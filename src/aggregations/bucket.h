@@ -85,48 +85,49 @@ private:
 
 	struct CmpByIndex {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.idx > b->second.idx) return false;
-			return true;
+			return a->second.idx < b->second.idx;
 		}
 	};
 
 	struct CmpByKeyAsc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.slot < b->second.slot) return true;
-			if (a->second.slot > b->second.slot) return false;
-			if (a->first > b->first) return false;
-			return true;
+			if (a->second.slot != b->second.slot) {
+				return a->second.slot < b->second.slot;
+			}
+			return a->first < b->first;
 		}
 	};
 
 	struct CmpByKeyDesc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.slot > b->second.slot) return true;
-			if (a->second.slot < b->second.slot) return false;
-			if (a->first < b->first) return false;
-			return true;
+			if (a->second.slot != b->second.slot) {
+				return a->second.slot > b->second.slot;
+			}
+			return a->first > b->first;
 		}
 	};
 
 	struct CmpByCountAsc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.doc_count() < b->second.doc_count()) return true;
-			if (a->second.doc_count() > b->second.doc_count()) return false;
-			if (a->second.slot < b->second.slot) return true;
-			if (a->second.slot > b->second.slot) return false;
-			if (a->first > b->first) return false;
-			return true;
+			if (a->second.doc_count() != b->second.doc_count()) {
+				return a->second.doc_count() < b->second.doc_count();
+			}
+			if (a->second.slot != b->second.slot) {
+				return a->second.slot < b->second.slot;
+			}
+			return a->first < b->first;
 		}
 	};
 
 	struct CmpByCountDesc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			if (a->second.doc_count() > b->second.doc_count()) return true;
-			if (a->second.doc_count() < b->second.doc_count()) return false;
-			if (a->second.slot > b->second.slot) return true;
-			if (a->second.slot < b->second.slot) return false;
-			if (a->first < b->first) return false;
-			return true;
+			if (a->second.doc_count() != b->second.doc_count()) {
+				return a->second.doc_count() > b->second.doc_count();
+			}
+			if (a->second.slot != b->second.slot) {
+				return a->second.slot > b->second.slot;
+			}
+			return a->first > b->first;
 		}
 	};
 
@@ -134,12 +135,13 @@ private:
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			ASSERT(a->second.value_ptr);
 			ASSERT(b->second.value_ptr);
-			if (*a->second.value_ptr < *b->second.value_ptr) return true;
-			if (*a->second.value_ptr > *b->second.value_ptr) return false;
-			if (a->second.slot < b->second.slot) return true;
-			if (a->second.slot > b->second.slot) return false;
-			if (a->first > b->first) return false;
-			return true;
+			if (*a->second.value_ptr != *b->second.value_ptr) {
+				return *a->second.value_ptr < *b->second.value_ptr;
+			}
+			if (a->second.slot != b->second.slot) {
+				return a->second.slot < b->second.slot;
+			}
+			return a->first < b->first;
 		}
 	};
 
@@ -147,15 +149,15 @@ private:
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
 			ASSERT(a->second.value_ptr);
 			ASSERT(b->second.value_ptr);
-			if (*a->second.value_ptr > *b->second.value_ptr) return true;
-			if (*a->second.value_ptr < *b->second.value_ptr) return false;
-			if (a->second.slot > b->second.slot) return true;
-			if (a->second.slot < b->second.slot) return false;
-			if (a->first < b->first) return false;
-			return true;
+			if (*a->second.value_ptr != *b->second.value_ptr) {
+				return *a->second.value_ptr > *b->second.value_ptr;
+			}
+			if (a->second.slot != b->second.slot) {
+				return a->second.slot > b->second.slot;
+			}
+			return a->first > b->first;
 		}
 	};
-
 
 	template <typename Cmp>
 	MsgPack _get_result() {
