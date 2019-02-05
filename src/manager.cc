@@ -172,10 +172,10 @@ XapiandManager::XapiandManager()
 	  atom_sig(0)
 {
 	std::vector<std::string> values({
-		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
+		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http thread" : " http threads"),
 #ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol client thread" : " remote protocol threads"),
-		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol client thread" : " replication protocol threads"),
+		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol thread" : " remote protocol threads"),
+		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol thread" : " replication protocol threads"),
 #endif
 	});
 	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
@@ -837,10 +837,10 @@ XapiandManager::make_servers()
 	// Now print information about servers and workers.
 	std::vector<std::string> values({
 		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
-		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http client thread" : " http client threads"),
+		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http thread" : " http threads"),
 #ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol client thread" : " remote protocol client threads"),
-		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol client thread" : " replication protocol client threads"),
+		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol thread" : " remote protocol threads"),
+		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol thread" : " replication protocol threads"),
 #endif
 #if XAPIAND_DATABASE_WAL
 		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
@@ -1035,11 +1035,11 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	if (_remote_client_pool) {
-		L_MANAGER("Finishing remote protocol client threads pool!");
+		L_MANAGER("Finishing remote protocol threads pool!");
 		_remote_client_pool->finish();
 
-		L_MANAGER("Waiting for %zu remote protocol client thread%s...", _remote_client_pool->running_size(), (_remote_client_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the remote protocol clients...", "Remote Protocol clients finished!");
+		L_MANAGER("Waiting for %zu remote protocol thread%s...", _remote_client_pool->running_size(), (_remote_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the remote protocol threads...", "Remote Protocol threads finished!");
 		while (!_remote_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
@@ -1065,11 +1065,11 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	if (_replication_client_pool) {
-		L_MANAGER("Finishing replication protocol client threads pool!");
+		L_MANAGER("Finishing replication protocol threads pool!");
 		_replication_client_pool->finish();
 
-		L_MANAGER("Waiting for %zu replication protocol client thread%s...", _replication_client_pool->running_size(), (_replication_client_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication protocol clients...", "Replication Protocol clients finished!");
+		L_MANAGER("Waiting for %zu replication protocol thread%s...", _replication_client_pool->running_size(), (_replication_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication protocol threads...", "Replication Protocol threads finished!");
 		while (!_replication_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
