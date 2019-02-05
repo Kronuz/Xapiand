@@ -34,16 +34,16 @@ randomly generated.
 
 ## Loading the Sample Dataset
 
-You can download the [sample dataset]({{ '/assets/accounts.json' | absolute_url }}){:target="_blank"}. Extract it to
+You can download the [sample dataset]({{ '/assets/accounts.ndjson' | absolute_url }}){:target="_blank"}. Extract it to
 our current directory and let's load it into our cluster as follows:
 
 {% capture req %}
 
 ```json
 POST /bank/:restore?pretty
-Content-Type: application/json
+Content-Type: application/x-ndjson
 
-@accounts.json
+@accounts.ndjson
 ```
 {% endcapture %}
 {% include curl.html req=req %}
