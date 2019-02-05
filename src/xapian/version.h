@@ -86,7 +86,7 @@
 #define XAPIAN_HAS_GLASS_BACKEND 1
 
 /// XAPIAN_HAS_HONEY_BACKEND Defined if the honey backend is enabled.
-#define XAPIAN_HAS_HONEY_BACKEND 1
+/* #undef XAPIAN_HAS_HONEY_BACKEND */
 
 /// XAPIAN_HAS_INMEMORY_BACKEND Defined if the inmemory backend is enabled.
 #define XAPIAN_HAS_INMEMORY_BACKEND 1
