@@ -22,7 +22,7 @@
 
 
 
-#include "cassert.h"   // for ASSERT
+
 #include "../dispatchkit/boxed_value.hpp"
 #include "chaiscript_common.hpp"
 #include "chaiscript_optimizer.hpp"
@@ -118,11 +118,33 @@ namespace chaiscript
     }
 
 
-    template<typename Tracer, typename Optimizer>
+    template<typename Tracer, typename Optimizer, std::size_t Parse_Depth=512>
     class ChaiScript_Parser final : public ChaiScript_Parser_Base {
       void *get_tracer_ptr() override {
         return &m_tracer;
       }
+
+      std::size_t m_current_parse_depth = 0;
+
+      struct Depth_Counter
+      {
+        static const auto max_depth = Parse_Depth;
+        Depth_Counter(ChaiScript_Parser *t_parser) : parser(t_parser)
+        {
+          ++parser->m_current_parse_depth;
+          if (parser->m_current_parse_depth > max_depth) {
+            throw exception::eval_error("Maximum parse depth exceeded", 
+                File_Position(parser->m_position.line, parser->m_position.col), *(parser->m_filename));
+          }
+        }
+
+        ~Depth_Counter() noexcept
+        {
+          --parser->m_current_parse_depth;
+        }
+
+        ChaiScript_Parser *parser;
+      };
 
       static std::array<std::array<bool, detail::lengthof_alphabet>, detail::max_alphabet> build_alphabet()
       {
@@ -520,10 +542,14 @@ namespace chaiscript
 
       /// Skips ChaiScript whitespace, which means space and tab, but not cr/lf
       /// jespada: Modified SkipWS to skip optionally CR ('\n') and/or LF+CR ("\r\n")
+      /// AlekMosingiewicz: Added exception when illegal character detected
       bool SkipWS(bool skip_cr=false) {
         bool retval = false;
 
         while (m_position.has_more()) {
+          if(static_cast<unsigned char>(*m_position) > 0x7e) {
+            throw exception::eval_error("Illegal character", File_Position(m_position.line, m_position.col), *m_filename);
+          }
           auto end_line = (*m_position != 0) && ((*m_position == '\n') || (*m_position == '\r' && *(m_position+1) == '\n'));
 
           if ( char_in_alphabet(*m_position,detail::white_alphabet) || (skip_cr && end_line)) {
@@ -734,6 +760,7 @@ namespace chaiscript
 
 #ifdef CHAISCRIPT_CLANG
 #pragma GCC diagnostic ignored "-Wtautological-compare"
+#pragma GCC diagnostic ignored "-Wsign-conversion"
 #endif
 
 #endif
@@ -748,8 +775,9 @@ namespace chaiscript
             return const_var(static_cast<unsigned int>(u));
           } else if (!unsigned_ && !longlong_ && u >= std::numeric_limits<long>::min() && u <= std::numeric_limits<long>::max()) {
             return const_var(static_cast<long>(u));
-          } else if ((unsigned_ || base != 10) && !longlong_ 
-                     && u >= std::numeric_limits<unsigned long>::min() 
+          } else if ((unsigned_ || base != 10) && !longlong_
+
+                     && u >= std::numeric_limits<unsigned long>::min()
                      && u <= std::numeric_limits<unsigned long>::max()) {
             return const_var(static_cast<unsigned long>(u));
           } else if (!unsigned_ && u >= std::numeric_limits<long long>::min() && u <= std::numeric_limits<long long>::max()) {
@@ -1038,7 +1066,7 @@ namespace chaiscript
         bool saw_interpolation_marker = false;
         bool is_octal = false;
         bool is_hex = false;
-        bool is_unicode = false;
+        std::size_t unicode_size = 0;
         const bool interpolation_allowed;
 
         string_type octal_matches;
@@ -1062,12 +1090,12 @@ namespace chaiscript
               process_hex();
             }
 
-            if (is_unicode) {
+            if (unicode_size > 0) {
               process_unicode();
             }
           } catch (const std::invalid_argument &) {
-            // escape sequence was invalid somehow, we'll pick this
-            // up in the next part of parsing
+          } catch (const exception::eval_error &) {
+            // Something happened with parsing, we'll catch it later?
           }
         }
 
@@ -1097,13 +1125,43 @@ namespace chaiscript
 
         void process_unicode()
         {
-          if (!hex_matches.empty()) {
-            auto val = stoll(hex_matches, nullptr, 16);
-            hex_matches.clear();
-            match += detail::Char_Parser_Helper<string_type>::str_from_ll(val);
-          }
+          const auto ch = static_cast<uint32_t>(std::stoi(hex_matches, nullptr, 16));
+          const auto match_size = hex_matches.size();
+          hex_matches.clear();
           is_escaped = false;
-          is_unicode = false;
+          const auto u_size = unicode_size;
+          unicode_size = 0;
+
+          char buf[4];
+          if (u_size != match_size) {
+            throw exception::eval_error("Incomplete unicode escape sequence");
+          }
+          if (u_size == 4 && ch >= 0xD800 && ch <= 0xDFFF) {
+            throw exception::eval_error("Invalid 16 bit universal character");
+          }
+
+
+          if (ch < 0x80) {
+            match += static_cast<char>(ch);
+          } else if (ch < 0x800) {
+            buf[0] = static_cast<char>(0xC0 | (ch >> 6));
+            buf[1] = static_cast<char>(0x80 | (ch & 0x3F));
+            match.append(buf, 2);
+          } else if (ch < 0x10000) {
+            buf[0] = static_cast<char>(0xE0 |  (ch >> 12));
+            buf[1] = static_cast<char>(0x80 | ((ch >>  6) & 0x3F));
+            buf[2] = static_cast<char>(0x80 |  (ch        & 0x3F));
+            match.append(buf, 3);
+          } else if (ch < 0x200000) {
+            buf[0] = static_cast<char>(0xF0 |  (ch >> 18));
+            buf[1] = static_cast<char>(0x80 | ((ch >> 12) & 0x3F));
+            buf[2] = static_cast<char>(0x80 | ((ch >>  6) & 0x3F));
+            buf[3] = static_cast<char>(0x80 |  (ch        & 0x3F));
+            match.append(buf, 4);
+          } else {
+            // this must be an invalid escape sequence?
+            throw exception::eval_error("Invalid 32 bit universal character");
+          }
         }
 
         void parse(const char_type t_char, const int line, const int col, const std::string &filename) {
@@ -1139,16 +1197,16 @@ namespace chaiscript
             } else {
               process_hex();
             }
-          } else if (is_unicode) {
+          } else if (unicode_size > 0) {
             if (is_hex_char) {
               hex_matches.push_back(t_char);
 
-            if(hex_matches.size() == 4) {
-              // Format is specified to be 'slash'uABCD
-              // on collecting from A to D do parsing
-              process_unicode();
-            }
-            return;
+              if(hex_matches.size() == unicode_size) {
+                // Format is specified to be 'slash'uABCD
+                // on collecting from A to D do parsing
+                process_unicode();
+              }
+              return;
             } else {
               // Not a unicode anymore, try parsing any way
               // May be someone used 'slash'uAA only
@@ -1171,7 +1229,9 @@ namespace chaiscript
               } else if (t_char == 'x') {
                 is_hex = true;
               } else if (t_char == 'u') {
-                is_unicode = true;
+                unicode_size = 4;
+              } else if (t_char == 'U') {
+                unicode_size = 8;
               } else {
                 switch (t_char) {
                   case ('\'') : match.push_back('\''); break;
@@ -1202,6 +1262,7 @@ namespace chaiscript
 
       /// Reads (and potentially captures) a quoted string from input.  Translates escaped sequences.
       bool Quoted_String() {
+        Depth_Counter dc{this};
         SkipWS();
 
         const auto start = m_position;
@@ -1317,6 +1378,7 @@ namespace chaiscript
 
       /// Reads (and potentially captures) a char group from input.  Translates escaped sequences.
       bool Single_Quoted_String() {
+        Depth_Counter dc{this};
         SkipWS();
 
         const auto start = m_position;
@@ -1356,6 +1418,7 @@ namespace chaiscript
 
       /// Reads (and potentially captures) a char from input if it matches the parameter
       bool Char(const char t_c) {
+        Depth_Counter dc{this};
         SkipWS();
         return Char_(t_c);
       }
@@ -1380,6 +1443,7 @@ namespace chaiscript
 
       /// Reads (and potentially captures) a string from input if it matches the parameter
       bool Keyword(const utility::Static_String &t_s) {
+        Depth_Counter dc{this};
         SkipWS();
         const auto start = m_position;
         bool retval = Keyword_(t_s);
@@ -1404,6 +1468,7 @@ namespace chaiscript
 
       /// Reads (and potentially captures) a symbol group from input if it matches the parameter
       bool Symbol(const utility::Static_String &t_s, const bool t_disallow_prevention=false) {
+        Depth_Counter dc{this};
         SkipWS();
         const auto start = m_position;
         bool retval = Symbol_(t_s);
@@ -1438,6 +1503,7 @@ namespace chaiscript
 
       /// Reads until the end of the current statement
       bool Eos() {
+        Depth_Counter dc{this};
         SkipWS();
 
         return Eol_(true);
@@ -1445,6 +1511,7 @@ namespace chaiscript
 
       /// Reads (and potentially captures) an end-of-line group from input
       bool Eol() {
+        Depth_Counter dc{this};
         SkipWS();
 
         return Eol_();
@@ -1452,6 +1519,7 @@ namespace chaiscript
 
       /// Reads a comma-separated list of values from input. Id's only, no types allowed
       bool Id_Arg_List() {
+        Depth_Counter dc{this};
         SkipWS(true);
         bool retval = false;
 
@@ -1477,6 +1545,7 @@ namespace chaiscript
 
       /// Reads a comma-separated list of values from input, for function declarations
       bool Decl_Arg_List() {
+        Depth_Counter dc{this};
         SkipWS(true);
         bool retval = false;
 
@@ -1503,6 +1572,7 @@ namespace chaiscript
 
       /// Reads a comma-separated list of values from input
       bool Arg_List() {
+        Depth_Counter dc{this};
         SkipWS(true);
         bool retval = false;
 
@@ -1528,6 +1598,7 @@ namespace chaiscript
 
       /// Reads possible special container values, including ranges and map_pairs
       bool Container_Arg_List() {
+        Depth_Counter dc{this};
         bool retval = false;
         SkipWS(true);
 
@@ -1565,6 +1636,7 @@ namespace chaiscript
 
       /// Reads a lambda (anonymous function) from input
       bool Lambda() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1606,6 +1678,7 @@ namespace chaiscript
 
       /// Reads a function definition from input
       bool Def(const bool t_class_context = false, const std::string &t_class_name = "") {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1665,6 +1738,7 @@ namespace chaiscript
 
       /// Reads a function definition from input
       bool Try() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1724,6 +1798,7 @@ namespace chaiscript
 
       /// Reads an if/else if/else block from input
       bool If() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1789,6 +1864,7 @@ namespace chaiscript
 
       /// Reads a class block from input
       bool Class(const bool t_class_allowed) {
+        Depth_Counter dc{this};
         bool retval = false;
 
         size_t prev_stack_top = m_match_stack.size();
@@ -1821,6 +1897,7 @@ namespace chaiscript
 
       /// Reads a while block from input
       bool While() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1850,6 +1927,7 @@ namespace chaiscript
 
       /// Reads the ranged `for` conditions from input
       bool Range_Expression() {
+        Depth_Counter dc{this};
         // the first element will have already been captured by the For_Guards() call that preceeds it
         return Char(':') && Equation();
       }
@@ -1857,6 +1935,7 @@ namespace chaiscript
 
       /// Reads the C-style `for` conditions from input
       bool For_Guards() {
+        Depth_Counter dc{this};
         if (!(Equation() && Eol()))
         {
           if (!Eol())
@@ -1888,6 +1967,7 @@ namespace chaiscript
 
       /// Reads a for block from input
       bool For() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1931,6 +2011,7 @@ namespace chaiscript
 
       /// Reads a case block from input
       bool Case() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -1971,6 +2052,7 @@ namespace chaiscript
 
       /// Reads a switch statement from input
       bool Switch() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         if (Keyword("switch")) {
@@ -2014,6 +2096,7 @@ namespace chaiscript
 
       /// Reads a curly-brace C-style class block from input
       bool Class_Block(const std::string &t_class_name) {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -2038,6 +2121,7 @@ namespace chaiscript
 
       /// Reads a curly-brace C-style block from input
       bool Block() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -2062,6 +2146,7 @@ namespace chaiscript
 
       /// Reads a return statement from input
       bool Return() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         if (Keyword("return")) {
@@ -2075,6 +2160,7 @@ namespace chaiscript
 
       /// Reads a break statement from input
       bool Break() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         if (Keyword("break")) {
@@ -2087,6 +2173,7 @@ namespace chaiscript
 
       /// Reads a continue statement from input
       bool Continue() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         if (Keyword("continue")) {
@@ -2099,6 +2186,7 @@ namespace chaiscript
 
       /// Reads a dot expression(member access), then proceeds to check if it's a function or array call
       bool Dot_Fun_Array() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -2169,6 +2257,7 @@ namespace chaiscript
 
       /// Reads a variable declaration from input
       bool Var_Decl(const bool t_class_context = false, const std::string &t_class_name = "") {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -2224,6 +2313,7 @@ namespace chaiscript
 
       /// Reads an expression surrounded by parentheses from input
       bool Paren_Expression() {
+        Depth_Counter dc{this};
         if (Char('(')) {
           if (!Operator()) {
             throw exception::eval_error("Incomplete expression", File_Position(m_position.line, m_position.col), *m_filename);
@@ -2239,6 +2329,7 @@ namespace chaiscript
 
       /// Reads, and identifies, a short-form container initialization from input
       bool Inline_Container() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         if (Char('[')) {
@@ -2270,6 +2361,7 @@ namespace chaiscript
 
       /// Parses a variable specified with a & aka reference
       bool Reference() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         if (Symbol("&")) {
@@ -2286,6 +2378,7 @@ namespace chaiscript
 
       /// Reads a unary prefixed expression from input
       bool Prefix() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
         using SS = utility::Static_String;
         constexpr const std::array<utility::Static_String, 6> prefix_opers{{
@@ -2316,10 +2409,12 @@ namespace chaiscript
 
       /// Parses any of a group of 'value' style ast_node groups from input
       bool Value() {
+        Depth_Counter dc{this};
         return Var_Decl() || Dot_Fun_Array() || Prefix();
       }
 
       bool Operator_Helper(const size_t t_precedence, std::string &oper) {
+        Depth_Counter dc{this};
         for (auto & elem : m_operator_matches[t_precedence]) {
           if (Symbol(elem)) {
             oper = elem.c_str();
@@ -2330,6 +2425,7 @@ namespace chaiscript
       }
 
       bool Operator(const size_t t_precedence = 0) {
+        Depth_Counter dc{this};
         bool retval = false;
         const auto prev_stack_top = m_match_stack.size();
 
@@ -2377,7 +2473,7 @@ namespace chaiscript
                   build_match<eval::Logical_Or_AST_Node<Tracer>>(prev_stack_top, oper);
                   break;
                 case(Operator_Precidence::Prefix) :
-                  ASSERT(false); // cannot reach here because of if() statement at the top
+                  assert(false); // cannot reach here because of if() statement at the top
                   break;
 
 //                default:
@@ -2394,6 +2490,7 @@ namespace chaiscript
 
       /// Reads a pair of values used to create a map initialization from input
       bool Map_Pair() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -2421,6 +2518,7 @@ namespace chaiscript
 
       /// Reads a pair of values used to create a range initialization from input
       bool Value_Range() {
+        Depth_Counter dc{this};
         bool retval = false;
 
         const auto prev_stack_top = m_match_stack.size();
@@ -2448,6 +2546,7 @@ namespace chaiscript
 
       /// Parses a string of binary equation operators
       bool Equation() {
+        Depth_Counter dc{this};
         const auto prev_stack_top = m_match_stack.size();
 
         using SS = utility::Static_String;
@@ -2473,6 +2572,7 @@ namespace chaiscript
 
       /// Parses statements allowed inside of a class block
       bool Class_Statements(const std::string &t_class_name) {
+        Depth_Counter dc{this};
         bool retval = false;
 
         bool has_more = true;
@@ -2501,6 +2601,7 @@ namespace chaiscript
 
       /// Top level parser, starts parsing of all known parses
       bool Statements(const bool t_class_allowed = false) {
+        Depth_Counter dc{this};
         bool retval = false;
 
         bool has_more = true;

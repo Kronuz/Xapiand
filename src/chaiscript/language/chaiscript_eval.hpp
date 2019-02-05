@@ -21,7 +21,6 @@
 #include <string>
 #include <vector>
 
-#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../dispatchkit/boxed_cast.hpp"
 #include "../dispatchkit/boxed_number.hpp"
@@ -307,7 +306,7 @@ namespace chaiscript
     struct Fun_Call_AST_Node : AST_Node_Impl<T> {
         Fun_Call_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Fun_Call, std::move(t_loc), std::move(t_children)) { 
-            ASSERT(!this->children.empty());
+            assert(!this->children.empty());
           }
 
         template<bool Save_Params>
@@ -441,7 +440,7 @@ namespace chaiscript
         Equation_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Equation, std::move(t_loc), std::move(t_children)), 
           m_oper(Operators::to_operator(this->text))
-        { ASSERT(this->children.size() == 2); }
+        { assert(this->children.size() == 2); }
 
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
@@ -449,19 +448,22 @@ namespace chaiscript
           Boxed_Value rhs = this->children[1]->eval(t_ss); 
           Boxed_Value lhs = this->children[0]->eval(t_ss);
 
+          if (lhs.is_return_value()) {
+            throw exception::eval_error("Error, cannot assign to temporary value.");
+          } else if (lhs.is_const()) {
+            throw exception::eval_error("Error, cannot assign to constant value.");
+          }
+
+
           if (m_oper != Operators::Opers::invalid && lhs.get_type_info().is_arithmetic() &&
               rhs.get_type_info().is_arithmetic())
           {
             try {
               return Boxed_Number::do_oper(m_oper, lhs, rhs);
             } catch (const std::exception &) {
-              throw exception::eval_error("Error with unsupported arithmetic assignment operation");
+              throw exception::eval_error("Error with unsupported arithmetic assignment operation.");
             }
           } else if (m_oper == Operators::Opers::assign) {
-            if (lhs.is_return_value()) {
-              throw exception::eval_error("Error, cannot assign to temporary value.");
-            }
-
             try {
 
               if (lhs.is_undef()) {
@@ -471,7 +473,7 @@ namespace chaiscript
                               && this->children[0]->children[0]->identifier == AST_Node_Type::Reference)
                        )
                    )
-                  
+
                 {
                   /// \todo This does not handle the case of an unassigned reference variable
                   ///       being assigned outside of its declaration
@@ -886,7 +888,7 @@ namespace chaiscript
         If_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::If, std::move(t_loc), std::move(t_children)) 
         { 
-          ASSERT(this->children.size() == 3);
+          assert(this->children.size() == 3);
         }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
@@ -902,7 +904,7 @@ namespace chaiscript
     struct Ranged_For_AST_Node final : AST_Node_Impl<T> {
         Ranged_For_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Ranged_For, std::move(t_loc), std::move(t_children))
-          { ASSERT(this->children.size() == 3); }
+          { assert(this->children.size() == 3); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           const auto get_function = [&t_ss](const std::string &t_name, auto &t_hint){
@@ -923,10 +925,16 @@ namespace chaiscript
 
           const auto do_loop = [&loop_var_name, &t_ss, this](const auto &ranged_thing){
             try {
-              chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
-              Boxed_Value &obj = t_ss.add_get_object(loop_var_name, void_var());
-              for (auto loop_var : ranged_thing) {
-                obj = Boxed_Value(std::move(loop_var));
+              for (auto &&loop_var : ranged_thing) {
+                // This scope push and pop might not be the best thing for perf
+                // but we know it's 100% correct
+                chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
+                /// to-do make this if-constexpr with C++17 branch
+                if (!std::is_same<std::decay_t<decltype(loop_var)>, Boxed_Value>::value) {
+                  t_ss.add_get_object(loop_var_name, Boxed_Value(std::ref(loop_var)));
+                } else {
+                  t_ss.add_get_object(loop_var_name, Boxed_Value(loop_var));
+                }
                 try {
                   this->children[2]->eval(t_ss);
                 } catch (detail::Continue_Loop &) {
@@ -950,10 +958,9 @@ namespace chaiscript
 
             try {
               const auto range_obj = call_function(range_funcs, range_expression_result);
-              chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
-              Boxed_Value &obj = t_ss.add_get_object(loop_var_name, void_var());
               while (!boxed_cast<bool>(call_function(empty_funcs, range_obj))) {
-                obj = call_function(front_funcs, range_obj);
+                chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
+                t_ss.add_get_object(loop_var_name, call_function(front_funcs, range_obj));
                 try {
                   this->children[2]->eval(t_ss);
                 } catch (detail::Continue_Loop &) {
@@ -980,7 +987,7 @@ namespace chaiscript
     struct For_AST_Node final : AST_Node_Impl<T> {
         For_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::For, std::move(t_loc), std::move(t_children)) 
-          { ASSERT(this->children.size() == 4); }
+          { assert(this->children.size() == 4); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
@@ -1057,7 +1064,7 @@ namespace chaiscript
     struct Case_AST_Node final : AST_Node_Impl<T> {
         Case_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Case, std::move(t_loc), std::move(t_children)) 
-        { ASSERT(this->children.size() == 2); /* how many children does it have? */ }
+        { assert(this->children.size() == 2); /* how many children does it have? */ }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
           chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
@@ -1072,7 +1079,7 @@ namespace chaiscript
     struct Default_AST_Node final : AST_Node_Impl<T> {
         Default_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Default, std::move(t_loc), std::move(t_children))
-        { ASSERT(this->children.size() == 1); }
+        { assert(this->children.size() == 1); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
           chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
@@ -1142,10 +1149,10 @@ namespace chaiscript
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           if (!this->children.empty()) {
-            throw detail::Return_Value(this->children[0]->eval(t_ss));
+            throw detail::Return_Value{this->children[0]->eval(t_ss)};
           }
           else {
-            throw detail::Return_Value(void_var());
+            throw detail::Return_Value{void_var()};
           }
         }
     };
@@ -1179,7 +1186,7 @@ namespace chaiscript
     struct Reference_AST_Node final : AST_Node_Impl<T> {
         Reference_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Reference, std::move(t_loc), std::move(t_children))
-        { ASSERT(this->children.size() == 1); }
+        { assert(this->children.size() == 1); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           Boxed_Value bv;
@@ -1202,6 +1209,10 @@ namespace chaiscript
             // short circuit arithmetic operations
             if (m_oper != Operators::Opers::invalid && m_oper != Operators::Opers::bitwise_and && bv.get_type_info().is_arithmetic())
             {
+              if ((m_oper == Operators::Opers::pre_increment || m_oper == Operators::Opers::pre_decrement) && bv.is_const())
+              {
+                throw exception::eval_error("Error with prefix operator evaluation: cannot modify constant value.");
+              }
               return Boxed_Number::do_oper(m_oper, bv);
             } else {
               chaiscript::eval::detail::Function_Push_Pop fpp(t_ss);
@@ -1295,7 +1306,7 @@ namespace chaiscript
 
           size_t end_point = this->children.size();
           if (this->children.back()->identifier == AST_Node_Type::Finally) {
-            ASSERT(end_point > 0);
+            assert(end_point > 0);
             end_point = this->children.size() - 1;
           }
           for (size_t i = 1; i < end_point; ++i) {
@@ -1410,7 +1421,7 @@ namespace chaiscript
 
         Method_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Method, std::move(t_loc),
-              std::vector<AST_Node_Impl_Ptr<T>>(std::make_move_iterator(t_children.begin()), 
+              std::vector<AST_Node_Impl_Ptr<T>>(std::make_move_iterator(t_children.begin()),
                                                 std::make_move_iterator(std::prev(t_children.end(), Def_AST_Node<T>::has_guard(t_children, 1)?2:1)))
               ),
             m_body_node(Def_AST_Node<T>::get_body_node(std::move(t_children))),
@@ -1521,7 +1532,7 @@ namespace chaiscript
     struct Logical_And_AST_Node final : AST_Node_Impl<T> {
         Logical_And_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Logical_And, std::move(t_loc), std::move(t_children)) 
-        { ASSERT(this->children.size() == 2); }
+        { assert(this->children.size() == 2); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override
         {
@@ -1535,7 +1546,7 @@ namespace chaiscript
     struct Logical_Or_AST_Node final : AST_Node_Impl<T> {
         Logical_Or_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Logical_Or, std::move(t_loc), std::move(t_children)) 
-        { ASSERT(this->children.size() == 2); }
+        { assert(this->children.size() == 2); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override
         {

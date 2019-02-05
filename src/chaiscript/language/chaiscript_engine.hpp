@@ -11,6 +11,7 @@
 #ifndef CHAISCRIPT_ENGINE_HPP_
 #define CHAISCRIPT_ENGINE_HPP_
 
+#include <cassert>
 #include <exception>
 #include <fstream>
 #include <functional>
@@ -22,7 +23,6 @@
 #include <vector>
 #include <cstring>
 
-#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../chaiscript_threading.hpp"
 #include "../dispatchkit/boxed_cast_helper.hpp"
@@ -204,6 +204,27 @@ namespace chaiscript
       m_engine.add(fun([this](const std::string& t_namespace_name) { import(t_namespace_name); }), "import");
     }
 
+    /// Skip BOM at the beginning of file
+    static bool skip_bom(std::ifstream &infile) {
+        size_t bytes_needed = 3;
+        char buffer[3];
+
+        memset(buffer, '\0', bytes_needed);
+
+        infile.read(buffer, static_cast<std::streamsize>(bytes_needed));
+
+        if ((buffer[0] == '\xef')
+            && (buffer[1] == '\xbb')
+            && (buffer[2] == '\xbf')) {
+
+            infile.seekg(3);
+            return true;
+        }
+
+        infile.seekg(0);
+
+        return false;
+    }
 
     /// Helper function for loading a file
     static std::string load_file(const std::string &t_filename) {
@@ -213,10 +234,15 @@ namespace chaiscript
         throw chaiscript::exception::file_not_found_error(t_filename);
       }
 
-      const auto size = infile.tellg();
+      auto size = infile.tellg();
       infile.seekg(0, std::ios::beg);
 
-      ASSERT(size >= 0);
+      assert(size >= 0);
+
+      if (skip_bom(infile)) {
+          size-=3; // decrement the BOM size from file size, otherwise we'll get parsing errors
+          assert(size >= 0); //and check if there's more text
+      }
 
       if (size == std::streampos(0))
       {
@@ -368,8 +394,8 @@ explicit ChaiScript_Basic(std::unique_ptr<parser::ChaiScript_Parser_Base> &&pars
     {
       for (const auto &path : m_use_paths)
       {
+        const auto appendedpath = path + t_filename;
         try {
-          const auto appendedpath = path + t_filename;
 
           chaiscript::detail::threading::unique_lock<chaiscript::detail::threading::recursive_mutex> l(m_use_mutex);
           chaiscript::detail::threading::unique_lock<chaiscript::detail::threading::shared_mutex> l2(m_mutex);
@@ -385,7 +411,11 @@ explicit ChaiScript_Basic(std::unique_ptr<parser::ChaiScript_Parser_Base> &&pars
           }
 
           return retval; // return, we loaded it, or it was already loaded
-        } catch (const exception::file_not_found_error &) {
+        } catch (const exception::file_not_found_error &e) {
+          if (e.filename != appendedpath) {
+            // a nested file include failed
+            throw;
+          }
           // failed to load, try the next path
         }
       }

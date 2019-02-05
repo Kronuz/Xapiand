@@ -24,7 +24,7 @@
 // SOFTWARE.
 
 #include <cstddef>
-#include "cassert.h"   // for ASSERT
+#include <cassert>
 
 template <std::size_t N, std::size_t alignment = alignof(std::max_align_t)>
 class arena
@@ -62,7 +62,7 @@ char*
 arena<N, alignment>::allocate(std::size_t n)
 {
     static_assert(ReqAlign <= alignment, "alignment is too small for this arena");
-    ASSERT(pointer_in_buffer(ptr_) && "short_alloc has outlived arena");
+    assert(pointer_in_buffer(ptr_) && "short_alloc has outlived arena");
     auto const aligned_n = align_up(n);
     if (static_cast<decltype(aligned_n)>(buf_ + N - ptr_) >= aligned_n)
     {
@@ -81,7 +81,7 @@ template <std::size_t N, std::size_t alignment>
 void
 arena<N, alignment>::deallocate(char* p, std::size_t n) noexcept
 {
-    ASSERT(pointer_in_buffer(ptr_) && "short_alloc has outlived arena");
+    assert(pointer_in_buffer(ptr_) && "short_alloc has outlived arena");
     if (pointer_in_buffer(p))
     {
       n = align_up(n);

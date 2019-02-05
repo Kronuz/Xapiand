@@ -23,10 +23,10 @@ namespace chaiscript
       void array(const std::string &type, Module& m)
       {
         typedef typename std::remove_extent<T>::type ReturnType;
-        const auto extent = std::extent<T>::value;
         m.add(user_type<T>(), type);
         m.add(fun(
-              [extent](T& t, size_t index)->ReturnType &{
+              [](T& t, size_t index)->ReturnType &{
+                constexpr auto extent = std::extent<T>::value;
                 if (extent > 0 && index >= extent) {
                   throw std::range_error("Array index out of range. Received: " + std::to_string(index)  + " expected < " + std::to_string(extent));
                 } else {
@@ -37,7 +37,8 @@ namespace chaiscript
             );
 
         m.add(fun(
-              [extent](const T &t, size_t index)->const ReturnType &{
+              [](const T &t, size_t index)->const ReturnType &{
+                constexpr auto extent = std::extent<T>::value;
                 if (extent > 0 && index >= extent) {
                   throw std::range_error("Array index out of range. Received: " + std::to_string(index)  + " expected < " + std::to_string(extent));
                 } else {
@@ -48,7 +49,8 @@ namespace chaiscript
             );
 
         m.add(fun(
-              [extent](const T &) {
+              [](const T &) {
+                constexpr auto extent = std::extent<T>::value;
                 return extent;
               }), "size");
       }
@@ -464,7 +466,7 @@ namespace chaiscript
         m.add(fun([](const char c) { return std::string(1, c); }), "to_string");
         m.add(fun(&Boxed_Number::to_string), "to_string");
 
-        
+
         bootstrap_pod_type<double>("double", m);
         bootstrap_pod_type<long double>("long_double", m);
         bootstrap_pod_type<float>("float", m);
@@ -493,7 +495,7 @@ namespace chaiscript
 
         opers_arithmetic_pod(m);
 
-        
+
         m.add(fun(&Build_Info::version_major), "version_major");
         m.add(fun(&Build_Info::version_minor), "version_minor");
         m.add(fun(&Build_Info::version_patch), "version_patch");

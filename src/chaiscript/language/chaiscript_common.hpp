@@ -18,7 +18,6 @@
 #include <string>
 #include <vector>
 
-#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../dispatchkit/boxed_value.hpp"
 #include "../dispatchkit/dispatchkit.hpp"
@@ -263,7 +262,7 @@ namespace chaiscript
           bool t_dot_notation,
           const chaiscript::detail::Dispatch_Engine &t_ss)
       {
-        ASSERT(t_func);
+        assert(t_func);
         int arity = t_func->get_arity();
         std::vector<Type_Info> types = t_func->get_param_types();
 
@@ -352,7 +351,7 @@ namespace chaiscript
         std::stringstream ss;
         if (t_functions.size() == 1)
         {
-          ASSERT(t_functions[0]);
+          assert(t_functions[0]);
           ss << "  Expected: " << format_types(t_functions[0], t_dot_notation, t_ss) << '\n';
         } else {
           ss << "  " << t_functions.size() << " overloads available:\n";
@@ -481,11 +480,14 @@ namespace chaiscript
     /// Errors generated when loading a file
     struct file_not_found_error : std::runtime_error {
       explicit file_not_found_error(const std::string &t_filename) noexcept
-        : std::runtime_error("File Not Found: " + t_filename)
+        : std::runtime_error("File Not Found: " + t_filename),
+          filename(t_filename)
       { }
 
       file_not_found_error(const file_not_found_error &) = default;
       ~file_not_found_error() noexcept override = default;
+
+      std::string filename;
     };
 
   }
@@ -648,8 +650,6 @@ namespace chaiscript
       /// Special type for returned values
       struct Return_Value {
         Boxed_Value retval;
-
-        explicit Return_Value(Boxed_Value t_return_value) : retval(std::move(t_return_value)) { }
       };
 
 
