@@ -23,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../chaiscript_threading.hpp"
 #include "bad_boxed_cast.hpp"
@@ -360,7 +361,7 @@ namespace chaiscript
               ++begin;
             }
 
-            assert(!type_infos.empty() && " type_info vector size is < 0, this is only possible if something else is broken");
+            ASSERT(!type_infos.empty() && " type_info vector size is < 0, this is only possible if something else is broken");
 
             if (size_mismatch)
             {
@@ -633,7 +634,7 @@ namespace chaiscript
           t_holder.call_params.pop_back();
           StackData &stack = get_stack_data(t_holder);
 
-          assert(!stack.empty());
+          ASSERT(!stack.empty());
 
           stack.pop_back();
         }
@@ -1245,7 +1246,7 @@ namespace chaiscript
         {
           --t_s.call_depth;
 
-          assert(t_s.call_depth >= 0);
+          ASSERT(t_s.call_depth >= 0);
 
           if (t_s.call_depth == 0)
           {

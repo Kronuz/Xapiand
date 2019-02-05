@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../dispatchkit/boxed_cast.hpp"
 #include "../dispatchkit/boxed_number.hpp"
@@ -306,7 +307,7 @@ namespace chaiscript
     struct Fun_Call_AST_Node : AST_Node_Impl<T> {
         Fun_Call_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Fun_Call, std::move(t_loc), std::move(t_children)) { 
-            assert(!this->children.empty());
+            ASSERT(!this->children.empty());
           }
 
         template<bool Save_Params>
@@ -440,7 +441,7 @@ namespace chaiscript
         Equation_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Equation, std::move(t_loc), std::move(t_children)), 
           m_oper(Operators::to_operator(this->text))
-        { assert(this->children.size() == 2); }
+        { ASSERT(this->children.size() == 2); }
 
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
@@ -888,7 +889,7 @@ namespace chaiscript
         If_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::If, std::move(t_loc), std::move(t_children)) 
         { 
-          assert(this->children.size() == 3);
+          ASSERT(this->children.size() == 3);
         }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
@@ -904,7 +905,7 @@ namespace chaiscript
     struct Ranged_For_AST_Node final : AST_Node_Impl<T> {
         Ranged_For_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Ranged_For, std::move(t_loc), std::move(t_children))
-          { assert(this->children.size() == 3); }
+          { ASSERT(this->children.size() == 3); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           const auto get_function = [&t_ss](const std::string &t_name, auto &t_hint){
@@ -987,7 +988,7 @@ namespace chaiscript
     struct For_AST_Node final : AST_Node_Impl<T> {
         For_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::For, std::move(t_loc), std::move(t_children)) 
-          { assert(this->children.size() == 4); }
+          { ASSERT(this->children.size() == 4); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
@@ -1064,7 +1065,7 @@ namespace chaiscript
     struct Case_AST_Node final : AST_Node_Impl<T> {
         Case_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Case, std::move(t_loc), std::move(t_children)) 
-        { assert(this->children.size() == 2); /* how many children does it have? */ }
+        { ASSERT(this->children.size() == 2); /* how many children does it have? */ }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
           chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
@@ -1079,7 +1080,7 @@ namespace chaiscript
     struct Default_AST_Node final : AST_Node_Impl<T> {
         Default_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Default, std::move(t_loc), std::move(t_children))
-        { assert(this->children.size() == 1); }
+        { ASSERT(this->children.size() == 1); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override {
           chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
@@ -1186,7 +1187,7 @@ namespace chaiscript
     struct Reference_AST_Node final : AST_Node_Impl<T> {
         Reference_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Reference, std::move(t_loc), std::move(t_children))
-        { assert(this->children.size() == 1); }
+        { ASSERT(this->children.size() == 1); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override{
           Boxed_Value bv;
@@ -1306,7 +1307,7 @@ namespace chaiscript
 
           size_t end_point = this->children.size();
           if (this->children.back()->identifier == AST_Node_Type::Finally) {
-            assert(end_point > 0);
+            ASSERT(end_point > 0);
             end_point = this->children.size() - 1;
           }
           for (size_t i = 1; i < end_point; ++i) {
@@ -1532,7 +1533,7 @@ namespace chaiscript
     struct Logical_And_AST_Node final : AST_Node_Impl<T> {
         Logical_And_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Logical_And, std::move(t_loc), std::move(t_children)) 
-        { assert(this->children.size() == 2); }
+        { ASSERT(this->children.size() == 2); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override
         {
@@ -1546,7 +1547,7 @@ namespace chaiscript
     struct Logical_Or_AST_Node final : AST_Node_Impl<T> {
         Logical_Or_AST_Node(std::string t_ast_node_text, Parse_Location t_loc, std::vector<AST_Node_Impl_Ptr<T>> t_children) :
           AST_Node_Impl<T>(std::move(t_ast_node_text), AST_Node_Type::Logical_Or, std::move(t_loc), std::move(t_children)) 
-        { assert(this->children.size() == 2); }
+        { ASSERT(this->children.size() == 2); }
 
         Boxed_Value eval_internal(const chaiscript::detail::Dispatch_State &t_ss) const override
         {
