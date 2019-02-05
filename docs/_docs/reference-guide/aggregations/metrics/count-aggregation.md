@@ -39,14 +39,14 @@ POST /bank/:search?pretty
 
 {
   "_query": {
-    "state": "Indiana"
+    "contact.state": "Indiana"
   },
   "_limit": 0,
   "_check_at_least": 1000,
   "_aggs": {
     "indiana_city_count": {
       "_count": {
-        "_field": "city"
+        "_field": "contact.city"
       }
     }
   }

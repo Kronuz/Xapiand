@@ -9,21 +9,33 @@ realistic dataset. I've prepared a sample of fictitious JSON documents of
 customer bank account information. Each document has the following schema:
 
 ```json
-{
-  "firstname": "Ashley",
-  "lastname": "Clark",
-  "age": 24,
-  "gender": "female",
-  "phone": "+1 (964) 525-3462",
-  "employer": "Syntac",
-  "address": "477 Branton Street",
-  "city": "Trexlertown",
-  "state": "Indiana",
-  "email": "ashley.clark@pearlessa.co.uk",
-  "eyeColor": "green",
-  "favoriteFruit": "strawberry",
-  "account_number": 360070,
-  "balance": "2550.21"
+  {
+    "accountNumber": 121931,
+    "balance": 221.46,
+    "employer": "Globoil",
+    "name": {
+      "firstName": "Juan",
+      "lastName": "Ash"
+    },
+    "age": 24,
+    "gender": "male",
+    "contact": {
+      "address": "630 Victor Road",
+      "city": "Leyner",
+      "state": "Indiana",
+      "phone": "+1 (924) 594-3216",
+      "email": "juan.ash@globoil.co.uk"
+    },
+    "favoriteFruit": "raspberry",
+    "eyeColor": "blue",
+    "style": {
+      "clothing": {
+        "pants": "khakis",
+        "footwear": "casual shoes"
+      },
+      "hairstyle": "afro"
+    },
+    "personality": "It's hard to describe..."
 }
 ```
 
@@ -64,15 +76,15 @@ Response should be something like:
 ```json
 {
   "#database_info": {
-    "#uuid": "bdb0ce31-a0ea-450b-a14e-2f99dfdf3be6",
+    "#uuid": "06c3fdba-2490-49ff-9dc3-8f5f91bc2035",
     "#revision": 1,
     "#doc_count": 1000,
     "#last_id": 1000,
     "#doc_del": 0,
-    "#av_length": 88.864,
-    "#doc_len_lower": 88,
-    "#doc_len_upper": 94,
-    "#has_positions": false
+    "#av_length": 159.109,
+    "#doc_len_lower": 140,
+    "#doc_len_upper": 179,
+    "#has_positions": true
   }
 }
 ```
@@ -97,15 +109,15 @@ returns all documents in the bank index:
 {% capture req %}
 
 ```json
-GET /bank/:search?q=*&sort=account_number&pretty
+GET /bank/:search?q=*&sort=accountNumber&pretty
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
 Let's first dissect the search call. We are searching (`:search` endpoint) in
 the `bank` index, and the `q=*` parameter instructs Xapiand to _match all_
-documents in the index. The `sort=account_number` parameter indicates to
-sort the results using the `account_number` field of each document in an
+documents in the index. The `sort=accountNumber` parameter indicates to
+sort the results using the `accountNumber` field of each document in an
 ascending order. The `pretty` parameter just tells Xapiand to return
 pretty-printed JSON results, the same effect can be achieved by using the
 `Accept` header as in: `Accept: application/json; indent: 4`.
@@ -119,22 +131,34 @@ And the response (partially shown):
     "#matches_estimated": 1000,
     "#hits": [
       {
-        "city": "Fairview",
-        "gender": "female",
-        "balance": "1073.05",
-        "firstname": "Hester",
-        "lastname": "Blake",
-        "company": "Affluex",
-        "favoriteFruit": "strawberry",
-        "eyeColor": "brown",
-        "phone": "+1 (919) 400-3616",
-        "state": "Virgin Islands",
-        "account_number": 100123,
-        "address": "756 Strauss Street",
-        "age": 24,
-        "email": "hester.blake@affluex.net",
-        "_id": 233,
-        "#docid": 233,
+        "style": {
+          "hairstyle": "spiky",
+          "clothing": {
+            "footwear": "sneakers",
+            "shirt": "tunic",
+            "pants": "leggings"
+          }
+        },
+        "_id": 28,
+        "name": {
+          "lastName": "Thomas",
+          "firstName": "Georgia"
+        },
+        "accountNumber": 657011,
+        "age": 25,
+        "employer": "Orbalix",
+        "eyeColor": "green",
+        "contact": {
+          "city": "Greenbush",
+          "state": "Oregon",
+          "email": "georgia.thomas@orbalix.ca",
+          "phone": "+1 (965) 541-3560",
+          "address": "505 Howard Alley"
+        },
+        "favoriteFruit": "lemon",
+        "balance": 6691.46,
+        "personality": "It's hard to describe...",
+        "#docid": 1,
         "#rank": 0,
         "#weight": 0.0,
         "#percent": 100
@@ -173,7 +197,7 @@ POST /bank/:search?pretty
 
 {
   "_query": "*",
-  "_sort": "account_number"
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
@@ -263,7 +287,7 @@ It takes the form of `"{field1,field2}"`, and it selects only `field1` and
 `field2` to be returned.
 
 This example shows how to return two fields using the _Field Selector_,
-`account_number` and `balance`, from the search:
+`accountNumber` and `balance`, from the search:
 
 {% capture req %}
 
@@ -272,7 +296,7 @@ POST /bank/:search?pretty
 
 {
   "_query": "*",
-  "_selector": "{account_number,balance}"
+  "_selector": "{accountNumber,balance}"
 }
 ```
 {% endcapture %}
@@ -293,7 +317,7 @@ POST /bank/:search?pretty
 
 {
   "_query": "*",
-  "_selector": "email"
+  "_selector": "contact.email"
 }
 ```
 {% endcapture %}
@@ -350,7 +374,7 @@ GET /bank/:search?pretty
   "_aggregations": {
     "group_by_state": {
       "_values": {
-        "_field": "state",
+        "_field": "contact.state",
         "_keyed": true
       }
     }
