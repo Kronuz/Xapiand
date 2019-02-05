@@ -11,21 +11,23 @@ from [GitHub]. Once you have a local copy, procede with the
 
 ### Requirements
 
-Xapiand is written in C++14, it makes use of libev (which is included in the
-codebase), it has the following build requirements:
+Xapiand is written in C++14 and it has the following build requirements:
 
-* Clang v4.0+
 * pkg-config
-* CMake
+* Clang >= 4.0
+* CMake >= 3.5
+* perl >= 5.6 (for a few building scripts)
+* Tcl >= 8.6  (to generate unicode/unicode-data.cc)
 
 
 ### Dependencies
 
-The only external dependencies for building it are:
+Xapiand it makes use a quite few libraries: libev, Chaiscript, Xapian, LZ4,
+but most of them are all included in the codebase. The only external
+dependencies needed for building it are:
 
 * zlib
 * libpthread (internally used by the Standard C++ thread library)
-* xapian-core v1.4+ (Optionally, with patches by Kronuz applied, see [https://github.com/Kronuz/xapian.git](https://github.com/Kronuz/xapian.git))
 
 
 ## Building process
@@ -70,9 +72,8 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
   telling ninja to use `<number of cores> - 1` jobs. Example, for a system with
   4 CPU cores: `ninja -j3`.
 
-* When building sanitized versions of Xapiand, you'll need
-  [sanitized versions of xapian]({{ '/docs/building-xapian/#building-sanitized-libraries' | relative_url }})
-  and **Configure the Build** using the proper library (for ASAN, for example):
+* When building sanitized versions of Xapiand, you'll need to
+  **Configure the Build** using the proper library (for ASAN, for example):
 
     ```sh
 ~/Xapiand/build $ cmake -GNinja -DASAN=ON ..
