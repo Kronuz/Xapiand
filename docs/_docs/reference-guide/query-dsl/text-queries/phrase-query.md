@@ -12,6 +12,7 @@ GET /bank/:search?pretty
 {
   "_query": {
     "personality": "\"these days are few and far between\""
+  }
 }
 ```
 {% endcapture %}
