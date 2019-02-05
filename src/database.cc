@@ -1292,11 +1292,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
-#if XAPIAN_AT_LEAST(1, 5, 0)
 			result = wdb->remove_spelling(word, freqdec);
-#else
-			wdb->remove_spelling(word, freqdec);
-#endif
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {

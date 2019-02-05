@@ -323,7 +323,6 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 	reset();
 	lock_database lk_db(this);
 
-#if XAPIAN_AT_LEAST(1, 5, 0)
 	const Xapian::TermIterator end = db()->allterms_end(prefix);
 	for (Xapian::TermIterator t = db()->allterms_begin(prefix); t != end; ++t) {
 		if unlikely(prev.size() > 255)
@@ -339,23 +338,6 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
-#else
-	const Xapian::TermIterator end = db()->allterms_end(prefix);
-	for (Xapian::TermIterator t = db()->allterms_begin(prefix); t != end; ++t) {
-		if unlikely(prev.size() > 255)
-			prev.resize(255);
-		const std::string& term = *t;
-		size_t reuse = common_prefix_length(prev, term);
-		reply = serialise_length(t.get_termfreq());
-		reply.append(1, char(reuse));
-		reply.append(term, reuse, std::string::npos);
-		send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
-		prev = term;
-	}
-	lk_db.unlock();
-
-	send_message(RemoteReplyType::REPLY_DONE, std::string());
-#endif
 }
 
 
@@ -371,7 +353,6 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 	reset();
 	lock_database lk_db(this);
 
-#if XAPIAN_AT_LEAST(1, 5, 0)
 	Xapian::TermIterator t = db()->termlist_begin(did);
 	Xapian::termcount num_terms = t.get_approx_size();
 
@@ -398,31 +379,6 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_TERMLIST, reply);
-#else
-	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(db()->get_doclength(did)));
-
-    std::string reply;
-    std::string prev;
-
-	const Xapian::TermIterator end = db()->termlist_end(did);
-	for (Xapian::TermIterator t = db()->termlist_begin(did); t != end; ++t) {
-		if unlikely(prev.size() > 255) {
-			prev.resize(255);
-		}
-		const std::string& term = *t;
-		size_t reuse = common_prefix_length(prev, term);
-		reply = serialise_length(t.get_wdf());
-		reply += serialise_length(t.get_termfreq());
-		reply.append(1, char(reuse));
-		reply.append(term, reuse, std::string::npos);
-		send_message(RemoteReplyType::REPLY_TERMLIST, reply);
-		prev = term;
-	}
-
-	lk_db.unlock();
-
-	send_message(RemoteReplyType::REPLY_DONE, std::string());
-#endif
 }
 
 
@@ -649,11 +605,7 @@ RemoteProtocolClient::msg_update(const std::string &)
 		message += serialise_length(doclen_lb);
 		message += serialise_length(db()->get_doclength_upper_bound() - doclen_lb);
 		message += (db()->has_positions() ? '1' : '0');
-#if XAPIAN_AT_LEAST(1, 4, 4)
 		message += serialise_length(db()->get_total_length());
-#else
-		message += serialise_length(db()->get_avlength() * db()->get_doccount() + .5);
-#endif
 		std::string uuid = db()->get_uuid();
 		message += uuid;
 
@@ -1173,7 +1125,6 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 	reset();
 	lock_database lk_db(this);
 
-#if XAPIAN_AT_LEAST(1, 5, 0)
 	std::string reply;
 	std::string prev = message;
 	const std::string& prefix = message;
@@ -1193,28 +1144,6 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 	lk_db.unlock();
 
 	send_message(RemoteReplyType::REPLY_METADATAKEYLIST, reply);
-
-#else
-	std::string reply;
-	std::string prev = message;
-	const std::string& prefix = message;
-	const Xapian::TermIterator end = db()->metadata_keys_end(prefix);
-	Xapian::TermIterator t = db()->metadata_keys_begin(prefix);
-	for (; t != end; ++t) {
-		if unlikely(prev.size() > 255)
-			prev.resize(255);
-		const std::string& term = *t;
-		size_t reuse = common_prefix_length(prev, term);
-		reply.assign(1, char(reuse));
-		reply.append(term, reuse, std::string::npos);
-		send_message(RemoteReplyType::REPLY_METADATAKEYLIST, reply);
-		prev = term;
-	}
-
-	lk_db.unlock();
-
-	send_message(RemoteReplyType::REPLY_DONE, std::string());
-#endif
 }
 
 
@@ -1263,11 +1192,7 @@ RemoteProtocolClient::msg_removespelling(const std::string & message)
 	reset();
 	lock_database lk_db(this);
 	auto result = database()->remove_spelling(std::string(p, p_end - p), freqdec);
-#if XAPIAN_AT_LEAST(1, 5, 0)
 	send_message(RemoteReplyType::REPLY_REMOVESPELLING, serialise_length(result));
-#else
-	ignore_unused(result);
-#endif
 }
 
 
