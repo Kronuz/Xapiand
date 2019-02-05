@@ -403,14 +403,6 @@ if (V8)
 	find_package(V8 REQUIRED)
 	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${V8_INCLUDE_DIRS}")
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${V8_LIBRARIES})
-
-elseif (CHAISCRIPT)
-	# ChaiScript Engine Library
-	####################################################################
-	find_package(CHAISCRIPT)
-	if (CHAISCRIPT_FOUND)
-		target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${CHAISCRIPT_INCLUDE_DIRS}")
-	endif ()
 endif ()
 
 
