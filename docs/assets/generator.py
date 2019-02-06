@@ -347,6 +347,8 @@ def main():
     for idx, x in enumerate(docs):
         _id = x.pop('_id')
 
+        x.pop('_schema', None)
+
         accountNumber = x.pop('accountNumber')
 
         balance = x.pop('balance')
@@ -397,6 +399,8 @@ def main():
         _, _, domain = email.partition('@')
         email = "{}.{}@{}".format(first_name.lower(), last_name.lower(), domain)
 
+        x.pop('checkin', None)
+
         x.pop('favoriteFruit', None)
         favoriteFruit = fake.fruit()
 
@@ -413,6 +417,7 @@ def main():
         personality = fake.personality(first_name=first_name, last_name=last_name, gender=gender)
 
         ###
+        x.clear()
 
         x['accountNumber'] = accountNumber
 
