@@ -50,14 +50,26 @@
 #endif
 
 
-constexpr const char RESERVED_OR[] = "_or";
 constexpr const char RESERVED_AND[] = "_and";
-constexpr const char RESERVED_XOR[] = "_xor";
+constexpr const char RESERVED_OR[] = "_or";
 constexpr const char RESERVED_NOT[] = "_not";
+constexpr const char RESERVED_AND_NOT[] = "_and_not";
+constexpr const char RESERVED_XOR[] = "_xor";
 constexpr const char RESERVED_AND_MAYBE[] = "_and_maybe";
+constexpr const char RESERVED_FILTER[] = "_filter";
+constexpr const char RESERVED_NEAR[] = "_near";
+constexpr const char RESERVED_PHRASE[] = "_phrase";
+constexpr const char RESERVED_VALUE_RANGE[] = "_value_range";
+constexpr const char RESERVED_SCALE_WEIGHT[] = "_scale_weight";
+constexpr const char RESERVED_ELITE_SET[] = "_elite_set";
+constexpr const char RESERVED_VALUE_GE[] = "_value_ge";
+constexpr const char RESERVED_VALUE_LE[] = "_value_le";
+constexpr const char RESERVED_SYNONYM[] = "_synonym";
+constexpr const char RESERVED_MAX[] = "_max";
+constexpr const char RESERVED_WILDCARD[] = "_wildcard";
 
 
-/* A domain-specific language (DSL) for query */
+// A domain-specific language (DSL) for query
 
 
 QueryDSL::QueryDSL(std::shared_ptr<Schema>  schema_)
@@ -154,6 +166,150 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 
 
 inline Xapian::Query
+QueryDSL::process_and(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_and(...)");
+
+	return process(Xapian::Query::OP_AND, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_or(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_or(...)");
+
+	return process(Xapian::Query::OP_OR, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_and_not(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_and_not(...)");
+
+	return process(Xapian::Query::OP_AND_NOT, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_xor(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_xor(...)");
+
+	return process(Xapian::Query::OP_XOR, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_and_maybe(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_and_maybe(...)");
+
+	return process(Xapian::Query::OP_AND_MAYBE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_filter(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_filter(...)");
+
+	return process(Xapian::Query::OP_FILTER, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_near(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_near(...)");
+
+	return process(Xapian::Query::OP_NEAR, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_phrase(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_phrase(...)");
+
+	return process(Xapian::Query::OP_PHRASE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_value_range(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_value_range(...)");
+
+	return process(Xapian::Query::OP_VALUE_RANGE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_scale_weight(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_scale_weight(...)");
+
+	return process(Xapian::Query::OP_SCALE_WEIGHT, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_elite_set(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_elite_set(...)");
+
+	return process(Xapian::Query::OP_ELITE_SET, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_value_ge(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_value_ge(...)");
+
+	return process(Xapian::Query::OP_VALUE_GE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_value_le(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_value_le(...)");
+
+	return process(Xapian::Query::OP_VALUE_LE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_synonym(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_synonym(...)");
+
+	return process(Xapian::Query::OP_SYNONYM, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_max(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+{
+	L_CALL("QueryDSL::process_max(...)");
+
+	return process(Xapian::Query::OP_MAX, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+}
+
+
+inline Xapian::Query
+QueryDSL::process_wildcard(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool /*unused*/)
+{
+	L_CALL("QueryDSL::process_wildcard(...)");
+
+	return process(Xapian::Query::OP_WILDCARD, parent, obj, wqf, q_flags, is_raw, is_in, true);
+}
+
+
+inline Xapian::Query
 QueryDSL::process_in(std::string_view /*unused*/, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool /*unused*/, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_in(...)");
@@ -190,150 +346,6 @@ QueryDSL::process_value(std::string_view /*unused*/, Xapian::Query::op /*unused*
 
 
 inline Xapian::Query
-QueryDSL::process_and(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_and(...)");
-
-	return process(Xapian::Query::OP_AND, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_and_maybe(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_and_maybe(...)");
-
-	return process(Xapian::Query::OP_AND_MAYBE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_and_not(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_and_not(...)");
-
-	return process(Xapian::Query::OP_AND_NOT, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_elite_set(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_elite_set(...)");
-
-	return process(Xapian::Query::OP_ELITE_SET, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_filter(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_filter(...)");
-
-	return process(Xapian::Query::OP_FILTER, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_max(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_max(...)");
-
-	return process(Xapian::Query::OP_MAX, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_near(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_near(...)");
-
-	return process(Xapian::Query::OP_NEAR, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_or(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_or(...)");
-
-	return process(Xapian::Query::OP_OR, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_phrase(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_phrase(...)");
-
-	return process(Xapian::Query::OP_PHRASE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_scale_weight(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_scale_weight(...)");
-
-	return process(Xapian::Query::OP_SCALE_WEIGHT, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_synonym(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_synonym(...)");
-
-	return process(Xapian::Query::OP_SYNONYM, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_value_ge(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_value_ge(...)");
-
-	return process(Xapian::Query::OP_VALUE_GE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_value_le(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_value_le(...)");
-
-	return process(Xapian::Query::OP_VALUE_LE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_value_range(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_value_range(...)");
-
-	return process(Xapian::Query::OP_VALUE_RANGE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_wildcard(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool /*unused*/)
-{
-	L_CALL("QueryDSL::process_wildcard(...)");
-
-	return process(Xapian::Query::OP_WILDCARD, parent, obj, wqf, q_flags, is_raw, is_in, true);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_xor(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_xor(...)");
-
-	return process(Xapian::Query::OP_XOR, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
 QueryDSL::process_cast(std::string_view word, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_cast(%s, ...)", repr(word));
@@ -363,27 +375,30 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 
 				Xapian::Query query;
 				constexpr static auto _ = phf::make_phf({
+					// Compound query clauses
+					hh(RESERVED_AND),
+					hh(RESERVED_OR),
+					hh(RESERVED_NOT),
+					hh(RESERVED_AND_NOT),
+					hh(RESERVED_XOR),
+					hh(RESERVED_AND_MAYBE),
+					hh(RESERVED_FILTER),
+					hh(RESERVED_NEAR),
+					hh(RESERVED_PHRASE),
+					hh(RESERVED_VALUE_RANGE),
+					hh(RESERVED_SCALE_WEIGHT),
+					hh(RESERVED_ELITE_SET),
+					hh(RESERVED_VALUE_GE),
+					hh(RESERVED_VALUE_LE),
+					hh(RESERVED_SYNONYM),
+					hh(RESERVED_MAX),
+					hh(RESERVED_WILDCARD),
+					// Leaf query clauses.
 					hh(QUERYDSL_IN),
 					hh(QUERYDSL_RANGE),
 					hh(QUERYDSL_RAW),
 					hh(RESERVED_VALUE),
-					hh(RESERVED_AND),
-					hh(RESERVED_AND_MAYBE),
-					hh("_and_not"),
-					hh("_elite_set"),
-					hh("_filter"),
-					hh("_max"),
-					hh("_near"),
-					hh(RESERVED_NOT),
-					hh(RESERVED_OR),
-					hh("_phrase"),
-					hh("_scale_weight"),
-					hh("_synonym"),
-					hh("_value_ge"),
-					hh("_value_le"),
-					hh("_value_range"),
-					hh("_wildcard"),
-					hh(RESERVED_XOR),
+					// Reserved cast words
 					hh(RESERVED_FLOAT),
 					hh(RESERVED_POSITIVE),
 					hh(RESERVED_INTEGER),
@@ -407,6 +422,58 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					hh(RESERVED_GEO_INTERSECTION),
 				});
 				switch (_.fhh(field_name)) {
+					// Compound query clauses
+					case _.fhh(RESERVED_AND):
+						query = process_and(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_OR):
+						query = process_or(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_NOT):
+						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_AND_NOT):
+						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_XOR):
+						query = process_xor(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_AND_MAYBE):
+						query = process_and_maybe(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_FILTER):
+						query = process_filter(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_NEAR):
+						query = process_near(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_PHRASE):
+						query = process_phrase(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_VALUE_RANGE):
+						query = process_value_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_SCALE_WEIGHT):
+						query = process_scale_weight(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_ELITE_SET):
+						query = process_elite_set(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_VALUE_GE):
+						query = process_value_ge(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_VALUE_LE):
+						query = process_value_le(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_SYNONYM):
+						query = process_synonym(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_MAX):
+						query = process_max(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
+					case _.fhh(RESERVED_WILDCARD):
+						query = process_wildcard(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+						break;
 					// Leaf query clauses.
 					case _.fhh(QUERYDSL_IN):
 						query = process_in(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
@@ -419,58 +486,6 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 						break;
 					case _.fhh(RESERVED_VALUE):
 						query = process_value(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					// Compound query clauses
-					case _.fhh(RESERVED_AND):
-						query = process_and(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_AND_MAYBE):
-						query = process_and_maybe(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_and_not"):
-						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_elite_set"):
-						query = process_elite_set(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_filter"):
-						query = process_filter(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_max"):
-						query = process_max(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_near"):
-						query = process_near(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_NOT):
-						query = process_and_not(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_OR):
-						query = process_or(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_phrase"):
-						query = process_phrase(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_scale_weight"):
-						query = process_scale_weight(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_synonym"):
-						query = process_synonym(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_value_ge"):
-						query = process_value_ge(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_value_le"):
-						query = process_value_le(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_value_range"):
-						query = process_value_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh("_wildcard"):
-						query = process_wildcard(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_XOR):
-						query = process_xor(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					// Reserved cast words
 					case _.fhh(RESERVED_FLOAT):
