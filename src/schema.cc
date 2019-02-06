@@ -4481,8 +4481,10 @@ Schema::validate_required_namespace_data()
 			specification.language = default_spc.language;
 			if (!specification.language.empty()) {
 				specification.stop_strategy = default_spc.stop_strategy;
+			}
+			specification.stem_language = default_spc.stem_language;
+			if (!specification.stem_language.empty()) {
 				specification.stem_strategy = default_spc.stem_strategy;
-				specification.stem_language = default_spc.stem_language;
 			}
 			specification.flags.concrete = true;
 			break;
@@ -4634,11 +4636,13 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			if (!specification.language.empty()) {
 				mut_properties[RESERVED_LANGUAGE] = specification.language;
 				mut_properties[RESERVED_STOP_STRATEGY] = _get_str_stop_strategy(specification.stop_strategy);
-				mut_properties[RESERVED_STEM_STRATEGY] = _get_str_stem_strategy(specification.stem_strategy);
-				if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
-					specification.stem_language = specification.aux_language;
-				}
+			}
+			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
+				specification.stem_language = specification.aux_language;
+			}
+			if (!specification.stem_language.empty()) {
 				mut_properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
+				mut_properties[RESERVED_STEM_STRATEGY] = _get_str_stem_strategy(specification.stem_strategy);
 			}
 
 			specification.flags.concrete = true;
@@ -5163,9 +5167,11 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		case FieldType::TEXT: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
-			if (!field_spc.language.empty()) {
-				// term_generator.set_stopper(getStopper(field_spc.language).get());
-				// term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+			// if (!field_spc.language.empty()) {
+			// 	term_generator.set_stopper(getStopper(field_spc.language).get());
+			// 	term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+			// }
+			if (!field_spc.stem_language.empty()) {
 				term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
 				term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));
 			}
@@ -9002,13 +9008,15 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 						if (stop_strategy_it != it_e) {
 							res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
 						}
+					}
+					auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
+					if (stem_language_it != it_e) {
+						res.stem_language = stem_language_it.value().str();
+					}
+					if (!res.stem_language.empty()) {
 						auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
 						if (stem_strategy_it != it_e) {
 							res.stem_strategy = _get_stem_strategy(stem_strategy_it.value().str_view());
-						}
-						auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
-						if (stem_language_it != it_e) {
-							res.stem_language = stem_language_it.value().str();
 						}
 					}
 					break;
@@ -9048,13 +9056,15 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 						if (stop_strategy_it != it_e) {
 							res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
 						}
+					}
+					auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
+					if (stem_language_it != it_e) {
+						res.stem_language = stem_language_it.value().str();
+					}
+					if (!res.stem_language.empty()) {
 						auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
 						if (stem_strategy_it != it_e) {
 							res.stem_strategy = _get_stem_strategy(stem_strategy_it.value().str_view());
-						}
-						auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
-						if (stem_language_it != it_e) {
-							res.stem_language = stem_language_it.value().str();
 						}
 					}
 					break;
@@ -9139,13 +9149,15 @@ Schema::get_slot_field(std::string_view field_name) const
 					if (stop_strategy_it != it_e) {
 						res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
 					}
+				}
+				auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
+				if (stem_language_it != it_e) {
+					res.stem_language = stem_language_it.value().str();
+				}
+				if (!res.stem_language.empty()) {
 					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
 					if (stem_strategy_it != it_e) {
 						res.stem_strategy = _get_stem_strategy(stem_strategy_it.value().str_view());
-					}
-					auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
-					if (stem_language_it != it_e) {
-						res.stem_language = stem_language_it.value().str();
 					}
 				}
 				break;
