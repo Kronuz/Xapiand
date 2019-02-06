@@ -834,10 +834,9 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				q_flags |= Xapian::QueryParser::FLAG_PARTIAL;
 			}
 			Xapian::QueryParser parser;
-			const auto& stopper = getStopper(field_spc.language);
-			parser.set_stopper(stopper.get());
-			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
+			parser.set_stopper(getStopper(field_spc.language).get());
 			parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
+			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 			return parser.parse_query(std::string(serialised_term), q_flags, field_spc.prefix() + field_spc.get_ctype());
 		}
 
