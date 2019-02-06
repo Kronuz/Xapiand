@@ -878,7 +878,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 
 	const auto it = obj.begin();
 	const auto field_name = it->str_view();
-	if (field_name.compare(QUERYDSL_RANGE) == 0) {
+	if (field_name == QUERYDSL_RANGE) {
 		const auto& value = it.value();
 		if (!value.is_map()) {
 			THROW(QueryDslError, "%s must be object [%s]", repr(field_name), repr(value.to_string()));
@@ -929,7 +929,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 {
 	L_CALL("Query::make_dsl_query(%s)", repr(query));
 
-	if (query.empty() || query.compare("*") == 0) {
+	if (query.empty() || query == "*") {
 		return "*";
 	}
 
@@ -1201,7 +1201,7 @@ QueryDSL::get_query(const MsgPack& obj)
 
 	Xapian::Query query;
 
-	if (obj.is_string() && obj.str_view().compare("*") == 0) {
+	if (obj.is_string() && obj.str_view() == "*") {
 		query = Xapian::Query(std::string());
 	} else {
 		query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false, false);
