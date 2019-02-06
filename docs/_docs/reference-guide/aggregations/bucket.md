@@ -114,8 +114,10 @@ POST /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-Ordering the buckets by single value metrics sub-aggregation (identified by the
-aggregation name):
+#### Ordering by Sub Aggregations
+
+Ordering the buckets by **single value** metrics sub-aggregation (identified by
+the aggregation name):
 
 {% capture req %}
 
@@ -129,7 +131,7 @@ POST /bank/:search?pretty
   "_aggs": {
     "balance_by_state": {
       "_values": {
-        "_field": "state",
+        "_field": "contact.state",
         "_sort": { "max_balance_count._max": "asc" }
       },
       "_aggs": {
@@ -147,8 +149,8 @@ POST /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-Ordering the buckets by multi value metrics sub-aggregation (identified by the
-aggregation name):
+Ordering the buckets by **multi value** metrics sub-aggregation (identified by
+the aggregation name):
 
 {% capture req %}
 
@@ -162,7 +164,7 @@ POST /bank/:search?pretty
   "_aggs": {
     "balance_by_state": {
       "_values": {
-        "_field": "state",
+        "_field": "contact.state",
         "_sort": { "balance_stats._max": "asc" }
       },
       "_aggs": {
@@ -180,6 +182,13 @@ POST /bank/:search?pretty
 {% include curl.html req=req %}
 
 
+#### Deep Ordering
+
+{: .note .unreleased}
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
+
 It is also possible to order the buckets based on a "deeper" aggregation in the
 hierarchy. This is supported as long as the aggregations path are of a
 _single-bucket_ type, where the last aggregation in the path may either be a
@@ -189,11 +198,6 @@ it's a metrics one, the same rules as above apply (where the path must indicate
 the metric name to sort by in case of a multi-value metrics aggregation, and in
 case of a single-value metrics aggregation the sort will be applied on that
 value).
-
-{: .note .unreleased}
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
 
 {% capture req %}
 
@@ -207,13 +211,13 @@ POST /bank/:search?pretty
   "_aggs": {
     "states": {
       "_values": {
-        "_field": "state",
+        "_field": "contact.state",
         "_sort": { "cities.*.balance_stats._max": "asc" }
       },
       "_aggs": {
         "cities": {
           "_values": {
-            "_field": "city"
+            "_field": "contact.city"
           },
           "_aggs": {
             "balance_stats": {
@@ -231,11 +235,13 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
+
 ### Limit
 
 The maximum number of buckets allowed in a single response is not currently
 hard limited, but the default is 10,000 buckets. The `<limit_count>` in the
 `_limit` option is a positive integer number used for changing this default.
+
 
 ### Response Format
 By default, the buckets are returned as an ordered array. It is also possible
