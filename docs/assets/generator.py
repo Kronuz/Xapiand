@@ -414,23 +414,6 @@ def main():
 
         ###
 
-        if not idx:
-            x['_schema'] = {
-                'schema': {
-                    'checkin': {
-                        '_type': 'geospatial',
-                    },
-                    'personality': {
-                        '_type': 'text',
-                        '_language': 'en',
-                    },
-                    'style': {
-                        '_namespace': True,
-                        '_partial_paths': True,
-                    },
-                },
-            }
-
         x['accountNumber'] = accountNumber
 
         x['balance'] = balance
@@ -466,6 +449,8 @@ def main():
 
         if pants or shirt or footwear or hairstyle:
             x['style'] = OrderedDict()
+            x['style']['_namespace'] = True
+            x['style']['_partial_paths'] = True
             if pants or shirt or footwear:
                 x['style']['clothing'] = OrderedDict()
                 if pants:
@@ -477,7 +462,11 @@ def main():
             if hairstyle:
                 x['style']['hairstyle'] = hairstyle
 
-        x['personality'] = personality
+        x['personality'] = {
+            '_type': 'text',
+            '_language': 'en',
+            '_value': personality,
+        }
 
         x['_id'] = _id
 
