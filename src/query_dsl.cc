@@ -846,10 +846,10 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 		}
 
 		case FieldType::KEYWORD: {
-			std::string lower;
+			std::string serialised_term_holder;
 			if (!field_spc.flags.bool_term) {
-				lower = string::lower(serialised_term);
-				serialised_term = lower;
+				serialised_term_holder = string::lower(serialised_term);
+				serialised_term = serialised_term_holder;
 			}
 			if (string::endswith(serialised_term, '*')) {
 				serialised_term.remove_suffix(1);
