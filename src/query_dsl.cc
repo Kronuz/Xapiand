@@ -911,7 +911,9 @@ QueryDSL::make_dsl_query(const query_field_t& e)
 	L_CALL("Query::make_dsl_query(<query_field_t>)");
 
 	MsgPack dsl(MsgPack::Type::MAP);
-	if (e.query.size() == 1) {
+	if (e.query.empty()) {
+		dsl = "*";
+	} else if (e.query.size() == 1) {
 		dsl = make_dsl_query(*e.query.begin());
 	} else {
 		for (const auto& query : e.query) {
@@ -927,7 +929,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 {
 	L_CALL("Query::make_dsl_query(%s)", repr(query));
 
-	if (query.compare("*") == 0) {
+	if (query.empty() || query.compare("*") == 0) {
 		return "*";
 	}
 
