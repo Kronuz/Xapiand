@@ -225,17 +225,30 @@ GeoSpatial::getPoints(const data_t& data, const MsgPack& latitude, const MsgPack
 Point
 GeoSpatial::make_point(const MsgPack& o)
 {
-	if (!o.is_map()) {
-		THROW(GeoSpatialError, "%s must be map", RESERVED_POINT);
-	}
-	const auto data = get_data(o);
-	if ((data.lat == nullptr) || (data.lon == nullptr)) {
-		THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POINT, GEO_LATITUDE, GEO_LONGITUDE);
-	}
-	try {
-		return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.height != nullptr ? data.height->f64() : 0, data.units, data.srid));
-	} catch (const msgpack::type_error&) {
-		THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+
+	switch (o.getType()) {
+		case MsgPack::Type::MAP: {
+			const auto data = get_data(o);
+			if ((data.lat == nullptr) || (data.lon == nullptr)) {
+				THROW(GeoSpatialError, "%s must contain %s and %s", RESERVED_POINT, GEO_LATITUDE, GEO_LONGITUDE);
+			}
+			try {
+				return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.height != nullptr ? data.height->f64() : 0, data.units, data.srid));
+			} catch (const msgpack::type_error&) {
+				THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			}
+		}
+		case MsgPack::Type::ARRAY:
+			if (o.size() != 2) {
+				THROW(GeoSpatialError, "Expected array of [latitude, longitude]");
+			}
+			try{
+				return Point(Cartesian(o[0].f64(), o[1].f64(), 0, Cartesian::Units::DEGREES));
+			} catch (const msgpack::type_error&) {
+				THROW(GeoSpatialError, "%s, %s and %s must be numeric", GEO_LATITUDE, GEO_LONGITUDE, GEO_HEIGHT);
+			}
+		default:
+			THROW(GeoSpatialError, "%s must be map", RESERVED_POINT);
 	}
 }
 
