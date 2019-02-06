@@ -40,6 +40,7 @@
 #include "multivalue/range.h"                  // for MultipleValueRange
 #include "repr.hh"                             // for repr
 #include "serialise.h"                         // for MsgPack, get_range_type...
+#include "stopper.h"                           // for getStopper
 #include "string.hh"                           // for string::startswith
 
 
@@ -837,25 +838,12 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			if (is_wildcard) {
 				q_flags |= Xapian::QueryParser::FLAG_PARTIAL;
 			}
-			// const auto& stopper = getStopper(field_spc.language);
-			// parser.set_stopper(stopper.get());
+			const auto& stopper = getStopper(field_spc.language);
+			parser.set_stopper(stopper.get());
 			parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 			parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
 			return parser.parse_query("_:" + std::string(serialised_term), q_flags);
 		}
-
-		// case FieldType::STRING: {
-		// 	Xapian::QueryParser parser;
-		// 	if (field_spc.flags.bool_term) {
-		// 		parser.add_boolean_prefix("_", field_spc.prefix() + field_spc.get_ctype());
-		// 	} else {
-		// 		parser.add_prefix("_", field_spc.prefix() + field_spc.get_ctype());
-		// 	}
-		// 	if (is_wildcard) {
-		// 		q_flags |= Xapian::QueryParser::FLAG_PARTIAL;
-		// 	}
-		// 	return parser.parse_query("_:" + std::string(serialised_term), q_flags);
-		// }
 
 		case FieldType::KEYWORD: {
 			std::string lower;
