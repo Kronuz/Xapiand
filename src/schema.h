@@ -238,6 +238,22 @@ inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(S
 }
 
 
+// Waiting for QueryParser::stop_strategy()
+// https://trac.xapian.org/ticket/750
+// inline constexpr Xapian::QueryParser::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
+// 	switch (stop_strategy) {
+// 		case StopStrategy::STOP_NONE:
+// 			return Xapian::QueryParser::STOP_NONE;
+// 		case StopStrategy::STOP_ALL:
+// 			return Xapian::QueryParser::STOP_ALL;
+// 		case StopStrategy::STOP_STEMMED:
+// 			return Xapian::QueryParser::STOP_STEMMED;
+// 		default:
+// 			THROW(Error, "Schema is corrupt: invalid stop strategy");
+// 	}
+// }
+
+
 inline constexpr Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
 		case StemStrategy::STEM_NONE:

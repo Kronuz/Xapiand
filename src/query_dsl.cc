@@ -836,6 +836,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			Xapian::QueryParser parser;
 			if (!field_spc.language.empty()) {
 				parser.set_stopper(getStopper(field_spc.language).get());
+				// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
 			}
 			if (!field_spc.stem_language.empty()) {
 				parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
