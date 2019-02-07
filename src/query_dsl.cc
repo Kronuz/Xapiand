@@ -64,10 +64,13 @@ constexpr const char RESERVED_QUERYDSL_AND_NOT[]            = RESERVED__ "and_no
 constexpr const char RESERVED_QUERYDSL_XOR[]                = RESERVED__ "xor";
 constexpr const char RESERVED_QUERYDSL_AND_MAYBE[]          = RESERVED__ "and_maybe";
 constexpr const char RESERVED_QUERYDSL_FILTER[]             = RESERVED__ "filter";
+constexpr const char RESERVED_QUERYDSL_NEAR[]               = RESERVED__ "near";
+constexpr const char RESERVED_QUERYDSL_PHRASE[]             = RESERVED__ "phrase";
 constexpr const char RESERVED_QUERYDSL_SCALE_WEIGHT[]       = RESERVED__ "scale_weight";
 constexpr const char RESERVED_QUERYDSL_ELITE_SET[]          = RESERVED__ "elite_set";
 constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
 constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
+constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
 
 
 // A domain-specific language (DSL) for query
@@ -202,10 +205,13 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_QUERYDSL_XOR),
 						hh(RESERVED_QUERYDSL_AND_MAYBE),
 						hh(RESERVED_QUERYDSL_FILTER),
+						hh(RESERVED_QUERYDSL_NEAR),
+						hh(RESERVED_QUERYDSL_PHRASE),
 						hh(RESERVED_QUERYDSL_SCALE_WEIGHT),
 						hh(RESERVED_QUERYDSL_ELITE_SET),
 						hh(RESERVED_QUERYDSL_SYNONYM),
 						hh(RESERVED_QUERYDSL_MAX),
+						hh(RESERVED_QUERYDSL_WILDCARD),
 						// Leaf query clauses.
 						hh(RESERVED_QUERYDSL_IN),
 						hh(RESERVED_QUERYDSL_RAW),
@@ -257,6 +263,12 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						case _.fhh(RESERVED_QUERYDSL_FILTER):
 							query = process(Xapian::Query::OP_FILTER, path, o, wqf, flags);
 							break;
+						case _.fhh(RESERVED_QUERYDSL_NEAR):
+							query = process(Xapian::Query::OP_NEAR, path, o, wqf, flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_PHRASE):
+							query = process(Xapian::Query::OP_PHRASE, path, o, wqf, flags);
+							break;
 						case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
 							// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
 							query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, wqf, flags);
@@ -269,6 +281,9 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 							break;
 						case _.fhh(RESERVED_QUERYDSL_MAX):
 							query = process(Xapian::Query::OP_MAX, path, o, wqf, flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_WILDCARD):
+							query = process(Xapian::Query::OP_WILDCARD, path, o, wqf, flags);
 							break;
 						// Leaf query clauses.
 						case _.fhh(RESERVED_QUERYDSL_IN):
