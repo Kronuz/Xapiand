@@ -188,12 +188,44 @@ GET /bank/:search?pretty
 
 ## Elite Set
 
-* `_elite_set`    - Pick the best N subqueries and combine with `_or`.
+Picks the best _N_ subqueries and combine them with `_or`.
+
+If you want to find documents similar to a piece of text, an obvious approach
+is to build an `_or` query from all the terms in the text, and run this query
+against a database containing the documents. However such a query can contain
+lots of terms and be quite slow to perform, yet many of these terms don't
+contribute usefully to the results.
+
+The `_elite_set` operator can be used instead of `_or` in this situation.
+`_elite_set` selects the **most important** _N_ terms and then acts as an `_or`
+query with just these, ignoring any other terms. This will usually return
+results just as good as the full `_or` query, but much faster.
+
+In general, the `_elite_set` operator can be used when you have a large OR
+query, but it doesn't matter if the search completely ignores some of the less
+important terms in the query.
+
+The subqueries don't have to be terms, but if they aren't then `_elite_set`
+will look at the estimated frequencies of the subqueries and so could pick a
+subset which don't actually match any documents even if the full OR would
+match some.
+
+You can specify a parameter to the query constructor which control the number
+of terms which `_elite_set` will pick. If not specified, this defaults to _10_.
+
+If the number of subqueries is less than this threshold, `_elite_set`
+behaves identically to `_or`.
+
+For example, this will pick the best 7 terms:
 
 
 ## Additional Operators
 
-* `_max`          - Pick the maximum weight of any subquery.
+* `_max`          - Pick the maximum weight of any subquery. This matches the
+                    same documents as a `_or`, but the weight contributed is
+                    the maximum weight from any matching subquery (for `_or`,
+                    it's the sum of the weights from the matching subqueries).
+
 
 <!--
 * `_wildcard`     - Wildcard expansion.
