@@ -379,6 +379,9 @@ Cast::getHash(std::string_view cast_word)
 FieldType
 Cast::getType(std::string_view cast_word)
 {
+	if (cast_word.empty() || cast_word[0] != reserved__) {
+		THROW(CastError, "Unknown cast type %s", repr(cast_word));
+	}
 	switch (getHash(cast_word)) {
 		case Hash::INTEGER:           return FieldType::INTEGER;
 		case Hash::POSITIVE:          return FieldType::POSITIVE;

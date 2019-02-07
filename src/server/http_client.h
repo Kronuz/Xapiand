@@ -136,21 +136,21 @@ enum class Encoding {
 
 // Available commands
 
-constexpr const char COMMAND_CHECK[]       = COMMAND_PREFIX "check";
-constexpr const char COMMAND_COMMIT[]      = COMMAND_PREFIX "commit";
-constexpr const char COMMAND_COUNT[]       = COMMAND_PREFIX "count";
-constexpr const char COMMAND_DUMP[]        = COMMAND_PREFIX "dump";
-constexpr const char COMMAND_FLUSH[]       = COMMAND_PREFIX "flush";
-constexpr const char COMMAND_INFO[]        = COMMAND_PREFIX "info";
-constexpr const char COMMAND_METADATA[]    = COMMAND_PREFIX "metadata";
-constexpr const char COMMAND_METRICS[]     = COMMAND_PREFIX "metrics";
-constexpr const char COMMAND_NODES[]       = COMMAND_PREFIX "nodes";
-constexpr const char COMMAND_QUIT[]        = COMMAND_PREFIX "quit";
-constexpr const char COMMAND_RESTORE[]     = COMMAND_PREFIX "restore";
-constexpr const char COMMAND_SCHEMA[]      = COMMAND_PREFIX "schema";
-constexpr const char COMMAND_SEARCH[]      = COMMAND_PREFIX "search";
-constexpr const char COMMAND_TOUCH[]       = COMMAND_PREFIX "touch";
-constexpr const char COMMAND_WAL[]         = COMMAND_PREFIX "wal";
+constexpr const char COMMAND_CHECK[]       = COMMAND__ "check";
+constexpr const char COMMAND_COMMIT[]      = COMMAND__ "commit";
+constexpr const char COMMAND_COUNT[]       = COMMAND__ "count";
+constexpr const char COMMAND_DUMP[]        = COMMAND__ "dump";
+constexpr const char COMMAND_FLUSH[]       = COMMAND__ "flush";
+constexpr const char COMMAND_INFO[]        = COMMAND__ "info";
+constexpr const char COMMAND_METADATA[]    = COMMAND__ "metadata";
+constexpr const char COMMAND_METRICS[]     = COMMAND__ "metrics";
+constexpr const char COMMAND_NODES[]       = COMMAND__ "nodes";
+constexpr const char COMMAND_QUIT[]        = COMMAND__ "quit";
+constexpr const char COMMAND_RESTORE[]     = COMMAND__ "restore";
+constexpr const char COMMAND_SCHEMA[]      = COMMAND__ "schema";
+constexpr const char COMMAND_SEARCH[]      = COMMAND__ "search";
+constexpr const char COMMAND_TOUCH[]       = COMMAND__ "touch";
+constexpr const char COMMAND_WAL[]         = COMMAND__ "wal";
 
 #define COMMAND_OPTIONS() \
 	OPTION(CHECK) \

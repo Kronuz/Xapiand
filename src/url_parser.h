@@ -27,7 +27,8 @@
 #include "string_view.hh"    // for std::string_view
 
 
-#define COMMAND_PREFIX ":"
+#define COMMAND__ ":"
+constexpr const char command__ = COMMAND__[0];
 
 
 std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=');

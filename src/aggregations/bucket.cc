@@ -47,9 +47,9 @@ FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view na
 		THROW(AggregationError, "%s must be object", repr(filter_conf.to_string()));
 	}
 
-	const auto term_filter_it = filter_conf.find(AGGREGATION_TERM);
+	const auto term_filter_it = filter_conf.find(RESERVED_AGGS_TERM);
 	if (term_filter_it == filter_conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_TERM, repr(filter_conf.to_string()));
+		THROW(AggregationError, "'%s' must be specified in %s", RESERVED_AGGS_TERM, repr(filter_conf.to_string()));
 	}
 	const auto& term_filter_conf = term_filter_it.value();
 	if (!term_filter_conf.is_map()) {

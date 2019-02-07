@@ -41,7 +41,7 @@
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
-#include "query_dsl.h"                      // for QUERYDSL_QUERY, QueryDSL
+#include "query_dsl.h"                      // for RESERVED_QUERYDSL_*, QueryDSL
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
 #include "schema.h"                         // for Schema, required_spc_t
@@ -1264,41 +1264,41 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		case HTTP_POST: {
 			QueryDSL query_object(schema);
 
-			if (qdsl && qdsl->find(QUERYDSL_SORT) != qdsl->end()) {
-				auto value = qdsl->at(QUERYDSL_SORT);
+			if (qdsl && qdsl->find(RESERVED_QUERYDSL_SORT) != qdsl->end()) {
+				auto value = qdsl->at(RESERVED_QUERYDSL_SORT);
 				query_object.get_sorter(sorter, value);
 			}
 
-			if (qdsl && qdsl->find(QUERYDSL_QUERY) != qdsl->end()) {
-				query = query_object.get_query(qdsl->at(QUERYDSL_QUERY));
+			if (qdsl && qdsl->find(RESERVED_QUERYDSL_QUERY) != qdsl->end()) {
+				query = query_object.get_query(qdsl->at(RESERVED_QUERYDSL_QUERY));
 			} else {
 				query = query_object.get_query(query_object.make_dsl_query(query_field));
 			}
 
-			if (qdsl && qdsl->find(QUERYDSL_OFFSET) != qdsl->end()) {
-				auto value = qdsl->at(QUERYDSL_OFFSET);
+			if (qdsl && qdsl->find(RESERVED_QUERYDSL_OFFSET) != qdsl->end()) {
+				auto value = qdsl->at(RESERVED_QUERYDSL_OFFSET);
 				if (value.is_integer()) {
 					offset = value.as_u64();
 				} else {
-					THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_OFFSET);
+					THROW(ClientError, "The %s must be a unsigned int", RESERVED_QUERYDSL_OFFSET);
 				}
 			}
 
-			if (qdsl && qdsl->find(QUERYDSL_LIMIT) != qdsl->end()) {
-				auto value = qdsl->at(QUERYDSL_LIMIT);
+			if (qdsl && qdsl->find(RESERVED_QUERYDSL_LIMIT) != qdsl->end()) {
+				auto value = qdsl->at(RESERVED_QUERYDSL_LIMIT);
 				if (value.is_integer()) {
 					limit = value.as_u64();
 				} else {
-					THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_LIMIT);
+					THROW(ClientError, "The %s must be a unsigned int", RESERVED_QUERYDSL_LIMIT);
 				}
 			}
 
-			if (qdsl && qdsl->find(QUERYDSL_CHECK_AT_LEAST) != qdsl->end()) {
-				auto value = qdsl->at(QUERYDSL_CHECK_AT_LEAST);
+			if (qdsl && qdsl->find(RESERVED_QUERYDSL_CHECK_AT_LEAST) != qdsl->end()) {
+				auto value = qdsl->at(RESERVED_QUERYDSL_CHECK_AT_LEAST);
 				if (value.is_integer()) {
 					check_at_least = value.as_u64();
 				} else {
-					THROW(ClientError, "The %s must be a unsigned int", QUERYDSL_CHECK_AT_LEAST);
+					THROW(ClientError, "The %s must be a unsigned int", RESERVED_QUERYDSL_CHECK_AT_LEAST);
 				}
 			}
 

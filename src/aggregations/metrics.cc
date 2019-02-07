@@ -68,13 +68,13 @@ ValuesHandler::ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>&
 	if (!conf.is_map()) {
 		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
 	}
-	const auto field_it = conf.find(AGGREGATION_FIELD);
+	const auto field_it = conf.find(RESERVED_AGGS_FIELD);
 	if (field_it == conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()));
+		THROW(AggregationError, "'%s' must be specified in %s", RESERVED_AGGS_FIELD, repr(conf.to_string()));
 	}
 	const auto& field_conf = field_it.value();
 	if (!field_conf.is_string()) {
-		THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
+		THROW(AggregationError, "'%s' must be string", RESERVED_AGGS_FIELD);
 	}
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_slot_field(field_name);
@@ -101,13 +101,13 @@ TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& s
 	if (!conf.is_map()) {
 		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
 	}
-	const auto field_it = conf.find(AGGREGATION_FIELD);
+	const auto field_it = conf.find(RESERVED_AGGS_FIELD);
 	if (field_it == conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", AGGREGATION_FIELD, repr(conf.to_string()));
+		THROW(AggregationError, "'%s' must be specified in %s", RESERVED_AGGS_FIELD, repr(conf.to_string()));
 	}
 	const auto& field_conf = field_it.value();
 	if (!field_conf.is_string()) {
-		THROW(AggregationError, "'%s' must be string", AGGREGATION_FIELD);
+		THROW(AggregationError, "'%s' must be string", RESERVED_AGGS_FIELD);
 	}
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_data_field(field_name).first;

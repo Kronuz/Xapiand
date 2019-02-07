@@ -22,20 +22,20 @@
 
 #include "range.h"
 
-#include <stdexcept>                // for out_of_range
-#include <sys/types.h>              // for int64_t, uint64_t
-#include <type_traits>              // for decay_t, enable_if_t, is_i...
-#include <vector>                   // for vector
+#include <stdexcept>                              // for out_of_range
+#include <sys/types.h>                            // for int64_t, uint64_t
+#include <type_traits>                            // for decay_t, enable_if_t, is_i...
+#include <vector>                                 // for vector
 
-#include "cast.h"                   // for Cast
-#include "datetime.h"               // for timestamp
-#include "exception.h"              // for MSG_QueryParserError, Quer...
-#include "generate_terms.h"         // for date, geo, numeric
-#include "geospatialrange.h"        // for GeoSpatialRange
-#include "length.h"                 // for serialise_length
-#include "query_dsl.h"              // for QUERYDSL_FROM, QUERYDSL_TO
-#include "schema.h"                 // for required_spc_t, FieldType
-#include "serialise_list.h"         // for StringList
+#include "cast.h"                                 // for Cast
+#include "datetime.h"                             // for timestamp
+#include "exception.h"                            // for MSG_QueryParserError, Quer...
+#include "generate_terms.h"                       // for date, geo, numeric
+#include "geospatialrange.h"                      // for GeoSpatialRange
+#include "length.h"                               // for serialise_length
+#include "query_dsl.h"                            // for RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO
+#include "schema.h"                               // for required_spc_t, FieldType
+#include "serialise_list.h"                       // for StringList
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
@@ -162,12 +162,12 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 	const MsgPack* start = nullptr;
 	const MsgPack* end = nullptr;
 
-	auto it = obj.find(QUERYDSL_FROM);
+	auto it = obj.find(RESERVED_QUERYDSL_FROM);
 	if (it != obj.end()) {
 		start = &it.value();
 	}
 
-	it = obj.find(QUERYDSL_TO);
+	it = obj.find(RESERVED_QUERYDSL_TO);
 	if (it != obj.end()) {
 		end = &it.value();
 	}

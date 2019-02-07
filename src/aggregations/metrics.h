@@ -34,7 +34,7 @@
 #include <utility>                  // for std::pair
 #include <vector>                   // for std::vector
 
-#include "aggregations.h"           // for BaseAggregation, AGGREGATION_*
+#include "aggregations.h"           // for BaseAggregation, RESERVED_AGGS_*
 #include "exception.h"              // for AggregationError, MSG_AggregationError
 #include "msgpack.h"                // for MsgPack, object::object
 #include "serialise_list.h"         // for StringList, RangeList
@@ -227,12 +227,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_COUNT, static_cast<uint64_t>(_count) },
+			{ RESERVED_AGGS_COUNT, static_cast<uint64_t>(_count) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_COUNT) {
+		if (field == RESERVED_AGGS_COUNT) {
 			return &_count;
 		}
 		return nullptr;
@@ -295,12 +295,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_SUM, static_cast<double>(_sum) },
+			{ RESERVED_AGGS_SUM, static_cast<double>(_sum) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_SUM) {
+		if (field == RESERVED_AGGS_SUM) {
 			return &_sum;
 		}
 		return nullptr;
@@ -350,12 +350,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_AVG, static_cast<double>(_avg) },
+			{ RESERVED_AGGS_AVG, static_cast<double>(_avg) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_AVG) {
+		if (field == RESERVED_AGGS_AVG) {
 			return &_avg;
 		}
 		return nullptr;
@@ -418,12 +418,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_MIN, static_cast<double>(_min) },
+			{ RESERVED_AGGS_MIN, static_cast<double>(_min) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_MIN) {
+		if (field == RESERVED_AGGS_MIN) {
 			return &_min;
 		}
 		return nullptr;
@@ -479,12 +479,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_MAX, static_cast<double>(_max) },
+			{ RESERVED_AGGS_MAX, static_cast<double>(_max) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_MAX) {
+		if (field == RESERVED_AGGS_MAX) {
 			return &_max;
 		}
 		return nullptr;
@@ -535,12 +535,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
+			{ RESERVED_AGGS_VARIANCE, static_cast<double>(_variance) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_VARIANCE) {
+		if (field == RESERVED_AGGS_VARIANCE) {
 			return &_variance;
 		}
 		return nullptr;
@@ -598,7 +598,7 @@ public:
 		  _sigma{2.0},
 		  _upper{0.0},
 		  _lower{0.0} {
-		const auto it = _conf.find(AGGREGATION_SIGMA);
+		const auto it = _conf.find(RESERVED_AGGS_SIGMA);
 		if (it != _conf.end()) {
 			const auto& sigma_value = it.value();
 			switch (sigma_value.getType()) {
@@ -610,36 +610,36 @@ public:
 						break;
 					}
 				default:
-					THROW(AggregationError, "'%s' must be a positive number", AGGREGATION_SIGMA);
+					THROW(AggregationError, "'%s' must be a positive number", RESERVED_AGGS_SIGMA);
 			}
 		}
 	}
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_STD, static_cast<double>(_std) },
-			{ AGGREGATION_STD_BOUNDS, {
-				{ AGGREGATION_UPPER, static_cast<double>(_upper) },
-				{ AGGREGATION_LOWER, static_cast<double>(_lower) },
+			{ RESERVED_AGGS_STD, static_cast<double>(_std) },
+			{ RESERVED_AGGS_STD_BOUNDS, {
+				{ RESERVED_AGGS_UPPER, static_cast<double>(_upper) },
+				{ RESERVED_AGGS_LOWER, static_cast<double>(_lower) },
 			}},
 		};
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {
-		if (field == AGGREGATION_STD_BOUNDS) {
+		if (field == RESERVED_AGGS_STD_BOUNDS) {
 			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds
 		}
 		return nullptr;
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_STD) {
+		if (field == RESERVED_AGGS_STD) {
 			return &_std;
 		}
-		if (field == AGGREGATION_UPPER) {
+		if (field == RESERVED_AGGS_UPPER) {
 			return &_upper;
 		}
-		if (field == AGGREGATION_LOWER) {
+		if (field == RESERVED_AGGS_LOWER) {
 			return &_lower;
 		}
 		return nullptr;
@@ -666,12 +666,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_MEDIAN, static_cast<double>(_median) },
+			{ RESERVED_AGGS_MEDIAN, static_cast<double>(_median) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_MEDIAN) {
+		if (field == RESERVED_AGGS_MEDIAN) {
 			return &_median;
 		}
 		return nullptr;
@@ -736,12 +736,12 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_MODE, static_cast<double>(_mode) },
+			{ RESERVED_AGGS_MODE, static_cast<double>(_mode) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_MODE) {
+		if (field == RESERVED_AGGS_MODE) {
 			return &_mode;
 		}
 		return nullptr;
@@ -797,28 +797,28 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_COUNT, static_cast<uint64_t>(_count) },
-			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
-			{ AGGREGATION_MAX, static_cast<double>(_max_metric._max) },
-			{ AGGREGATION_AVG, static_cast<double>(_avg) },
-			{ AGGREGATION_SUM, static_cast<double>(_sum) },
+			{ RESERVED_AGGS_COUNT, static_cast<uint64_t>(_count) },
+			{ RESERVED_AGGS_MIN, static_cast<double>(_min_metric._min) },
+			{ RESERVED_AGGS_MAX, static_cast<double>(_max_metric._max) },
+			{ RESERVED_AGGS_AVG, static_cast<double>(_avg) },
+			{ RESERVED_AGGS_SUM, static_cast<double>(_sum) },
 		};
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_COUNT) {
+		if (field == RESERVED_AGGS_COUNT) {
 			return &_count;
 		}
-		if (field == AGGREGATION_MIN) {
+		if (field == RESERVED_AGGS_MIN) {
 			return &_min_metric._min;
 		}
-		if (field == AGGREGATION_MAX) {
+		if (field == RESERVED_AGGS_MAX) {
 			return &_max_metric._max;
 		}
-		if (field == AGGREGATION_AVG) {
+		if (field == RESERVED_AGGS_AVG) {
 			return &_avg;
 		}
-		if (field == AGGREGATION_SUM) {
+		if (field == RESERVED_AGGS_SUM) {
 			return &_sum;
 		}
 		return nullptr;
@@ -869,56 +869,56 @@ public:
 
 	MsgPack get_result() override {
 		return {
-			{ AGGREGATION_COUNT, static_cast<uint64_t>(_count) },
-			{ AGGREGATION_MIN, static_cast<double>(_min_metric._min) },
-			{ AGGREGATION_MAX, static_cast<double>(_max_metric._max) },
-			{ AGGREGATION_AVG, static_cast<double>(_avg) },
-			{ AGGREGATION_SUM, static_cast<double>(_sum) },
-			{ AGGREGATION_SUM_OF_SQ, static_cast<double>(_sq_sum) },
-			{ AGGREGATION_VARIANCE, static_cast<double>(_variance) },
-			{ AGGREGATION_STD, static_cast<double>(_std) },
-			{ AGGREGATION_STD_BOUNDS, {
-				{ AGGREGATION_UPPER, static_cast<double>(_upper) },
-				{ AGGREGATION_LOWER, static_cast<double>(_lower) },
+			{ RESERVED_AGGS_COUNT, static_cast<uint64_t>(_count) },
+			{ RESERVED_AGGS_MIN, static_cast<double>(_min_metric._min) },
+			{ RESERVED_AGGS_MAX, static_cast<double>(_max_metric._max) },
+			{ RESERVED_AGGS_AVG, static_cast<double>(_avg) },
+			{ RESERVED_AGGS_SUM, static_cast<double>(_sum) },
+			{ RESERVED_AGGS_SUM_OF_SQ, static_cast<double>(_sq_sum) },
+			{ RESERVED_AGGS_VARIANCE, static_cast<double>(_variance) },
+			{ RESERVED_AGGS_STD, static_cast<double>(_std) },
+			{ RESERVED_AGGS_STD_BOUNDS, {
+				{ RESERVED_AGGS_UPPER, static_cast<double>(_upper) },
+				{ RESERVED_AGGS_LOWER, static_cast<double>(_lower) },
 			}},
 		};
 	}
 	BaseAggregation* get_agg(std::string_view field) override {
-		if (field == AGGREGATION_STD_BOUNDS) {
+		if (field == RESERVED_AGGS_STD_BOUNDS) {
 			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds
 		}
 		return nullptr;
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
-		if (field == AGGREGATION_COUNT) {
+		if (field == RESERVED_AGGS_COUNT) {
 			return &_count;
 		}
-		if (field == AGGREGATION_MIN) {
+		if (field == RESERVED_AGGS_MIN) {
 			return &_min_metric._min;
 		}
-		if (field == AGGREGATION_MAX) {
+		if (field == RESERVED_AGGS_MAX) {
 			return &_max_metric._max;
 		}
-		if (field == AGGREGATION_AVG) {
+		if (field == RESERVED_AGGS_AVG) {
 			return &_avg;
 		}
-		if (field == AGGREGATION_SUM) {
+		if (field == RESERVED_AGGS_SUM) {
 			return &_sum;
 		}
-		if (field == AGGREGATION_SUM_OF_SQ) {
+		if (field == RESERVED_AGGS_SUM_OF_SQ) {
 			return &_sq_sum;
 		}
-		if (field == AGGREGATION_VARIANCE) {
+		if (field == RESERVED_AGGS_VARIANCE) {
 			return &_variance;
 		}
-		if (field == AGGREGATION_STD) {
+		if (field == RESERVED_AGGS_STD) {
 			return &_std;
 		}
-		if (field == AGGREGATION_UPPER) {
+		if (field == RESERVED_AGGS_UPPER) {
 			return &_upper;
 		}
-		if (field == AGGREGATION_LOWER) {
+		if (field == RESERVED_AGGS_LOWER) {
 			return &_lower;
 		}
 		return nullptr;

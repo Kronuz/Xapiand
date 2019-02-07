@@ -27,7 +27,7 @@
 #include "bucket.h"                         // for FilterAggregation, Histog...
 #include "database_utils.h"                 // for is_valid
 #include "exception.h"                      // for AggregationError, MSG_Agg...
-#include "metrics.h"                        // for AGGREGATION_AVG, AGGREGAT...
+#include "metrics.h"                        // for RESERVED_AGGS_*
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "schema.h"                         // for Schema
 #include "hashes.hh"                        // for fnv1ah32
@@ -50,47 +50,47 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 	  idx{0}
 {
 	constexpr static auto _ = phf::make_phf({
-		hh(AGGREGATION_COUNT),
-		// hh(AGGREGATION_CARDINALITY),
-		hh(AGGREGATION_SUM),
-		hh(AGGREGATION_AVG),
-		hh(AGGREGATION_MIN),
-		hh(AGGREGATION_MAX),
-		hh(AGGREGATION_VARIANCE),
-		hh(AGGREGATION_STD),
-		hh(AGGREGATION_MEDIAN),
-		hh(AGGREGATION_MODE),
-		hh(AGGREGATION_STATS),
-		hh(AGGREGATION_EXT_STATS),
-		// hh(AGGREGATION_GEO_BOUNDS),
-		// hh(AGGREGATION_GEO_CENTROID),
-		// hh(AGGREGATION_PERCENTILES),
-		// hh(AGGREGATION_PERCENTILES_RANK),
-		// hh(AGGREGATION_SCRIPTED_METRIC),
-		hh(AGGREGATION_FILTER),
-		hh(AGGREGATION_VALUES),
-		hh(AGGREGATION_VALUE),
-		hh(AGGREGATION_TERMS),
-		hh(AGGREGATION_TERM),
-		// hh(AGGREGATION_DATE_HISTOGRAM),
-		// hh(AGGREGATION_DATE_RANGE),
-		// hh(AGGREGATION_GEO_DISTANCE),
-		// hh(AGGREGATION_GEO_TRIXELS),
-		hh(AGGREGATION_HISTOGRAM),
-		// hh(AGGREGATION_MISSING),
-		hh(AGGREGATION_RANGE),
-		// hh(AGGREGATION_IP_RANGE),
-		// hh(AGGREGATION_GEO_IP),
+		hh(RESERVED_AGGS_COUNT),
+		// hh(RESERVED_AGGS_CARDINALITY),
+		hh(RESERVED_AGGS_SUM),
+		hh(RESERVED_AGGS_AVG),
+		hh(RESERVED_AGGS_MIN),
+		hh(RESERVED_AGGS_MAX),
+		hh(RESERVED_AGGS_VARIANCE),
+		hh(RESERVED_AGGS_STD),
+		hh(RESERVED_AGGS_MEDIAN),
+		hh(RESERVED_AGGS_MODE),
+		hh(RESERVED_AGGS_STATS),
+		hh(RESERVED_AGGS_EXT_STATS),
+		// hh(RESERVED_AGGS_GEO_BOUNDS),
+		// hh(RESERVED_AGGS_GEO_CENTROID),
+		// hh(RESERVED_AGGS_PERCENTILES),
+		// hh(RESERVED_AGGS_PERCENTILES_RANK),
+		// hh(RESERVED_AGGS_SCRIPTED_METRIC),
+		hh(RESERVED_AGGS_FILTER),
+		hh(RESERVED_AGGS_VALUES),
+		hh(RESERVED_AGGS_VALUE),
+		hh(RESERVED_AGGS_TERMS),
+		hh(RESERVED_AGGS_TERM),
+		// hh(RESERVED_AGGS_DATE_HISTOGRAM),
+		// hh(RESERVED_AGGS_DATE_RANGE),
+		// hh(RESERVED_AGGS_GEO_DISTANCE),
+		// hh(RESERVED_AGGS_GEO_TRIXELS),
+		hh(RESERVED_AGGS_HISTOGRAM),
+		// hh(RESERVED_AGGS_MISSING),
+		hh(RESERVED_AGGS_RANGE),
+		// hh(RESERVED_AGGS_IP_RANGE),
+		// hh(RESERVED_AGGS_GEO_IP),
 	});
 
-	auto aggs_it = context.find(AGGREGATION_AGGREGATIONS);
+	auto aggs_it = context.find(RESERVED_AGGS_AGGREGATIONS);
 	if (aggs_it == context.end()) {
-		aggs_it = context.find(AGGREGATION_AGGS);
+		aggs_it = context.find(RESERVED_AGGS_AGGS);
 	}
 	if (aggs_it != context.end()) {
 		const auto& aggs = aggs_it.value();
 		if (!aggs.is_map()) {
-			THROW(AggregationError, "'%s' must be an object", AGGREGATION_AGGREGATIONS);
+			THROW(AggregationError, "'%s' must be an object", RESERVED_AGGS_AGGREGATIONS);
 		}
 		const auto it = aggs.begin();
 		const auto it_end = aggs.end();
@@ -103,96 +103,96 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 				}
 				auto sub_agg_type = sub_agg.begin()->str_view();
 				switch (_.fhh(sub_agg_type)) {
-					case _.fhh(AGGREGATION_COUNT):
+					case _.fhh(RESERVED_AGGS_COUNT):
 						add_metric<MetricCount>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					// case _.fhh(AGGREGATION_CARDINALITY):
+					// case _.fhh(RESERVED_AGGS_CARDINALITY):
 					// 	add_metric<MetricCardinality>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					case _.fhh(AGGREGATION_SUM):
+					case _.fhh(RESERVED_AGGS_SUM):
 						add_metric<MetricSum>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_AVG):
+					case _.fhh(RESERVED_AGGS_AVG):
 						add_metric<MetricAvg>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_MIN):
+					case _.fhh(RESERVED_AGGS_MIN):
 						add_metric<MetricMin>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_MAX):
+					case _.fhh(RESERVED_AGGS_MAX):
 						add_metric<MetricMax>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_VARIANCE):
+					case _.fhh(RESERVED_AGGS_VARIANCE):
 						add_metric<MetricVariance>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_STD):
+					case _.fhh(RESERVED_AGGS_STD):
 						add_metric<MetricStdDeviation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_MEDIAN):
+					case _.fhh(RESERVED_AGGS_MEDIAN):
 						add_metric<MetricMedian>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_MODE):
+					case _.fhh(RESERVED_AGGS_MODE):
 						add_metric<MetricMode>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_STATS):
+					case _.fhh(RESERVED_AGGS_STATS):
 						add_metric<MetricStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_EXT_STATS):
+					case _.fhh(RESERVED_AGGS_EXT_STATS):
 						add_metric<MetricExtendedStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					// case _.fhh(AGGREGATION_GEO_BOUNDS):
+					// case _.fhh(RESERVED_AGGS_GEO_BOUNDS):
 					// 	add_metric<MetricGeoBounds>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_GEO_CENTROID):
+					// case _.fhh(RESERVED_AGGS_GEO_CENTROID):
 					// 	add_metric<MetricGeoCentroid>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_PERCENTILES):
+					// case _.fhh(RESERVED_AGGS_PERCENTILES):
 					// 	add_metric<MetricPercentiles>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_PERCENTILES_RANK):
+					// case _.fhh(RESERVED_AGGS_PERCENTILES_RANK):
 					// 	add_metric<MetricPercentilesRank>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_SCRIPTED_METRIC):
+					// case _.fhh(RESERVED_AGGS_SCRIPTED_METRIC):
 					// 	add_metric<MetricScripted>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 
-					case _.fhh(AGGREGATION_FILTER):
+					case _.fhh(RESERVED_AGGS_FILTER):
 						add_bucket<FilterAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_VALUE):
-						L_WARNING_ONCE("Aggregation '%s' has been deprecated, use '%s' instead", AGGREGATION_VALUE, AGGREGATION_VALUES);
-					case _.fhh(AGGREGATION_VALUES):
+					case _.fhh(RESERVED_AGGS_VALUE):
+						L_WARNING_ONCE("Aggregation '%s' has been deprecated, use '%s' instead", RESERVED_AGGS_VALUE, RESERVED_AGGS_VALUES);
+					case _.fhh(RESERVED_AGGS_VALUES):
 						add_bucket<ValuesAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					case _.fhh(AGGREGATION_TERM):
-						L_WARNING_ONCE("Aggregation '%s' has been deprecated, use '%s' instead", AGGREGATION_TERM, AGGREGATION_TERMS);
-					case _.fhh(AGGREGATION_TERMS):
+					case _.fhh(RESERVED_AGGS_TERM):
+						L_WARNING_ONCE("Aggregation '%s' has been deprecated, use '%s' instead", RESERVED_AGGS_TERM, RESERVED_AGGS_TERMS);
+					case _.fhh(RESERVED_AGGS_TERMS):
 						add_bucket<TermsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					// case _.fhh(AGGREGATION_DATE_HISTOGRAM):
+					// case _.fhh(RESERVED_AGGS_DATE_HISTOGRAM):
 					// 	add_bucket<DateHistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_DATE_RANGE):
+					// case _.fhh(RESERVED_AGGS_DATE_RANGE):
 					// 	add_bucket<DateRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_GEO_DISTANCE):
+					// case _.fhh(RESERVED_AGGS_GEO_DISTANCE):
 					// 	add_bucket<GeoDistanceAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_GEO_TRIXELS):
+					// case _.fhh(RESERVED_AGGS_GEO_TRIXELS):
 					// 	add_bucket<GeoTrixelsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					case _.fhh(AGGREGATION_HISTOGRAM):
+					case _.fhh(RESERVED_AGGS_HISTOGRAM):
 						add_bucket<HistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					// case _.fhh(AGGREGATION_MISSING):
+					// case _.fhh(RESERVED_AGGS_MISSING):
 					// 	add_bucket<MissingAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					case _.fhh(AGGREGATION_RANGE):
+					case _.fhh(RESERVED_AGGS_RANGE):
 						add_bucket<RangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 						break;
-					// case _.fhh(AGGREGATION_IP_RANGE):
+					// case _.fhh(RESERVED_AGGS_IP_RANGE):
 					// 	add_bucket<IPRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
-					// case _.fhh(AGGREGATION_GEO_IP):
+					// case _.fhh(RESERVED_AGGS_GEO_IP):
 					// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					default:
@@ -229,7 +229,7 @@ MsgPack
 Aggregation::get_result()
 {
 	MsgPack result = {
-		{ AGGREGATION_DOC_COUNT, _doc_count },
+		{ RESERVED_AGGS_DOC_COUNT, _doc_count },
 	};
 	for (auto& sub_agg : _sub_aggs) {
 		result[sub_agg.first] = sub_agg.second->get_result();

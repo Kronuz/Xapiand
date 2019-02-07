@@ -22,34 +22,35 @@
 
 #pragma once
 
-#include <memory>                 // for shared_ptr
-#include <string>                 // for string
-#include "string_view.hh"         // for std::string_view
-#include <unordered_map>          // for unordered_map
-#include <unordered_set>          // for unordered_set
+#include <memory>                                 // for std::shared_ptr
+#include <string>                                 // for std::string
+#include "string_view.hh"                         // for std::string_view
+#include <unordered_map>                          // for std::unordered_map
+#include <unordered_set>                          // for std::unordered_set
 
-#include "msgpack.h"              // for MsgPack
-#include "schema.h"               // for Schema, FieldType, required_spc_t
-#include "multivalue/keymaker.h"  // for Multi_MultiValueKeyMaker"
-#include "xapian.h"               // for Query, Query::op, termcount
+#include "msgpack.h"                              // for MsgPack
+#include "multivalue/keymaker.h"                  // for Multi_MultiValueKeyMaker"
+#include "reserved.h"                             // for RESERVED__
+#include "schema.h"                               // for Schema, FieldType, required_spc_t
+#include "xapian.h"                               // for Query, Query::op, termcount
 
 
-constexpr const char QUERYDSL_FROM[]            = "_from";
-constexpr const char QUERYDSL_IN[]              = "_in";
-constexpr const char QUERYDSL_QUERY[]           = "_query";
-constexpr const char QUERYDSL_RANGE[]           = "_range";
-constexpr const char QUERYDSL_RAW[]             = "_raw";
-constexpr const char QUERYDSL_TO[]              = "_to";
-constexpr const char QUERYDSL_LIMIT[]           = "_limit";
-constexpr const char QUERYDSL_CHECK_AT_LEAST[]  = "_check_at_least";
-constexpr const char QUERYDSL_OFFSET[]          = "_offset";
-constexpr const char QUERYDSL_SORT[]            = "_sort";
-constexpr const char QUERYDSL_SELECTOR[]        = "_selector";
-constexpr const char QUERYDSL_ORDER[]           = "_order";
-constexpr const char QUERYDSL_METRIC[]          = "_metric";
+constexpr const char RESERVED_QUERYDSL_FROM[]               = RESERVED__ "from";
+constexpr const char RESERVED_QUERYDSL_IN[]                 = RESERVED__ "in";
+constexpr const char RESERVED_QUERYDSL_QUERY[]              = RESERVED__ "query";
+constexpr const char RESERVED_QUERYDSL_RANGE[]              = RESERVED__ "range";
+constexpr const char RESERVED_QUERYDSL_RAW[]                = RESERVED__ "raw";
+constexpr const char RESERVED_QUERYDSL_TO[]                 = RESERVED__ "to";
+constexpr const char RESERVED_QUERYDSL_LIMIT[]              = RESERVED__ "limit";
+constexpr const char RESERVED_QUERYDSL_CHECK_AT_LEAST[]     = RESERVED__ "check_at_least";
+constexpr const char RESERVED_QUERYDSL_OFFSET[]             = RESERVED__ "offset";
+constexpr const char RESERVED_QUERYDSL_SORT[]               = RESERVED__ "sort";
+constexpr const char RESERVED_QUERYDSL_SELECTOR[]           = RESERVED__ "selector";
+constexpr const char RESERVED_QUERYDSL_ORDER[]              = RESERVED__ "order";
+constexpr const char RESERVED_QUERYDSL_METRIC[]             = RESERVED__ "metric";
 
-constexpr const char QUERYDSL_ASC[]             = "asc";
-constexpr const char QUERYDSL_DESC[]            = "desc";
+constexpr const char QUERYDSL_ASC[]     = "asc";
+constexpr const char QUERYDSL_DESC[]    = "desc";
 
 /* A domain-specific language (DSL) for query */
 

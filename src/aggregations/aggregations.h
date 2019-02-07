@@ -22,73 +22,74 @@
 
 #pragma once
 
-#include <memory>                   // for shared_ptr, make_shared
-#include <stddef.h>                 // for size_t
-#include <string>                   // for string
-#include "string_view.hh"           // for std::string_view
-#include <type_traits>              // for decay_t, enable_if_t, forward
-#include <utility>                  // for std::pair, std::make_pair
-#include <vector>                   // for vector
+#include <memory>                                 // for shared_ptr, make_shared
+#include <stddef.h>                               // for size_t
+#include <string>                                 // for string
+#include "string_view.hh"                         // for std::string_view
+#include <type_traits>                            // for decay_t, enable_if_t, forward
+#include <utility>                                // for std::pair, std::make_pair
+#include <vector>                                 // for vector
 
-#include "msgpack.h"                // for MsgPack
-#include "xapian.h"                 // for MatchSpy, doccount
+#include "msgpack.h"                              // for MsgPack
+#include "reserved.h"                             // for RESERVED__
+#include "xapian.h"                               // for MatchSpy, doccount
 
 
-constexpr const char AGGREGATION_AGGS[]             = "_aggs";
-constexpr const char AGGREGATION_AGGREGATIONS[]     = "_aggregations";
-constexpr const char AGGREGATION_DOC_COUNT[]        = "_doc_count";
-constexpr const char AGGREGATION_FIELD[]            = "_field";
-constexpr const char AGGREGATION_FROM[]             = "_from";
-constexpr const char AGGREGATION_INTERVAL[]         = "_interval";
-constexpr const char AGGREGATION_SHIFT[]            = "_shift";
-constexpr const char AGGREGATION_KEY[]              = "_key";
-constexpr const char AGGREGATION_RANGES[]           = "_ranges";
-constexpr const char AGGREGATION_SUM_OF_SQ[]        = "_sum_of_squares";
-constexpr const char AGGREGATION_TO[]               = "_to";
+constexpr const char RESERVED_AGGS_AGGS[]                   = RESERVED__ "aggs";
+constexpr const char RESERVED_AGGS_AGGREGATIONS[]           = RESERVED__ "aggregations";
+constexpr const char RESERVED_AGGS_DOC_COUNT[]              = RESERVED__ "doc_count";
+constexpr const char RESERVED_AGGS_FIELD[]                  = RESERVED__ "field";
+constexpr const char RESERVED_AGGS_FROM[]                   = RESERVED__ "from";
+constexpr const char RESERVED_AGGS_INTERVAL[]               = RESERVED__ "interval";
+constexpr const char RESERVED_AGGS_SHIFT[]                  = RESERVED__ "shift";
+constexpr const char RESERVED_AGGS_KEY[]                    = RESERVED__ "key";
+constexpr const char RESERVED_AGGS_RANGES[]                 = RESERVED__ "ranges";
+constexpr const char RESERVED_AGGS_SUM_OF_SQ[]              = RESERVED__ "sum_of_squares";
+constexpr const char RESERVED_AGGS_TO[]                     = RESERVED__ "to";
 
-constexpr const char AGGREGATION_AVG[]              = "_avg";
-constexpr const char AGGREGATION_CARDINALITY[]      = "_cardinality";
-constexpr const char AGGREGATION_COUNT[]            = "_count";
-constexpr const char AGGREGATION_EXT_STATS[]        = "_extended_stats";
-constexpr const char AGGREGATION_GEO_BOUNDS[]       = "_geo_bounds";
-constexpr const char AGGREGATION_GEO_CENTROID[]     = "_geo_centroid";
-constexpr const char AGGREGATION_MAX[]              = "_max";
-constexpr const char AGGREGATION_MEDIAN[]           = "_median";
-constexpr const char AGGREGATION_MIN[]              = "_min";
-constexpr const char AGGREGATION_MODE[]             = "_mode";
-constexpr const char AGGREGATION_PERCENTILES[]      = "_percentiles";
-constexpr const char AGGREGATION_PERCENTILES_RANK[] = "_percentiles_rank";
-constexpr const char AGGREGATION_SCRIPTED_METRIC[]  = "_scripted_metric";
-constexpr const char AGGREGATION_STATS[]            = "_stats";
-constexpr const char AGGREGATION_STD[]              = "_std_deviation";
-constexpr const char AGGREGATION_STD_BOUNDS[]       = "_std_deviation_bounds";
-constexpr const char AGGREGATION_SUM[]              = "_sum";
-constexpr const char AGGREGATION_VARIANCE[]         = "_variance";
+constexpr const char RESERVED_AGGS_AVG[]                    = RESERVED__ "avg";
+constexpr const char RESERVED_AGGS_CARDINALITY[]            = RESERVED__ "cardinality";
+constexpr const char RESERVED_AGGS_COUNT[]                  = RESERVED__ "count";
+constexpr const char RESERVED_AGGS_EXT_STATS[]              = RESERVED__ "extended_stats";
+constexpr const char RESERVED_AGGS_GEO_BOUNDS[]             = RESERVED__ "geo_bounds";
+constexpr const char RESERVED_AGGS_GEO_CENTROID[]           = RESERVED__ "geo_centroid";
+constexpr const char RESERVED_AGGS_MAX[]                    = RESERVED__ "max";
+constexpr const char RESERVED_AGGS_MEDIAN[]                 = RESERVED__ "median";
+constexpr const char RESERVED_AGGS_MIN[]                    = RESERVED__ "min";
+constexpr const char RESERVED_AGGS_MODE[]                   = RESERVED__ "mode";
+constexpr const char RESERVED_AGGS_PERCENTILES[]            = RESERVED__ "percentiles";
+constexpr const char RESERVED_AGGS_PERCENTILES_RANK[]       = RESERVED__ "percentiles_rank";
+constexpr const char RESERVED_AGGS_SCRIPTED_METRIC[]        = RESERVED__ "scripted_metric";
+constexpr const char RESERVED_AGGS_STATS[]                  = RESERVED__ "stats";
+constexpr const char RESERVED_AGGS_STD[]                    = RESERVED__ "std_deviation";
+constexpr const char RESERVED_AGGS_STD_BOUNDS[]             = RESERVED__ "std_deviation_bounds";
+constexpr const char RESERVED_AGGS_SUM[]                    = RESERVED__ "sum";
+constexpr const char RESERVED_AGGS_VARIANCE[]               = RESERVED__ "variance";
 
-constexpr const char AGGREGATION_DATE_HISTOGRAM[]   = "_date_histogram";
-constexpr const char AGGREGATION_DATE_RANGE[]       = "_date_range";
-constexpr const char AGGREGATION_FILTER[]           = "_filter";
-constexpr const char AGGREGATION_GEO_DISTANCE[]     = "_geo_distance";
-constexpr const char AGGREGATION_GEO_IP[]           = "_geo_ip";
-constexpr const char AGGREGATION_GEO_TRIXELS[]      = "_geo_trixels";
-constexpr const char AGGREGATION_HISTOGRAM[]        = "_histogram";
-constexpr const char AGGREGATION_IP_RANGE[]         = "_ip_range";
-constexpr const char AGGREGATION_MISSING[]          = "_missing";
-constexpr const char AGGREGATION_RANGE[]            = "_range";
-constexpr const char AGGREGATION_VALUES[]           = "_values";
-constexpr const char AGGREGATION_TERMS[]            = "_terms";
+constexpr const char RESERVED_AGGS_DATE_HISTOGRAM[]         = RESERVED__ "date_histogram";
+constexpr const char RESERVED_AGGS_DATE_RANGE[]             = RESERVED__ "date_range";
+constexpr const char RESERVED_AGGS_FILTER[]                 = RESERVED__ "filter";
+constexpr const char RESERVED_AGGS_GEO_DISTANCE[]           = RESERVED__ "geo_distance";
+constexpr const char RESERVED_AGGS_GEO_IP[]                 = RESERVED__ "geo_ip";
+constexpr const char RESERVED_AGGS_GEO_TRIXELS[]            = RESERVED__ "geo_trixels";
+constexpr const char RESERVED_AGGS_HISTOGRAM[]              = RESERVED__ "histogram";
+constexpr const char RESERVED_AGGS_IP_RANGE[]               = RESERVED__ "ip_range";
+constexpr const char RESERVED_AGGS_MISSING[]                = RESERVED__ "missing";
+constexpr const char RESERVED_AGGS_RANGE[]                  = RESERVED__ "range";
+constexpr const char RESERVED_AGGS_VALUES[]                 = RESERVED__ "values";
+constexpr const char RESERVED_AGGS_TERMS[]                  = RESERVED__ "terms";
 
-constexpr const char AGGREGATION_UPPER[]            = "_upper";
-constexpr const char AGGREGATION_LOWER[]            = "_lower";
-constexpr const char AGGREGATION_SIGMA[]            = "_sigma";
+constexpr const char RESERVED_AGGS_UPPER[]                  = RESERVED__ "upper";
+constexpr const char RESERVED_AGGS_LOWER[]                  = RESERVED__ "lower";
+constexpr const char RESERVED_AGGS_SIGMA[]                  = RESERVED__ "sigma";
 
-constexpr const char AGGREGATION_VALUE[]            = "_value";
-constexpr const char AGGREGATION_TERM[]             = "_term";
-constexpr const char AGGREGATION_SORT[]             = "_sort";
-constexpr const char AGGREGATION_ORDER[]            = "_order";
-constexpr const char AGGREGATION_MIN_DOC_COUNT[]    = "_min_doc_count";
-constexpr const char AGGREGATION_LIMIT[]            = "_limit";
-constexpr const char AGGREGATION_KEYED[]            = "_keyed";
+constexpr const char RESERVED_AGGS_VALUE[]                  = RESERVED__ "_value";
+constexpr const char RESERVED_AGGS_TERM[]                   = RESERVED__ "_term";
+constexpr const char RESERVED_AGGS_SORT[]                   = RESERVED__ "_sort";
+constexpr const char RESERVED_AGGS_ORDER[]                  = RESERVED__ "_order";
+constexpr const char RESERVED_AGGS_MIN_DOC_COUNT[]          = RESERVED__ "_min_doc_count";
+constexpr const char RESERVED_AGGS_LIMIT[]                  = RESERVED__ "_limit";
+constexpr const char RESERVED_AGGS_KEYED[]                  = RESERVED__ "_keyed";
 
 
 class Schema;
@@ -200,7 +201,7 @@ public:
 
 	const auto& get_aggregation() noexcept {
 		_aggregation.update();
-		_result[AGGREGATION_AGGREGATIONS] = _aggregation.get_result();
+		_result[RESERVED_AGGS_AGGREGATIONS] = _aggregation.get_result();
 		return _result;
 	}
 };

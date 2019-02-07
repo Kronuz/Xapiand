@@ -34,8 +34,6 @@
 #endif
 
 
-constexpr const char cmd_prefix = COMMAND_PREFIX[0];
-
 
 std::string
 urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
@@ -269,7 +267,7 @@ PathParser::init(std::string_view p)
 			case '/':
 				cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 				cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
-				if (cn1 == cmd_prefix && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
+				if (cn1 == command__ && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
 					cmd_found = true;
 					cn1 = '\0';
 					++n1;
@@ -313,7 +311,7 @@ PathParser::init(std::string_view p)
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
 							if (cmd_found) {
-								if (cn1 == cmd_prefix && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
+								if (cn1 == command__ && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
 									off_cmd = n1 + 1;
 									len_cmd = length;
 									state = State::ID;
@@ -341,7 +339,7 @@ PathParser::init(std::string_view p)
 						if (length != 0u) {
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
-							if (cn1 == cmd_prefix && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
+							if (cn1 == command__ && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
 								off_cmd = n1 + 1;
 								len_cmd = length;
 								state = State::ID;

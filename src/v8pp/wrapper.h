@@ -88,7 +88,7 @@ struct wrap<MsgPack> {
 			return toValue(isolate, obj.at(property), obj_template);
 		} catch (const std::out_of_range&) {
 		} catch (const msgpack::type_error&) {
-			if (property == "_value") {
+			if (property == RESERVED_VALUE) {
 				return toValue(isolate, obj, obj_template);
 			}
 		}
@@ -110,15 +110,15 @@ struct wrap<MsgPack> {
 		try {
 			auto &inner_obj = obj[property];
 			auto msgpack_value = convertor(value);
-			if (!msgpack_value.is_map() && property != "_value") {
+			if (!msgpack_value.is_map() && property != RESERVED_VALUE) {
 				try {
-					inner_obj["_value"] = msgpack_value;
+					inner_obj[RESERVED_VALUE] = msgpack_value;
 					return;
 				} catch (const msgpack::type_error&) { }
 			}
 			inner_obj = msgpack_value;
 		} catch (const msgpack::type_error&) {
-			if (property == "_value") {
+			if (property == RESERVED_VALUE) {
 				obj = convertor(value);
 			}
 		}
@@ -131,7 +131,7 @@ struct wrap<MsgPack> {
 			auto msgpack_value = convertor(value);
 			if (!msgpack_value.is_map()) {
 				try {
-					inner_obj["_value"] = msgpack_value;
+					inner_obj[RESERVED_VALUE] = msgpack_value;
 					return;
 				} catch (const msgpack::type_error&) { }
 			}

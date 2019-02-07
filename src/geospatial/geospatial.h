@@ -22,18 +22,19 @@
 
 #pragma once
 
-#include "string_view.hh"        // for std::string_view
+#include "string_view.hh"                         // for std::string_view
 
-#include "msgpack.h"
+#include "msgpack.h"                              // for MsgPack
+#include "reserved.h"                             // for RESERVED__
 #include "ewkt.h"
 
 
-constexpr const char GEO_LATITUDE[]   = "_latitude";
-constexpr const char GEO_LONGITUDE[]  = "_longitude";
-constexpr const char GEO_HEIGHT[]     = "_height";
-constexpr const char GEO_RADIUS[]     = "_radius";
-constexpr const char GEO_UNITS[]      = "_units";
-constexpr const char GEO_SRID[]       = "_srid";
+constexpr const char RESERVED_GEO_LATITUDE[]                = RESERVED__ "latitude";
+constexpr const char RESERVED_GEO_LONGITUDE[]               = RESERVED__ "longitude";
+constexpr const char RESERVED_GEO_HEIGHT[]                  = RESERVED__ "height";
+constexpr const char RESERVED_GEO_RADIUS[]                  = RESERVED__ "radius";
+constexpr const char RESERVED_GEO_UNITS[]                   = RESERVED__ "units";
+constexpr const char RESERVED_GEO_SRID[]                    = RESERVED__ "srid";
 
 
 class GeoSpatial {

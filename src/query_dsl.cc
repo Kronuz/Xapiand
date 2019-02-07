@@ -22,48 +22,54 @@
 
 #include "query_dsl.h"
 
-#include <strings.h>                           // for strncasecmp
+#include <strings.h>                              // for strncasecmp
 #include <utility>
 
-#include "booleanParser/BooleanParser.h"       // for BooleanTree
-#include "booleanParser/LexicalException.h"    // for LexicalException
-#include "booleanParser/SyntacticException.h"  // for SyntacticException
-#include "cast.h"                              // for Cast
-#include "database_utils.h"                    // for prefixed, RESERVED_VALUE
-#include "exception.h"                         // for THROW, QueryDslError
-#include "field_parser.h"                      // for FieldParser
-#include "hashes.hh"                           // for fnv1ah32
-#include "log.h"                               // for L_CALL, L
-#include "modulus.hh"                          // for modulus
-#include "multivalue/generate_terms.h"         // for GenerateTerms
-#include "multivalue/geospatialrange.h"        // for GeoSpatial, GeoSpatialRange
-#include "multivalue/range.h"                  // for MultipleValueRange
-#include "repr.hh"                             // for repr
-#include "serialise.h"                         // for MsgPack, get_range_type...
-#include "stopper.h"                           // for getStopper
-#include "string.hh"                           // for string::startswith
+#include "booleanParser/BooleanParser.h"          // for BooleanTree
+#include "booleanParser/LexicalException.h"       // for LexicalException
+#include "booleanParser/SyntacticException.h"     // for SyntacticException
+#include "cast.h"                                 // for Cast
+#include "database_utils.h"                       // for prefixed, RESERVED_VALUE
+#include "exception.h"                            // for THROW, QueryDslError
+#include "field_parser.h"                         // for FieldParser
+#include "hashes.hh"                              // for fnv1ah32
+#include "log.h"                                  // for L_CALL, L
+#include "modulus.hh"                             // for modulus
+#include "multivalue/generate_terms.h"            // for GenerateTerms
+#include "multivalue/geospatialrange.h"           // for GeoSpatial, GeoSpatialRange
+#include "multivalue/range.h"                     // for MultipleValueRange
+#include "repr.hh"                                // for repr
+#include "reserved.h"                             // for RESERVED_
+#include "serialise.h"                            // for MsgPack, get_range_type...
+#include "stopper.h"                              // for getStopper
+#include "string.hh"                              // for string::startswith
+
+
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY
+// #define L_QUERY L_ORANGE
 
 
 #ifndef L_QUERY
-#define L_QUERY_DEFINED
 #define L_QUERY L_NOTHING
 #endif
 
-
-constexpr const char RESERVED_AND[] = "_and";
-constexpr const char RESERVED_OR[] = "_or";
-constexpr const char RESERVED_NOT[] = "_not";
-constexpr const char RESERVED_AND_NOT[] = "_and_not";
-constexpr const char RESERVED_XOR[] = "_xor";
-constexpr const char RESERVED_AND_MAYBE[] = "_and_maybe";
-constexpr const char RESERVED_FILTER[] = "_filter";
-constexpr const char RESERVED_NEAR[] = "_near";
-constexpr const char RESERVED_PHRASE[] = "_phrase";
-constexpr const char RESERVED_SCALE_WEIGHT[] = "_scale_weight";
-constexpr const char RESERVED_ELITE_SET[] = "_elite_set";
-constexpr const char RESERVED_SYNONYM[] = "_synonym";
-constexpr const char RESERVED_MAX[] = "_max";
-constexpr const char RESERVED_WILDCARD[] = "_wildcard";
+constexpr const char RESERVED_QUERYDSL_AND[]                = RESERVED__ "and";
+constexpr const char RESERVED_QUERYDSL_OR[]                 = RESERVED__ "or";
+constexpr const char RESERVED_QUERYDSL_NOT[]                = RESERVED__ "not";
+constexpr const char RESERVED_QUERYDSL_AND_NOT[]            = RESERVED__ "and_not";
+constexpr const char RESERVED_QUERYDSL_XOR[]                = RESERVED__ "xor";
+constexpr const char RESERVED_QUERYDSL_AND_MAYBE[]          = RESERVED__ "and_maybe";
+constexpr const char RESERVED_QUERYDSL_FILTER[]             = RESERVED__ "filter";
+constexpr const char RESERVED_QUERYDSL_NEAR[]               = RESERVED__ "near";
+constexpr const char RESERVED_QUERYDSL_PHRASE[]             = RESERVED__ "phrase";
+constexpr const char RESERVED_QUERYDSL_SCALE_WEIGHT[]       = RESERVED__ "scale_weight";
+constexpr const char RESERVED_QUERYDSL_ELITE_SET[]          = RESERVED__ "elite_set";
+constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
+constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
+constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
 
 
 // A domain-specific language (DSL) for query
@@ -79,7 +85,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 	L_CALL("QueryDSL::get_in_type(%s)", repr(obj.to_string()));
 
 	try {
-		auto it = obj.find(QUERYDSL_RANGE);
+		auto it = obj.find(RESERVED_QUERYDSL_RANGE);
 		if (it == obj.end()) {
 			// If is not _range must be geo.
 			return FieldType::GEO;
@@ -87,20 +93,20 @@ QueryDSL::get_in_type(const MsgPack& obj)
 
 		const auto& range = it.value();
 		try {
-			auto it_f = range.find(QUERYDSL_FROM);
+			auto it_f = range.find(RESERVED_QUERYDSL_FROM);
 			if (it_f != range.end()) {
 				return Serialise::guess_type(it_f.value());
 			}
-			auto it_t = range.find(QUERYDSL_TO);
+			auto it_t = range.find(RESERVED_QUERYDSL_TO);
 			if (it_t != range.end()) {
 				return Serialise::guess_type(it_t.value());
 			}
 			return FieldType::EMPTY;
 		} catch (const msgpack::type_error&) {
-			THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_RANGE, repr(range.to_string()));
+			THROW(QueryDslError, "%s must be object [%s]", RESERVED_QUERYDSL_RANGE, repr(range.to_string()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(QueryDslError, "%s must be object [%s]", QUERYDSL_IN, repr(obj.to_string()));
+		THROW(QueryDslError, "%s must be object [%s]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 
 	return FieldType::EMPTY;
@@ -118,16 +124,16 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range));
 	}
 	MsgPack value;
-	auto& _range = value[QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
+	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
 	auto start = fp.get_start();
 	auto field_type = FieldType::EMPTY;
 	if (!start.empty()) {
-		auto& obj = _range[QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
+		auto& obj = _range[RESERVED_QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
 		field_type = Serialise::guess_type(obj);
 	}
 	auto end = fp.get_end();
 	if (!end.empty()) {
-		auto& obj = _range[QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
+		auto& obj = _range[RESERVED_QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
 		if (field_type == FieldType::EMPTY) {
 			field_type = Serialise::guess_type(obj);
 		}
@@ -148,14 +154,14 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range));
 	}
 	MsgPack value;
-	auto& _range = value[QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
+	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
 	auto start = fp.get_start();
 	if (!start.empty()) {
-		_range[QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
+		_range[RESERVED_QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
 	}
 	auto end = fp.get_end();
 	if (!end.empty()) {
-		_range[QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
+		_range[RESERVED_QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
 	}
 
 	return value;
@@ -184,24 +190,24 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 				Xapian::Query query;
 				constexpr static auto _ = phf::make_phf({
 					// Compound query clauses
-					hh(RESERVED_AND),
-					hh(RESERVED_OR),
-					hh(RESERVED_NOT),
-					hh(RESERVED_AND_NOT),
-					hh(RESERVED_XOR),
-					hh(RESERVED_AND_MAYBE),
-					hh(RESERVED_FILTER),
-					hh(RESERVED_NEAR),
-					hh(RESERVED_PHRASE),
-					hh(RESERVED_SCALE_WEIGHT),
-					hh(RESERVED_ELITE_SET),
-					hh(RESERVED_SYNONYM),
-					hh(RESERVED_MAX),
-					hh(RESERVED_WILDCARD),
+					hh(RESERVED_QUERYDSL_AND),
+					hh(RESERVED_QUERYDSL_OR),
+					hh(RESERVED_QUERYDSL_NOT),
+					hh(RESERVED_QUERYDSL_AND_NOT),
+					hh(RESERVED_QUERYDSL_XOR),
+					hh(RESERVED_QUERYDSL_AND_MAYBE),
+					hh(RESERVED_QUERYDSL_FILTER),
+					hh(RESERVED_QUERYDSL_NEAR),
+					hh(RESERVED_QUERYDSL_PHRASE),
+					hh(RESERVED_QUERYDSL_SCALE_WEIGHT),
+					hh(RESERVED_QUERYDSL_ELITE_SET),
+					hh(RESERVED_QUERYDSL_SYNONYM),
+					hh(RESERVED_QUERYDSL_MAX),
+					hh(RESERVED_QUERYDSL_WILDCARD),
 					// Leaf query clauses.
-					hh(QUERYDSL_IN),
-					hh(QUERYDSL_RANGE),
-					hh(QUERYDSL_RAW),
+					hh(RESERVED_QUERYDSL_IN),
+					hh(RESERVED_QUERYDSL_RANGE),
+					hh(RESERVED_QUERYDSL_RAW),
 					hh(RESERVED_VALUE),
 					// Reserved cast words
 					hh(RESERVED_FLOAT),
@@ -228,56 +234,56 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 				});
 				switch (_.fhh(field_name)) {
 					// Compound query clauses
-					case _.fhh(RESERVED_AND):
+					case _.fhh(RESERVED_QUERYDSL_AND):
 						query = process(Xapian::Query::OP_AND, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_OR):
+					case _.fhh(RESERVED_QUERYDSL_OR):
 						query = process(Xapian::Query::OP_OR, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_NOT):
+					case _.fhh(RESERVED_QUERYDSL_NOT):
 						query = process(Xapian::Query::OP_AND_NOT, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_AND_NOT):
+					case _.fhh(RESERVED_QUERYDSL_AND_NOT):
 						query = process(Xapian::Query::OP_AND_NOT, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_XOR):
+					case _.fhh(RESERVED_QUERYDSL_XOR):
 						query = process(Xapian::Query::OP_XOR, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_AND_MAYBE):
+					case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
 						query = process(Xapian::Query::OP_AND_MAYBE, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_FILTER):
+					case _.fhh(RESERVED_QUERYDSL_FILTER):
 						query = process(Xapian::Query::OP_FILTER, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_NEAR):
+					case _.fhh(RESERVED_QUERYDSL_NEAR):
 						query = process(Xapian::Query::OP_NEAR, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_PHRASE):
+					case _.fhh(RESERVED_QUERYDSL_PHRASE):
 						query = process(Xapian::Query::OP_PHRASE, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_SCALE_WEIGHT):
+					case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
 						query = process(Xapian::Query::OP_SCALE_WEIGHT, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_ELITE_SET):
+					case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
 						query = process(Xapian::Query::OP_ELITE_SET, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_SYNONYM):
+					case _.fhh(RESERVED_QUERYDSL_SYNONYM):
 						query = process(Xapian::Query::OP_SYNONYM, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_MAX):
+					case _.fhh(RESERVED_QUERYDSL_MAX):
 						query = process(Xapian::Query::OP_MAX, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_WILDCARD):
+					case _.fhh(RESERVED_QUERYDSL_WILDCARD):
 						query = process(Xapian::Query::OP_WILDCARD, parent, o, wqf, q_flags, is_raw, is_in, true);
 						break;
 					// Leaf query clauses.
-					case _.fhh(QUERYDSL_IN):
+					case _.fhh(RESERVED_QUERYDSL_IN):
 						query = process(op, parent, o, wqf, q_flags, is_raw, true, is_wildcard);
 						break;
-					case _.fhh(QUERYDSL_RAW):
+					case _.fhh(RESERVED_QUERYDSL_RAW):
 						query = process(op, parent, o, wqf, q_flags, true, is_in, is_wildcard);
 						break;
-					case _.fhh(QUERYDSL_RANGE):
+					case _.fhh(RESERVED_QUERYDSL_RANGE):
 						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					case _.fhh(RESERVED_VALUE):
@@ -685,12 +691,12 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 	L_CALL("QueryDSL::get_in_query(<field_spc>, %s)", repr(obj.to_string()));
 
 	if (!obj.is_map() || obj.size() != 1) {
-		THROW(QueryDslError, "%s must be an object with a single element [%s]", QUERYDSL_IN, repr(obj.to_string()));
+		THROW(QueryDslError, "%s must be an object with a single element [%s]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 
 	const auto it = obj.begin();
 	const auto field_name = it->str_view();
-	if (field_name == QUERYDSL_RANGE) {
+	if (field_name == RESERVED_QUERYDSL_RANGE) {
 		const auto& value = it.value();
 		if (!value.is_map()) {
 			THROW(QueryDslError, "%s must be object [%s]", repr(field_name), repr(value.to_string()));
@@ -712,7 +718,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj)
 		case Cast::Hash::GEO_INTERSECTION:
 			return GeoSpatialRange::getQuery(field_spc, obj);
 		default:
-			THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_IN, repr(obj.to_string()));
+			THROW(QueryDslError, "Invalid format %s: %s", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 }
 
@@ -758,7 +764,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (stack_msgpack.empty()) {
 						THROW(QueryDslError, "Bad boolean expression");
 					}
-					create_exp_op_dsl(stack_msgpack, RESERVED_NOT);
+					create_exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_NOT);
 					last_op = TokenType::Not;
 					break;
 				}
@@ -770,25 +776,25 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
 						stack_msgpack.pop_back();
-						auto ob_it = ob.find(RESERVED_OR);
+						auto ob_it = ob.find(RESERVED_QUERYDSL_OR);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
-							object[RESERVED_OR] = last_op_object;
+							object[RESERVED_QUERYDSL_OR] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
 							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto ob2_it = ob2.find(RESERVED_OR);
+							auto ob2_it = ob2.find(RESERVED_QUERYDSL_OR);
 							auto ob2_it_end = ob2.end();
 							if (ob2_it != ob2_it_end) {
 								auto last_op_object = ob2_it.value();
 								last_op_object.push_back(ob);
 								MsgPack object;
-								object[RESERVED_OR] = last_op_object;
+								object[RESERVED_QUERYDSL_OR] = last_op_object;
 								stack_msgpack.push_back(std::move(object));
 							} else {
 								/* parentheses case Ej: ... a or (b or c) ...
@@ -797,11 +803,11 @@ QueryDSL::make_dsl_query(std::string_view query)
 								ASSERT(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
-								create_2exp_op_dsl(stack_msgpack, RESERVED_OR);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_OR);
 							}
 						}
 					} else {
-						create_2exp_op_dsl(stack_msgpack, RESERVED_OR);
+						create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_OR);
 					}
 					last_op = TokenType::Or;
 					break;
@@ -814,25 +820,25 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
 						stack_msgpack.pop_back();
-						auto ob_it = ob.find(RESERVED_AND);
+						auto ob_it = ob.find(RESERVED_QUERYDSL_AND);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
-							object[RESERVED_AND] = last_op_object;
+							object[RESERVED_QUERYDSL_AND] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
 							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto ob2_it = ob2.find(RESERVED_AND);
+							auto ob2_it = ob2.find(RESERVED_QUERYDSL_AND);
 							auto ob2_it_end = ob2.end();
 							if (ob2_it != ob2_it_end) {
 								auto last_op_object = ob2_it.value();
 								last_op_object.push_back(ob);
 								MsgPack object;
-								object[RESERVED_AND] = last_op_object;
+								object[RESERVED_QUERYDSL_AND] = last_op_object;
 								stack_msgpack.push_back(std::move(object));
 							} else {
 								/* parentheses case Ej: ... a and (b and c) ...
@@ -841,11 +847,11 @@ QueryDSL::make_dsl_query(std::string_view query)
 								ASSERT(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
-								create_2exp_op_dsl(stack_msgpack, RESERVED_AND);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND);
 							}
 						}
 					} else {
-						create_2exp_op_dsl(stack_msgpack, RESERVED_AND);
+						create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND);
 					}
 					last_op = TokenType::And;
 					break;
@@ -858,25 +864,25 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
 						stack_msgpack.pop_back();
-						auto ob_it = ob.find(RESERVED_AND_MAYBE);
+						auto ob_it = ob.find(RESERVED_QUERYDSL_AND_MAYBE);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
-							object[RESERVED_AND_MAYBE] = last_op_object;
+							object[RESERVED_QUERYDSL_AND_MAYBE] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
 							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto ob2_it = ob2.find(RESERVED_AND_MAYBE);
+							auto ob2_it = ob2.find(RESERVED_QUERYDSL_AND_MAYBE);
 							auto ob2_it_end = ob2.end();
 							if (ob2_it != ob2_it_end) {
 								auto last_op_object = ob2_it.value();
 								last_op_object.push_back(ob);
 								MsgPack object;
-								object[RESERVED_AND_MAYBE] = last_op_object;
+								object[RESERVED_QUERYDSL_AND_MAYBE] = last_op_object;
 								stack_msgpack.push_back(std::move(object));
 							} else {
 								/* parentheses case Ej: ... a maybe (b maybe c) ...
@@ -885,11 +891,11 @@ QueryDSL::make_dsl_query(std::string_view query)
 								ASSERT(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
-								create_2exp_op_dsl(stack_msgpack, RESERVED_AND_MAYBE);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND_MAYBE);
 							}
 						}
 					} else {
-						create_2exp_op_dsl(stack_msgpack, RESERVED_AND_MAYBE);
+						create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND_MAYBE);
 					}
 					last_op = TokenType::Maybe;
 					break;
@@ -902,25 +908,25 @@ QueryDSL::make_dsl_query(std::string_view query)
 					if (last_op == token.get_type()) {
 						auto ob = stack_msgpack.back();
 						stack_msgpack.pop_back();
-						auto ob_it = ob.find(RESERVED_XOR);
+						auto ob_it = ob.find(RESERVED_QUERYDSL_XOR);
 						auto it_end = ob.end();
 						if (ob_it != it_end) {
 							auto last_op_object = ob_it.value();
 							last_op_object.push_back(stack_msgpack.back());
 							stack_msgpack.pop_back();
 							MsgPack object;
-							object[RESERVED_XOR] = last_op_object;
+							object[RESERVED_QUERYDSL_XOR] = last_op_object;
 							stack_msgpack.push_back(std::move(object));
 						} else {
 							auto ob2 = stack_msgpack.back();
 							stack_msgpack.pop_back();
-							auto ob2_it = ob2.find(RESERVED_XOR);
+							auto ob2_it = ob2.find(RESERVED_QUERYDSL_XOR);
 							auto ob2_it_end = ob2.end();
 							if (ob2_it != ob2_it_end) {
 								auto last_op_object = ob2_it.value();
 								last_op_object.push_back(ob);
 								MsgPack object;
-								object[RESERVED_XOR] = last_op_object;
+								object[RESERVED_QUERYDSL_XOR] = last_op_object;
 								stack_msgpack.push_back(std::move(object));
 							} else {
 								/* parentheses case Ej: ... a xor (b xor c) ...
@@ -929,11 +935,11 @@ QueryDSL::make_dsl_query(std::string_view query)
 								ASSERT(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
-								create_2exp_op_dsl(stack_msgpack, RESERVED_XOR);
+								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_XOR);
 							}
 						}
 					} else {
-						create_2exp_op_dsl(stack_msgpack, RESERVED_XOR);
+						create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_XOR);
 					}
 					last_op = TokenType::Xor;
 					break;
@@ -945,7 +951,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 
 					MsgPack value;
 					if (fp.is_range()) {
-						value[QUERYDSL_IN] = fp.get_values();
+						value[RESERVED_QUERYDSL_IN] = fp.get_values();
 					} else {
 						value = fp.get_value();
 					}
@@ -954,9 +960,9 @@ QueryDSL::make_dsl_query(std::string_view query)
 
 					MsgPack object;
 					if (field_name.empty()) {
-						object[QUERYDSL_RAW] = value;
+						object[RESERVED_QUERYDSL_RAW] = value;
 					} else {
-						object[field_name][QUERYDSL_RAW] = value;
+						object[field_name][RESERVED_QUERYDSL_RAW] = value;
 					}
 					stack_msgpack.push_back(std::move(object));
 					break;
@@ -1044,14 +1050,14 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 					const auto field_key = it_val->str_view();
 					auto const& val = it_val.value();
 					constexpr static auto _srt = phf::make_phf({
-						hh(QUERYDSL_ORDER),
+						hh(RESERVED_QUERYDSL_ORDER),
 						hh(RESERVED_VALUE),
-						hh(QUERYDSL_METRIC),
+						hh(RESERVED_QUERYDSL_METRIC),
 					});
 					switch (_srt.fhh(field_key)) {
-						case _srt.fhh(QUERYDSL_ORDER):
+						case _srt.fhh(RESERVED_QUERYDSL_ORDER):
 							if (!val.is_string()) {
-								THROW(QueryDslError, "%s must be string (asc/desc) [%s]", QUERYDSL_ORDER, repr(val.to_string()));
+								THROW(QueryDslError, "%s must be string (asc/desc) [%s]", RESERVED_QUERYDSL_ORDER, repr(val.to_string()));
 							}
 							if (strncasecmp(val.as_str().data(), QUERYDSL_DESC, sizeof(QUERYDSL_DESC)) == 0) {
 								descending = true;
@@ -1060,9 +1066,9 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 						case _srt.fhh(RESERVED_VALUE):
 							value = val.as_str();
 							break;
-						case _srt.fhh(QUERYDSL_METRIC):
+						case _srt.fhh(RESERVED_QUERYDSL_METRIC):
 							if (!val.is_string()) {
-								THROW(QueryDslError, "%s must be string (%s) [%s]", QUERYDSL_METRIC, "levenshtein, leven, jarowinkler, jarow, sorensendice, sorensen, dice, jaccard, lcsubstr, lcs, lcsubsequence, lcsq, soundex, sound, jaro" ,repr(val.to_string()));
+								THROW(QueryDslError, "%s must be string (%s) [%s]", RESERVED_QUERYDSL_METRIC, "levenshtein, leven, jarowinkler, jarow, sorensendice, sorensen, dice, jaccard, lcsubstr, lcs, lcsubsequence, lcsq, soundex, sound, jaro" ,repr(val.to_string()));
 							}
 							e.metric = val.as_str();
 							break;
@@ -1096,7 +1102,7 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 		}
 		break;
 		default:
-			THROW(QueryDslError, "Invalid format %s: %s", QUERYDSL_SORT, repr(obj.to_string()));
+			THROW(QueryDslError, "Invalid format %s: %s", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
 	}
 
 }

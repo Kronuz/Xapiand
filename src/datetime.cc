@@ -22,26 +22,26 @@
 
 #include "datetime.h"
 
-#include <cctype>                // for std::isdigit
-#include <cmath>                 // for ceil
-#include <exception>             // for exception
-#include <stdexcept>             // for invalid_argument, out_of_range
-#include "string_view.hh"        // for std::string_view
+#include <cctype>                                 // for std::isdigit
+#include <cmath>                                  // for ceil
+#include <exception>                              // for exception
+#include <stdexcept>                              // for invalid_argument, out_of_range
+#include "string_view.hh"                         // for std::string_view
 
-#include "cassert.h"             // for ASSERT
-#include "hashes.hh"             // for fnv1ah32
-#include "log.h"                 // for L_ERR
-#include "msgpack.h"             // for MsgPack
-#include "phf.hh"                // for phf
-#include "repr.hh"               // for repr
-#include "strict_stox.hh"        // for strict_stoull
-#include "string.hh"             // for string::format
+#include "cassert.h"                              // for ASSERT
+#include "hashes.hh"                              // for fnv1ah32
+#include "log.h"                                  // for L_ERR
+#include "msgpack.h"                              // for MsgPack
+#include "phf.hh"                                 // for phf
+#include "repr.hh"                                // for repr
+#include "reserved.h"                             // for RESERVED__
+#include "strict_stox.hh"                         // for strict_stoull
+#include "string.hh"                              // for string::format
 
 
-constexpr const char RESERVED_YEAR[]                = "_year";
-constexpr const char RESERVED_MONTH[]               = "_month";
-constexpr const char RESERVED_DAY[]                 = "_day";
-constexpr const char RESERVED_TIME[]                = "_time";
+constexpr const char RESERVED_YEAR[]                        = RESERVED__ "year";
+constexpr const char RESERVED_MONTH[]                       = RESERVED__ "month";
+constexpr const char RESERVED_DAY[]                         = RESERVED__ "day";
 
 
 const std::regex Datetime::date_re(R"(([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\|\|[ ]*([+-/\dyMwdhms]+))?)", std::regex::optimize);

@@ -58,11 +58,11 @@
 #include "manager.h"                        // for XapiandManager
 #include "metrics.h"                        // for Metrics::metrics
 #include "msgpack.h"                        // for MsgPack, msgpack::object
-#include "aggregations/aggregations.h"      // for AggregationMatchSpy, AGGREGATION_AGGREGATIONS
+#include "aggregations/aggregations.h"      // for AggregationMatchSpy, RESERVED_AGGS_AGGREGATIONS
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
-#include "query_dsl.h"                      // for QUERYDSL_SELECTOR
+#include "query_dsl.h"                      // for RESERVED_QUERYDSL_SELECTOR
 #include "rapidjson/document.h"             // for Document
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
@@ -2392,18 +2392,18 @@ HttpClient::search_view(Request& request)
 
 			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
 
-			if (decoded_body.find(QUERYDSL_SELECTOR) != decoded_body.end()) {
-				auto selector_obj = decoded_body.at(QUERYDSL_SELECTOR);
+			if (decoded_body.find(RESERVED_QUERYDSL_SELECTOR) != decoded_body.end()) {
+				auto selector_obj = decoded_body.at(RESERVED_QUERYDSL_SELECTOR);
 				if (selector_obj.is_string()) {
 					selector_string_holder = selector_obj.as_str();
 					selector = selector_string_holder;
 				} else {
-					THROW(ClientError, "The %s must be a string", QUERYDSL_SELECTOR);
+					THROW(ClientError, "The %s must be a string", RESERVED_QUERYDSL_SELECTOR);
 				}
 			}
 
 			mset = db_handler.get_mset(query_field, &decoded_body, &aggs);
-			aggregations = aggs.get_aggregation().at(AGGREGATION_AGGREGATIONS);
+			aggregations = aggs.get_aggregation().at(RESERVED_AGGS_AGGREGATIONS);
 		}
 	} catch (const NotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
