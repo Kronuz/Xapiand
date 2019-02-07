@@ -1042,7 +1042,12 @@ QueryDSL::get_query(const MsgPack& obj)
 	if (obj.is_string() && obj.str_view() == "*") {
 		query = Xapian::Query(std::string());
 	} else {
-		query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD);
+		unsigned flags = (
+			Xapian::QueryParser::FLAG_PHRASE |
+			Xapian::QueryParser::FLAG_LOVEHATE |
+			Xapian::QueryParser::FLAG_WILDCARD
+		);
+		query = process(Xapian::Query::OP_AND, "", obj, 1, flags);
 	}
 
 	L_QUERY("query = " + STEEL_BLUE + "%s" + CLEAR_COLOR + "\n" + DIM_GREY + "%s" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
