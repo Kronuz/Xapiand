@@ -82,13 +82,9 @@ class QueryDSL {
 	Xapian::Query process_phrase(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 	Xapian::Query process_scale_weight(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 	Xapian::Query process_synonym(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
-	Xapian::Query process_value_ge(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
-	Xapian::Query process_value_le(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
-	Xapian::Query process_value_range(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 	Xapian::Query process_wildcard(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 	Xapian::Query process_xor(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 	Xapian::Query process_cast(std::string_view word, Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
-
 
 	Xapian::Query process(Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);
 	Xapian::Query get_value_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard);

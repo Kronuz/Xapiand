@@ -59,11 +59,8 @@ constexpr const char RESERVED_AND_MAYBE[] = "_and_maybe";
 constexpr const char RESERVED_FILTER[] = "_filter";
 constexpr const char RESERVED_NEAR[] = "_near";
 constexpr const char RESERVED_PHRASE[] = "_phrase";
-constexpr const char RESERVED_VALUE_RANGE[] = "_value_range";
 constexpr const char RESERVED_SCALE_WEIGHT[] = "_scale_weight";
 constexpr const char RESERVED_ELITE_SET[] = "_elite_set";
-constexpr const char RESERVED_VALUE_GE[] = "_value_ge";
-constexpr const char RESERVED_VALUE_LE[] = "_value_le";
 constexpr const char RESERVED_SYNONYM[] = "_synonym";
 constexpr const char RESERVED_MAX[] = "_max";
 constexpr const char RESERVED_WILDCARD[] = "_wildcard";
@@ -238,15 +235,6 @@ QueryDSL::process_phrase(std::string_view /*unused*/, Xapian::Query::op /*unused
 
 
 inline Xapian::Query
-QueryDSL::process_value_range(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_value_range(...)");
-
-	return process(Xapian::Query::OP_VALUE_RANGE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
 QueryDSL::process_scale_weight(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
 {
 	L_CALL("QueryDSL::process_scale_weight(...)");
@@ -261,24 +249,6 @@ QueryDSL::process_elite_set(std::string_view /*unused*/, Xapian::Query::op /*unu
 	L_CALL("QueryDSL::process_elite_set(...)");
 
 	return process(Xapian::Query::OP_ELITE_SET, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_value_ge(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_value_ge(...)");
-
-	return process(Xapian::Query::OP_VALUE_GE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
-}
-
-
-inline Xapian::Query
-QueryDSL::process_value_le(std::string_view /*unused*/, Xapian::Query::op /*unused*/, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
-{
-	L_CALL("QueryDSL::process_value_le(...)");
-
-	return process(Xapian::Query::OP_VALUE_LE, parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
 }
 
 
@@ -385,11 +355,8 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					hh(RESERVED_FILTER),
 					hh(RESERVED_NEAR),
 					hh(RESERVED_PHRASE),
-					hh(RESERVED_VALUE_RANGE),
 					hh(RESERVED_SCALE_WEIGHT),
 					hh(RESERVED_ELITE_SET),
-					hh(RESERVED_VALUE_GE),
-					hh(RESERVED_VALUE_LE),
 					hh(RESERVED_SYNONYM),
 					hh(RESERVED_MAX),
 					hh(RESERVED_WILDCARD),
@@ -450,20 +417,11 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 					case _.fhh(RESERVED_PHRASE):
 						query = process_phrase(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
-					case _.fhh(RESERVED_VALUE_RANGE):
-						query = process_value_range(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
 					case _.fhh(RESERVED_SCALE_WEIGHT):
 						query = process_scale_weight(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					case _.fhh(RESERVED_ELITE_SET):
 						query = process_elite_set(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_VALUE_GE):
-						query = process_value_ge(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_VALUE_LE):
-						query = process_value_le(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
 						break;
 					case _.fhh(RESERVED_SYNONYM):
 						query = process_synonym(field_name, op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
