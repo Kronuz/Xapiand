@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015-2018 Dubalu LLC
+* Copyright (c) 2015-2019 Dubalu LLC
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to
@@ -33,6 +33,7 @@
 #include "exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
 #include "hashes.hh"                              // for fnv1ah32
+#include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "log.h"                                  // for L_CALL, L
 #include "modulus.hh"                             // for modulus
 #include "multivalue/generate_terms.h"            // for GenerateTerms
@@ -329,12 +330,21 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 			break;
 		}
 
-		case MsgPack::Type::ARRAY:
-			for (auto const& o : obj) {
-				auto query = process(op, path, o, wqf, q_flags);
-				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+		case MsgPack::Type::ARRAY: {
+			auto processed = itertools::transform<MsgPack>([&](const MsgPack& o){
+				return process(op, path, o, wqf, q_flags);
+			}, obj.begin(), obj.end());
+
+			if (final_query.empty()) {
+				final_query = Xapian::Query(op, processed.begin(), processed.end());
+			} else {
+				auto chained = itertools::chain<MsgPack>(
+					&final_query, &final_query + 1,
+					processed.begin(), processed.end());
+				final_query = Xapian::Query(op, chained.begin(), chained.end());
 			}
 			break;
+		}
 
 		default: {
 			auto query = get_value_query(path, obj, wqf, q_flags);
