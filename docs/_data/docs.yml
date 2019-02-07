@@ -20,8 +20,11 @@
     - url: reference-guide/search
     - url: reference-guide/query-dsl
       docs:
-        - url: reference-guide/query-dsl/query-dsl
+        - url: reference-guide/query-dsl/queries
           title: Queries
+          docs:
+            - link: '#simple-queries'
+              title: Simple Queries
         - url: reference-guide/query-dsl/text-queries
           title: Text Queries
           docs:

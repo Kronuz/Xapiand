@@ -163,13 +163,26 @@ branches within the tree.
 The most basic operators are the logical operators: `_or`, `_and` and `_not`,
 but there are other more advanced operators:
 
-* `_and`        - Finds documents which are matched by all of the subqueries.
-* `_or`         - Finds documents which are matched by either of the subqueries.
-* `_not`        - Finds documents which don't match any of the subqueries.
-* `_xor`        - Finds documents which are matched by one or other of the subquerie,
-                  but not both (the expression is evaluated in pairs taken by the array)
-* `_and_maybe`  - Finds any document which matches the first element of the array
-                  and whether or not matches the rest.
+
+* `_and`          - Finds documents which are matched by all of the subqueries.
+* `_or`           - Finds documents which are matched by either of the subqueries.
+* `_not`          - Finds documents which don't match any of the subqueries.
+* `_and_not`      - 
+* `_xor`          - Finds documents which are matched by one or other of the subquerie,
+                    but not both (the expression is evaluated in pairs taken by the array)
+* `_and_maybe`    - Finds any document which matches the first element of the array
+                    and whether or not matches the rest.
+* `_filter`       - 
+* `_near`         - 
+* `_phrase`       - 
+* `_value_range`  - 
+* `_scale_weight` - 
+* `_elite_set`    - 
+* `_value_ge`     - 
+* `_value_le`     - 
+* `_synonym`      - 
+* `_max`          - 
+* `_wildcard`     - 
 
 The following example finds _all_ bank accounts for which their account
 holders are either _brown_ eyed _females_ or like _bananas_:
