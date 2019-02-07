@@ -25,6 +25,18 @@
           docs:
             - link: '#simple-queries'
               title: Simple Queries
+            - link: '#logical-operators'
+              title: Logical Operators
+            - link: '#maybe'
+              title: Maybe
+            - link: '#filtering'
+              title: Filtering
+            - link: '#range-searches'
+              title: Range Searches
+            - link: '#near'
+              title: Near
+            - link: '#phrase'
+              title: Phrase
         - url: reference-guide/query-dsl/text-queries
           title: Text Queries
           docs:
