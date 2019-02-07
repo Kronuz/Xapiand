@@ -41,3 +41,8 @@ context or filter context.
 
 * [**_Basic Queries_**](basic-queries)
 * [**_Text Queries_**](text-queries)
+* [**_Namespace Queries_**](namespace-queries)
+* [**_Cast Queries_**](cast-queries)
+* [**_Geospatial Queries_**](geo-queries)
+* [**_Find Documents Like This_**](like-this-queries)
+* [**_Near Queries_**](near-queries)

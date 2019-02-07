@@ -48,6 +48,16 @@
               title: Phrase Query
             - url: reference-guide/query-dsl/text-queries/partial-query
               title: Partial Query
+        - url: reference-guide/query-dsl/namespace-queries
+          title: Namespace Queries
+        - url: reference-guide/query-dsl/cast-queries
+          title: Cast Queries
+        - url: reference-guide/query-dsl/geo-queries
+          title: Geospatial Queries
+        - url: reference-guide/query-dsl/like-this-queries
+          title: Find Docs. Like This
+        - url: reference-guide/query-dsl/near-queries
+          title: Near Queries
     - url: reference-guide/aggregations
       docs:
         - url: reference-guide/aggregations/metrics
