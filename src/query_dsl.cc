@@ -172,9 +172,9 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 
 
 inline Xapian::Query
-QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::termcount wqf, unsigned flags)
+QueryDSL::process(std::string_view path, const MsgPack& obj, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
-	L_CALL("QueryDSL::process(%d, %s, %s, <wqf>, <flags>)", (int)op, repr(path), repr(obj.to_string()));
+	L_CALL("QueryDSL::process(%s, %s, %d, <wqf>, <flags>)", repr(path), repr(obj.to_string()), (int)op);
 
 	Xapian::Query final_query;
 	if (op == Xapian::Query::OP_AND_NOT) {
@@ -243,57 +243,57 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 					switch (_.fhh(field_name)) {
 						// Compound query clauses
 						case _.fhh(RESERVED_QUERYDSL_AND):
-							query = process(Xapian::Query::OP_AND, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_AND, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_OR):
-							query = process(Xapian::Query::OP_OR, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_OR, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_NOT):
-							query = process(Xapian::Query::OP_AND_NOT, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_AND_NOT, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_AND_NOT):
-							query = process(Xapian::Query::OP_AND_NOT, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_AND_NOT, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_XOR):
-							query = process(Xapian::Query::OP_XOR, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_XOR, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
-							query = process(Xapian::Query::OP_AND_MAYBE, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_AND_MAYBE, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_FILTER):
-							query = process(Xapian::Query::OP_FILTER, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_FILTER, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_NEAR):
-							query = process(Xapian::Query::OP_NEAR, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_NEAR, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_PHRASE):
-							query = process(Xapian::Query::OP_PHRASE, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_PHRASE, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
 							// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
-							query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_SCALE_WEIGHT, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-							query = process(Xapian::Query::OP_ELITE_SET, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_ELITE_SET, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_SYNONYM):
-							query = process(Xapian::Query::OP_SYNONYM, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_SYNONYM, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_MAX):
-							query = process(Xapian::Query::OP_MAX, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_MAX, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_WILDCARD):
-							query = process(Xapian::Query::OP_WILDCARD, path, o, wqf, flags);
+							query = process(path, o, Xapian::Query::OP_WILDCARD, wqf, flags);
 							break;
 						// Leaf query clauses.
 						case _.fhh(RESERVED_QUERYDSL_IN):
-							query = get_in_query(path, o, wqf, flags);
+							query = get_in_query(path, o, op, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_RAW):
-							query = get_raw_query(path, o, wqf, flags);
+							query = get_raw_query(path, o, op, wqf, flags);
 							break;
 						case _.fhh(RESERVED_VALUE):
-							query = get_value_query(path, o, wqf, flags);
+							query = get_value_query(path, o, op, wqf, flags);
 							break;
 						// Reserved cast words
 						case _.fhh(RESERVED_FLOAT):
@@ -318,17 +318,17 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						case _.fhh(RESERVED_MULTICHULL):
 						case _.fhh(RESERVED_GEO_COLLECTION):
 						case _.fhh(RESERVED_GEO_INTERSECTION):
-							query = get_value_query(path, {{ field_name, o }}, wqf, flags);
+							query = get_value_query(path, {{ field_name, o }}, op, wqf, flags);
 							break;
 					}
 				} else {
 					if (path.empty()) {
-						query = process(op, field_name, o, wqf, flags);
+						query = process(field_name, o, op, wqf, flags);
 					} else {
 						std::string n_parent;
 						n_parent.reserve(path.length() + 1 + field_name.length());
 						n_parent.append(path).append(1, DB_OFFSPRING_UNION).append(field_name);
-						query = process(op, n_parent, o, wqf, flags);
+						query = process(n_parent, o, op, wqf, flags);
 					}
 				}
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
@@ -338,7 +338,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 		case MsgPack::Type::ARRAY: {
 			auto processed = itertools::transform<MsgPack>([&](const MsgPack& o){
-				return process(op, path, o, wqf, flags);
+				return process(path, o, op, wqf, flags);
 			}, obj.begin(), obj.end());
 
 			if (final_query.empty()) {
@@ -353,7 +353,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 		}
 
 		default: {
-			auto query = get_value_query(path, obj, wqf, flags);
+			auto query = get_value_query(path, obj, op, wqf, flags);
 			final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			break;
 		}
@@ -364,12 +364,12 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 
 inline Xapian::Query
-QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_in_query(%s, %s, <wqf>, <flags>)", repr(path), repr(obj.to_string()));
 
 	if (path.empty()) {
-		return get_namespace_in_query(default_spc, obj, wqf, flags);
+		return get_namespace_in_query(default_spc, obj, op, wqf, flags);
 	}
 
 	auto data_field = schema->get_data_field(path, true);
@@ -380,29 +380,29 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::termco
 	// }
 
 	if (field_spc.flags.inside_namespace) {
-		return get_namespace_in_query(field_spc, obj, wqf, flags);
+		return get_namespace_in_query(field_spc, obj, op, wqf, flags);
 	}
 
 	try {
-		return get_regular_in_query(field_spc, obj, wqf, flags);
+		return get_regular_in_query(field_spc, obj, op, wqf, flags);
 	} catch (const SerialisationError&) {
-		return get_namespace_in_query(field_spc, obj, wqf, flags);
+		return get_namespace_in_query(field_spc, obj, op, wqf, flags);
 	}
 }
 
 
 
 inline Xapian::Query
-QueryDSL::get_raw_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_raw_query(std::string_view path, const MsgPack& obj, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_raw_query(%s, %s, <wqf>, <flags>)", repr(path), repr(obj.to_string()));
 
 	if (path.empty()) {
 		if (obj.is_string()) {
 			const auto aux = Cast::cast(FieldType::EMPTY, obj.str_view());
-			return get_namespace_query(default_spc, aux, wqf, flags);
+			return get_namespace_query(default_spc, aux, op, wqf, flags);
 		}
-		return get_namespace_query(default_spc, obj, wqf, flags);
+		return get_namespace_query(default_spc, obj, op, wqf, flags);
 	}
 	auto data_field = schema->get_data_field(path, false);
 	const auto& field_spc = data_field.first;
@@ -412,24 +412,24 @@ QueryDSL::get_raw_query(std::string_view path, const MsgPack& obj, Xapian::termc
 	}
 
 	if (field_spc.flags.inside_namespace) {
-		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, flags);
+		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, op, wqf, flags);
 	}
 
 	try {
-		return get_regular_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, flags);
+		return get_regular_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, op, wqf, flags);
 	} catch (const SerialisationError&) {
-		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, wqf, flags);
+		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, op, wqf, flags);
 	}
 }
 
 
 inline Xapian::Query
-QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_value_query(%s, %s, <wqf>, <flags>)", repr(path), repr(obj.to_string()));
 
 	if (path.empty()) {
-		return get_namespace_query(default_spc, obj, wqf, flags);
+		return get_namespace_query(default_spc, obj, op, wqf, flags);
 	}
 	auto data_field = schema->get_data_field(path, false);
 	const auto& field_spc = data_field.first;
@@ -439,13 +439,13 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::ter
 	}
 
 	if (field_spc.flags.inside_namespace) {
-		return get_namespace_query(field_spc, obj, wqf, flags);
+		return get_namespace_query(field_spc, obj, op, wqf, flags);
 	}
 
 	try {
-		return get_regular_query(field_spc, obj, wqf, flags);
+		return get_regular_query(field_spc, obj, op, wqf, flags);
 	} catch (const SerialisationError&) {
-		return get_namespace_query(field_spc, obj, wqf, flags);
+		return get_namespace_query(field_spc, obj, op, wqf, flags);
 	}
 }
 
@@ -587,7 +587,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 
 
 inline Xapian::Query
-QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_namespace_query(<field_spc>, %s, <wqf>, <flags>)", repr(obj.to_string()));
 
@@ -611,12 +611,12 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 	auto ser_type = Serialise::guess_serialise(obj);
 	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.prefix());
 
-	return get_term_query(spc, std::get<1>(ser_type), wqf, flags);
+	return get_term_query(spc, std::get<1>(ser_type), op, wqf, flags);
 }
 
 
 inline Xapian::Query
-QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <flags>)", repr(obj.to_string()));
 
@@ -637,12 +637,12 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 	}
 
 	auto serialised_term = Serialise::MsgPack(field_spc, obj);
-	return get_term_query(field_spc, serialised_term, wqf, flags);
+	return get_term_query(field_spc, serialised_term, op, wqf, flags);
 }
 
 
 inline Xapian::Query
-QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::Query::op op, Xapian::termcount wqf, unsigned flags)
 {
 	L_CALL("QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <flags>)", repr(serialised_term));
 
