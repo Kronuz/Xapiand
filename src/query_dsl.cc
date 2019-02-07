@@ -69,7 +69,6 @@ constexpr const char RESERVED_QUERYDSL_SCALE_WEIGHT[]       = RESERVED__ "scale_
 constexpr const char RESERVED_QUERYDSL_ELITE_SET[]          = RESERVED__ "elite_set";
 constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
 constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
-constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
 
 
 // A domain-specific language (DSL) for query
@@ -123,6 +122,7 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 	if (!fp.is_range()) {
 		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range));
 	}
+
 	MsgPack value;
 	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
 	auto start = fp.get_start();
@@ -153,6 +153,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 	if (!fp.is_range()) {
 		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range));
 	}
+
 	MsgPack value;
 	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
 	auto start = fp.get_start();
@@ -169,9 +170,9 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 
 
 inline Xapian::Query
-QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
 {
-	L_CALL("QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>, %s, %s, %s)", (int)op, repr(parent), repr(obj.to_string()), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
+	L_CALL("QueryDSL::process(%d, %s, %s, <wqf>, <q_flags>)", (int)op, repr(path), repr(obj.to_string()));
 
 	Xapian::Query final_query;
 	if (op == Xapian::Query::OP_AND_NOT) {
@@ -183,184 +184,145 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 			const auto it_e = obj.end();
 			for (auto it = obj.begin(); it != it_e; ++it) {
 				const auto field_name = it->str_view();
+				if (field_name.empty()) {
+					THROW(QueryDslError, "Invalid field name: must not be empty");
+				}
 				auto const& o = it.value();
 
 				L_QUERY(STEEL_BLUE + "%s = %s" + CLEAR_COLOR, repr(field_name), o.to_string());
 
 				Xapian::Query query;
-				constexpr static auto _ = phf::make_phf({
-					// Compound query clauses
-					hh(RESERVED_QUERYDSL_AND),
-					hh(RESERVED_QUERYDSL_OR),
-					hh(RESERVED_QUERYDSL_NOT),
-					hh(RESERVED_QUERYDSL_AND_NOT),
-					hh(RESERVED_QUERYDSL_XOR),
-					hh(RESERVED_QUERYDSL_AND_MAYBE),
-					hh(RESERVED_QUERYDSL_FILTER),
-					hh(RESERVED_QUERYDSL_NEAR),
-					hh(RESERVED_QUERYDSL_PHRASE),
-					hh(RESERVED_QUERYDSL_SCALE_WEIGHT),
-					hh(RESERVED_QUERYDSL_ELITE_SET),
-					hh(RESERVED_QUERYDSL_SYNONYM),
-					hh(RESERVED_QUERYDSL_MAX),
-					hh(RESERVED_QUERYDSL_WILDCARD),
-					// Leaf query clauses.
-					hh(RESERVED_QUERYDSL_IN),
-					hh(RESERVED_QUERYDSL_RANGE),
-					hh(RESERVED_QUERYDSL_RAW),
-					hh(RESERVED_VALUE),
-					// Reserved cast words
-					hh(RESERVED_FLOAT),
-					hh(RESERVED_POSITIVE),
-					hh(RESERVED_INTEGER),
-					hh(RESERVED_BOOLEAN),
-					hh(RESERVED_TERM),  // FIXME: remove legacy term
-					hh(RESERVED_KEYWORD),
-					hh(RESERVED_TEXT),
-					hh(RESERVED_DATE),
-					hh(RESERVED_UUID),
-					hh(RESERVED_EWKT),
-					hh(RESERVED_POINT),
-					hh(RESERVED_POLYGON),
-					hh(RESERVED_CIRCLE),
-					hh(RESERVED_CHULL),
-					hh(RESERVED_MULTIPOINT),
-					hh(RESERVED_MULTIPOLYGON),
-					hh(RESERVED_MULTICIRCLE),
-					hh(RESERVED_MULTICONVEX),
-					hh(RESERVED_MULTICHULL),
-					hh(RESERVED_GEO_COLLECTION),
-					hh(RESERVED_GEO_INTERSECTION),
-				});
-				switch (_.fhh(field_name)) {
-					// Compound query clauses
-					case _.fhh(RESERVED_QUERYDSL_AND):
-						query = process(Xapian::Query::OP_AND, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_OR):
-						query = process(Xapian::Query::OP_OR, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_NOT):
-						query = process(Xapian::Query::OP_AND_NOT, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_AND_NOT):
-						query = process(Xapian::Query::OP_AND_NOT, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_XOR):
-						query = process(Xapian::Query::OP_XOR, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
-						query = process(Xapian::Query::OP_AND_MAYBE, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_FILTER):
-						query = process(Xapian::Query::OP_FILTER, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_NEAR):
-						query = process(Xapian::Query::OP_NEAR, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_PHRASE):
-						query = process(Xapian::Query::OP_PHRASE, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
-						query = process(Xapian::Query::OP_SCALE_WEIGHT, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-						query = process(Xapian::Query::OP_ELITE_SET, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_SYNONYM):
-						query = process(Xapian::Query::OP_SYNONYM, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_MAX):
-						query = process(Xapian::Query::OP_MAX, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_WILDCARD):
-						query = process(Xapian::Query::OP_WILDCARD, parent, o, wqf, q_flags, is_raw, is_in, true);
-						break;
-					// Leaf query clauses.
-					case _.fhh(RESERVED_QUERYDSL_IN):
-						query = process(op, parent, o, wqf, q_flags, is_raw, true, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_RAW):
-						query = process(op, parent, o, wqf, q_flags, true, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_QUERYDSL_RANGE):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_VALUE):
-						query = get_value_query(parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					// Reserved cast words
-					case _.fhh(RESERVED_FLOAT):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_POSITIVE):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_INTEGER):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_BOOLEAN):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
-					case _.fhh(RESERVED_KEYWORD):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
-					case _.fhh(RESERVED_TEXT):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_DATE):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_UUID):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_EWKT):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_POINT):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_POLYGON):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_CIRCLE):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_CHULL):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_MULTIPOINT):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_MULTIPOLYGON):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_MULTICIRCLE):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_MULTICONVEX):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_MULTICHULL):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_GEO_COLLECTION):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					case _.fhh(RESERVED_GEO_INTERSECTION):
-						query = get_value_query(parent, {{ field_name, o }}, wqf, q_flags, is_raw, is_in, is_wildcard);
-						break;
-					default:
-						if (parent.empty()) {
-							query = process(op, field_name, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						} else {
-							std::string n_parent;
-							n_parent.reserve(parent.length() + 1 + field_name.length());
-							n_parent.append(parent).append(1, DB_OFFSPRING_UNION).append(field_name);
-							query = process(op, n_parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
-						}
+
+				if (field_name[0] == reserved__) {
+					constexpr static auto _ = phf::make_phf({
+						// Compound query clauses
+						hh(RESERVED_QUERYDSL_AND),
+						hh(RESERVED_QUERYDSL_OR),
+						hh(RESERVED_QUERYDSL_NOT),
+						hh(RESERVED_QUERYDSL_AND_NOT),
+						hh(RESERVED_QUERYDSL_XOR),
+						hh(RESERVED_QUERYDSL_AND_MAYBE),
+						hh(RESERVED_QUERYDSL_FILTER),
+						hh(RESERVED_QUERYDSL_NEAR),
+						hh(RESERVED_QUERYDSL_PHRASE),
+						hh(RESERVED_QUERYDSL_SCALE_WEIGHT),
+						hh(RESERVED_QUERYDSL_ELITE_SET),
+						hh(RESERVED_QUERYDSL_SYNONYM),
+						hh(RESERVED_QUERYDSL_MAX),
+						// Leaf query clauses.
+						hh(RESERVED_QUERYDSL_IN),
+						hh(RESERVED_QUERYDSL_RAW),
+						hh(RESERVED_VALUE),
+						// Reserved cast words
+						hh(RESERVED_FLOAT),
+						hh(RESERVED_POSITIVE),
+						hh(RESERVED_INTEGER),
+						hh(RESERVED_BOOLEAN),
+						hh(RESERVED_TERM),  // FIXME: remove legacy term
+						hh(RESERVED_KEYWORD),
+						hh(RESERVED_STRING),  // FIXME: remove legacy string
+						hh(RESERVED_TEXT),
+						hh(RESERVED_DATE),
+						hh(RESERVED_UUID),
+						hh(RESERVED_EWKT),
+						hh(RESERVED_POINT),
+						hh(RESERVED_POLYGON),
+						hh(RESERVED_CIRCLE),
+						hh(RESERVED_CHULL),
+						hh(RESERVED_MULTIPOINT),
+						hh(RESERVED_MULTIPOLYGON),
+						hh(RESERVED_MULTICIRCLE),
+						hh(RESERVED_MULTICONVEX),
+						hh(RESERVED_MULTICHULL),
+						hh(RESERVED_GEO_COLLECTION),
+						hh(RESERVED_GEO_INTERSECTION),
+					});
+					switch (_.fhh(field_name)) {
+						// Compound query clauses
+						case _.fhh(RESERVED_QUERYDSL_AND):
+							query = process(Xapian::Query::OP_AND, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_OR):
+							query = process(Xapian::Query::OP_OR, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_NOT):
+							query = process(Xapian::Query::OP_AND_NOT, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_AND_NOT):
+							query = process(Xapian::Query::OP_AND_NOT, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_XOR):
+							query = process(Xapian::Query::OP_XOR, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
+							query = process(Xapian::Query::OP_AND_MAYBE, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_FILTER):
+							query = process(Xapian::Query::OP_FILTER, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_NEAR):
+							query = process(Xapian::Query::OP_NEAR, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_PHRASE):
+							query = process(Xapian::Query::OP_PHRASE, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
+							query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
+							query = process(Xapian::Query::OP_ELITE_SET, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_SYNONYM):
+							query = process(Xapian::Query::OP_SYNONYM, path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_MAX):
+							query = process(Xapian::Query::OP_MAX, path, o, wqf, q_flags);
+							break;
+						// Leaf query clauses.
+						case _.fhh(RESERVED_QUERYDSL_IN):
+							query = get_in_query(path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_QUERYDSL_RAW):
+							query = get_raw_query(path, o, wqf, q_flags);
+							break;
+						case _.fhh(RESERVED_VALUE):
+							query = get_value_query(path, o, wqf, q_flags);
+							break;
+						// Reserved cast words
+						case _.fhh(RESERVED_FLOAT):
+						case _.fhh(RESERVED_POSITIVE):
+						case _.fhh(RESERVED_INTEGER):
+						case _.fhh(RESERVED_BOOLEAN):
+						case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
+						case _.fhh(RESERVED_KEYWORD):
+						case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
+						case _.fhh(RESERVED_TEXT):
+						case _.fhh(RESERVED_DATE):
+						case _.fhh(RESERVED_UUID):
+						case _.fhh(RESERVED_EWKT):
+						case _.fhh(RESERVED_POINT):
+						case _.fhh(RESERVED_POLYGON):
+						case _.fhh(RESERVED_CIRCLE):
+						case _.fhh(RESERVED_CHULL):
+						case _.fhh(RESERVED_MULTIPOINT):
+						case _.fhh(RESERVED_MULTIPOLYGON):
+						case _.fhh(RESERVED_MULTICIRCLE):
+						case _.fhh(RESERVED_MULTICONVEX):
+						case _.fhh(RESERVED_MULTICHULL):
+						case _.fhh(RESERVED_GEO_COLLECTION):
+						case _.fhh(RESERVED_GEO_INTERSECTION):
+							query = get_value_query(path, {{ field_name, o }}, wqf, q_flags);
+							break;
+					}
+				} else {
+					if (path.empty()) {
+						query = process(op, field_name, o, wqf, q_flags);
+					} else {
+						std::string n_parent;
+						n_parent.reserve(path.length() + 1 + field_name.length());
+						n_parent.append(path).append(1, DB_OFFSPRING_UNION).append(field_name);
+						query = process(op, n_parent, o, wqf, q_flags);
+					}
 				}
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			}
@@ -369,13 +331,13 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 
 		case MsgPack::Type::ARRAY:
 			for (auto const& o : obj) {
-				auto query = process(op, parent, o, wqf, q_flags, is_raw, is_in, is_wildcard);
+				auto query = process(op, path, o, wqf, q_flags);
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			}
 			break;
 
 		default: {
-			auto query = get_value_query(parent, obj, wqf, q_flags, is_raw, is_in, is_wildcard);
+			auto query = get_value_query(path, obj, wqf, q_flags);
 			final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
 			break;
 		}
@@ -386,32 +348,88 @@ QueryDSL::process(Xapian::Query::op op, std::string_view parent, const MsgPack& 
 
 
 inline Xapian::Query
-QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_raw, bool is_in, bool is_wildcard)
+QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
 {
-	L_CALL("QueryDSL::get_value_query(%s, %s, <wqf>, <q_flags>, %s, %s, %s)", repr(path), repr(obj.to_string()), is_raw ? "true" : "false", is_in ? "true" : "false", is_wildcard ? "true" : "false");
+	L_CALL("QueryDSL::get_in_query(%s, %s, <wqf>, <q_flags>)", repr(path), repr(obj.to_string()));
 
 	if (path.empty()) {
-		if (!is_in && is_raw && obj.is_string()) {
-			const auto aux = Cast::cast(FieldType::EMPTY, obj.str_view());
-			return get_namespace_query(default_spc, aux, wqf, q_flags, is_in, is_wildcard);
-		}
-		return get_namespace_query(default_spc, obj, wqf, q_flags, is_in, is_wildcard);
+		return get_namespace_in_query(default_spc, obj, wqf, q_flags);
 	}
-	auto data_field = schema->get_data_field(path, is_in);
+
+	auto data_field = schema->get_data_field(path, true);
 	const auto& field_spc = data_field.first;
 
-	if (!data_field.second.empty()) {
-		return get_accuracy_query(field_spc, data_field.second, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, is_in);
-	}
+	// if (!data_field.second.empty()) {
+	// 	return get_accuracy_in_query(field_spc, data_field.second, obj, wqf);
+	// }
 
 	if (field_spc.flags.inside_namespace) {
-		return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
+		return get_namespace_in_query(field_spc, obj, wqf, q_flags);
 	}
 
 	try {
-		return get_regular_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
+		return get_regular_in_query(field_spc, obj, wqf, q_flags);
 	} catch (const SerialisationError&) {
-		return get_namespace_query(field_spc, (!is_in && is_raw && obj.is_string()) ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, wqf, q_flags, is_in, is_wildcard);
+		return get_namespace_in_query(field_spc, obj, wqf, q_flags);
+	}
+}
+
+
+
+inline Xapian::Query
+QueryDSL::get_raw_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
+{
+	L_CALL("QueryDSL::get_raw_query(%s, %s, <wqf>, <q_flags>)", repr(path), repr(obj.to_string()));
+
+	if (path.empty()) {
+		if (obj.is_string()) {
+			const auto aux = Cast::cast(FieldType::EMPTY, obj.str_view());
+			return get_namespace_query(default_spc, aux, wqf, q_flags);
+		}
+		return get_namespace_query(default_spc, obj, wqf, q_flags);
+	}
+	auto data_field = schema->get_data_field(path, false);
+	const auto& field_spc = data_field.first;
+
+	if (!data_field.second.empty()) {
+		return get_accuracy_query(field_spc, data_field.second, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf);
+	}
+
+	if (field_spc.flags.inside_namespace) {
+		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags);
+	}
+
+	try {
+		return get_regular_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, wqf, q_flags);
+	} catch (const SerialisationError&) {
+		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, wqf, q_flags);
+	}
+}
+
+
+inline Xapian::Query
+QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
+{
+	L_CALL("QueryDSL::get_value_query(%s, %s, <wqf>, <q_flags>)", repr(path), repr(obj.to_string()));
+
+	if (path.empty()) {
+		return get_namespace_query(default_spc, obj, wqf, q_flags);
+	}
+	auto data_field = schema->get_data_field(path, false);
+	const auto& field_spc = data_field.first;
+
+	if (!data_field.second.empty()) {
+		return get_accuracy_query(field_spc, data_field.second, obj, wqf);
+	}
+
+	if (field_spc.flags.inside_namespace) {
+		return get_namespace_query(field_spc, obj, wqf, q_flags);
+	}
+
+	try {
+		return get_regular_query(field_spc, obj, wqf, q_flags);
+	} catch (const SerialisationError&) {
+		return get_namespace_query(field_spc, obj, wqf, q_flags);
 	}
 }
 
@@ -531,13 +549,9 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 
 
 inline Xapian::Query
-QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf, bool is_in)
+QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::termcount wqf)
 {
-	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, %s, %s, <wqf>, %s)", repr(field_accuracy), repr(obj.to_string()), is_in ? "true" : "false");
-
-	if (is_in) {
-		THROW(QueryDslError, "Accuracy is only indexed like terms, searching by range is not supported");
-	}
+	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, %s, %s, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
 	switch (field_spc.get_type()) {
 		case FieldType::INTEGER:
@@ -557,30 +571,9 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 
 
 inline Xapian::Query
-QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in, bool is_wildcard)
+QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
 {
-	L_CALL("QueryDSL::get_namespace_query(<field_spc>, %s, <wqf>, <q_flags>, %s, %s)", repr(obj.to_string()), is_in ? "true" : "false", is_wildcard ? "true" : "false");
-
-	if (is_in) {
-		if (obj.is_string()) {
-			auto parsed = parse_guess_range(field_spc, obj.str_view());
-			if (parsed.first == FieldType::EMPTY) {
-				return Xapian::Query(std::string());
-			}
-			if (field_spc.prefix().empty()) {
-				return get_in_query(specification_t::get_global(parsed.first), parsed.second);
-			}
-			return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix()), parsed.second);
-		}
-		auto field_type = get_in_type(obj);
-		if (field_type == FieldType::EMPTY) {
-			return Xapian::Query(std::string());
-		}
-		if (field_spc.prefix().empty()) {
-			return get_in_query(specification_t::get_global(field_type), obj);
-		}
-		return get_in_query(Schema::get_namespace_specification(field_type, field_spc.prefix()), obj);
-	}
+	L_CALL("QueryDSL::get_namespace_query(<field_spc>, %s, <wqf>, <q_flags>)", repr(obj.to_string()));
 
 	switch (obj.getType()) {
 		case MsgPack::Type::NIL:
@@ -602,21 +595,14 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 	auto ser_type = Serialise::guess_serialise(obj);
 	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.prefix());
 
-	return get_term_query(spc, std::get<1>(ser_type), wqf, q_flags, is_wildcard);
+	return get_term_query(spc, std::get<1>(ser_type), wqf, q_flags);
 }
 
 
 inline Xapian::Query
-QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags, bool is_in, bool is_wildcard)
+QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount wqf, int q_flags)
 {
-	L_CALL("QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <q_flags>, %s, %s)", repr(obj.to_string()), is_in ? "true" : "false", is_wildcard ? "true" : "false");
-
-	if (is_in) {
-		if (obj.is_string()) {
-			return get_in_query(field_spc, parse_range(field_spc, obj.str_view()));
-		}
-		return get_in_query(field_spc, obj);
-	}
+	L_CALL("QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <q_flags>)", repr(obj.to_string()));
 
 	switch (obj.getType()) {
 		case MsgPack::Type::NIL:
@@ -635,22 +621,20 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 	}
 
 	auto serialised_term = Serialise::MsgPack(field_spc, obj);
-	return get_term_query(field_spc, serialised_term, wqf, q_flags, is_wildcard);
+	return get_term_query(field_spc, serialised_term, wqf, q_flags);
 }
 
 
 inline Xapian::Query
-QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::termcount wqf, int q_flags, bool is_wildcard)
+QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view serialised_term, Xapian::termcount wqf, int q_flags)
 {
-	L_CALL("QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>, %s)", repr(serialised_term), is_wildcard ? "true" : "false");
+	L_CALL("QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>)", repr(serialised_term));
 
 	switch (field_spc.get_type()) {
 		case FieldType::STRING:
 		case FieldType::TEXT: {
 			// There cannot be non-keyword fields with bool_term
-			if (is_wildcard) {
-				q_flags |= Xapian::QueryParser::FLAG_PARTIAL;
-			}
+			// q_flags |= Xapian::QueryParser::FLAG_PARTIAL;
 			Xapian::QueryParser parser;
 			if (!field_spc.language.empty()) {
 				parser.set_stopper(getStopper(field_spc.language).get());
@@ -673,15 +657,50 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				serialised_term.remove_suffix(1);
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
 			}
-			if (is_wildcard) {
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
-			}
 			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 		}
 
 		default:
 			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 	}
+}
+
+
+inline Xapian::Query
+QueryDSL::get_namespace_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount /*wqf*/, int /*q_flags*/)
+{
+	L_CALL("QueryDSL::get_namespace_in_query(<field_spc>, %s, <wqf>, <q_flags>)", repr(obj.to_string()));
+
+	if (obj.is_string()) {
+		auto parsed = parse_guess_range(field_spc, obj.str_view());
+		if (parsed.first == FieldType::EMPTY) {
+			return Xapian::Query(std::string());
+		}
+		if (field_spc.prefix().empty()) {
+			return get_in_query(specification_t::get_global(parsed.first), parsed.second);
+		}
+		return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix()), parsed.second);
+	}
+	auto field_type = get_in_type(obj);
+	if (field_type == FieldType::EMPTY) {
+		return Xapian::Query(std::string());
+	}
+	if (field_spc.prefix().empty()) {
+		return get_in_query(specification_t::get_global(field_type), obj);
+	}
+	return get_in_query(Schema::get_namespace_specification(field_type, field_spc.prefix()), obj);
+}
+
+
+inline Xapian::Query
+QueryDSL::get_regular_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::termcount /*wqf*/, int /*q_flags*/)
+{
+	L_CALL("QueryDSL::get_regular_query(<field_spc>, %s, <wqf>, <q_flags>)", repr(obj.to_string()));
+
+	if (obj.is_string()) {
+		return get_in_query(field_spc, parse_range(field_spc, obj.str_view()));
+	}
+	return get_in_query(field_spc, obj);
 }
 
 
@@ -1022,7 +1041,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	if (obj.is_string() && obj.str_view() == "*") {
 		query = Xapian::Query(std::string());
 	} else {
-		query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD, false, false, false);
+		query = process(Xapian::Query::OP_AND, "", obj, 1, Xapian::QueryParser::FLAG_DEFAULT | Xapian::QueryParser::FLAG_WILDCARD);
 	}
 
 	L_QUERY("query = " + STEEL_BLUE + "%s" + CLEAR_COLOR + "\n" + DIM_GREY + "%s" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
@@ -1106,9 +1125,3 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 	}
 
 }
-
-
-#ifdef L_QUERY_DEFINED
-#undef L_QUERY_DEFINED
-#undef L_QUERY
-#endif
