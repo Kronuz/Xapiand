@@ -652,15 +652,34 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			// There cannot be non-keyword fields with bool_term
 			// flags |= Xapian::QueryParser::FLAG_PARTIAL;
 			Xapian::QueryParser parser;
-			if (!field_spc.language.empty()) {
-				parser.set_stopper(getStopper(field_spc.language).get());
-				// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
+			switch (default_op) {
+				case Xapian::Query::OP_NEAR:
+				case Xapian::Query::OP_PHRASE:
+				case Xapian::Query::OP_ELITE_SET:
+				case Xapian::Query::OP_SYNONYM:
+				case Xapian::Query::OP_MAX:
+					parser.set_default_op(default_op);
+					break;
+				case Xapian::Query::OP_AND:
+				case Xapian::Query::OP_OR:
+					parser.set_default_op(default_op);
+					/* FALLTHROUGH */
+				case Xapian::Query::OP_AND_NOT:
+				case Xapian::Query::OP_XOR:
+				case Xapian::Query::OP_AND_MAYBE:
+				case Xapian::Query::OP_FILTER:
+				case Xapian::Query::OP_SCALE_WEIGHT:
+				case Xapian::Query::OP_WILDCARD:
+				default:
+					if (!field_spc.language.empty()) {
+						parser.set_stopper(getStopper(field_spc.language).get());
+						// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
+					}
+					if (!field_spc.stem_language.empty()) {
+						parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
+						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
+					}
 			}
-			if (!field_spc.stem_language.empty()) {
-				parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
-				parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
-			}
-			parser.set_default_op(default_op);
 			return parser.parse_query(std::string(serialised_term), flags, field_spc.prefix() + field_spc.get_ctype());
 		}
 
