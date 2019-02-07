@@ -264,23 +264,23 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 							query = process(Xapian::Query::OP_FILTER, path, o, default_op, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_NEAR):
-							query = process(Xapian::Query::OP_NEAR, path, o, default_op, wqf, flags);
+							query = process(Xapian::Query::OP_NEAR, path, o, Xapian::Query::OP_NEAR, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_PHRASE):
-							query = process(Xapian::Query::OP_PHRASE, path, o, default_op, wqf, flags);
+							query = process(Xapian::Query::OP_PHRASE, path, o, Xapian::Query::OP_PHRASE, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
 							// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
 							query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-							query = process(Xapian::Query::OP_ELITE_SET, path, o, default_op, wqf, flags);
+							query = process(Xapian::Query::OP_ELITE_SET, path, o, Xapian::Query::OP_ELITE_SET, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_SYNONYM):
-							query = process(Xapian::Query::OP_SYNONYM, path, o, default_op, wqf, flags);
+							query = process(Xapian::Query::OP_SYNONYM, path, o, Xapian::Query::OP_SYNONYM, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_MAX):
-							query = process(Xapian::Query::OP_MAX, path, o, default_op, wqf, flags);
+							query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags);
 							break;
 						case _.fhh(RESERVED_QUERYDSL_WILDCARD):
 							query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags);
@@ -660,6 +660,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
 				parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 			}
+			parser.set_default_op(default_op);
 			return parser.parse_query(std::string(serialised_term), flags, field_spc.prefix() + field_spc.get_ctype());
 		}
 
