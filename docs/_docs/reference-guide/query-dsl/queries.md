@@ -307,6 +307,23 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "personality": {
+      "_near": "adventurous ambitious"
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+
 ## Phrase
 
 A phrase is surrounded with double quotes (`""`) and allows searching for a
@@ -338,6 +355,22 @@ GET /bank/:search?pretty
 {
   "_query": {
     "personality": "\"these days are few and far between\""
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "personality": {
+      "_phrase": "these days are few and far between"
+    }
   }
 }
 ```
