@@ -186,6 +186,27 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 
+## Elite Set
+
+* `_elite_set`    - Pick the best N subqueries and combine with `_or`.
+
+
+## Additional Operators
+
+* `_max`          - Pick the maximum weight of any subquery.
+
+<!--
+* `_wildcard`     - Wildcard expansion.
+* `_scale_weight` -
+* `_synonym`      -
+ -->
+
+
+
+---
+
+
+
 ## Range Searches
 
 The keyword `_range` matches documents where the given value is between the
@@ -231,9 +252,9 @@ GET /bank/:search?pretty
 
 ## Near
 
-Two additional operators that are commonly used are `_near`, which finds terms
-within 10 words of each other in the current document, behaving like `_and`
-with regard to weights, so that:
+Another commonly used operator is `NEAR`, which finds terms within 10 words
+of each other in the current document, behaving like `_and` with regard to
+weights, so that:
 
 * Documents which match A within 10 words of B are matched, with weight of A+B
 
@@ -253,33 +274,29 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{% capture req %}
-
-```json
-GET /bank/:search?pretty
-
-{
-  "_query": {
-    "_near": [
-        { "personality": "adventurous" },
-        { "personality": "ambitious" },
-    ]
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
 
 ## Phrase
 
-The `_phrase` operator allows for searching for a specific phrase and returns
-only matches where all terms appear in the document, in the correct order,
-giving a weight of the sum of each term. For example:
+A phrase is surrounded with double quotes (`""`) and allows searching for a
+specific exact phrase and returns only matches where all terms appear in the
+document in the correct order, giving a weight of the sum of each term.
+For example:
 
 * Documents which match A followed by B followed by C gives a weight of A+B+C
 
+{: .note .info}
+**_Note_**<br>
+When searching for phrases, _stop words_ do not apply.
+
+{: .note .warning}
+**_Caution_**<br>
+Hyphenated words are also treated as phrases, as are cases such as filenames
+and email addresses (e.g. `/etc/passwd` or `president@whitehouse.gov`)
+
 #### Example
+
+In the following example, we will retrieve documents with the exact phrase,
+including the stop words `these`, `are`, `few`, `and` `far` and `between`.
 
 {% capture req %}
 
@@ -295,6 +312,22 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
+
+## Love and Hate
+
+The `+` and `-` operators, select documents based on the presence or absence of
+specified terms.
+
+{: .note .info}
+**_Note_**<br>
+When using these operators, _stop words_ do not apply.
+
+
+#### Example
+
+The following matches all documents with the phrase _"adventurous nature"_ but
+not _ambitious_; and:
+
 {% capture req %}
 
 ```json
@@ -302,9 +335,7 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "_phrase": [
-        { "personality": "these days are few and far between" },
-    ]
+    "personality": "\"adventurous nature\" -ambitious"
   }
 }
 ```
@@ -312,17 +343,8 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-## Elite Set
-
-* `_elite_set`    - Pick the best N subqueries and combine with `_or`.
-
-
-## Additional Operators
-
-* `_max`          - Pick the maximum weight of any subquery.
-* `_wildcard`     - Wildcard expansion.
-
-<!--
-* `_scale_weight` -
-* `_synonym`      -
- -->
+{: .note .warning}
+**_Caution_**<br>
+One thing to note is that the behaviour of the +/- operators vary depending on
+the default operator used and the above examples assume that the default (`OR`)
+is used.
