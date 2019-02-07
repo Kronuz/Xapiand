@@ -11,7 +11,10 @@ of different methods to produce more complex queries.
 ## Simple Queries
 
 The most basic query is a search for a single textual term. This will find all
-documents in the database which have that term assigned to them.
+documents in the database which have that term assigned to them. These kind of
+queries are called "**leaf queries**".
+
+#### Example
 
 For example, a search might be for the term "_banana_" assigned in the
 "_favoriteFruit_" field and restricting the size of results to one result by
@@ -63,8 +66,10 @@ the weight of one or both subqueries in the following way:
 * `_not`          - Finds documents which don't match any of the subqueries.
 * `_and_not`      - Matches documents with the weight from subquery A only.
 
-The following example finds _all_ bank accounts for which their account
-holders are either _brown_ eyed _females_ or like _bananas_:
+#### Example
+
+For example, the following matches all of those who either like _bananas_ or
+are _brown-eyed females_:
 
 {% capture req %}
 
@@ -75,13 +80,13 @@ GET /bank/:search?pretty
   "_query": {
     "_or": [
       {
+        "favoriteFruit": "banana"
+      },
+      {
         "_and": [
             { "gender": "female" },
             { "eyeColor": "brown" }
         ]
-      },
-      {
-        "favoriteFruit": "banana"
       }
     ]
   }
@@ -107,6 +112,12 @@ operator, the weight is the sum of the matching subqueries, so:
 This allows you to state that you require some terms (A) and that other
 terms (B) are useful but not required.
 
+#### Example
+
+For example, the following matches all of those who like _bananas_ and which
+maybe are also are _brown-eyed females_. It will return _brown-eyed females_
+who like _bananas_ first:
+
 {% capture req %}
 
 ```json
@@ -116,13 +127,13 @@ GET /bank/:search?pretty
   "_query": {
     "_and_maybe": [
       {
+        "favoriteFruit": "banana"
+      },
+      {
         "_and": [
             { "gender": "female" },
             { "eyeColor": "brown" }
         ]
-      },
-      {
-        "favoriteFruit": "banana"
       }
     ]
   }
@@ -144,6 +155,36 @@ to a query depending whether you want to include or exclude documents:
                     match the right hand one (with weights coming from the left
                     subquery)
 
+#### Example
+
+For example, the following matches all who like _bananas_ filtering the results
+to those who also are _brown-eyed females_, but this filter doesn't affect
+weights:
+
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "_filter": [
+      {
+        "favoriteFruit": "banana"
+      },
+      {
+        "_and": [
+            { "gender": "female" },
+            { "eyeColor": "brown" }
+        ]
+      }
+    ]
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
 
 ## Range Searches
 
@@ -155,6 +196,8 @@ greater than or equal to a fixed value.
 
 If you only use the keyword `_to` matches documents where the given value is
 less than or equal a fixed value.
+
+#### Example
 
 This example find _all_ bank accounts for which their account holders are
 _females_ in the ages between 20 and 30:
@@ -194,10 +237,7 @@ with regard to weights, so that:
 
 * Documents which match A within 10 words of B are matched, with weight of A+B
 
-{: .note .unreleased}
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+#### Example
 
 {% capture req %}
 
@@ -206,10 +246,24 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "_personality": {
-        "_value": "adventurous",
-        "_near": "assures"
-    }
+    "personality": "adventurous NEAR ambitious"
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "_near": [
+        { "personality": "adventurous" },
+        { "personality": "ambitious" },
+    ]
   }
 }
 ```
@@ -225,10 +279,7 @@ giving a weight of the sum of each term. For example:
 
 * Documents which match A followed by B followed by C gives a weight of A+B+C
 
-{: .note .unreleased}
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+#### Example
 
 {% capture req %}
 
@@ -237,18 +288,37 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "_personality": {
-        "_phrase": "All in all"
-    }
+    "personality": "\"these days are few and far between\""
   }
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-## Additional Operators
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "_phrase": [
+        { "personality": "these days are few and far between" },
+    ]
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+
+## Elite Set
 
 * `_elite_set`    - Pick the best N subqueries and combine with `_or`.
+
+
+## Additional Operators
+
 * `_max`          - Pick the maximum weight of any subquery.
 * `_wildcard`     - Wildcard expansion.
 
