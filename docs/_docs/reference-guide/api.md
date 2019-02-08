@@ -34,7 +34,7 @@ methods for certain operations.
 - **DELETE**, **PUT**, **MERGE** and **STORE** methods are idempotent.
 - **POST** and **PATCH** aren't safe or idempotent.
 
-{: .note .info}
+{: .note .info }
 **_Idempotent methods_**<br>
 An _idempotent_ HTTP method is a HTTP method that can be called many times
 without different outcomes. It would not matter if the method is called only
@@ -94,6 +94,6 @@ The defaults settings for the above parameters depend on the api being used.
 -->
 {% endif %}
 
-{: .note .info}
+{: .note .info }
 Single index APIs such as the Document APIs and the single-index alias APIs
 do not support multiple indices.

@@ -2,7 +2,7 @@
 title: Schemas
 ---
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 A schema is the definition of how a document, and the fields it contains, are
@@ -45,19 +45,19 @@ an existing index with the PUT schema API.
 
 ## [Casting Types](casting-types)
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 
 ## [Accuracy](accuracy)
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 
 ## [Indexing Mode](indexing-mode)
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 * `none`, `all`
@@ -68,23 +68,23 @@ _This section is a **work in progress**..._
 
 ## [Dynamic Field Names](dynamic-field-names)
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 
 ## [Namespaces](namespaces)
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 
 ## [Foreign Schemas](foreign-schemas)
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 
-{: .note .info}
+{: .note .info }
 **_Updating Existing Field Types_**<br>
 Other than where documented, **existing field types cannot be updated**.
 Changing the name or the type of a field would mean invalidating already indexed
@@ -92,7 +92,7 @@ documents. Instead, you should create a new index with the correct field types
 and reindex your data into that index.
 
 
-{: .note .info}
+{: .note .info }
 **_One Index, One Document Type_**<br>
 In {{ site.name }}, one index can contain one document type. E.g. Instead of
 storing two document types in a single index, one should store tweets in the

@@ -25,27 +25,27 @@ Throughout this guide there are a number of small-but-handy pieces of
 information that can make using {{ site.name }} easier, more interesting, and
 less hazardous. Here's what to look out for.
 
-{: .note .tip}
+{: .note .tip }
 **_Tips help you get more from {{ site.name }}_**<br>
 These are tips and tricks that will help you be a {{ site.name }} wizard!
 
-{: .note .info}
+{: .note .info }
 **_Notes are handy pieces of information_**<br>
 These are for the extra tidbits sometimes necessary to understand {{ site.name }}.
 
-{: .note .notice}
+{: .note .caution }
 **_Things to notice to help you get better results_**<br>
 Be aware of these messages if you wish to avoid certain death.
 
-{: .note .warning}
+{: .note .warning }
 **_Warnings help you not blow things up_**<br>
 Be aware of these messages if you wish to avoid certain death.
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_You'll see this by a feature that hasn't been released_**<br>
 Some pieces are for future versions of {{ site.name }} that are not yet released.
 
-{: .note .construction}
+{: .note .construction }
 **_Documentation section under construction_**<br>
 This part of the {{ site.name }} documentation is still not completed.
 

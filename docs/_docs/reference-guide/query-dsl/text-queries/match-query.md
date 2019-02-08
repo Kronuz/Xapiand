@@ -27,7 +27,7 @@ GET /bank/:search?pretty
 The default operator to be used can be set by using the `default_operator`
 parameter. It can be `AND` or `OR`. Defaults to `OR`.
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)

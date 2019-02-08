@@ -34,7 +34,7 @@ associate aggregations on the bucket level, and those will execute within the
 context of that bucket. This is where the real power of aggregations kicks in:
 **aggregations can be nested!**
 
-{: .note .info}
+{: .note .info }
 **_Sub-aggregations_**<br>
 Bucketing aggregations can have _sub-aggregations_ (bucketing or metric). The
 sub-aggregations will be computed for the buckets which their parent aggregation
@@ -42,7 +42,7 @@ generates. There is no hard limit on the level/depth of nested aggregations (one
 can nest an aggregation under a "parent" aggregation, which is itself a
 sub-aggregation of another higher-level aggregation).
 
-{: .note .info}
+{: .note .info }
 **_Limits_**<br>
 Aggregations operate on the `double` representation of the data. As a
 consequence, the result may be approximate when running on longs whose absolute
@@ -87,7 +87,7 @@ field will define the _field_ on which the average will be calculated).
 
 ### Metadata
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -113,7 +113,7 @@ Some aggregations work on values extracted from the aggregated documents.
 Typically, the values will be extracted from a specific document field which is
 set using the field key for the aggregations.
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)

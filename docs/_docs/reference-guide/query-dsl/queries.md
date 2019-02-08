@@ -333,11 +333,11 @@ For example:
 
 * Documents which match A followed by B followed by C gives a weight of A+B+C
 
-{: .note .info}
+{: .note .info }
 **_Note_**<br>
 When searching for phrases, _stop words_ do not apply.
 
-{: .note .notice}
+{: .note .caution }
 **_Caution_**<br>
 Hyphenated words are also treated as phrases, as are cases such as filenames
 and email addresses (e.g. `/etc/passwd` or `president@whitehouse.gov`)
@@ -383,7 +383,7 @@ GET /bank/:search?pretty
 The `+` and `-` operators, select documents based on the presence or absence of
 specified terms.
 
-{: .note .info}
+{: .note .info }
 **_Note_**<br>
 When using these operators, _stop words_ do not apply.
 
@@ -408,7 +408,7 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-{: .note .notice}
+{: .note .caution }
 **_Caution_**<br>
 One thing to note is that the behaviour of the +/- operators vary depending on
 the default operator used and the above examples assume that the default (`OR`)

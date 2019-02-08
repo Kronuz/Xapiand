@@ -37,7 +37,7 @@ The restore for the above dump can also be done in three steps:
 ~ $ xapiand --restore="twitter" --in="twitter.docs"
 ```
 
-{: .note .warning}
+{: .note .warning }
 **_Use the same parameters used when running the server_**<br>
 For all the above commands you _should_ use the same parameters you use while
 running the server. For example, if the server runs in "optimal" mode by using

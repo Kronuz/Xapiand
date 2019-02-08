@@ -34,7 +34,7 @@ Available bucket aggregations:
   * IP range <sup>*</sup>
   * Geo-spatial IP <sup>*</sup>
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Features!_**<br>
 Features with asterisk haven't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -184,7 +184,7 @@ POST /bank/:search?pretty
 
 #### Deep Ordering
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -346,7 +346,7 @@ or more. Default value is 1.
 
 ### Filtering Values
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -359,7 +359,7 @@ filter using partition expressions.
 
 ### Collect Mode
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -375,7 +375,7 @@ In some scenarios this can be very wasteful and can hit memory constraints.
 
 ### Missing Value
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -500,7 +500,7 @@ Response:
 
 ## Mixing field types
 
-{: .note .warning}
+{: .note .warning }
 **_Warning_**<br>
 When aggregating on multiple indices the type of the aggregated field may not be
 the same in all indices. Some types are compatible with each other (positive

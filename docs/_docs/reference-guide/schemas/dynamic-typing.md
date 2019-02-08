@@ -2,7 +2,7 @@
 title: Dynamic Typing
 ---
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 By default, when a previously unseen field is found in a document,

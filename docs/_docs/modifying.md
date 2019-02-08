@@ -122,7 +122,7 @@ MERGE /customer/1?pretty
 
 ### Updating With Scripts
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -147,7 +147,7 @@ to be updated.
 
 ### Updating Multiple Documents
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -185,7 +185,7 @@ DELETE /customer/2?pretty
 
 ### Deleting Multiple Documents
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
@@ -200,7 +200,7 @@ DELETE /customer/:search?q=gender:male&pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .notice}
+{: .note .caution }
 It is worth noting that it is much more efficient to delete a
 whole index instead of deleting all documents using this method.
 

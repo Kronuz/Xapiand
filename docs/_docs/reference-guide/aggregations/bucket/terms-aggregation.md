@@ -2,14 +2,14 @@
 title: Terms Aggregation
 ---
 
-{: .note .construction}
+{: .note .construction }
 _This section is a **work in progress**..._
 
 
 A _multi-bucket_ value source based aggregation where buckets are dynamically
 built - one per unique **term**.
 
-{: .note .notice}
+{: .note .caution }
 **_Performance_**<br>
 Whenever is possible, prefer [Values Aggregation](../values-aggregation) to this type as
 it's more efficient.

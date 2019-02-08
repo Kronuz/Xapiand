@@ -17,6 +17,6 @@ might contain the following:
 In short, tutorials aren't the core reference information in docs. They walk
 users through processes from beginning to end.
 
-{: .note .info}
+{: .note .info }
 The Tutorials section is new, so there aren't many tutorials yet.
 You can add a tutorial here to help populate this section.

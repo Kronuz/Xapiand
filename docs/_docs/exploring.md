@@ -183,7 +183,7 @@ execute queries. This is referred to as the Query DSL. The query language is
 quite comprehensive and can be intimidating at first glance but the best way to
 actually learn it is to start with a few basic examples.
 
-{: .note}
+{: .note .tip }
 The Query DSL method for searching is much more efficient.
 
 Going back to our last example, we executed a query to retrieve all documents

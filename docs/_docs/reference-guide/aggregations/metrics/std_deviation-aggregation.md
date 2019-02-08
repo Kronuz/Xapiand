@@ -106,7 +106,7 @@ displayed and can be any non-negative double, meaning you can request
 non-integer values such as `1.5`.  A value of `0` is valid, but will simply
 return the average for both `_upper` and `_lower` bounds.
 
-{: .note .warning}
+{: .note .warning }
 **_Standard Deviation and Bounds require normality._**<br>
 The standard deviation and its bounds are displayed by default, but they are not
 always applicable to all data-sets. Your data must be normally distributed for

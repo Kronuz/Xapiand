@@ -37,7 +37,7 @@ Available metrics aggregations:
   * Scripted <sup>*</sup>
   * [Extended Statistics](extended_stats-aggregation)
 
-{: .note .unreleased}
+{: .note .unimplemented }
 **_Unimplemented Features!_**<br>
 Features with asterisk haven't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
