@@ -119,7 +119,14 @@ MERGE /customer/1?pretty
 
 {% if site.serving %}
 
-<!-- TODO: Implement feature -->
+
+### Updating With Scripts
+
+{: .note .unreleased}
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
+
 Updates can also be performed by using simple scripts. This example uses a
 script to increment the age by 5:
 
@@ -137,7 +144,14 @@ MERGE /customer/1?pretty
 In the above example, `obj` refers to the current source document that is about
 to be updated.
 
-<!-- TODO: Implement feature -->
+
+### Updating Multiple Documents
+
+{: .note .unreleased}
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
+
 Xapiand provides the ability to update multiple documents given a specific
 query condition (like an SQL UPDATE-WHERE statement):
 
@@ -169,7 +183,13 @@ DELETE /customer/2?pretty
 
 {% if site.serving %}
 
-<!-- TODO: Implement feature -->
+### Deleting Multiple Documents
+
+{: .note .unreleased}
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
+
 Xapiand provides the ability to delete multiple documents given a specific
 query condition.
 
@@ -180,7 +200,7 @@ DELETE /customer/:search?q=gender:male&pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .warning}
+{: .note .notice}
 It is worth noting that it is much more efficient to delete a
 whole index instead of deleting all documents using this method.
 

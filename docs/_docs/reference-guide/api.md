@@ -76,7 +76,7 @@ Most APIs that refer to an index parameter support execution across multiple
 indices, using simple `test1,test2,test3` notation.
 
 {% if site.serving %}
-<!-- TODO: Implement feature -->
+<!-- TODO: Unimplemented Feature! -->
 <!--
 It also support  `_all` for all indices, wildcards, for example: `test*`,
 `*test`, `te*t` or `*test*`, and the ability to "exclude" (-), for example:
