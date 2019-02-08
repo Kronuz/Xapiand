@@ -162,7 +162,7 @@ void json_load(rapidjson::Document& doc, std::string_view str)
 			snippet.replace(p, 1, tabs);
 			++p;
 		}
-		THROW(ClientError, "JSON parse error at line %zu, col: %zu : %s\n%s", line, col, GetParseError_En(parse_done.Code()), snippet);
+		THROW(ClientError, "JSON parse error at line {}, col: {} : {}\n{}", line, col, GetParseError_En(parse_done.Code()), snippet);
 	}
 }
 

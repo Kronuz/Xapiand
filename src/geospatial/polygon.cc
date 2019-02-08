@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -600,7 +600,7 @@ std::vector<std::string>
 Polygon::ConvexPolygon::getTrixels(bool partials, double error) const
 {
 	if (error < HTM_MIN_ERROR || error > HTM_MAX_ERROR) {
-		THROW(HTMError, "Error must be in [%f, %f]", HTM_MIN_ERROR, HTM_MAX_ERROR);
+		THROW(HTMError, "Error must be in [{}, {}]", HTM_MIN_ERROR, HTM_MAX_ERROR);
 	}
 
 	trixel_data data(partials, HTM_MAX_LEVEL);
@@ -652,7 +652,7 @@ std::vector<range_t>
 Polygon::ConvexPolygon::getRanges(bool partials, double error) const
 {
 	if (error < HTM_MIN_ERROR || error > HTM_MAX_ERROR) {
-		THROW(HTMError, "Error must be in [%f, %f]", HTM_MIN_ERROR, HTM_MAX_ERROR);
+		THROW(HTMError, "Error must be in [{}, {}]", HTM_MIN_ERROR, HTM_MAX_ERROR);
 	}
 
 	range_data data(partials, HTM_MAX_LEVEL);

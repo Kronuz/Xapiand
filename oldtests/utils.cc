@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -99,11 +99,11 @@ DB_Test::DB_Test(std::string_view db_name, const std::vector<std::string>& docs,
 				L_ERR("Can not read the file %s", doc);
 			} else if (db_handler.index(std::to_string(i++), false, get_body(buffer, ct_type).second, true, ct_type_t(ct_type)).first == 0) {
 				destroy();
-				THROW(Error, "File %s can not index", doc);
+				THROW(Error, "File {} can not index", doc);
 			}
 		} catch (const std::exception& e) {
 			destroy();
-			THROW(Error, "File %s can not index [%s]", doc, e.what());
+			THROW(Error, "File {} can not index [{}]", doc, e.what());
 		}
 	}
 }

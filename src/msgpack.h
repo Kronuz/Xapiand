@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1848,7 +1848,7 @@ inline MsgPack& MsgPack::at(size_t pos) {
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			if (pos >= _body->_obj->via.map.size) {
-				THROW(out_of_range, "The map only contains %u elements", _body->_obj->via.map.size);
+				THROW(out_of_range, "The map only contains {} elements", _body->_obj->via.map.size);
 			}
 			return at(std::string_view(_body->_obj->via.map.ptr[pos].key.via.str.ptr, _body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
@@ -1866,7 +1866,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			if (pos >= _const_body->_obj->via.map.size) {
-				THROW(out_of_range, "The map only contains %u elements", _const_body->_obj->via.map.size);
+				THROW(out_of_range, "The map only contains {} elements", _const_body->_obj->via.map.size);
 			}
 			return at(std::string_view(_const_body->_obj->via.map.ptr[pos].key.via.str.ptr, _const_body->_obj->via.map.ptr[pos].key.via.str.size));
 		case Type::ARRAY:
@@ -2617,7 +2617,7 @@ inline MsgPack MsgPack::unserialise(std::string_view s) {
 inline void MsgPack::serialise(int fd) const {
 	std::string serialised = serialise();
 	ssize_t w = io::write(fd, serialised.data(), serialised.size());
-	if (w < 0) THROW(Error, "Cannot write to file [%d]", fd);
+	if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
 }
 
 
@@ -2636,7 +2636,7 @@ inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& of
 		}
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
-		if (r < 0) THROW(Error, "Cannot read from file [%d]", fd);
+		if (r < 0) THROW(Error, "Cannot read from file [{}]", fd);
 		buffer.append(buf, r);
 	} while (true);
 }

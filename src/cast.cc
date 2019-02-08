@@ -67,7 +67,7 @@ Cast::cast(const MsgPack& obj)
 			case Hash::GEO_INTERSECTION:
 				return obj;
 			default:
-				THROW(CastError, "Unknown cast type %s", str_key);
+				THROW(CastError, "Unknown cast type {}", str_key);
 		}
 	}
 
@@ -103,12 +103,12 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			if (obj.is_map()) {
 				return obj;
 			}
-			THROW(CastError, "Type %s cannot be cast to script", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to script", obj.getStrType());
 		case FieldType::GEO:
 			if (obj.is_map() || obj.is_string()) {
 				return obj;
 			}
-			THROW(CastError, "Type %s cannot be cast to geo", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to geo", obj.getStrType());
 		case FieldType::EMPTY:
 			if (obj.is_string()) {
 				{
@@ -139,7 +139,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			}
 			/* FALLTHROUGH */
 		default:
-			THROW(CastError, "Type %s cannot be cast", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast", obj.getStrType());
 	}
 }
 
@@ -158,14 +158,14 @@ Cast::integer(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoll(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value %s cannot be cast to integer", obj.getStrType());
+				THROW(CastError, "Value {} cannot be cast to integer", obj.getStrType());
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<int64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type %s cannot be cast to integer", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to integer", obj.getStrType());
 	}
 }
 
@@ -184,14 +184,14 @@ Cast::positive(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoull(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value %s cannot be cast to positive", obj.getStrType());
+				THROW(CastError, "Value {} cannot be cast to positive", obj.getStrType());
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<uint64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type %s cannot be cast to positive", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to positive", obj.getStrType());
 	}
 }
 
@@ -210,14 +210,14 @@ Cast::_float(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stod(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value %s cannot be cast to float", obj.getStrType());
+				THROW(CastError, "Value {} cannot be cast to float", obj.getStrType());
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<double>(obj.boolean());
 		default:
-			THROW(CastError, "Type %s cannot be cast to float", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to float", obj.getStrType());
 	}
 }
 
@@ -297,7 +297,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type %s cannot be cast to boolean", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to boolean", obj.getStrType());
 	}
 }
 
@@ -308,7 +308,7 @@ Cast::uuid(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type %s cannot be cast to uuid", obj.getStrType());
+	THROW(CastError, "Type {} cannot be cast to uuid", obj.getStrType());
 }
 
 
@@ -323,7 +323,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to date", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to date", obj.getStrType());
 	}
 }
 
@@ -338,7 +338,7 @@ Cast::time(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to time", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to time", obj.getStrType());
 	}
 }
 
@@ -353,7 +353,7 @@ Cast::timedelta(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type %s cannot be cast to timedelta", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to timedelta", obj.getStrType());
 	}
 }
 
@@ -364,7 +364,7 @@ Cast::ewkt(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type %s cannot be cast to ewkt", obj.getStrType());
+	THROW(CastError, "Type {} cannot be cast to ewkt", obj.getStrType());
 }
 
 
@@ -381,7 +381,7 @@ FieldType
 Cast::getType(std::string_view cast_word)
 {
 	if (cast_word.empty() || cast_word[0] != reserved__) {
-		THROW(CastError, "Unknown cast type %s", repr(cast_word));
+		THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
 	switch (getHash(cast_word)) {
 		case Hash::INTEGER:           return FieldType::INTEGER;
@@ -410,6 +410,6 @@ Cast::getType(std::string_view cast_word)
 		case Hash::CHAI:              return FieldType::SCRIPT;
 		case Hash::ECMA:              return FieldType::SCRIPT;
 		default:
-			THROW(CastError, "Unknown cast type %s", repr(cast_word));
+			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
 }

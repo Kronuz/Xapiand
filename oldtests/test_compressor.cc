@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +53,7 @@ const std::vector<std::string> big_files({
 std::string read_file(const std::string& filename) {
 	int fd = io::open(filename.c_str(), O_RDONLY);
 	if unlikely(fd < 0) {
-		THROW(Error, "Cannot open file: %s", filename);
+		THROW(Error, "Cannot open file: {}", filename);
 	}
 
 	std::string ret;
@@ -83,7 +83,7 @@ int test_Compress_Decompress_Data(const std::string& orig_file) {
 
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
-			THROW(Error, "Cannot open file: %s", cmp_file);
+			THROW(Error, "Cannot open file: {}", cmp_file);
 		}
 
 		LZ4CompressData lz4(_data.c_str(), _data.size());
@@ -126,7 +126,7 @@ int test_Compress_Decompress_File(const std::string& orig_file) {
 		// Compress File
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
-			THROW(Error, "Cannot open file: %s", cmp_file.c_str());
+			THROW(Error, "Cannot open file: {}", cmp_file.c_str());
 		}
 
 		LZ4CompressFile lz4(orig_file);
@@ -171,12 +171,12 @@ int test_Compress_Decompress_BlockFile(const std::string& orig_file, size_t numB
 		// Compress File
 		int orig_fd = io::open(orig_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(orig_fd < 0) {
-			THROW(Error, "Cannot open file: %s", orig_file);
+			THROW(Error, "Cannot open file: {}", orig_file);
 		}
 
 		int fd = io::open(cmp_file.c_str(), O_RDWR | O_CREAT, 0644);
 		if unlikely(fd < 0) {
-			THROW(Error, "Cannot open file: %s", cmp_file);
+			THROW(Error, "Cannot open file: {}", cmp_file);
 		}
 
 		LZ4CompressFile lz4;

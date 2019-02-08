@@ -867,7 +867,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 		case _.fhhl("x-http-method-override"):
 		case _.fhhl("http-method-override"): {
 			if (parser->method != HTTP_POST) {
-				THROW(ClientError, "%s header must use the POST method", repr(new_request->_header_name));
+				THROW(ClientError, "{} header must use the POST method", repr(new_request->_header_name));
 			}
 
 			constexpr static auto __ = phf::make_phf({
@@ -2398,7 +2398,7 @@ HttpClient::search_view(Request& request)
 					selector_string_holder = selector_obj.as_str();
 					selector = selector_string_holder;
 				} else {
-					THROW(ClientError, "The %s must be a string", RESERVED_QUERYDSL_SELECTOR);
+					THROW(ClientError, "The {} must be a string", RESERVED_QUERYDSL_SELECTOR);
 				}
 			}
 

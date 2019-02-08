@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -506,7 +506,7 @@ Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool revers
 				break;
 			}
 			default:
-				THROW(InvalidArgumentError, "Type '%c' is not supported", field_spc.get_type());
+				THROW(InvalidArgumentError, "Type '{}' is not supported", field_spc.get_type());
 		}
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,25 +28,9 @@
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
 
+#include "fmt/format.h"       // fmt::format_args, fmt::vformat, fmt::make_format_args
 #include "xapian.h"           // for DocNotFoundError, InternalError, InvalidArgum...
 
-#ifdef WITHOUT_FMT
-#include <cstdarg>            // for va_list
-#include <cstdio>             // for vsprintf
-#include "stringified.hh"     // for stringified
-inline std::string vsprintf(std::string_view format, va_list args) {
-	std::string buffer;
-	buffer.resize(1024);
-	buffer.resize(vsnprintf(&buffer[0], buffer.size(), stringified(format).c_str(), args));
-	return buffer;
-}
-#define VSPRINTF vsprintf
-#define VFPRINTF_ARGS va_list
-#else
-#include "fmt/printf.h"       // fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
-#define VSPRINTF fmt::vsprintf
-#define VFPRINTF_ARGS fmt::printf_args
-#endif
 
 class BaseException {
 	static const BaseException& default_exc() {
@@ -55,16 +39,7 @@ class BaseException {
 	}
 
 	struct private_ctor {};
-	BaseException(private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, VFPRINTF_ARGS args);
-
-#ifdef WITHOUT_FMT
-	BaseException(const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, const char* format, ...) {
-		va_list args;
-		va_start(args, format);
-		BaseException(private_ctor{}, exc, function_, filename_, line_, type, format, args);
-		va_end(args);
-	}
-#endif
+	BaseException(private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, fmt::format_args args);
 
 protected:
 	std::string type;
@@ -86,43 +61,23 @@ public:
 
 	BaseException(const BaseException* exc);
 
-#ifdef WITHOUT_FMT
 	template <typename... Args>
 	BaseException(const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
-		: BaseException(default_exc(), function, filename, line, type, stringified(format).c_str(), std::forward<Args>(args)...) { }
+		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, format, fmt::make_format_args(std::forward<Args>(args)...)) { }
 	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
 	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
-		: BaseException(*exc, function, filename, line, type, stringified(format).c_str(), std::forward<Args>(args)...) { }
+		: BaseException(private_ctor{}, *exc, function, filename, line, type, format, fmt::make_format_args(std::forward<Args>(args)...)) { }
 	template <typename... Args>
 	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
-		: BaseException(default_exc(), function, filename, line, type, stringified(format).c_str(), std::forward<Args>(args)...) { }
+		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, format, fmt::make_format_args(std::forward<Args>(args)...)) { }
 
 	BaseException(const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
-		: BaseException(default_exc(), function, filename, line, type, stringified(msg).c_str()) { }
+		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, msg, fmt::make_format_args()) { }
 	template <typename T, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
 	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
-		: BaseException(*exc, function, filename, line, type, stringified(msg).c_str()) { }
+		: BaseException(private_ctor{}, *exc, function, filename, line, type, msg, fmt::make_format_args()) { }
 	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
-		: BaseException(default_exc(), function, filename, line, type, stringified(msg).c_str()) { }
-#else
-	template <typename... Args>
-	BaseException(const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
-		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, format, fmt::make_printf_args(std::forward<Args>(args)...)) { }
-	template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
-		: BaseException(private_ctor{}, *exc, function, filename, line, type, format, fmt::make_printf_args(std::forward<Args>(args)...)) { }
-	template <typename... Args>
-	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view format, Args&&... args)
-		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, format, fmt::make_printf_args(std::forward<Args>(args)...)) { }
-
-	BaseException(const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
-		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, msg, fmt::make_printf_args()) { }
-	template <typename T, typename = std::enable_if_t<std::is_base_of<BaseException, std::decay_t<T>>::value>>
-	BaseException(const T* exc, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
-		: BaseException(private_ctor{}, *exc, function, filename, line, type, msg, fmt::make_printf_args()) { }
-	BaseException(const void*, const char *function, const char *filename, int line, const char* type, std::string_view msg = "")
-		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, msg, fmt::make_printf_args()) { }
-#endif
+		: BaseException(private_ctor{}, default_exc(), function, filename, line, type, msg, fmt::make_format_args()) { }
 
 	const char* get_message() const;
 	const char* get_context() const;

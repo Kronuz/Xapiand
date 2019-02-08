@@ -610,7 +610,7 @@ public:
 						break;
 					}
 				default:
-					THROW(AggregationError, "'%s' must be a positive number", RESERVED_AGGS_SIGMA);
+					THROW(AggregationError, "'{}' must be a positive number", RESERVED_AGGS_SIGMA);
 			}
 		}
 	}

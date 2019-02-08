@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -311,7 +311,7 @@ Cartesian::toWGS84()
 
 		SRID = WGS84;
 	} catch (const std::out_of_range&) {
-		THROW(CartesianError, "SRID = %d is not supported", SRID);
+		THROW(CartesianError, "SRID = {} is not supported", SRID);
 	}
 }
 
@@ -353,7 +353,7 @@ Cartesian::toCartesian(double lat, double lon, double height, Units units)
 		y = (N + height) * cos_lat * std::sin(lon);
 		z = ((1 - e2) * N + height) * sin_lat;
 	} catch (const std::out_of_range&) {
-		THROW(CartesianError, "SRID = %d is not supported", SRID);
+		THROW(CartesianError, "SRID = {} is not supported", SRID);
 	}
 }
 
@@ -524,7 +524,7 @@ Cartesian::normalize()
 {
 	scale = norm();
 	if (scale < DBL_TOLERANCE) {
-		THROW(CartesianError, "Norm is zero (%f)", scale);
+		THROW(CartesianError, "Norm is zero ({})", scale);
 	}
 	x /= scale;
 	y /= scale;

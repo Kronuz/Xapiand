@@ -104,10 +104,10 @@ QueryDSL::get_in_type(const MsgPack& obj)
 			}
 			return FieldType::EMPTY;
 		} catch (const msgpack::type_error&) {
-			THROW(QueryDslError, "%s must be object [%s]", RESERVED_QUERYDSL_RANGE, repr(range.to_string()));
+			THROW(QueryDslError, "{} must be object [{}]", RESERVED_QUERYDSL_RANGE, repr(range.to_string()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(QueryDslError, "%s must be object [%s]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
+		THROW(QueryDslError, "{} must be object [{}]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 
 	return FieldType::EMPTY;
@@ -122,7 +122,7 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 	FieldParser fp(range);
 	fp.parse();
 	if (!fp.is_range()) {
-		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range));
+		THROW(QueryDslError, "Invalid range [<string>]: {}", repr(range));
 	}
 
 	MsgPack value;
@@ -153,7 +153,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 	FieldParser fp(range);
 	fp.parse();
 	if (!fp.is_range()) {
-		THROW(QueryDslError, "Invalid range [<string>]: %s", repr(range));
+		THROW(QueryDslError, "Invalid range [<string>]: {}", repr(range));
 	}
 
 	MsgPack value;
@@ -282,7 +282,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							default:
-								THROW(QueryDslError, "Invalid operator: %s", name);
+								THROW(QueryDslError, "Invalid operator: {}", name);
 						}
 					} else {
 						switch (_.fhh(name)) {
@@ -347,7 +347,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								query = get_value_query(path, {{ name, o }}, default_op, wqf, flags);
 								break;
 							default:
-								THROW(QueryDslError, "Invalid operator: %s", name);
+								THROW(QueryDslError, "Invalid operator: {}", name);
 						}
 					}
 				} else {
@@ -527,7 +527,7 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
 		}
 		case UnitTime::INVALID:
-		THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
+		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 }
 
@@ -539,7 +539,7 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view f
 
 	auto acc = get_accuracy_time(field_accuracy.substr(2));
 	if (acc == UnitTime::INVALID) {
-		THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
+		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 
 	int64_t value = Datetime::time_to_double(obj);
@@ -554,7 +554,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_v
 
 	auto acc = get_accuracy_time(field_accuracy.substr(3));
 	if (acc == UnitTime::INVALID) {
-		THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
+		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 
 	int64_t value = Datetime::timedelta_to_double(obj);
@@ -570,7 +570,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 	int errno_save;
 	auto acc = strict_stoull(&errno_save, field_accuracy.substr(1));
 	if (errno_save != 0) {
-		THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
+		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 	auto value = Cast::integer(obj);
 	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
@@ -586,14 +586,14 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 		int errno_save;
 		auto nivel = strict_stoull(&errno_save, field_accuracy.substr(4));
 		if (errno_save != 0) {
-			THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
+			THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 		}
 		GeoSpatial geo(obj);
 		const auto ranges = geo.getGeometry()->getRanges(default_spc.flags.partials, default_spc.error);
 		return GenerateTerms::geo(ranges, { nivel }, { field_spc.prefix() }, wqf);
 	}
 
-	THROW(QueryDslError, "Invalid field name: %s", field_accuracy);
+	THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 }
 
 
@@ -614,7 +614,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 		case FieldType::GEO:
 			return get_acc_geo_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
 		default:
-			THROW(Error, "Type: %s does not handle accuracy terms", Serialise::type(field_spc.get_type()));
+			THROW(Error, "Type: {} does not handle accuracy terms", Serialise::type(field_spc.get_type()));
 	}
 }
 
@@ -778,7 +778,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapi
 	L_CALL("QueryDSL::get_in_query(<field_spc>, %s, <default_op>, <wqf>, <flags>)", repr(obj.to_string()));
 
 	if (!obj.is_map() || obj.size() != 1) {
-		THROW(QueryDslError, "%s must be an object with a single element [%s]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
+		THROW(QueryDslError, "{} must be an object with a single element [{}]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 
 	const auto it = obj.begin();
@@ -786,7 +786,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapi
 	if (field_name == RESERVED_QUERYDSL_RANGE) {
 		const auto& value = it.value();
 		if (!value.is_map()) {
-			THROW(QueryDslError, "%s must be object [%s]", repr(field_name), repr(value.to_string()));
+			THROW(QueryDslError, "{} must be object [{}]", repr(field_name), repr(value.to_string()));
 		}
 		return MultipleValueRange::getQuery(field_spc, value);
 	}
@@ -805,7 +805,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapi
 		case Cast::Hash::GEO_INTERSECTION:
 			return GeoSpatialRange::getQuery(field_spc, obj);
 		default:
-			THROW(QueryDslError, "Invalid format %s: %s", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
+			THROW(QueryDslError, "Invalid format {}: {}", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 }
 
@@ -1149,7 +1149,7 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 					switch (_srt.fhh(field_key)) {
 						case _srt.fhh(RESERVED_QUERYDSL_ORDER):
 							if (!val.is_string()) {
-								THROW(QueryDslError, "%s must be string (asc/desc) [%s]", RESERVED_QUERYDSL_ORDER, repr(val.to_string()));
+								THROW(QueryDslError, "{} must be string (asc/desc) [{}]", RESERVED_QUERYDSL_ORDER, repr(val.to_string()));
 							}
 							if (strncasecmp(val.as_str().data(), QUERYDSL_DESC, sizeof(QUERYDSL_DESC)) == 0) {
 								descending = true;
@@ -1160,7 +1160,7 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 							break;
 						case _srt.fhh(RESERVED_QUERYDSL_METRIC):
 							if (!val.is_string()) {
-								THROW(QueryDslError, "%s must be string (%s) [%s]", RESERVED_QUERYDSL_METRIC, "levenshtein, leven, jarowinkler, jarow, sorensendice, sorensen, dice, jaccard, lcsubstr, lcs, lcsubsequence, lcsq, soundex, sound, jaro" ,repr(val.to_string()));
+								THROW(QueryDslError, "{} must be string ({}) [{}]", RESERVED_QUERYDSL_METRIC, "levenshtein, leven, jarowinkler, jarow, sorensendice, sorensen, dice, jaccard, lcsubstr, lcs, lcsubsequence, lcsq, soundex, sound, jaro" ,repr(val.to_string()));
 							}
 							e.metric = val.as_str();
 							break;
@@ -1194,7 +1194,7 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 		}
 		break;
 		default:
-			THROW(QueryDslError, "Invalid format %s: %s", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
+			THROW(QueryDslError, "Invalid format {}: {}", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
 	}
 
 }

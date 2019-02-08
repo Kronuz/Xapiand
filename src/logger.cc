@@ -724,7 +724,7 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 	unlog_line = _line;
 	L_DEBUG_TRY {
 		unlog_str = fmt::vsprintf(format, args);
-	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
+	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
 }
 
 
@@ -734,7 +734,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 	std::string str;
 	L_DEBUG_TRY {
 		str = fmt::vsprintf(format, args);
-	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
+	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
 	if (collect) {
 		std::lock_guard<std::mutex> lk(collected_mtx);
 		collected.emplace_back(std::move(str), with_endl);
@@ -751,7 +751,7 @@ Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_c
 		std::string str;
 		L_DEBUG_TRY {
 			str = fmt::vsprintf(format, args);
-		} L_DEBUG_RETHROW("Cannot format %s", repr(format));
+		} L_DEBUG_RETHROW("Cannot format {}", repr(format));
 		return add(wakeup, function, filename, line, std::move(str), std::move(eptr), clears, async, info, stacked, once, priority);
 	}
 	return Log();

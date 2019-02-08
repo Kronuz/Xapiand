@@ -90,7 +90,7 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 	if (aggs_it != context.end()) {
 		const auto& aggs = aggs_it.value();
 		if (!aggs.is_map()) {
-			THROW(AggregationError, "'%s' must be an object", RESERVED_AGGS_AGGREGATIONS);
+			THROW(AggregationError, "'{}' must be an object", RESERVED_AGGS_AGGREGATIONS);
 		}
 		const auto it = aggs.begin();
 		const auto it_end = aggs.end();
@@ -196,10 +196,10 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 					// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 					// 	break;
 					default:
-						THROW(AggregationError, "Aggregation type %s is not valid for %s", repr(sub_agg_type), repr(sub_agg_name));
+						THROW(AggregationError, "Aggregation type {} is not valid for {}", repr(sub_agg_type), repr(sub_agg_name));
 				}
 			} else {
-				THROW(AggregationError, "Aggregation name %s is not valid", repr(sub_agg_name));
+				THROW(AggregationError, "Aggregation name {} is not valid", repr(sub_agg_name));
 			}
 		}
 	}

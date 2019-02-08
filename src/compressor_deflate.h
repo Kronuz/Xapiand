@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -291,7 +291,7 @@ public:
 		stringified filename_string(filename);
 		fd = io::open(filename_string.c_str(), O_RDONLY);
 		if unlikely(fd == -1) {
-			THROW(DeflateIOError, "Cannot open file: %s", filename_string);
+			THROW(DeflateIOError, "Cannot open file: {}", filename_string);
 		}
 		fd_offset = 0;
 		fd_nbytes = -1;

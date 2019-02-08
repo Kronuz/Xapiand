@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -210,7 +210,7 @@ FieldParser::parse(size_t lvl_max)
 			case FieldParser::State::QUOTE:
 				switch (*currentSymbol) {
 					case '\0':
-						THROW(FieldParserError, "Expected symbol: '%c'", quote);
+						THROW(FieldParserError, "Expected symbol: '{}'", quote);
 					case '\\':
 						if (*(currentSymbol + 1) == '\0') {
 							THROW(FieldParserError, "Syntax error: EOL while scanning quoted string");
@@ -296,7 +296,7 @@ FieldParser::parse(size_t lvl_max)
 						}
 						/* FALLTHROUGH */
 					default:
-						THROW(FieldParserError, "Unexpected symbol: '%c'", *currentSymbol);
+						THROW(FieldParserError, "Unexpected symbol: '{}'", *currentSymbol);
 				}
 				break;
 
@@ -492,7 +492,7 @@ FieldParser::parse(size_t lvl_max)
 						currentState = FieldParser::State::END;
 						break;
 					default:
-						THROW(FieldParserError, "Unexpected symbol: '%c'", *currentSymbol);
+						THROW(FieldParserError, "Unexpected symbol: '{}'", *currentSymbol);
 				}
 				break;
 

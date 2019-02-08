@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -130,7 +130,7 @@ serialise_length(int fd, unsigned long long len)
 
 	auto length = serialise_length(len);
 	w = io::write(fd, length.data(), length.size());
-	if (w < 0) { THROW(Error, "Cannot write to file [%d]", fd); }
+	if (w < 0) { THROW(Error, "Cannot write to file [{}]", fd); }
 }
 
 
@@ -141,7 +141,7 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 	if (buffer.size() - off < 10) {
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
-		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		if (r < 0) { THROW(Error, "Cannot read from file [{}]", fd); }
 		acc += r;
 		buffer.append(buf, r);
 	}
@@ -163,7 +163,7 @@ serialise_string(int fd, std::string_view input)
 	serialise_length(fd, input.size());
 
 	ssize_t w = io::write(fd, input.data(), input.size());
-	if (w < 0) { THROW(Error, "Cannot write to file [%d]", fd); }
+	if (w < 0) { THROW(Error, "Cannot write to file [{}]", fd); }
 }
 
 
@@ -187,10 +187,10 @@ unserialise_string(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 		str.append(pos, end);
 		str.resize(length);
 		ssize_t r = io::read(fd, &str[available], length - available);
-		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		if (r < 0) { THROW(Error, "Cannot read from file [{}]", fd); }
 		acc += r;
 		if (r != length - available) {
-			THROW(SerialisationError, "Invalid input: insufficient data (needed %zd, read %zd)", length - available, r);
+			THROW(SerialisationError, "Invalid input: insufficient data (needed {}, read {})", length - available, r);
 		}
 		buffer.clear();
 		off = 0;
@@ -210,7 +210,7 @@ serialise_char(int fd, char ch)
 	ssize_t w;
 
 	w = io::write(fd, &ch, 1);
-	if (w < 0) { THROW(Error, "Cannot write to file [%d]", fd); }
+	if (w < 0) { THROW(Error, "Cannot write to file [{}]", fd); }
 }
 
 
@@ -221,7 +221,7 @@ unserialise_char(int fd, std::string &buffer, std::size_t& off, std::size_t& acc
 	if (buffer.size() - off < 1) {
 		char buf[1024];
 		r = io::read(fd, buf, sizeof(buf));
-		if (r < 0) { THROW(Error, "Cannot read from file [%d]", fd); }
+		if (r < 0) { THROW(Error, "Cannot read from file [{}]", fd); }
 		acc += r;
 		buffer.append(buf, r);
 	}

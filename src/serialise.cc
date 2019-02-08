@@ -139,7 +139,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
-			THROW(SerialisationError, "msgpack::type %s is not supported", field_value.getStrType());
+			THROW(SerialisationError, "msgpack::type {} is not supported", field_value.getStrType());
 	}
 }
 
@@ -150,7 +150,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 	if (o.size() == 1) {
 		auto str_key = o.begin()->str_view();
 		if (str_key.empty() || str_key[0] != reserved__) {
-			THROW(SerialisationError, "Unknown cast type: %s", repr(str_key));
+			THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 		}
 		switch (Cast::getHash(str_key)) {
 			case Cast::Hash::INTEGER:
@@ -188,7 +188,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 			case Cast::Hash::GEO_INTERSECTION:
 				return geospatial(field_spc.get_type(), o);
 			default:
-				THROW(SerialisationError, "Unknown cast type %s", repr(str_key));
+				THROW(SerialisationError, "Unknown cast type {}", repr(str_key));
 		}
 	}
 
@@ -225,7 +225,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 		case FieldType::UUID:
 			return uuid(field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
+			THROW(SerialisationError, "Type: {:#04x} is an unknown type", field_type);
 	}
 }
 
@@ -259,7 +259,7 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
+			THROW(SerialisationError, "Type: {:#04x} is an unknown type", field_type);
 	}
 }
 
@@ -285,7 +285,7 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: %s is not string", type(field_spc.get_type()));
+			THROW(SerialisationError, "Type: {} is not string", type(field_spc.get_type()));
 	}
 }
 
@@ -315,10 +315,10 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 				case FieldType::STRING:
 					return Datetime::iso8601(Datetime::DateParser(field_value));
 				default:
-					THROW(SerialisationError, "Type: %s is not a date", field_value.getStrType());
+					THROW(SerialisationError, "Type: {} is not a date", field_value.getStrType());
 			}
 		default:
-			THROW(SerialisationError, "Type: %s is not a date", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a date", field_value.getStrType());
 	}
 }
 
@@ -336,7 +336,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: %s is not a time", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a time", field_value.getStrType());
 	}
 }
 
@@ -354,7 +354,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: %s is not a timedelta", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a timedelta", field_value.getStrType());
 	}
 }
 
@@ -372,7 +372,7 @@ Serialise::_float(FieldType field_type, long double field_value)
 		case FieldType::FLOAT:
 			return _float(field_value);
 		default:
-			THROW(SerialisationError, "Type: %s is not a float", type(field_type));
+			THROW(SerialisationError, "Type: {} is not a float", type(field_type));
 	}
 }
 
@@ -383,7 +383,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 	switch (field_type) {
 		case FieldType::POSITIVE:
 			if (field_value < 0) {
-				THROW(SerialisationError, "Type: %s must be a positive number [%lld]", type(field_type), field_value);
+				THROW(SerialisationError, "Type: {} must be a positive number [{}]", type(field_type), field_value);
 			}
 			return positive(field_value);
 		case FieldType::DATE:
@@ -397,7 +397,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 		case FieldType::INTEGER:
 			return integer(field_value);
 		default:
-			THROW(SerialisationError, "Type: %s is not a integer [%lld]", type(field_type), field_value);
+			THROW(SerialisationError, "Type: {} is not a integer [{}]", type(field_type), field_value);
 	}
 }
 
@@ -419,7 +419,7 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::POSITIVE:
 			return positive(field_value);
 		default:
-			THROW(SerialisationError, "Type: %s is not a positive integer [%llu]", type(field_type), field_value);
+			THROW(SerialisationError, "Type: {} is not a positive integer [{}]", type(field_type), field_value);
 	}
 }
 
@@ -431,7 +431,7 @@ Serialise::boolean(FieldType field_type, bool field_value)
 		return boolean(field_value);
 	}
 
-	THROW(SerialisationError, "Type: %s is not boolean", type(field_type));
+	THROW(SerialisationError, "Type: {} is not boolean", type(field_type));
 }
 
 
@@ -442,7 +442,7 @@ Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
 		return geospatial(field_value);
 	}
 
-	THROW(SerialisationError, "Type: %s is not geospatial", type(field_type));
+	THROW(SerialisationError, "Type: {} is not geospatial", type(field_type));
 }
 
 
@@ -499,7 +499,7 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: %s is not time", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not time", field_value.getStrType());
 	}
 }
 
@@ -511,7 +511,7 @@ Serialise::time(double field_value)
 		return timestamp(field_value);
 	}
 
-	THROW(SerialisationError, "Time: %f is out of range", field_value);
+	THROW(SerialisationError, "Time: {} is out of range", field_value);
 }
 
 
@@ -546,7 +546,7 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: %s is not timedelta", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not timedelta", field_value.getStrType());
 	}
 }
 
@@ -558,7 +558,7 @@ Serialise::timedelta(double field_value)
 		return timestamp(field_value);
 	}
 
-	THROW(SerialisationError, "Timedelta: %f is out of range", field_value);
+	THROW(SerialisationError, "Timedelta: {} is out of range", field_value);
 }
 
 
@@ -568,9 +568,9 @@ Serialise::_float(std::string_view field_value)
 	try {
 		return _float(strict_stold(field_value));
 	} catch (const std::invalid_argument& exc) {
-		RETHROW(SerialisationError, "Invalid float format: %s", repr(field_value));
+		RETHROW(SerialisationError, "Invalid float format: {}", repr(field_value));
 	} catch (const std::out_of_range& exc) {
-		RETHROW(SerialisationError, "Out of range float format: %s", repr(field_value));
+		RETHROW(SerialisationError, "Out of range float format: {}", repr(field_value));
 	}
 }
 
@@ -581,9 +581,9 @@ Serialise::integer(std::string_view field_value)
 	try {
 		return integer(strict_stoll(field_value));
 	} catch (const std::invalid_argument& exc) {
-		RETHROW(SerialisationError, "Invalid integer format: %s", repr(field_value));
+		RETHROW(SerialisationError, "Invalid integer format: {}", repr(field_value));
 	} catch (const std::out_of_range& exc) {
-		RETHROW(SerialisationError, "Out of range integer format: %s", repr(field_value));
+		RETHROW(SerialisationError, "Out of range integer format: {}", repr(field_value));
 	}
 }
 
@@ -594,9 +594,9 @@ Serialise::positive(std::string_view field_value)
 	try {
 		return positive(strict_stoull(field_value));
 	} catch (const std::invalid_argument& exc) {
-		RETHROW(SerialisationError, "Invalid positive integer format: %s", repr(field_value));
+		RETHROW(SerialisationError, "Invalid positive integer format: {}", repr(field_value));
 	} catch (const std::out_of_range& exc) {
-		RETHROW(SerialisationError, "Out of range positive integer format: %s", repr(field_value));
+		RETHROW(SerialisationError, "Out of range positive integer format: {}", repr(field_value));
 	}
 }
 
@@ -634,12 +634,12 @@ Serialise::uuid(std::string_view field_value)
 					} catch (const std::invalid_argument&) { }
 				}
 			#endif
-				THROW(SerialisationError, "Invalid encoded UUID format in: %s", uuid);
+				THROW(SerialisationError, "Invalid encoded UUID format in: {}", uuid);
 			}
 		}
 		return serialised;
 	}
-	THROW(SerialisationError, "Invalid UUID format in: %s", repr(field_value));
+	THROW(SerialisationError, "Invalid UUID format in: {}", repr(field_value));
 }
 
 
@@ -685,7 +685,7 @@ Serialise::boolean(std::string_view field_value)
 			break;
 	}
 
-	THROW(SerialisationError, "Boolean format is not valid: %s", repr(field_value));
+	THROW(SerialisationError, "Boolean format is not valid: {}", repr(field_value));
 }
 
 
@@ -926,7 +926,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			if (field_value.size() == 1) {
 				const auto str_key = field_value.begin()->str_view();
 				if (str_key.empty() || str_key[0] != reserved__) {
-					THROW(SerialisationError, "Unknown cast type: %s", repr(str_key));
+					THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
 				switch (Cast::getHash(str_key)) {
 					case Cast::Hash::INTEGER:
@@ -965,7 +965,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 					case Cast::Hash::GEO_INTERSECTION:
 						return FieldType::GEO;
 					default:
-						THROW(SerialisationError, "Unknown cast type: %s", repr(str_key));
+						THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
 			} else {
 				THROW(SerialisationError, "Expected map with one element");
@@ -982,7 +982,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			return FieldType::STRING;
 
 		default:
-			THROW(SerialisationError, "Unexpected type %s", field_value.getStrType());
+			THROW(SerialisationError, "Unexpected type {}", field_value.getStrType());
 	}
 }
 
@@ -1065,7 +1065,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 				const auto it = field_value.begin();
 				const auto str_key = it->str_view();
 				if (str_key.empty() || str_key[0] != reserved__) {
-					THROW(SerialisationError, "Unknown cast type: %s", repr(str_key));
+					THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
 				switch (Cast::getHash(str_key)) {
 					case Cast::Hash::INTEGER:
@@ -1104,7 +1104,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 					case Cast::Hash::GEO_INTERSECTION:
 						return std::make_pair(FieldType::GEO, geospatial(field_value));
 					default:
-						THROW(SerialisationError, "Unknown cast type: %s", repr(str_key));
+						THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
 			} else {
 				THROW(SerialisationError, "Expected map with one element");
@@ -1121,7 +1121,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			return std::make_pair(FieldType::STRING, "");
 
 		default:
-			THROW(SerialisationError, "Unexpected type %s", field_value.getStrType());
+			THROW(SerialisationError, "Unexpected type {}", field_value.getStrType());
 	}
 }
 
@@ -1175,7 +1175,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 			result = uuid(serialised_val);
 			break;
 		default:
-			THROW(SerialisationError, "Type: 0x%02x is an unknown type", field_type);
+			THROW(SerialisationError, "Type: {:#04x} is an unknown type", field_type);
 	}
 
 	return result;
@@ -1204,7 +1204,7 @@ Unserialise::time_d(std::string_view serialised_time)
 		return t;
 	}
 
-	THROW(SerialisationError, "Unserialised time: %f is out of range", t);
+	THROW(SerialisationError, "Unserialised time: {} is out of range", t);
 }
 
 
@@ -1223,7 +1223,7 @@ Unserialise::timedelta_d(std::string_view serialised_time)
 		return t;
 	}
 
-	THROW(SerialisationError, "Unserialised timedelta: %f is out of range", t);
+	THROW(SerialisationError, "Unserialised timedelta: {} is out of range", t);
 }
 
 
@@ -1330,7 +1330,7 @@ Cartesian
 Unserialise::cartesian(std::string_view serialised_val)
 {
 	if (serialised_val.size() != SERIALISED_LENGTH_CARTESIAN) {
-		THROW(SerialisationError, "Cannot unserialise cartesian: %s [%zu]", repr(serialised_val), serialised_val.size());
+		THROW(SerialisationError, "Cannot unserialise cartesian: {} [{}]", repr(serialised_val), serialised_val.size());
 	}
 
 	double x = (((unsigned)serialised_val[0] << 24) & 0xFF000000) | (((unsigned)serialised_val[1] << 16) & 0xFF0000) | (((unsigned)serialised_val[2] << 8) & 0xFF00)  | (((unsigned)serialised_val[3]) & 0xFF);
@@ -1344,7 +1344,7 @@ uint64_t
 Unserialise::trixel_id(std::string_view serialised_id)
 {
 	if (serialised_id.size() != HTM_BYTES_ID) {
-		THROW(SerialisationError, "Cannot unserialise trixel_id: %s [%zu]", repr(serialised_id), serialised_id.size());
+		THROW(SerialisationError, "Cannot unserialise trixel_id: {} [{}]", repr(serialised_id), serialised_id.size());
 	}
 
 	uint64_t id = (((uint64_t)serialised_id[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_id[1] << 40) & 0xFF0000000000) | \
@@ -1359,7 +1359,7 @@ range_t
 Unserialise::range(std::string_view serialised_range)
 {
 	if (serialised_range.size() != SERIALISED_LENGTH_RANGE) {
-		THROW(SerialisationError, "Cannot unserialise range_t: %s [%zu]", repr(serialised_range), serialised_range.size());
+		THROW(SerialisationError, "Cannot unserialise range_t: {} [{}]", repr(serialised_range), serialised_range.size());
 	}
 
 	uint64_t start = (((uint64_t)serialised_range[0] << 48) & 0xFF000000000000) | (((uint64_t)serialised_range[1] << 40) & 0xFF0000000000) | \
@@ -1463,6 +1463,6 @@ Unserialise::type(std::string_view str_type)
 		case _.fhhl("timedelta"):
 			return FieldType::TIMEDELTA;
 		default:
-			THROW(SerialisationError, "Type: %s is an unsupported type", repr(str_type));
+			THROW(SerialisationError, "Type: {} is an unsupported type", repr(str_type));
 	}
 }

@@ -231,7 +231,7 @@ private:
 								if (order_str == "asc") {
 									return Sort::by_count_asc;
 								}
-								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT);
+								THROW(AggregationError, "'{}.{}' must use either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT);
 							}
 							case MsgPack::Type::MAP: {
 								it = sorter.find(RESERVED_AGGS_ORDER);
@@ -246,17 +246,17 @@ private:
 											if (order_str == "asc") {
 												return Sort::by_count_asc;
 											}
-											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT, RESERVED_AGGS_ORDER);
+											THROW(AggregationError, "'{}.{}.{}' must be either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT, RESERVED_AGGS_ORDER);
 										}
 										default:
-											THROW(AggregationError, "'%s.%s.%s' must be a string", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT, RESERVED_AGGS_ORDER);
+											THROW(AggregationError, "'{}.{}.{}' must be a string", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT, RESERVED_AGGS_ORDER);
 									}
 									break;
 								}
-								THROW(AggregationError, "'%s.%s' must contain '%s'", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT, RESERVED_AGGS_ORDER);
+								THROW(AggregationError, "'{}.{}' must contain '{}'", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT, RESERVED_AGGS_ORDER);
 							}
 							default:
-								THROW(AggregationError, "'%s.%s' must be a string or an object", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT);
+								THROW(AggregationError, "'{}.{}' must be a string or an object", RESERVED_AGGS_SORT, RESERVED_AGGS_DOC_COUNT);
 						}
 					}
 
@@ -272,7 +272,7 @@ private:
 								if (order_str == "asc") {
 									return Sort::by_key_asc;
 								}
-								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY);
+								THROW(AggregationError, "'{}.{}' must use either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY);
 							}
 							case MsgPack::Type::MAP: {
 								it = sorter.find(RESERVED_AGGS_ORDER);
@@ -287,17 +287,17 @@ private:
 											if (order_str == "asc") {
 												return Sort::by_key_asc;
 											}
-											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY, RESERVED_AGGS_ORDER);
+											THROW(AggregationError, "'{}.{}.{}' must be either 'desc' or 'asc'", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY, RESERVED_AGGS_ORDER);
 										}
 										default:
-											THROW(AggregationError, "'%s.%s.%s' must be a string", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY, RESERVED_AGGS_ORDER);
+											THROW(AggregationError, "'{}.{}.{}' must be a string", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY, RESERVED_AGGS_ORDER);
 									}
 									break;
 								}
-								THROW(AggregationError, "'%s.%s' must contain '%s'", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY, RESERVED_AGGS_ORDER);
+								THROW(AggregationError, "'{}.{}' must contain '{}'", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY, RESERVED_AGGS_ORDER);
 							}
 							default:
-								THROW(AggregationError, "'%s.%s' must be a string or an object", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY);
+								THROW(AggregationError, "'{}.{}' must be a string or an object", RESERVED_AGGS_SORT, RESERVED_AGGS_KEY);
 						}
 					}
 
@@ -305,7 +305,7 @@ private:
 					if (it != value.end()) {
 						const auto& field = it->str_view();
 						if (field.empty()) {
-							THROW(AggregationError, "'%s' must have a valid field name", RESERVED_AGGS_SORT);
+							THROW(AggregationError, "'{}' must have a valid field name", RESERVED_AGGS_SORT);
 						}
 						const auto& sorter = it.value();
 						switch (sorter.getType()) {
@@ -319,7 +319,7 @@ private:
 									_sort_field = Split<std::string_view>(field, '.');
 									return Sort::by_field_asc;
 								}
-								THROW(AggregationError, "'%s.%s' must use either 'desc' or 'asc'", RESERVED_AGGS_SORT, field);
+								THROW(AggregationError, "'{}.{}' must use either 'desc' or 'asc'", RESERVED_AGGS_SORT, field);
 							}
 							case MsgPack::Type::MAP: {
 								it = sorter.find(RESERVED_AGGS_ORDER);
@@ -336,25 +336,25 @@ private:
 												_sort_field = Split<std::string_view>(field, '.');
 												return Sort::by_field_asc;
 											}
-											THROW(AggregationError, "'%s.%s.%s' must be either 'desc' or 'asc'", RESERVED_AGGS_SORT, field, RESERVED_AGGS_ORDER);
+											THROW(AggregationError, "'{}.{}.{}' must be either 'desc' or 'asc'", RESERVED_AGGS_SORT, field, RESERVED_AGGS_ORDER);
 										}
 										default:
-											THROW(AggregationError, "'%s.%s.%s' must be a string", RESERVED_AGGS_SORT, field, RESERVED_AGGS_ORDER);
+											THROW(AggregationError, "'{}.{}.{}' must be a string", RESERVED_AGGS_SORT, field, RESERVED_AGGS_ORDER);
 									}
 									break;
 								}
-								THROW(AggregationError, "'%s.%s' must contain '%s'", RESERVED_AGGS_SORT, field, RESERVED_AGGS_ORDER);
+								THROW(AggregationError, "'{}.{}' must contain '{}'", RESERVED_AGGS_SORT, field, RESERVED_AGGS_ORDER);
 							}
 							default:
-								THROW(AggregationError, "'%s.%s' must be a string or an object", RESERVED_AGGS_SORT, field);
+								THROW(AggregationError, "'{}.{}' must be a string or an object", RESERVED_AGGS_SORT, field);
 						}
 					}
 
-					THROW(AggregationError, "'%s' must contain a field name", RESERVED_AGGS_SORT);
+					THROW(AggregationError, "'{}' must contain a field name", RESERVED_AGGS_SORT);
 				}
 
 				default:
-					THROW(AggregationError, "'%s' must be a string or an object", RESERVED_AGGS_SORT);
+					THROW(AggregationError, "'{}' must be a string or an object", RESERVED_AGGS_SORT);
 			}
 		}
 		return _default_sort;
@@ -374,7 +374,7 @@ private:
 					}
 				}
 				default:
-					THROW(AggregationError, "'%s' must be a positive integer", RESERVED_AGGS_LIMIT);
+					THROW(AggregationError, "'{}' must be a positive integer", RESERVED_AGGS_LIMIT);
 			}
 		}
 		return 10000;
@@ -390,7 +390,7 @@ private:
 					return value.as_boolean();
 				}
 				default:
-					THROW(AggregationError, "'%s' must be a boolean", RESERVED_AGGS_KEYED);
+					THROW(AggregationError, "'{}' must be a boolean", RESERVED_AGGS_KEYED);
 			}
 		}
 		return false;
@@ -410,7 +410,7 @@ private:
 					}
 				}
 				default:
-					THROW(AggregationError, "'%s' must be a positive number", RESERVED_AGGS_MIN_DOC_COUNT);
+					THROW(AggregationError, "'{}' must be a positive number", RESERVED_AGGS_MIN_DOC_COUNT);
 			}
 		}
 		return 1;
@@ -601,21 +601,21 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 
 	auto get_bucket(uint64_t value) {
 		if (!interval_u64) {
-			THROW(AggregationError, "'%s' must be a non-zero number", RESERVED_AGGS_INTERVAL);
+			THROW(AggregationError, "'{}' must be a non-zero number", RESERVED_AGGS_INTERVAL);
 		}
 		return ((value - shift_u64) / interval_u64) * interval_u64 + shift_u64;
 	}
 
 	auto get_bucket(int64_t value) {
 		if (!interval_i64) {
-			THROW(AggregationError, "'%s' must be a non-zero number", RESERVED_AGGS_INTERVAL);
+			THROW(AggregationError, "'{}' must be a non-zero number", RESERVED_AGGS_INTERVAL);
 		}
 		return ((value - shift_i64) / interval_i64) * interval_i64 + shift_i64;
 	}
 
 	auto get_bucket(long double value) {
 		if (!interval_f64) {
-			THROW(AggregationError, "'%s' must be a non-zero number", RESERVED_AGGS_INTERVAL);
+			THROW(AggregationError, "'{}' must be a non-zero number", RESERVED_AGGS_INTERVAL);
 		}
 		return floorl((value - shift_f64) / interval_f64) * interval_f64 + shift_f64;
 	}
@@ -631,10 +631,10 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 					interval_u64 = interval_value.as_u64();
 					break;
 				default:
-					THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_INTERVAL);
+					THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_INTERVAL);
 			}
 		} else {
-			THROW(AggregationError, "'%s' must be object with '%s'", _name, RESERVED_AGGS_INTERVAL);
+			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_INTERVAL);
 		}
 
 		const auto shift_it = _conf.find(RESERVED_AGGS_SHIFT);
@@ -647,7 +647,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 					shift_u64 = shift_value.as_u64();
 					break;
 				default:
-					THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_SHIFT);
+					THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_SHIFT);
 			}
 		}
 	}
@@ -663,10 +663,10 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 					interval_i64 = interval_value.as_i64();
 					break;
 				default:
-					THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_INTERVAL);
+					THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_INTERVAL);
 			}
 		} else {
-			THROW(AggregationError, "'%s' must be object with '%s'", _name, RESERVED_AGGS_INTERVAL);
+			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_INTERVAL);
 		}
 
 		const auto shift_it = _conf.find(RESERVED_AGGS_SHIFT);
@@ -679,7 +679,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 					shift_i64 = shift_value.as_i64();
 					break;
 				default:
-					THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_SHIFT);
+					THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_SHIFT);
 			}
 		}
 	}
@@ -695,10 +695,10 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 					interval_f64 = interval_value.as_f64();
 					break;
 				default:
-					THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_INTERVAL);
+					THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_INTERVAL);
 			}
 		} else {
-			THROW(AggregationError, "'%s' must be object with '%s'", _name, RESERVED_AGGS_INTERVAL);
+			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_INTERVAL);
 		}
 
 		const auto shift_it = _conf.find(RESERVED_AGGS_SHIFT);
@@ -711,7 +711,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 					shift_f64 = shift_value.as_f64();
 					break;
 				default:
-					THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_SHIFT);
+					THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_SHIFT);
 			}
 		}
 	}
@@ -803,7 +803,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 		if (it != _conf.end()) {
 			const auto& ranges = it.value();
 			if (!ranges.is_array()) {
-				THROW(AggregationError, "'%s.%s' must be an array", _name, RESERVED_AGGS_RANGES);
+				THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
 			}
 
 			for (const auto& range : ranges) {
@@ -813,7 +813,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				if (key_it != range.end()) {
 					const auto& key_value = key_it.value();
 					if (!key_value.is_string()) {
-						THROW(AggregationError, "'%s' must be a string", RESERVED_AGGS_KEY);
+						THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
 					}
 					key = key_value.str_view();
 				}
@@ -829,7 +829,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 							from_u64 = from_value.as_u64();
 							break;
 						default:
-							THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_FROM);
+							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_FROM);
 					}
 				}
 
@@ -844,7 +844,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 							to_u64 = to_value.as_u64();
 							break;
 						default:
-							THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_TO);
+							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_TO);
 					}
 				}
 
@@ -855,7 +855,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				ranges_u64.emplace_back(key, std::make_pair(from_u64, to_u64));
 			}
 		} else {
-			THROW(AggregationError, "'%s' must be object with '%s'", _name, RESERVED_AGGS_RANGES);
+			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_RANGES);
 		}
 	}
 
@@ -864,7 +864,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 		if (it != _conf.end()) {
 			const auto& ranges = it.value();
 			if (!ranges.is_array()) {
-				THROW(AggregationError, "'%s.%s' must be an array", _name, RESERVED_AGGS_RANGES);
+				THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
 			}
 
 			for (const auto& range : ranges) {
@@ -874,7 +874,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				if (key_it != range.end()) {
 					const auto& key_value = key_it.value();
 					if (!key_value.is_string()) {
-						THROW(AggregationError, "'%s' must be a string", RESERVED_AGGS_KEY);
+						THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
 					}
 					key = key_value.str_view();
 				}
@@ -890,7 +890,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 							from_i64 = from_value.as_i64();
 							break;
 						default:
-							THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_FROM);
+							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_FROM);
 					}
 				}
 
@@ -905,7 +905,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 							to_i64 = to_value.as_i64();
 							break;
 						default:
-							THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_TO);
+							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_TO);
 					}
 				}
 
@@ -916,7 +916,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				ranges_i64.emplace_back(key, std::make_pair(from_i64, to_i64));
 			}
 		} else {
-			THROW(AggregationError, "'%s' must be object with '%s'", _name, RESERVED_AGGS_RANGES);
+			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_RANGES);
 		}
 	}
 
@@ -925,7 +925,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 		if (it != _conf.end()) {
 			const auto& ranges = it.value();
 			if (!ranges.is_array()) {
-				THROW(AggregationError, "'%s.%s' must be an array", _name, RESERVED_AGGS_RANGES);
+				THROW(AggregationError, "'{}.{}' must be an array", _name, RESERVED_AGGS_RANGES);
 			}
 			for (const auto& range : ranges) {
 				std::string default_key;
@@ -934,7 +934,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				if (key_it != range.end()) {
 					const auto& key_value = key_it.value();
 					if (!key_value.is_string()) {
-						THROW(AggregationError, "'%s' must be a string", RESERVED_AGGS_KEY);
+						THROW(AggregationError, "'{}' must be a string", RESERVED_AGGS_KEY);
 					}
 					key = key_value.str_view();
 				}
@@ -950,7 +950,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 							from_f64 = from_value.as_f64();
 							break;
 						default:
-							THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_FROM);
+							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_FROM);
 					}
 				}
 
@@ -965,7 +965,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 							to_f64 = to_value.as_f64();
 							break;
 						default:
-							THROW(AggregationError, "'%s' must be a number", RESERVED_AGGS_TO);
+							THROW(AggregationError, "'{}' must be a number", RESERVED_AGGS_TO);
 					}
 				}
 
@@ -976,7 +976,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				ranges_f64.emplace_back(key, std::make_pair(from_f64, to_f64));
 			}
 		} else {
-			THROW(AggregationError, "'%s' must be object with '%s'", _name, RESERVED_AGGS_RANGES);
+			THROW(AggregationError, "'{}' must be object with '{}'", _name, RESERVED_AGGS_RANGES);
 		}
 	}
 

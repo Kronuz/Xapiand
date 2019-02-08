@@ -130,9 +130,9 @@ to_docid(std::string_view document_id)
 		try {
 			return static_cast<Xapian::docid>(strict_stol(did_str));
 		} catch (const InvalidArgument& er) {
-			THROW(ClientError, "Value %s cannot be cast to integer [%s]", repr(did_str), er.what());
+			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(did_str), er.what());
 		} catch (const OutOfRange& er) {
-			THROW(ClientError, "Value %s cannot be cast to integer [%s]", repr(did_str), er.what());
+			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(did_str), er.what());
 		}
 	}
 	return static_cast<Xapian::docid>(0);
@@ -144,21 +144,21 @@ inject_blob(Data& data, const MsgPack& obj)
 {
 	auto blob_it = obj.find(RESERVED_BLOB);
 	if (blob_it == obj.end()) {
-		THROW(ClientError, "Data inconsistency, objects in '%s' must contain '%s'", RESERVED_DATA, RESERVED_BLOB);
+		THROW(ClientError, "Data inconsistency, objects in '{}' must contain '{}'", RESERVED_DATA, RESERVED_BLOB);
 	}
 	auto& blob_value = blob_it.value();
 	if (!blob_value.is_string()) {
-		THROW(ClientError, "Data inconsistency, '%s' must be a string", RESERVED_BLOB);
+		THROW(ClientError, "Data inconsistency, '{}' must be a string", RESERVED_BLOB);
 	}
 
 	auto content_type_it = obj.find(RESERVED_CONTENT_TYPE);
 	if (content_type_it == obj.end()) {
-		THROW(ClientError, "Data inconsistency, objects in '%s' must contain '%s'", RESERVED_DATA, RESERVED_CONTENT_TYPE);
+		THROW(ClientError, "Data inconsistency, objects in '{}' must contain '{}'", RESERVED_DATA, RESERVED_CONTENT_TYPE);
 	}
 	auto& content_type_value = content_type_it.value();
 	auto ct_type = ct_type_t(content_type_value.is_string() ? content_type_value.str_view() : "");
 	if (ct_type.empty()) {
-		THROW(ClientError, "Data inconsistency, '%s' must be a valid content type string", RESERVED_CONTENT_TYPE);
+		THROW(ClientError, "Data inconsistency, '{}' must be a valid content type string", RESERVED_CONTENT_TYPE);
 	}
 
 	std::string_view type;
@@ -168,7 +168,7 @@ inject_blob(Data& data, const MsgPack& obj)
 	} else {
 		auto& type_value = type_it.value();
 		if (!type_value.is_string()) {
-			THROW(ClientError, "Data inconsistency, '%s' must be either \"inplace\" or \"stored\"", RESERVED_TYPE);
+			THROW(ClientError, "Data inconsistency, '{}' must be either \"inplace\" or \"stored\"", RESERVED_TYPE);
 		}
 		type = type_value.str_view();
 	}
@@ -176,13 +176,13 @@ inject_blob(Data& data, const MsgPack& obj)
 	if (type == "inplace") {
 		auto blob = blob_value.str_view();
 		if (blob.size() > NON_STORED_SIZE_LIMIT) {
-			THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+			THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 		}
 		data.update(ct_type, blob);
 	} else if (type == "stored") {
 		data.update(ct_type, -1, 0, 0, blob_value.str_view());
 	} else {
-		THROW(ClientError, "Data inconsistency, '%s' must be either \"inplace\" or \"stored\"", RESERVED_TYPE);
+		THROW(ClientError, "Data inconsistency, '{}' must be either \"inplace\" or \"stored\"", RESERVED_TYPE);
 	}
 }
 
@@ -197,7 +197,7 @@ inject_data(Data& data, const MsgPack& obj)
 			case MsgPack::Type::STR: {
 				auto blob = _data.str_view();
 				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
 				data.update("application/octet-stream", blob);
 				break;
@@ -215,7 +215,7 @@ inject_data(Data& data, const MsgPack& obj)
 				}
 				break;
 			default:
-				THROW(ClientError, "Data inconsistency, '%s' must be an array or an object", RESERVED_DATA);
+				THROW(ClientError, "Data inconsistency, '{}' must be an array or an object", RESERVED_DATA);
 		}
 	}
 }
@@ -534,7 +534,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 				} else {
 					auto blob = body.str_view();
 					if (blob.size() > NON_STORED_SIZE_LIMIT) {
-						THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+						THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 					}
 					data.update(ct_type, blob);
 				}
@@ -547,7 +547,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 				inject_data(data, body);
 				return prepare(document_id, body, data, old_document_pair);
 			default:
-				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 		}
 	} catch (...) {
 		if (old_document_pair != nullptr) {
@@ -593,7 +593,7 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 				} else {
 					auto blob = body.str_view();
 					if (blob.size() > NON_STORED_SIZE_LIMIT) {
-						THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+						THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 					}
 					data.update(ct_type, blob);
 				}
@@ -606,7 +606,7 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 				inject_data(data, body);
 				return index(document_id, body, data, old_document_pair, commit);
 			default:
-				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 		}
 	} catch (...) {
 		if (old_document_pair != nullptr) {
@@ -692,7 +692,7 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 				} else {
 					auto blob = body.str_view();
 					if (blob.size() > NON_STORED_SIZE_LIMIT) {
-						THROW(ClientError, "Non-stored object has a size limit of %s", string::from_bytes(NON_STORED_SIZE_LIMIT));
+						THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 					}
 					data.update(ct_type, blob);
 				}
@@ -714,7 +714,7 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 					return index(document_id, obj, data, old_document_pair, commit);
 				}
 			default:
-				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is %s", body.getStrType());
+				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 		}
 
 		return index(document_id, obj, data, old_document_pair, commit);
@@ -738,7 +738,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 		schema = get_schema();
 		was_foreign_obj = schema->write(obj, replace);
 		if (!was_foreign_obj && opts.foreign) {
-			THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(endpoints.to_string()));
+			THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(endpoints.to_string()));
 		}
 		L_INDEX("Schema to write: %s %s", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
 	} while (!update_schema(schema_begins));
@@ -798,9 +798,9 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1223,9 +1223,9 @@ DatabaseHandler::get_all_mset(Xapian::docid initial, size_t limit)
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1237,7 +1237,7 @@ DatabaseHandler::get_all_mset(Xapian::docid initial, size_t limit)
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		} catch (const std::exception& exc) {
-			THROW(ClientError, "The search was not performed: %s", exc.what());
+			THROW(ClientError, "The search was not performed: {}", exc.what());
 		}
 		database()->reopen();
 	}
@@ -1280,7 +1280,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 				if (value.is_integer()) {
 					offset = value.as_u64();
 				} else {
-					THROW(ClientError, "The %s must be a unsigned int", RESERVED_QUERYDSL_OFFSET);
+					THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_OFFSET);
 				}
 			}
 
@@ -1289,7 +1289,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 				if (value.is_integer()) {
 					limit = value.as_u64();
 				} else {
-					THROW(ClientError, "The %s must be a unsigned int", RESERVED_QUERYDSL_LIMIT);
+					THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_LIMIT);
 				}
 			}
 
@@ -1298,7 +1298,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 				if (value.is_integer()) {
 					check_at_least = value.as_u64();
 				} else {
-					THROW(ClientError, "The %s must be a unsigned int", RESERVED_QUERYDSL_CHECK_AT_LEAST);
+					THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_CHECK_AT_LEAST);
 				}
 			}
 
@@ -1390,9 +1390,9 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			mset = enquire.get_mset(offset, limit, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description()); }
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: %s", exc.get_description()); }
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1404,7 +1404,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		} catch (const std::exception& exc) {
-			THROW(ClientError, "The search was not performed: %s", exc.what());
+			THROW(ClientError, "The search was not performed: {}", exc.what());
 		}
 		database()->reopen();
 	}
@@ -2037,7 +2037,7 @@ Document::serialise(size_t retries)
 		if (retries != 0u) {
 			return serialise(--retries);
 		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
 	}
 }
 
@@ -2055,7 +2055,7 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 		if (retries != 0u) {
 			return get_value(slot, --retries);
 		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
 	}
 }
 
@@ -2073,7 +2073,7 @@ Document::get_data(size_t retries)
 		if (retries != 0u) {
 			return get_data(--retries);
 		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
 	}
 }
 
@@ -2113,7 +2113,7 @@ Document::get_terms(size_t retries)
 		if (retries != 0u) {
 			return get_terms(--retries);
 		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
 	}
 }
 
@@ -2139,7 +2139,7 @@ Document::get_values(size_t retries)
 		if (retries != 0u) {
 			return get_values(--retries);
 		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
 	}
 }
 
@@ -2231,6 +2231,6 @@ Document::hash(size_t retries)
 		if (retries != 0u) {
 			return hash(--retries);
 		}
-		THROW(TimeOutError, "Database was modified, try again: %s", exc.get_description());
+		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
 	}
 }

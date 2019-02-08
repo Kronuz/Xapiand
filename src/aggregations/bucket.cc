@@ -35,25 +35,25 @@ FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view na
 	: _agg(context, schema)
 {
 	if (!context.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(context.to_string()));
+		THROW(AggregationError, "{} must be object", repr(context.to_string()));
 	}
 
 	const auto filter_it = context.find(name);
 	if (filter_it == context.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", name, repr(context.to_string()));
+		THROW(AggregationError, "'{}' must be specified in {}", name, repr(context.to_string()));
 	}
 	const auto& filter_conf = filter_it.value();
 	if (!filter_conf.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(filter_conf.to_string()));
+		THROW(AggregationError, "{} must be object", repr(filter_conf.to_string()));
 	}
 
 	const auto term_filter_it = filter_conf.find(RESERVED_AGGS_TERM);
 	if (term_filter_it == filter_conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", RESERVED_AGGS_TERM, repr(filter_conf.to_string()));
+		THROW(AggregationError, "'{}' must be specified in {}", RESERVED_AGGS_TERM, repr(filter_conf.to_string()));
 	}
 	const auto& term_filter_conf = term_filter_it.value();
 	if (!term_filter_conf.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(term_filter_conf.to_string()));
+		THROW(AggregationError, "{} must be object", repr(term_filter_conf.to_string()));
 	}
 
 	const auto it = term_filter_conf.begin();

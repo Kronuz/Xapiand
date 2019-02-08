@@ -57,24 +57,24 @@ get_func_value_handle(FieldType type, std::string_view field_name)
 		case FieldType::UUID:
 			return &HandledSubAggregation<Handler>::_aggregate_uuid;
 		case FieldType::EMPTY:
-			THROW(AggregationError, "Field: %s has not been indexed", repr(field_name));
+			THROW(AggregationError, "Field: {} has not been indexed", repr(field_name));
 		default:
-			THROW(AggregationError, "Type: '%c' is not supported", toUType(type));
+			THROW(AggregationError, "Type: '{}' is not supported", toUType(type));
 	}
 }
 
 
 ValuesHandler::ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
 	if (!conf.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
+		THROW(AggregationError, "{} must be object", repr(conf.to_string()));
 	}
 	const auto field_it = conf.find(RESERVED_AGGS_FIELD);
 	if (field_it == conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", RESERVED_AGGS_FIELD, repr(conf.to_string()));
+		THROW(AggregationError, "'{}' must be specified in {}", RESERVED_AGGS_FIELD, repr(conf.to_string()));
 	}
 	const auto& field_conf = field_it.value();
 	if (!field_conf.is_string()) {
-		THROW(AggregationError, "'%s' must be string", RESERVED_AGGS_FIELD);
+		THROW(AggregationError, "'{}' must be string", RESERVED_AGGS_FIELD);
 	}
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_slot_field(field_name);
@@ -99,15 +99,15 @@ ValuesHandler::values(const Xapian::Document& doc) const
 
 TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& schema) {
 	if (!conf.is_map()) {
-		THROW(AggregationError, "%s must be object", repr(conf.to_string()));
+		THROW(AggregationError, "{} must be object", repr(conf.to_string()));
 	}
 	const auto field_it = conf.find(RESERVED_AGGS_FIELD);
 	if (field_it == conf.end()) {
-		THROW(AggregationError, "'%s' must be specified in %s", RESERVED_AGGS_FIELD, repr(conf.to_string()));
+		THROW(AggregationError, "'{}' must be specified in {}", RESERVED_AGGS_FIELD, repr(conf.to_string()));
 	}
 	const auto& field_conf = field_it.value();
 	if (!field_conf.is_string()) {
-		THROW(AggregationError, "'%s' must be string", RESERVED_AGGS_FIELD);
+		THROW(AggregationError, "'{}' must be string", RESERVED_AGGS_FIELD);
 	}
 	auto field_name = field_conf.str_view();
 	auto field_spc = schema->get_data_field(field_name).first;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -98,9 +98,9 @@ public:
 		std::swap(errno, _errno);
 		switch (_errno) {
 			case EINVAL:
-				THROW(InvalidArgument, "%s: Cannot convert value: %s", name, str);
+				THROW(InvalidArgument, "{}: Cannot convert value: {}", name, str);
 			case ERANGE:
-				THROW(OutOfRange, "%s: Out of range value: %s", name, str);
+				THROW(OutOfRange, "{}: Out of range value: {}", name, str);
 			default:
 				break;
 		}

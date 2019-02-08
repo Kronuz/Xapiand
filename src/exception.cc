@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,12 +62,12 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(BaseException::private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, VFPRINTF_ARGS args)
+BaseException::BaseException(BaseException::private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, fmt::format_args args)
 	: type(type),
 	  function(function_),
 	  filename(filename_),
 	  line(line_),
-	  message(VSPRINTF(format, args))
+	  message(fmt::vformat(format, args))
 {
 	if (!exc.type.empty()) {
 		function = exc.function;

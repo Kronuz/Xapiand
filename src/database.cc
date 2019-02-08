@@ -311,7 +311,7 @@ Database::reopen_writable()
 				throw;
 			}
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
-				THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+				THROW(DatabaseNotFoundError, "Database not found: {}", repr(endpoint.to_string()));
 			}
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
@@ -458,7 +458,7 @@ Database::reopen_readable()
 				++failures;
 				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 					if (failures == endpoints_size) {
-						THROW(DatabaseNotFoundError, "Database not found: %s", repr(endpoint.to_string()));
+						THROW(DatabaseNotFoundError, "Database not found: {}", repr(endpoint.to_string()));
 					}
 					incomplete.store(true, std::memory_order_relaxed);
 					continue;

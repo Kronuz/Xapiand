@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -216,7 +216,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 				return Xapian::Query();
 		}
 	} catch (const Exception& exc) {
-		THROW(QueryParserError, "Failed to serialize: %s - %s like %s (%s)", start ? start->to_string() : "", end ? end->to_string() : "",
+		THROW(QueryParserError, "Failed to serialize: {} - {} like {} ({})", start ? start->to_string() : "", end ? end->to_string() : "",
 			Serialise::type(field_spc.get_type()), exc.what());
 	}
 }

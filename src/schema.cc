@@ -1372,7 +1372,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 				if (!result.empty()) { result += "/"; }
 				result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
 			}
-			THROW(ClientError, "%s not supported.", repr(result), RESERVED_TYPE);
+			THROW(ClientError, "{} not supported.", repr(result), RESERVED_TYPE);
 		}
 	}
 }
@@ -1407,7 +1407,7 @@ _get_acc_data(std::string_view field_acc)
 	} catch (const std::invalid_argument&) {
 	} catch (const std::out_of_range&) { }
 
-	THROW(ClientError, "The field name: %s is not valid", repr(field_acc));
+	THROW(ClientError, "The field name: {} is not valid", repr(field_acc));
 }
 
 
@@ -1807,7 +1807,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "%s not supported, '%s' must be one of { 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' } or any of their { 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' } variations.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
@@ -2054,7 +2054,7 @@ specification_t::global_type(FieldType field_type)
 			return FieldType::TEXT;
 
 		default:
-			THROW(ClientError, "Type: 0x%02x is an unknown type", field_type);
+			THROW(ClientError, "Type: {:#04x} is an unknown type", field_type);
 	}
 }
 
@@ -2109,7 +2109,7 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		default:
-			THROW(ClientError, "Type: 0x%02x is an unknown type", field_type);
+			THROW(ClientError, "Type: {:#04x} is an unknown type", field_type);
 	}
 }
 
@@ -2220,35 +2220,35 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			return std::make_pair(&object, nullptr);
 		}
 		if (!object.is_map()) {
-			THROW(ErrorType, "%sschema must be a map", prefix);
+			THROW(ErrorType, "{}chema must be a map", prefix);
 		}
 		auto it_end = object.end();
 		auto type_it = object.find(RESERVED_TYPE);
 		if (type_it != it_end) {
 			auto& type = type_it.value();
 			if (!type.is_string()) {
-				THROW(ErrorType, "%s'%s' field must be a string", prefix, RESERVED_TYPE);
+				THROW(ErrorType, "{}'{}' field must be a string", prefix, RESERVED_TYPE);
 			}
 			auto type_name = type.str_view();
 			const auto& sep_types = required_spc_t::get_types(type_name);
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				auto endpoint_it = object.find(RESERVED_ENDPOINT);
 				if (endpoint_it == it_end) {
-					THROW(ErrorType, "%s'%s' field does not exist", prefix, RESERVED_ENDPOINT);
+					THROW(ErrorType, "{}'{}' field does not exist", prefix, RESERVED_ENDPOINT);
 				}
 				auto& endpoint = endpoint_it.value();
 				if (!endpoint.is_string()) {
-					THROW(ErrorType, "%s'%s' field must be a string", prefix, RESERVED_ENDPOINT);
+					THROW(ErrorType, "{}'{}' field must be a string", prefix, RESERVED_ENDPOINT);
 				}
 				return std::make_pair(&endpoint, &object);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%sschema object has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name);
+				THROW(ErrorType, "{}chema object has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 			}
 		}
 	} else {
 		if (!object.is_map()) {
-			THROW(ErrorType, "%sschema must be a map", prefix);
+			THROW(ErrorType, "{}chema must be a map", prefix);
 		}
 	}
 
@@ -2258,15 +2258,15 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	auto version_it = object.find(VERSION_FIELD_NAME);
 	if (version_it == it_end) {
 		if (!allow_versionless) {
-			THROW(ErrorType, "%s'%s' field does not exist", prefix, VERSION_FIELD_NAME);
+			THROW(ErrorType, "{}'{}' field does not exist", prefix, VERSION_FIELD_NAME);
 		}
 	} else {
 		auto& version = version_it.value();
 		if (!version.is_number()) {
-			THROW(ErrorType, "%s'%s' field must be a number", prefix, VERSION_FIELD_NAME);
+			THROW(ErrorType, "{}'{}' field must be a number", prefix, VERSION_FIELD_NAME);
 		}
 		if (version.f64() != DB_VERSION_SCHEMA) {
-			THROW(ErrorType, "%sDifferent schema versions, the current version is %1.1f", prefix, DB_VERSION_SCHEMA);
+			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
 		}
 	}
 
@@ -2274,26 +2274,26 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	auto schema_it = object.find(SCHEMA_FIELD_NAME);
 	if (schema_it == it_end) {
 		if (!allow_root) {
-			THROW(ErrorType, "%s'%s' field does not exist", prefix, SCHEMA_FIELD_NAME);
+			THROW(ErrorType, "{}'{}' field does not exist", prefix, SCHEMA_FIELD_NAME);
 		}
 		return std::make_pair(nullptr, nullptr);
 	}
 
 	auto& schema = schema_it.value();
 	if (!schema.is_map()) {
-		THROW(ErrorType, "%s'%s' is not an object", prefix, SCHEMA_FIELD_NAME);
+		THROW(ErrorType, "{}'{}' is not an object", prefix, SCHEMA_FIELD_NAME);
 	}
 	auto schema_it_end = schema.end();
 	auto type_it = schema.find(RESERVED_TYPE);
 	if (type_it != schema_it_end) {
 		auto& type = type_it.value();
 		if (!type.is_string()) {
-			THROW(ErrorType, "%s'%s.%s' field must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
+			THROW(ErrorType, "{}'{}.{}' field must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
 		}
 		auto type_name = type.str_view();
 		const auto& sep_types = required_spc_t::get_types(type_name);
 		if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-			THROW(ErrorType, "%s'%s' has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name);
+			THROW(ErrorType, "{}'{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 		}
 	}
 	return std::make_pair(nullptr, &schema);
@@ -2579,7 +2579,7 @@ Schema::index(const MsgPack& object,
 			mut_object = db_handler.run_script(object, term_id, old_document_pair, *specification.script);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
-					THROW(ClientError, "Script must return an object, it returned %s", mut_object->getStrType());
+					THROW(ClientError, "Script must return an object, it returned {}", mut_object->getStrType());
 				}
 				// Rebuild fields with new values.
 				fields.clear();
@@ -2653,7 +2653,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 			if (!inserted.second && pos == 0) {
-				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 			}
 			data = &inserted.first.value();
 		}
@@ -2661,7 +2661,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -2693,7 +2693,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -2705,14 +2705,14 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -2723,7 +2723,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -2732,7 +2732,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -2745,7 +2745,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -2758,7 +2758,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -2798,7 +2798,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 			if (!inserted.second && pos == 0) {
-				THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 			}
 			data = &inserted.first.value();
 		}
@@ -2806,7 +2806,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -2838,7 +2838,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -2850,14 +2850,14 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -2868,7 +2868,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -2876,7 +2876,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -2888,7 +2888,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -2901,7 +2901,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: %s (%s) in %s is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is duplicated", repr(name), repr(inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -3200,7 +3200,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
@@ -3210,7 +3210,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 
 	if (val != nullptr) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have a value", repr(specification.full_meta_name));
+			THROW(ClientError, "{} is a foreign type and as such it cannot have a value", repr(specification.full_meta_name));
 		}
 		index_item_value(doc, *data, *val);
 	} else {
@@ -3239,7 +3239,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		}
 	} else {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name));
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name));
 		}
 		set_type_to_object();
 		const auto spc_object = std::move(specification);
@@ -3351,7 +3351,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -3371,7 +3371,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3379,7 +3379,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
@@ -3390,7 +3390,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -3441,7 +3441,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -3461,7 +3461,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3469,7 +3469,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties);
@@ -3480,7 +3480,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -3610,14 +3610,14 @@ Schema::update_item_value()
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
 		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 		}
 		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
@@ -3656,7 +3656,7 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
@@ -3682,7 +3682,7 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 		}
 	} else {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name));
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name));
 		}
 		set_type_to_object();
 		const auto spc_object = std::move(specification);
@@ -3794,7 +3794,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(mut_properties, field_name)) {
@@ -3813,7 +3813,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 					} else {
 						verify_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3821,7 +3821,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 				} else {
 					verify_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
@@ -3832,7 +3832,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(mut_properties, field_name)) {
@@ -3882,7 +3882,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(mut_properties, field_name)) {
@@ -3901,7 +3901,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 					} else {
 						verify_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3909,7 +3909,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(n_field_name), repr(specification.full_meta_name));
 				} else {
 					verify_dynamic(n_field_name);
 					add_field(mut_properties);
@@ -3920,7 +3920,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
-			THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(name), repr(field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(mut_properties, field_name)) {
@@ -4050,14 +4050,14 @@ Schema::write_item_value(MsgPack*& mut_properties)
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
 		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 		}
 		if (specification.flags.inside_namespace) {
@@ -4094,7 +4094,7 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
@@ -4118,7 +4118,7 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 		}
 	} else {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "%s is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name));
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", repr(specification.full_meta_name));
 		}
 		set_type_to_object();
 		const auto spc_object = std::move(specification);
@@ -4139,7 +4139,7 @@ Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_p
 	L_CALL("Schema::get_partial_paths(%zu, %s)", partial_prefixes.size(), uuid_path ? "true" : "false");
 
 	if (partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
-		THROW(ClientError, "Partial paths limit depth is %zu, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
+		THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
 	}
 
 	std::vector<std::string> paths;
@@ -4211,14 +4211,14 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
 		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			guess_field_type(item_value);
 		}
@@ -4329,14 +4329,14 @@ Schema::complete_specification(const MsgPack& item_value)
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
 		}
 		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field %s is missing", repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is missing", repr(specification.full_meta_name));
 			}
 			guess_field_type(item_value);
 		}
@@ -4521,7 +4521,7 @@ Schema::validate_required_namespace_data()
 			break;
 
 		default:
-			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 }
 
@@ -4548,11 +4548,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						if (val_acc <= HTM_MAX_LEVEL) {
 							set_acc.insert(val_acc);
 						} else {
-							THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d (%llu not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+							THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
 			} else if (!specification.flags.optimal) {
 				set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
@@ -4570,19 +4570,19 @@ Schema::validate_required_data(MsgPack& mut_properties)
 							if (accuracy_date != UnitTime::INVALID) {
 								accuracy = toUType(accuracy_date);
 							} else {
-								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
 							}
 						} else {
 							accuracy = _accuracy.u64();
 							if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
 							} else {
-								THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+								THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 							}
 						}
 						set_acc.insert(accuracy);
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 				}
 			} else if (!specification.flags.optimal) {
 				set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
@@ -4598,11 +4598,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						try {
 							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 						} catch (const std::out_of_range&) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
 			} else if (!specification.flags.optimal) {
 				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
@@ -4619,7 +4619,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
 			} else if (!specification.flags.optimal) {
 				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -4685,7 +4685,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			break;
 
 		default:
-			THROW(ClientError, "%s: '%s' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 
 	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
@@ -4814,14 +4814,14 @@ Schema::guess_field_type(const MsgPack& item_doc)
 					return;
 				}
 			}
-			THROW(ClientError, "'%s' cannot be a nested object", RESERVED_VALUE);
+			THROW(ClientError, "'{}' cannot be a nested object", RESERVED_VALUE);
 		case MsgPack::Type::ARRAY:
-			THROW(ClientError, "'%s' cannot be a nested array", RESERVED_VALUE);
+			THROW(ClientError, "'{}' cannot be a nested array", RESERVED_VALUE);
 		default:
 			break;
 	}
 
-	THROW(ClientError, "'%s': %s is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()));
+	THROW(ClientError, "'{}': {} is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()));
 }
 
 
@@ -5259,7 +5259,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for float type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::INTEGER: {
@@ -5276,7 +5276,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for integer type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for integer type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -5293,7 +5293,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for positive type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::DATE: {
@@ -5381,7 +5381,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::STRING:
@@ -5400,7 +5400,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -5426,11 +5426,11 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
 			}
 		}
 		default:
-			THROW(ClientError, "Type: 0x%02x is an unknown type", spc.sep_types[SPC_CONCRETE_TYPE]);
+			THROW(ClientError, "Type: {:#04x} is an unknown type", spc.sep_types[SPC_CONCRETE_TYPE]);
 	}
 }
 
@@ -5461,7 +5461,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for float type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::INTEGER: {
@@ -5484,7 +5484,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for integer type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for integer type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -5507,7 +5507,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for positive type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::DATE: {
@@ -5623,7 +5623,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::STRING:
@@ -5643,7 +5643,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for %s type: %s", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -5671,11 +5671,11 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for uuid type: %s", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
 			}
 		}
 		default:
-			THROW(ClientError, "Type: 0x%02x is an unknown type", field_spc.sep_types[SPC_CONCRETE_TYPE]);
+			THROW(ClientError, "Type: {:#04x} is an unknown type", field_spc.sep_types[SPC_CONCRETE_TYPE]);
 	}
 }
 
@@ -6691,7 +6691,7 @@ Schema::feed_weight(const MsgPack& prop_weight)
 			specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_WEIGHT, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, repr(specification.full_meta_name));
 	}
 }
 
@@ -6711,7 +6711,7 @@ Schema::feed_position(const MsgPack& prop_position)
 			specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_POSITION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_POSITION, repr(specification.full_meta_name));
 	}
 }
 
@@ -6731,7 +6731,7 @@ Schema::feed_spelling(const MsgPack& prop_spelling)
 			specification.spelling.push_back(prop_spelling.boolean());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_SPELLING, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_SPELLING, repr(specification.full_meta_name));
 	}
 }
 
@@ -6751,7 +6751,7 @@ Schema::feed_positions(const MsgPack& prop_positions)
 			specification.positions.push_back(prop_positions.boolean());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_POSITIONS, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_POSITIONS, repr(specification.full_meta_name));
 	}
 }
 
@@ -6764,7 +6764,7 @@ Schema::feed_language(const MsgPack& prop_language)
 	try {
 		specification.language = prop_language.str();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_LANGUAGE, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_LANGUAGE, repr(specification.full_meta_name));
 	}
 }
 
@@ -6778,13 +6778,13 @@ Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 		if (prop_stop_strategy.is_string()) {
 			specification.stop_strategy = _get_stop_strategy(prop_stop_strategy.str_view());
 			if (specification.stop_strategy == StopStrategy::INVALID) {
-				THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name), repr(str_set_stop_strategy));
+				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name), repr(str_set_stop_strategy));
 			}
 		} else {
 			specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name));
 	}
 }
 
@@ -6798,13 +6798,13 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 		if (prop_stem_strategy.is_string()) {
 			specification.stem_strategy = _get_stem_strategy(prop_stem_strategy.str_view());
 			if (specification.stem_strategy == StemStrategy::INVALID) {
-				THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name), repr(str_set_stem_strategy));
+				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name), repr(str_set_stem_strategy));
 			}
 		} else {
 			specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name));
 	}
 }
 
@@ -6817,7 +6817,7 @@ Schema::feed_stem_language(const MsgPack& prop_stem_language)
 	try {
 		specification.stem_language = prop_stem_language.str();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STEM_LANGUAGE, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STEM_LANGUAGE, repr(specification.full_meta_name));
 	}
 }
 
@@ -6838,7 +6838,7 @@ Schema::feed_type(const MsgPack& prop_type)
 		}
 		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TYPE, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TYPE, repr(specification.full_meta_name));
 	}
 }
 
@@ -6858,7 +6858,7 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 				if (accuracy_date != UnitTime::INVALID) {
 					accuracy = toUType(accuracy_date);
 				} else {
-					THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
+					THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
 				}
 			} else {
 				accuracy = _accuracy.u64();
@@ -6866,7 +6866,7 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 			specification.accuracy.push_back(accuracy);
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
 	}
 }
 
@@ -6883,7 +6883,7 @@ Schema::feed_acc_prefix(const MsgPack& prop_acc_prefix)
 			specification.acc_prefix.push_back(acc_p.str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACC_PREFIX, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACC_PREFIX, repr(specification.full_meta_name));
 	}
 }
 
@@ -6896,7 +6896,7 @@ Schema::feed_prefix(const MsgPack& prop_prefix)
 	try {
 		specification.local_prefix.field.assign(prop_prefix.str_view());
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PREFIX, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_PREFIX, repr(specification.full_meta_name));
 	}
 }
 
@@ -6909,7 +6909,7 @@ Schema::feed_slot(const MsgPack& prop_slot)
 	try {
 		specification.slot = static_cast<Xapian::valueno>(prop_slot.u64());
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_SLOT, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_SLOT, repr(specification.full_meta_name));
 	}
 }
 
@@ -6922,11 +6922,11 @@ Schema::feed_index(const MsgPack& prop_index)
 	try {
 		specification.index = _get_index(prop_index.str_view());
 		if (specification.index == TypeIndex::INVALID) {
-			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX, repr(specification.full_meta_name), repr(str_set_index));
+			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX, repr(specification.full_meta_name), repr(str_set_index));
 		}
 		specification.flags.has_index = true;
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_INDEX, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX, repr(specification.full_meta_name));
 	}
 }
 
@@ -6940,7 +6940,7 @@ Schema::feed_store(const MsgPack& prop_store)
 		specification.flags.parent_store = specification.flags.store;
 		specification.flags.store = prop_store.boolean() && specification.flags.parent_store;
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STORE, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STORE, repr(specification.full_meta_name));
 	}
 }
 
@@ -6953,7 +6953,7 @@ Schema::feed_recurse(const MsgPack& prop_recurse)
 	try {
 		specification.flags.is_recurse = prop_recurse.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_RECURSE, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_RECURSE, repr(specification.full_meta_name));
 	}
 }
 
@@ -6966,7 +6966,7 @@ Schema::feed_dynamic(const MsgPack& prop_dynamic)
 	try {
 		specification.flags.dynamic = prop_dynamic.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_DYNAMIC, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_DYNAMIC, repr(specification.full_meta_name));
 	}
 }
 
@@ -6979,7 +6979,7 @@ Schema::feed_strict(const MsgPack& prop_strict)
 	try {
 		specification.flags.strict = prop_strict.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_STRICT, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STRICT, repr(specification.full_meta_name));
 	}
 }
 
@@ -6992,7 +6992,7 @@ Schema::feed_date_detection(const MsgPack& prop_date_detection)
 	try {
 		specification.flags.date_detection = prop_date_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_DATE_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_DATE_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7005,7 +7005,7 @@ Schema::feed_time_detection(const MsgPack& prop_time_detection)
 	try {
 		specification.flags.time_detection = prop_time_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TIME_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TIME_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7018,7 +7018,7 @@ Schema::feed_timedelta_detection(const MsgPack& prop_timedelta_detection)
 	try {
 		specification.flags.timedelta_detection = prop_timedelta_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TIMEDELTA_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TIMEDELTA_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7031,7 +7031,7 @@ Schema::feed_numeric_detection(const MsgPack& prop_numeric_detection)
 	try {
 		specification.flags.numeric_detection = prop_numeric_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_NUMERIC_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_NUMERIC_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7044,7 +7044,7 @@ Schema::feed_geo_detection(const MsgPack& prop_geo_detection)
 	try {
 		specification.flags.geo_detection = prop_geo_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_GEO_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_GEO_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7057,7 +7057,7 @@ Schema::feed_bool_detection(const MsgPack& prop_bool_detection)
 	try {
 		specification.flags.bool_detection = prop_bool_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_BOOL_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_BOOL_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7070,7 +7070,7 @@ Schema::feed_text_detection(const MsgPack& prop_text_detection)
 	try {
 		specification.flags.text_detection = prop_text_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TEXT_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TEXT_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7083,7 +7083,7 @@ Schema::feed_term_detection(const MsgPack& prop_term_detection)
 	try {
 		specification.flags.term_detection = prop_term_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_TERM_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TERM_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7096,7 +7096,7 @@ Schema::feed_uuid_detection(const MsgPack& prop_uuid_detection)
 	try {
 		specification.flags.uuid_detection = prop_uuid_detection.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_UUID_DETECTION, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_UUID_DETECTION, repr(specification.full_meta_name));
 	}
 }
 
@@ -7109,7 +7109,7 @@ Schema::feed_bool_term(const MsgPack& prop_bool_term)
 	try {
 		specification.flags.bool_term = prop_bool_term.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_BOOL_TERM, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_BOOL_TERM, repr(specification.full_meta_name));
 	}
 }
 
@@ -7122,7 +7122,7 @@ Schema::feed_partials(const MsgPack& prop_partials)
 	try {
 		specification.flags.partials = prop_partials.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PARTIALS, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_PARTIALS, repr(specification.full_meta_name));
 	}
 }
 
@@ -7135,7 +7135,7 @@ Schema::feed_error(const MsgPack& prop_error)
 	try {
 		specification.error = prop_error.f64();
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ERROR, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ERROR, repr(specification.full_meta_name));
 	}
 }
 
@@ -7149,7 +7149,7 @@ Schema::feed_namespace(const MsgPack& prop_namespace)
 		specification.flags.is_namespace = prop_namespace.boolean();
 		specification.flags.has_namespace = true;
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_NAMESPACE, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_NAMESPACE, repr(specification.full_meta_name));
 	}
 }
 
@@ -7163,7 +7163,7 @@ Schema::feed_partial_paths(const MsgPack& prop_partial_paths)
 		specification.flags.partial_paths = prop_partial_paths.boolean();
 		specification.flags.has_partial_paths = true;
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_PARTIAL_PATHS, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_PARTIAL_PATHS, repr(specification.full_meta_name));
 	}
 }
 
@@ -7176,10 +7176,10 @@ Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 	try {
 		specification.index_uuid_field = _get_index_uuid_field(prop_index_uuid_field.str_view());
 		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
-			THROW(Error, "Schema is corrupt: '%s' in %s must be one of %s.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name), repr(str_set_index_uuid_field));
+			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name), repr(str_set_index_uuid_field));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name));
 	}
 }
 
@@ -7194,7 +7194,7 @@ Schema::feed_script(const MsgPack& prop_script)
 	specification.flags.normalized_script = true;
 #else
 	ignore_unused(prop_script);
-	THROW(ClientError, "%s only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "{} only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
 }
 
@@ -7208,7 +7208,7 @@ Schema::feed_endpoint(const MsgPack& prop_endpoint)
 		specification.endpoint.assign(prop_endpoint.str_view());
 		specification.flags.static_endpoint = true;
 	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ENDPOINT, repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ENDPOINT, repr(specification.full_meta_name));
 	}
 }
 
@@ -7308,7 +7308,7 @@ Schema::write_dynamic(MsgPack& mut_properties, std::string_view prop_name, const
 		specification.flags.dynamic = doc_dynamic.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.dynamic);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7323,7 +7323,7 @@ Schema::write_strict(MsgPack& mut_properties, std::string_view prop_name, const 
 		specification.flags.strict = doc_strict.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.strict);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7338,7 +7338,7 @@ Schema::write_date_detection(MsgPack& mut_properties, std::string_view prop_name
 		specification.flags.date_detection = doc_date_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7353,7 +7353,7 @@ Schema::write_time_detection(MsgPack& mut_properties, std::string_view prop_name
 		specification.flags.time_detection = doc_time_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7368,7 +7368,7 @@ Schema::write_timedelta_detection(MsgPack& mut_properties, std::string_view prop
 		specification.flags.timedelta_detection = doc_timedelta_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7383,7 +7383,7 @@ Schema::write_numeric_detection(MsgPack& mut_properties, std::string_view prop_n
 		specification.flags.numeric_detection = doc_numeric_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7398,7 +7398,7 @@ Schema::write_geo_detection(MsgPack& mut_properties, std::string_view prop_name,
 		specification.flags.geo_detection = doc_geo_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7413,7 +7413,7 @@ Schema::write_bool_detection(MsgPack& mut_properties, std::string_view prop_name
 		specification.flags.bool_detection = doc_bool_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7428,7 +7428,7 @@ Schema::write_text_detection(MsgPack& mut_properties, std::string_view prop_name
 		specification.flags.text_detection = doc_text_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7443,7 +7443,7 @@ Schema::write_term_detection(MsgPack& mut_properties, std::string_view prop_name
 		specification.flags.term_detection = doc_term_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7458,7 +7458,7 @@ Schema::write_uuid_detection(MsgPack& mut_properties, std::string_view prop_name
 		specification.flags.uuid_detection = doc_uuid_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7493,7 +7493,7 @@ Schema::write_namespace(MsgPack& mut_properties, std::string_view prop_name, con
 		specification.flags.has_namespace = true;
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7559,10 +7559,10 @@ Schema::process_language(std::string_view prop_name, const MsgPack& doc_language
 			specification.language = stem.second;
 			specification.aux_language = stem.second;
 		} else {
-			THROW(ClientError, "%s: %s is not supported", repr(prop_name), repr(str_language));
+			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_language));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7576,7 +7576,7 @@ Schema::process_prefix(std::string_view prop_name, const MsgPack& doc_prefix)
 	try {
 		specification.local_prefix.field.assign(doc_prefix.str_view());
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7590,11 +7590,11 @@ Schema::process_slot(std::string_view prop_name, const MsgPack& doc_slot)
 	try {
 		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
 		if (slot == Xapian::BAD_VALUENO) {
-			THROW(ClientError, "%s invalid slot (%u not supported)", repr(prop_name), slot);
+			THROW(ClientError, "{} invalid slot ({} not supported)", repr(prop_name), slot);
 		}
 		specification.slot = slot;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be integer", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be integer", repr(prop_name));
 	}
 }
 
@@ -7609,10 +7609,10 @@ Schema::process_stop_strategy(std::string_view prop_name, const MsgPack& doc_sto
 		auto str_stop_strategy = doc_stop_strategy.str_view();
 		specification.stop_strategy = _get_stop_strategy(str_stop_strategy);
 		if (specification.stop_strategy == StopStrategy::INVALID) {
-			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name), str_set_stop_strategy, repr(str_stop_strategy));
+			THROW(ClientError, "{} can be in {} ({} not supported)", repr(prop_name), str_set_stop_strategy, repr(str_stop_strategy));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7627,10 +7627,10 @@ Schema::process_stem_strategy(std::string_view prop_name, const MsgPack& doc_ste
 		auto str_stem_strategy = doc_stem_strategy.str_view();
 		specification.stem_strategy = _get_stem_strategy(str_stem_strategy);
 		if (specification.stem_strategy == StemStrategy::INVALID) {
-			THROW(ClientError, "%s can be in %s (%s not supported)", repr(prop_name), str_set_stem_strategy, repr(str_stem_strategy));
+			THROW(ClientError, "{} can be in {} ({} not supported)", repr(prop_name), str_set_stem_strategy, repr(str_stem_strategy));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7645,12 +7645,12 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& doc_ste
 		auto str_stem_language = doc_stem_language.str_view();
 		const auto& stem = _get_stem_language(str_stem_language);
 		if (stem.second.empty()) {
-			THROW(ClientError, "%s: %s is not supported", repr(prop_name), repr(str_stem_language));
+			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_stem_language));
 		}
 		specification.stem_language = str_stem_language;
 		specification.aux_stem_language = stem.second;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7671,11 +7671,11 @@ Schema::process_type(std::string_view prop_name, const MsgPack& doc_type)
 			specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)doc_type.at(SPC_CONCRETE_TYPE).u64();
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 	if (!specification.endpoint.empty()) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-			THROW(ClientError, "Data inconsistency, %s must be foreign", repr(prop_name));
+			THROW(ClientError, "Data inconsistency, {} must be foreign", repr(prop_name));
 		}
 	}
 }
@@ -7690,7 +7690,7 @@ Schema::process_accuracy(std::string_view prop_name, const MsgPack& doc_accuracy
 	if (doc_accuracy.is_array()) {
 		specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
 	} else {
-		THROW(ClientError, "Data inconsistency, %s must be array", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be array", repr(prop_name));
 	}
 }
 
@@ -7708,7 +7708,7 @@ Schema::process_acc_prefix(std::string_view prop_name, const MsgPack& doc_acc_pr
 			specification.acc_prefix.push_back(acc_p.str());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be an array of strings", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
 	}
 }
 
@@ -7723,7 +7723,7 @@ Schema::process_bool_term(std::string_view prop_name, const MsgPack& doc_bool_te
 		specification.flags.bool_term = doc_bool_term.boolean();
 		specification.flags.has_bool_term = true;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a boolean", repr(prop_name));
 	}
 }
 
@@ -7737,7 +7737,7 @@ Schema::process_partials(std::string_view prop_name, const MsgPack& doc_partials
 	try {
 		specification.flags.partials = doc_partials.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7751,7 +7751,7 @@ Schema::process_error(std::string_view prop_name, const MsgPack& doc_error)
 	try {
 		specification.error = doc_error.f64();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a double", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a double", repr(prop_name));
 	}
 }
 
@@ -7766,7 +7766,7 @@ Schema::process_position(std::string_view prop_name, const MsgPack& doc_position
 		specification.position.clear();
 		if (doc_position.is_array()) {
 			if (doc_position.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+				THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 			}
 			for (const auto& _position : doc_position) {
 				specification.position.push_back(static_cast<unsigned>(_position.u64()));
@@ -7775,7 +7775,7 @@ Schema::process_position(std::string_view prop_name, const MsgPack& doc_position
 			specification.position.push_back(static_cast<unsigned>(doc_position.u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 	}
 }
 
@@ -7799,7 +7799,7 @@ Schema::process_weight(std::string_view prop_name, const MsgPack& doc_weight)
 		specification.weight.clear();
 		if (doc_weight.is_array()) {
 			if (doc_weight.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+				THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 			}
 			for (const auto& _weight : doc_weight) {
 				specification.weight.push_back(static_cast<unsigned>(_weight.u64()));
@@ -7808,7 +7808,7 @@ Schema::process_weight(std::string_view prop_name, const MsgPack& doc_weight)
 			specification.weight.push_back(static_cast<unsigned>(doc_weight.u64()));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 	}
 }
 
@@ -7823,7 +7823,7 @@ Schema::process_spelling(std::string_view prop_name, const MsgPack& doc_spelling
 		specification.spelling.clear();
 		if (doc_spelling.is_array()) {
 			if (doc_spelling.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));
+				THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 			}
 			for (const auto& _spelling : doc_spelling) {
 				specification.spelling.push_back(_spelling.boolean());
@@ -7832,7 +7832,7 @@ Schema::process_spelling(std::string_view prop_name, const MsgPack& doc_spelling
 			specification.spelling.push_back(doc_spelling.boolean());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 	}
 }
 
@@ -7847,7 +7847,7 @@ Schema::process_positions(std::string_view prop_name, const MsgPack& doc_positio
 		specification.positions.clear();
 		if (doc_positions.is_array()) {
 			if (doc_positions.empty()) {
-				THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));
+				THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 			}
 			for (const auto& _positions : doc_positions) {
 				specification.positions.push_back(_positions.boolean());
@@ -7856,7 +7856,7 @@ Schema::process_positions(std::string_view prop_name, const MsgPack& doc_positio
 			specification.positions.push_back(doc_positions.boolean());
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean or a not-empty array of booleans", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 	}
 }
 
@@ -7871,11 +7871,11 @@ Schema::process_index(std::string_view prop_name, const MsgPack& doc_index)
 		auto str_index = doc_index.str_view();
 		specification.index = _get_index(str_index);
 		if (specification.index == TypeIndex::INVALID) {
-			THROW(ClientError, "%s not supported, %s must be one of %s", repr(str_index), repr(prop_name), str_set_index);
+			THROW(ClientError, "{} not supported, {} must be one of {}", repr(str_index), repr(prop_name), str_set_index);
 		}
 		specification.flags.has_index = true;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7894,7 +7894,7 @@ Schema::process_store(std::string_view prop_name, const MsgPack& doc_store)
 		specification.flags.store = specification.flags.parent_store && doc_store.boolean();
 		specification.flags.parent_store = specification.flags.store;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7912,7 +7912,7 @@ Schema::process_recurse(std::string_view prop_name, const MsgPack& doc_recurse)
 	try {
 		specification.flags.is_recurse = doc_recurse.boolean();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7930,7 +7930,7 @@ Schema::process_partial_paths(std::string_view prop_name, const MsgPack& doc_par
 		specification.flags.partial_paths = doc_partial_paths.boolean();
 		specification.flags.has_partial_paths = true;
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -7948,10 +7948,10 @@ Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& doc_
 	try {
 		specification.index_uuid_field = _get_index_uuid_field(str_index_uuid_field);
 		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
-			THROW(ClientError, "%s not supported, %s must be one of %s (%s not supported)", repr(str_index_uuid_field), repr(prop_name), str_set_index_uuid_field);
+			THROW(ClientError, "{} not supported, {} must be one of {} ({} not supported)", repr(str_index_uuid_field), repr(prop_name), str_set_index_uuid_field);
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -7981,7 +7981,7 @@ Schema::process_script(std::string_view /*unused*/, const MsgPack& doc_script)
 	specification.flags.normalized_script = false;
 #else
 	ignore_unused(doc_script);
-	THROW(ClientError, "'%s' only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "'{}' only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
 #endif
 }
 
@@ -7995,12 +7995,12 @@ Schema::process_endpoint(std::string_view prop_name, const MsgPack& doc_endpoint
 	try {
 		const auto _endpoint = doc_endpoint.str_view();
 		if (_endpoint.empty()) {
-			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name));
+			THROW(ClientError, "Data inconsistency, {} must be a valid endpoint", repr(prop_name));
 		}
 		std::string_view _path, _id;
 		split_path_id(_endpoint, _path, _id);
 		if (_path.empty() || _id.empty()) {
-			THROW(ClientError, "Data inconsistency, %s must be a valid endpoint", repr(prop_name));
+			THROW(ClientError, "Data inconsistency, {} must be a valid endpoint", repr(prop_name));
 		}
 		if (specification.endpoint != _endpoint) {
 			if (
@@ -8010,13 +8010,13 @@ Schema::process_endpoint(std::string_view prop_name, const MsgPack& doc_endpoint
 					specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY
 				)
 			) {
-				THROW(ClientError, "Data inconsistency, %s cannot be used in non-foreign fields", repr(prop_name));
+				THROW(ClientError, "Data inconsistency, {} cannot be used in non-foreign fields", repr(prop_name));
 			}
 			specification.flags.static_endpoint = false;
 			specification.endpoint.assign(_endpoint);
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -8046,10 +8046,10 @@ Schema::consistency_language(std::string_view prop_name, const MsgPack& doc_lang
 	try {
 		const auto str_language = doc_language.str_view();
 		if (specification.language != str_language) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), specification.language, repr(str_language), repr(specification.full_meta_name));
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.language, repr(str_language), repr(specification.full_meta_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -8065,13 +8065,13 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc
 			const auto _stop_strategy = string::lower(doc_stop_strategy.str_view());
 			const auto stop_strategy = _get_str_stop_strategy(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), stop_strategy, _stop_strategy, repr(specification.full_meta_name));
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), stop_strategy, _stop_strategy, repr(specification.full_meta_name));
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name));
+			THROW(ClientError, "{} only is allowed in text type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -8087,13 +8087,13 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc
 			const auto _stem_strategy = string::lower(doc_stem_strategy.str_view());
 			const auto stem_strategy = _get_str_stem_strategy(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(stem_strategy), repr(_stem_strategy), repr(specification.full_meta_name));
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(stem_strategy), repr(_stem_strategy), repr(specification.full_meta_name));
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name));
+			THROW(ClientError, "{} only is allowed in text type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -8108,13 +8108,13 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& doc
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
 			const auto _stem_language = string::lower(doc_stem_language.str_view());
 			if (specification.stem_language != _stem_language) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(specification.stem_language), repr(_stem_language), repr(specification.full_meta_name));
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(specification.stem_language), repr(_stem_language), repr(specification.full_meta_name));
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in text type fields", repr(prop_name));
+			THROW(ClientError, "{} only is allowed in text type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
@@ -8137,16 +8137,16 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
 			auto str_concretr_type = _str_type.substr(init_pos);
 			if ((str_concretr_type != "term" || str_type != "keyword") && (str_concretr_type != "keyword" || str_type != "term")) {  // FIXME: remove legacy term
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_type), repr(str_concretr_type), repr(specification.full_meta_name));
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_type), repr(str_concretr_type), repr(specification.full_meta_name));
 			}
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be string", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 
 	if (!specification.endpoint.empty()) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
-			THROW(ClientError, "Data inconsistency, %s must be foreign", repr(prop_name));
+			THROW(ClientError, "Data inconsistency, {} must be foreign", repr(prop_name));
 		}
 	}
 }
@@ -8167,7 +8167,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, level value in '%s': '%s' must be a positive number between 0 and %d", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8177,7 +8177,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [%s ->  %s] in %s", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [{} ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}
 				return;
 			}
@@ -8190,19 +8190,19 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 							if (accuracy_date != UnitTime::INVALID) {
 								accuracy = toUType(accuracy_date);
 							} else {
-								THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
 							}
 						} else {
 							accuracy = _accuracy.u64();
 							if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
 							} else {
-								THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+								THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 							}
 						}
 						set_acc.insert(accuracy);
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8212,7 +8212,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(_get_str_acc_date((UnitTime)acc)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}
 				return;
 			}
@@ -8223,11 +8223,11 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						try {
 							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 						} catch (const std::out_of_range&) {
-							THROW(ClientError, "Data inconsistency, '%s': '%s' must be a subset of %s (%s not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '%s' in '%s' must be a subset of %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8237,7 +8237,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(_get_str_acc_date((UnitTime)acc)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}
 				return;
 			}
@@ -8249,7 +8249,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, %s in %s must be an array of positive numbers in %s", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(specification.full_meta_name));
+					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(specification.full_meta_name));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8259,15 +8259,15 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 					for (const auto& acc : specification.accuracy) {
 						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
 					}
-					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}
 				return;
 			}
 			default:
-				THROW(ClientError, "%s is not allowed in %s type fields", repr(prop_name), Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+				THROW(ClientError, "{} is not allowed in {} type fields", repr(prop_name), Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 		}
 	} else {
-		THROW(ClientError, "Data inconsistency, %s must be array", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be array", repr(prop_name));
 	}
 }
 
@@ -8282,13 +8282,13 @@ Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& doc_boo
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", repr(specification.full_meta_name));
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", repr(specification.full_meta_name));
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in keyword type fields", repr(prop_name));
+			THROW(ClientError, "{} only is allowed in keyword type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a boolean", repr(prop_name));
 	}
 }
 
@@ -8303,13 +8303,13 @@ Schema::consistency_partials(std::string_view prop_name, const MsgPack& doc_part
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _partials = doc_partials.boolean();
 			if (specification.flags.partials != _partials) {
-				THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in geospatial type fields", repr(prop_name));
+			THROW(ClientError, "{} only is allowed in geospatial type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8324,13 +8324,13 @@ Schema::consistency_error(std::string_view prop_name, const MsgPack& doc_error)
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _error = doc_error.f64();
 			if (specification.error != _error) {
-				THROW(ClientError, "It is not allowed to change %s [%.2f  ->  %.2f]", repr(prop_name), specification.error, _error);
+				THROW(ClientError, "It is not allowed to change {} [{:.2}  ->  {:.2}]", repr(prop_name), specification.error, _error);
 			}
 		} else {
-			THROW(ClientError, "%s only is allowed in geospatial type fields", repr(prop_name));
+			THROW(ClientError, "{} only is allowed in geospatial type fields", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be a double", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be a double", repr(prop_name));
 	}
 }
 
@@ -8344,10 +8344,10 @@ Schema::consistency_dynamic(std::string_view prop_name, const MsgPack& doc_dynam
 	try {
 		const auto _dynamic = doc_dynamic.boolean();
 		if (specification.flags.dynamic != _dynamic) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.dynamic ? "true" : "false", _dynamic ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.dynamic ? "true" : "false", _dynamic ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8361,10 +8361,10 @@ Schema::consistency_strict(std::string_view prop_name, const MsgPack& doc_strict
 	try {
 		const auto _strict = doc_strict.boolean();
 		if (specification.flags.strict != _strict) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.strict ? "true" : "false", _strict ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.strict ? "true" : "false", _strict ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8378,10 +8378,10 @@ Schema::consistency_date_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _date_detection = doc_date_detection.boolean();
 		if (specification.flags.date_detection != _date_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8395,10 +8395,10 @@ Schema::consistency_time_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _time_detection = doc_time_detection.boolean();
 		if (specification.flags.time_detection != _time_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8412,10 +8412,10 @@ Schema::consistency_timedelta_detection(std::string_view prop_name, const MsgPac
 	try {
 		const auto _timedelta_detection = doc_timedelta_detection.boolean();
 		if (specification.flags.timedelta_detection != _timedelta_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8429,10 +8429,10 @@ Schema::consistency_numeric_detection(std::string_view prop_name, const MsgPack&
 	try {
 		const auto _numeric_detection = doc_numeric_detection.boolean();
 		if (specification.flags.numeric_detection != _numeric_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8446,10 +8446,10 @@ Schema::consistency_geo_detection(std::string_view prop_name, const MsgPack& doc
 	try {
 		const auto _geo_detection = doc_geo_detection.boolean();
 		if (specification.flags.geo_detection != _geo_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8463,10 +8463,10 @@ Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _bool_detection = doc_bool_detection.boolean();
 		if (specification.flags.bool_detection != _bool_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8480,10 +8480,10 @@ Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _text_detection = doc_text_detection.boolean();
 		if (specification.flags.text_detection != _text_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8497,10 +8497,10 @@ Schema::consistency_term_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _term_detection = doc_term_detection.boolean();
 		if (specification.flags.term_detection != _term_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8514,10 +8514,10 @@ Schema::consistency_uuid_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _uuid_detection = doc_uuid_detection.boolean();
 		if (specification.flags.uuid_detection != _uuid_detection) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8531,10 +8531,10 @@ Schema::consistency_namespace(std::string_view prop_name, const MsgPack& doc_nam
 	try {
 		const auto _is_namespace = doc_namespace.boolean();
 		if (specification.flags.is_namespace != _is_namespace) {
-			THROW(ClientError, "It is not allowed to change %s [%s  ->  %s]", repr(prop_name), specification.flags.is_namespace ? "true" : "false", _is_namespace ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.is_namespace ? "true" : "false", _is_namespace ? "true" : "false");
 		}
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, %s must be boolean", repr(prop_name));
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
@@ -8547,10 +8547,10 @@ Schema::consistency_schema(std::string_view prop_name, const MsgPack& doc_schema
 
 	if (specification.full_meta_name.empty()) {
 		if (!doc_schema.is_string() && !doc_schema.is_map()) {
-			THROW(ClientError, "%s must be string or map", repr(prop_name));
+			THROW(ClientError, "{} must be string or map", repr(prop_name));
 		}
 	} else {
-		THROW(ClientError, "%s is only allowed in root object", repr(prop_name));
+		THROW(ClientError, "{} is only allowed in root object", repr(prop_name));
 	}
 }
 
@@ -8981,7 +8981,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 								if (accuracy_date != UnitTime::INVALID) {
 									accuracy = toUType(accuracy_date);
 								} else {
-									THROW(Error, "Schema is corrupt: '%s' in %s is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
+									THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, repr(specification.full_meta_name));
 								}
 							} else {
 								accuracy = acc.u64();
@@ -9101,7 +9101,7 @@ Schema::get_slot_field(std::string_view field_name) const
 	res.flags.inside_namespace = spc.inside_namespace;
 
 	if (!spc.acc_field.empty()) {
-		THROW(ClientError, "Field name: %s is an accuracy, therefore does not have slot", repr(field_name));
+		THROW(ClientError, "Field name: {} is an accuracy, therefore does not have slot", repr(field_name));
 	}
 
 	if (res.flags.inside_namespace) {
@@ -9202,7 +9202,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 						spc.acc_field_type = acc_data.second;
 						return spc;
 					}
-					THROW(ClientError, "The field name: %s (%s) in %s is not valid", repr(full_name), repr(field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "The field name: {} ({}) in {} is not valid", repr(full_name), repr(field_name), repr(specification.full_meta_name));
 				}
 			} else if (++it == it_e) {
 				auto acc_data = _get_acc_data(field_name);
@@ -9211,7 +9211,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 				spc.acc_field_type = acc_data.second;
 				return spc;
 			} else {
-				THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(full_name), repr(field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(full_name), repr(field_name), repr(specification.full_meta_name));
 			}
 		}
 
@@ -9240,7 +9240,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 			// It is a search using partial prefix.
 			size_t depth_partials = std::distance(it, it_e);
 			if (depth_partials > LIMIT_PARTIAL_PATHS_DEPTH) {
-				THROW(ClientError, "Partial paths limit depth is %zu, and partial paths provided has a depth of %zu", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
+				THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
 			}
 			spc.inside_namespace = true;
 			for (++it; it != it_e; ++it) {
@@ -9263,7 +9263,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 					spc.acc_field_type = acc_data.second;
 					return spc;
 				} else {
-					THROW(ClientError, "Field name: %s (%s) in %s is not valid", repr(full_name), repr(partial_field), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name: {} ({}) in {} is not valid", repr(full_name), repr(partial_field), repr(specification.full_meta_name));
 				}
 			}
 			return spc;

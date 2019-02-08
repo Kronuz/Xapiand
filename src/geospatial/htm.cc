@@ -826,7 +826,7 @@ HTM::getCorners(const std::string& name)
 				v2 = w2;
 				break;
 			default:
-				THROW(HTMError, "Invalid trixel's name: %s", name);
+				THROW(HTMError, "Invalid trixel's name: {}", name);
 		}
 		++i;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,7 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 		foreign = checked.first->str_view();
 		split_path_id(foreign, foreign_path, foreign_id);
 		if (foreign_path.empty() || foreign_id.empty()) {
-			THROW(ErrorType, "%s'%s' must contain index and docid [%s]", prefix, RESERVED_ENDPOINT, repr(foreign));
+			THROW(ErrorType, "{}'{}' must contain index and docid [{}]", prefix, RESERVED_ENDPOINT, repr(foreign));
 		}
 	}
 	return checked;
@@ -60,10 +60,10 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 
 	try {
 		if (context->size() > MAX_SCHEMA_RECURSION) {
-			THROW(Error, "Maximum recursion reached: %s", endpoint.to_string());
+			THROW(Error, "Maximum recursion reached: {}", endpoint.to_string());
 		}
 		if (!context->insert(path).second) {
-			THROW(Error, "Cyclic schema reference detected: %s", endpoint.to_string());
+			THROW(Error, "Cyclic schema reference detected: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 		std::string_view selector;
@@ -140,7 +140,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			if (new_metadata && write) {
 				// New LOCAL schema:
 				if (opts.foreign) {
-					THROW(ForeignSchemaError, "Schema of %s must use a foreign schema", repr(db_handler->endpoints.to_string()));
+					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
 				}
 				try {
 					// Try writing (only if there's no metadata there alrady)
@@ -224,7 +224,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 					schema_ptr->lock();
 				}
 				if (!schema_ptr->is_map()) {
-					THROW(Error, "Schema of %s must be map [%s]", repr(db_handler->endpoints.to_string()), repr(schema_ptr->to_string()));
+					THROW(Error, "Schema of {} must be map [{}]", repr(db_handler->endpoints.to_string()), repr(schema_ptr->to_string()));
 				}
 			} catch (const ForeignSchemaError&) {
 				schema_ptr = Schema::get_initial_schema();
@@ -259,7 +259,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
 		}
 		if (opts.strict && o.find(ID_FIELD_NAME) == o.end()) {
-			THROW(MissingTypeError, "Type of field '%s' for the foreign schema is missing", ID_FIELD_NAME);
+			THROW(MissingTypeError, "Type of field '{}' for the foreign schema is missing", ID_FIELD_NAME);
 		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
 			o[SCHEMA_FIELD_NAME] = MsgPack(MsgPack::Type::MAP);
@@ -325,7 +325,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
 						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
-							THROW(Error, "Cannot set metadata: %s", repr(reserved_schema));
+							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
 						new_metadata = false;
 						local_schema_ptr = schema_ptr;

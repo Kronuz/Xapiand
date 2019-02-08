@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -73,12 +73,12 @@ void apply_patch(const MsgPack& patch, MsgPack& object) {
 						patch_decr(elem, object);
 						break;
 					default:
-						THROW(ClientError, "In patch op: %s is not a valid value", repr(op_str));
+						THROW(ClientError, "In patch op: {} is not a valid value", repr(op_str));
 				}
 			} catch (const std::out_of_range&) {
-				THROW(ClientError, "Patch Object MUST have exactly one '%s' member", PATCH_OP);
+				THROW(ClientError, "Patch Object MUST have exactly one '{}' member", PATCH_OP);
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "'%s' must be string", PATCH_OP);
+				THROW(ClientError, "'{}' must be string", PATCH_OP);
 			}
 		}
 	} else {
@@ -103,11 +103,11 @@ void patch_add(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch add: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch add: %s", exc.what());
+		THROW(ClientError, "In patch add: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch add: %s", exc.what());
+		THROW(ClientError, "In patch add: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch add: %s", exc.what());
+		THROW(Error, "In patch add: {}", exc.what());
 	}
 }
 
@@ -127,11 +127,11 @@ void patch_remove(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch remove: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch remove: %s", exc.what());
+		THROW(ClientError, "In patch remove: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch remove: %s", exc.what());
+		THROW(ClientError, "In patch remove: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch remove: %s", exc.what());
+		THROW(Error, "In patch remove: {}", exc.what());
 	}
 }
 
@@ -145,11 +145,11 @@ void patch_replace(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch replace: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch replace: %s", exc.what());
+		THROW(ClientError, "In patch replace: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch replace: %s", exc.what());
+		THROW(ClientError, "In patch replace: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch replace: %s", exc.what());
+		THROW(Error, "In patch replace: {}", exc.what());
 	}
 }
 
@@ -181,11 +181,11 @@ void patch_move(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch move: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch move: %s", exc.what());
+		THROW(ClientError, "In patch move: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch move: %s", exc.what());
+		THROW(ClientError, "In patch move: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch move: %s", exc.what());
+		THROW(Error, "In patch move: {}", exc.what());
 	}
 }
 
@@ -212,11 +212,11 @@ void patch_copy(const MsgPack& obj_patch, MsgPack& object) {
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch 'copy': Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch 'copy': %s", exc.what());
+		THROW(ClientError, "In patch 'copy': {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch 'copy': %s", exc.what());
+		THROW(ClientError, "In patch 'copy': {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch 'copy': %s", exc.what());
+		THROW(Error, "In patch 'copy': {}", exc.what());
 	}
 }
 
@@ -228,16 +228,16 @@ void patch_test(const MsgPack& obj_patch, MsgPack& object) {
 		const auto& o = object.path(path_split);
 		const auto& val = get_patch_value(obj_patch, PATCH_TES);
 		if (val != o) {
-			THROW(ClientError, "In patch test: Objects are not equals. Expected: %s Result: %s", repr(val.to_string()), repr(o.to_string()));
+			THROW(ClientError, "In patch test: Objects are not equals. Expected: {} Result: {}", repr(val.to_string()), repr(o.to_string()));
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch test: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch test: %s", exc.what());
+		THROW(ClientError, "In patch test: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch test: %s", exc.what());
+		THROW(ClientError, "In patch test: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch test: %s", exc.what());
+		THROW(Error, "In patch test: {}", exc.what());
 	}
 }
 
@@ -256,15 +256,15 @@ void patch_incr(const MsgPack& obj_patch, MsgPack& object) {
 			_incr(o, val_num);
 		}
 	} catch (const LimitError& exc){
-		THROW(ClientError, "In patch increment: %s", exc.what());
+		THROW(ClientError, "In patch increment: {}", exc.what());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch increment: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch increment: %s", exc.what());
+		THROW(ClientError, "In patch increment: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch increment: %s", exc.what());
+		THROW(ClientError, "In patch increment: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch increment: %s", exc.what());
+		THROW(Error, "In patch increment: {}", exc.what());
 	}
 }
 
@@ -283,15 +283,15 @@ void patch_decr(const MsgPack& obj_patch, MsgPack& object) {
 			_incr(o, -val_num);
 		}
 	} catch (const LimitError& exc){
-		THROW(ClientError, "In patch decrement: %s", exc.what());
+		THROW(ClientError, "In patch decrement: {}", exc.what());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch decrement: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
-		THROW(ClientError, "In patch decrement: %s", exc.what());
+		THROW(ClientError, "In patch decrement: {}", exc.what());
 	} catch (const std::out_of_range& exc) {
-		THROW(ClientError, "In patch decrement: %s", exc.what());
+		THROW(ClientError, "In patch decrement: {}", exc.what());
 	} catch (const std::exception& exc) {
-		THROW(Error, "In patch decrement: %s", exc.what());
+		THROW(Error, "In patch decrement: {}", exc.what());
 	}
 }
 
@@ -300,7 +300,7 @@ const MsgPack& get_patch_value(const MsgPack& obj_patch, const char* patch_op) {
 	try {
 		return obj_patch.at(PATCH_VALUE);
 	} catch (const std::out_of_range&) {
-		THROW(ClientError, "'%s' must be defined for patch operation: '%s'", PATCH_VALUE, patch_op);
+		THROW(ClientError, "'{}' must be defined for patch operation: '{}'", PATCH_VALUE, patch_op);
 	}
 }
 
@@ -312,6 +312,6 @@ double get_patch_double(const MsgPack& val, const char* patch_op) {
 	try {
 		return val.f64();
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "'%s' must be string or numeric", patch_op);
+		THROW(ClientError, "'{}' must be string or numeric", patch_op);
 	}
 }

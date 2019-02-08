@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -109,7 +109,7 @@ inline void _erase(MsgPack& o, std::string_view target) {
 				THROW(ClientError, "Object is not array or map");
 		}
 	} catch (const std::out_of_range& e) {
-		THROW(ClientError, "Target %s not found [%s]", target, e.what());
+		THROW(ClientError, "Target {} not found [{}]", target, e.what());
 	}
 }
 
@@ -153,11 +153,11 @@ inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split,
 		}
 
 		if (path_split.size() == 0 and path_str != "") {
-			THROW(ClientError, "Bad syntax in '%s': %s (check RFC 6901)", path_c, path_str);
+			THROW(ClientError, "Bad syntax in '{}': {} (check RFC 6901)", path_c, path_str);
 		}
 	} catch (const std::out_of_range&) {
-		THROW(ClientError, "Object MUST have exactly one '%s' member for patch operation: '%s'", path_c, patch_op);
+		THROW(ClientError, "Object MUST have exactly one '{}' member for patch operation: '{}'", path_c, patch_op);
 	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "'%s' must be a string", path_c);
+		THROW(ClientError, "'{}' must be a string", path_c);
 	}
 }

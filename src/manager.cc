@@ -744,7 +744,7 @@ XapiandManager::make_servers()
 			if (node->addr().sin_addr.s_addr == local_node->addr().sin_addr.s_addr) {
 				if (node->http_port == http_port) {
 					if (--http_tries == 0) {
-						THROW(Error, "Cannot use port %d, it's already in use!", http_port);
+						THROW(Error, "Cannot use port {}, it's already in use!", http_port);
 					}
 					++http_port;
 					it = nodes.begin();
@@ -752,7 +752,7 @@ XapiandManager::make_servers()
 				}
 				if (node->remote_port == remote_port) {
 					if (--remote_tries == 0) {
-						THROW(Error, "Cannot use port %d, it's already in use!", remote_port);
+						THROW(Error, "Cannot use port {}, it's already in use!", remote_port);
 					}
 					++remote_port;
 					it = nodes.begin();
@@ -760,7 +760,7 @@ XapiandManager::make_servers()
 				}
 				if (node->replication_port == replication_port) {
 					if (--replication_tries == 0) {
-						THROW(Error, "Cannot use port %d, it's already in use!", replication_port);
+						THROW(Error, "Cannot use port {}, it's already in use!", replication_port);
 					}
 					++replication_port;
 					it = nodes.begin();

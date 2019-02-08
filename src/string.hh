@@ -146,7 +146,7 @@ inline std::string format(std::string_view format, Args&&... args) {
 	std::string str;
 	L_DEBUG_TRY {
 		str = fmt::vformat(format, fmt::make_format_args(std::forward<Args>(args)...));
-	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
+	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
 	return str;
 }
 
@@ -156,7 +156,7 @@ inline std::string sprintf(std::string_view format, Args&&... args) {
 	std::string str;
 	L_DEBUG_TRY {
 		str = fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
-	} L_DEBUG_RETHROW("Cannot format %s", repr(format));
+	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
 	return str;
 }
 

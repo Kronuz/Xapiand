@@ -69,7 +69,7 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 			tm.year = year.i64();
 			return;
 		default:
-			THROW(DatetimeError, "'%s' must be a positive integer value", RESERVED_YEAR);
+			THROW(DatetimeError, "'{}' must be a positive integer value", RESERVED_YEAR);
 	}
 }
 
@@ -83,7 +83,7 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 			tm.mon = month.i64();
 			return;
 		default:
-			THROW(DatetimeError, "'%s' must be a positive integer value", RESERVED_MONTH);
+			THROW(DatetimeError, "'{}' must be a positive integer value", RESERVED_MONTH);
 	}
 }
 
@@ -97,7 +97,7 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 			tm.day = day.i64();
 			return;
 		default:
-			THROW(DatetimeError, "'%s' must be a positive integer value", RESERVED_DAY);
+			THROW(DatetimeError, "'{}' must be a positive integer value", RESERVED_DAY);
 	}
 }
 
@@ -220,10 +220,10 @@ static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 	}
 
 error:
-	THROW(DatetimeError, "Error format in _time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", str_time);
+	THROW(DatetimeError, "Error format in _time: {}, the format must be '00:00(:00(.0...)([+-]00:00))'", str_time);
 
 error_out_of_range:
-	THROW(DatetimeError, "Time: %s is out of range", str_time);
+	THROW(DatetimeError, "Time: {} is out of range", str_time);
 }
 
 
@@ -315,10 +315,10 @@ Datetime::DateParser(std::string_view date)
 	}
 
 error:
-	THROW(DatetimeError, "In DatetimeParser, format %s is incorrect", date);
+	THROW(DatetimeError, "In DatetimeParser, format {} is incorrect", date);
 
 error_out_of_range:
-	THROW(DatetimeError, "Date: %s is out of range", date);
+	THROW(DatetimeError, "Date: {} is out of range", date);
 }
 
 
@@ -368,11 +368,11 @@ Datetime::DateParser(const MsgPack& value)
 						try {
 							str_time = it_value.str_view();
 						} catch (const msgpack::type_error& exc) {
-							RETHROW(DatetimeError, "'%s' must be string", RESERVED_TIME);
+							RETHROW(DatetimeError, "'{}' must be string", RESERVED_TIME);
 						}
 						break;
 					default:
-						THROW(DatetimeError, "Unsupported Key: %s in date", repr(str_key));
+						THROW(DatetimeError, "Unsupported Key: {} in date", repr(str_key));
 				}
 			}
 			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
@@ -750,7 +750,7 @@ Datetime::processDateMath(std::string_view date_math, tm_t& tm)
 	}
 
 	if (date_math.size() != size_match) {
-		THROW(DatetimeError, "Date Math (%s) is used incorrectly", date_math);
+		THROW(DatetimeError, "Date Math ({}) is used incorrectly", date_math);
 	}
 }
 
@@ -790,7 +790,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 		case '+': {
 			auto num = strict_stoi(&errno_save, op.substr(1));
 			if (errno_save != 0) {
-				THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)));
+				THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. {} must be numeric", repr(op.substr(1)));
 			}
 			switch (unit) {
 				case 'y':
@@ -813,14 +813,14 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 				case 's':
 					tm.sec += num; break;
 				default:
-					THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. Unit must be in { y, M, w, d, h, m, s }", unit);
+					THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. Unit must be in {{ y, M, w, d, h, m, s }}", unit);
 			}
 			break;
 		}
 		case '-': {
 			auto num = strict_stoi(&errno_save, op.substr(1));
 			if (errno_save != 0) {
-				THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. %s must be numeric", repr(op.substr(1)));
+				THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. {} must be numeric", repr(op.substr(1)));
 			}
 			switch (unit) {
 				case 'y':
@@ -844,7 +844,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 				case 's':
 					tm.sec -= num; break;
 				default:
-					THROW(DatetimeError, "Invalid format in Date Math unit: '%c'. Unit must be in { y, M, w, d, h, m, s }", unit);
+					THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. Unit must be in {{ y, M, w, d, h, m, s }}", unit);
 			}
 			break;
 		}
@@ -862,7 +862,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'M':
@@ -876,7 +876,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'w': {
@@ -893,7 +893,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				}
@@ -906,7 +906,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'h':
@@ -917,7 +917,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'm':
@@ -928,7 +928,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 's':
@@ -937,13 +937,13 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 					} else if (op.size() == 2 && op[1] == '/') {
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 				break;
 			}
 			break;
 		default:
-			THROW(DatetimeError, "Invalid format in Date Math operator: %s. Operator must be in { +#, -#, /, // }", op);
+			THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 	}
 
 	// Update date.
@@ -1339,7 +1339,7 @@ Datetime::TimeParser(std::string_view _time)
 	}
 
 error:
-	THROW(TimeError, "Error format in time: %s, the format must be '00:00(:00(.0...)([+-]00:00))'", _time);
+	THROW(TimeError, "Error format in time: {}, the format must be '00:00(:00(.0...)([+-]00:00))'", _time);
 }
 
 
@@ -1429,21 +1429,21 @@ Datetime::time_to_double(const MsgPack& _time)
 			if (isvalidTime(t_val)) {
 				return t_val;
 			}
-			THROW(TimeError, "Time: %f is out of range", t_val);
+			THROW(TimeError, "Time: {} is out of range", t_val);
 		}
 		case MsgPack::Type::NEGATIVE_INTEGER: {
 			double t_val = _time.i64();
 			if (isvalidTime(t_val)) {
 				return t_val;
 			}
-			THROW(TimeError, "Time: %f is out of range", t_val);
+			THROW(TimeError, "Time: {} is out of range", t_val);
 		}
 		case MsgPack::Type::FLOAT: {
 			double t_val = _time.f64();
 			if (isvalidTime(t_val)) {
 				return t_val;
 			}
-			THROW(TimeError, "Time: %f is out of range", t_val);
+			THROW(TimeError, "Time: {} is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
 			return time_to_double(TimeParser(_time.str_view()));
@@ -1623,7 +1623,7 @@ Datetime::TimedeltaParser(std::string_view timedelta)
 	}
 
 error:
-	THROW(TimedeltaError, "Error format in timedelta: %s, the format must be '[+-]00:00(:00(.0...))'", timedelta);
+	THROW(TimedeltaError, "Error format in timedelta: {}, the format must be '[+-]00:00(:00(.0...))'", timedelta);
 }
 
 
@@ -1675,21 +1675,21 @@ Datetime::timedelta_to_double(const MsgPack& timedelta)
 			if (isvalidTimedelta(t_val)) {
 				return t_val;
 			}
-			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
+			THROW(TimedeltaError, "Timedelta: {} is out of range", t_val);
 		}
 		case MsgPack::Type::NEGATIVE_INTEGER: {
 			double t_val = timedelta.i64();
 			if (isvalidTimedelta(t_val)) {
 				return t_val;
 			}
-			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
+			THROW(TimedeltaError, "Timedelta: {} is out of range", t_val);
 		}
 		case MsgPack::Type::FLOAT: {
 			double t_val = timedelta.f64();
 			if (isvalidTimedelta(t_val)) {
 				return t_val;
 			}
-			THROW(TimedeltaError, "Timedelta: %f is out of range", t_val);
+			THROW(TimedeltaError, "Timedelta: {} is out of range", t_val);
 		}
 		case MsgPack::Type::STR:
 			return timedelta_to_double(TimedeltaParser(timedelta.str_view()));
