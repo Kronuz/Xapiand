@@ -244,7 +244,41 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_GEO_COLLECTION),
 						hh(RESERVED_GEO_INTERSECTION),
 					});
-					if (is_leaf) {
+					if (o.is_array()) {
+						switch (_.fhh(name)) {
+							// Compound query clauses
+							case _.fhh(RESERVED_QUERYDSL_AND):
+								query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_OR):
+								query = process(Xapian::Query::OP_OR, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_NOT):
+								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
+								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_XOR):
+								query = process(Xapian::Query::OP_XOR, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
+								query = process(Xapian::Query::OP_AND_MAYBE, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_FILTER):
+								query = process(Xapian::Query::OP_FILTER, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
+								// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
+								query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
+								query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags, is_leaf);
+								break;
+							default:
+								THROW(QueryDslError, "Invalid operator: %s", name);
+						}
+					} else {
 						switch (_.fhh(name)) {
 							// Compound query clauses
 							case _.fhh(RESERVED_QUERYDSL_AND):
@@ -309,49 +343,15 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 							default:
 								THROW(QueryDslError, "Invalid operator: %s", name);
 						}
-					} else {
-						switch (_.fhh(name)) {
-							// Compound query clauses
-							case _.fhh(RESERVED_QUERYDSL_AND):
-								query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_OR):
-								query = process(Xapian::Query::OP_OR, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_NOT):
-								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
-								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_XOR):
-								query = process(Xapian::Query::OP_XOR, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
-								query = process(Xapian::Query::OP_AND_MAYBE, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_FILTER):
-								query = process(Xapian::Query::OP_FILTER, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
-								// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
-								query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags, false);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
-								query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags, false);
-								break;
-							default:
-								THROW(QueryDslError, "Invalid operator: %s", name);
-						}
 					}
 				} else {
 					if (path.empty()) {
-						query = process(op, name, o, default_op, wqf, flags, true);
+						query = process(op, name, o, default_op, wqf, flags, is_leaf);
 					} else {
 						std::string n_parent;
 						n_parent.reserve(path.length() + 1 + name.length());
 						n_parent.append(path).append(1, DB_OFFSPRING_UNION).append(name);
-						query = process(op, n_parent, o, default_op, wqf, flags, true);
+						query = process(op, n_parent, o, default_op, wqf, flags, is_leaf);
 					}
 				}
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
