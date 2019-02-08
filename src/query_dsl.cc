@@ -213,6 +213,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_QUERYDSL_MAX),
 						hh(RESERVED_QUERYDSL_WILDCARD),
 						// Leaf query clauses.
+						hh(RESERVED_QUERYDSL_PARTIAL),
 						hh(RESERVED_QUERYDSL_IN),
 						hh(RESERVED_QUERYDSL_RAW),
 						hh(RESERVED_VALUE),
@@ -265,6 +266,9 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags, is_leaf);
 								break;
 							// Leaf query clauses.
+							case _.fhh(RESERVED_QUERYDSL_PARTIAL):
+								query = process(op, path, o, default_op, wqf, flags | Xapian::QueryParser::FLAG_PARTIAL, is_leaf);
+								break;
 							case _.fhh(RESERVED_QUERYDSL_IN):
 								query = get_in_query(path, o, default_op, wqf, flags);
 								break;
@@ -666,7 +670,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 		case FieldType::STRING:
 		case FieldType::TEXT: {
 			// There cannot be non-keyword fields with bool_term
-			// flags |= Xapian::QueryParser::FLAG_PARTIAL;
 			Xapian::QueryParser parser;
 			switch (default_op) {
 				case Xapian::Query::OP_NEAR:

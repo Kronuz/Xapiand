@@ -48,6 +48,7 @@ constexpr const char RESERVED_QUERYDSL_SORT[]               = RESERVED__ "sort";
 constexpr const char RESERVED_QUERYDSL_SELECTOR[]           = RESERVED__ "selector";
 constexpr const char RESERVED_QUERYDSL_ORDER[]              = RESERVED__ "order";
 constexpr const char RESERVED_QUERYDSL_METRIC[]             = RESERVED__ "metric";
+constexpr const char RESERVED_QUERYDSL_PARTIAL[]            = RESERVED__ "partial";
 
 constexpr const char QUERYDSL_ASC[]     = "asc";
 constexpr const char QUERYDSL_DESC[]    = "desc";
