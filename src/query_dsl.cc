@@ -172,7 +172,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 
 
 inline Xapian::Query
-QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags, bool is_leaf)
 {
 	L_CALL("QueryDSL::process(%d, %s, %s, <default_op>, <wqf>, <flags>)", (int)op, repr(path), repr(obj.to_string()));
 
@@ -240,97 +240,111 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_GEO_COLLECTION),
 						hh(RESERVED_GEO_INTERSECTION),
 					});
-					switch (_.fhh(name)) {
-						// Compound query clauses
-						case _.fhh(RESERVED_QUERYDSL_AND):
-							query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_OR):
-							query = process(Xapian::Query::OP_OR, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_NOT):
-							query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_AND_NOT):
-							query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_XOR):
-							query = process(Xapian::Query::OP_XOR, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
-							query = process(Xapian::Query::OP_AND_MAYBE, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_FILTER):
-							query = process(Xapian::Query::OP_FILTER, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_NEAR):
-							query = process(Xapian::Query::OP_NEAR, path, o, Xapian::Query::OP_NEAR, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_PHRASE):
-							query = process(Xapian::Query::OP_PHRASE, path, o, Xapian::Query::OP_PHRASE, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
-							// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
-							query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-							query = process(Xapian::Query::OP_ELITE_SET, path, o, Xapian::Query::OP_ELITE_SET, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_SYNONYM):
-							query = process(Xapian::Query::OP_SYNONYM, path, o, Xapian::Query::OP_SYNONYM, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_MAX):
-							query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_WILDCARD):
-							query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags);
-							break;
-						// Leaf query clauses.
-						case _.fhh(RESERVED_QUERYDSL_IN):
-							query = get_in_query(path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_QUERYDSL_RAW):
-							query = get_raw_query(path, o, default_op, wqf, flags);
-							break;
-						case _.fhh(RESERVED_VALUE):
-							query = get_value_query(path, o, default_op, wqf, flags);
-							break;
-						// Reserved cast words
-						case _.fhh(RESERVED_FLOAT):
-						case _.fhh(RESERVED_POSITIVE):
-						case _.fhh(RESERVED_INTEGER):
-						case _.fhh(RESERVED_BOOLEAN):
-						case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
-						case _.fhh(RESERVED_KEYWORD):
-						case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
-						case _.fhh(RESERVED_TEXT):
-						case _.fhh(RESERVED_DATE):
-						case _.fhh(RESERVED_UUID):
-						case _.fhh(RESERVED_EWKT):
-						case _.fhh(RESERVED_POINT):
-						case _.fhh(RESERVED_POLYGON):
-						case _.fhh(RESERVED_CIRCLE):
-						case _.fhh(RESERVED_CHULL):
-						case _.fhh(RESERVED_MULTIPOINT):
-						case _.fhh(RESERVED_MULTIPOLYGON):
-						case _.fhh(RESERVED_MULTICIRCLE):
-						case _.fhh(RESERVED_MULTICONVEX):
-						case _.fhh(RESERVED_MULTICHULL):
-						case _.fhh(RESERVED_GEO_COLLECTION):
-						case _.fhh(RESERVED_GEO_INTERSECTION):
-							query = get_value_query(path, {{ name, o }}, default_op, wqf, flags);
-							break;
-						default:
-							THROW(QueryDslError, "Invalid operator: %s", name);
+					if (is_leaf) {
+						switch (_.fhh(name)) {
+							// Compound query clauses
+							case _.fhh(RESERVED_QUERYDSL_AND):
+								query = process(Xapian::Query::OP_AND, path, o, Xapian::Query::OP_AND, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_OR):
+								query = process(Xapian::Query::OP_OR, path, o, Xapian::Query::OP_OR, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_NEAR):
+								query = process(Xapian::Query::OP_NEAR, path, o, Xapian::Query::OP_NEAR, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_PHRASE):
+								query = process(Xapian::Query::OP_PHRASE, path, o, Xapian::Query::OP_PHRASE, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
+								query = process(Xapian::Query::OP_ELITE_SET, path, o, Xapian::Query::OP_ELITE_SET, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_SYNONYM):
+								query = process(Xapian::Query::OP_SYNONYM, path, o, Xapian::Query::OP_SYNONYM, wqf, flags, is_leaf);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_MAX):
+								query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags, is_leaf);
+								break;
+							// Leaf query clauses.
+							case _.fhh(RESERVED_QUERYDSL_IN):
+								query = get_in_query(path, o, default_op, wqf, flags);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_RAW):
+								query = get_raw_query(path, o, default_op, wqf, flags);
+								break;
+							case _.fhh(RESERVED_VALUE):
+								query = get_value_query(path, o, default_op, wqf, flags);
+								break;
+							// Reserved cast words
+							case _.fhh(RESERVED_FLOAT):
+							case _.fhh(RESERVED_POSITIVE):
+							case _.fhh(RESERVED_INTEGER):
+							case _.fhh(RESERVED_BOOLEAN):
+							case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
+							case _.fhh(RESERVED_KEYWORD):
+							case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
+							case _.fhh(RESERVED_TEXT):
+							case _.fhh(RESERVED_DATE):
+							case _.fhh(RESERVED_UUID):
+							case _.fhh(RESERVED_EWKT):
+							case _.fhh(RESERVED_POINT):
+							case _.fhh(RESERVED_POLYGON):
+							case _.fhh(RESERVED_CIRCLE):
+							case _.fhh(RESERVED_CHULL):
+							case _.fhh(RESERVED_MULTIPOINT):
+							case _.fhh(RESERVED_MULTIPOLYGON):
+							case _.fhh(RESERVED_MULTICIRCLE):
+							case _.fhh(RESERVED_MULTICONVEX):
+							case _.fhh(RESERVED_MULTICHULL):
+							case _.fhh(RESERVED_GEO_COLLECTION):
+							case _.fhh(RESERVED_GEO_INTERSECTION):
+								query = get_value_query(path, {{ name, o }}, default_op, wqf, flags);
+								break;
+							default:
+								THROW(QueryDslError, "Invalid operator: %s", name);
+						}
+					} else {
+						switch (_.fhh(name)) {
+							// Compound query clauses
+							case _.fhh(RESERVED_QUERYDSL_AND):
+								query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_OR):
+								query = process(Xapian::Query::OP_OR, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_NOT):
+								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
+								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_XOR):
+								query = process(Xapian::Query::OP_XOR, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_AND_MAYBE):
+								query = process(Xapian::Query::OP_AND_MAYBE, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_FILTER):
+								query = process(Xapian::Query::OP_FILTER, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_SCALE_WEIGHT):
+								// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
+								query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags, false);
+								break;
+							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
+								query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags, false);
+								break;
+							default:
+								THROW(QueryDslError, "Invalid operator: %s", name);
+						}
 					}
 				} else {
 					if (path.empty()) {
-						query = process(op, name, o, default_op, wqf, flags);
+						query = process(op, name, o, default_op, wqf, flags, true);
 					} else {
 						std::string n_parent;
 						n_parent.reserve(path.length() + 1 + name.length());
 						n_parent.append(path).append(1, DB_OFFSPRING_UNION).append(name);
-						query = process(op, n_parent, o, default_op, wqf, flags);
+						query = process(op, n_parent, o, default_op, wqf, flags, true);
 					}
 				}
 				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
@@ -340,7 +354,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 		case MsgPack::Type::ARRAY: {
 			auto processed = itertools::transform<MsgPack>([&](const MsgPack& o){
-				return process(op, path, o, default_op, wqf, flags);
+				return process(op, path, o, default_op, wqf, flags, is_leaf);
 			}, obj.begin(), obj.end());
 
 			if (final_query.empty()) {
@@ -1084,7 +1098,7 @@ QueryDSL::get_query(const MsgPack& obj)
 			Xapian::QueryParser::FLAG_LOVEHATE |
 			Xapian::QueryParser::FLAG_WILDCARD
 		);
-		query = process(Xapian::Query::OP_AND, "", obj, Xapian::Query::OP_OR, 1, flags);
+		query = process(Xapian::Query::OP_AND, "", obj, Xapian::Query::OP_OR, 1, flags, false);
 	}
 
 	L_QUERY("query = " + STEEL_BLUE + "%s" + CLEAR_COLOR + "\n" + DIM_GREY + "%s" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
