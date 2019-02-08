@@ -61,9 +61,9 @@ GET /bank/:search?pretty
 The `_radius` in the example is in meters.
 
 {: .note .notice}
-_**Searching Inside the Circle**_<br>
-Notice you _**must**_ use `_in` keyword to search for documents **inside** the
-given circle instead of searching for documents with the circle itself.
+**_Caution_**<br>
+For searching **inside** the given circle you _**must**_ use `_in` keyword.
+Otherwise you'd be searching for the circle itself, not what's in it.
 
 
 ## Polygon
@@ -201,11 +201,17 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 {: .note .notice}
-**_EWKT expression_**<br>
-Notice the correct coordinate order is (longitude, latitude)
+**_Caution_**<br>
+Notice that for points in EWKT expressions, the correct coordinate order is
+`(longitude, latitude)`, "longitude" first.
 
 
 ## Accepted Coordinates
+
+{: .note .unreleased}
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
 
 Here are examples of text formats that work:
 
