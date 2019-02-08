@@ -54,6 +54,29 @@
           title: Cast Queries
         - url: reference-guide/query-dsl/geo-queries
           title: Geospatial Queries
+          docs:
+            - link: '#point'
+              title: Point
+            - link: '#circle'
+              title: Circle
+            - link: '#polygon'
+              title: Polygon
+            - link: '#convex'
+              title: Convex
+            - link: '#chull'
+              title: Chull
+            - link: '#multipoint'
+              title: Multipoint
+            - link: '#multicircle'
+              title: Multicircle
+            - link: '#multiconvex'
+              title: Multiconvex
+            - link: '#multipolygon'
+              title: Multipolygon
+            - link: '#multichull'
+              title: Multichull
+            - link: '#extended_well_known_text'
+              title: EWKT
         - url: reference-guide/query-dsl/like-this-queries
           title: Find Docs. Like This
         - url: reference-guide/query-dsl/near-queries
