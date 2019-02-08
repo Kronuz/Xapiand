@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,13 +52,13 @@ int test_boolparser() {
 		BooleanTree booltree(query.query);
 
 		if (booltree.size() != query.stack_expected.size()) {
-			L_ERR("ERROR: Boolean parser mismatch sizes in stacks: expected %zu, result is: %zu", query.stack_expected.size(), booltree.size());
+			L_ERR("ERROR: Boolean parser mismatch sizes in stacks: expected {}, result is: {}", query.stack_expected.size(), booltree.size());
 			++count;
 		} else {
 			for (const auto& token : query.stack_expected) {
 				const auto& lexeme = booltree.front().get_lexeme();
 				if (token != lexeme) {
-					L_ERR("ERROR: Boolean parser: expected token %s, result is: %s", token, lexeme);
+					L_ERR("ERROR: Boolean parser: expected token {}, result is: {}", token, lexeme);
 					++count;
 				}
 				booltree.pop_front();

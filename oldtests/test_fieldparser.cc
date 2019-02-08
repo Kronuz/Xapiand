@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -108,42 +108,42 @@ int test_field_parser() {
 		fp.parse(4);
 
 		if (fp.get_field_name() != field.field_name) {
-			L_ERR("\nError: The field name should be:\n  %s\nbut it is:\n  %s", field.field_name, fp.get_field_name());
+			L_ERR("\nError: The field name should be:\n  {}\nbut it is:\n  {}", field.field_name, fp.get_field_name());
 			++count;
 		}
 
 		if (fp.get_value() != field.value) {
-			L_ERR("\nError: The value should be:\n  %s\nbut it is:\n  %s", field.value, fp.get_value());
+			L_ERR("\nError: The value should be:\n  {}\nbut it is:\n  {}", field.value, fp.get_value());
 			++count;
 		}
 
 		if (fp.get_double_quoted_value() != field.double_quote_value) {
-			L_ERR("\nError: The double quote value should be:\n  %s\nbut it is:\n  %s", field.double_quote_value, fp.get_double_quoted_value());
+			L_ERR("\nError: The double quote value should be:\n  {}\nbut it is:\n  {}", field.double_quote_value, fp.get_double_quoted_value());
 			++count;
 		}
 
 		if (fp.get_single_quoted_value() != field.single_quote_value) {
-			L_ERR("\nError: The single quote value should be:\n  %s\nbut it is:\n  %s", field.single_quote_value, fp.get_single_quoted_value());
+			L_ERR("\nError: The single quote value should be:\n  {}\nbut it is:\n  {}", field.single_quote_value, fp.get_single_quoted_value());
 			++count;
 		}
 
 		if (fp.get_start() != field.start) {
-			L_ERR("\nError: The start value range should be:\n  %s\nbut it is:\n  %s", field.start, fp.get_start());
+			L_ERR("\nError: The start value range should be:\n  {}\nbut it is:\n  {}", field.start, fp.get_start());
 			++count;
 		}
 
 		if (fp.get_end() != field.end) {
-			L_ERR("\nError: The end value range should be:\n  %s\nbut it is:\n  %s", field.end, fp.get_end());
+			L_ERR("\nError: The end value range should be:\n  {}\nbut it is:\n  {}", field.end, fp.get_end());
 			++count;
 		}
 
 		if (fp.get_values() != field.values) {
-			L_ERR("\nError: The values should be:\n  %s\nbut are:\n  %s", field.values, fp.get_values());
+			L_ERR("\nError: The values should be:\n  {}\nbut are:\n  {}", field.values, fp.get_values());
 			++count;
 		}
 
 		if (fp.range != field.range) {
-			L_ERR("\nError: The range type should be:\n  %s\nbut it is:\n  %s", readable_range(field.range), readable_range(fp.range));
+			L_ERR("\nError: The range type should be:\n  {}\nbut it is:\n  {}", readable_range(field.range), readable_range(fp.range));
 			++count;
 		}
 	}

@@ -110,7 +110,7 @@ Script::Script(const MsgPack& _obj)
 void
 Script::process_body(const MsgPack& _body)
 {
-	L_CALL("Script::process_body(%s)", repr(_body.to_string()));
+	L_CALL("Script::process_body({})", repr(_body.to_string()));
 
 	if (with_value) {
 		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
@@ -128,7 +128,7 @@ Script::process_body(const MsgPack& _body)
 void
 Script::process_name(const MsgPack& _name)
 {
-	L_CALL("Script::process_name(%s)", repr(_name.to_string()));
+	L_CALL("Script::process_name({})", repr(_name.to_string()));
 
 	if (with_value) {
 		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
@@ -146,7 +146,7 @@ Script::process_name(const MsgPack& _name)
 void
 Script::process_type(const MsgPack& _type)
 {
-	L_CALL("Script::process_type(%s)", repr(_type.to_string()));
+	L_CALL("Script::process_type({})", repr(_type.to_string()));
 
 	try {
 		sep_types = required_spc_t::get_types(_type.str());
@@ -159,7 +159,7 @@ Script::process_type(const MsgPack& _type)
 void
 Script::process_value(const MsgPack& _value)
 {
-	L_CALL("Script::process_value(%s)", repr(_value.to_string()));
+	L_CALL("Script::process_value({})", repr(_value.to_string()));
 
 	if (with_data || with_value) {
 		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
@@ -204,7 +204,7 @@ Script::process_value(const MsgPack& _value)
 void
 Script::process_chai(const MsgPack& _chai)
 {
-	L_CALL("Script::process_chai(%s)", repr(_chai.to_string()));
+	L_CALL("Script::process_chai({})", repr(_chai.to_string()));
 
 	process_value(_chai);
 	type = Type::CHAI;
@@ -214,7 +214,7 @@ Script::process_chai(const MsgPack& _chai)
 void
 Script::process_ecma(const MsgPack& _ecma)
 {
-	L_CALL("Script::process_ecma(%s)", repr(_ecma.to_string()));
+	L_CALL("Script::process_ecma({})", repr(_ecma.to_string()));
 
 	process_value(_ecma);
 	type = Type::ECMA;
@@ -224,7 +224,7 @@ Script::process_ecma(const MsgPack& _ecma)
 MsgPack
 Script::process_chai(bool strict)
 {
-	L_CALL("Script::process_chai(%s)", strict ? "true" : "false");
+	L_CALL("Script::process_chai({})", strict ? "true" : "false");
 
 #if defined(XAPIAND_CHAISCRIPT)
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
@@ -289,7 +289,7 @@ Script::process_chai(bool strict)
 MsgPack
 Script::process_ecma(bool strict)
 {
-	L_CALL("Script::process_ecma(%s)", strict ? "true" : "false");
+	L_CALL("Script::process_ecma({})", strict ? "true" : "false");
 
 #if defined(XAPIAND_V8)
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
@@ -355,7 +355,7 @@ Script::process_ecma(bool strict)
 MsgPack
 Script::process_script(bool strict)
 {
-	L_CALL("Script::process_script(%s)", strict ? "true" : "false");
+	L_CALL("Script::process_script({})", strict ? "true" : "false");
 
 	switch (type) {
 		case Type::CHAI:

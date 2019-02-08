@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ int test_md5() {
 	for (auto it = test.begin(), rit = expect.begin(); it != test.end(); ++it, ++rit) {
 		std::string res = md5(*it);
 		if (res != *rit) {
-			L_ERR("ERROR: Testing MD5 Failed.\nResult MD5(%s)=%s  Expected=%s", *it, res, *rit);
+			L_ERR("ERROR: Testing MD5 Failed.\nResult MD5({})={}  Expected={}", *it, res, *rit);
 			RETURN (1);
 		}
 	}
@@ -74,7 +74,7 @@ int test_sha256() {
 	for (auto it = test.begin(), rit = expects.begin(); it != test.end(); ++it, ++rit) {
 		std::string res = sha256(*it);
 		if (res != *rit) {
-			L_ERR("ERROR: Testing SHA256 Failed.\nResult SHA256(%s)=%s  Expected=%s", *it, res, *rit);
+			L_ERR("ERROR: Testing SHA256 Failed.\nResult SHA256({})={}  Expected={}", *it, res, *rit);
 			RETURN(1);
 		}
 	}

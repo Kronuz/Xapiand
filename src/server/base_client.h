@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -186,7 +186,7 @@ protected:
 
 	// Receive message from client socket
 	void _io_cb_read(ev::io &watcher, int revents) {
-		L_CALL("BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+		L_CALL("BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 		L_EV_END("BaseClient::io_cb_read:END");
@@ -194,7 +194,7 @@ protected:
 		ASSERT(sock == -1 || sock == watcher.fd);
 		ignore_unused(watcher);
 
-		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 		if (closed) {
 			stop();
@@ -204,7 +204,7 @@ protected:
 		}
 
 		if ((revents & EV_ERROR) != 0) {
-			L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: got invalid event {{sock:{}}} - {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 			stop();
 			destroy();
 			detach();
@@ -216,14 +216,14 @@ protected:
 
 		if (received < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("Ignored error: {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+				L_CONN("Ignored error: {{sock:{}}} - {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 				return;
 			}
 
 			if (errno == ECONNRESET) {
-				L_CONN("Received ECONNRESET {sock:%d}!", watcher.fd);
+				L_CONN("Received ECONNRESET {{sock:{}}}!", watcher.fd);
 			} else {
-				L_ERR("ERROR: read error {sock:%d} - %d: %s (%d)", watcher.fd, error::name(errno), errno, error::description(errno));
+				L_ERR("ERROR: read error {{sock:{}}} - {}: {} ({})", watcher.fd, error::name(errno), errno, error::description(errno));
 			}
 			close();
 			on_read(nullptr, received);
@@ -233,7 +233,7 @@ protected:
 
 		if (received == 0) {
 			// The peer has closed its half side of the connection.
-			L_CONN("Received EOF {sock:%d}!", watcher.fd);
+			L_CONN("Received EOF {{sock:{}}}!", watcher.fd);
 			close();
 			on_read(nullptr, received);
 			detach();
@@ -244,7 +244,7 @@ protected:
 		const char* buf_end = read_buffer + received;
 
 		total_received_bytes += received;
-		L_TCP_WIRE("{sock:%d} -->> %s (%zu bytes)", watcher.fd, repr(buf_data, received, true, true, 500), received);
+		L_TCP_WIRE("{{sock:{}}} -->> {} ({} bytes)", watcher.fd, repr(buf_data, received, true, true, 500), received);
 
 		do {
 			if ((received > 0) && mode == MODE::READ_BUF) {
@@ -253,7 +253,7 @@ protected:
 			}
 
 			if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
-				L_CONN("Receiving file {sock:%d}...", watcher.fd);
+				L_CONN("Receiving file {{sock:{}}}...", watcher.fd);
 				decompressor = std::make_unique<ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>>(static_cast<MetaBaseClient<ClientImpl>&>(*this));
 				file_size_buffer.clear();
 				receive_checksum = false;
@@ -343,14 +343,14 @@ protected:
 	}
 
 	bool send_file(int fd, size_t offset = 0) {
-		L_CALL("BaseClient::send_file(%d, %zu)", fd, offset);
+		L_CALL("BaseClient::send_file({}, {})", fd, offset);
 
 		ClientLZ4Compressor<MetaBaseClient<ClientImpl>> compressor(static_cast<MetaBaseClient<ClientImpl>&>(*this), fd, offset);
 		return (compressor.compress() != -1);
 	}
 
 	void shutdown_impl(long long asap, long long now) override {
-		L_CALL("HttpClient::shutdown_impl(%lld, %lld)", asap, now);
+		L_CALL("HttpClient::shutdown_impl({}, {})", asap, now);
 
 		Worker::shutdown_impl(asap, now);
 

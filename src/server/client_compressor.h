@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -118,7 +118,7 @@ public:
 				++it;
 			}
 		} catch (const std::exception& e) {
-			L_ERR("%s", e.what());
+			L_ERR("{}", e.what());
 			return -1;
 		}
 
@@ -164,7 +164,7 @@ public:
 	}
 
 	void append(const char *buf, size_t size) {
-		L_CALL("append(%s)", repr(buf, size));
+		L_CALL("append({})", repr(buf, size));
 
 		input.append(buf, size);
 	}
@@ -181,7 +181,7 @@ public:
 	}
 
 	bool verify(uint32_t checksum_) noexcept {
-		L_CALL("verify(0x%04x)", checksum_);
+		L_CALL("verify({:#06x})", checksum_);
 
 		return XXH32_digest(xxh_state) == checksum_;
 	}
@@ -207,7 +207,7 @@ public:
 	}
 
 	void append(const char *buf, size_t size) {
-		L_CALL("append(%s)", repr(buf, size));
+		L_CALL("append({})", repr(buf, size));
 
 		input.append(buf, size);
 	}
@@ -225,7 +225,7 @@ public:
 	}
 
 	bool verify(uint32_t checksum_) noexcept {
-		L_CALL("verify(0x%04x)", checksum_);
+		L_CALL("verify({:#06x})", checksum_);
 
 		return get_digest() == checksum_;
 	}

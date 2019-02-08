@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -170,11 +170,11 @@ int test_storage_data(int flags) {
 			++cont_read;
 		}
 	} catch (const StorageException& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.get_context());
+		L_ERR("Read: [{}] {}\n", cont_read, er.get_context());
 	} catch (const LZ4Exception& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.get_context());
+		L_ERR("Read: [{}] {}\n", cont_read, er.get_context());
 	} catch (const std::exception& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.what());
+		L_ERR("Read: [{}] {}\n", cont_read, er.what());
 	}
 
 	unlink(volume_name.c_str());
@@ -220,11 +220,11 @@ int test_storage_file(int flags) {
 			++cont_read;
 		}
 	} catch (const StorageException& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.get_context());
+		L_ERR("Read: [{}] {}\n", cont_read, er.get_context());
 	} catch (const LZ4Exception& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.get_context());
+		L_ERR("Read: [{}] {}\n", cont_read, er.get_context());
 	} catch (const std::exception& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.what());
+		L_ERR("Read: [{}] {}\n", cont_read, er.what());
 	}
 
 	unlink(volume_name.c_str());
@@ -241,21 +241,21 @@ int test_storage_bad_headers() {
 		Storage<StorageHeader, StorageBinBadHeader1, StorageBinFooterChecksum> _storage("", nullptr);
 		res = 1;
 	} catch (const std::exception& e) {
-		L_ERR("Bad header (1): %s", e.what());
+		L_ERR("Bad header (1): {}", e.what());
 	}
 
 	try {
 		Storage<StorageHeader, StorageBinBadHeader2, StorageBinFooterChecksum> _storage("", nullptr);
 		res = 1;
 	} catch (const std::exception& e) {
-		L_ERR("Bad header (2): %s", e.what());
+		L_ERR("Bad header (2): {}", e.what());
 	}
 
 	try {
 		Storage<StorageHeader, StorageBinBadHeader3, StorageBinFooterChecksum> _storage("", nullptr);
 		res = 1;
 	} catch (const std::exception& e) {
-		L_ERR("Bad header (3): %s", e.what());
+		L_ERR("Bad header (3): {}", e.what());
 	}
 
 	RETURN(res);
@@ -318,11 +318,11 @@ int test_storage_exception_write(int flags) {
 			++cont_read;
 		}
 	} catch (const StorageEOF& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.get_context());
+		L_ERR("Read: [{}] {}\n", cont_read, er.get_context());
 		unlink(volume_name.c_str());
 		RETURN(0);
 	} catch (const std::exception& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.what());
+		L_ERR("Read: [{}] {}\n", cont_read, er.what());
 		unlink(volume_name.c_str());
 		RETURN(1);
 	}
@@ -404,11 +404,11 @@ int test_storage_exception_write_file(int flags) {
 			++cont_read;
 		}
 	} catch (const StorageEOF& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.get_context());
+		L_ERR("Read: [{}] {}\n", cont_read, er.get_context());
 		unlink(volume_name.c_str());
 		RETURN(0);
 	} catch (const std::exception& er) {
-		L_ERR("Read: [%d] %s\n", cont_read, er.what());
+		L_ERR("Read: [{}] {}\n", cont_read, er.what());
 		unlink(volume_name.c_str());
 		RETURN(1);
 	}

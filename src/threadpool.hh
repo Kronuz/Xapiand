@@ -85,7 +85,7 @@ public:
 
 	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType, thread_policy>* pool) noexcept :
 		_pool(pool),
-		_name(string::sprintf(pool->_format, idx)) {}
+		_name(string::format(pool->_format, idx)) {}
 
 	void operator()();
 

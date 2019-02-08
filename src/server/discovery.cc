@@ -121,7 +121,7 @@ Discovery::~Discovery() noexcept
 void
 Discovery::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("Discovery::shutdown_impl(%lld, %lld)", asap, now);
+	L_CALL("Discovery::shutdown_impl({}, {})", asap, now);
 
 	Worker::shutdown_impl(asap, now);
 
@@ -157,10 +157,10 @@ Discovery::start_impl()
 	Worker::start_impl();
 
 	cluster_discovery.start(0, CLUSTER_DISCOVERY_WAITING_FAST);
-	L_EV("Start discovery's cluster_discovery exploring event (%f)", cluster_discovery.repeat);
+	L_EV("Start discovery's cluster_discovery exploring event ({})", cluster_discovery.repeat);
 
 	io.start(sock, ev::READ);
-	L_EV("Start discovery's server accept event {sock:%d}", sock);
+	L_EV("Start discovery's server accept event {{sock:{}}}", sock);
 
 	L_DISCOVERY("Discovery was started! (exploring)");
 }
@@ -175,7 +175,7 @@ Discovery::stop_impl()
 
 	auto local_node = Node::local_node();
 	send_message(Message::CLUSTER_BYE, local_node->serialise());
-	L_INFO("Waving goodbye to cluster %s!", opts.cluster_name);
+	L_INFO("Waving goodbye to cluster {}!", opts.cluster_name);
 
 	raft_leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
@@ -209,9 +209,9 @@ Discovery::operator()()
 void
 Discovery::send_message(Message type, const std::string& message)
 {
-	L_CALL("Discovery::send_message(%s, <message>)", MessageNames(type));
+	L_CALL("Discovery::send_message({}, <message>)", MessageNames(type));
 
-	L_DISCOVERY_PROTO("<< send_message (%s): %s", MessageNames(type), repr(message));
+	L_DISCOVERY_PROTO("<< send_message ({}): {}", MessageNames(type), repr(message));
 	UDP::send_message(toUType(type), message);
 }
 
@@ -219,10 +219,10 @@ Discovery::send_message(Message type, const std::string& message)
 void
 Discovery::io_accept_cb(ev::io &watcher, int revents)
 {
-	L_CALL("Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("Discovery::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
-	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
-	L_EV_END("Discovery::io_accept_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::io_accept_cb:END {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
@@ -231,10 +231,10 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 		return;
 	}
 
-	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("Discovery::io_accept_cb", "Discovery::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	if (EV_ERROR & revents) {
-		L_EV("ERROR: got invalid cluster_discovery event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid cluster_discovery event {{sock:{}}}: {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
@@ -247,7 +247,7 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 					break;  // no message
 				}
 				Message type = static_cast<Message>(raw_type);
-				L_DISCOVERY_PROTO(">> get_message (%s): %s", MessageNames(type), repr(message));
+				L_DISCOVERY_PROTO(">> get_message ({}): {}", MessageNames(type), repr(message));
 				discovery_server(type, message);
 			} catch (...) {
 				L_EXC("ERROR: Unhandled exception in discovery_server");
@@ -261,10 +261,10 @@ Discovery::io_accept_cb(ev::io &watcher, int revents)
 void
 Discovery::discovery_server(Message type, const std::string& message)
 {
-	L_CALL("Discovery::discovery_server(%s, <message>)", MessageNames(type));
+	L_CALL("Discovery::discovery_server({}, <message>)", MessageNames(type));
 
-	L_EV_BEGIN("Discovery::discovery_server:BEGIN {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
-	L_EV_END("Discovery::discovery_server:END {state:%s, type:%s}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
+	L_EV_BEGIN("Discovery::discovery_server:BEGIN {{state:{}, type:{}}}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
+	L_EV_END("Discovery::discovery_server:END {{state:{}, type:{}}}", XapiandManager::StateNames(XapiandManager::state()), MessageNames(type));
 
 	switch (type) {
 		case Message::CLUSTER_HELLO:
@@ -314,14 +314,14 @@ Discovery::discovery_server(Message type, const std::string& message)
 void
 Discovery::cluster_hello(Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_hello(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_hello({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", MessageNames(type), remote_node.name());
 
 
 	auto local_node = Node::local_node();
@@ -340,29 +340,29 @@ Discovery::cluster_hello(Message type, const std::string& message)
 void
 Discovery::cluster_wave(Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_wave(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_wave({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", MessageNames(type), remote_node.name());
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node: %s[%zu] %s", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+		L_ERR("Denied node: {}[{}] {}", remote_node.col().ansi(), remote_node.idx, remote_node.name());
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
 		if (put.second) {
-			L_INFO("Node %s%s" + INFO_COL + " is at the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
+			L_INFO("Node {}{}" + INFO_COL + " is at the party on ip:{}, tcp:{} (http), tcp:{} (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
 		}
 
 		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
 		// (prevent it from switching to slow waiting)
 		if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
-			// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+			// L_DEBUG("State changed: {} -> {}", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 		}
 	}
 }
@@ -371,7 +371,7 @@ Discovery::cluster_wave(Message type, const std::string& message)
 void
 Discovery::cluster_sneer(Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_sneer(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_sneer({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::RESET &&
@@ -385,17 +385,17 @@ Discovery::cluster_sneer(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", MessageNames(type), remote_node.name());
 
 	auto local_node = Node::local_node();
 	if (remote_node == *local_node) {
 		if (XapiandManager::node_name().empty()) {
-			L_DISCOVERY("Node name %s already taken. Retrying other name...", local_node->name());
+			L_DISCOVERY("Node name {} already taken. Retrying other name...", local_node->name());
 			XapiandManager::reset_state();
 		} else {
 			XapiandManager::state().store(XapiandManager::State::BAD);
 			Node::local_node(std::make_shared<const Node>());
-			L_CRIT("Cannot join the party. Node name %s already taken!", local_node->name());
+			L_CRIT("Cannot join the party. Node name {} already taken!", local_node->name());
 			sig_exit(-EX_SOFTWARE);
 		}
 	}
@@ -405,23 +405,23 @@ Discovery::cluster_sneer(Message type, const std::string& message)
 void
 Discovery::cluster_enter(Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_enter(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_enter({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", MessageNames(type), remote_node.name());
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node: %s[%zu] %s", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+		L_ERR("Denied node: {}[{}] {}", remote_node.col().ansi(), remote_node.idx, remote_node.name());
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
 		if (put.second) {
-			L_INFO("Node %s%s" + INFO_COL + " joined the party on ip:%s, tcp:%d (http), tcp:%d (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
+			L_INFO("Node {}{}" + INFO_COL + " joined the party on ip:{}, tcp:{} (http), tcp:{} (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
 		}
 	}
 }
@@ -430,7 +430,7 @@ Discovery::cluster_enter(Message type, const std::string& message)
 void
 Discovery::cluster_bye(Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_bye(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_bye({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
@@ -443,34 +443,34 @@ Discovery::cluster_bye(Message type, const std::string& message)
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> %s [from %s]", MessageNames(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", MessageNames(type), remote_node.name());
 
 	Node::drop_node(remote_node.name());
 
 	auto leader_node = Node::leader_node();
 	if (*leader_node == remote_node) {
-		L_INFO("Leader node %s%s" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
+		L_INFO("Leader node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
 
 		Node::leader_node(std::make_shared<const Node>());
 		XapiandManager::renew_leader();
 	} else {
-		L_INFO("Node %s%s" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
+		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.name());
 	}
 
-	L_DEBUG("Nodes still active after %s left: %zu", remote_node.name(), Node::active_nodes());
+	L_DEBUG("Nodes still active after {} left: {}", remote_node.name(), Node::active_nodes());
 }
 
 
 void
 Discovery::raft_request_vote(Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_request_vote(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_request_vote({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -480,7 +480,7 @@ Discovery::raft_request_vote(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -497,14 +497,14 @@ Discovery::raft_request_vote(Message type, const std::string& message)
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	auto granted = false;
 	if (term == raft_current_term) {
 		if (raft_voted_for.empty()) {
 			if (Node::is_local(node)) {
 				raft_voted_for = *node;
-				L_RAFT("I vote for %s (1)", raft_voted_for.name());
+				L_RAFT("I vote for {} (1)", raft_voted_for.name());
 			} else if (raft_role == Role::RAFT_FOLLOWER) {
 				uint64_t remote_last_log_term = unserialise_length(&p, p_end);
 				size_t remote_last_log_index = unserialise_length(&p, p_end);
@@ -515,27 +515,27 @@ Discovery::raft_request_vote(Message type, const std::string& message)
 					// If the logs have last entries with different terms, then the
 					// raft_log with the later term is more up-to-date.
 					raft_voted_for = *node;
-					L_RAFT("I vote for %s (raft_log term is newer)", raft_voted_for.name());
+					L_RAFT("I vote for {} (raft_log term is newer)", raft_voted_for.name());
 				} else if (last_log_term == remote_last_log_term) {
 					// If the logs end with the same term, then whichever
 					// raft_log is longer is more up-to-date.
 					if (raft_log.size() <= remote_last_log_index) {
 						raft_voted_for = *node;
-						L_RAFT("I vote for %s (raft_log index size concurs)", raft_voted_for.name());
+						L_RAFT("I vote for {} (raft_log index size concurs)", raft_voted_for.name());
 					} else {
-						L_RAFT("I don't vote for %s (raft_log index is shorter)", raft_voted_for.name());
+						L_RAFT("I don't vote for {} (raft_log index is shorter)", raft_voted_for.name());
 					}
 				} else {
-					L_RAFT("I don't vote for %s (raft_log term is older)", raft_voted_for.name());
+					L_RAFT("I don't vote for {} (raft_log term is older)", raft_voted_for.name());
 				}
 			}
 		} else {
-			L_RAFT("I already voted for %s", raft_voted_for.name());
+			L_RAFT("I already voted for {}", raft_voted_for.name());
 		}
 		granted = raft_voted_for == *node;
 	}
 
-	L_RAFT("   << REQUEST_VOTE_RESPONSE {node:%s, term:%llu, granted:%s}", node->name(), term, granted ? "true" : "false");
+	L_RAFT("   << REQUEST_VOTE_RESPONSE {{node:{}, term:{}, granted:{}}}", node->name(), term, granted ? "true" : "false");
 	send_message(Message::RAFT_REQUEST_VOTE_RESPONSE,
 		node->serialise() +
 		serialise_length(term) +
@@ -546,7 +546,7 @@ Discovery::raft_request_vote(Message type, const std::string& message)
 void
 Discovery::raft_request_vote_response(Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_request_vote_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_request_vote_response({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (raft_role != Role::RAFT_CANDIDATE) {
@@ -556,7 +556,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -566,7 +566,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -585,7 +585,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
 		if (Node::is_superset(local_node, node)) {
@@ -595,7 +595,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 			} else {
 				++raft_votes_denied;
 			}
-			L_RAFT("Number of servers: %d; Votes granted: %d; Votes denied: %d", Node::active_nodes(), raft_votes_granted, raft_votes_denied);
+			L_RAFT("Number of servers: {}; Votes granted: {}; Votes denied: {}", Node::active_nodes(), raft_votes_granted, raft_votes_denied);
 			if (raft_has_consensus(raft_votes_granted + raft_votes_denied)) {
 				if (raft_votes_granted > raft_votes_denied) {
 					raft_role = Role::RAFT_LEADER;
@@ -610,7 +610,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 					auto prev_log_index = entry_index - 1;
 					auto prev_log_term = entry_index > 1 ? raft_log[prev_log_index - 1].term : 0;
 
-					L_RAFT("   << HEARTBEAT {node:%s, term:%llu, prev_log_term:%llu, prev_log_index:%zu, raft_commit_index:%zu}",
+					L_RAFT("   << HEARTBEAT {{node:{}, term:{}, prev_log_term:{}, prev_log_index:{}, raft_commit_index:{}}}",
 						local_node->name(), raft_current_term, prev_log_term, prev_log_index, raft_commit_index);
 					send_message(Message::RAFT_HEARTBEAT,
 						local_node->serialise() +
@@ -621,7 +621,7 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 
 					// First time we elect a leader's, we setup node
 					if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
-						// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+						// L_DEBUG("Role changed: {} -> {}", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 						XapiandManager::setup_node();
 					}
 				}
@@ -634,12 +634,12 @@ Discovery::raft_request_vote_response(Message type, const std::string& message)
 void
 Discovery::raft_append_entries(Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_append_entries(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_append_entries({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -649,7 +649,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -676,7 +676,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	size_t next_index;
 	size_t match_index;
@@ -702,7 +702,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = raft_log.size();
 		auto entry_index = prev_log_index + 1;
-		// L_RAFT("   {entry_index:%zu, prev_log_index:%zu, last_index:%zu, prev_log_term:%llu}", entry_index, prev_log_index, last_index, prev_log_term);
+		// L_RAFT("   {{entry_index:{}, prev_log_index:{}, last_index:{}, prev_log_term:{}}}", entry_index, prev_log_index, last_index, prev_log_term);
 		if (entry_index <= 1 || (prev_log_index <= last_index && raft_log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::RAFT_APPEND_ENTRIES) {
 				size_t last_log_index = unserialise_length(&p, p_end);
@@ -741,7 +741,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			if (leader_commit > raft_commit_index) {
 				raft_commit_index = std::min(leader_commit, entry_index);
 				if (raft_commit_index > raft_last_applied) {
-					L_RAFT("committed {raft_commit_index:%zu}", raft_commit_index);
+					L_RAFT("committed {{raft_commit_index:{}}}", raft_commit_index);
 
 					// If commitIndex > lastApplied:
 					while (raft_commit_index > raft_last_applied) {
@@ -757,7 +757,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			if (leader_commit == raft_commit_index) {
 				// First time we reach leader's commit, we setup node
 				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
-					// L_DEBUG("Role changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+					// L_DEBUG("Role changed: {} -> {}", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 					XapiandManager::setup_node();
 				}
 			}
@@ -774,7 +774,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	} else {
 		response_type = Message::RAFT_HEARTBEAT_RESPONSE;
 	}
-	L_RAFT("   << %s {node:%s, term:%llu, success:%s}",
+	L_RAFT("   << {} {{node:{}, term:{}, success:{}}}",
 		MessageNames(response_type), local_node->name(), term, success ? "true" : "false");
 	send_message(response_type,
 		local_node->serialise() +
@@ -788,7 +788,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 
 #ifdef L_RAFT_LOG
 	for (size_t i = 0; i < raft_log.size(); ++i) {
-		L_RAFT_LOG("   %s raft_log[%zu] -> {term:%llu, command:%s}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+		L_RAFT_LOG("   {} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 	}
 #endif
 }
@@ -797,13 +797,13 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 void
 Discovery::raft_append_entries_response(Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_append_entries_response(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_append_entries_response({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -813,7 +813,7 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -834,7 +834,7 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> %s [from %s]%s", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", MessageNames(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
 		bool success = unserialise_length(&p, p_end);
@@ -845,7 +845,7 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 			size_t match_index = unserialise_length(&p, p_end);
 			raft_next_indexes[node->lower_name()] = next_index;
 			raft_match_indexes[node->lower_name()] = match_index;
-			L_RAFT("   {success:%s, next_index:%zu, match_index:%zu}", success ? "true" : "false", next_index, match_index);
+			L_RAFT("   {{success:{}, next_index:{}, match_index:{}}}", success ? "true" : "false", next_index, match_index);
 		} else {
 			// If AppendEntries fails because of raft_log inconsistency:
 			// decrement nextIndex and retry
@@ -856,13 +856,13 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 			if (next_index > 1) {
 				--next_index;
 			}
-			L_RAFT("   {success:%s, next_index:%zu}", success ? "true" : "false", next_index);
+			L_RAFT("   {{success:{}, next_index:{}}}", success ? "true" : "false", next_index);
 		}
 		_raft_commit_log();
 
 #ifdef L_RAFT_LOG
 		for (size_t i = 0; i < raft_log.size(); ++i) {
-			L_RAFT_LOG("%s raft_log[%zu] -> {term:%llu, command:%s}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+			L_RAFT_LOG("{} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 		}
 #endif
 	}
@@ -872,13 +872,13 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 void
 Discovery::raft_add_command(Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_add_command(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_add_command({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> %s (invalid state: %s)", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -888,7 +888,7 @@ Discovery::raft_add_command(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> %s [from %s] (nonexistent node)", MessageNames(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", MessageNames(type), remote_node.name());
 		return;
 	}
 
@@ -904,7 +904,7 @@ Discovery::raft_add_command(Message type, const std::string& message)
 void
 Discovery::db_updated(Message type, const std::string& message)
 {
-	L_CALL("Discovery::db_updated(%s, <message>) {state:%s}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::db_updated({}, <message>) {{state:{}}}", MessageNames(type), XapiandManager::StateNames(XapiandManager::state().load()));
 	ignore_unused(type);
 
 	if (XapiandManager::state() != XapiandManager::State::READY) {
@@ -923,13 +923,13 @@ Discovery::db_updated(Message type, const std::string& message)
 	}
 
 	auto path = std::string(p, p_end);
-	L_DISCOVERY(">> %s [from %s]: %s", MessageNames(type), remote_node.name(), repr(path));
+	L_DISCOVERY(">> {} [from {}]: {}", MessageNames(type), remote_node.name(), repr(path));
 
 	auto node = Node::touch_node(remote_node, false).first;
 	if (node) {
 		Endpoint local_endpoint(path);
 		if (local_endpoint.empty()) {
-			L_WARNING("Ignoring update for empty database path: %s!", repr(path));
+			L_WARNING("Ignoring update for empty database path: {}!", repr(path));
 		} else {
 			// Replicate database from the other node
 			Endpoint remote_endpoint(path, node.get());
@@ -944,10 +944,10 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 {
 	auto state = XapiandManager::state().load();
 
-	L_CALL("Discovery::cluster_discovery_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(state));
+	L_CALL("Discovery::cluster_discovery_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), XapiandManager::StateNames(state));
 
-	L_EV_BEGIN("Discovery::cluster_discovery_cb:BEGIN {state:%s}", XapiandManager::StateNames(state));
-	L_EV_END("Discovery::cluster_discovery_cb:END {state:%s}", XapiandManager::StateNames(state));
+	L_EV_BEGIN("Discovery::cluster_discovery_cb:BEGIN {{state:{}}}", XapiandManager::StateNames(state));
+	L_EV_END("Discovery::cluster_discovery_cb:END {{state:{}}}", XapiandManager::StateNames(state));
 
 	ignore_unused(revents);
 
@@ -970,8 +970,8 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 
 			local_node = Node::local_node();
 			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
-				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
-				L_INFO("Advertising as %s%s" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
+				// L_DEBUG("State changed: {} -> {}", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+				L_INFO("Advertising as {}{}" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
 				send_message(Message::CLUSTER_HELLO, local_node->serialise());
 			}
 			break;
@@ -982,10 +982,10 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 
 			cluster_discovery.repeat = CLUSTER_DISCOVERY_WAITING_SLOW;
 			cluster_discovery.again();
-			L_EV("Reset discovery's cluster_discovery event (%f)", cluster_discovery.repeat);
+			L_EV("Reset discovery's cluster_discovery event ({})", cluster_discovery.repeat);
 
 			if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
-				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+				// L_DEBUG("State changed: {} -> {}", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 			}
 			break;
 		}
@@ -994,7 +994,7 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 			L_EV("Stop discovery's cluster_discovery event");
 
 			if (XapiandManager::exchange_state(XapiandManager::State::WAITING_MORE, XapiandManager::State::JOINING, 3s, "Joining cluster is taking too long...", "Joining cluster is finally done!")) {
-				// L_DEBUG("State changed: %s -> %s", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
+				// L_DEBUG("State changed: {} -> {}", XapiandManager::StateNames(state), XapiandManager::StateNames(XapiandManager::state().load()));
 				XapiandManager::join_cluster();
 			}
 			break;
@@ -1009,7 +1009,7 @@ Discovery::cluster_discovery_cb(ev::timer&, int revents)
 void
 Discovery::raft_leader_election_timeout_cb(ev::timer&, int revents)
 {
-	L_CALL("Discovery::raft_leader_election_timeout_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_leader_election_timeout_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::state().load()));
 
 	L_EV_BEGIN("Discovery::raft_leader_election_timeout_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_election_timeout_cb:END");
@@ -1019,7 +1019,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, int revents)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT("   << LEADER_ELECTION (invalid state: %s)", XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT("   << LEADER_ELECTION (invalid state: {})", XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -1038,7 +1038,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, int revents)
 void
 Discovery::raft_leader_heartbeat_cb(ev::timer&, int revents)
 {
-	// L_CALL("Discovery::raft_leader_heartbeat_cb(<watcher>, 0x%x (%s)) {state:%s}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::state().load()));
+	// L_CALL("Discovery::raft_leader_heartbeat_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), XapiandManager::StateNames(XapiandManager::state().load()));
 
 	L_EV_BEGIN("Discovery::raft_leader_heartbeat_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_heartbeat_cb:END");
@@ -1048,7 +1048,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, int revents)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT("   << HEARTBEAT (invalid state: %s)", XapiandManager::StateNames(XapiandManager::state().load()));
+		L_RAFT("   << HEARTBEAT (invalid state: {})", XapiandManager::StateNames(XapiandManager::state().load()));
 		return;
 	}
 
@@ -1072,7 +1072,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, int revents)
 			auto prev_log_term = entry_index > 1 ? raft_log[prev_log_index - 1].term : 0;
 			auto entry_term = raft_log[entry_index - 1].term;
 			auto entry_command = raft_log[entry_index - 1].command;
-			L_RAFT("   << APPEND_ENTRIES {raft_current_term:%llu, prev_log_index:%zu, prev_log_term:%llu, last_log_index:%zu, entry_term:%llu, entry_command:%s, raft_commit_index:%zu}",
+			L_RAFT("   << APPEND_ENTRIES {{raft_current_term:{}, prev_log_index:{}, prev_log_term:{}, last_log_index:{}, entry_term:{}, entry_command:{}, raft_commit_index:{}}}",
 				raft_current_term, prev_log_index, prev_log_term, last_log_index, entry_term, repr(entry_command), raft_commit_index);
 			send_message(Message::RAFT_APPEND_ENTRIES,
 				local_node->serialise() +
@@ -1089,7 +1089,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, int revents)
 
 	auto local_node = Node::local_node();
 	auto last_log_term = last_log_index > 0 ? raft_log[last_log_index - 1].term : 0;
-	L_RAFT("   << HEARTBEAT {last_log_term:%llu, last_log_index:%zu, raft_commit_index:%zu}", last_log_term, last_log_index, raft_commit_index);
+	L_RAFT("   << HEARTBEAT {{last_log_term:{}, last_log_index:{}, raft_commit_index:{}}}", last_log_term, last_log_index, raft_commit_index);
 	send_message(Message::RAFT_HEARTBEAT,
 		local_node->serialise() +
 		serialise_length(raft_current_term) +
@@ -1109,18 +1109,18 @@ Discovery::_raft_leader_heartbeat_start(double min, double max)
 
 	raft_leader_heartbeat.repeat = random_real(min, max);
 	raft_leader_heartbeat.again();
-	L_EV("Restart raft's leader heartbeat event (%g)", raft_leader_heartbeat.repeat);
+	L_EV("Restart raft's leader heartbeat event ({})", raft_leader_heartbeat.repeat);
 }
 
 
 void
 Discovery::_raft_leader_election_timeout_reset(double min, double max)
 {
-	L_CALL("Discovery::_raft_leader_election_timeout_reset(%g, %g)", min, max);
+	L_CALL("Discovery::_raft_leader_election_timeout_reset({}, {})", min, max);
 
 	raft_leader_election_timeout.repeat = random_real(min, max);
 	raft_leader_election_timeout.again();
-	L_EV("Restart raft's leader election timeout event (%g)", raft_leader_election_timeout.repeat);
+	L_EV("Restart raft's leader election timeout event ({})", raft_leader_election_timeout.repeat);
 
 	raft_leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
@@ -1130,10 +1130,10 @@ Discovery::_raft_leader_election_timeout_reset(double min, double max)
 void
 Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 {
-	L_CALL("Discovery::_raft_set_leader_node(%s)", repr(node->name()));
+	L_CALL("Discovery::_raft_set_leader_node({})", repr(node->name()));
 
 	auto leader_node = Node::leader_node();
-	L_CALL("leader_node -> %s", leader_node->__repr__());
+	L_CALL("leader_node -> {}", leader_node->__repr__());
 	if (!Node::is_superset(leader_node, node)) {
 		Node::leader_node(node);
 		XapiandManager::new_leader();
@@ -1144,7 +1144,7 @@ Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 void
 Discovery::_raft_apply(const std::string& command)
 {
-	L_CALL("Discovery::_raft_apply(%s)", repr(command));
+	L_CALL("Discovery::_raft_apply({})", repr(command));
 
 	const char *p = command.data();
 	const char *p_end = p + command.size();
@@ -1165,10 +1165,10 @@ Discovery::_raft_apply(const std::string& command)
 
 	auto put = Node::touch_node(indexed_node, false);
 	if (put.first == nullptr) {
-		L_ERR("Denied node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		L_ERR("Denied node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
 	} else {
 		node = put.first;
-		L_DEBUG("Added node: %s[%zu] %s", node->col().ansi(), node->idx, node->name());
+		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
 	}
 }
 
@@ -1192,7 +1192,7 @@ Discovery::_raft_commit_log()
 			}
 			if (raft_has_consensus(matches)) {
 				raft_commit_index = index;
-				L_RAFT("committed {matches:%zu, active_nodes:%zu, raft_commit_index:%zu}",
+				L_RAFT("committed {{matches:{}, active_nodes:{}, raft_commit_index:{}}}",
 					matches, Node::active_nodes(), raft_commit_index);
 
 				// If commitIndex > lastApplied:
@@ -1204,7 +1204,7 @@ Discovery::_raft_commit_log()
 					_raft_apply(command);
 				}
 			} else {
-				L_RAFT("not committed {matches:%zu, active_nodes:%zu, raft_commit_index:%zu}",
+				L_RAFT("not committed {{matches:{}, active_nodes:{}, raft_commit_index:{}}}",
 					matches, Node::active_nodes(), raft_commit_index);
 			}
 		}
@@ -1215,7 +1215,7 @@ Discovery::_raft_commit_log()
 void
 Discovery::_raft_request_vote(bool immediate)
 {
-	L_CALL("Discovery::_raft_request_vote(%s)", immediate ? "true" : "false");
+	L_CALL("Discovery::_raft_request_vote({})", immediate ? "true" : "false");
 
 	if (immediate) {
 		++raft_current_term;
@@ -1232,7 +1232,7 @@ Discovery::_raft_request_vote(bool immediate)
 		auto last_log_term = last_log_index > 0 ? raft_log[last_log_index - 1].term : 0;
 
 		auto local_node = Node::local_node();
-		L_RAFT("   << REQUEST_VOTE { node:%s, term:%llu, last_log_term:%llu, last_log_index:%zu, state:%s, timeout:%f, active_nodes:%zu, leader:%s }",
+		L_RAFT("   << REQUEST_VOTE {{ node:{}, term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, active_nodes:{}, leader:{} }}",
 			local_node->name(), raft_current_term, last_log_term, last_log_index, RoleNames(raft_role), raft_leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
@@ -1262,10 +1262,10 @@ Discovery::raft_request_vote()
 void
 Discovery::raft_request_vote_async_cb(ev::async&, int revents)
 {
-	L_CALL("Discovery::raft_request_vote_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("Discovery::raft_request_vote_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::raft_request_vote_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
-	L_EV_END("Discovery::raft_request_vote_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::raft_request_vote_async_cb:BEGIN {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::raft_request_vote_async_cb:END {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
@@ -1276,7 +1276,7 @@ Discovery::raft_request_vote_async_cb(ev::async&, int revents)
 void
 Discovery::_raft_add_command(const std::string& command)
 {
-	L_CALL("Discovery::_raft_add_command(%s)", repr(command));
+	L_CALL("Discovery::_raft_add_command({})", repr(command));
 
 	if (raft_role == Role::RAFT_LEADER) {
 		raft_log.push_back({
@@ -1288,7 +1288,7 @@ Discovery::_raft_add_command(const std::string& command)
 
 #ifdef L_RAFT_LOG
 		for (size_t i = 0; i < raft_log.size(); ++i) {
-			L_RAFT_LOG("%s raft_log[%zu] -> {term:%llu, command:%s}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+			L_RAFT_LOG("{} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 		}
 #endif
 	} else {
@@ -1303,10 +1303,10 @@ Discovery::_raft_add_command(const std::string& command)
 void
 Discovery::raft_add_command_async_cb(ev::async&, int revents)
 {
-	L_CALL("Discovery::raft_add_command_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("Discovery::raft_add_command_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::raft_add_command_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
-	L_EV_END("Discovery::raft_add_command_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::raft_add_command_async_cb:BEGIN {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::raft_add_command_async_cb:END {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
@@ -1320,7 +1320,7 @@ Discovery::raft_add_command_async_cb(ev::async&, int revents)
 void
 Discovery::raft_add_command(const std::string& command)
 {
-	L_CALL("Discovery::raft_add_command(%s)", repr(command));
+	L_CALL("Discovery::raft_add_command({})", repr(command));
 
 	raft_add_command_args.enqueue(command);
 
@@ -1336,17 +1336,17 @@ Discovery::_db_update_send(const std::string& path)
 		local_node->serialise() +   // The node where the index is at
 		path);  // The path of the index
 
-	L_DEBUG("Sending database updated signal for %s", repr(path));
+	L_DEBUG("Sending database updated signal for {}", repr(path));
 }
 
 
 void
 Discovery::cluster_enter_async_cb(ev::async&, int revents)
 {
-	L_CALL("Discovery::cluster_enter_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("Discovery::cluster_enter_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::cluster_enter_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
-	L_EV_END("Discovery::cluster_enter_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::cluster_enter_async_cb:BEGIN {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::cluster_enter_async_cb:END {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
@@ -1367,10 +1367,10 @@ Discovery::cluster_enter()
 void
 Discovery::db_update_send_async_cb(ev::async&, int revents)
 {
-	L_CALL("Discovery::db_update_send_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("Discovery::db_update_send_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
-	L_EV_END("Discovery::db_update_send_async_cb:END {state:%s}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
+	L_EV_END("Discovery::db_update_send_async_cb:END {{state:{}}}", XapiandManager::StateNames(XapiandManager::state()));
 
 	ignore_unused(revents);
 
@@ -1384,7 +1384,7 @@ Discovery::db_update_send_async_cb(ev::async&, int revents)
 void
 Discovery::db_update_send(const std::string& path)
 {
-	L_CALL("Discovery::db_update_send(%s)", repr(path));
+	L_CALL("Discovery::db_update_send({})", repr(path));
 
 	db_update_send_args.enqueue(path);
 

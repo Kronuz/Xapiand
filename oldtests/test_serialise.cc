@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -226,7 +226,7 @@ int test_datetotimestamp() {
 		}
 		if (timestamp != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Serialise::date is not working.\n\t  Result: %s\n\tExpected: %s", timestamp, test.serialised);
+			L_ERR("ERROR: Serialise::date is not working.\n\t  Result: {}\n\tExpected: {}", timestamp, test.serialised);
 		}
 	}
 
@@ -248,7 +248,7 @@ int test_unserialise_date() {
 		const auto date = Unserialise::date(serialised);
 		if (date != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Unserialise::date is not working.\n\t  Result: %s\n\tExpected: %s", date, test.serialised);
+			L_ERR("ERROR: Unserialise::date is not working.\n\t  Result: {}\n\tExpected: {}", date, test.serialised);
 		}
 	}
 
@@ -269,7 +269,7 @@ int test_serialise_cartesian() {
 		const auto serialised = repr(Serialise::cartesian(test.cartesian), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Serialise::cartesian is not working.\n\t  Result: %s\n\tExpected: %s", serialised, test.serialised);
+			L_ERR("ERROR: Serialise::cartesian is not working.\n\t  Result: {}\n\tExpected: {}", serialised, test.serialised);
 		}
 	}
 
@@ -291,7 +291,7 @@ int test_unserialise_cartesian() {
 		const auto cartesian = Unserialise::cartesian(serialised);
 		if (cartesian != test.cartesian) {
 			++cont;
-			L_ERR("ERROR: Unserialise::cartesian is not working.\n\t  Result: %s\n\tExpected: %s", cartesian.to_string(), test.cartesian.to_string());
+			L_ERR("ERROR: Unserialise::cartesian is not working.\n\t  Result: {}\n\tExpected: {}", cartesian.to_string(), test.cartesian.to_string());
 		}
 	}
 
@@ -312,7 +312,7 @@ int test_serialise_range() {
 		const auto serialised = repr(Serialise::range(test.range), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Serialise::range is not working.\n\t  Result: %s\n\tExpected: %s", serialised, test.serialised);
+			L_ERR("ERROR: Serialise::range is not working.\n\t  Result: {}\n\tExpected: {}", serialised, test.serialised);
 		}
 	}
 
@@ -334,7 +334,7 @@ int test_unserialise_range() {
 		const auto range = Unserialise::range(serialised);
 		if (range != test.range) {
 			++cont;
-			L_ERR("ERROR: Unserialise::range is not working.\n\t  Result: %s\n\tExpected: %s", range.to_string(), test.range.to_string());
+			L_ERR("ERROR: Unserialise::range is not working.\n\t  Result: {}\n\tExpected: {}", range.to_string(), test.range.to_string());
 		}
 	}
 
@@ -355,7 +355,7 @@ int test_serialise_uuid() {
 		const auto serialised = repr(Serialise::uuid(test.uuid), true, false);
 		if (serialised != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Serialise::uuid(%s) is not working.\n\t  Result: %s\n\tExpected: %s", test.uuid, serialised, test.serialised);
+			L_ERR("ERROR: Serialise::uuid({}) is not working.\n\t  Result: {}\n\tExpected: {}", test.uuid, serialised, test.serialised);
 		}
 	}
 
@@ -377,7 +377,7 @@ int test_unserialise_uuid() {
 		const auto uuid = Unserialise::uuid(serialised);
 		if (uuid != test.unserialised) {
 			++cont;
-			L_ERR("ERROR: Unserialise::uuid(%s) is not working.\n\t  Result: %s\n\tExpected: %s", test.uuid, uuid, test.unserialised);
+			L_ERR("ERROR: Unserialise::uuid({}) is not working.\n\t  Result: {}\n\tExpected: {}", test.uuid, uuid, test.unserialised);
 		}
 	}
 

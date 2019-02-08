@@ -34,7 +34,7 @@ template <typename ErrorType>
 inline std::pair<const MsgPack*, const MsgPack*>
 SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
 {
-	L_CALL("SchemasLRU::validate_schema(%s)", repr(object.to_string()));
+	L_CALL("SchemasLRU::validate_schema({})", repr(object.to_string()));
 
 	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
 	if (checked.first) {
@@ -51,7 +51,7 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 MsgPack
 SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("SchemasLRU::get_shared(%s, %s, %s)", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
+	L_CALL("SchemasLRU::get_shared({}, {}, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
 	auto path = endpoint.path;
 	if (!context) {
@@ -89,7 +89,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
 SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 {
-	L_CALL("SchemasLRU::get(<db_handler>, %s)", obj ? repr(obj->to_string()) : "nullptr");
+	L_CALL("SchemasLRU::get(<db_handler>, {})", obj ? repr(obj->to_string()) : "nullptr");
 
 	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -280,7 +280,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 bool
 SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
-	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, %s)", new_schema ? repr(new_schema->to_string()) : "nullptr");
+	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
 	bool exchanged;
 	bool failure = false;

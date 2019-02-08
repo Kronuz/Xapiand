@@ -94,7 +94,7 @@ ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worke
 		.xapiand_replication_connections
 		.Increment();
 
-	L_CONN("New Replication Protocol Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Replication Protocol Client in socket {}, {} client(s) of a total of {} connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
 }
 
 
@@ -160,7 +160,7 @@ ReplicationProtocolClient::reset()
 bool
 ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
-	L_CALL("ReplicationProtocolClient::init_replication_protocol(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	try {
 		src_endpoints = Endpoints{src_endpoint};
@@ -174,9 +174,9 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 
 		temp_directory_template = endpoints[0].path + ".tmp.XXXXXX";
 
-		L_REPLICATION("init_replication_protocol initialized: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication_protocol initialized: {} -->  {}", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 	} catch (const TimeOutError&) {
-		L_REPLICATION("init_replication_protocol deferred: %s -->  %s", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication_protocol deferred: {} -->  {}", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 		return false;
 	} catch (...) {
 		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
@@ -189,9 +189,9 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 void
 ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::send_message(%s, <message>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", ReplicationReplyTypeNames(type));
 
-	L_REPLICA_PROTO("<< send_message (%s): %s", ReplicationReplyTypeNames(type), repr(message));
+	L_REPLICA_PROTO("<< send_message ({}): {}", ReplicationReplyTypeNames(type), repr(message));
 
 	send_message(toUType(type), message);
 }
@@ -200,9 +200,9 @@ ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::st
 void
 ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
 {
-	L_CALL("ReplicationProtocolClient::send_file(%s, <fd>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocolClient::send_file({}, <fd>)", ReplicationReplyTypeNames(type));
 
-	L_REPLICA_PROTO("<< send_file (%s): %d", ReplicationReplyTypeNames(type), fd);
+	L_REPLICA_PROTO("<< send_file ({}): {}", ReplicationReplyTypeNames(type), fd);
 
 	send_file(toUType(type), fd);
 }
@@ -211,10 +211,10 @@ ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
 void
 ReplicationProtocolClient::replication_server(ReplicationMessageType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::replication_server(%s, <message>)", ReplicationMessageTypeNames(type));
+	L_CALL("ReplicationProtocolClient::replication_server({}, <message>)", ReplicationMessageTypeNames(type));
 
-	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {type:%s}", ReplicationMessageTypeNames(type));
-	L_OBJ_END("ReplicationProtocolClient::replication_server:END {type:%s}", ReplicationMessageTypeNames(type));
+	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {{type:{}}}", ReplicationMessageTypeNames(type));
+	L_OBJ_END("ReplicationProtocolClient::replication_server:END {{type:{}}}", ReplicationMessageTypeNames(type));
 
 	switch (type) {
 		case ReplicationMessageType::MSG_GET_CHANGESETS:
@@ -326,7 +326,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 					auto ends = std::chrono::system_clock::now();
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
-					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {%s} %llu %s\" ERROR %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					lk_db.lock();
@@ -361,9 +361,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	auto ends = std::chrono::system_clock::now();
 	total_sent_bytes = total_sent_bytes - total_sent_bytes;
 	if (from_revision == to_revision) {
-		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {%s} %llu %s\" OK EMPTY %s %s", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK EMPTY {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	} else {
-		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {%s} %llu %s\" OK [%llu..%llu] %s %s", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	}
 }
 
@@ -371,10 +371,10 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 void
 ReplicationProtocolClient::replication_client(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::replication_client(%s, <message>)", ReplicationReplyTypeNames(type));
+	L_CALL("ReplicationProtocolClient::replication_client({}, <message>)", ReplicationReplyTypeNames(type));
 
-	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {type:%s}", ReplicationReplyTypeNames(type));
-	L_OBJ_END("ReplicationProtocolClient::replication_client:END {type:%s}", ReplicationReplyTypeNames(type));
+	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {{type:{}}}", ReplicationReplyTypeNames(type));
+	L_OBJ_END("ReplicationProtocolClient::replication_client:END {{type:{}}}", ReplicationReplyTypeNames(type));
 
 	switch (type) {
 		case ReplicationReplyType::REPLY_WELCOME:
@@ -450,8 +450,8 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::database_pool()->unlock(database());
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: %s (%s a set of %zu changesets)%s", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
-	L_DEBUG("Replication of %s {%s} was completed at revision %llu (%s a set of %zu changesets)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy and" : "from", changesets);
+	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: {} ({} a set of {} changesets){}", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
+	L_DEBUG("Replication of {} {{{}}} was completed at revision {} ({} a set of {} changesets)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy and" : "from", changesets);
 
 	if (cluster_database) {
 		cluster_database = false;
@@ -468,7 +468,7 @@ ReplicationProtocolClient::reply_fail(const std::string&)
 {
 	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
 
-	L_REPLICATION("ReplicationProtocolClient::reply_fail: %s", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_fail: {}", repr(endpoints[0].path));
 
 	reset();
 
@@ -495,16 +495,16 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 	strncpy(path, temp_directory_template.c_str(), PATH_MAX);
 	build_path_index(temp_directory_template);
 	if (io::mkdtemp(path) == nullptr) {
-		L_ERR("Directory %s not created: %s (%d): %s", path, error::name(errno), errno, error::description(errno));
+		L_ERR("Directory {} not created: {} ({}): {}", path, error::name(errno), errno, error::description(errno));
 		detach();
 		return;
 	}
 	switch_database_path = path;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_header: %s in %s", repr(endpoints[0].path), repr(switch_database_path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_header: {} in {}", repr(endpoints[0].path), repr(switch_database_path));
 	L_TIMED_VAR(log, 1s,
-		"Replication of whole database taking too long: %s",
-		"Replication of whole database took too long: %s",
+		"Replication of whole database taking too long: {}",
+		"Replication of whole database took too long: {}",
 		repr(endpoints[0].path));
 }
 
@@ -518,7 +518,7 @@ ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 
 	file_path = switch_database_path + "/" + filename;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filename(%s): %s", repr(filename), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filename({}): {}", repr(filename), repr(endpoints[0].path));
 }
 
 
@@ -530,12 +530,12 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 	ASSERT(!switch_database_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
-		L_ERR("Cannot rename temporary file %s to %s: %s (%d): %s", tmp_file, file_path, error::name(errno), errno, error::description(errno));
+		L_ERR("Cannot rename temporary file {} to {}: {} ({}): {}", tmp_file, file_path, error::name(errno), errno, error::description(errno));
 		detach();
 		return;
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata(%s -> %s): %s", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata({} -> {}): {}", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
 }
 
 
@@ -555,7 +555,7 @@ ReplicationProtocolClient::reply_db_footer(const std::string& message)
 		switch_database_path.clear();
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_footer%s: %s", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_footer{}: {}", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
 }
 
 
@@ -578,8 +578,8 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 			wal = std::make_unique<DatabaseWAL>(database().get());
 		}
 		L_TIMED_VAR(log, 1s,
-			"Replication of %schangesets taking too long: %s",
-			"Replication of %schangesets took too long: %s",
+			"Replication of {}changesets taking too long: {}",
+			"Replication of {}changesets took too long: {}",
 			switching ? "whole database with " : "",
 			repr(endpoints[0].path));
 	}
@@ -587,7 +587,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	wal->execute_line(line, true, false, false);
 
 	++changesets;
-	L_REPLICATION("ReplicationProtocolClient::reply_changeset (%zu changesets%s): %s", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_changeset ({} changesets{}): {}", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
 }
 
 
@@ -624,7 +624,7 @@ ReplicationProtocolClient::init_replication() noexcept
 bool
 ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
-	L_CALL("ReplicationProtocolClient::init_replication(%s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_CALL("ReplicationProtocolClient::init_replication({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
@@ -646,13 +646,13 @@ ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const 
 ssize_t
 ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 {
-	L_CALL("ReplicationProtocolClient::on_read(<buf>, %zu)", received);
+	L_CALL("ReplicationProtocolClient::on_read(<buf>, {})", received);
 
 	if (received <= 0) {
 		return received;
 	}
 
-	L_REPLICA_WIRE("ReplicationProtocolClient::on_read: %zd bytes", received);
+	L_REPLICA_WIRE("ReplicationProtocolClient::on_read: {} bytes", received);
 	ssize_t processed = -buffer.size();
 	buffer.append(buf, received);
 	while (buffer.size() >= 2) {
@@ -661,7 +661,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		L_REPLICA_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
+		L_REPLICA_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
 				char path[PATH_MAX];
@@ -672,7 +672,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
 						build_path_index(temp_directory_template);
 						if (io::mkdtemp(path) == nullptr) {
-							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, error::name(errno), errno, error::description(errno));
+							L_ERR("Directory {} not created: {} ({}): {}", temp_directory_template, error::name(errno), errno, error::description(errno));
 							detach();
 							return processed;
 						}
@@ -684,11 +684,11 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 				temp_files.push_back(path);
 				file_message_type = *p++;
 				if (file_descriptor == -1) {
-					L_ERR("Cannot create temporary file: %s (%d): %s", error::name(errno), errno, error::description(errno));
+					L_ERR("Cannot create temporary file: {} ({}): {}", error::name(errno), errno, error::description(errno));
 					detach();
 					return processed;
 				} else {
-					L_REPLICA("Start reading file: %s (%d)", path, file_descriptor);
+					L_REPLICA("Start reading file: {} ({})", path, file_descriptor);
 				}
 				read_file();
 				processed += p - o;
@@ -729,9 +729,9 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 void
 ReplicationProtocolClient::on_read_file(const char *buf, ssize_t received)
 {
-	L_CALL("ReplicationProtocolClient::on_read_file(<buf>, %zu)", received);
+	L_CALL("ReplicationProtocolClient::on_read_file(<buf>, {})", received);
 
-	L_REPLICA_WIRE("ReplicationProtocolClient::on_read_file: %zd bytes", received);
+	L_REPLICA_WIRE("ReplicationProtocolClient::on_read_file: {} bytes", received);
 
 	io::write(file_descriptor, buf, received);
 }
@@ -864,7 +864,7 @@ ReplicationProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_REPLICA_PROTO(">> get_message[REPLICATION_SERVER] (%s): %s", ReplicationMessageTypeNames(type), repr(message));
+					L_REPLICA_PROTO(">> get_message[REPLICATION_SERVER] ({}): {}", ReplicationMessageTypeNames(type), repr(message));
 					replication_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -895,7 +895,7 @@ ReplicationProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_REPLICA_PROTO(">> get_message[REPLICATION_CLIENT] (%s): %s", ReplicationReplyTypeNames(type), repr(message));
+					L_REPLICA_PROTO(">> get_message[REPLICATION_CLIENT] ({}): {}", ReplicationReplyTypeNames(type), repr(message));
 					replication_client(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);

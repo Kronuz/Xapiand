@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -218,15 +218,15 @@ public:
 			// Then figure out if there's something that needs to be acted upon sooner
 			// than that wakeup time in the scheduler queue (an earlier wakeup time needed):
 			TaskType task;
-			L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(now), wakeup_time);
+			L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(now), wakeup_time);
 			if ((task = scheduler_queue.peep(wakeup_time))) {
 				if (task) {
 					pending = true;  // flag there are still scheduled things pending.
 					if (wakeup_time > task->wakeup_time) {
 						wakeup_time = task->wakeup_time;
-						L_SCHEDULER("BaseScheduler::" + PURPLE + "PEEP_UPDATED" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+						L_SCHEDULER("BaseScheduler::" + PURPLE + "PEEP_UPDATED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}  ({})", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
 					} else {
-						L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPED" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu  (%s)", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+						L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}  ({})", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
 					}
 				}
 			}
@@ -242,7 +242,7 @@ public:
 			// Sleep until wakeup time arrives or someone adding a task wakes us up;
 			// make sure we first lock mutex so there cannot be race condition between
 			// the time we load the next_wakeup_time and we actually start waiting:
-			L_DEBUG_HOOK("BaseScheduler::LOOP", "BaseScheduler::" + STEEL_BLUE + "LOOP" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu", time_point_to_ullong(now), atom_next_wakeup_time.load());
+			L_DEBUG_HOOK("BaseScheduler::LOOP", "BaseScheduler::" + STEEL_BLUE + "LOOP" + CLEAR_COLOR + " - now:{}, next_wakeup_time:{}", time_point_to_ullong(now), atom_next_wakeup_time.load());
 			lk.lock();
 			next_wakeup_time = atom_next_wakeup_time.load();
 			auto next_wakeup_time_point = time_point_from_ullong(next_wakeup_time);
@@ -250,7 +250,7 @@ public:
 				wakeup_signal.wait_until(lk, next_wakeup_time_point);
 			}
 			lk.unlock();
-			L_SCHEDULER("BaseScheduler::" + DODGER_BLUE + "WAKEUP" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
+			L_SCHEDULER("BaseScheduler::" + DODGER_BLUE + "WAKEUP" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::system_clock::now()), wakeup_time);
 
 			// Start walking the queue and running still pending tasks.
 			scheduler_queue.clean_checkpoint();
@@ -277,9 +277,9 @@ public:
 			if (next_wakeup_time >= wakeup_time || next_wakeup_time <= now) {
 				std::lock_guard<std::mutex> lk(mtx);
 				wakeup_signal.notify_one();
-				L_SCHEDULER("BaseScheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, atom_next_wakeup_time.load(), wakeup_time);
+				L_SCHEDULER("BaseScheduler::" + LIGHT_GREEN + "ADDED_NOTIFY" + CLEAR_COLOR + " - now:{}, next_wakeup_time:{}, wakeup_time:{}", now, atom_next_wakeup_time.load(), wakeup_time);
 			} else {
-				L_SCHEDULER("BaseScheduler::" + FOREST_GREEN + "ADDED" + CLEAR_COLOR + " - now:%llu, next_wakeup_time:%llu, wakeup_time:%llu", now, atom_next_wakeup_time.load(), wakeup_time);
+				L_SCHEDULER("BaseScheduler::" + FOREST_GREEN + "ADDED" + CLEAR_COLOR + " - now:{}, next_wakeup_time:{}, wakeup_time:{}", now, atom_next_wakeup_time.load(), wakeup_time);
 			}
 		}
 	}
@@ -335,11 +335,11 @@ public:
 	void operator()(TaskType& task) {
 		if (*task) {
 			if (task->clear(true)) {
-				L_SCHEDULER("Scheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
+				L_SCHEDULER("Scheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 				task->operator()();
 			}
 		}
-		L_SCHEDULER("Scheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
+		L_SCHEDULER("Scheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 	}
 };
 
@@ -407,13 +407,13 @@ public:
 	void operator()(TaskType& task) {
 		if (*task) {
 			if (task->clear(true)) {
-				L_SCHEDULER("ThreadedScheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
+				L_SCHEDULER("ThreadedScheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 				try {
 					thread_pool.enqueue(task);
 				} catch (const std::logic_error&) { }
 			}
 		}
-		L_SCHEDULER("ThreadedScheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:%llu, wakeup_time:%llu", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
+		L_SCHEDULER("ThreadedScheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::system_clock::now()), task->wakeup_time);
 	}
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -104,7 +104,7 @@ BaseClient::~BaseClient() noexcept
 
 		if (sock != -1) {
 			if (io::close(sock) == -1) {
-				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_WARNING("WARNING: close {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
 
@@ -157,7 +157,7 @@ BaseClient::start_impl()
 	L_EV("Start client's async read start event");
 
 	io_read.start();
-	L_EV("Start client's read event {sock:%d}", sock);
+	L_EV("Start client's read event {{sock:{}}}", sock);
 }
 
 
@@ -191,8 +191,8 @@ BaseClient::write_from_queue()
 	L_CALL("BaseClient::write_from_queue()");
 
 	if (closed) {
-		L_ERR("ERROR: write error {sock:%d}: Socket already closed!", sock);
-		L_CONN("WR:ERR.1: {sock:%d}", sock);
+		L_ERR("ERROR: write error {{sock:{}}}: Socket already closed!", sock);
+		L_CONN("WR:ERR.1: {{sock:{}}}", sock);
 		return WR::ERROR;
 	}
 
@@ -211,34 +211,34 @@ BaseClient::write_from_queue()
 
 		if (sent < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("WR:RETRY: {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_CONN("WR:RETRY: {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 				return WR::RETRY;
 			}
 
-			L_ERR("ERROR: write error {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
-			L_CONN("WR:ERR.2: {sock:%d}", sock);
+			L_ERR("ERROR: write error {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
+			L_CONN("WR:ERR.2: {{sock:{}}}", sock);
 			close();
 			return WR::ERROR;
 		}
 
 		total_sent_bytes += sent;
-		L_TCP_WIRE("{sock:%d} <<-- %s (%zu bytes)", sock, repr(buf_data, sent, true, true, 500), sent);
+		L_TCP_WIRE("{{sock:{}}} <<-- {} ({} bytes)", sock, repr(buf_data, sent, true, true, 500), sent);
 
 		buffer->remove_prefix(sent);
 		if (buffer->size() == 0) {
 			if (write_queue.pop(buffer)) {
 				if (write_queue.empty()) {
-					L_CONN("WR:OK: {sock:%d}", sock);
+					L_CONN("WR:OK: {{sock:{}}}", sock);
 					return WR::OK;
 				}
 			}
 		}
 
-		L_CONN("WR:PENDING: {sock:%d}", sock);
+		L_CONN("WR:PENDING: {{sock:{}}}", sock);
 		return WR::PENDING;
 	}
 
-	L_CONN("WR:OK.2: {sock:%d}", sock);
+	L_CONN("WR:OK.2: {{sock:{}}}", sock);
 	return WR::OK;
 }
 
@@ -246,7 +246,7 @@ BaseClient::write_from_queue()
 WR
 BaseClient::write_from_queue(int max)
 {
-	L_CALL("BaseClient::write_from_queue(%d)", max);
+	L_CALL("BaseClient::write_from_queue({})", max);
 
 	WR status = WR::PENDING;
 
@@ -264,7 +264,7 @@ BaseClient::write_from_queue(int max)
 bool
 BaseClient::write(const char *buf, size_t buf_size)
 {
-	L_CALL("BaseClient::write(<buf>, %zu)", buf_size);
+	L_CALL("BaseClient::write(<buf>, {})", buf_size);
 
 	if (!buf_size) {
 		return true;
@@ -295,7 +295,7 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 	} while (!write_queue.push(buffer, 1));
 
 	writes += 1;
-	L_TCP_ENQUEUE("{sock:%d} <ENQUEUE> buffer (%zu bytes)", sock, buffer->full_size());
+	L_TCP_ENQUEUE("{{sock:{}}} <ENQUEUE> buffer ({} bytes)", sock, buffer->full_size());
 
 	switch (write_from_queue(-1)) {
 		case WR::RETRY:
@@ -313,7 +313,7 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 void
 BaseClient::_io_cb_write(ev::io &watcher, int revents)
 {
-	L_CALL("BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("BaseClient::io_cb_write(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 	L_EV_END("BaseClient::io_cb_write:END");
@@ -321,7 +321,7 @@ BaseClient::_io_cb_write(ev::io &watcher, int revents)
 	ASSERT(sock == -1 || sock == watcher.fd);
 	ignore_unused(watcher);
 
-	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	if (closed) {
 		stop();
@@ -331,7 +331,7 @@ BaseClient::_io_cb_write(ev::io &watcher, int revents)
 	}
 
 	if ((revents & EV_ERROR) != 0) {
-		L_ERR("ERROR: got invalid event {sock:%d} - %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: got invalid event {{sock:{}}} - {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 		stop();
 		destroy();
 		detach();
@@ -366,7 +366,7 @@ BaseClient::_io_cb_write(ev::io &watcher, int revents)
 void
 BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("BaseClient::write_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("BaseClient::write_start_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BaseClient::write_start_async_cb:BEGIN");
 	L_EV_END("BaseClient::write_start_async_cb:END");
@@ -375,7 +375,7 @@ BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 
 	if (!closed) {
 		io_write.start();
-		L_EV("Enable write event [%d]", io_write.is_active());
+		L_EV("Enable write event [{}]", io_write.is_active());
 	}
 }
 
@@ -383,7 +383,7 @@ BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 void
 BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
 {
-	L_CALL("BaseClient::read_start_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("BaseClient::read_start_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BaseClient::read_start_async_cb:BEGIN");
 	L_EV_END("BaseClient::read_start_async_cb:END");
@@ -392,7 +392,7 @@ BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
 
 	if (!closed) {
 		io_read.start();
-		L_EV("Enable read event [%d]", io_read.is_active());
+		L_EV("Enable read event [{}]", io_read.is_active());
 	}
 }
 

@@ -113,9 +113,9 @@ committer_commit(std::weak_ptr<Database> weak_database) {
 		auto end = std::chrono::system_clock::now();
 
 		if (error.empty()) {
-			L_DEBUG("Autocommit of %s succeeded after %s", repr(database->endpoints.to_string()), string::from_delta(start, end));
+			L_DEBUG("Autocommit of {} succeeded after {}", repr(database->endpoints.to_string()), string::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit of %s falied after %s: %s", repr(database->endpoints.to_string()), string::from_delta(start, end), error);
+			L_WARNING("Autocommit of {} falied after {}: {}", repr(database->endpoints.to_string()), string::from_delta(start, end), error);
 		}
 	}
 }
@@ -270,7 +270,7 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 void
 DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<std::string>>& context_)
 {
-	L_CALL("DatabaseHandler::reset(%s, %x, <method>)", repr(endpoints_.to_string()), flags_);
+	L_CALL("DatabaseHandler::reset({}, {:#x}, <method>)", repr(endpoints_.to_string()), flags_);
 
 	if (endpoints_.empty()) {
 		THROW(ClientError, "It is expected at least one endpoint");
@@ -291,7 +291,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 MsgPack
 DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised)
 {
-	L_CALL("DatabaseHandler::repr_wal(%u, %u)", start_revision, end_revision);
+	L_CALL("DatabaseHandler::repr_wal({}, {})", start_revision, end_revision);
 
 	if (endpoints.size() != 1) {
 		THROW(ClientError, "It is expected one single endpoint");
@@ -332,7 +332,7 @@ DatabaseHandler::check()
 Document
 DatabaseHandler::get_document_term(const std::string& term_id)
 {
-	L_CALL("DatabaseHandler::get_document_term(%s)", repr(term_id));
+	L_CALL("DatabaseHandler::get_document_term({})", repr(term_id));
 
 	lock_database lk_db(this);
 	auto did = database()->find_document(term_id);
@@ -366,10 +366,10 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 				}
 				if (old_document_pair != nullptr) {
 					auto old_object = old_document_pair->second.get_obj();
-					L_INDEX("Script: on_put(%s, %s)", mut_object->to_string(4), old_object.to_string(4));
+					L_INDEX("Script: on_put({}, {})", mut_object->to_string(4), old_object.to_string(4));
 					*mut_object = (*processor)["on_put"](*mut_object, old_object);
 				} else {
-					L_INDEX("Script: on_put(%s)", mut_object->to_string(4));
+					L_INDEX("Script: on_put({})", mut_object->to_string(4));
 					*mut_object = (*processor)["on_put"](*mut_object, MsgPack(MsgPack::Type::MAP));
 				}
 				return mut_object;
@@ -383,10 +383,10 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 				}
 				if (old_document_pair != nullptr) {
 					auto old_object = old_document_pair->second.get_obj();
-					L_INDEX("Script: on_patch(%s, %s)", mut_object->to_string(4), old_object.to_string(4));
+					L_INDEX("Script: on_patch({}, {})", mut_object->to_string(4), old_object.to_string(4));
 					*mut_object = (*processor)["on_patch"](*mut_object, old_object);
 				} else {
-					L_INDEX("Script: on_patch(%s)", mut_object->to_string(4));
+					L_INDEX("Script: on_patch({})", mut_object->to_string(4));
 					*mut_object = (*processor)["on_patch"](*mut_object, MsgPack(MsgPack::Type::MAP));
 				}
 				return mut_object;
@@ -399,10 +399,10 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 				}
 				if (old_document_pair != nullptr) {
 					auto old_object = old_document_pair->second.get_obj();
-					L_INDEX("Script: on_delete(%s, %s)", mut_object->to_string(4), old_object.to_string(4));
+					L_INDEX("Script: on_delete({}, {})", mut_object->to_string(4), old_object.to_string(4));
 					*mut_object = (*processor)["on_delete"](*mut_object, old_object);
 				} else {
-					L_INDEX("Script: on_delete(%s)", mut_object->to_string(4));
+					L_INDEX("Script: on_delete({})", mut_object->to_string(4));
 					*mut_object = (*processor)["on_delete"](*mut_object, MsgPack(MsgPack::Type::MAP));
 				}
 				return mut_object;
@@ -410,14 +410,14 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 
 			case HTTP_GET: {
 				auto mut_object = std::make_unique<MsgPack>(object);
-				L_INDEX("Script: on_get(%s)", mut_object->to_string(4));
+				L_INDEX("Script: on_get({})", mut_object->to_string(4));
 				*mut_object = (*processor)["on_get"](*mut_object);
 				return mut_object;
 			}
 
 			case HTTP_POST: {
 				auto mut_object = std::make_unique<MsgPack>(object);
-				L_INDEX("Script: on_post(%s)", mut_object->to_string(4));
+				L_INDEX("Script: on_post({})", mut_object->to_string(4));
 				*mut_object = (*processor)["on_post"](*mut_object);
 				return mut_object;
 			}
@@ -480,7 +480,7 @@ DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std
 std::tuple<std::string, Xapian::Document, MsgPack>
 DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
 {
-	L_CALL("DatabaseHandler::prepare(%s, %s, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
+	L_CALL("DatabaseHandler::prepare({}, {}, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
@@ -490,7 +490,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 		auto schema_begins = std::chrono::system_clock::now();
 		do {
 			schema = get_schema(&obj);
-			L_INDEX("Schema: %s", repr(schema->to_string()));
+			L_INDEX("Schema: {}", repr(schema->to_string()));
 			prepared = schema->index(obj, document_id, old_document_pair, *this);
 		} while (!update_schema(schema_begins));
 
@@ -518,7 +518,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 std::tuple<std::string, Xapian::Document, MsgPack>
 DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::prepare(%s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -561,7 +561,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 DataType
 DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, <data>, %s)", repr(document_id.to_string()), repr(obj.to_string()), commit ? "true" : "false");
+	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit ? "true" : "false");
 
 	auto prepared = prepare(document_id, obj, data, old_document_pair);
 	auto& term_id = std::get<0>(prepared);
@@ -577,7 +577,7 @@ DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& dat
 DataType
 DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index(%s, %s, %s, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit ? "true" : "false", ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -620,7 +620,7 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 DataType
 DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool commit, const ct_type_t& /*ct_type*/)
 {
-	L_CALL("DatabaseHandler::patch(%s, <patches>, %s)", repr(document_id.to_string()), commit ? "true" : "false");
+	L_CALL("DatabaseHandler::patch({}, <patches>, {})", repr(document_id.to_string()), commit ? "true" : "false");
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -662,7 +662,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 DataType
 DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::merge(%s, %s, <body>, %s, %s/%s)", repr(document_id.to_string()), stored ? "true" : "false", commit ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::merge({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored ? "true" : "false", commit ? "true" : "false", ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -730,7 +730,7 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 void
 DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 {
-	L_CALL("DatabaseHandler::write_schema(%s)", repr(obj.to_string()));
+	L_CALL("DatabaseHandler::write_schema({})", repr(obj.to_string()));
 
 	auto schema_begins = std::chrono::system_clock::now();
 	bool was_foreign_obj;
@@ -740,7 +740,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 		if (!was_foreign_obj && opts.foreign) {
 			THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(endpoints.to_string()));
 		}
-		L_INDEX("Schema to write: %s %s", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
+		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
 	} while (!update_schema(schema_begins));
 
 	if (was_foreign_obj) {
@@ -750,7 +750,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 		do {
 			schema = get_schema();
 			was_foreign_obj = schema->write(o, replace);
-			L_INDEX("Schema to write: %s (local)", repr(schema->to_string()));
+			L_INDEX("Schema to write: {} (local)", repr(schema->to_string()));
 		} while (!update_schema(schema_begins));
 	}
 }
@@ -767,7 +767,7 @@ DatabaseHandler::delete_schema()
 		schema = get_schema();
 		auto old_schema = schema->get_const_schema();
 		done = XapiandManager::schemas()->drop(this, old_schema);
-		L_INDEX("Schema to delete: %s", repr(schema->to_string()));
+		L_INDEX("Schema to delete: {}", repr(schema->to_string()));
 	} while (!done);
 	auto schema_ends = std::chrono::system_clock::now();
 	(void)schema_begins;
@@ -857,7 +857,7 @@ DatabaseHandler::dump_metadata(int fd)
 	XXH32_freeState(xxh_state);
 
 	serialise_length(fd, current_hash);
-	L_INFO("Dump hash is 0x%08x", current_hash);
+	L_INFO("Dump hash is {:#010x}", current_hash);
 }
 
 
@@ -888,7 +888,7 @@ DatabaseHandler::dump_schema(int fd)
 	XXH32_freeState(xxh_state);
 
 	serialise_length(fd, current_hash);
-	L_INFO("Dump hash is 0x%08x", current_hash);
+	L_INFO("Dump hash is {:#010x}", current_hash);
 }
 
 
@@ -915,7 +915,7 @@ DatabaseHandler::dump_documents(int fd)
 	XXH32_freeState(xxh_state);
 
 	serialise_length(fd, current_hash);
-	L_INFO("Dump hash is 0x%08x", current_hash);
+	L_INFO("Dump hash is {:#010x}", current_hash);
 }
 
 
@@ -955,10 +955,10 @@ DatabaseHandler::restore(int fd)
 				break;
 			}
 			if (key.empty()) {
-				L_WARNING("Metadata with no key ignored [%zu]", ID_FIELD_NAME, i);
+				L_WARNING("Metadata with no key ignored [{}]", ID_FIELD_NAME, i);
 				continue;
 			}
-			L_INFO_HOOK("DatabaseHandler::restore", "Restoring metadata %s = %s", key, value);
+			L_INFO_HOOK("DatabaseHandler::restore", "Restoring metadata {} = {}", key, value);
 			database()->set_metadata(key, value, false, false);
 		}
 	}
@@ -971,7 +971,7 @@ DatabaseHandler::restore(int fd)
 		lk_db.unlock();
 		if (!saved_schema_ser.empty()) {
 			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
-			L_INFO_HOOK("DatabaseHandler::restore", "Restoring schema: %s", saved_schema.to_string(4));
+			L_INFO_HOOK("DatabaseHandler::restore", "Restoring schema: {}", saved_schema.to_string(4));
 			write_schema(saved_schema, true);
 		}
 		schema = get_schema();
@@ -992,7 +992,7 @@ DatabaseHandler::restore(int fd)
 		std::atomic_size_t processed = 0;
 		std::size_t total = 0;
 
-		ThreadPool<> thread_pool("TP%02zu", 4 * std::thread::hardware_concurrency());
+		ThreadPool<> thread_pool("TP{:02}", 4 * std::thread::hardware_concurrency());
 
 		// Index documents.
 		auto indexer = thread_pool.async([&]{
@@ -1031,14 +1031,14 @@ DatabaseHandler::restore(int fd)
 						break;
 					}
 					if (processed_ % (1024 * 16) == 0) {
-						L_INFO("%zu of %zu documents processed (%s)", processed_, total, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
+						L_INFO("{} of {} documents processed ({})", processed_, total, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
 					}
 				} else {
 					if (processed_ % (limit_signal * 32) == 0) {
 						limit.signal(limit_signal);
 					}
 					if (processed_ % (1024 * 16) == 0) {
-						L_INFO("%zu documents processed (%s)", processed_, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
+						L_INFO("{} documents processed ({})", processed_, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
 					}
 				}
 			}
@@ -1103,7 +1103,7 @@ DatabaseHandler::restore(int fd)
 			}
 
 			if (!document_id) {
-				L_WARNING("Skipping document with no valid '%s'", ID_FIELD_NAME);
+				L_WARNING("Skipping document with no valid '{}'", ID_FIELD_NAME);
 				continue;
 			}
 
@@ -1126,7 +1126,7 @@ DatabaseHandler::restore(int fd)
 			};
 			if (bulk_cnt == bulk.size()) {
 				if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
-					L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+					L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 				}
 				bulk_cnt = 0;
 				limit.wait();
@@ -1135,7 +1135,7 @@ DatabaseHandler::restore(int fd)
 
 		if (bulk_cnt != 0) {
 			if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
-				L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+				L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 			}
 		}
 
@@ -1143,7 +1143,7 @@ DatabaseHandler::restore(int fd)
 
 		indexer.wait();
 
-		L_INFO("%zu of %zu documents processed (%s)", processed.load(std::memory_order_relaxed), total, string::from_bytes(acc));
+		L_INFO("{} of {} documents processed ({})", processed.load(std::memory_order_relaxed), total, string::from_bytes(acc));
 
 		lk_db.lock();
 	}
@@ -1155,7 +1155,7 @@ DatabaseHandler::restore(int fd)
 	XXH32_freeState(xxh_state);
 
 	if (saved_hash != current_hash) {
-		L_WARNING("Invalid dump hash. Should be 0x%08x, but instead is 0x%08x", saved_hash, current_hash);
+		L_WARNING("Invalid dump hash. Should be {:#010x}, but instead is {:#010x}", saved_hash, current_hash);
 	}
 }
 
@@ -1249,7 +1249,7 @@ DatabaseHandler::get_all_mset(Xapian::docid initial, size_t limit)
 MSet
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs)
 {
-	L_CALL("DatabaseHandler::get_mset(%s, %s)", repr(string::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
+	L_CALL("DatabaseHandler::get_mset({}, {})", repr(string::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
 	schema = get_schema();
 
@@ -1309,7 +1309,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			break;
 	}
 
-	// L_DEBUG("query: %s", query.get_description());
+	// L_DEBUG("query: {}", query.get_description());
 
 	// Configure sorter.
 	if (!sorter && !query_field.sort.empty()) {
@@ -1436,7 +1436,7 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 		(void)schema_begins;
 		(void)schema_ends;
 		if (updated) {
-			L_DEBUG("Schema for %s %s", repr(endpoints.to_string()), created ? "created" : "updated");
+			L_DEBUG("Schema for {} {}", repr(endpoints.to_string()), created ? "created" : "updated");
 			// Stats::add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 		} else {
 			// Stats::add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
@@ -1450,7 +1450,7 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 std::string
 DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
-	L_CALL("DatabaseHandler::get_prefixed_term_id(%s)", repr(document_id.to_string()));
+	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
 
 	schema = get_schema();
 
@@ -1486,7 +1486,7 @@ DatabaseHandler::get_metadata_keys()
 std::string
 DatabaseHandler::get_metadata(const std::string& key)
 {
-	L_CALL("DatabaseHandler::get_metadata(%s)", repr(key));
+	L_CALL("DatabaseHandler::get_metadata({})", repr(key));
 
 	lock_database lk_db(this);
 	return database()->get_metadata(key);
@@ -1503,7 +1503,7 @@ DatabaseHandler::get_metadata(std::string_view key)
 bool
 DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit, bool overwrite)
 {
-	L_CALL("DatabaseHandler::set_metadata(%s, %s, %s, %s)", repr(key), repr(value), commit ? "true" : "false", overwrite ? "true" : "false");
+	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit ? "true" : "false", overwrite ? "true" : "false");
 
 	lock_database lk_db(this);
 	if (!overwrite) {
@@ -1527,7 +1527,7 @@ DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool
 Document
 DatabaseHandler::get_document(Xapian::docid did)
 {
-	L_CALL("DatabaseHandler::get_document((Xapian::docid)%d)", did);
+	L_CALL("DatabaseHandler::get_document((Xapian::docid){})", did);
 
 	lock_database lk_db(this);
 	return Document(did, this);
@@ -1537,7 +1537,7 @@ DatabaseHandler::get_document(Xapian::docid did)
 Document
 DatabaseHandler::get_document(std::string_view document_id)
 {
-	L_CALL("DatabaseHandler::get_document((std::string)%s)", repr(document_id));
+	L_CALL("DatabaseHandler::get_document((std::string){})", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
@@ -1555,7 +1555,7 @@ DatabaseHandler::get_document(std::string_view document_id)
 Xapian::docid
 DatabaseHandler::get_docid(std::string_view document_id)
 {
-	L_CALL("DatabaseHandler::get_docid(%s)", repr(document_id));
+	L_CALL("DatabaseHandler::get_docid({})", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
@@ -1572,7 +1572,7 @@ DatabaseHandler::get_docid(std::string_view document_id)
 void
 DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 {
-	L_CALL("DatabaseHandler::delete_document(%s)", repr(document_id));
+	L_CALL("DatabaseHandler::delete_document({})", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
@@ -1590,7 +1590,7 @@ DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 Xapian::docid
 DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit)
 {
-	L_CALL("Database::replace_document(%d, <doc>)", did);
+	L_CALL("Database::replace_document({}, <doc>)", did);
 
 	lock_database lk_db(this);
 	return database()->replace_document(did, std::move(doc), commit);
@@ -1600,7 +1600,7 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 MsgPack
 DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 {
-	L_CALL("DatabaseHandler::get_document_info(%s, %s)", repr(document_id), raw_data ? "true" : "false");
+	L_CALL("DatabaseHandler::get_document_info({}, {})", repr(document_id), raw_data ? "true" : "false");
 
 	auto document = get_document(document_id);
 	const auto data = Data(document.get_data());
@@ -1689,7 +1689,7 @@ DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
 bool
 DatabaseHandler::commit(bool wal)
 {
-	L_CALL("DatabaseHandler::commit(%s)", wal ? "true" : "false");
+	L_CALL("DatabaseHandler::commit({})", wal ? "true" : "false");
 
 	lock_database lk_db(this);
 	return database()->commit(wal);
@@ -1710,7 +1710,7 @@ DatabaseHandler::reopen()
 const std::shared_ptr<std::pair<std::string, const Data>>
 DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate_exists)
 {
-	L_CALL("DatabaseHandler::get_document_change_seq(%s, %s)", endpoints.to_string(), repr(term_id));
+	L_CALL("DatabaseHandler::get_document_change_seq({}, {})", endpoints.to_string(), repr(term_id));
 
 	ASSERT(endpoints.size() == 1);
 	auto key = endpoints[0].path + std::string(term_id);
@@ -1751,7 +1751,7 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate
 bool
 DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
-	L_CALL("DatabaseHandler::set_document_change_seq(%s, %s)", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
+	L_CALL("DatabaseHandler::set_document_change_seq({}, {})", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
 
 	ASSERT(endpoints.size() == 1);
 	auto key = endpoints[0].path + new_document_pair->first;
@@ -1803,7 +1803,7 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 void
 DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
-	L_CALL("DatabaseHandler::dec_document_change_cnt(%s)", endpoints.to_string(), repr(old_document_pair->first));
+	L_CALL("DatabaseHandler::dec_document_change_cnt({})", endpoints.to_string(), repr(old_document_pair->first));
 
 	ASSERT(endpoints.size() == 1);
 	auto key = endpoints[0].path + old_document_pair->first;
@@ -1906,7 +1906,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 	L_CALL("DocIndexer::_prepare(<obj>)");
 
 	if (!obj.is_map()) {
-		L_ERR("Indexing object has an unsupported type: %s", obj.getStrType());
+		L_ERR("Indexing object has an unsupported type: {}", obj.getStrType());
 		return;
 	}
 
@@ -1915,7 +1915,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 		_total += bulk_cnt;
 		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			_total -= bulk_cnt;
-			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		if (_total == bulk_cnt) {
 			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
@@ -1950,7 +1950,7 @@ DocIndexer::wait(double timeout)
 		_total += bulk_cnt;
 		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			_total -= bulk_cnt;
-			L_ERR("Ignored %zu documents: cannot enqueue tasks!", bulk_cnt);
+			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		if (_total == bulk_cnt) {
 			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
@@ -2027,7 +2027,7 @@ Document::get_docid()
 std::string
 Document::serialise(size_t retries)
 {
-	L_CALL("Document::serialise(%zu)", retries);
+	L_CALL("Document::serialise({})", retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -2045,7 +2045,7 @@ Document::serialise(size_t retries)
 std::string
 Document::get_value(Xapian::valueno slot, size_t retries)
 {
-	L_CALL("Document::get_value(%u, %zu)", slot, retries);
+	L_CALL("Document::get_value({}, {})", slot, retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -2063,7 +2063,7 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 std::string
 Document::get_data(size_t retries)
 {
-	L_CALL("Document::get_data(%zu)", retries);
+	L_CALL("Document::get_data({})", retries);
 
 	try {
 		lock_database lk_db(db_handler);
@@ -2081,7 +2081,7 @@ Document::get_data(size_t retries)
 MsgPack
 Document::get_terms(size_t retries)
 {
-	L_CALL("get_terms(%zu)", retries);
+	L_CALL("get_terms({})", retries);
 
 	try {
 		MsgPack terms;
@@ -2121,7 +2121,7 @@ Document::get_terms(size_t retries)
 MsgPack
 Document::get_values(size_t retries)
 {
-	L_CALL("get_values(%zu)", retries);
+	L_CALL("get_values({})", retries);
 
 	try {
 		MsgPack values;
@@ -2147,7 +2147,7 @@ Document::get_values(size_t retries)
 MsgPack
 Document::get_value(std::string_view slot_name)
 {
-	L_CALL("Document::get_value(%s)", repr(slot_name));
+	L_CALL("Document::get_value({})", repr(slot_name));
 
 	if (db_handler != nullptr) {
 		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
@@ -2170,7 +2170,7 @@ Document::get_obj()
 MsgPack
 Document::get_field(std::string_view slot_name)
 {
-	L_CALL("Document::get_field(%s)", repr(slot_name));
+	L_CALL("Document::get_field({})", repr(slot_name));
 
 	return get_field(slot_name, get_obj());
 }
@@ -2179,7 +2179,7 @@ Document::get_field(std::string_view slot_name)
 MsgPack
 Document::get_field(std::string_view slot_name, const MsgPack& obj)
 {
-	L_CALL("Document::get_field(%s, <obj>)", repr(slot_name));
+	L_CALL("Document::get_field({}, <obj>)", repr(slot_name));
 
 	auto itf = obj.find(slot_name);
 	if (itf != obj.end()) {

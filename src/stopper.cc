@@ -46,7 +46,7 @@ getStopper(std::string_view language)
 	if (words.is_open()) {
 		stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());
 	} else {
-		L_WARNING_ONCE("Cannot open stop words file: %s", path);
+		L_WARNING_ONCE("Cannot open stop words file: {}", path);
 	}
 	return stopper;
 }

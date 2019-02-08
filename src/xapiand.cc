@@ -737,12 +737,12 @@ void adjustOpenFilesLimit() {
 	ssize_t max_files = opts.max_files;
 	if (max_files != 0) {
 		if (max_files > aprox_available_files) {
-			L_WARNING_ONCE("The requested open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
+			L_WARNING_ONCE("The requested open files limit of {} {} the system-wide currently available number of files: {}", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	} else {
 		max_files = recommended_files;
 		if (max_files > aprox_available_files) {
-			L_WARNING_ONCE("The minimum recommended open files limit of %zd %s the system-wide currently available number of files: %zd", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
+			L_WARNING_ONCE("The minimum recommended open files limit of {} {} the system-wide currently available number of files: {}", max_files, max_files > available_files ? "exceeds" : "almost exceeds", available_files);
 		}
 	}
 
@@ -755,7 +755,7 @@ void adjustOpenFilesLimit() {
 		if ((limit_cur_files == 0) || limit_cur_files > 4000) {
 			limit_cur_files = 4000;
 		}
-		L_WARNING_ONCE("Unable to obtain the current NOFILE limit, assuming %zd: %s (%d): %s", limit_cur_files, error::name(errno), errno, error::description(errno));
+		L_WARNING_ONCE("Unable to obtain the current NOFILE limit, assuming {}: {} ({}): {}", limit_cur_files, error::name(errno), errno, error::description(errno));
 	} else {
 		limit_cur_files = limit.rlim_cur;
 	}
@@ -777,9 +777,9 @@ void adjustOpenFilesLimit() {
 			limit.rlim_max = static_cast<rlim_t>(new_max_files);
 			if (setrlimit(RLIMIT_NOFILE, &limit) != -1) {
 				if (increasing) {
-					L_INFO("Increased maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (std::size_t)limit_cur_files);
+					L_INFO("Increased maximum number of open files to {} (it was originally set to {})", new_max_files, (std::size_t)limit_cur_files);
 				} else {
-					L_INFO("Decresed maximum number of open files to %zd (it was originally set to %zd)", new_max_files, (std::size_t)limit_cur_files);
+					L_INFO("Decresed maximum number of open files to {} (it was originally set to {})", new_max_files, (std::size_t)limit_cur_files);
 				}
 				break;
 			}
@@ -795,7 +795,7 @@ void adjustOpenFilesLimit() {
 		}
 
 		if (setrlimit_errno != 0) {
-			L_ERR("Server can't set maximum open files to %zd because of OS error: %s (%d): %s", max_files, error::name(setrlimit_errno), setrlimit_errno, error::description(setrlimit_errno));
+			L_ERR("Server can't set maximum open files to {} because of OS error: {} ({}): {}", max_files, error::name(setrlimit_errno), setrlimit_errno, error::description(setrlimit_errno));
 		}
 		max_files = new_max_files;
 	} else {
@@ -821,24 +821,24 @@ void adjustOpenFilesLimit() {
 
 	// Warn about changes to the configured dbpool_size or max_clients:
 	if (new_dbpool_size > 0 && new_dbpool_size < opts.dbpool_size) {
-		L_WARNING_ONCE("You requested a dbpool_size of %zd requiring at least %zd max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
-		L_WARNING_ONCE("Current maximum open files is %zd so dbpool_size has been reduced to %zd to compensate for low limit.", max_files, new_dbpool_size);
+		L_WARNING_ONCE("You requested a dbpool_size of {} requiring at least {} max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
+		L_WARNING_ONCE("Current maximum open files is {} so dbpool_size has been reduced to {} to compensate for low limit.", max_files, new_dbpool_size);
 	}
 	if (new_max_clients > 0 && new_max_clients < opts.max_clients) {
-		L_WARNING_ONCE("You requested max_clients of %zd requiring at least %zd max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
-		L_WARNING_ONCE("Current maximum open files is %zd so max_clients has been reduced to %zd to compensate for low limit.", max_files, new_max_clients);
+		L_WARNING_ONCE("You requested max_clients of {} requiring at least {} max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
+		L_WARNING_ONCE("Current maximum open files is {} so max_clients has been reduced to {} to compensate for low limit.", max_files, new_max_clients);
 	}
 
 
 	// Warn about minimum/recommended sizes:
 	if (max_files < minimum_files) {
-		L_CRIT("Your open files limit of %zd is not enough for the server to start. Please increase your system-wide open files limit to at least %zd",
+		L_CRIT("Your open files limit of {} is not enough for the server to start. Please increase your system-wide open files limit to at least {}",
 			max_files,
 			minimum_files);
 		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
 		throw SystemExit(EX_OSFILE);
 	} else if (max_files < recommended_files) {
-		L_WARNING_ONCE("Your current max_files of %zd is not enough. Please increase your system-wide open files limit to at least %zd",
+		L_WARNING_ONCE("Your current max_files of {} is not enough. Please increase your system-wide open files limit to at least {}",
 			max_files,
 			recommended_files);
 		L_WARNING_ONCE("If you need to increase your system-wide open files limit use 'ulimit -n'");
@@ -877,7 +877,7 @@ void demote(const char* username, const char* group) {
 		if ((pw = getpwnam(username)) == nullptr) {
 			uid = std::atoi(username);
 			if ((uid == 0u) || (pw = getpwuid(uid)) == nullptr) {
-				L_CRIT("Can't find the user %s to switch to", username);
+				L_CRIT("Can't find the user {} to switch to", username);
 				throw SystemExit(EX_NOUSER);
 			}
 		}
@@ -891,7 +891,7 @@ void demote(const char* username, const char* group) {
 			if ((gr = getgrnam(group)) == nullptr) {
 				gid = std::atoi(group);
 				if ((gid == 0u) || (gr = getgrgid(gid)) == nullptr) {
-					L_CRIT("Can't find the group %s to switch to", group);
+					L_CRIT("Can't find the group {} to switch to", group);
 					throw SystemExit(EX_NOUSER);
 				}
 			}
@@ -899,7 +899,7 @@ void demote(const char* username, const char* group) {
 			group = gr->gr_name;
 		} else {
 			if ((gr = getgrgid(gid)) == nullptr) {
-				L_CRIT("Can't find the group id %d", gid);
+				L_CRIT("Can't find the group id {}", gid);
 				throw SystemExit(EX_NOUSER);
 			}
 			group = gr->gr_name;
@@ -925,21 +925,21 @@ void demote(const char* username, const char* group) {
 		cap_value_t root_caps[2] = { CAP_SYS_NICE, CAP_SETUID };
 		if (cap_set_flag(capabilities, CAP_PERMITTED, sizeof root_caps / sizeof root_caps[0], root_caps, CAP_SET) ||
 			cap_set_flag(capabilities, CAP_EFFECTIVE, sizeof root_caps / sizeof root_caps[0], root_caps, CAP_SET)) {
-			L_CRIT("Cannot manipulate capability data structure as root: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			L_CRIT("Cannot manipulate capability data structure as root: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
 
 		// Above, we just manipulated the data structure describing the flags,
 		// not the capabilities themselves. So, set those capabilities now.
 		if (cap_set_proc(capabilities)) {
-			L_CRIT("Cannot set capabilities as root: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			L_CRIT("Cannot set capabilities as root: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
 
 		// We wish to retain the capabilities across the identity change,
 		// so we need to tell the kernel.
 		if (prctl(PR_SET_KEEPCAPS, 1L)) {
-			L_CRIT("Cannot keep capabilities after dropping privileges: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			L_CRIT("Cannot keep capabilities after dropping privileges: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
 		#endif
@@ -947,7 +947,7 @@ void demote(const char* username, const char* group) {
 		// Drop extra privileges (aside from capabilities) by switching
 		// to the target group and user:
 		if (setgid(gid) < 0 || setuid(uid) < 0) {
-			L_CRIT("Failed to assume identity of %s:%s", username, group);
+			L_CRIT("Failed to assume identity of {}:{}", username, group);
 			throw SystemExit(EX_OSERR);
 		}
 
@@ -956,25 +956,25 @@ void demote(const char* username, const char* group) {
 		// capability. Let's clear the capability set, except for the CAP_SYS_NICE
 		// in the permitted and effective sets.
 		if (cap_clear(capabilities)) {
-			L_CRIT("Cannot clear capability data structure: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			L_CRIT("Cannot clear capability data structure: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
 
 		cap_value_t user_caps[1] = { CAP_SYS_NICE };
 		if (cap_set_flag(capabilities, CAP_PERMITTED, sizeof user_caps / sizeof user_caps[0], user_caps, CAP_SET) ||
 			cap_set_flag(capabilities, CAP_EFFECTIVE, sizeof user_caps / sizeof user_caps[0], user_caps, CAP_SET)) {
-			L_CRIT("Cannot manipulate capability data structure as user: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			L_CRIT("Cannot manipulate capability data structure as user: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
 
 		// Apply modified capabilities.
 		if (cap_set_proc(capabilities)) {
-			L_CRIT("Cannot set capabilities as user: %s (%d) %s", error::name(errno), errno, error::description(errno));
+			L_CRIT("Cannot set capabilities as user: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
 		#endif
 
-		L_NOTICE("Running as %s:%s", username, group);
+		L_NOTICE("Running as {}:{}", username, group);
 	}
 }
 
@@ -1001,9 +1001,8 @@ void writepid(const char* pidfile) {
 	/* Try to write the pid file in a best-effort way. */
 	int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
 	if (fd != -1) {
-		char buffer[100];
-		std::snprintf(buffer, sizeof(buffer), "%lu\n", (unsigned long)getpid());
-		io::write(fd, buffer, std::strlen(buffer));
+		auto pid = string::format("{}\n", (unsigned long)getpid());
+		io::write(fd, pid.data(), pid.size());
 		io::close(fd);
 	}
 }
@@ -1014,7 +1013,7 @@ void usedir(const char* path, bool force) {
 		DIR *dirp;
 		dirp = opendir(path, true);
 		if (!dirp) {
-			L_CRIT("Cannot open working directory: %s", path);
+			L_CRIT("Cannot open working directory: {}", path);
 			throw SystemExit(EX_OSFILE);
 		}
 
@@ -1040,7 +1039,7 @@ void usedir(const char* path, bool force) {
 		closedir(dirp);
 
 		if (!empty) {
-			L_CRIT("Working directory must be empty or a valid xapian database: %s", path);
+			L_CRIT("Working directory must be empty or a valid xapian database: {}", path);
 			throw SystemExit(EX_DATAERR);
 		}
 	}
@@ -1048,18 +1047,18 @@ void usedir(const char* path, bool force) {
 	if (chdir(path) == -1) {
 		if (build_path(std::string(path))) {
 			if (chdir(path) == -1) {
-				L_CRIT("Cannot change current working directory to %s", path);
+				L_CRIT("Cannot change current working directory to {}", path);
 				throw SystemExit(EX_OSFILE);
 			}
 		} else {
-			L_ERR("Cannot create working directory: %s: %s (%d): %s", repr(path), error::name(errno), errno, error::description(errno));
+			L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(path), error::name(errno), errno, error::description(errno));
 		}
 	}
 
 	char buffer[PATH_MAX];
 	getcwd(buffer, sizeof(buffer));
 	Endpoint::cwd = normalize_path(buffer, buffer, true);  // Endpoint::cwd must always end with slash
-	L_NOTICE("Changed current working directory to %s", Endpoint::cwd);
+	L_NOTICE("Changed current working directory to {}", Endpoint::cwd);
 }
 
 
@@ -1088,15 +1087,15 @@ void banner() {
 			outer + "| " +       top + "`-_   _-´" + outer + " | "                         + rgb(192, 192, 192) + "  \\   // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 			outer + "| " +     inner + "`-_" + top + "`-´" + inner + "_-´" + outer + " | " + rgb(160, 160, 160) + "  /   \\ (_| | |_) | | (_| | | | | (_| |\n" +
 			outer + "| " +     inner + "`-_`-´_-´" + outer + " | "                         + rgb(128, 128, 128) + " / /\\__\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-			outer + " `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + " %s" + rgb(96, 96, 96) + "|_|" + rgb(144, 238, 144) + "%s" + "\n" +
-			outer + "    ``-´´   " + rgb(0, 128, 0) + "%s" + "\n" +
-					"            " + rgb(0, 96, 0)  + "%s" + "\n\n",
+			outer + " `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + " {}" + rgb(96, 96, 96) + "|_|" + rgb(144, 238, 144) + "{}" + "\n" +
+			outer + "    ``-´´   " + rgb(0, 128, 0) + "{}" + "\n" +
+					"            " + rgb(0, 96, 0)  + "{}" + "\n\n",
 			string::center(Package::HASH, 8, true),
 			string::center(Package::FULLVERSION, 25, true),
 			string::center("Using " + string::join(values, ", ", " and "), 42),
 			string::center("[" + Package::BUGREPORT + "]", 42));
 	} else {
-		L(-LOG_NOTICE, NOTICE_COL, "%s started.", Package::STRING);
+		L(-LOG_NOTICE, NOTICE_COL, "{} started.", Package::STRING);
 	}
 }
 
@@ -1105,12 +1104,12 @@ void setup() {
 	// Flush threshold:
 	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p != nullptr) {
-		L_INFO("Flush threshold is now %d. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p) || 10000);
+		L_INFO("Flush threshold is now {}. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p) || 10000);
 	} else {
 		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::format("{}", opts.flush_threshold).c_str(), 0) == -1) {
-			L_INFO("Flush threshold is 10000: %s (%d): %s", error::name(errno), errno, error::description(errno));
+			L_INFO("Flush threshold is 10000: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		} else {
-			L_INFO("Flush threshold is now %d. (it was originally 10000)", opts.flush_threshold);
+			L_INFO("Flush threshold is now {}. (it was originally 10000)", opts.flush_threshold);
 		}
 	}
 
@@ -1145,7 +1144,7 @@ void setup() {
 
 void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 	if (opts.detach) {
-		L_NOTICE("Xapiand is done with all work here. Daemon on process ID [%d] taking over!", getpid());
+		L_NOTICE("Xapiand is done with all work here. Daemon on process ID [{}] taking over!", getpid());
 	}
 
 	usleep(100000ULL);
@@ -1153,7 +1152,7 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 	setup();
 
 	ev::default_loop default_loop(opts.ev_flags);
-	L_INFO("Connection processing backend: %s", ev_backend(default_loop.backend()));
+	L_INFO("Connection processing backend: {}", ev_backend(default_loop.backend()));
 
 	auto& manager = XapiandManager::make(&default_loop, opts.ev_flags, process_start);
 	manager->run();
@@ -1162,7 +1161,7 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 	if (managers == 0) {
 		L(-LOG_NOTICE, NOTICE_COL, "Xapiand is cleanly done with all work!");
 	} else {
-		L(-LOG_WARNING, WARNING_COL, "Xapiand is uncleanly done with all work (%ld)!\n%s", managers, manager->dump_tree());
+		L(-LOG_WARNING, WARNING_COL, "Xapiand is uncleanly done with all work ({})!\n{}", managers, manager->dump_tree());
 	}
 	manager.reset();
 }
@@ -1176,7 +1175,7 @@ void dump_metadata() {
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
-			L_NOTICE("Dumping metadata database: %s", repr(endpoints.to_string()));
+			L_NOTICE("Dumping metadata database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_metadata(fd);
 			L_NOTICE("Dump finished!");
@@ -1192,7 +1191,7 @@ void dump_metadata() {
 			io::close(fd);
 		}
 	} else {
-		L_CRIT("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: {}", opts.filename);
 		throw SystemExit(EX_OSFILE);
 	}
 }
@@ -1206,7 +1205,7 @@ void dump_schema() {
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
-			L_NOTICE("Dumping schema database: %s", repr(endpoints.to_string()));
+			L_NOTICE("Dumping schema database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_schema(fd);
 			L_NOTICE("Dump finished!");
@@ -1222,7 +1221,7 @@ void dump_schema() {
 			io::close(fd);
 		}
 	} else {
-		L_CRIT("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: {}", opts.filename);
 		throw SystemExit(EX_OSFILE);
 	}
 }
@@ -1236,7 +1235,7 @@ void dump_documents() {
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
-			L_NOTICE("Dumping database: %s", repr(endpoints.to_string()));
+			L_NOTICE("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
 			db_handler.dump_documents(fd);
 			L_NOTICE("Dump finished!");
@@ -1252,7 +1251,7 @@ void dump_documents() {
 			io::close(fd);
 		}
 	} else {
-		L_CRIT("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: {}", opts.filename);
 		throw SystemExit(EX_OSFILE);
 	}
 }
@@ -1266,7 +1265,7 @@ void restore() {
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
-			L_NOTICE("Restoring into: %s", repr(endpoints.to_string()));
+			L_NOTICE("Restoring into: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL);
 			db_handler.restore(fd);
 			L_NOTICE("Restore finished!");
@@ -1282,7 +1281,7 @@ void restore() {
 			io::close(fd);
 		}
 	} else {
-		L_CRIT("Cannot open file: %s", opts.filename);
+		L_CRIT("Cannot open file: {}", opts.filename);
 		throw SystemExit(EX_OSFILE);
 	}
 }
@@ -1396,13 +1395,13 @@ int main(int argc, char **argv) {
 		} catch (const SystemExit& exc) {
 			exit_code = exc.code;
 		} catch (const BaseException& exc) {
-			L_CRIT("Uncaught exception: %s", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
+			L_CRIT("Uncaught exception: {}", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
 			exit_code = EX_SOFTWARE;
 		} catch (const Xapian::Error& exc) {
-			L_CRIT("Uncaught exception: %s", exc.get_description());
+			L_CRIT("Uncaught exception: {}", exc.get_description());
 			exit_code = EX_SOFTWARE;
 		} catch (const std::exception& exc) {
-			L_CRIT("Uncaught exception: %s", *exc.what() ? exc.what() : "Unkown std::exception!");
+			L_CRIT("Uncaught exception: {}", *exc.what() ? exc.what() : "Unkown std::exception!");
 			exit_code = EX_SOFTWARE;
 		} catch (...) {
 			L_CRIT("Uncaught exception!");

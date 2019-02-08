@@ -121,7 +121,7 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 		.xapiand_remote_connections
 		.Increment();
 
-	L_CONN("New Remote Protocol Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Remote Protocol Client in socket {}, {} client(s) of a total of {} connected.", sock_, XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
 }
 
 
@@ -163,9 +163,9 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 void
 RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& message)
 {
-	L_CALL("RemoteProtocolClient::send_message(%s, <message>)", RemoteReplyTypeNames(type));
+	L_CALL("RemoteProtocolClient::send_message({}, <message>)", RemoteReplyTypeNames(type));
 
-	L_BINARY_PROTO("<< send_message (%s): %s", RemoteReplyTypeNames(type), repr(message));
+	L_BINARY_PROTO("<< send_message ({}): {}", RemoteReplyTypeNames(type), repr(message));
 
 	send_message(toUType(type), message);
 }
@@ -174,10 +174,10 @@ RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& mess
 void
 RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::remote_server(%s, <message>)", RemoteMessageTypeNames(type));
+	L_CALL("RemoteProtocolClient::remote_server({}, <message>)", RemoteMessageTypeNames(type));
 
-	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {type:%s}", RemoteMessageTypeNames(type));
-	L_OBJ_END("RemoteProtocolClient::remote_server:END {type:%s}", RemoteMessageTypeNames(type));
+	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", RemoteMessageTypeNames(type));
+	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", RemoteMessageTypeNames(type));
 
 	try {
 		switch (type) {
@@ -1241,13 +1241,13 @@ RemoteProtocolClient::init_remote() noexcept
 ssize_t
 RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 {
-	L_CALL("RemoteProtocolClient::on_read(<buf>, %zu)", received);
+	L_CALL("RemoteProtocolClient::on_read(<buf>, {})", received);
 
 	if (received <= 0) {
 		return received;
 	}
 
-	L_BINARY_WIRE("RemoteProtocolClient::on_read: %zd bytes", received);
+	L_BINARY_WIRE("RemoteProtocolClient::on_read: {} bytes", received);
 	ssize_t processed = -buffer.size();
 	buffer.append(buf, received);
 	while (buffer.size() >= 2) {
@@ -1256,7 +1256,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		L_BINARY_WIRE("on_read message: %s {state:%s}", repr(std::string(1, type)), StateNames(state));
+		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), StateNames(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
 				char path[PATH_MAX];
@@ -1267,7 +1267,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
 						build_path_index(temp_directory_template);
 						if (io::mkdtemp(path) == nullptr) {
-							L_ERR("Directory %s not created: %s (%d): %s", temp_directory_template, error::name(errno), errno, error::description(errno));
+							L_ERR("Directory {} not created: {} ({}): {}", temp_directory_template, error::name(errno), errno, error::description(errno));
 							detach();
 							return processed;
 						}
@@ -1279,11 +1279,11 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 				temp_files.push_back(path);
 				file_message_type = *p++;
 				if (file_descriptor == -1) {
-					L_ERR("Cannot create temporary file: %s (%d): %s", error::name(errno), errno, error::description(errno));
+					L_ERR("Cannot create temporary file: {} ({}): {}", error::name(errno), errno, error::description(errno));
 					detach();
 					return processed;
 				} else {
-					L_BINARY("Start reading file: %s (%d)", path, file_descriptor);
+					L_BINARY("Start reading file: {} ({})", path, file_descriptor);
 				}
 				read_file();
 				processed += p - o;
@@ -1324,9 +1324,9 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 void
 RemoteProtocolClient::on_read_file(const char *buf, ssize_t received)
 {
-	L_CALL("RemoteProtocolClient::on_read_file(<buf>, %zu)", received);
+	L_CALL("RemoteProtocolClient::on_read_file(<buf>, {})", received);
 
-	L_BINARY_WIRE("RemoteProtocolClient::on_read_file: %zd bytes", received);
+	L_BINARY_WIRE("RemoteProtocolClient::on_read_file: {} bytes", received);
 
 	io::write(file_descriptor, buf, received);
 }
@@ -1457,7 +1457,7 @@ RemoteProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] (%s): %s", RemoteMessageTypeNames(type), repr(message));
+					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] ({}): {}", RemoteMessageTypeNames(type), repr(message));
 					remote_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);

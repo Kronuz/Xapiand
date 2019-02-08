@@ -77,7 +77,7 @@ ReplicationProtocolServer::start_impl()
 	Worker::start_impl();
 
 	io.start(sock == -1 ? replication.sock : sock, ev::READ);
-	L_EV("Start replication protocol's server accept event not needed {sock:%d}", sock == -1 ? replication.sock : sock);
+	L_EV("Start replication protocol's server accept event not needed {{sock:{}}}", sock == -1 ? replication.sock : sock);
 }
 
 
@@ -96,7 +96,7 @@ ReplicationProtocolServer::accept()
 void
 ReplicationProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("ReplicationProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("ReplicationProtocolServer::io_accept_cb:BEGIN");
 	L_EV_END("ReplicationProtocolServer::io_accept_cb:END");
@@ -104,10 +104,10 @@ ReplicationProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
-	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid replication protocol event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid replication protocol event {{sock:{}}}: {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 
@@ -137,7 +137,7 @@ ReplicationProtocolServer::trigger_replication()
 void
 ReplicationProtocolServer::trigger_replication_async_cb(ev::async&, int revents)
 {
-	L_CALL("ReplicationProtocolServer::trigger_replication_async_cb(<watcher>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("ReplicationProtocolServer::trigger_replication_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("ReplicationProtocolServer::trigger_replication_async_cb:BEGIN");
 	L_EV_END("ReplicationProtocolServer::trigger_replication_async_cb:END");
@@ -200,7 +200,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		}
 		return;
 	}
-	L_CONN("Connected to %s! (in socket %d)", repr(args.src_endpoint.to_string()), client_sock);
+	L_CONN("Connected to {}! (in socket {})", repr(args.src_endpoint.to_string()), client_sock);
 
 	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
 
@@ -210,7 +210,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	}
 
 	client->start();
-	L_DEBUG("Database %s being synchronized from %s%s" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
+	L_DEBUG("Database {} being synchronized from {}{}" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
 }
 
 

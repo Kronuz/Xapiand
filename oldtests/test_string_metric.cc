@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -91,7 +91,7 @@ int test_ranking_results() {
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
-				L_ERR("ERROR: Distance of %s(%s, %s) -> Expected: %f Result: %f\n", metrics[j], str, strs[i], expected[j][i], results[j]);
+				L_ERR("ERROR: Distance of {}({}, {}) -> Expected: {} Result: {}\n", metrics[j], str, strs[i], expected[j][i], results[j]);
 				++res;
 			}
 		}
@@ -192,7 +192,7 @@ int test_ranking_results() {
 			};
 			for (size_t k = 0; k < arraySize(results); ++k) {
 				if (std::abs(results[k] - expected2[k][i][j]) >= 1e-6) {
-					L_ERR("ERROR: Distance of %s(%s, %s) -> Expected: %f Result: %f\n", metrics[k], strs_r1[i], strs_r2[j], expected2[k][i][j], results[k]);
+					L_ERR("ERROR: Distance of {}({}, {}) -> Expected: {} Result: {}\n", metrics[k], strs_r1[i], strs_r2[j], expected2[k][i][j], results[k]);
 					++res;
 				}
 			}
@@ -262,7 +262,7 @@ int test_special_cases() {
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
-				L_ERR("ERROR: Distance of %s(%s, %s) -> Expected: %f Result: %f\n", metrics[j], str1[i], str2[i], expected[j][i], results[j]);
+				L_ERR("ERROR: Distance of {}({}, {}) -> Expected: {} Result: {}\n", metrics[j], str1[i], str2[i], expected[j][i], results[j]);
 				++res;
 			}
 		}
@@ -370,7 +370,7 @@ int test_case_sensitive() {
 		};
 		for (size_t j = 0; j < arraySize(results); ++j) {
 			if (std::abs(results[j] - expected[j][i]) >= 1e-6) {
-				L_ERR("ERROR: Distance of %s(%s, %s) -> Expected: %f Result: %f\n", metrics[j], str1[i], str2[i], expected[j][i], results[j]);
+				L_ERR("ERROR: Distance of {}({}, {}) -> Expected: {} Result: {}\n", metrics[j], str1[i], str2[i], expected[j][i], results[j]);
 				++res;
 			}
 		}
@@ -388,7 +388,7 @@ void run_test_v1(T& metric, const std::string& str) {
 	}
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	L_INFO("Time %s [v1 %d]: %lld ms\n", metric.description(), NUM_TESTS, duration);
+	L_INFO("Time {} [v1 {}]: {} ms\n", metric.description(), NUM_TESTS, duration);
 }
 
 
@@ -401,7 +401,7 @@ void run_test_v2(T& metric, const std::string& str1, const std::string& str2) {
 	}
 	auto t2 = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	L_INFO("Time %s [v2 %d]: %lld ms\n", metric.description(), NUM_TESTS, duration);
+	L_INFO("Time {} [v2 {}]: {} ms\n", metric.description(), NUM_TESTS, duration);
 }
 
 

@@ -40,7 +40,7 @@
 #define L_NODE_NODES(args...) \
 	L_SLATE_GREY(args); \
 	for (const auto& _ : _nodes) { \
-		L_SLATE_GREY("    nodes[%s] -> {index:%zu, name:%s, host:%s, http_port:%d, remote_port:%d, replication_port:%d, touched:%lld}%s%s%s", \
+		L_SLATE_GREY("    nodes[{}] -> {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}", \
 			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->remote_port, _.second->replication_port, _.second->touched.load(std::memory_order_relaxed), \
 			Node::is_active(_.second) ? " active" : "", \
 			Node::is_local(_.second) ? " (local)" : "", \
@@ -222,7 +222,7 @@ std::shared_ptr<const Node>
 Node::local_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
-		L_CALL("Node::local_node(%s)", node->__repr__());
+		L_CALL("Node::local_node({})", node->__repr__());
 
 		auto now = epoch::now<std::chrono::milliseconds>();
 		node->touched.store(now, std::memory_order_relaxed);
@@ -250,7 +250,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 		}
 		_indexed_nodes = _nodes_indexed.size();
 
-		L_NODE_NODES("local_node(%s)", node->__repr__());
+		L_NODE_NODES("local_node({})", node->__repr__());
 	} else {
 		L_CALL("Node::local_node()");
 	}
@@ -262,7 +262,7 @@ std::shared_ptr<const Node>
 Node::leader_node(std::shared_ptr<const Node> node)
 {
 	if (node) {
-		L_CALL("Node::leader_node(%s)", node->__repr__());
+		L_CALL("Node::leader_node({})", node->__repr__());
 
 		auto now = epoch::now<std::chrono::milliseconds>();
 		node->touched.store(now, std::memory_order_relaxed);
@@ -292,7 +292,7 @@ Node::leader_node(std::shared_ptr<const Node> node)
 		}
 		_indexed_nodes = _nodes_indexed.size();
 
-		L_NODE_NODES("leader_node(%s)", node->__repr__());
+		L_NODE_NODES("leader_node({})", node->__repr__());
 	} else {
 		L_CALL("Node::leader_node()");
 	}
@@ -303,18 +303,18 @@ Node::leader_node(std::shared_ptr<const Node> node)
 std::shared_ptr<const Node>
 Node::get_node(std::string_view _node_name)
 {
-	L_CALL("Node::get_node(%s)", repr(_node_name));
+	L_CALL("Node::get_node({})", repr(_node_name));
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
 	auto it = _nodes.find(string::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		// L_NODE_NODES("get_node(%s) -> %s", _node_name, node_ref->__repr__());
+		// L_NODE_NODES("get_node({}) -> {}", _node_name, node_ref->__repr__());
 		return node_ref;
 	}
 
-	L_NODE_NODES("get_node(%s) -> nullptr", _node_name);
+	L_NODE_NODES("get_node({}) -> nullptr", _node_name);
 	return nullptr;
 }
 
@@ -322,17 +322,17 @@ Node::get_node(std::string_view _node_name)
 std::shared_ptr<const Node>
 Node::get_node(size_t idx)
 {
-	L_CALL("Node::get_node(%zu)", idx);
+	L_CALL("Node::get_node({})", idx);
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
 	if (idx > 0 && idx <= _nodes_indexed.size()) {
 		auto& node_ref = _nodes_indexed[idx - 1];
-		// L_NODE_NODES("get_node(%zu) -> %s", idx, node_ref->__repr__());
+		// L_NODE_NODES("get_node({}) -> {}", idx, node_ref->__repr__());
 		return node_ref;
 	}
 
-	L_NODE_NODES("get_node(%zu) -> nullptr", idx);
+	L_NODE_NODES("get_node({}) -> nullptr", idx);
 	return nullptr;
 }
 
@@ -340,7 +340,7 @@ Node::get_node(size_t idx)
 std::pair<std::shared_ptr<const Node>, bool>
 Node::touch_node(const Node& node, bool activate)
 {
-	L_CALL("Node::touch_node(%s, %s)", node.__repr__(), activate ? "true" : "false");
+	L_CALL("Node::touch_node({}, {})", node.__repr__(), activate ? "true" : "false");
 
 	auto now = epoch::now<std::chrono::milliseconds>();
 
@@ -366,7 +366,7 @@ Node::touch_node(const Node& node, bool activate)
 					if (node_ref_copy->idx >= 1 && node_ref_copy->idx <= _nodes_indexed.size()) {
 						auto& indexed_node = _nodes_indexed[node_ref_copy->idx - 1];
 						if (indexed_node && node_ref_copy->lower_name() != indexed_node->lower_name()) {
-							L_NODE_NODES("touch_node(%s) -> nullptr (1)", node.__repr__());
+							L_NODE_NODES("touch_node({}) -> nullptr (1)", node.__repr__());
 							return std::make_pair(nullptr, false);
 						}
 					}
@@ -393,10 +393,10 @@ Node::touch_node(const Node& node, bool activate)
 					modified = true;
 				}
 			}
-			L_NODE_NODES("touch_node(%s) -> %s (1)", node_ref->__repr__(), modified ? "true" : "false");
+			L_NODE_NODES("touch_node({}) -> {} (1)", node_ref->__repr__(), modified ? "true" : "false");
 			return std::make_pair(node_ref, modified);
 		} else if (is_active(node_ref)) {
-			L_NODE_NODES("touch_node(%s) -> nullptr (2)", node.__repr__());
+			L_NODE_NODES("touch_node({}) -> nullptr (2)", node.__repr__());
 			return std::make_pair(nullptr, false);
 		}
 		idx = node_ref->idx;
@@ -408,7 +408,7 @@ Node::touch_node(const Node& node, bool activate)
 		if (new_node_copy->idx >= 1 && new_node_copy->idx <= _nodes_indexed.size()) {
 			auto& indexed_node = _nodes_indexed[new_node_copy->idx - 1];
 			if (indexed_node && new_node_copy->lower_name() != indexed_node->lower_name()) {
-				L_NODE_NODES("touch_node(%s) -> nullptr (3)", new_node_copy->__repr__());
+				L_NODE_NODES("touch_node({}) -> nullptr (3)", new_node_copy->__repr__());
 				return std::make_pair(nullptr, false);
 			}
 		}
@@ -420,7 +420,7 @@ Node::touch_node(const Node& node, bool activate)
 	_nodes[new_node->lower_name()] = new_node;
 	_update_nodes(new_node);
 
-	L_NODE_NODES("touch_node(%s) -> true", new_node->__repr__());
+	L_NODE_NODES("touch_node({}) -> true", new_node->__repr__());
 	return std::make_pair(new_node, true);
 }
 
@@ -428,7 +428,7 @@ Node::touch_node(const Node& node, bool activate)
 void
 Node::drop_node(std::string_view _node_name)
 {
-	L_CALL("Node::drop_node(%s)", repr(_node_name));
+	L_CALL("Node::drop_node({})", repr(_node_name));
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
@@ -446,7 +446,7 @@ Node::drop_node(std::string_view _node_name)
 		_update_nodes(node_ref);
 	}
 
-	L_NODE_NODES("drop_node(%s)", _node_name);
+	L_NODE_NODES("drop_node({})", _node_name);
 }
 
 

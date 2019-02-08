@@ -122,7 +122,7 @@ DatabaseEndpoint::~DatabaseEndpoint()
 std::shared_ptr<Database>&
 DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
-	L_CALL("DatabaseEndpoint::writable_checkout((%s), %f, %s)", readable_flags(flags), timeout, callback ? "<callback>" : "null");
+	L_CALL("DatabaseEndpoint::writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
 	do {
 		if (is_finished()) {
@@ -167,7 +167,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 std::shared_ptr<Database>&
 DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
-	L_CALL("DatabaseEndpoint::readable_checkout((%s), %f, %s)", readable_flags(flags), timeout, callback ? "<callback>" : "null");
+	L_CALL("DatabaseEndpoint::readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
 	do {
 		if (is_finished()) {
@@ -226,7 +226,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 std::shared_ptr<Database>
 DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* callback)
 {
-	L_CALL("DatabaseEndpoint::checkout((%s), %f, %s)", readable_flags(flags), timeout, callback ? "<callback>" : "null");
+	L_CALL("DatabaseEndpoint::checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
 	auto now = std::chrono::system_clock::now();
 
@@ -284,7 +284,7 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 void
 DatabaseEndpoint::checkin(std::shared_ptr<Database>& database) noexcept
 {
-	L_CALL("DatabaseEndpoint::checkin(%s)", database ? database->__repr__() : "null");
+	L_CALL("DatabaseEndpoint::checkin({})", database ? database->__repr__() : "null");
 
 	ASSERT(database);
 	ASSERT(database->is_busy());
@@ -535,7 +535,7 @@ DatabasePool::endpoints(const Endpoint& endpoint) const
 void
 DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 {
-	L_CALL("DatabasePool::lock(%s, %f)", database ? database->__repr__() : "null", timeout);
+	L_CALL("DatabasePool::lock({}, {})", database ? database->__repr__() : "null", timeout);
 
 	ASSERT(database);
 
@@ -583,7 +583,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 void
 DatabasePool::unlock(const std::shared_ptr<Database>& database)
 {
-	L_CALL("DatabasePool::unlock(%s)", database ? database->__repr__() : "null");
+	L_CALL("DatabasePool::unlock({})", database ? database->__repr__() : "null");
 
 	ASSERT(database);
 
@@ -610,7 +610,7 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 bool
 DatabasePool::notify_lockable(const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::notify_lockable(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::notify_lockable({})", repr(endpoints.to_string()));
 
 	bool locked = false;
 
@@ -636,7 +636,7 @@ DatabasePool::notify_lockable(const Endpoints& endpoints)
 bool
 DatabasePool::is_locked(const Endpoints& endpoints) const
 {
-	L_CALL("DatabasePool::is_locked(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::is_locked({})", repr(endpoints.to_string()));
 
 	if (locks) {
 		std::lock_guard<std::mutex> lk(mtx);
@@ -658,7 +658,7 @@ DatabasePool::is_locked(const Endpoints& endpoints) const
 void
 DatabasePool::_lot_endpoints(const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::_lot_endpoints(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::_lot_endpoints({})", repr(endpoints.to_string()));
 
 	for (auto& endpoint : endpoints) {
 		auto& endpoints_set = endpoints_map[endpoint];
@@ -670,7 +670,7 @@ DatabasePool::_lot_endpoints(const Endpoints& endpoints)
 void
 DatabasePool::_drop_endpoints(const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::_drop_endpoints(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::_drop_endpoints({})", repr(endpoints.to_string()));
 
 	for (auto& endpoint : endpoints) {
 		auto &endpoints_set = endpoints_map[endpoint];
@@ -685,7 +685,7 @@ DatabasePool::_drop_endpoints(const Endpoints& endpoints)
 ReferencedDatabaseEndpoint
 DatabasePool::_spawn(const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::_spawn(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::_spawn({})", repr(endpoints.to_string()));
 
 	DatabaseEndpoint* database_endpoint;
 
@@ -713,7 +713,7 @@ DatabasePool::_spawn(const Endpoints& endpoints)
 ReferencedDatabaseEndpoint
 DatabasePool::spawn(const Endpoints& endpoints)
 {
-	L_CALL("DatabasePool::spawn(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::spawn({})", repr(endpoints.to_string()));
 
 	std::lock_guard<std::mutex> lk(mtx);
 	return _spawn(endpoints);
@@ -723,7 +723,7 @@ DatabasePool::spawn(const Endpoints& endpoints)
 ReferencedDatabaseEndpoint
 DatabasePool::_get(const Endpoints& endpoints) const
 {
-	L_CALL("DatabasePool::_get(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::_get({})", repr(endpoints.to_string()));
 
 	DatabaseEndpoint* database_endpoint = nullptr;
 
@@ -740,7 +740,7 @@ DatabasePool::_get(const Endpoints& endpoints) const
 ReferencedDatabaseEndpoint
 DatabasePool::get(const Endpoints& endpoints) const
 {
-	L_CALL("DatabasePool::get(%s)", repr(endpoints.to_string()));
+	L_CALL("DatabasePool::get({})", repr(endpoints.to_string()));
 
 	std::lock_guard<std::mutex> lk(mtx);
 	return _get(endpoints);
@@ -750,17 +750,17 @@ DatabasePool::get(const Endpoints& endpoints) const
 std::shared_ptr<Database>
 DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, std::packaged_task<void()>* callback)
 {
-	L_CALL("DatabasePool::checkout(%s, (%s), %f)", repr(endpoints.to_string()), readable_flags(flags), timeout);
+	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoints.to_string()), readable_flags(flags), timeout);
 
 	if (endpoints.empty()) {
-		L_DEBUG("ERROR: Expecting at least one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
+		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout empty database");
 	}
 
 	bool is_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
 	if (is_writable && endpoints.size() != 1) {
-		L_DEBUG("ERROR: Expecting exactly one database, %d requested: %s", endpoints.size(), repr(endpoints.to_string()));
+		L_DEBUG("ERROR: Expecting exactly one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
 		THROW(CheckoutErrorBadEndpoint, "Cannot checkout writable multi-database");
 	}
 
@@ -768,8 +768,8 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 	ASSERT(database);
 
 	L_TIMED_VAR(database->log, 200ms,
-		"Database checkout is taking too long: %s (%s)%s%s%s",
-		"Database checked out for too long: %s (%s)%s%s%s",
+		"Database checkout is taking too long: {} ({}){}{}{}",
+		"Database checked out for too long: {} ({}){}{}{}",
 		repr(database->endpoints.to_string()),
 		readable_flags(database->flags),
 		database->is_writable() ? " (writable)" : "",
@@ -783,7 +783,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 void
 DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
-	L_CALL("DatabasePool::checkin(%s)", database ? database->__repr__() : "null");
+	L_CALL("DatabasePool::checkin({})", database ? database->__repr__() : "null");
 
 	return database->endpoints.checkin(database);
 }
@@ -843,14 +843,14 @@ DatabasePool::cleanup(bool immediate)
 				lk.lock();
 				referenced_database_endpoint.reset();
 				if (!database_endpoint->empty()) {
-					L_DATABASE("Leave used endpoint: %s", repr(database_endpoint->to_string()));
+					L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
 					return lru::DropAction::leave;
 				}
 				_drop_endpoints(*database_endpoint);
-				L_DATABASE("Evict endpoint from full LRU: %s", repr(database_endpoint->to_string()));
+				L_DATABASE("Evict endpoint from full LRU: {}", repr(database_endpoint->to_string()));
 				return lru::DropAction::evict;
 			}
-			L_DATABASE("Leave recently used endpoint: %s", repr(database_endpoint->to_string()));
+			L_DATABASE("Leave recently used endpoint: {}", repr(database_endpoint->to_string()));
 			return lru::DropAction::leave;
 		}
 		if (immediate || database_endpoint->renew_time < now - 3600s) {
@@ -860,14 +860,14 @@ DatabasePool::cleanup(bool immediate)
 			lk.lock();
 			referenced_database_endpoint.reset();
 			if (!database_endpoint->empty()) {
-				L_DATABASE("Leave used endpoint: %s", repr(database_endpoint->to_string()));
+				L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
 				return lru::DropAction::leave;
 			}
 			_drop_endpoints(*database_endpoint);
-			L_DATABASE("Evict endpoint: %s", repr(database_endpoint->to_string()));
+			L_DATABASE("Evict endpoint: {}", repr(database_endpoint->to_string()));
 			return lru::DropAction::evict;
 		}
-		L_DATABASE("Stop at endpoint: %s", repr(database_endpoint->to_string()));
+		L_DATABASE("Stop at endpoint: {}", repr(database_endpoint->to_string()));
 		return lru::DropAction::stop;
 	};
 	trim(on_drop);

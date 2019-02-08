@@ -224,7 +224,7 @@ UUIDCondenser::serialise() const
 inline UUIDCondenser
 UUIDCondenser::unserialise(const char** ptr, const char* end)
 {
-	L_CALL("UUIDCondenser::unserialise(%s)", repr(*ptr, end));
+	L_CALL("UUIDCondenser::unserialise({})", repr(*ptr, end));
 
 	auto size = end - *ptr;
 	auto length = size + 1;
@@ -294,7 +294,7 @@ static inline unsigned char hexPairToChar(const char** ptr) {
 static inline std::array<unsigned char, 16>
 uuid_to_bytes(const char* pos, size_t size)
 {
-	L_CALL("uuid_to_bytes(%s)", repr(pos, size));
+	L_CALL("uuid_to_bytes({})", repr(pos, size));
 
 	if (size != UUID_LENGTH) {
 		THROW(InvalidArgument, "Invalid UUID string length");
@@ -732,7 +732,7 @@ UUID::unserialise(std::string_view bytes)
 UUID
 UUID::unserialise(const char** ptr, const char* end)
 {
-	L_CALL("UUID::unserialise(%s)", repr(*ptr, end));
+	L_CALL("UUID::unserialise({})", repr(*ptr, end));
 
 	auto size = end - *ptr;
 	if (size < 2) {
@@ -750,7 +750,7 @@ UUID::unserialise(const char** ptr, const char* end)
 UUID
 UUID::unserialise_full(const char** ptr, const char* end)
 {
-	L_CALL("UUID::unserialise_full(%s)", repr(*ptr, end));
+	L_CALL("UUID::unserialise_full({})", repr(*ptr, end));
 
 	auto size = end - *ptr;
 	if (size < 17) {
@@ -768,7 +768,7 @@ UUID::unserialise_full(const char** ptr, const char* end)
 UUID
 UUID::unserialise_condensed(const char** ptr, const char* end)
 {
-	L_CALL("UUID::unserialise_condensed(%s)", repr(*ptr, end));
+	L_CALL("UUID::unserialise_condensed({})", repr(*ptr, end));
 
 	UUIDCondenser condenser = UUIDCondenser::unserialise(ptr, end);
 

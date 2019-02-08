@@ -76,7 +76,7 @@ RemoteProtocolServer::start_impl()
 	Worker::start_impl();
 
 	io.start(sock == -1 ? remote.sock : sock, ev::READ);
-	L_EV("Start remote protocol's server accept event {sock:%d}", sock == -1 ? remote.sock : sock);
+	L_EV("Start remote protocol's server accept event {{sock:{}}}", sock == -1 ? remote.sock : sock);
 }
 
 
@@ -95,7 +95,7 @@ RemoteProtocolServer::accept()
 void
 RemoteProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("RemoteProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("RemoteProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("RemoteProtocolServer::io_accept_cb:BEGIN");
 	L_EV_END("RemoteProtocolServer::io_accept_cb:END");
@@ -103,10 +103,10 @@ RemoteProtocolServer::io_accept_cb(ev::io& watcher, int revents)
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
-	L_DEBUG_HOOK("RemoteProtocolServer::io_accept_cb", "RemoteProtocolServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("RemoteProtocolServer::io_accept_cb", "RemoteProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid remote protocol event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid remote protocol event {{sock:{}}}: {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 

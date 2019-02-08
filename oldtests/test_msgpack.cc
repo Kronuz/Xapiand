@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ int test_msgpack_constructors() {
 	int res = 0;
 	auto result = o.to_string();
 	if (result != res1) {
-		L_ERR("ERROR: MsgPack(array list) is not working. Result:\n %s\nExpected:\n %s\n", result, res1);
+		L_ERR("ERROR: MsgPack(array list) is not working. Result:\n {}\nExpected:\n {}\n", result, res1);
 		++res;
 	}
 
@@ -61,7 +61,7 @@ int test_msgpack_constructors() {
 
 	result = o2.to_string();
 	if (result != res2) {
-		L_ERR("ERROR: MsgPack(initialize list nested ARRAY) is not working. Result:\n %s\nExpected:\n %s\n", result, res2);
+		L_ERR("ERROR: MsgPack(initialize list nested ARRAY) is not working. Result:\n {}\nExpected:\n {}\n", result, res2);
 		++res;
 	}
 
@@ -76,7 +76,7 @@ int test_msgpack_constructors() {
 
 	result = o3.to_string();
 	if (result != res3) {
-		L_ERR("ERROR: MsgPack(initialize list MAP) is not working. Result:\n %s\nExpected:\n %s\n", result, res3);
+		L_ERR("ERROR: MsgPack(initialize list MAP) is not working. Result:\n {}\nExpected:\n {}\n", result, res3);
 		++res;
 	}
 
@@ -100,7 +100,7 @@ int test_msgpack_constructors() {
 
 	result = o4.to_string();
 	if (result != res4) {
-		L_ERR("ERROR: MsgPack(initialize list nested MAP) is not working. Result:\n %s\nExpected:\n %s\n", result, res4);
+		L_ERR("ERROR: MsgPack(initialize list nested MAP) is not working. Result:\n {}\nExpected:\n {}\n", result, res4);
 		++res;
 	}
 
@@ -109,7 +109,7 @@ int test_msgpack_constructors() {
 
 	result = o5.to_string();
 	if (result != res3) {
-		L_ERR("ERROR: MsgPack(const MsgPack&) is not working. Result:\n %s\nExpected:\n %s\n", result, res3);
+		L_ERR("ERROR: MsgPack(const MsgPack&) is not working. Result:\n {}\nExpected:\n {}\n", result, res3);
 		++res;
 	}
 
@@ -128,7 +128,7 @@ int test_msgpack_constructors() {
 
 	result = o6.to_string();
 	if (result != res2) {
-		L_ERR("ERROR: MsgPack(const MsgPack&) is not working. Result:\n %s\nExpected:\n %s\n", result, res3);
+		L_ERR("ERROR: MsgPack(const MsgPack&) is not working. Result:\n {}\nExpected:\n {}\n", result, res3);
 		++res;
 	}
 
@@ -137,18 +137,18 @@ int test_msgpack_constructors() {
 	std::string filename(path_test_msgpack);
 	filename.append("msgpack/json_test1.txt");
 	if (!read_file_contents(filename, &str_json)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		++res;
 	} else {
 		std::string expect_json;
 		filename.assign(path_test_msgpack).append("msgpack/json_test1_unpack.txt");
 		if (!read_file_contents(filename, &expect_json)) {
-			L_ERR("ERROR: Can not read the file: %s", filename);
+			L_ERR("ERROR: Can not read the file: {}", filename);
 			++res;
 		} else {
 			MsgPack json_obj(to_json(str_json));
 			if (json_obj.to_string() != expect_json) {
-				L_ERR("MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: %s\nExpected: %s\n", repr(json_obj.to_string()), repr(expect_json));
+				L_ERR("MsgPack::MsgPack(rapidjson::Document) is not working correctly. Result: {}\nExpected: {}\n", repr(json_obj.to_string()), repr(expect_json));
 				++res;
 			}
 		}
@@ -177,33 +177,33 @@ int test_msgpack_assigment() {
 	m_array = m_map;
 	auto result = m_array.to_string();
 	if (result != res2) {
-		L_ERR("ERROR: Mgspack::copy assigment from ARRAY to MAP is not working. Result:\n %s\nExpected:\n %s\n", result, res2);
+		L_ERR("ERROR: Mgspack::copy assigment from ARRAY to MAP is not working. Result:\n {}\nExpected:\n {}\n", result, res2);
 		++res;
 	}
 	if (m_array.capacity() != m_map.size()) {
-		L_ERR("ERROR: Mgspack::copy assigment from ARRAY to MAP is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_array.capacity(), m_map.size());
+		L_ERR("ERROR: Mgspack::copy assigment from ARRAY to MAP is not reserving correctly. Result:\n {}\nExpected:\n {}\n", m_array.capacity(), m_map.size());
 		++res;
 	}
 
 	m_array = MsgPack({ 1, 2, 3, 4, 5 });
 	result = m_array.to_string();
 	if (result != res1) {
-		L_ERR("ERROR: Mgspack::move assigment from MAP to ARRAY is not working. Result:\n %s\nExpected:\n %s\n", result, res1);
+		L_ERR("ERROR: Mgspack::move assigment from MAP to ARRAY is not working. Result:\n {}\nExpected:\n {}\n", result, res1);
 		++res;
 	}
 	if (m_array.capacity() != m_array.size()) {
-		L_ERR("ERROR: Mgspack::move assigment from MAP to ARRAY is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_array.capacity(), m_array.size());
+		L_ERR("ERROR: Mgspack::move assigment from MAP to ARRAY is not reserving correctly. Result:\n {}\nExpected:\n {}\n", m_array.capacity(), m_array.size());
 		++res;
 	}
 
 	m_map = m_array;
 	result = m_map.to_string();
 	if (result != res1) {
-		L_ERR("ERROR: Msgpack::copy assigment from MAP to ARRAY is not working. Result:\n %s\nExpected:\n %s\n", result, res1);
+		L_ERR("ERROR: Msgpack::copy assigment from MAP to ARRAY is not working. Result:\n {}\nExpected:\n {}\n", result, res1);
 		++res;
 	}
 	if (m_map.capacity() != m_array.size()) {
-		L_ERR("ERROR: Msgpack::copy assigment from MAP to ARRAY is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_map.capacity(), m_array.size());
+		L_ERR("ERROR: Msgpack::copy assigment from MAP to ARRAY is not reserving correctly. Result:\n {}\nExpected:\n {}\n", m_map.capacity(), m_array.size());
 		++res;
 	}
 
@@ -220,11 +220,11 @@ int test_msgpack_assigment() {
 
 	result = m_map.to_string();
 	if (result != res2) {
-		L_ERR("ERROR: Msgpack::move assigment from ARRAY to MAP is not working. Result:\n %s\nExpected:\n %s\n", result, res2);
+		L_ERR("ERROR: Msgpack::move assigment from ARRAY to MAP is not working. Result:\n {}\nExpected:\n {}\n", result, res2);
 		++res;
 	}
 	if (m_map.capacity() != m_map.size()) {
-		L_ERR("ERROR: Msgpack::move assigment from ARRAY to MAP is not reserving correctly. Result:\n %zu\nExpected:\n %zu\n", m_map.capacity(), m_map.size());
+		L_ERR("ERROR: Msgpack::move assigment from ARRAY to MAP is not reserving correctly. Result:\n {}\nExpected:\n {}\n", m_map.capacity(), m_map.size());
 		++res;
 	}
 
@@ -246,7 +246,7 @@ int test_msgpack_iterator() {
 
 	int res = 0;
 	if (ss.str() != expected) {
-		L_ERR("ERROR: MsgPack::iterator with array is not working\n\nExpected: %s\n\nResult: %s\n", expected, ss.str());
+		L_ERR("ERROR: MsgPack::iterator with array is not working\n\nExpected: {}\n\nResult: {}\n", expected, ss.str());
 		++res;
 	}
 
@@ -265,7 +265,7 @@ int test_msgpack_iterator() {
 	}
 
 	if (ss.str() != expected) {
-		L_ERR("ERROR: MsgPack::iterator with map is not working\n\nExpected: %s\n\nResult: %s\n", expected, ss.str());
+		L_ERR("ERROR: MsgPack::iterator with map is not working\n\nExpected: {}\n\nResult: {}\n", expected, ss.str());
 		++res;
 	}
 
@@ -278,7 +278,7 @@ int test_msgpack_serialise() {
 	std::string buffer;
 	std::string filename(path_test_msgpack + "msgpack/json_test1.txt");
 	if (!read_file_contents(filename, &buffer)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -286,7 +286,7 @@ int test_msgpack_serialise() {
 	try {
 		json_load(doc, buffer);
 	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 
@@ -295,7 +295,7 @@ int test_msgpack_serialise() {
 	std::string pack_expected;
 	std::string expected_filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(expected_filename, &pack_expected)) {
-		L_ERR("ERROR: Can not read the file: %s", expected_filename);
+		L_ERR("ERROR: Can not read the file: {}", expected_filename);
 		RETURN(1);
 	}
 
@@ -313,7 +313,7 @@ int test_msgpack_unserialise() {
 	std::string buffer;
 	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &buffer)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -322,13 +322,13 @@ int test_msgpack_unserialise() {
 	std::string expected;
 	std::string expected_filename(path_test_msgpack + "msgpack/json_test1_unpack.txt");
 	if (!read_file_contents(expected_filename, &expected)) {
-		L_ERR("ERROR: Can not read the file: %s", expected_filename);
+		L_ERR("ERROR: Can not read the file: {}", expected_filename);
 		RETURN(1);
 	}
 
 	auto result = obj.to_string();
 	if (expected != result) {
-		L_ERR("ERROR: MsgPack::unserialise is not working\n\nExpected: %s\n\nResult: %s\n", expected, result);
+		L_ERR("ERROR: MsgPack::unserialise is not working\n\nExpected: {}\n\nResult: {}\n", expected, result);
 		RETURN(1);
 	}
 
@@ -341,7 +341,7 @@ int test_msgpack_explore() {
 	std::string buffer;
 	std::string filename(path_test_msgpack + "msgpack/test2.mpack");
 	if (!read_file_contents(filename, &buffer)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -380,7 +380,7 @@ int test_msgpack_explore() {
 	}
 
 	if (ss.str() != expected) {
-		L_ERR("ERROR: MsgPack [using at] does not explore the map correctly\n\nExpected: %s\n\nResult: %s\n", expected, ss.str());
+		L_ERR("ERROR: MsgPack [using at] does not explore the map correctly\n\nExpected: {}\n\nResult: {}\n", expected, ss.str());
 		++res;
 	}
 
@@ -390,7 +390,7 @@ int test_msgpack_explore() {
 	}
 
 	if (ss.str() != expected) {
-		L_ERR("ERROR: MsgPack [using operator[]] does not explore the map correctly\n\nExpected: %s\n\nResult: %s\n", expected, ss.str());
+		L_ERR("ERROR: MsgPack [using operator[]] does not explore the map correctly\n\nExpected: {}\n\nResult: {}\n", expected, ss.str());
 		++res;
 	}
 
@@ -403,7 +403,7 @@ int test_msgpack_explore() {
 	}
 
 	if (ss.str() != expected) {
-		L_ERR("ERROR: MsgPack does not explore the array correctly\n\nExpected: %s\n\nResult: %s\n", expected, ss.str());
+		L_ERR("ERROR: MsgPack does not explore the array correctly\n\nExpected: {}\n\nResult: {}\n", expected, ss.str());
 		++res;
 	}
 
@@ -439,13 +439,13 @@ int test_msgpack_copy() {
 	auto str_orig = obj.to_string();
 	int res = 0;
 	if (str_orig_expect != str_orig) {
-		L_ERR("Copy MsgPack (Original) is not working. Result: %s, Expected: %s", str_orig, str_orig_expect);
+		L_ERR("Copy MsgPack (Original) is not working. Result: {}, Expected: {}", str_orig, str_orig_expect);
 		++res;
 	}
 
 	auto str_copy = copy_obj.to_string();
 	if (str_copy != str_copy_expect) {
-		L_ERR("Copy MsgPack (Copy) is not working. Result: %s, Expected: %s", str_copy, str_copy_expect);
+		L_ERR("Copy MsgPack (Copy) is not working. Result: {}, Expected: {}", str_copy, str_copy_expect);
 		++res;
 	}
 
@@ -479,13 +479,13 @@ int test_msgpack_reference() {
 	auto str_orig = obj.to_string();
 	int res = 0;
 	if (str_expect != str_orig) {
-		L_ERR("Copy MsgPack (Original) is not working. Result: %s, Expected: %s", str_orig, str_expect);
+		L_ERR("Copy MsgPack (Original) is not working. Result: {}, Expected: {}", str_orig, str_expect);
 		++res;
 	}
 
 	auto str_copy = copy_obj.to_string();
 	if (str_copy != str_expect) {
-		L_ERR("Copy MsgPack (Copy) is not working. Result: %s, Expected: %s", str_copy, str_expect);
+		L_ERR("Copy MsgPack (Copy) is not working. Result: {}, Expected: {}", str_copy, str_expect);
 		++res;
 	}
 
@@ -498,7 +498,7 @@ int test_msgpack_path() {
 	std::string buffer;
 	std::string filename(path_test_msgpack + "json/object_path.txt");
 	if (!read_file_contents(filename, &buffer)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -516,7 +516,7 @@ int test_msgpack_path() {
 
 	int res = 0;
 	if (target.compare("\"MEXICO\"") != 0) {
-		L_ERR("ERROR: MsgPack::path is not working\n\nExpected: \"MEXICO\"\nResult: %s\n", target);
+		L_ERR("ERROR: MsgPack::path is not working\n\nExpected: \"MEXICO\"\nResult: {}\n", target);
 		++res;
 	}
 
@@ -556,7 +556,7 @@ int test_msgpack_erase() {
 	std::string str_obj_expect("{\"elem2\":\"Final_Elem2\",\"elem4\":\"Final_Elem4\"}");
 	auto str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
-		L_ERR("ERROR: MsgPack::erase(key) is not working correctly. Result: %s, Expected: %s\n", str_obj, str_obj_expect);
+		L_ERR("ERROR: MsgPack::erase(key) is not working correctly. Result: {}, Expected: {}\n", str_obj, str_obj_expect);
 		++res;
 	}
 
@@ -589,7 +589,7 @@ int test_msgpack_erase() {
 	str_obj_expect = "{\"elem2\":\"Final_Elem2\",\"elem3\":\"Final_Elem3\"}";
 	str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
-		L_ERR("ERROR: MsgPack::erase(offset) is not working correctly. Result: %s, Expected: %s\n", str_obj, str_obj_expect);
+		L_ERR("ERROR: MsgPack::erase(offset) is not working correctly. Result: {}, Expected: {}\n", str_obj, str_obj_expect);
 		++res;
 	}
 
@@ -600,7 +600,7 @@ int test_msgpack_erase() {
 	str_obj_expect = "[1,3,5]";
 	str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
-		L_ERR("ERROR: MsgPack::erase(offset) is not working correctly. Result: %s, Expected: %s\n", str_obj, str_obj_expect);
+		L_ERR("ERROR: MsgPack::erase(offset) is not working correctly. Result: {}, Expected: {}\n", str_obj, str_obj_expect);
 		++res;
 	}
 
@@ -611,7 +611,7 @@ int test_msgpack_erase() {
 	str_obj_expect = "[11,31,51]";
 	str_obj = obj.to_string();
 	if (str_obj_expect != str_obj) {
-		L_ERR("ERROR: MsgPack::erase(offset) is not working correctly. Result: %s, Expected: %s\n", str_obj, str_obj_expect);
+		L_ERR("ERROR: MsgPack::erase(offset) is not working correctly. Result: {}, Expected: {}\n", str_obj, str_obj_expect);
 		++res;
 	}
 
@@ -624,7 +624,7 @@ int test_msgpack_reserve() {
 	std::string data;
 	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &data)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -637,13 +637,13 @@ int test_msgpack_reserve() {
 	}
 	obj.reserve(r_size);
 	if (obj.capacity() != r_size) {
-		L_ERR("ERROR: MsgPack::reserve(msgpack::map) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
+		L_ERR("ERROR: MsgPack::reserve(msgpack::map) is not working. Result: {}  Expected: {}\n", obj.capacity(), r_size);
 		++res;
 	}
 
 	auto result = obj.serialise();
 	if (result != data) {
-		L_ERR("ERROR: MsgPack::expand_map is not allocating memory correctly. Result: %s  Expect: %s\n", result, data);
+		L_ERR("ERROR: MsgPack::expand_map is not allocating memory correctly. Result: {}  Expect: {}\n", result, data);
 		++res;
 	}
 
@@ -653,7 +653,7 @@ int test_msgpack_reserve() {
 	r_size = 1024;
 	obj.reserve(r_size);
 	if (obj.capacity() < r_size) {
-		L_ERR("ERROR: MsgPack::reserve(msgpack::array) is not working. Result: %zu  Expected: %zu\n", obj.capacity(), r_size);
+		L_ERR("ERROR: MsgPack::reserve(msgpack::array) is not working. Result: {}  Expected: {}\n", obj.capacity(), r_size);
 		++res;
 	}
 
@@ -683,7 +683,7 @@ int test_msgpack_keys() {
 	std::string data;
 	std::string filename(path_test_msgpack + "msgpack/test1.mpack");
 	if (!read_file_contents(filename, &data)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		++res;
 	}
 
@@ -732,7 +732,7 @@ int test_msgpack_change_keys() {
 	if (result == expected) {
 		RETURN(0);
 	} else {
-		L_ERR("Change keys in MsgPack  is not working. Result: %s\nExpected: %s\n", result, expected);
+		L_ERR("Change keys in MsgPack  is not working. Result: {}\nExpected: {}\n", result, expected);
 		RETURN(1);
 	}
 }
@@ -753,7 +753,7 @@ int test_msgpack_map() {
 	std::string buffer;
 	std::string filename(path_test_msgpack + "json/object_map_test.txt");
 	if (!read_file_contents(filename, &buffer)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -766,31 +766,31 @@ int test_msgpack_map() {
 	auto& sub_obj = object["Marcial"];
 
 	if (sub_obj.size() != r0) {
-		L_ERR("Updated the map after erase is not working. Result: %zu\nExpected: %zu\n", sub_obj.size(), r0);
+		L_ERR("Updated the map after erase is not working. Result: {}\nExpected: {}\n", sub_obj.size(), r0);
 	}
 
 	try {
 		sub_obj[f1];
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the map after erase is not working. Expected: %s\n", r1);
+		L_ERR("Updated the map after erase is not working. Expected: {}\n", r1);
 		RETURN(1);
 	}
 	try {
 		sub_obj[f2];
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the map after erase is not working. Expected: %s\n", r2);
+		L_ERR("Updated the map after erase is not working. Expected: {}\n", r2);
 		RETURN(1);
 	}
 	try {
 		sub_obj[f3];
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the map after erase is not working. Expected: %s\n", r3);
+		L_ERR("Updated the map after erase is not working. Expected: {}\n", r3);
 		RETURN(1);
 	}
 	try {
 		sub_obj[f4];
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the map after erase is not working. Expected: %s\n", r4);
+		L_ERR("Updated the map after erase is not working. Expected: {}\n", r4);
 		RETURN(1);
 	}
 
@@ -815,7 +815,7 @@ int test_msgpack_array() {
 	std::string buffer;
 	std::string filename(path_test_msgpack + "json/object_to_patch.txt");
 	if (!read_file_contents(filename, &buffer)) {
-		L_ERR("ERROR: Can not read the file: %s", filename);
+		L_ERR("ERROR: Can not read the file: {}", filename);
 		RETURN(1);
 	}
 
@@ -828,21 +828,21 @@ int test_msgpack_array() {
 	auto& sub_obj = object["villains"][0];
 
 	if (sub_obj.size() != r0) {
-		L_ERR("Updated the array after erase is not working. Result: %zu\nExpected: %zu\n", sub_obj.size(), r0);
+		L_ERR("Updated the array after erase is not working. Result: {}\nExpected: {}\n", sub_obj.size(), r0);
 	}
 
 	try {
 		auto& r1 = sub_obj[f1];
 		try {
 			if (r1.str() != e1) {
-				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r1.str(), e1);
+				L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: {}\n", r1.str(), e1);
 			}
 		} catch (const msgpack::type_error&) {
-			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r1.to_string(), e1);
+			L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: \"{}\"\n", r1.to_string(), e1);
 			RETURN(1);
 		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e1);
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: {}\n", e1);
 		RETURN(1);
 	}
 
@@ -850,14 +850,14 @@ int test_msgpack_array() {
 		auto& r2 = sub_obj[f2];
 		try {
 			if (r2.str() != e2) {
-				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r2.str(), e2);
+				L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: {}\n", r2.str(), e2);
 			}
 		} catch (const msgpack::type_error&) {
-			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r2.to_string(), e2);
+			L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: \"{}\"\n", r2.to_string(), e2);
 			RETURN(1);
 		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e2);
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: {}\n", e2);
 		RETURN(1);
 	}
 
@@ -865,14 +865,14 @@ int test_msgpack_array() {
 		auto& r3 = sub_obj[f3];
 		try {
 			if (r3.str() != e3) {
-				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r3.str(), e3);
+				L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: {}\n", r3.str(), e3);
 			}
 		} catch (const msgpack::type_error&) {
-			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r3.to_string(), e3);
+			L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: \"{}\"\n", r3.to_string(), e3);
 			RETURN(1);
 		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e3);
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: {}\n", e3);
 		RETURN(1);
 	}
 
@@ -880,14 +880,14 @@ int test_msgpack_array() {
 		auto& r4 = sub_obj[f4];
 		try {
 			if (r4.str() != e4) {
-				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r4.str(), e4);
+				L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: {}\n", r4.str(), e4);
 			}
 		} catch (const msgpack::type_error&) {
-			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r4.to_string(), e4);
+			L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: \"{}\"\n", r4.to_string(), e4);
 			RETURN(1);
 		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e4);
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: {}\n", e4);
 		RETURN(1);
 	}
 
@@ -895,14 +895,14 @@ int test_msgpack_array() {
 		auto& r5 = sub_obj[f5];
 		try {
 			if (r5.str() != e5) {
-				L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: %s\n", r5.str(), e5);
+				L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: {}\n", r5.str(), e5);
 			}
 		} catch (const msgpack::type_error&) {
-			L_ERR("Updated the array after erase is not working.\n\t  Result: %s\n\tExpected: \"%s\"\n", r5.to_string(), e5);
+			L_ERR("Updated the array after erase is not working.\n\t  Result: {}\n\tExpected: \"{}\"\n", r5.to_string(), e5);
 			RETURN(1);
 		}
 	} catch (const std::out_of_range& e) {
-		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: %s\n", e5);
+		L_ERR("Updated the array after erase is not working.\n\t  Result: <out_of_range>\n\tExpected: {}\n", e5);
 		RETURN(1);
 	}
 

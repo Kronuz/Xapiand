@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ int test_pool() {
 	pool.join();
 
 	if (results != "<1<2<3<44>2>3>1>") {
-		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<3<44>2>3>1>", results);
+		L_ERR("ThreadPool::enqueue is not working correctly. Result: {}  Expected: <1<2<3<44>2>3>1>", results);
 		RETURN(1);
 	}
 
@@ -62,7 +62,7 @@ int test_pool_limit() {
 	pool.end();
 	pool.join();
 	if (results != "<1<2<32><44>3>1>") {
-		L_ERR("ThreadPool::enqueue is not working correctly. Result: %s  Expected: <1<2<32><44>3>1>", results);
+		L_ERR("ThreadPool::enqueue is not working correctly. Result: {}  Expected: <1<2<32><44>3>1>", results);
 		RETURN(1);
 	}
 
@@ -110,7 +110,7 @@ int test_pool_func() {
 	}
 
 	if (total != 55) {
-		L_ERR("ThreadPool::async functions with int is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::async functions with int is not working correctly. Result: {} Expect: 30", total);
 		RETURN(1);
 	}
 
@@ -161,7 +161,7 @@ int test_pool_func_shared() {
 	}
 
 	if (total != 55) {
-		L_ERR("ThreadPool::async functions with std::shared_ptr is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::async functions with std::shared_ptr is not working correctly. Result: {} Expect: 30", total);
 		RETURN(1);
 	}
 
@@ -212,7 +212,7 @@ int test_pool_func_unique() {
 	}
 
 	if (total != 55)  {
-		L_ERR("ThreadPool::async functions with std::unique_ptr is not working correctly. Result: %d Expect: 30", total);
+		L_ERR("ThreadPool::async functions with std::unique_ptr is not working correctly. Result: {} Expect: 30", total);
 		RETURN(1);
 	}
 

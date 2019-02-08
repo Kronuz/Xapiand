@@ -1026,7 +1026,7 @@ public:
 	 */
 	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
 	static required_spc_t get_namespace_specification(FieldType namespace_type, S&& prefix_namespace) {
-		L_CALL("Schema::get_namespace_specification('%c', %s)", toUType(namespace_type), repr(prefix_namespace));
+		L_CALL("Schema::get_namespace_specification('{}', {})", toUType(namespace_type), repr(prefix_namespace));
 
 		auto spc = specification_t::get_global(namespace_type);
 

@@ -50,7 +50,7 @@
 
 
 void delete_files(std::string_view path, const std::vector<const std::string>& patterns) {
-	L_CALL("delete_files(%s, <patterns>)", repr(path));
+	L_CALL("delete_files({}, <patterns>)", repr(path));
 
 	stringified path_string(path);
 
@@ -66,10 +66,10 @@ void delete_files(std::string_view path, const std::vector<const std::string>& p
 		switch (ent->d_type) {
 			case DT_DIR:  // This is a directory.
 				if (n[0] == '.' && (n[1] == '\0' || (n[1] == '.' && n[2] == '\0'))) {
-					L_FS("Directory %s is ignored", n);
+					L_FS("Directory {} is ignored", n);
 					continue;
 				}
-				L_FS("Directory %s is observed", n);
+				L_FS("Directory {} is observed", n);
 				empty = false;
 				break;
 			case DT_REG:  //  This is a regular file.
@@ -80,22 +80,22 @@ void delete_files(std::string_view path, const std::vector<const std::string>& p
 					file.push_back('/');
 					file.append(n);
 					if (::remove(file.c_str()) != 0) {
-						L_ERR("File %s could not be deleted", n);
+						L_ERR("File {} could not be deleted", n);
 						break;
 					} else {
-						L_FS("File %s deleted", n);
+						L_FS("File {} deleted", n);
 					}
 				} else {
-					L_FS("File %s did not match", n);
+					L_FS("File {} did not match", n);
 				}
 				empty = false;
 				break;
 			case DT_LNK:  // This is a symbolic link.
-				L_FS("Symbolic link %s is observed", n);
+				L_FS("Symbolic link {} is observed", n);
 				empty = false;
 				break;
 			default:
-				L_FS("Entry (%d) %s is observed", static_cast<int>(ent->d_type), n);
+				L_FS("Entry ({}) {} is observed", static_cast<int>(ent->d_type), n);
 				empty = false;
 				break;
 		}
@@ -105,16 +105,16 @@ void delete_files(std::string_view path, const std::vector<const std::string>& p
 
 	if (empty) {
 		if (::rmdir(path_string.c_str()) != 0) {
-			L_ERR("Directory %s could not be deleted", path_string);
+			L_ERR("Directory {} could not be deleted", path_string);
 		} else {
-			L_FS("Directory %s deleted", path_string);
+			L_FS("Directory {} deleted", path_string);
 		}
 	}
 }
 
 
 void move_files(std::string_view src, std::string_view dst) {
-	L_CALL("move_files(%s, %s)", repr(src), repr(dst));
+	L_CALL("move_files({}, {})", repr(src), repr(dst));
 
 	stringified src_string(src);
 	DIR *dirp = ::opendir(src_string.c_str());
@@ -132,20 +132,20 @@ void move_files(std::string_view src, std::string_view dst) {
 			new_name.push_back('/');
 			new_name.append(ent->d_name);
 			if (::rename(old_name.c_str(), new_name.c_str()) != 0) {
-				L_ERR("Couldn't rename %s to %s", old_name, new_name);
+				L_ERR("Couldn't rename {} to {}", old_name, new_name);
 			}
 		}
 	}
 
 	::closedir(dirp);
 	if (::rmdir(src_string.c_str()) != 0) {
-		L_ERR("Directory %s could not be deleted", src_string);
+		L_ERR("Directory {} could not be deleted", src_string);
 	}
 }
 
 
 bool exists(std::string_view path) {
-	L_CALL("exists(%s)", repr(path));
+	L_CALL("exists({})", repr(path));
 
 	struct stat buf;
 	return ::stat(stringified(path).c_str(), &buf) == 0;
@@ -153,7 +153,7 @@ bool exists(std::string_view path) {
 
 
 bool build_path(std::string_view path) {
-	L_CALL("build_path(%s)", repr(path));
+	L_CALL("build_path({})", repr(path));
 
 	if (exists(path)) {
 		return true;
@@ -175,7 +175,7 @@ bool build_path(std::string_view path) {
 
 
 bool build_path_index(std::string_view path_index) {
-	L_CALL("build_path_index(%s)", repr(path_index));
+	L_CALL("build_path_index({})", repr(path_index));
 
 	size_t found = path_index.find_last_of('/');
 	if (found == std::string_view::npos) {
@@ -186,7 +186,7 @@ bool build_path_index(std::string_view path_index) {
 
 
 DIR* opendir(std::string_view path, bool create) {
-	L_CALL("opendir(%s, %s)", repr(path), create ? "true" : "false");
+	L_CALL("opendir({}, {})", repr(path), create ? "true" : "false");
 
 	stringified path_string(path);
 	DIR* dirp = ::opendir(path_string.c_str());
@@ -232,7 +232,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 	stringified src_string(src);
 	DIR* dir_src = ::opendir(src_string.c_str());
 	if (dir_src == nullptr) {
-		L_ERR("ERROR: couldn't open directory %s: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: couldn't open directory {}: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 
@@ -243,11 +243,11 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 	if (err == -1) {
 		if (ENOENT == errno && create) {
 			if (::mkdir(dst_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0) {
-				L_ERR("ERROR: couldn't create directory %s: %s (%d): %s", dst_string, error::name(errno), errno, error::description(errno));
+				L_ERR("ERROR: couldn't create directory {}: {} ({}): {}", dst_string, error::name(errno), errno, error::description(errno));
 				return -1;
 			}
 		} else {
-			L_ERR("ERROR: couldn't obtain directory information %s: %s (%d): %s", dst_string, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: couldn't obtain directory information {}: {} ({}): {}", dst_string, error::name(errno), errno, error::description(errno));
 			return -1;
 		}
 	}
@@ -280,20 +280,20 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 
 			int src_fd = io::open(src_path.c_str(), O_RDONLY);
 			if (src_fd == -1) {
-				L_ERR("ERROR: opening file. %s\n", src_path);
+				L_ERR("ERROR: opening file. {}\n", src_path);
 				return -1;
 			}
 
 			int dst_fd = io::open(dst_path.c_str(), O_CREAT | O_WRONLY, 0644);
 			if (src_fd == -1) {
-				L_ERR("ERROR: opening file. %s\n", dst_path);
+				L_ERR("ERROR: opening file. {}\n", dst_path);
 				return -1;
 			}
 
 			while (true) {
 				ssize_t bytes = io::read(src_fd, buffer, 4096);
 				if (bytes == -1) {
-					L_ERR("ERROR: reading file. %s: %s (%d): %s\n", src_path, error::name(errno), errno, error::description(errno));
+					L_ERR("ERROR: reading file. {}: {} ({}): {}\n", src_path, error::name(errno), errno, error::description(errno));
 					return -1;
 				}
 
@@ -301,7 +301,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 
 				bytes = io::write(dst_fd, buffer, bytes);
 				if (bytes == -1) {
-					L_ERR("ERROR: writing file. %s: %s (%d): %s\n", dst_path, error::name(errno), errno, error::description(errno));
+					L_ERR("ERROR: writing file. {}: {} ({}): {}\n", dst_path, error::name(errno), errno, error::description(errno));
 					return -1;
 				}
 			}

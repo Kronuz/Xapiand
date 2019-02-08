@@ -63,7 +63,7 @@ ReplicationProtocol::start()
 void
 ReplicationProtocol::trigger_replication(const TriggerReplicationArgs& args)
 {
-	L_CALL("ReplicationProtocol::trigger_replication(%s, %s, %s)", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
+	L_CALL("ReplicationProtocol::trigger_replication({}, {}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()), cluster_database ? "true" : "false");
 
 	trigger_replication_args.enqueue(args);
 

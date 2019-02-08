@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -222,7 +222,7 @@ public:
 void db_updater_send(std::string path);
 
 inline auto& db_updater(bool create = true) {
-	static auto db_updater = create ? make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::updaters>("DU--", "DU%02zu", 3, db_updater_send) : nullptr;
+	static auto db_updater = create ? make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::updaters>("DU--", "DU{:02}", 3, db_updater_send) : nullptr;
 	ASSERT(!create || db_updater);
 	return db_updater;
 }

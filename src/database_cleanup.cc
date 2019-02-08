@@ -95,7 +95,7 @@ DatabaseCleanup::stop_impl()
 void
 DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, int revents)
 {
-	L_CALL("DatabaseCleanup::cleanup_cb(<timer>, 0x%x (%s))", revents, readable_revents(revents));
+	L_CALL("DatabaseCleanup::cleanup_cb(<timer>, {:#04x} ({}))", revents, readable_revents(revents));
 
 	ignore_unused(revents);
 

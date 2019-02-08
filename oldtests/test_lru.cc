@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,7 @@ int test_lru_actions() {
 			RETURN(1);
 		}
 	} catch (const std::exception& exc) {
-		L_EXC("%s\n", exc.what());
+		L_EXC("{}\n", exc.what());
 	}
 
 	L_ERR("Test LRU with actions is correct!");

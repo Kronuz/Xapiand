@@ -375,7 +375,7 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
 	new_request->begins = std::chrono::system_clock::now();
 
-	L_CONN("New Http Client in socket %d, %d client(s) of a total of %d connected.", sock_, XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Http Client in socket {}, {} client(s) of a total of {} connected.", sock_, XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
 }
 
 
@@ -513,32 +513,32 @@ HttpClient::is_idle() const
 ssize_t
 HttpClient::on_read(const char* buf, ssize_t received)
 {
-	L_CALL("HttpClient::on_read(<buf>, %zd)", received);
+	L_CALL("HttpClient::on_read(<buf>, {})", received);
 
 	unsigned init_state = new_request->parser.state;
 
 	if (received <= 0) {
 		if (received < 0) {
-			L_NOTICE("Client connection closed unexpectedly after %s: %s (%d): %s", string::from_delta(new_request->begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
+			L_NOTICE("Client connection closed unexpectedly after {}: {} ({}): {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
 		} else if (init_state != 18) {
-			L_NOTICE("Client closed unexpectedly after %s: Not in final HTTP state (%d)", string::from_delta(new_request->begins, std::chrono::system_clock::now()), init_state);
+			L_NOTICE("Client closed unexpectedly after {}: Not in final HTTP state ({})", string::from_delta(new_request->begins, std::chrono::system_clock::now()), init_state);
 		} else if (waiting) {
-			L_NOTICE("Client closed unexpectedly after %s: There was still a request in progress", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+			L_NOTICE("Client closed unexpectedly after {}: There was still a request in progress", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		// } else if (running) {
-		// 	L_NOTICE("Client closed unexpectedly after %s: There was still a worker running", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+		// 	L_NOTICE("Client closed unexpectedly after {}: There was still a worker running", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		} else if (!write_queue.empty()) {
-			L_NOTICE("Client closed unexpectedly after %s: There was still pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+			L_NOTICE("Client closed unexpectedly after {}: There was still pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		} else {
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			auto requests_size = requests.size();
 			if (requests_size && (requests_size > 1 || !requests.front()->ended)) {
-				L_NOTICE("Client closed unexpectedly after %s: There were still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+				L_NOTICE("Client closed unexpectedly after {}: There were still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 			}
 		}
 		return received;
 	}
 
-	L_HTTP_WIRE("HttpClient::on_read: %zd bytes", received);
+	L_HTTP_WIRE("HttpClient::on_read: {} bytes", received);
 	ssize_t parsed = http_parser_execute(&new_request->parser, &settings, buf, received);
 	if (parsed != received) {
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
@@ -550,7 +550,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			}
 		} else {
 			std::string message(http_errno_description(err));
-			L_DEBUG("HTTP parser error: %s", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
+			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 			if (new_request->response.status == static_cast<http_status>(0)) {
 				MsgPack err_response = {
 					{ RESPONSE_STATUS, (int)error_code },
@@ -570,9 +570,9 @@ HttpClient::on_read(const char* buf, ssize_t received)
 void
 HttpClient::on_read_file(const char* /*buf*/, ssize_t received)
 {
-	L_CALL("HttpClient::on_read_file(<buf>, %zd)", received);
+	L_CALL("HttpClient::on_read_file(<buf>, {})", received);
 
-	L_ERR("Not Implemented: HttpClient::on_read_file: %zd bytes", received);
+	L_ERR("Not Implemented: HttpClient::on_read_file: {} bytes", received);
 }
 
 
@@ -710,7 +710,7 @@ HttpClient::on_message_begin(http_parser* parser)
 {
 	L_CALL("HttpClient::on_message_begin(<parser>)");
 
-	L_HTTP_PROTO("on_message_begin {state:%s, header_state:%s}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
+	L_HTTP_PROTO("on_message_begin {{state:{}, header_state:{}}}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state));
 	ignore_unused(parser);
 
 	waiting = true;
@@ -727,7 +727,7 @@ HttpClient::on_url(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_url(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_url {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_HTTP_PROTO("on_url {{state:{}, header_state:{}}}: {}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
 	new_request->path.append(at, length);
@@ -740,7 +740,7 @@ HttpClient::on_status(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_status(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_status {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_HTTP_PROTO("on_status {{state:{}, header_state:{}}}: {}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
 	ignore_unused(at);
@@ -754,7 +754,7 @@ HttpClient::on_header_field(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_header_field(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_header_field {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_HTTP_PROTO("on_header_field {{state:{}, header_state:{}}}: {}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
 	new_request->_header_name = std::string(at, length);
@@ -767,7 +767,7 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_header_value(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_header_value {state:%s, header_state:%s}: %s", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+	L_HTTP_PROTO("on_header_value {{state:{}, header_state:{}}}: {}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 	ignore_unused(parser);
 
 	auto _header_value = std::string_view(at, length);
@@ -918,7 +918,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 {
 	L_CALL("HttpClient::on_headers_complete(<parser>)");
 
-	L_HTTP_PROTO("on_headers_complete {state:%s, header_state:%s, flags:[%s]}",
+	L_HTTP_PROTO("on_headers_complete {{state:{}, header_state:{}, flags:[{}]}}",
 		HttpParserStateNames(parser->state),
 		HttpParserHeaderStateNames(parser->header_state),
 		readable_http_parser_flags(parser));
@@ -947,9 +947,9 @@ HttpClient::on_headers_complete(http_parser* parser)
 int
 HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 {
-	L_CALL("HttpClient::on_body(<parser>, <at>, %zu)", length);
+	L_CALL("HttpClient::on_body(<parser>, <at>, {})", length);
 
-	L_HTTP_PROTO("on_body {state:%s, header_state:%s, flags:[%s]}: %s",
+	L_HTTP_PROTO("on_body {{state:{}, header_state:{}, flags:[{}]}}: {}",
 		HttpParserStateNames(parser->state),
 		HttpParserHeaderStateNames(parser->header_state),
 		readable_http_parser_flags(parser),
@@ -976,7 +976,7 @@ HttpClient::on_message_complete(http_parser* parser)
 {
 	L_CALL("HttpClient::on_message_complete(<parser>)");
 
-	L_HTTP_PROTO("on_message_complete {state:%s, header_state:%s, flags:[%s]}",
+	L_HTTP_PROTO("on_message_complete {{state:{}, header_state:{}, flags:[{}]}}",
 		HttpParserStateNames(parser->state),
 		HttpParserHeaderStateNames(parser->header_state),
 		readable_http_parser_flags(parser));
@@ -1013,7 +1013,7 @@ HttpClient::on_chunk_header(http_parser* parser)
 {
 	L_CALL("HttpClient::on_chunk_header(<parser>)");
 
-	L_HTTP_PROTO("on_chunk_header {state:%s, header_state:%s, flags:[%s]}",
+	L_HTTP_PROTO("on_chunk_header {{state:{}, header_state:{}, flags:[{}]}}",
 		HttpParserStateNames(parser->state),
 		HttpParserHeaderStateNames(parser->header_state),
 		readable_http_parser_flags(parser));
@@ -1027,7 +1027,7 @@ HttpClient::on_chunk_complete(http_parser* parser)
 {
 	L_CALL("HttpClient::on_chunk_complete(<parser>)");
 
-	L_HTTP_PROTO("on_chunk_complete {state:%s, header_state:%s, flags:[%s]}",
+	L_HTTP_PROTO("on_chunk_complete {{state:{}, header_state:{}, flags:[{}]}}",
 		HttpParserStateNames(parser->state),
 		HttpParserHeaderStateNames(parser->header_state),
 		readable_http_parser_flags(parser));
@@ -1043,8 +1043,8 @@ HttpClient::prepare()
 	L_CALL("HttpClient::prepare()");
 
 	L_TIMED_VAR(request.log, 1s,
-		"Response taking too long: %s",
-		"Response took too long: %s",
+		"Response taking too long: {}",
+		"Response took too long: {}",
 		request.head());
 
 	new_request->received = std::chrono::system_clock::now();
@@ -1584,7 +1584,7 @@ HttpClient::delete_document_view(Request& request)
 	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Deletion took %s", string::from_delta(took));
+	L_TIME("Deletion took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1612,7 +1612,7 @@ HttpClient::delete_schema_view(Request& request)
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Schema deletion took %s", string::from_delta(took));
+	L_TIME("Schema deletion took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1653,7 +1653,7 @@ HttpClient::index_document_view(Request& request)
 	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Indexing took %s", string::from_delta(took));
+	L_TIME("Indexing took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1687,7 +1687,7 @@ HttpClient::write_schema_view(Request& request)
 	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Schema write took %s", string::from_delta(took));
+	L_TIME("Schema write took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1733,7 +1733,7 @@ HttpClient::update_document_view(Request& request)
 	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Updating took %s", string::from_delta(took));
+	L_TIME("Updating took {}", string::from_delta(took));
 
 	if (request.method == HTTP_PATCH) {
 		Metrics::metrics()
@@ -1817,7 +1817,7 @@ HttpClient::metadata_view(Request& request)
 	write_http_response(request, status_code, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Get metadata took %s", string::from_delta(took));
+	L_TIME("Get metadata took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1899,7 +1899,7 @@ HttpClient::info_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Info took %s", string::from_delta(took));
+	L_TIME("Info took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1976,7 +1976,7 @@ HttpClient::touch_view(Request& request)
 	write_http_response(request, HTTP_STATUS_CREATED, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Touch took %s", string::from_delta(took));
+	L_TIME("Touch took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2008,7 +2008,7 @@ HttpClient::commit_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Commit took %s", string::from_delta(took));
+	L_TIME("Commit took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2072,7 +2072,7 @@ HttpClient::dump_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, docs);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Dump took %s", string::from_delta(took));
+	L_TIME("Dump took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2123,7 +2123,7 @@ HttpClient::restore_view(Request& request)
 
 		write_http_response(request, HTTP_STATUS_OK, response_obj);
 
-		L_TIME("Restore took %s", string::from_delta(took));
+		L_TIME("Restore took {}", string::from_delta(took));
 
 		Metrics::metrics()
 			.xapiand_operations_summary
@@ -2171,7 +2171,7 @@ HttpClient::schema_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, schema);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Schema took %s", string::from_delta(took));
+	L_TIME("Schema took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2203,7 +2203,7 @@ HttpClient::wal_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, repr);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("WAL took %s", string::from_delta(took));
+	L_TIME("WAL took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2233,7 +2233,7 @@ HttpClient::check_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, status);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Database check took %s", string::from_delta(took));
+	L_TIME("Database check took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2339,7 +2339,7 @@ HttpClient::retrieve_view(Request& request)
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Retrieving took %s", string::from_delta(took));
+	L_TIME("Retrieving took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2457,7 +2457,7 @@ HttpClient::search_view(Request& request)
 
 	request.ready = std::chrono::system_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Searching took %s", string::from_delta(took));
+	L_TIME("Searching took {}", string::from_delta(took));
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
@@ -2542,7 +2542,7 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 HttpClient::Command
 HttpClient::getCommand(std::string_view command_name)
 {
-	L_CALL("HttpClient::getCommand(%s)", repr(command_name));
+	L_CALL("HttpClient::getCommand({})", repr(command_name));
 
 	static const auto _ = http_commands;
 
@@ -2558,7 +2558,7 @@ HttpClient::url_resolve(Request& request)
 	struct http_parser_url u;
 	std::string b = repr(request.path, true, 0);
 
-	L_HTTP("URL: %s", b);
+	L_HTTP("URL: {}", b);
 
 	if (http_parser_parse_url(request.path.data(), request.path.size(), 0, &u) == 0) {
 		L_HTTP_PROTO("HTTP parsing done!");
@@ -2673,7 +2673,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 	} else {
 		endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{index_path}, master));
 	}
-	L_HTTP("Endpoint: -> %s", endpoints.to_string());
+	L_HTTP("Endpoint: -> {}", endpoints.to_string());
 }
 
 
@@ -2748,13 +2748,13 @@ HttpClient::query_field_maker(Request& request, int flags)
 
 		request.query_parser.rewind();
 		while (request.query_parser.next("query") != -1) {
-			L_SEARCH("query=%s", request.query_parser.get());
+			L_SEARCH("query={}", request.query_parser.get());
 			query_field.query.emplace_back(request.query_parser.get());
 		}
 
 		request.query_parser.rewind();
 		while (request.query_parser.next("q") != -1) {
-			L_SEARCH("query=%s", request.query_parser.get());
+			L_SEARCH("query={}", request.query_parser.get());
 			query_field.query.emplace_back(request.query_parser.get());
 		}
 
@@ -2894,7 +2894,7 @@ HttpClient::log_request(Request& request)
 	std::string request_prefix = " 🌎  ";
 	int priority = -LOG_DEBUG;
 	auto request_text = request.to_text(true);
-	L(priority, NO_COLOR, "%s%s", request_prefix, string::indent(request_text, ' ', 4, false));
+	L(priority, NO_COLOR, "{}{}", request_prefix, string::indent(request_text, ' ', 4, false));
 }
 
 
@@ -2917,7 +2917,7 @@ HttpClient::log_response(Response& response)
 		priority = -LOG_NOTICE;
 	}
 	auto response_text = response.to_text(true);
-	L(priority, NO_COLOR, "%s%s", response_prefix, string::indent(response_text, ' ', 4, false));
+	L(priority, NO_COLOR, "{}{}", response_prefix, string::indent(response_text, ' ', 4, false));
 }
 
 
@@ -2936,26 +2936,26 @@ HttpClient::end_http_request(Request& request)
 		request.log.reset();
 	}
 	if (request.parser.http_errno != 0u) {
-		L(LOG_ERR, LIGHT_RED, "HTTP parsing error (%s): %s", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
+		L(LOG_ERR, LIGHT_RED, "HTTP parsing error ({}): {}", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
 	} else {
-		static constexpr auto fmt_defaut = RED + "\"%s\" %d %s %s";
+		static constexpr auto fmt_defaut = RED + "\"{}\" {} {} {}";
 		auto fmt = fmt_defaut.c_str();
 		int priority = LOG_DEBUG;
 
 		if ((int)request.response.status >= 200 && (int)request.response.status <= 299) {
-			static constexpr auto fmt_2xx = WHITE + "\"%s\" %d %s %s";
+			static constexpr auto fmt_2xx = WHITE + "\"{}\" {} {} {}";
 			fmt = fmt_2xx.c_str();
 		} else if ((int)request.response.status >= 300 && (int)request.response.status <= 399) {
-			static constexpr auto fmt_3xx = STEEL_BLUE + "\"%s\" %d %s %s";
+			static constexpr auto fmt_3xx = STEEL_BLUE + "\"{}\" {} {} {}";
 			fmt = fmt_3xx.c_str();
 		} else if ((int)request.response.status >= 400 && (int)request.response.status <= 499) {
-			static constexpr auto fmt_4xx = SADDLE_BROWN + "\"%s\" %d %s %s";
+			static constexpr auto fmt_4xx = SADDLE_BROWN + "\"{}\" {} {} {}";
 			fmt = fmt_4xx.c_str();
 			if ((int)request.response.status != 404) {
 				priority = LOG_INFO;
 			}
 		} else if ((int)request.response.status >= 500 && (int)request.response.status <= 599) {
-			static constexpr auto fmt_5xx = LIGHT_PURPLE + "\"%s\" %d %s %s";
+			static constexpr auto fmt_5xx = LIGHT_PURPLE + "\"{}\" {} {} {}";
 			fmt = fmt_5xx.c_str();
 			priority = LOG_NOTICE;
 		}
@@ -2975,7 +2975,7 @@ HttpClient::end_http_request(Request& request)
 		L(priority, NO_COLOR, fmt, request.head(), (int)request.response.status, string::from_bytes(request.response.size), string::from_delta(request.begins, request.ends));
 	}
 
-	L_TIME("Full request took %s, response took %s", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
+	L_TIME("Full request took {}, response took {}", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
 
 	auto sent = total_sent_bytes.exchange(0);
 	Metrics::metrics()
@@ -2992,7 +2992,7 @@ HttpClient::end_http_request(Request& request)
 ct_type_t
 HttpClient::resolve_ct_type(Request& request, ct_type_t ct_type)
 {
-	L_CALL("HttpClient::resolve_ct_type(%s)", repr(ct_type.to_string()));
+	L_CALL("HttpClient::resolve_ct_type({})", repr(ct_type.to_string()));
 
 	if (ct_type == json_type || ct_type == msgpack_type || ct_type == x_msgpack_type) {
 		if (is_acceptable_type(get_acceptable_type(request, json_type), json_type) != nullptr) {
@@ -3024,7 +3024,7 @@ HttpClient::resolve_ct_type(Request& request, ct_type_t ct_type)
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type(%s, %s)", repr(ct_type_pattern.to_string()), repr(ct_type.to_string()));
+	L_CALL("HttpClient::is_acceptable_type({}, {})", repr(ct_type_pattern.to_string()), repr(ct_type.to_string()));
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
@@ -3047,7 +3047,7 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t
 const ct_type_t*
 HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
 {
-	L_CALL("HttpClient::is_acceptable_type((%s, <ct_types>)", repr(ct_type_pattern.to_string()));
+	L_CALL("HttpClient::is_acceptable_type(({}, <ct_types>)", repr(ct_type_pattern.to_string()));
 
 	for (auto& ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type) != nullptr) {
@@ -3084,7 +3084,7 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 std::pair<std::string, std::string>
 HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
-	L_CALL("HttpClient::serialize_response(%s, %s, %u, %s)", repr(obj.to_string(), true, '\'', 200), repr(ct_type.to_string()), indent, serialize_error ? "true" : "false");
+	L_CALL("HttpClient::serialize_response({}, {}, {}, {})", repr(obj.to_string(), true, '\'', 200), repr(ct_type.to_string()), indent, serialize_error ? "true" : "false");
 
 	if (ct_type == no_type) {
 		return std::make_pair("", "");
@@ -3241,7 +3241,7 @@ HttpClient::readable_encoding(Encoding e)
 std::string
 HttpClient::encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
 {
-	L_CALL("HttpClient::encoding_http_response(%s)", repr(response_obj));
+	L_CALL("HttpClient::encoding_http_response({})", repr(response_obj));
 
 	bool gzip = false;
 	switch (e) {
@@ -3332,7 +3332,7 @@ Request::~Request() noexcept
 MsgPack
 Request::decode(std::string_view body)
 {
-	L_CALL("Request::decode(%s)", repr(body));
+	L_CALL("Request::decode({})", repr(body));
 
 	std::string ct_type_str = ct_type.to_string();
 	if (ct_type_str.empty()) {
@@ -3542,7 +3542,7 @@ Request::head()
 std::string
 Request::to_text(bool decode)
 {
-	L_CALL("Request::to_text(%s)", decode ? "true" : "false");
+	L_CALL("Request::to_text({})", decode ? "true" : "false");
 
 	static constexpr auto no_col = NO_COLOR;
 	auto request_headers_color = no_col.c_str();
@@ -3701,7 +3701,7 @@ Response::Response()
 std::string
 Response::to_text(bool decode)
 {
-	L_CALL("Response::to_text(%s)", decode ? "true" : "false");
+	L_CALL("Response::to_text({})", decode ? "true" : "false");
 
 	static constexpr auto no_col = NO_COLOR;
 	auto response_headers_color = no_col.c_str();

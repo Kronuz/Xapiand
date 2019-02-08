@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ std::atomic_bool& ignore_eintr() {
 
 
 int open(const char* path, int oflag, int mode) {
-	L_CALL("io::open(%s, <buf>, <mode>)", path);
+	L_CALL("io::open({}, <buf>, <mode>)", path);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EACCES);
 
@@ -106,7 +106,7 @@ int close(int fd) {
 
 
 ssize_t write(int fd, const void* buf, size_t nbyte) {
-	L_CALL("io::write(%d, <buf>, %lu)", fd, nbyte);
+	L_CALL("io::write({}, <buf>, {})", fd, nbyte);
 	CHECK_OPENED("during write()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -115,7 +115,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 	while (nbyte != 0u) {
 		ssize_t c = ::write(fd, p, nbyte);
 		if unlikely(c == -1) {
-			L_ERRNO("io::write(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::write(): {} ({}): {} [{}]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -136,7 +136,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 
 
 ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
-	L_CALL("io::pwrite(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
+	L_CALL("io::pwrite({}, <buf>, {}, {})", fd, nbyte, offset);
 	CHECK_OPENED("during pwrite()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -144,7 +144,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 	const auto* p = static_cast<const char*>(buf);
 #ifndef HAVE_PWRITE
 	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
-		L_ERRNO("io::pwrite(): lseek: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERRNO("io::pwrite(): lseek: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 #endif
@@ -155,7 +155,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pwrite(fd, p, nbyte, offset);
 #endif
 		if unlikely(c == -1) {
-			L_ERRNO("io::pwrite(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::pwrite(): {} ({}): {} [{}]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -177,7 +177,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 
 
 ssize_t read(int fd, void* buf, size_t nbyte) {
-	L_CALL("io::read(%d, <buf>, %lu)", fd, nbyte);
+	L_CALL("io::read({}, <buf>, {})", fd, nbyte);
 	CHECK_OPENED("during read()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -186,7 +186,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 	while (nbyte != 0u) {
 		ssize_t c = ::read(fd, p, nbyte);
 		if unlikely(c == -1) {
-			L_ERRNO("io::read(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::read(): {} ({}): {} [{}]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -209,14 +209,14 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 
 
 ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
-	L_CALL("io::pread(%d, <buf>, %lu, %lu)", fd, nbyte, offset);
+	L_CALL("io::pread({}, <buf>, {}, {})", fd, nbyte, offset);
 	CHECK_OPENED("during pread()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 #ifndef HAVE_PWRITE
 	if unlikely(::lseek(fd, offset, SEEK_SET) == -1) {
-		L_ERRNO("io::pread(): lseek: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERRNO("io::pread(): lseek: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return -1;
 	}
 #endif
@@ -228,7 +228,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 		ssize_t c = ::pread(fd, p, nbyte, offset);
 #endif
 		if unlikely(c == -1) {
-			L_ERRNO("io::pread(): %s (%d): %s [%llu]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
+			L_ERRNO("io::pread(): {} ({}): {} [{}]", error::name(errno), errno, error::description(errno), p - static_cast<const char*>(buf));
 			if unlikely(errno == EINTR && ignore_eintr().load()) {
 				continue;
 			}
@@ -324,7 +324,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 	}
 
 	if unlikely(fd >= 1024*1024) {
-		L_ERR("fd (%d) is too big to track %s", fd, msg);
+		L_ERR("fd ({}) is too big to track {}", fd, msg);
 		return -1;
 	}
 
@@ -342,29 +342,29 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 
 	if (currently & SOCKET) {
 		if (check_unset & SOCKET) {
-			L_ERR("fd (%d) is a socket %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd ({}) is a socket {}" + DEBUG_COL + "{}", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	} else {
 		if (check_set & SOCKET) {
-			L_ERR("fd (%d) is not a socket %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd ({}) is not a socket {}" + DEBUG_COL + "{}", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	}
 	if (currently & OPENED) {
 		if (check_unset & OPENED) {
-			L_ERR("fd (%d) is opened %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd ({}) is opened {}" + DEBUG_COL + "{}", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	} else {
 		if (check_set & OPENED) {
-			L_ERR("fd (%d) is not opened %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd ({}) is not opened {}" + DEBUG_COL + "{}", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	}
 	if (currently & CLOSED) {
 		if (check_unset & CLOSED) {
-			L_ERR("fd (%d) is closed %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd ({}) is closed {}" + DEBUG_COL + "{}", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	} else {
 		if (check_set & CLOSED) {
-			L_ERR("fd (%d) is not closed %s" + DEBUG_COL + "%s", fd, msg, ::traceback(function, filename, line, 8));
+			L_ERR("fd ({}) is not closed {}" + DEBUG_COL + "{}", fd, msg, ::traceback(function, filename, line, 8));
 		}
 	}
 
@@ -389,7 +389,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 int close(int fd) {
 	static int honeypot = io::RetryAfterSignal(::open, "/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
 	if unlikely(honeypot == -1) {
-		L_ERR("honeypot: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("honeypot: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		exit(EX_SOFTWARE);
 	}
 	CHECK_CLOSE(fd);

@@ -102,17 +102,17 @@ MsgPack normalize_uuid(const MsgPack& uuid)
 int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
 {
 	auto sdir = std::string(dir);
-	L_DATABASE("+ READING UUID OF INDEX '%s'...", sdir);
+	L_DATABASE("+ READING UUID OF INDEX '{}'...", sdir);
 
 	struct stat info;
 	if ((::stat(sdir.c_str(), &info) != 0) || ((info.st_mode & S_IFDIR) == 0)) {
-		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
+		L_DATABASE("- NO DATABASE INDEX '{}'", sdir);
 		return -1;
 	}
 
 	int fd = io::open((sdir + "/iamglass").c_str(), O_RDONLY | O_CLOEXEC);
 	if (fd == -1) {
-		L_DATABASE("- NO DATABASE INDEX '%s'", sdir);
+		L_DATABASE("- NO DATABASE INDEX '{}'", sdir);
 		return -1;
 	}
 

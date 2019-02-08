@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -171,12 +171,12 @@ int testCartesianTransforms() {
 			Cartesian c(test.lat, test.lon, test.height, Cartesian::Units::DEGREES, test.SRID);
 			const auto deg_min_sec = c.toDegMinSec();
 			if (deg_min_sec != test.res) {
-				L_ERR("ERROR: Resul: %s  Expected: %s", deg_min_sec, test.res);
+				L_ERR("ERROR: Resul: {}  Expected: {}", deg_min_sec, test.res);
 				++cont;
 			}
 		}
 	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		++cont;
 	}
 
@@ -229,7 +229,7 @@ int testGrahamScanAlgorithm() {
 					std::getline(expected, coord_exp);
 					if (coord_exp != coord_get) {
 						++cont;
-						L_ERR("ERROR: Result(%s) Expect(%s).", coord_get, coord_exp);
+						L_ERR("ERROR: Result({}) Expect({}).", coord_get, coord_exp);
 					}
 				} else {
 					++cont;
@@ -250,7 +250,7 @@ int testGrahamScanAlgorithm() {
 			HTM::writeGrahamScanMap(python_geospatial + "convex_hull/" + test + "GM.py", test + "GM.html", points, convex_points, path_test_geospatial);
 			HTM::writeGrahamScan3D(python_geospatial + "convex_hull/" + test + "3D.py", points, convex_points);
 		} else {
-			L_ERR("ERROR: File %s or %s not found.", source_file, expected_file);
+			L_ERR("ERROR: File {} or {} not found.", source_file, expected_file);
 			++cont;
 		}
 	}
@@ -424,14 +424,14 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 		HTM::insertGreaterRange(_ranges, HTM::getRange(trixel));
 	}
 	if (_ranges != ranges) {
-		L_ERR("ERROR: Different ranges [%zu %zu]", ranges.size(), _ranges.size());
+		L_ERR("ERROR: Different ranges [{} {}]", ranges.size(), _ranges.size());
 		++cont;
 	}
 
 	// Test ranges to trixels
 	auto _trixels = HTM::getTrixels(ranges);
 	if (_trixels != trixels) {
-		L_ERR("ERROR: Different trixels [%zu %zu]", trixels.size(), _trixels.size());
+		L_ERR("ERROR: Different trixels [{} {}]", trixels.size(), _trixels.size());
 		++cont;
 	}
 
@@ -442,7 +442,7 @@ inline int verify_trixels_ranges(const std::shared_ptr<Geometry>& geometry, cons
 	_trixels = _geometry->getTrixels(partials, error);
 	HTM::simplifyTrixels(_trixels);
 	if (_trixels != trixels) {
-		L_ERR("ERROR: Geometry::toEWKT is not working\nEWKT: %s\nRec. EWKT: %s", str_ewkt, _geometry->toEWKT());
+		L_ERR("ERROR: Geometry::toEWKT is not working\nEWKT: {}\nRec. EWKT: {}", str_ewkt, _geometry->toEWKT());
 		++cont;
 	}
 

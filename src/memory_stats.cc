@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -93,7 +93,7 @@ uint64_t get_total_virtual_used()
 	xsw_usage vmusage = {0, 0, 0, 0, 0u};
 	size_t vmusage_len = sizeof(vmusage);
 	if (sysctl(mib, mib_len, &vmusage, &vmusage_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get swap usage: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_virtual_used = vmusage.xsu_used;
@@ -124,14 +124,14 @@ uint64_t get_total_ram()
 #ifdef _SYSCTL_NAME
 	auto total_ram_len = sizeof(total_ram);
 	if (sysctl(mib, mib_len, &total_ram, &total_ram_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total memory size: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
 	struct sysinfo info;
 	if (sysinfo(&info) < 0) {
-		L_ERR("ERROR: Unable to get total memory size: sysinfo(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total memory size: sysinfo(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_ram = info.totalram;
@@ -189,7 +189,7 @@ uint64_t get_current_memory_by_process(bool resident)
 		current_memory_by_process = vsize;
 	}
 #else
-	L_WARNING_ONCE("WARNING: No way of getting total %s memory size by the process.", resident ? "resident" : "virtual");
+	L_WARNING_ONCE("WARNING: No way of getting total {} memory size by the process.", resident ? "resident" : "virtual");
 #endif
 	return current_memory_by_process;
 }
@@ -205,7 +205,7 @@ uint64_t get_total_virtual_memory()
 	int mib[CTL_MAXNAME + 2];
 	size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
-		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 #endif
@@ -214,7 +214,7 @@ uint64_t get_total_virtual_memory()
 	int64_t total_pages;
 	auto total_pages_len = sizeof(total_pages);
 	if (sysctl(mib, mib_len, &total_pages, &total_pages_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get total virtual memory size: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total virtual memory size: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_virtual_memory = total_pages * getpagesize();
@@ -222,14 +222,14 @@ uint64_t get_total_virtual_memory()
 #elif defined(__APPLE__)
 	struct statfs stats;
 	if (0 != statfs("/", &stats)) {
-		L_ERR("ERROR: Unable to get total virtual memory size: statfs(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total virtual memory size: statfs(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_virtual_memory = (uint64_t)stats.f_bsize * stats.f_bfree;
 #elif defined(__linux__)
 	struct sysinfo info;
 	if (sysinfo(&info) < 0) {
-		L_ERR("ERROR: Unable to get total virtual memory size: sysinfo(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total virtual memory size: sysinfo(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_virtual_memory = info.totalswap;
@@ -247,14 +247,14 @@ uint64_t get_total_inodes()
 #if defined(__APPLE__)
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
-		L_ERR("ERROR: Unable to get total inodes statfs(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total inodes statfs(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_inodes = statf.f_files;
 #elif defined(__linux__)
 	struct statvfs info;
 	if (statvfs(".", &info) < 0) {
-		L_ERR("ERROR: Unable to get total inodes statvfs(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total inodes statvfs(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_inodes = info.f_files;
@@ -271,14 +271,14 @@ uint64_t get_free_inodes()
 #if defined(__APPLE__)
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
-		L_ERR("ERROR: Unable to get free inodes statfs(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get free inodes statfs(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	free_inodes = statf.f_ffree;
 #elif defined(__linux__)
 	struct statvfs info;
 	if (statvfs(".", &info) < 0) {
-		L_ERR("ERROR: Unable to get free inodes statvfs(): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get free inodes statvfs(): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	free_inodes = info.f_ffree;
@@ -295,7 +295,7 @@ uint64_t get_total_disk_size()
 #if defined(__APPLE__)|| defined(__linux__)
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
-		L_ERR("ERROR: Unable to get total disk size (): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get total disk size (): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	total_disk_size = statf.f_blocks * statf.f_bsize;
@@ -311,7 +311,7 @@ uint64_t get_free_disk_size()
 #if defined(__APPLE__)|| defined(__linux__)
 	struct statfs statf;
 	if (statfs(".", &statf) < 0) {
-		L_ERR("ERROR: Unable to get free disk size (): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get free disk size (): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	free_disk_size = statf.f_bfree * statf.f_bsize;

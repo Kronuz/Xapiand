@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ int test_endpoint() {
 		Endpoint e(uri_test[i][1]);
 		if (e.path != uri_test[i][2]) {
 			++count;
-			L_ERR("ERROR: Endpoint (%zu) missmatch.\n\t  Result: %s\n\tExpected: %s\n", i, e.path, uri_test[i][2]);
+			L_ERR("ERROR: Endpoint ({}) missmatch.\n\t  Result: {}\n\tExpected: {}\n", i, e.path, uri_test[i][2]);
 		}
 	}
 
@@ -73,7 +73,7 @@ int test_normalize_path() {
 	for (size_t i = 0; i < arraySize(path_samples); ++i) {
 		auto res = normalize_path(std::string_view(path_samples[i][0]), true);
 		if (res != path_samples[i][1]) {
-			L_ERR("ERROR: Path (%s) missmatch.\n\t  Result: %s\n\tExpected: %s\n", path_samples[i][0], res, path_samples[i][1]);
+			L_ERR("ERROR: Path ({}) missmatch.\n\t  Result: {}\n\tExpected: {}\n", path_samples[i][0], res, path_samples[i][1]);
 		}
 	}
 	RETURN(count);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -136,7 +136,7 @@ int test_url_path() {
 	for (const auto& url : urls) {
 		std::string result = run_url_path(url.path, url.clear_id);
 		if (result != url.expected) {
-			L_ERR("Error: the value obtained from the url path: { \"%s\", %s }\n  should be:\n    %s\n  but it is:\n    %s\n", url.path, url.clear_id ? "true" : "false", url.expected, result);
+			L_ERR("Error: the value obtained from the url path: {{ \"{}\", {} }}\n  should be:\n    {}\n  but it is:\n    {}\n", url.path, url.clear_id ? "true" : "false", url.expected, result);
 			++count;
 		}
 	}

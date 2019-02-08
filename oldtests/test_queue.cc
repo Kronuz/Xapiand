@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -189,7 +189,7 @@ int test_queue_set_on_dup() {
 		RETURN(1);
 	}
 
-	L_DEBUG("%d %d %d %d %d", i1, i2, i3, i4, i5);
+	L_DEBUG("{} {} {} {} {}", i1, i2, i3, i4, i5);
 
 	if (i1 != 1 || i2 != 2 || i3 != 4 || i4 != 3 || i5 != 789) {
 		L_ERR("QueueSet::pop with set_on_dup is changing memory.");

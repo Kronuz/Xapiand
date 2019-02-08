@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,7 +68,7 @@ TCP::~TCP() noexcept
 	try {
 		if (sock != -1) {
 			if (io::close(sock) == -1) {
-				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_WARNING("WARNING: close {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
 	} catch (...) {
@@ -79,7 +79,7 @@ TCP::~TCP() noexcept
 
 bool
 TCP::close(bool close) {
-	L_CALL("TCP::close(%s)", close ? "true" : "false");
+	L_CALL("TCP::close({})", close ? "true" : "false");
 
 	bool was_closed = closed.exchange(true);
 	if (!was_closed && sock != -1) {
@@ -87,7 +87,7 @@ TCP::close(bool close) {
 			// Dangerously close socket!
 			// (make sure no threads are using the file descriptor)
 			if (io::close(sock) == -1) {
-				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_WARNING("WARNING: close {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			}
 			sock = -1;
 		} else {
@@ -101,7 +101,7 @@ TCP::close(bool close) {
 void
 TCP::bind(const char* hostname, unsigned int serv, int tries)
 {
-	L_CALL("TCP::bind(%d)", tries);
+	L_CALL("TCP::bind({})", tries);
 
 	if (!closed.exchange(false) || !tries) {
 		return;
@@ -109,7 +109,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 
 	int optval = 1;
 
-	L_CONN("Binding TCP %s:%d", hostname ? hostname : "0.0.0.0", serv);
+	L_CONN("Binding TCP {}:{}", hostname ? hostname : "0.0.0.0", serv);
 
 	for (; --tries >= 0; ++serv) {
 		char servname[6];  // strlen("65535") + 1
@@ -123,7 +123,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 
 		struct addrinfo *addrinfo;
 		if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
-			L_CRIT("ERROR: getaddrinfo %s:%s {sock:%d}: %s", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
+			L_CRIT("ERROR: getaddrinfo {}:{} {{sock:{}}}: {}", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
 			sig_exit(-EX_CONFIG);
 			return;
 		}
@@ -132,35 +132,35 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if ((sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
 				if (ai->ai_next == nullptr) {
 					freeaddrinfo(addrinfo);
-					L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} socket: {} ({}): {}", description, error::name(errno), errno, error::description(errno));
 					sig_exit(-EX_IOERR);
 					return;
 				}
-				L_CONN("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} socket: {} ({}): {}", description, error::name(errno), errno, error::description(errno));
 				continue;
 			}
 
 			if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} fcntl O_NONBLOCK {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} fcntl O_NONBLOCK {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				break;
 			}
 
 			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} setsockopt SO_REUSEADDR {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} setsockopt SO_REUSEADDR {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
@@ -170,12 +170,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &optval, sizeof(optval)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: {} setsockopt SO_REUSEPORT_LB {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
 					}
-					L_CONN("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CONN("ERROR: {} setsockopt SO_REUSEPORT_LB {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					break;
 				}
@@ -183,12 +183,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: {} setsockopt SO_REUSEPORT {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
 					}
-					L_CONN("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CONN("ERROR: {} setsockopt SO_REUSEPORT {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					break;
 				}
@@ -199,12 +199,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if (io::setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} setsockopt SO_NOSIGPIPE {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s setsockopt SO_NOSIGPIPE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} setsockopt SO_NOSIGPIPE {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
@@ -213,12 +213,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if (io::setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} setsockopt SO_KEEPALIVE {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s setsockopt SO_KEEPALIVE {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} setsockopt SO_KEEPALIVE {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
@@ -229,12 +229,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if (io::setsockopt(sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} setsockopt SO_LINGER {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s setsockopt SO_LINGER {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} setsockopt SO_LINGER {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
@@ -251,12 +251,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, SOL_SOCKET, SO_ACCEPTFILTER, &af, sizeof(af)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
 					}
-					L_CONN("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+					L_CONN("ERROR: Failed to enable the 'dataready' Accept Filter: setsockopt SO_ACCEPTFILTER {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 					close();
 					break;
 				}
@@ -266,12 +266,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, IPPROTO_TCP, TCP_DEFER_ACCEPT, &optval, sizeof(optval)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: setsockopt TCP_DEFER_ACCEPT {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
 					}
-					L_CONN("ERROR: setsockopt TCP_DEFER_ACCEPT {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+					L_CONN("ERROR: setsockopt TCP_DEFER_ACCEPT {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 					close();
 					break;
 				}
@@ -283,12 +283,12 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if (io::bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} bind error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} bind error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
@@ -296,24 +296,24 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 			if (io::listen(sock, checked_tcp_backlog(XAPIAND_TCP_BACKLOG)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s listen error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} listen error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s listen error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} listen error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
 
-			// L_RED("TCP addr -> %s:%d", inet_ntop(addr), ntohs(addr.sin_port));
+			// L_RED("TCP addr -> {}:{}", inet_ntop(addr), ntohs(addr.sin_port));
 
 			freeaddrinfo(addrinfo);
 			return;
 		}
 	}
 
-	L_CRIT("ERROR: %s unknown bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	L_CRIT("ERROR: {} unknown bind error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
 }
@@ -322,7 +322,7 @@ TCP::bind(const char* hostname, unsigned int serv, int tries)
 int
 TCP::accept()
 {
-	L_CALL("TCP::accept() {sock=%d}", sock);
+	L_CALL("TCP::accept() {{sock={}}}", sock);
 
 	int client_sock;
 
@@ -333,27 +333,27 @@ TCP::accept()
 
 	if ((client_sock = io::accept(sock, (struct sockaddr *)&client_addr, &addrlen)) == -1) {
 		if (!io::ignored_errno(errno, true, true, true)) {
-			L_ERR("ERROR: accept error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: accept error {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 		}
 		return -1;
 	}
 
 	if (io::fcntl(client_sock, F_SETFL, fcntl(client_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-		L_ERR("ERROR: fcntl O_NONBLOCK {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: fcntl O_NONBLOCK {{client_sock:{}}}: {} ({}): {}", client_sock, error::name(errno), errno, error::description(errno));
 		io::close(client_sock);
 		return -1;
 	}
 
 #ifdef SO_NOSIGPIPE
 	if (io::setsockopt(client_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_NOSIGPIPE {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt SO_NOSIGPIPE {{client_sock:{}}}: {} ({}): {}", client_sock, error::name(errno), errno, error::description(errno));
 		io::close(client_sock);
 		return -1;
 	}
 #endif
 
 	if (io::setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-		L_ERR("ERROR: setsockopt SO_KEEPALIVE {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt SO_KEEPALIVE {{client_sock:{}}}: {} ({}): {}", client_sock, error::name(errno), errno, error::description(errno));
 		io::close(client_sock);
 		return -1;
 	}
@@ -362,14 +362,14 @@ TCP::accept()
 	linger.l_onoff = 1;
 	linger.l_linger = 0;
 	if (io::setsockopt(client_sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
-		L_ERR("ERROR: setsockopt SO_LINGER {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: setsockopt SO_LINGER {{client_sock:{}}}: {} ({}): {}", client_sock, error::name(errno), errno, error::description(errno));
 		io::close(client_sock);
 		return -1;
 	}
 
 	if ((flags & TCP_TCP_NODELAY) != 0) {
 		if (io::setsockopt(client_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt TCP_NODELAY {client_sock:%d}: %s (%d): %s", client_sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: setsockopt TCP_NODELAY {{client_sock:{}}}: {} ({}): {}", client_sock, error::name(errno), errno, error::description(errno));
 			io::close(client_sock);
 			return -1;
 		}
@@ -393,35 +393,35 @@ TCP::checked_tcp_backlog(int tcp_backlog)
 	int somaxconn;
 	size_t somaxconn_len = sizeof(somaxconn);
 	if (sysctl(mib, mib_len, &somaxconn, &somaxconn_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return tcp_backlog;
 	}
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		L_WARNING_ONCE("WARNING: The TCP backlog setting of %d cannot be enforced because "
+		L_WARNING_ONCE("WARNING: The TCP backlog setting of {} cannot be enforced because "
 				_SYSCTL_NAME
-				" is set to the lower value of %d.", tcp_backlog, somaxconn);
+				" is set to the lower value of {}.", tcp_backlog, somaxconn);
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
 	int fd = io::open("/proc/sys/net/core/somaxconn", O_RDONLY);
 	if unlikely(fd == -1) {
-		L_ERR("ERROR: Unable to open /proc/sys/net/core/somaxconn: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to open /proc/sys/net/core/somaxconn: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return tcp_backlog;
 	}
 	char line[100];
 	ssize_t n = io::read(fd, line, sizeof(line));
 	if unlikely(n == -1) {
-		L_ERR("ERROR: Unable to read from /proc/sys/net/core/somaxconn: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to read from /proc/sys/net/core/somaxconn: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return tcp_backlog;
 	}
 	int somaxconn = atoi(line);
 	if (somaxconn > 0 && somaxconn < tcp_backlog) {
-		L_WARNING_ONCE("WARNING: The TCP backlog setting of %d cannot be enforced because "
+		L_WARNING_ONCE("WARNING: The TCP backlog setting of {} cannot be enforced because "
 				"/proc/sys/net/core/somaxconn"
-				" is set to the lower value of %d.", tcp_backlog, somaxconn);
+				" is set to the lower value of {}.", tcp_backlog, somaxconn);
 	}
 #else
-	L_WARNING_ONCE("WARNING: No way of getting TCP backlog setting of %d.", tcp_backlog);
+	L_WARNING_ONCE("WARNING: No way of getting TCP backlog setting of {}.", tcp_backlog);
 #endif
 	return tcp_backlog;
 }
@@ -430,7 +430,7 @@ TCP::checked_tcp_backlog(int tcp_backlog)
 int
 TCP::connect(const char* hostname, const char* servname)
 {
-	L_CALL("TCP::connect(%s, %s)", hostname, servname);
+	L_CALL("TCP::connect({}, {})", hostname, servname);
 
 	struct addrinfo hints = {};
 	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
@@ -440,7 +440,7 @@ TCP::connect(const char* hostname, const char* servname)
 
 	struct addrinfo *addrinfo;
 	if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
-		L_ERR("Couldn't resolve host %s:%s: %s", hostname, servname, gai_strerror(err));
+		L_ERR("Couldn't resolve host {}:{}: {}", hostname, servname, gai_strerror(err));
 		return -1;
 	}
 
@@ -450,29 +450,29 @@ TCP::connect(const char* hostname, const char* servname)
 
 		if ((conn_sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
 			if (ai->ai_next == nullptr) {
-				L_CRIT("ERROR: %s:%s socket: %s (%d): %s", hostname, servname, error::name(errno), errno, error::description(errno));
+				L_CRIT("ERROR: {}:{} socket: {} ({}): {}", hostname, servname, error::name(errno), errno, error::description(errno));
 				return -1;
 			}
-			L_CONN("ERROR: %s:%s socket: %s (%d): %s", hostname, servname, error::name(errno), errno, error::description(errno));
+			L_CONN("ERROR: {}:{} socket: {} ({}): {}", hostname, servname, error::name(errno), errno, error::description(errno));
 			continue;
 		}
 
 		if (io::fcntl(conn_sock, F_SETFL, io::fcntl(conn_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
-			L_ERR("ERROR: fcntl O_NONBLOCK {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: fcntl O_NONBLOCK {{conn_sock:{}}}: {} ({}): {}", conn_sock, error::name(errno), errno, error::description(errno));
 			io::close(conn_sock);
 			return -1;
 		}
 
 #ifdef SO_NOSIGPIPE
 		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt SO_NOSIGPIPE {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: setsockopt SO_NOSIGPIPE {{conn_sock:{}}}: {} ({}): {}", conn_sock, error::name(errno), errno, error::description(errno));
 			io::close(conn_sock);
 			return -1;
 		}
 #endif
 
 		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt SO_KEEPALIVE {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: setsockopt SO_KEEPALIVE {{conn_sock:{}}}: {} ({}): {}", conn_sock, error::name(errno), errno, error::description(errno));
 			io::close(conn_sock);
 			return -1;
 		}
@@ -481,13 +481,13 @@ TCP::connect(const char* hostname, const char* servname)
 		linger.l_onoff = 1;
 		linger.l_linger = 0;
 		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
-			L_ERR("ERROR: setsockopt SO_LINGER {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: setsockopt SO_LINGER {{conn_sock:{}}}: {} ({}): {}", conn_sock, error::name(errno), errno, error::description(errno));
 			io::close(conn_sock);
 			return -1;
 		}
 
 		if (io::setsockopt(conn_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
-			L_ERR("ERROR: setsockopt TCP_NODELAY {conn_sock:%d}: %s (%d): %s", conn_sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: setsockopt TCP_NODELAY {{conn_sock:{}}}: {} ({}): {}", conn_sock, error::name(errno), errno, error::description(errno));
 			io::close(conn_sock);
 			return -1;
 		}
@@ -502,7 +502,7 @@ TCP::connect(const char* hostname, const char* servname)
 		return conn_sock;
 	}
 
-	L_ERR("ERROR: connect error to %s:%s: %s (%d): %s", hostname, servname, error::name(errno), errno, error::description(errno));
+	L_ERR("ERROR: connect error to {}:{}: {} ({}): {}", hostname, servname, error::name(errno), errno, error::description(errno));
 	freeaddrinfo(addrinfo);
 	return -1;
 
@@ -531,7 +531,7 @@ BaseTCP::~BaseTCP() noexcept
 void
 BaseTCP::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("BaseTCP::shutdown_impl(%lld, %lld)", asap, now);
+	L_CALL("BaseTCP::shutdown_impl({}, {})", asap, now);
 
 	Worker::shutdown_impl(asap, now);
 

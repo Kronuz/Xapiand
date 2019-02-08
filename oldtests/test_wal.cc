@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,13 +51,13 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 	bool same_file = true;
 	DIR* d1 = opendir(dir1.c_str());
 	if (!d1) {
-		L_ERR("ERROR: %s", strerror(errno));
+		L_ERR("ERROR: {}", strerror(errno));
 		return false;
 	}
 
 	DIR* d2 = opendir(dir2.c_str());
 	if (!d2) {
-		L_ERR("ERROR: %s", strerror(errno));
+		L_ERR("ERROR: {}", strerror(errno));
 		return false;
 	}
 
@@ -69,21 +69,21 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 
 			int fd1 = open(dir1_file.c_str(), O_RDONLY);
 			if (-1 == fd1) {
-				L_ERR("ERROR: opening file. %s\n", dir1_file);
+				L_ERR("ERROR: opening file. {}\n", dir1_file);
 				same_file = false;
 				break;
 			}
 
 			int fd2 = open(dir2_file.c_str(), O_RDONLY);
 			if (-1 == fd2) {
-				L_ERR("ERROR: opening file. %s\n", dir2_file);
+				L_ERR("ERROR: opening file. {}\n", dir2_file);
 				same_file = false;
 				close(fd1);
 				break;
 			}
 
 			if (get_checksum(fd1) != get_checksum(fd2)) {
-				L_ERR("ERROR: file %s and file %s are not the same\n", dir1_file, dir2_file);
+				L_ERR("ERROR: file {} and file {} are not the same\n", dir1_file, dir2_file);
 				same_file = false;
 				close(fd1);
 				close(fd2);
@@ -113,7 +113,7 @@ int create_db_wal() {
 	db_wal.db_handler.index(std::to_string(1), false, re.second, true, json_type);
 
 	if (copy_file(test_db.c_str(), restored_db.c_str()) == -1) {
-		L_ERR("ERROR: Could not copy the dir %s to dir %s\n", test_db, restored_db);
+		L_ERR("ERROR: Could not copy the dir {} to dir {}\n", test_db, restored_db);
 		return 1;
 	}
 
@@ -122,12 +122,12 @@ int create_db_wal() {
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.0")) == -1) {
-		L_ERR("ERROR: Could not copy the dir %s to dir %s\n", "wal.0", restored_db);
+		L_ERR("ERROR: Could not copy the dir {} to dir {}\n", "wal.0", restored_db);
 		return 1;
 	}
 
 	if (copy_file(test_db.c_str(), restored_db.c_str(), true, std::string("wal.1016")) == -1) {
-		L_ERR("ERROR: Could not copy the file %s to dir %s\n", "wal.1016", restored_db);
+		L_ERR("ERROR: Could not copy the file {} to dir {}\n", "wal.1016", restored_db);
 		return 1;
 	}
 
@@ -154,15 +154,15 @@ int restore_database() {
 			RETURN(0);
 		}
 	} catch (const ClientError& exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		delete_files(restored_db);
 		RETURN(1);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		delete_files(restored_db);
 		RETURN(1);
 	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		delete_files(restored_db);
 		RETURN(1);
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -118,9 +118,9 @@ std::size_t get_open_files_per_proc()
 					++cnt;
 					// char filePath[PATH_MAX];
 					// if unlikely(io::unchecked_fcntl(fds[idx].fd, F_GETPATH, filePath) == -1) {
-					// 	L_RED("%d -> %s (%d): %s", fds[idx].fd, error::name(errno), errno, error::description(errno));
+					// 	L_RED("{} -> {} ({}): {}", fds[idx].fd, error::name(errno), errno, error::description(errno));
 					// } else {
-					// 	L_GREEN("%d -> %s", fds[idx].fd, filePath);
+					// 	L_GREEN("{} -> {}", fds[idx].fd, filePath);
 					// }
 				}
 			}
@@ -146,7 +146,7 @@ std::size_t get_open_files_system_wide()
 	int mib[CTL_MAXNAME + 2];
 	std::size_t mib_len = sizeof(mib) / sizeof(int);
 	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
-		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 #endif
@@ -154,20 +154,20 @@ std::size_t get_open_files_system_wide()
 #ifdef _SYSCTL_NAME
 	auto max_files_per_proc_len = sizeof(max_files_per_proc);
 	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
-		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 #undef _SYSCTL_NAME
 #elif defined(__linux__)
 	int fd = io::open("/proc/sys/fs/file-nr", O_RDONLY);
 	if unlikely(fd == -1) {
-		L_ERR("ERROR: Unable to open /proc/sys/fs/file-nr: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to open /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	char line[100];
 	ssize_t n = io::read(fd, line, sizeof(line));
 	if unlikely(n == -1) {
-		L_ERR("ERROR: Unable to read from /proc/sys/fs/file-nr: %s (%d): %s", error::name(errno), errno, error::description(errno));
+		L_ERR("ERROR: Unable to read from /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
 	max_files_per_proc = atoi(line);

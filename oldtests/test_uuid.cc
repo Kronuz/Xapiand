@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ int test_generator_uuid(bool compact) {
 	auto g1 = generator(compact);
 	auto g2 = generator(compact);
 	auto g3 = generator(compact);
-	L_DEBUG("UUIDs generated: %s  %s  %s", repr(g1.to_string()), repr(g2.to_string()), repr(g3.to_string()));
+	L_DEBUG("UUIDs generated: {}  {}  {}", repr(g1.to_string()), repr(g2.to_string()), repr(g3.to_string()));
 	if (g1 == g2 || g1 == g3 || g2 == g3) {
 		L_ERR("ERROR: Not all random UUIDs are different");
 		++cont;
@@ -129,7 +129,7 @@ int test_special_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec, uuid_orig);
+			L_ERR("ERROR:\n\t  Result: {}\n\tExpected: {}", uuid_rec, uuid_orig);
 		}
 	}
 
@@ -149,7 +149,7 @@ int test_compacted_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec, uuid_orig);
+			L_ERR("ERROR:\n\t  Result: {}\n\tExpected: {}", uuid_rec, uuid_orig);
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -160,12 +160,12 @@ int test_compacted_uuids() {
 	}
 
 	if (max_length > MAX_COMPACTED_LENGTH) {
-		L_ERR("ERROR: Max length for compacted uuid is %zu", MAX_COMPACTED_LENGTH);
+		L_ERR("ERROR: Max length for compacted uuid is {}", MAX_COMPACTED_LENGTH);
 		++cont;
 	}
 
 	if (min_length < MIN_COMPACTED_LENGTH) {
-		L_ERR("ERROR: Min length for compacted uuid is %zu", MIN_COMPACTED_LENGTH);
+		L_ERR("ERROR: Min length for compacted uuid is {}", MIN_COMPACTED_LENGTH);
 		++cont;
 	}
 
@@ -185,7 +185,7 @@ int test_condensed_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec, uuid_orig);
+			L_ERR("ERROR:\n\t  Result: {}\n\tExpected: {}", uuid_rec, uuid_orig);
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -196,12 +196,12 @@ int test_condensed_uuids() {
 	}
 
 	if (max_length > MAX_CONDENSED_LENGTH) {
-		L_ERR("ERROR: Max length for condensed uuid is %zu", MAX_CONDENSED_LENGTH);
+		L_ERR("ERROR: Max length for condensed uuid is {}", MAX_CONDENSED_LENGTH);
 		++cont;
 	}
 
 	if (min_length < MIN_CONDENSED_LENGTH) {
-		L_ERR("ERROR: Min length for condensed uuid is %zu", MIN_CONDENSED_LENGTH);
+		L_ERR("ERROR: Min length for condensed uuid is {}", MIN_CONDENSED_LENGTH);
 		++cont;
 	}
 
@@ -250,7 +250,7 @@ int test_expanded_uuids() {
 		const auto uuid_rec = uuid2.to_string();
 		if (uuid_orig != uuid_rec) {
 			++cont;
-			L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", uuid_rec, uuid_orig);
+			L_ERR("ERROR:\n\t  Result: {}\n\tExpected: {}", uuid_rec, uuid_orig);
 		}
 		if (max_length < serialised.length()) {
 			max_length = serialised.length();
@@ -261,12 +261,12 @@ int test_expanded_uuids() {
 	}
 
 	if (max_length > MAX_EXPANDED_LENGTH) {
-		L_ERR("ERROR: Max length for expanded uuid is %zu", MAX_EXPANDED_LENGTH);
+		L_ERR("ERROR: Max length for expanded uuid is {}", MAX_EXPANDED_LENGTH);
 		++cont;
 	}
 
 	if (min_length < MIN_EXPANDED_LENGTH) {
-		L_ERR("ERROR: Min length for expanded uuid is %zu", MIN_EXPANDED_LENGTH);
+		L_ERR("ERROR: Min length for expanded uuid is {}", MIN_EXPANDED_LENGTH);
 		++cont;
 	}
 
@@ -372,7 +372,7 @@ int test_several_uuids() {
 					} catch (const std::invalid_argument&) { }
 				}
 			}
-			L_ERR("Invalid encoded UUID format in: %s", repr(uuid));
+			L_ERR("Invalid encoded UUID format in: {}", repr(uuid));
 		}
 
 		std::string str_uuids_serialised;
@@ -384,14 +384,14 @@ int test_several_uuids() {
 		UUID::unserialise(uuids_serialised, std::back_inserter(uuids));
 		if (uuids.size() != str_uuids.size()) {
 			++cont;
-			L_ERR("ERROR: Different sizes: %zu != %zu\n\t  Result: %s\n\tExpected: %s", uuids.size(), str_uuids.size(), repr(uuids_serialised), repr(str_uuids_serialised));
+			L_ERR("ERROR: Different sizes: {} != {}\n\t  Result: {}\n\tExpected: {}", uuids.size(), str_uuids.size(), repr(uuids_serialised), repr(str_uuids_serialised));
 		} else {
 			auto it = str_uuids.begin();
 			for (const auto& uuid : uuids) {
 				const auto str_uuid = uuid.to_string();
 				if (str_uuid != *it) {
 					++cont;
-					L_ERR("ERROR:\n\t  Result: %s\n\tExpected: %s", str_uuid, *it);
+					L_ERR("ERROR:\n\t  Result: {}\n\tExpected: {}", str_uuid, *it);
 				}
 				++it;
 			}

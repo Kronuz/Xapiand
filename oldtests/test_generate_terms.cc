@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -464,7 +464,7 @@ int numeric_test() {
 		} catch (const std::exception&) { }
 
 		if (result_query_terms != test.expected_query_terms) {
-			L_ERR("ERROR: Different numeric filter query.\n\t  Result: %s\n\tExpected: %s", result_query_terms, test.expected_query_terms);
+			L_ERR("ERROR: Different numeric filter query.\n\t  Result: {}\n\tExpected: {}", result_query_terms, test.expected_query_terms);
 			++cont;
 		}
 	}
@@ -487,7 +487,7 @@ int date_test() {
 		auto val_e = Datetime::timestamp(Datetime::DateParser(test.end));
 		auto result_query_terms = GenerateTerms::date(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		if (result_query_terms != test.expected_query_terms) {
-			L_ERR("ERROR: Different numeric filter query.\n\t  Result: %s\n\tExpected: %s", result_query_terms, test.expected_query_terms);
+			L_ERR("ERROR: Different numeric filter query.\n\t  Result: {}\n\tExpected: {}", result_query_terms, test.expected_query_terms);
 			++cont;
 		}
 	}
@@ -508,7 +508,7 @@ int geo_test() {
 	for (const auto& test : geo_tests) {
 		auto result_query_terms = GenerateTerms::geo(test.ranges, test.accuracy, test.acc_prefix).get_description();
 		if (result_query_terms != test.expected_query_terms) {
-			L_ERR("ERROR: Different numeric filter query.\n\t  Result: %s\n\tExpected: %s", result_query_terms, test.expected_query_terms);
+			L_ERR("ERROR: Different numeric filter query.\n\t  Result: {}\n\tExpected: {}", result_query_terms, test.expected_query_terms);
 			++cont;
 		}
 	}

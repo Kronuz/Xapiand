@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -703,7 +703,7 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 			mset = db_sort.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			if (mset.size() != test.expect_result.size()) {
 				++cont;
-				L_ERR("ERROR: Different number of documents. Obtained %u. Expected: %zu.", mset.size(), test.expect_result.size());
+				L_ERR("ERROR: Different number of documents. Obtained {}. Expected: {}.", mset.size(), test.expect_result.size());
 			} else {
 				auto m = mset.begin();
 				for (auto it = test.expect_result.begin(); m != mset.end(); ++it, ++m) {
@@ -711,12 +711,12 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 					auto val = Unserialise::MsgPack(id_type, document.get_value(0)).to_string();
 					if (it->compare(val) != 0) {
 						++cont;
-						L_ERR("ERROR: Result = %s:%s   Expected = %s:%s", ID_FIELD_NAME, val, ID_FIELD_NAME, *it);
+						L_ERR("ERROR: Result = {}:{}   Expected = {}:{}", ID_FIELD_NAME, val, ID_FIELD_NAME, *it);
 					}
 				}
 			}
 		} catch (const std::exception& exc) {
-			L_EXC("ERROR: %s", exc.what());
+			L_EXC("ERROR: {}", exc.what());
 			++cont;
 		}
 	}
@@ -736,10 +736,10 @@ int sort_test_string_levens() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -756,10 +756,10 @@ int sort_test_string_jaro() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -776,10 +776,10 @@ int sort_test_string_jaro_w() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -796,10 +796,10 @@ int sort_test_string_dice() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -816,10 +816,10 @@ int sort_test_string_jaccard() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -836,10 +836,10 @@ int sort_test_string_lcs() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -856,10 +856,10 @@ int sort_test_string_lcsq() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -876,10 +876,10 @@ int sort_test_string_soundex_en() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -896,10 +896,10 @@ int sort_test_string_soundex_fr() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -916,10 +916,10 @@ int sort_test_string_soundex_de() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -936,10 +936,10 @@ int sort_test_string_soundex_es() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -956,10 +956,10 @@ int sort_test_floats() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -976,10 +976,10 @@ int sort_test_integers() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -996,10 +996,10 @@ int sort_test_positives() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -1016,10 +1016,10 @@ int sort_test_date() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN (1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN (1);
 	}
 }
@@ -1036,10 +1036,10 @@ int sort_test_boolean() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -1056,10 +1056,10 @@ int sort_test_geo() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error &exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception &exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }

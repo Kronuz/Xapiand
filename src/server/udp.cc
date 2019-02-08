@@ -65,7 +65,7 @@ UDP::~UDP() noexcept
 	try {
 		if (sock != -1) {
 			if (io::close(sock) == -1) {
-				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_WARNING("WARNING: close {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
 	} catch (...) {
@@ -82,7 +82,7 @@ UDP::close(bool close) {
 			// Dangerously close socket!
 			// (make sure no threads are using the file descriptor)
 			if (io::close(sock) == -1) {
-				L_WARNING("WARNING: close {sock:%d} - %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_WARNING("WARNING: close {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			}
 			sock = -1;
 		} else {
@@ -103,7 +103,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 	const int on = 1;
 	const int off = 0;
 
-	L_CONN("Binding UDP %s:%d", hostname ? hostname : "0.0.0.0", serv);
+	L_CONN("Binding UDP {}:{}", hostname ? hostname : "0.0.0.0", serv);
 
 	for (; --tries >= 0; ++serv) {
 		char servname[6];  // strlen("65535") + 1
@@ -117,7 +117,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 
 		struct addrinfo *addrinfo;
 		if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
-			L_CRIT("ERROR: getaddrinfo %s:%s {sock:%d}: %s", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
+			L_CRIT("ERROR: getaddrinfo {}:{} {{sock:{}}}: {}", hostname ? hostname : "0.0.0.0", servname, sock, gai_strerror(err));
 			sig_exit(-EX_CONFIG);
 			return;
 		}
@@ -126,35 +126,35 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			if ((sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
 				if (ai->ai_next == nullptr) {
 					freeaddrinfo(addrinfo);
-					L_CRIT("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} socket: {} ({}): {}", description, error::name(errno), errno, error::description(errno));
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s socket: %s (%d): %s", description, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} socket: {} ({}): {}", description, error::name(errno), errno, error::description(errno));
 				continue;
 			}
 
 			if (io::fcntl(sock, F_SETFL, io::fcntl(sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} fcntl O_NONBLOCK {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s fcntl O_NONBLOCK {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} fcntl O_NONBLOCK {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				break;
 			}
 
 			if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} setsockopt SO_REUSEADDR {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s setsockopt SO_REUSEADDR {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} setsockopt SO_REUSEADDR {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
@@ -164,12 +164,12 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &on, sizeof(int)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: {} setsockopt SO_REUSEPORT_LB {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
 					}
-					L_CONN("ERROR: %s setsockopt SO_REUSEPORT_LB {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CONN("ERROR: {} setsockopt SO_REUSEPORT_LB {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					break;
 				}
@@ -177,7 +177,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &on, sizeof(int)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt SO_REUSEPORT {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: {} setsockopt SO_REUSEPORT {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
@@ -191,7 +191,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			socklen_t sndbuf_size_len = sizeof(size_t);
 			if (io::getsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sndbuf_size, &sndbuf_size_len) == -1) {
 				if (!tries) {
-					L_CRIT("ERROR: %s getsockopt SO_SNDBUF {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} getsockopt SO_SNDBUF {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
@@ -201,21 +201,21 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			for (size_t size = 4194304; size >= 262144 && size > sndbuf_size; size /= 2) {
 				if (io::setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &size, sizeof(size_t)) != -1) {
 					if (size != 4194304) {
-						L_WARNING("WARNING: %s SO_SNDBUF is set to %zu {sock:%d}", description, size, sock);
+						L_WARNING("WARNING: {} SO_SNDBUF is set to {} {{sock:{}}}", description, size, sock);
 					}
 					sndbuf_size = 0;
 					break;
 				}
 			}
 			if (sndbuf_size) {
-				L_WARNING("WARNING: %s SO_SNDBUF is set to %zu {sock:%d}", description, sndbuf_size, sock);
+				L_WARNING("WARNING: {} SO_SNDBUF is set to {} {{sock:{}}}", description, sndbuf_size, sock);
 			}
 
 			size_t rcvbuf_size = 0;
 			socklen_t rcvbuf_size_len = sizeof(size_t);
 			if (io::getsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcvbuf_size, &rcvbuf_size_len) == -1) {
 				if (!tries) {
-					L_CRIT("ERROR: %s getsockopt SO_RCVBUF {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} getsockopt SO_RCVBUF {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
@@ -225,21 +225,21 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			for (size_t size = 4194304; size >= 262144 && size > rcvbuf_size; size /= 2) {
 				if (io::setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size_t)) != -1) {
 					if (size != 4194304) {
-						L_WARNING("WARNING: %s SO_RCVBUF is set to %zu {sock:%d}", description, size, sock);
+						L_WARNING("WARNING: {} SO_RCVBUF is set to {} {{sock:{}}}", description, size, sock);
 					}
 					rcvbuf_size = 0;
 					break;
 				}
 			}
 			if (rcvbuf_size) {
-				L_WARNING("WARNING: %s SO_RCVBUF is set to %zu {sock:%d}", description, rcvbuf_size, sock);
+				L_WARNING("WARNING: {} SO_RCVBUF is set to {} {{sock:{}}}", description, rcvbuf_size, sock);
 			}
 
 			auto* onoff = ((flags & UDP_IP_MULTICAST_LOOP) != 0) ? &on : &off;
 			if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, onoff, sizeof(int)) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s setsockopt IP_MULTICAST_LOOP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} setsockopt IP_MULTICAST_LOOP {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
@@ -252,7 +252,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt IP_MULTICAST_TTL {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: {} setsockopt IP_MULTICAST_TTL {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
@@ -269,7 +269,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {
-						L_CRIT("ERROR: %s setsockopt IP_ADD_MEMBERSHIP {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+						L_CRIT("ERROR: {} setsockopt IP_ADD_MEMBERSHIP {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 						close();
 						sig_exit(-EX_CONFIG);
 						return;
@@ -293,24 +293,24 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 			if (io::bind(sock, ai->ai_addr, ai->ai_addrlen) == -1) {
 				freeaddrinfo(addrinfo);
 				if (!tries) {
-					L_CRIT("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+					L_CRIT("ERROR: {} bind error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 					close();
 					sig_exit(-EX_CONFIG);
 					return;
 				}
-				L_CONN("ERROR: %s bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+				L_CONN("ERROR: {} bind error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 				close();
 				break;
 			}
 
-			// L_RED("UDP addr -> %s:%d", inet_ntop(addr), ntohs(addr.sin_port));
+			// L_RED("UDP addr -> {}:{}", inet_ntop(addr), ntohs(addr.sin_port));
 
 			freeaddrinfo(addrinfo);
 			return;
 		}
 	}
 
-	L_CRIT("ERROR: %s unknown bind error {sock:%d}: %s (%d): %s", description, sock, error::name(errno), errno, error::description(errno));
+	L_CRIT("ERROR: {} unknown bind error {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
 	close();
 	sig_exit(-EX_CONFIG);
 }
@@ -320,7 +320,7 @@ ssize_t
 UDP::send_message(const std::string& message)
 {
 	if (!closed) {
-		L_UDP_WIRE("{sock:%d} <<-- %s", sock, repr(message));
+		L_UDP_WIRE("{{sock:{}}} <<-- {}", sock, repr(message));
 
 #ifdef MSG_NOSIGNAL
 		ssize_t written = io::sendto(sock, message.c_str(), message.size(), MSG_NOSIGNAL, (struct sockaddr *)&addr, sizeof(addr));
@@ -330,7 +330,7 @@ UDP::send_message(const std::string& message)
 
 		if (written < 0) {
 			if (!io::ignored_errno(errno, true, false, false)) {
-				L_ERR_ONCE_PER_MINUTE("ERROR: sendto error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+				L_ERR_ONCE_PER_MINUTE("ERROR: sendto error {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			}
 		}
 		return written;
@@ -362,21 +362,21 @@ UDP::get_message(std::string& result, char max_type)
 	ssize_t received = io::recv(sock, buf, sizeof(buf), 0);
 	if (received < 0) {
 		if (!io::ignored_errno(errno, true, false, false)) {
-			L_ERR("ERROR: read error {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+			L_ERR("ERROR: read error {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 			THROW(NetworkError, error::description(errno));
 		}
-		// L_CONN("Received ERROR {sock:%d}: %s (%d): %s", sock, error::name(errno), errno, error::description(errno));
+		// L_CONN("Received ERROR {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 		return '\xff';
 	} else if (received == 0) {
 		// If no messages are available to be received and the peer has performed an orderly shutdown.
-		L_CONN("Received EOF {sock:%d}!", sock);
+		L_CONN("Received EOF {{sock:{}}}!", sock);
 		return '\xff';
 	} else if (received < 4) {
 		L_CONN("Badly formed message: Incomplete!");
 		return '\xff';
 	}
 
-	L_UDP_WIRE("{sock:%d} -->> %s", sock, repr(buf, received));
+	L_UDP_WIRE("{{sock:{}}} -->> {}", sock, repr(buf, received));
 
 	const char *p = buf;
 	const char *p_end = p + received;
@@ -390,7 +390,7 @@ UDP::get_message(std::string& result, char max_type)
 
 	char type = *p++;
 	if (type >= max_type) {
-		L_CONN("Badly formed message: Invalid message type %u", unsigned(type));
+		L_CONN("Badly formed message: Invalid message type {}", unsigned(type));
 		return '\xff';
 	}
 

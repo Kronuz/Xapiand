@@ -72,7 +72,7 @@ HttpServer::start_impl()
 	Worker::start_impl();
 
 	io.start(sock == -1 ? http.sock : sock, ev::READ);
-	L_EV("Start http's server accept event {sock:%d}", sock == -1 ? http.sock : sock);
+	L_EV("Start http's server accept event {{sock:{}}}", sock == -1 ? http.sock : sock);
 }
 
 
@@ -91,7 +91,7 @@ HttpServer::accept()
 void
 HttpServer::io_accept_cb(ev::io& watcher, int revents)
 {
-	L_CALL("HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock: %d}", revents, readable_revents(revents), watcher.fd);
+	L_CALL("HttpServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock: {}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 	L_EV_END("HttpServer::io_accept_cb:END");
@@ -99,10 +99,10 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
-	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, 0x%x (%s)) {sock:%d}", revents, readable_revents(revents), watcher.fd);
+	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid http event {sock:%d}: %s (%d): %s", watcher.fd, error::name(errno), errno, error::description(errno));
+		L_EV("ERROR: got invalid http event {{sock:{}}}: {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
 		return;
 	}
 

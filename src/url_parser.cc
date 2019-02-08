@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -247,7 +247,7 @@ PathParser::init(std::string_view p)
 	cn = '\xff';
 	while (cn != 0) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-		L_URL_PARSER(GREEN + "1 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
+		L_URL_PARSER(GREEN + "1 ->> {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
 				case State::SLC: return "ncm";
 				case State::PMT: return "pmt";
@@ -285,7 +285,7 @@ PathParser::init(std::string_view p)
 	cn = '\xff';
 	while (cn != 0) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-		L_URL_PARSER(BLUE + "2 <<- %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
+		L_URL_PARSER(BLUE + "2 <<- {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
 				case State::SLC: return "ncm";
 				case State::PMT: return "pmt";
@@ -490,7 +490,7 @@ PathParser::next()
 	cn = '\xff';
 	while (true) {
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
-		L_URL_PARSER(CYAN + "3 ->> %3s 0x%02x '%c' [n1:%td - n0:%td = length:%td] total:%td", [state]{
+		L_URL_PARSER(CYAN + "3 ->> {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
 				case State::SLC: return "ncm";
 				case State::PMT: return "pmt";

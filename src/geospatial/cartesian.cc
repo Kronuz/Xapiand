@@ -26,6 +26,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "string.hh"
+
 
 /*
  * More ellipsoids available in:
@@ -553,9 +555,7 @@ Cartesian::norm() const
 std::string
 Cartesian::to_string() const
 {
-	char result[128];
-	snprintf(result, 128, "%s (%.6f %.6f %.6f)", DEFAULT_CRS, x * scale, y * scale, z * scale);
-	return std::string(result);
+	return string::format("{} ({:.6} {:.6} {:.6})", DEFAULT_CRS, x * scale, y * scale, z * scale)
 }
 
 

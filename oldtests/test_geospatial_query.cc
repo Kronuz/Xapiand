@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -122,7 +122,7 @@ static int make_search(const std::vector<test_geo_t> _tests) {
 			auto mset = db_geo.db_handler.get_mset(query, nullptr, nullptr, suggestions);
 			if (mset.size() != test.expect_datas.size()) {
 				++cont;
-				L_ERR("ERROR: Different number of documents. Obtained %d. Expected: %zu.", mset.size(), test.expect_datas.size());
+				L_ERR("ERROR: Different number of documents. Obtained {}. Expected: {}.", mset.size(), test.expect_datas.size());
 			} else {
 				auto it = test.expect_datas.begin();
 				for (auto m = mset.begin(); m != mset.end(); ++it, ++m) {
@@ -130,13 +130,13 @@ static int make_search(const std::vector<test_geo_t> _tests) {
 					auto region = document.get_obj().at("region").str();
 					if (region != *it) {
 						++cont;
-						L_ERR("Different regions.\n\t  Result: %s\n\tExpected: %s", region, *it);
+						L_ERR("Different regions.\n\t  Result: {}\n\tExpected: {}", region, *it);
 					}
 				}
 			}
 		} catch (const std::exception& exc) {
 			++cont;
-			L_EXC("ERROR: %s\n", exc.what());
+			L_EXC("ERROR: {}\n", exc.what());
 		}
 	}
 
@@ -155,10 +155,10 @@ int geo_range_test() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
@@ -175,10 +175,10 @@ int geo_terms_test() {
 		}
 		RETURN(cont);
 	} catch (const Xapian::Error& exc) {
-		L_EXC("ERROR: %s", exc.get_description());
+		L_EXC("ERROR: {}", exc.get_description());
 		RETURN(1);
 	} catch (const std::exception& exc) {
-		L_EXC("ERROR: %s", exc.what());
+		L_EXC("ERROR: {}", exc.what());
 		RETURN(1);
 	}
 }
