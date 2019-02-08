@@ -185,17 +185,17 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 		case MsgPack::Type::MAP: {
 			const auto it_e = obj.end();
 			for (auto it = obj.begin(); it != it_e; ++it) {
-				const auto field_name = it->str_view();
-				if (field_name.empty()) {
+				const auto name = it->str_view();
+				if (name.empty()) {
 					THROW(QueryDslError, "Invalid field name: must not be empty");
 				}
 				auto const& o = it.value();
 
-				L_QUERY(STEEL_BLUE + "%s = %s" + CLEAR_COLOR, repr(field_name), o.to_string());
+				L_QUERY(STEEL_BLUE + "%s = %s" + CLEAR_COLOR, repr(name), o.to_string());
 
 				Xapian::Query query;
 
-				if (field_name[0] == reserved__) {
+				if (name[0] == reserved__) {
 					constexpr static auto _ = phf::make_phf({
 						// Compound query clauses
 						hh(RESERVED_QUERYDSL_AND),
@@ -240,7 +240,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_GEO_COLLECTION),
 						hh(RESERVED_GEO_INTERSECTION),
 					});
-					switch (_.fhh(field_name)) {
+					switch (_.fhh(name)) {
 						// Compound query clauses
 						case _.fhh(RESERVED_QUERYDSL_AND):
 							query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags);
@@ -318,16 +318,18 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						case _.fhh(RESERVED_MULTICHULL):
 						case _.fhh(RESERVED_GEO_COLLECTION):
 						case _.fhh(RESERVED_GEO_INTERSECTION):
-							query = get_value_query(path, {{ field_name, o }}, default_op, wqf, flags);
+							query = get_value_query(path, {{ name, o }}, default_op, wqf, flags);
 							break;
+						default:
+							THROW(QueryDslError, "Invalid operator: %s", name);
 					}
 				} else {
 					if (path.empty()) {
-						query = process(op, field_name, o, default_op, wqf, flags);
+						query = process(op, name, o, default_op, wqf, flags);
 					} else {
 						std::string n_parent;
-						n_parent.reserve(path.length() + 1 + field_name.length());
-						n_parent.append(path).append(1, DB_OFFSPRING_UNION).append(field_name);
+						n_parent.reserve(path.length() + 1 + name.length());
+						n_parent.append(path).append(1, DB_OFFSPRING_UNION).append(name);
 						query = process(op, n_parent, o, default_op, wqf, flags);
 					}
 				}
