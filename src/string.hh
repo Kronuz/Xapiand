@@ -33,8 +33,8 @@
 
 #include "cassert.h"          // for ASSERT
 #include "chars.hh"           // for chars::tolower
-#include "fmt/format.h"       // for fmt::format_args, fmt::vformat, fmt::make_format_args
-#include "fmt/printf.h"       // for fmt::printf_args, fmt::vsprintf, fmt::make_printf_args
+#include "fmt/format.h"       // for fmt::format
+#include "fmt/ostream.h"      // for operator<<
 #include "log.h"              // for L_DEBUG_TRY
 #include "repr.hh"            // for repr
 #include "split.h"            // for Split
@@ -145,17 +145,7 @@ template <typename... Args>
 inline std::string format(std::string_view format, Args&&... args) {
 	std::string str;
 	L_DEBUG_TRY {
-		str = fmt::vformat(format, fmt::make_format_args(std::forward<Args>(args)...));
-	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
-	return str;
-}
-
-
-template <typename... Args>
-inline std::string sprintf(std::string_view format, Args&&... args) {
-	std::string str;
-	L_DEBUG_TRY {
-		str = fmt::vsprintf(format, fmt::make_printf_args(std::forward<Args>(args)...));
+		str = fmt::format(format, std::forward<Args>(args)...);
 	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
 	return str;
 }

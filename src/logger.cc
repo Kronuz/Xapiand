@@ -142,14 +142,14 @@ validated_priority(int priority)
 
 
 void
-vprintln(bool collect, bool with_endl, std::string_view format, fmt::printf_args args)
+vprintln(bool collect, bool with_endl, std::string_view format, fmt::format_args args)
 {
 	Logging::do_println(collect, with_endl, format, args);
 }
 
 
 Log
-vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, args);
 }
@@ -187,7 +187,7 @@ Log::operator=(Log&& o)
 
 
 void
-Log::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
+Log::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
 {
 	if (log) {
 		log->vunlog(_priority, _function, _filename, _line, format, args);
@@ -716,7 +716,7 @@ Logging::operator()()
 
 
 void
-Logging::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args)
+Logging::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
 {
 	unlog_priority = _priority;
 	unlog_function = _function;
@@ -729,7 +729,7 @@ Logging::vunlog(int _priority, const char* _function, const char* _filename, int
 
 
 void
-Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args)
+Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::format_args args)
 {
 	std::string str;
 	L_DEBUG_TRY {
@@ -745,7 +745,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args)
+Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	if (priority <= log_level) {
 		std::string str;

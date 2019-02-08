@@ -185,14 +185,14 @@ public:
 	static void growl(std::string_view text);
 	static void reset();
 
-	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::printf_args args);
-	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::printf_args args);
+	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::format_args args);
+	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 	template <typename... Args>
 	void unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
-		vunlog(_priority, _function, _filename, _line, format, fmt::make_printf_args(std::forward<Args>(args)...));
+		vunlog(_priority, _function, _filename, _line, format, fmt::make_format_args(std::forward<Args>(args)...));
 	}
-	void vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::printf_args args);
+	void vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
 
 	void clean();
 

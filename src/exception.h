@@ -28,7 +28,8 @@
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
 
-#include "fmt/format.h"       // fmt::format_args, fmt::vformat, fmt::make_format_args
+#include "fmt/format.h"       // for fmt::format_args, fmt::vformat, fmt::make_format_args
+#include "fmt/ostream.h"      // for operator<<
 #include "xapian.h"           // for DocNotFoundError, InternalError, InvalidArgum...
 
 

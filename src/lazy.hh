@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,10 +32,12 @@ auto eval(F&& invocable) {
 	return invocable();
 }
 
+
 template <typename Val, std::enable_if_t<not std::is_invocable<Val&>::value, int> = 0>
 auto eval(Val&& val) {
 	return std::forward<Val>(val);
 }
+
 
 template <class L>
 class lazy_eval {
@@ -54,11 +56,14 @@ public:
 	using expression_type = decltype(std::declval<L>()());
 
 	explicit operator expression_type() const { return lambda(); }
+
 	expression_type operator()() const { return lambda(); }
-	friend std::ostream& operator<<(std::ostream& os, const lazy_eval<L> & obj) {
+
+	friend std::ostream& operator<<(std::ostream& os, const lazy_eval<L>& obj) {
 		return os << obj();
 	}
 };
+
 
 template <typename L>
 lazy_eval<L>

@@ -555,7 +555,7 @@ Cartesian::norm() const
 std::string
 Cartesian::to_string() const
 {
-	return string::format("{} ({:.6} {:.6} {:.6})", DEFAULT_CRS, x * scale, y * scale, z * scale)
+	return string::format("{} ({:.6} {:.6} {:.6})", DEFAULT_CRS, x * scale, y * scale, z * scale);
 }
 
 
