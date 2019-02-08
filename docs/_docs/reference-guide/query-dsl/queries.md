@@ -337,7 +337,7 @@ For example:
 **_Note_**<br>
 When searching for phrases, _stop words_ do not apply.
 
-{: .note .warning}
+{: .note .notice}
 **_Caution_**<br>
 Hyphenated words are also treated as phrases, as are cases such as filenames
 and email addresses (e.g. `/etc/passwd` or `president@whitehouse.gov`)
@@ -408,7 +408,7 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-{: .note .warning}
+{: .note .notice}
 **_Caution_**<br>
 One thing to note is that the behaviour of the +/- operators vary depending on
 the default operator used and the above examples assume that the default (`OR`)

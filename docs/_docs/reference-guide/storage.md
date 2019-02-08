@@ -35,7 +35,7 @@ Accept: image/png
 Or by visiting the link to it with your web browser:
 [http://localhost:8880/twitter/images/Kronuz](http://localhost:8880/twitter/images/Kronuz){:target="_blank"}
 
-{: .note}
+{: .note .tip}
 **_Toggle console previews_**<br>
 You can enable previews for images in the terminal using the "_very-very-very-very_"
 verbose command line option (`-vvvvv`). Note you a compatible terminal for this
