@@ -8,7 +8,7 @@
 #ifndef FMT_CORE_H_
 #define FMT_CORE_H_
 
-#include <cassert>
+#include "cassert.h"
 #include <cstdio>  // std::FILE
 #include <cstring>
 #include <iterator>
@@ -189,7 +189,7 @@
 #endif
 
 #ifndef FMT_ASSERT
-#  define FMT_ASSERT(condition, message) assert((condition) && message)
+#  define FMT_ASSERT(condition, message) ASSERT((condition) && message)
 #endif
 
 // libc++ supports string_view in pre-c++17.

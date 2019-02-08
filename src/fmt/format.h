@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 #include <algorithm>
-#include <cassert>
+#include "cassert.h"
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -126,7 +126,7 @@ FMT_END_NAMESPACE
 #    define FMT_THROW(x)              \
       do {                            \
         static_cast<void>(sizeof(x)); \
-        assert(false);                \
+        ASSERT(false);                \
       } while (false);
 #  endif
 #endif
@@ -200,7 +200,7 @@ inline uint32_t clz(uint32_t x) {
   unsigned long r = 0;
   _BitScanReverse(&r, x);
 
-  assert(x != 0);
+  ASSERT(x != 0);
   // Static analysis complains about using uninitialized data
   // "r", but the only way that can happen is if "x" is 0,
   // which the callers guarantee to not happen.
@@ -225,7 +225,7 @@ inline uint32_t clzll(uint64_t x) {
   _BitScanReverse(&r, static_cast<uint32_t>(x));
 #  endif
 
-  assert(x != 0);
+  ASSERT(x != 0);
   // Static analysis complains about using uninitialized data
   // "r", but the only way that can happen is if "x" is 0,
   // which the callers guarantee to not happen.
@@ -533,7 +533,7 @@ class basic_memory_buffer : private Allocator,
     \endrst
    */
   basic_memory_buffer& operator=(basic_memory_buffer&& other) {
-    assert(this != &other);
+    ASSERT(this != &other);
     deallocate();
     move(other);
     return *this;
@@ -1545,7 +1545,7 @@ template <typename Char, typename ErrorHandler>
 FMT_CONSTEXPR unsigned parse_nonnegative_int(const Char*& begin,
                                              const Char* end,
                                              ErrorHandler&& eh) {
-  assert(begin != end && '0' <= *begin && *begin <= '9');
+  ASSERT(begin != end && '0' <= *begin && *begin <= '9');
   if (*begin == '0') {
     ++begin;
     return 0;
@@ -1910,7 +1910,7 @@ class dynamic_specs_handler
 template <typename Char, typename IDHandler>
 FMT_CONSTEXPR const Char* parse_arg_id(const Char* begin, const Char* end,
                                        IDHandler&& handler) {
-  assert(begin != end);
+  ASSERT(begin != end);
   Char c = *begin;
   if (c == '}' || c == ':') return handler(), begin;
   if (c >= '0' && c <= '9') {
