@@ -9,9 +9,8 @@ in a document:
 
 ### String datatypes
 
-* `string`
-* `keyword`
-* `text`
+* [keyword](../types/keyword-type)
+* [text](../types/text-type)
 
 ### Numeric datatypes
 

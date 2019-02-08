@@ -16,6 +16,11 @@
     - url: reference-guide/schemas
       docs:
         - url: reference-guide/schemas/field-types
+          docs:
+            - url: reference-guide/schemas/types/text-type
+              title: Text datatype
+            - url: reference-guide/schemas/types/keyword-type
+              title: Keyword datatype
         - url: reference-guide/schemas/dynamic-typing
     - url: reference-guide/search
     - url: reference-guide/query-dsl
