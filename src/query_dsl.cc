@@ -183,6 +183,12 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 	switch (obj.getType()) {
 		case MsgPack::Type::MAP: {
+			if (is_leaf) {
+				auto query = get_value_query(path, obj, default_op, wqf, flags);
+				final_query = final_query.empty() ? query : Xapian::Query(op, final_query, query);
+				break;
+			}
+
 			const auto it_e = obj.end();
 			for (auto it = obj.begin(); it != it_e; ++it) {
 				const auto name = it->str_view();
@@ -282,29 +288,29 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						switch (_.fhh(name)) {
 							// Compound query clauses
 							case _.fhh(RESERVED_QUERYDSL_AND):
-								query = process(Xapian::Query::OP_AND, path, o, Xapian::Query::OP_AND, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_AND, path, o, Xapian::Query::OP_AND, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_OR):
-								query = process(Xapian::Query::OP_OR, path, o, Xapian::Query::OP_OR, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_OR, path, o, Xapian::Query::OP_OR, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_NEAR):
-								query = process(Xapian::Query::OP_NEAR, path, o, Xapian::Query::OP_NEAR, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_NEAR, path, o, Xapian::Query::OP_NEAR, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_PHRASE):
-								query = process(Xapian::Query::OP_PHRASE, path, o, Xapian::Query::OP_PHRASE, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_PHRASE, path, o, Xapian::Query::OP_PHRASE, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
-								query = process(Xapian::Query::OP_ELITE_SET, path, o, Xapian::Query::OP_ELITE_SET, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_ELITE_SET, path, o, Xapian::Query::OP_ELITE_SET, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_SYNONYM):
-								query = process(Xapian::Query::OP_SYNONYM, path, o, Xapian::Query::OP_SYNONYM, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_SYNONYM, path, o, Xapian::Query::OP_SYNONYM, wqf, flags, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_MAX):
-								query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags, true);
 								break;
 							// Leaf query clauses.
 							case _.fhh(RESERVED_QUERYDSL_PARTIAL):
-								query = process(op, path, o, default_op, wqf, flags | Xapian::QueryParser::FLAG_PARTIAL, is_leaf);
+								query = process(op, path, o, default_op, wqf, flags | Xapian::QueryParser::FLAG_PARTIAL, true);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_IN):
 								query = get_in_query(path, o, default_op, wqf, flags);
@@ -360,6 +366,10 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 		}
 
 		case MsgPack::Type::ARRAY: {
+			if (is_leaf) {
+				THROW(QueryDslError, "Unexpected array");
+			}
+
 			auto processed = itertools::transform<MsgPack>([&](const MsgPack& o){
 				return process(op, path, o, default_op, wqf, flags, is_leaf);
 			}, obj.begin(), obj.end());
