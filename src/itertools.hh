@@ -32,14 +32,14 @@ namespace itertools {
 //   | || | | (_| | | | \__ \  _| (_) | |  | | | | | |
 //   |_||_|  \__,_|_| |_|___/_|  \___/|_|  |_| |_| |_|
 //
-template <typename T, typename F, typename I>
+template <typename F, typename I>
 class Transform {
 	F _fn;
 	I _begin;
 	I _end;
 
 public:
-	class iterator : public std::iterator<std::forward_iterator_tag, T> {
+	class iterator : public std::iterator<std::forward_iterator_tag, typename I::value_type, typename I::difference_type, typename I::pointer, typename I::reference> {
 		F& _fn;
 		I _it;
 
@@ -69,10 +69,10 @@ public:
 	}
 };
 
-template <typename T, typename F, typename I>
-Transform<T, F, I>
+template <typename F, typename I>
+auto
 transform(F fn, I begin, I end) {
-	return {fn, begin, end};
+	return Transform<F, I>{fn, begin, end};
 }
 
 
@@ -82,15 +82,15 @@ transform(F fn, I begin, I end) {
 // | |___| | | | (_| | | | | |
 //  \____|_| |_|\__,_|_|_| |_|
 //
-template <typename T, typename I1, typename I2>
-class Chain : public std::iterator<std::forward_iterator_tag, T> {
+template <typename I1, typename I2>
+class Chain {
 	I1 _begin1;
 	I1 _end1;
 	I2 _begin2;
 	I2 _end2;
 
 public:
-	class iterator : public std::iterator<std::forward_iterator_tag, T> {
+	class iterator : public std::iterator<std::forward_iterator_tag, typename I2::value_type, typename I2::difference_type, typename I2::pointer, typename I2::reference> {
 		I1 _it1;
 		I1 _end1;
 		I2 _it2;
@@ -133,10 +133,10 @@ public:
 	}
 };
 
-template <typename T, typename I1, typename I2>
-Chain<T, I1, I2>
+template <typename I1, typename I2>
+auto
 chain(I1 begin1, I1 end1, I2 begin2, I2 end2) {
-	return {begin1, end1, begin2, end2};
+	return Chain<I1, I2>{begin1, end1, begin2, end2};
 }
 
 }

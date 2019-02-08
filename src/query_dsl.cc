@@ -370,14 +370,14 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 				THROW(QueryDslError, "Unexpected array");
 			}
 
-			auto processed = itertools::transform<MsgPack>([&](const MsgPack& o){
+			auto processed = itertools::transform([&](const MsgPack& o){
 				return process(op, path, o, default_op, wqf, flags, is_leaf);
 			}, obj.begin(), obj.end());
 
 			if (final_query.empty()) {
 				final_query = Xapian::Query(op, processed.begin(), processed.end());
 			} else {
-				auto chained = itertools::chain<MsgPack>(
+				auto chained = itertools::chain(
 					&final_query, &final_query + 1,
 					processed.begin(), processed.end());
 				final_query = Xapian::Query(op, chained.begin(), chained.end());
