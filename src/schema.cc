@@ -50,7 +50,7 @@
 #include "script.h"                        // for Script
 #include "serialise_list.h"                // for StringList
 #include "split.h"                         // for Split
-#include "string.hh"                       // for string::tolower
+#include "string.hh"                       // for string::format, string::tolower
 #include "static_string.hh"                // for static_string
 
 
@@ -8172,10 +8172,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(string::Number(acc).str()).push_back(' ');
+						str_accuracy.append(string::format("{}", acc)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(string::Number(acc).str()).push_back(' ');
+						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change %s [%s ->  %s] in %s", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}
@@ -8254,10 +8254,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(string::Number(acc).str()).push_back(' ');
+						str_accuracy.append(string::format("{}", acc)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(string::Number(acc).str()).push_back(' ');
+						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change %s [%s  ->  %s] in %s", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}

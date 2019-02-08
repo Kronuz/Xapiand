@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -63,7 +63,7 @@ RemoteProtocol::start()
 std::string
 RemoteProtocol::__repr__() const
 {
-	return string::format("<RemoteProtocol {cnt:%ld}%s%s%s>",
+	return string::format("<RemoteProtocol {{cnt:{}}}{}{}{}>",
 		use_count(),
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
@@ -74,7 +74,7 @@ RemoteProtocol::__repr__() const
 std::string
 RemoteProtocol::getDescription() const
 {
-	return string::format("TCP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
+	return string::format("TCP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
 }
 
 #endif  /* XAPIAND_CLUSTERING */

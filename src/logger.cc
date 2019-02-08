@@ -459,9 +459,9 @@ Logging::tab_rgb(int red, int green, int blue)
 {
 	if (is_tty() && opts.iterm2) {
 		std::string buf;
-		buf += string::format("\033]6;1;bg;red;brightness;%d\a", red);
-		buf += string::format("\033]6;1;bg;green;brightness;%d\a", green);
-		buf += string::format("\033]6;1;bg;blue;brightness;%d\a", blue);
+		buf += string::format("\033]6;1;bg;red;brightness;{}\a", red);
+		buf += string::format("\033]6;1;bg;green;brightness;{}\a", green);
+		buf += string::format("\033]6;1;bg;blue;brightness;{}\a", blue);
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -470,7 +470,7 @@ void
 Logging::tab_title(std::string_view title)
 {
 	if (is_tty() && opts.iterm2) {
-		auto buf = string::format("\033]0;%s\a", title);
+		auto buf = string::format("\033]0;{}\a", title);
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -480,7 +480,7 @@ void
 Logging::badge(std::string_view badge)
 {
 	if (is_tty() && opts.iterm2) {
-		auto buf = string::format("\033]1337;SetBadgeFormat=%s\a", Base64::rfc4648().encode(badge));
+		auto buf = string::format("\033]1337;SetBadgeFormat={}\a", Base64::rfc4648().encode(badge));
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -490,7 +490,7 @@ void
 Logging::growl(std::string_view text)
 {
 	if (is_tty() && opts.iterm2) {
-		auto buf = string::format("\033]9;%s\a", text);
+		auto buf = string::format("\033]9;{}\a", text);
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -529,75 +529,75 @@ Logging::operator()()
 		if (opts.log_epoch) {
 			auto epoch = static_cast<int>(timestamp);
 			msg.append(std::string_view(rgb(94, 94, 94)));
-			msg.append(string::format("%010d", epoch));
+			msg.append(string::sprintf("%010d", epoch));
 			if (opts.log_plainseconds) {
 					// Use plain seconds only
 			} else if (opts.log_milliseconds) {
 				msg.append(std::string_view(rgb(60, 60, 60)));
-				msg.append(string::format("%.3f", timestamp - epoch).erase(0, 1));
+				msg.append(string::sprintf("%.3f", timestamp - epoch).erase(0, 1));
 			} else if (opts.log_microseconds) {
 				msg.append(std::string_view(rgb(60, 60, 60)));
-				msg.append(string::format("%.6f", timestamp - epoch).erase(0, 1));
+				msg.append(string::sprintf("%.6f", timestamp - epoch).erase(0, 1));
 			}
 			msg.push_back(' ');
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
 			if (opts.log_iso8601) {
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%04d", tm.year));
+				msg.append(string::sprintf("%04d", tm.year));
 				msg.append(std::string_view(rgb(60, 60, 60)));
 				msg.push_back('-');
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.mon));
+				msg.append(string::sprintf("%02d", tm.mon));
 				msg.append(std::string_view(rgb(60, 60, 60)));
 				msg.push_back('-');
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.day));
+				msg.append(string::sprintf("%02d", tm.day));
 				msg.append(std::string_view(rgb(60, 60, 60)));
 				msg.push_back(' ');
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.hour));
+				msg.append(string::sprintf("%02d", tm.hour));
 				msg.append(std::string_view(rgb(60, 60, 60)));
 				msg.push_back(':');
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.min));
+				msg.append(string::sprintf("%02d", tm.min));
 				msg.append(std::string_view(rgb(60, 60, 60)));
 				msg.push_back(':');
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.sec));
+				msg.append(string::sprintf("%02d", tm.sec));
 				if (opts.log_plainseconds) {
 					// Use plain seconds only
 				} else if (opts.log_milliseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.append(string::format("%.3f", tm.fsec).erase(0, 1));
+					msg.append(string::sprintf("%.3f", tm.fsec).erase(0, 1));
 				} else if (opts.log_microseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.append(string::format("%.6f", tm.fsec).erase(0, 1));
+					msg.append(string::sprintf("%.6f", tm.fsec).erase(0, 1));
 				}
 				msg.push_back(' ');
 			} else if (opts.log_timeless) {
 				// No timestamp
 			} else {
 				msg.append(std::string_view(rgb(60, 60, 60)));
-				msg.append(string::format("%04d", tm.year));
+				msg.append(string::sprintf("%04d", tm.year));
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.mon));
+				msg.append(string::sprintf("%02d", tm.mon));
 				msg.append(std::string_view(rgb(162, 162, 162)));
-				msg.append(string::format("%02d", tm.day));
+				msg.append(string::sprintf("%02d", tm.day));
 				msg.append(std::string_view(rgb(230, 230, 230)));
-				msg.append(string::format("%02d", tm.hour));
+				msg.append(string::sprintf("%02d", tm.hour));
 				msg.append(std::string_view(rgb(162, 162, 162)));
-				msg.append(string::format("%02d", tm.min));
+				msg.append(string::sprintf("%02d", tm.min));
 				msg.append(std::string_view(rgb(94, 94, 94)));
-				msg.append(string::format("%02d", tm.sec));
+				msg.append(string::sprintf("%02d", tm.sec));
 				if (opts.log_plainseconds) {
 					// Use plain seconds only
 				} else if (opts.log_milliseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.append(string::format("%.3f", tm.fsec).erase(0, 1));
+					msg.append(string::sprintf("%.3f", tm.fsec).erase(0, 1));
 				} else if (opts.log_microseconds) {
 					msg.append(std::string_view(rgb(60, 60, 60)));
-					msg.append(string::format("%.6f", tm.fsec).erase(0, 1));
+					msg.append(string::sprintf("%.6f", tm.fsec).erase(0, 1));
 				}
 				msg.push_back(' ');
 			}
@@ -613,8 +613,8 @@ Logging::operator()()
 		if (opts.log_location) {
 			msg.append(filename);
 			msg.push_back(':');
-			msg.append(string::Number(line));
-			msg.append(" Xat ");
+			msg.append(string::format("{}", line));
+			msg.append(" at ");
 			msg.append(function);
 			msg.append(": ");
 		}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -956,13 +956,13 @@ ReplicationProtocolClient::__repr__() const
 		switch (st) {
 			case ReplicaState::INIT_REPLICATION_CLIENT:
 			case ReplicaState::REPLICATION_CLIENT:
-				return string::format("%s) (%s<->%s",
+				return string::format("{}) ({}<->{}",
 					StateNames(st),
 					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(received)),
 					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(sent)));
 			case ReplicaState::INIT_REPLICATION_SERVER:
 			case ReplicaState::REPLICATION_SERVER:
-				return string::format("%s) (%s<->%s",
+				return string::format("{}) ({}<->{}",
 					StateNames(st),
 					ReplicationMessageTypeNames(static_cast<ReplicationMessageType>(received)),
 					ReplicationReplyTypeNames(static_cast<ReplicationReplyType>(sent)));
@@ -973,7 +973,7 @@ ReplicationProtocolClient::__repr__() const
 #else
 	auto& state_repr = StateNames(state.load(std::memory_order_relaxed));
 #endif
-	return string::format("<ReplicationProtocolClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
+	return string::format("<ReplicationProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,
 		use_count(),
 		sock,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -79,7 +79,7 @@ ReplicationProtocol::trigger_replication(const TriggerReplicationArgs& args)
 std::string
 ReplicationProtocol::__repr__() const
 {
-	return string::format("<ReplicationProtocol {cnt:%ld}%s%s%s>",
+	return string::format("<ReplicationProtocol {{cnt:{}}}{}{}{}>",
 		use_count(),
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",
@@ -90,7 +90,7 @@ ReplicationProtocol::__repr__() const
 std::string
 ReplicationProtocol::getDescription() const
 {
-	return string::format("TCP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_REPLICATION_PROTOCOL_MAJOR_VERSION, XAPIAND_REPLICATION_PROTOCOL_MINOR_VERSION);
+	return string::format("TCP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_REPLICATION_PROTOCOL_MAJOR_VERSION, XAPIAND_REPLICATION_PROTOCOL_MINOR_VERSION);
 }
 
 #endif  /* XAPIAND_CLUSTERING */

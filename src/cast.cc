@@ -23,6 +23,7 @@
 #include "cast.h"
 
 #include "schema.h"
+#include "string.hh"                              // for string::format
 
 
 MsgPack
@@ -226,11 +227,11 @@ Cast::string(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return string::Number(obj.u64()).str();
+			return string::format("{}", obj.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return string::Number(obj.i64()).str();
+			return string::format("{}", obj.i64());
 		case MsgPack::Type::FLOAT:
-			return string::Number(obj.f64()).str();
+			return string::format("{}", obj.f64());
 		case MsgPack::Type::STR:
 			return obj.str();
 		case MsgPack::Type::BOOLEAN:

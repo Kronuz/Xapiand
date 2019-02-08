@@ -1518,7 +1518,7 @@ RemoteProtocolClient::__repr__() const
 		switch (st) {
 			case State::INIT_REMOTE:
 			case State::REMOTE_SERVER:
-				return string::format("%s) (%s<->%s",
+				return string::format("{}) ({}<->{}",
 					StateNames(st),
 					RemoteMessageTypeNames(static_cast<RemoteMessageType>(received)),
 					RemoteReplyTypeNames(static_cast<RemoteReplyType>(sent)));
@@ -1529,7 +1529,7 @@ RemoteProtocolClient::__repr__() const
 #else
 	auto& state_repr = StateNames(state.load(std::memory_order_relaxed));
 #endif
-	return string::format("<RemoteProtocolClient (%s) {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
+	return string::format("<RemoteProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,
 		use_count(),
 		sock,

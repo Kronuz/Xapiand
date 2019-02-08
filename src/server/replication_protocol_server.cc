@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -217,7 +217,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 std::string
 ReplicationProtocolServer::__repr__() const
 {
-	return string::format("<ReplicationProtocolServer {cnt:%ld, sock:%d}%s%s%s>",
+	return string::format("<ReplicationProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? replication.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",

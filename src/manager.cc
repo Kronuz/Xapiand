@@ -595,7 +595,7 @@ XapiandManager::start_discovery()
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		auto msg = string::format("Discovering cluster %s by listening on ", opts.cluster_name);
+		auto msg = string::format("Discovering cluster {} by listening on ", opts.cluster_name);
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
 		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
@@ -1540,7 +1540,7 @@ XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds t
 std::string
 XapiandManager::__repr__() const
 {
-	return string::format("<XapiandManager (%s) {cnt:%ld}%s%s%s>",
+	return string::format("<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
 		StateNames(_state),
 		use_count(),
 		is_runner() ? " (runner)" : " (worker)",

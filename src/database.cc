@@ -946,7 +946,7 @@ Database::storage_get_stored(const Locator& locator, Xapian::docid did)
 
 	const auto& storage = storages[subdatabase];
 	if (storage) {
-		storage->open(string::format(DATA_STORAGE_PATH "%u", locator.volume));
+		storage->open(string::format(DATA_STORAGE_PATH "{}", locator.volume));
 		storage->seek(static_cast<uint32_t>(locator.offset));
 		return storage->read();
 	}
@@ -984,13 +984,13 @@ Database::storage_push_blobs(std::string&& doc_data)
 						try {
 							if (storage->closed()) {
 								storage->volume = storage->get_volumes_range(DATA_STORAGE_PATH).second;
-								storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
+								storage->open(string::format(DATA_STORAGE_PATH "{}", storage->volume));
 							}
 							offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
 							break;
 						} catch (StorageEOF) {
 							++storage->volume;
-							storage->open(string::format(DATA_STORAGE_PATH "%u", storage->volume));
+							storage->open(string::format(DATA_STORAGE_PATH "{}", storage->volume));
 						}
 					}
 					data.update(locator.ct_type, storage->volume, offset, locator.size);
@@ -1444,7 +1444,7 @@ Database::get_metadata(const std::string& key, int subdatabase)
 			++p;
 			ssize_t volume = unserialise_length(&p, p_end);
 			size_t offset = unserialise_length(&p, p_end);
-			storage->open(string::format(DATA_STORAGE_PATH "%u", volume));
+			storage->open(string::format(DATA_STORAGE_PATH "{}", volume));
 			storage->seek(static_cast<uint32_t>(offset));
 			return storage->read();
 		}
@@ -1821,7 +1821,7 @@ Database::to_string() const
 std::string
 Database::__repr__() const
 {
-	return string::format("<Database %s (%s)%s%s%s%s%s%s%s>",
+	return string::format("<Database {} ({}){}{}{}{}{}{}{}>",
 		repr(endpoints.to_string()),
 		readable_flags(flags),
 		is_writable() ? " (writable)" : "",

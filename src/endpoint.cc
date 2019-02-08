@@ -27,7 +27,7 @@
 #include "fs.hh"            // for normalize_path
 #include "opts.h"           // for opts
 #include "serialise.h"      // for UUIDRepr, Serialise
-#include "string.hh"        // for string::Number
+#include "string.hh"        // for string::format
 #include "xapian.h"         // for SerialisationError
 
 
@@ -337,7 +337,7 @@ Endpoint::to_string() const
 	ret += node.host();
 	if (node.remote_port > 0) {
 		ret += ":";
-		ret += string::Number(node.remote_port);
+		ret += string::format("{}", node.remote_port);
 	}
 	if (!node.host().empty() || node.remote_port > 0) {
 		ret += "/";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1395,7 +1395,7 @@ Discovery::db_update_send(const std::string& path)
 std::string
 Discovery::__repr__() const
 {
-	return string::format("<Discovery (%s) {cnt:%ld, sock:%d}%s%s%s>",
+	return string::format("<Discovery ({}) {{cnt:{}, sock:{}}}{}{}{}>",
 		RoleNames(raft_role),
 		use_count(),
 		sock,
@@ -1410,7 +1410,7 @@ Discovery::getDescription() const
 {
 	L_CALL("Discovery::getDescription()");
 
-	return string::format("UDP %s:%d (%s v%d.%d)", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION);
+	return string::format("UDP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION);
 }
 
 

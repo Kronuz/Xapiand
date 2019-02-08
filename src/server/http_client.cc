@@ -294,7 +294,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 		if (http_major == 0 && http_minor == 0) {
 			http_major = 1;
 		}
-		head += string::format("HTTP/%d.%d %d ", http_major, http_minor, status);
+		head += string::format("HTTP/{}.{} {} ", http_major, http_minor, status);
 		head += http_status_str(status);
 		head_sep += eol;
 		if ((mode & HTTP_HEADER_RESPONSE) == 0) {
@@ -313,9 +313,9 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 
 		request.ends = std::chrono::system_clock::now();
 
-		headers += string::format("Response-Time: %s", string::Number(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9).str()) + eol;
+		headers += string::format("Response-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9) + eol;
 		if (request.ready >= request.processing) {
-			headers += string::format("Operation-Time: %s", string::Number(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9).str()) + eol;
+			headers += string::format("Operation-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9) + eol;
 		}
 
 		if ((mode & HTTP_OPTIONS_RESPONSE) != 0) {
@@ -323,11 +323,11 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 		}
 
 		if ((mode & HTTP_TOTAL_COUNT_RESPONSE) != 0) {
-			headers += string::format("Total-Count: %lu", total_count) + eol;
+			headers += string::format("Total-Count: {}", total_count) + eol;
 		}
 
 		if ((mode & HTTP_MATCHES_ESTIMATED_RESPONSE) != 0) {
-			headers += string::format("Matches-Estimated: %lu", matches_estimated) + eol;
+			headers += string::format("Matches-Estimated: {}", matches_estimated) + eol;
 		}
 
 		if ((mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 && !ct_type.empty()) {
@@ -339,9 +339,9 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 		}
 
 		if ((mode & HTTP_CONTENT_LENGTH_RESPONSE) != 0) {
-			headers += string::format("Content-Length: %lu", content_length) + eol;
+			headers += string::format("Content-Length: {}", content_length) + eol;
 		} else {
-			headers += string::format("Content-Length: %lu", body.size()) + eol;
+			headers += string::format("Content-Length: {}", body.size()) + eol;
 		}
 		headers_sep += eol;
 	}
@@ -1502,13 +1502,13 @@ HttpClient::home_view(Request& request)
 	obj[RESPONSE_SERVER] = Package::STRING;
 	obj[RESPONSE_URL] = Package::BUGREPORT;
 	obj[RESPONSE_VERSIONS] = {
-		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("%s_%s", Package::VERSION, Package::REVISION) },
-		{ "Xapian", string::format("%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
+		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
+		{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #if defined(XAPIAND_V8)
-		{ "V8", string::format("%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
+		{ "V8", string::format("{}.{}", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
-		{ "ChaiScript", string::format("%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+		{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 	};
 
@@ -2656,7 +2656,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 #ifdef XAPIAND_CLUSTERING
 		auto node = Node::get_node(node_name);
 		if (!node) {
-			index_path = string::format("xapian://%s/%s", node_name, index_path);
+			index_path = string::format("xapian://{}/{}", node_name, index_path);
 		}
 		Endpoint endpoint{index_path, node.get()};
 		if (endpoint.node.remote_port == 0) {
@@ -2968,7 +2968,7 @@ HttpClient::end_http_request(Request& request)
 			.xapiand_http_requests_summary
 			.Add({
 				{"method", http_method_str(HTTP_PARSER_METHOD(&request.parser))},
-				{"status", string::Number(request.response.status).str()},
+				{"status", string::format("{}", request.response.status)},
 			})
 			.Observe(took / 1e9);
 
@@ -3284,7 +3284,7 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 std::string
 HttpClient::__repr__() const
 {
-	return string::format("<HttpClient {cnt:%ld, sock:%d}%s%s%s%s%s%s%s%s>",
+	return string::format("<HttpClient {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		use_count(),
 		sock,
 		is_runner() ? " (runner)" : " (worker)",
@@ -3535,7 +3535,7 @@ Request::head()
 {
 	L_CALL("Request::head()");
 
-	return string::format("%s %s HTTP/%d.%d", http_method_str(HTTP_PARSER_METHOD(&parser)), path, parser.http_major, parser.http_minor);
+	return string::format("{} {} HTTP/{}.{}", http_method_str(HTTP_PARSER_METHOD(&parser)), path, parser.http_major, parser.http_minor);
 }
 
 
@@ -3656,7 +3656,7 @@ Request::to_text(bool decode)
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(raw);
-			request_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+			request_text += string::format("\033]1337;File=name={};inline=1;size={};width=20%:",
 				b64_name,
 				b64_data.size());
 			request_text += b64_data;
@@ -3757,7 +3757,7 @@ Response::to_text(bool decode)
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(blob);
-			response_text += string::format("\033]1337;File=name=%s;inline=1;size=%d;width=20%%:",
+			response_text += string::format("\033]1337;File=name={};inline=1;size={};width=20%:",
 				b64_name,
 				b64_data.size());
 			response_text += b64_data;

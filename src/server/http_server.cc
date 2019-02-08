@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -116,7 +116,7 @@ HttpServer::io_accept_cb(ev::io& watcher, int revents)
 std::string
 HttpServer::__repr__() const
 {
-	return string::format("<HttpServer {cnt:%ld, sock:%d}%s%s%s>",
+	return string::format("<HttpServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? http.sock : sock,
 		is_runner() ? " (runner)" : " (worker)",

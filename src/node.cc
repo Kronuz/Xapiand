@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@
 #include "logger.h"             // for Logging::tab_title, Logging::badge
 #include "opts.h"               // for opts
 #include "serialise.h"          // for Serialise
-#include "string.hh"            // for string::Number
+#include "string.hh"            // for string::format, string::lower
 #include "xapian.h"             // for SerialisationError
 
 
@@ -55,7 +55,7 @@ set_as_title(const std::shared_ptr<const Node>& node)
 	if (node && !node->name().empty()) {
 		// Set window title
 		Logging::tab_title(node->idx
-			? string::format("[%d] %s", node->idx, node->name())
+			? string::format("[{}] {}", node->idx, node->name())
 			: node->name());
 
 		// Set iTerm2 badge
@@ -112,7 +112,7 @@ Node::unserialise(const char **p, const char *end)
 std::string
 Node::__repr__() const
 {
-	return string::format("<Node {index:%zu, name:%s, host:%s, http_port:%d, remote_port:%d, replication_port:%d, touched:%lld}%s%s%s>",
+	return string::format("<Node {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}>",
 		idx, repr(name()), repr(host()), http_port, remote_port, replication_port, touched.load(std::memory_order_relaxed),
 		is_active() ? " (active)" : "",
 		is_local() ? " (local)" : "",

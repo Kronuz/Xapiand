@@ -180,7 +180,7 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 		Xapian::rev end_rev;
 		for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 			try {
-				open(string::format(WAL_STORAGE_PATH "%llu", end_rev), STORAGE_OPEN);
+				open(string::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
 				if (header.head.revision != end_rev) {
 					if (!unsafe) {
 						L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), end_rev);
@@ -449,7 +449,7 @@ DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool uns
 	Xapian::rev end_rev;
 	for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 		try {
-			open(string::format(WAL_STORAGE_PATH "%llu", end_rev), STORAGE_OPEN);
+			open(string::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
 			if (header.head.revision != end_rev) {
 				L_WARNING("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), end_rev);
 				header.head.revision = end_rev;
@@ -665,7 +665,7 @@ DatabaseWAL::init_database()
 	validate_uuid = false;
 
 	try {
-		open(string::format(WAL_STORAGE_PATH "%llu", 0), STORAGE_OPEN);
+		open(string::format(WAL_STORAGE_PATH "{}", 0), STORAGE_OPEN);
 		if (header.head.revision != 0) {
 			L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), 0);
 			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -738,7 +738,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		if (closed()) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
 			auto volume = (volumes.first <= volumes.second) ? volumes.second : revision;
-			open(string::format(WAL_STORAGE_PATH "%llu", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "{}", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != volume) {
 				L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), volume);
 				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -754,7 +754,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 
 		if (slot >= WAL_SLOTS) {
 			// We need a new volume, the old one is full
-			open(string::format(WAL_STORAGE_PATH "%llu", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+			open(string::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != revision) {
 				L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), revision);
 				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -778,7 +778,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 			if (slot + 1 < WAL_SLOTS) {
 				header.slot[slot + 1] = header.slot[slot];
 			} else {
-				open(string::format(WAL_STORAGE_PATH "%llu", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+				open(string::format(WAL_STORAGE_PATH "{}", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 				if (header.head.revision != revision + 1) {
 					L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), revision + 1);
 					THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -815,7 +815,7 @@ DatabaseWAL::locate_revision(Xapian::rev revision)
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, 0, revision);
 	if (volumes.first <= volumes.second && revision - volumes.second < WAL_SLOTS) {
-		open(string::format(WAL_STORAGE_PATH "%u", volumes.second), STORAGE_OPEN);
+		open(string::format(WAL_STORAGE_PATH "{}", volumes.second), STORAGE_OPEN);
 		if (header.head.revision != volumes.second) {
 			L_DEBUG("Mismatch in WAL revision %llu: %s volume %llu", header.head.revision, ::repr(base_path), volumes.second);
 			THROW(StorageCorruptVolume, "Mismatch in WAL revision");

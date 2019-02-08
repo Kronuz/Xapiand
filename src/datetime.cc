@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@
 #include "repr.hh"                                // for repr
 #include "reserved.h"                             // for RESERVED__
 #include "strict_stox.hh"                         // for strict_stoull
-#include "string.hh"                              // for string::format
+#include "string.hh"                              // for string::sprintf
 
 
 constexpr const char RESERVED_YEAR[]                        = RESERVED__ "year";
@@ -1161,12 +1161,12 @@ std::string
 Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 {
 	if (trim) {
-		return string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
+		return string::sprintf("%04d-%02d-%02d%c%02d:%02d:%02d",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
 			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
 
-	return string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+	return string::sprintf("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
 		tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
 		sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
@@ -1179,11 +1179,11 @@ std::string
 Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
 	if (trim) {
-		auto res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
+		auto res = string::sprintf("%04d-%02d-%02d%c%02d:%02d:%02d",
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
 		if (tm.fsec > 0.0) {
-			res += string::format("%.6f", tm.fsec).erase(0, 1);
+			res += string::sprintf("%.6f", tm.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1196,14 +1196,14 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 	}
 
 	if (tm.fsec > 0.0) {
-		auto res = string::format("%04d-%02d-%02d%c%02d:%02d:%02d",
+		auto res = string::sprintf("%04d-%02d-%02d%c%02d:%02d:%02d",
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
-		res += string::format("%.6f", tm.fsec).erase(0, 1);
+		res += string::sprintf("%.6f", tm.fsec).erase(0, 1);
 		return res;
 	}
 
-	return string::format("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
+	return string::sprintf("%04d-%02d-%02d%c%02d:%02d:%02d.000000",
 		tm.year, tm.mon, tm.day, sep,
 		tm.hour, tm.min, tm.sec);
 }
@@ -1472,10 +1472,10 @@ std::string
 Datetime::time_to_string(const clk_t& clk, bool trim)
 {
 	if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
-		auto res = string::format("%02d:%02d:%02d",
+		auto res = string::sprintf("%02d:%02d:%02d",
 			clk.hour, clk.min, clk.sec);
 		if (clk.fsec > 0) {
-			res += string::format("%.6f", clk.fsec).erase(0, 1);
+			res += string::sprintf("%.6f", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1488,14 +1488,14 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 	}
 
 	if (clk.fsec > 0) {
-		auto res = string::format("%02d:%02d:%02d",
+		auto res = string::sprintf("%02d:%02d:%02d",
 			clk.hour, clk.min, clk.sec);
-		res += string::format("%.6f%c%02d:%02d", clk.fsec,
+		res += string::sprintf("%.6f%c%02d:%02d", clk.fsec,
 			clk.tz_s, clk.tz_h, clk.tz_m).erase(0, 1);
 		return res;
 	}
 
-	return string::format("%02d:%02d:%02d.000000%c%02d:%02d",
+	return string::sprintf("%02d:%02d:%02d.000000%c%02d:%02d",
 		clk.hour, clk.min, clk.sec,
 		clk.tz_s, clk.tz_h, clk.tz_m);
 }
@@ -1711,10 +1711,10 @@ std::string
 Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 {
 	if (trim) {
-		auto res = string::format("%c%02d:%02d:%02d",
+		auto res = string::sprintf("%c%02d:%02d:%02d",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
 		if (clk.fsec > 0) {
-			res += string::format("%.6f", clk.fsec).erase(0, 1);
+			res += string::sprintf("%.6f", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1727,11 +1727,11 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 	}
 
 	if (clk.fsec > 0) {
-		return string::format("%c%02d:%02d:%02d",
+		return string::sprintf("%c%02d:%02d:%02d",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
 	}
 
-	return string::format("%c%02d:%02d:%02d.000000",
+	return string::sprintf("%c%02d:%02d:%02d.000000",
 		clk.tz_s, clk.hour, clk.min, clk.sec);
 }
 

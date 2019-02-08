@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,7 @@ inline std::string inet_ntop(const struct sockaddr_in& addr) {
 	// 	L_ERR("ERROR: inet_ntop: %s (%d): %s", error::name(errno), errno, error::description(errno));
 	// }
 	// return std::string(ip);
-	return string::format("%d.%d.%d.%d",
+	return string::format("{}.{}.{}.{}",
 		addr.sin_addr.s_addr & 0xff,
 		(addr.sin_addr.s_addr >> 8) & 0xff,
 		(addr.sin_addr.s_addr >> 16) & 0xff,

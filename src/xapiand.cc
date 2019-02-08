@@ -134,8 +134,8 @@ public:
 				case SIGSEGV:
 				case SIGSYS:
 					// create core image
-					tty_messages[sig] = string::format(LIGHT_RED + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					tty_messages[sig] = string::format(LIGHT_RED + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: {}\n", sig_str);
 					break;
 				case SIGHUP:
 				case SIGINT:
@@ -153,16 +153,16 @@ public:
 				case SIGSTKFLT:
 #endif
 					// terminate process
-					tty_messages[sig] = string::format(BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					tty_messages[sig] = string::format(BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: {}\n", sig_str);
 					break;
 				case SIGSTOP:
 				case SIGTSTP:
 				case SIGTTIN:
 				case SIGTTOU:
 					// stop process
-					tty_messages[sig] = string::format(SADDLE_BROWN + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					tty_messages[sig] = string::format(SADDLE_BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: {}\n", sig_str);
 					break;
 				case SIGURG:
 				case SIGCONT:
@@ -174,12 +174,12 @@ public:
 #endif
 					// discard signal
 
-					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: {}\n", sig_str);
 					break;
 				default:
-					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: %s" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: %s\n", sig_str);
+					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[sig] = string::format("Signal received: {}\n", sig_str);
 					break;
 			}
 		}
@@ -1067,12 +1067,12 @@ void banner() {
 	set_thread_name("MAIN");
 
 	std::vector<std::string> values({
-			string::format("Xapian v%d.%d.%d", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+			string::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
 #if defined(XAPIAND_V8)
-			string::format("V8 v%u.%u", V8_MAJOR_VERSION, V8_MINOR_VERSION),
+			string::format("V8 v{}.{}", V8_MAJOR_VERSION, V8_MINOR_VERSION),
 #endif
 #if defined(XAPIAND_CHAISCRIPT)
-			string::format("ChaiScript v%d.%d", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+			string::format("ChaiScript v{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
 #endif
 	});
 
@@ -1107,7 +1107,7 @@ void setup() {
 	if (p != nullptr) {
 		L_INFO("Flush threshold is now %d. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p) || 10000);
 	} else {
-		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::Number(opts.flush_threshold).c_str(), 0) == -1) {
+		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::format("{}", opts.flush_threshold).c_str(), 0) == -1) {
 			L_INFO("Flush threshold is 10000: %s (%d): %s", error::name(errno), errno, error::description(errno));
 		} else {
 			L_INFO("Flush threshold is now %d. (it was originally 10000)", opts.flush_threshold);
@@ -1134,9 +1134,9 @@ void setup() {
 	adjustOpenFilesLimit();
 
 	L_INFO("With a maximum of " + string::join(std::vector<std::string>{
-		string::format("%zu %s", opts.max_files, opts.max_files == 1 ? "file" : "files"),
-		string::format("%zu %s", opts.max_clients, opts.max_clients == 1 ? "client" : "clients"),
-		string::format("%zu %s", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
+		string::format("{} {}", opts.max_files, opts.max_files == 1 ? "file" : "files"),
+		string::format("{} {}", opts.max_clients, opts.max_clients == 1 ? "client" : "clients"),
+		string::format("{} {}", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
 	}, ", ", " and ", [](const auto& s) { return s.empty(); }));
 
 	usedir(opts.database.c_str(), opts.force);

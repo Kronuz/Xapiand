@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -102,7 +102,7 @@ class color {
 	uint8_t b;
 
 	auto trueColor(bool bold) {
-		auto trueColor = string::format(ESC "[%d;38;2;%d;%d;%dm", bold ? 1 : 0, r, g, b);
+		auto trueColor = string::format(ESC "[{};38;2;{};{};{}m", bold ? 1 : 0, r, g, b);
 		return trueColor;
 	}
 
@@ -117,7 +117,7 @@ class color {
 			(static_cast<int>(g / 255.0f * 5.0f + 0.5f) * 6) +
 			(static_cast<int>(b / 255.0f * 5.0f + 0.5f))
 		));
-		auto standard256 = string::format(ESC "[%d;38;5;%dm", bold ? 1 : 0, color);
+		auto standard256 = string::format(ESC "[{};38;5;{}m", bold ? 1 : 0, color);
 		return standard256;
 	}
 
@@ -142,7 +142,7 @@ class color {
 				) + (max > 192 ? 8 : 0)
 			)
 		));
-		auto standard16 = string::format(ESC "[%d;38;5;%dm", bold ? 1 : 0, color);
+		auto standard16 = string::format(ESC "[{};38;5;{}m", bold ? 1 : 0, color);
 		return standard16;
 	}
 

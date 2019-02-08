@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -80,10 +80,10 @@ public:
 		if (colored) {
 			auto& color = colors[order];
 			auto& reset = colors[last];
-			return string::format("%s%s%s%s%s", color, prefix, string::Number(static_cast<double>(num)), unit, reset);
+			return string::format("{}{}{}{}{}", color, prefix, static_cast<double>(num), unit, reset);
 		}
 
-		return string::format("%s%s%s", prefix, string::Number(static_cast<double>(num)), unit);
+		return string::format("{}{}{}", prefix, static_cast<double>(num), unit);
 	}
 };
 
