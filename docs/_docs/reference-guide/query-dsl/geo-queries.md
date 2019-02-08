@@ -17,7 +17,7 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "checkin":{
+    "checkin": {
       "_point": {
         "_latitude": 41.50343,
         "_longitude": -74.01042
@@ -32,7 +32,9 @@ GET /bank/:search?pretty
 
 ## Circle
 
-Use `_circle` to match all documents with coordinates inside the given circle:
+Although you certainly can use `_circle` the same way we used [Point](#point),
+to directly match an specific circle, you will probably more likely need to find
+documents within the given circle. For that, the `_in` keyword is needed:
 
 {% capture req %}
 
@@ -41,11 +43,13 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "checkin":{
-      "_circle": {
-        "_latitude": 41.50830,
-        "_longitude": -73.97696,
-        "_radius": 5000
+    "checkin": {
+      "_in": {
+        "_circle": {
+          "_latitude": 41.50830,
+          "_longitude": -73.97696,
+          "_radius": 5000
+        }
       }
     }
   }
@@ -54,14 +58,53 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-The `_radius` in the above example is in meters.
+The `_radius` in the example is in meters.
+
+{: .note .notice}
+_**Searching Inside the Circle**_<br>
+Notice you _**must**_ use `_in` keyword to search for documents **inside** the
+given circle instead of searching for documents with the circle itself.
+
 
 ## Polygon
 
 Use `_polygon`.
 
-{: .note .construction}
-_This section is a **work in progress**..._
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "checkin": {
+      "_in": {
+        "_polygon": {
+          "_latitude": [
+            41.502530,
+            41.507152,
+            41.506734,
+            41.502121,
+          ],
+          "_longitude": [
+            -74.015237,
+            -74.015061,
+            -74.009160,
+            -74.009489,
+          ]
+        }
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{: .note .warning}
+_**Concave Polygons**_<br>
+Notice you _**must**_ provide convex polygons; at the moment, concave polygons
+are not supported.
 
 
 ## Convex
@@ -127,16 +170,16 @@ Use `_ewkt`.
 Shapes can be represented using the Extended Well-Known Text (EWKT) format.
 The following shapes are allowed types:
 
-* POINT         - Finds documents with the point
-* CIRCLE        - Finds documents inside the circle or with the circle.
-* CONVEX        - Finds documents inside the convex or with the convex.
-* POLYGON       - Finds documents inside the polygon or with the polygon.
-* CHULL         - Finds documents inside the convex hull or with the convex hull.
-* MULTIPOINT    - Finds documents inside the vector of points.
-* MULTIPCIRCLE  - Finds documents inside the vector of circles.
-* MULTICONVEX   - Finds documents inside the vector of convexs.
-* MULTIPOLYGON  - Finds documents inside the vector of polygons.
-* MULTICHULL    - Finds documents inside the vector of convexs hull.
+* POINT         - Finds documents with the given point
+* CIRCLE        - Finds documents inside or with the given circle.
+* CONVEX        - Finds documents inside or with the given convex.
+* POLYGON       - Finds documents inside or with the given polygon.
+* CHULL         - Finds documents inside or with the given convex hull.
+* MULTIPOINT    - Finds documents inside the given vector of points.
+* MULTIPCIRCLE  - Finds documents inside the given vector of circles.
+* MULTICONVEX   - Finds documents inside the given vector of convexs.
+* MULTIPOLYGON  - Finds documents inside the given vector of polygons.
+* MULTICHULL    - Finds documents inside the given vector of convexs hull.
 
 The following example search a point with _latitude_ of **41.50343** and
 _longitude_ of **-74.01042**.
@@ -148,7 +191,7 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "checkin":{
+    "checkin": {
       "_ewkt": "POINT(-74.01042 41.50343)"
     }
   }
@@ -157,7 +200,7 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .info}
+{: .note .notice}
 **_EWKT expression_**<br>
 Notice the correct coordinate order is (longitude, latitude)
 

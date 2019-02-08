@@ -17,8 +17,8 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "_elite_set": {
-      "personality": "the biggest two things to know are that hes lovable and cooperative. Of course hes also kind, honest and considerate, but theyre far less prominent, especially compared to impulses of being shallow as well"
+    "personality": {
+      "_elite_set": "the biggest two things to know are that hes lovable and cooperative. Of course hes also kind, honest and considerate, but theyre far less prominent, especially compared to impulses of being shallow as well"
     }
   }
 }
