@@ -363,7 +363,7 @@ const std::vector<testQueryG_t> geo_tests({
 		// CIRCLE(-104.026930 48.998427, 20015114)
 		std::vector<range_t>({
 			{ 9007199254740992, 18014398509481983 },
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		}), { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
 		"Query((((((((G6G\\xbe\\xc0 OR G6G\\xbe\\xc8) OR G6G\\xbe\\xd0) OR G6G\\xbe\\xd8) OR G6G\\xbe\\xe0) OR G6G\\xbe\\xe8) OR G6G\\xbe\\xf0) OR G6G\\xbe\\xf8))"
 		// "G6:8 OR G6:9 OR G6:10 OR G6:11 OR G6:12 OR G6:13 OR G6:14 OR G6:15"
 	},
@@ -378,14 +378,14 @@ const std::vector<testQueryG_t> geo_tests({
 			range_t(14777436277309440, 15058911254020095),
 			range_t(15129279998197760, 15621861207441407),
 			range_t(15692229951619072, 18014398509481983),
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		}), { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
 		"Query((((((((G6G\\xbe\\xc0 OR G6G\\xbe\\xc8) OR G6G\\xbe\\xd0) OR G6G\\xbe\\xd8) OR G6G\\xbe\\xe0) OR G6G\\xbe\\xe8) OR G6G\\xbe\\xf0) OR G6G\\xbe\\xf8))"
 		// "G6:8 OR G6:9 OR G6:10 OR G6:11 OR G6:12 OR G6:13 OR G6:14 OR G6:15"
 	},
 	{
 		std::vector<range_t>({
 			{ 15629289656149997, 15629289656149997 }
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		}), { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
 		"Query(G1G˯\\x0d\\x83$\\x17\\xcf\\xda)"
 		// G1:15629289656149997
 	},
@@ -422,7 +422,7 @@ const std::vector<testQueryG_t> geo_tests({
 			range_t(11126386785779712, 11126386919997439),
 			range_t(11126386987106304, 11126387121324031),
 			range_t(11126387523977216, 11126387591086079),
-		}), { 25, 20, 15, 10, 5, 0 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
+		}), { 0, 5, 10, 15, 20, 25 }, { "G1", "G2", "G3", "G4", "G5", "G6" },
 		"Query(((G5G\\xc1\\x8f\\x0c OR G5G\\xc1\\x8f\\x0e) AND ((((((((((((((((((G4G\\xc4\\x0f\\x0c\\xa0\\x80 OR G4G\\xc4\\x0f\\x0c\\xa1) OR G4G\\xc4\\x0f\\x0c\\xa1\\x80) OR G4G\\xc4\\x0f\\x0c\\xa4) OR G4G\\xc4\\x0f\\x0c\\xa4\\x80) OR G4G\\xc4\\x0f\\x0c\\xa5) OR G4G\\xc4\\x0f\\x0c\\xa5\\x80) OR G4G\\xc4\\x0f\\x0c\\xa6) OR G4G\\xc4\\x0f\\x0c\\xa6\\x80) OR G4G\\xc4\\x0f\\x0c\\xa7) OR G4G\\xc4\\x0f\\x0c\\xa7\\x80) OR G4G\\xc4\\x0f\\x0e\\xc0\\x80) OR G4G\\xc4\\x0f\\x0e\\xc2) OR G4G\\xc4\\x0f\\x0e) OR G4G\\xc4\\x0f\\x0e\\xc3) OR G4G\\xc4\\x0f\\x0eÀ) OR G4G\\xc4\\x0f\\x0e\\xc6) OR G4G\\xc4\\x0f\\x0e\\xc7) OR G4G\\xc4\\x0f\\x0eǀ)))"
 		// ((G5:10118 OR G5:10119) AND (G4:10361153 OR G4:10361154 OR G4:10361155 OR G4:10361160 OR G4:10361161 OR G4:10361162 OR G4:10361163 OR G4:10361164 OR G4:10361165 OR G4:10361166 OR G4:10361167 OR G4:10362241 OR G4:10362244 OR G4:10362245 OR G4:10362246 OR G4:10362247 OR G4:10362252 OR G4:10362254 OR G4:10362255))
 	},

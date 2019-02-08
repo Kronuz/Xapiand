@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -633,7 +633,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
-		for (auto acc : reversed(accuracy)) {
+		for (auto acc : accuracy) {
 			acc = HTM_START_POS - (acc * 2);
 			if (acc < last_pos) {
 				break;
