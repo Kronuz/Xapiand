@@ -189,6 +189,9 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 				if (name.empty()) {
 					THROW(QueryDslError, "Invalid field name: must not be empty");
 				}
+				if (name[0] == '#') {
+					continue;  // skip comments (fields starting with '#')
+				}
 				auto const& o = it.value();
 
 				L_QUERY(STEEL_BLUE + "%s = %s" + CLEAR_COLOR, repr(name), o.to_string());

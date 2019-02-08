@@ -2924,7 +2924,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	}
 
 	if (name[0] == '#') {
-		return;
+		return;  // skip comments (fields starting with '#')
 	}
 
 	if (!specification.flags.is_recurse && name[0] != '_') {
@@ -3515,7 +3515,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 	}
 
 	if (name[0] == '#') {
-		return;
+		return;  // skip comments (fields starting with '#')
 	}
 
 	if (!specification.flags.is_recurse && name[0] != '_') {
@@ -3954,7 +3954,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std
 	}
 
 	if (name[0] == '#') {
-		return;
+		return;  // skip comments (fields starting with '#')
 	}
 
 	if (!specification.flags.is_recurse && name[0] != '_') {
