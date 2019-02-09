@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,18 +22,18 @@
 
 #pragma once
 
-#include <cstdint>           // for uint64_t
-#include <stddef.h>          // for size_t
-#include <string>            // for string
-#include <sys/types.h>       // for uint64_t, int64_t
-#include <type_traits>       // for decay_t, enable_if_t, is_integral
-#include <vector>            // for vector, allocator
+#include <cstdint>                                // for uint64_t
+#include <stddef.h>                               // for size_t
+#include <string>                                 // for string
+#include <sys/types.h>                            // for uint64_t, int64_t
+#include <type_traits>                            // for decay_t, enable_if_t, is_integral
+#include <vector>                                 // for vector, allocator
 
-#include "database_utils.h"  // for prefixed
-#include "geospatial/htm.h"  // for HTM_BITS_ID, range_t (ptr only)
-#include "modulus.hh"        // for modulus
-#include "serialise.h"       // for serialise
-#include "xapian.h"          // for Query, Query::op::OP_OR, Query::op::OP_AND
+#include "database_utils.h"                       // for prefixed
+#include "geospatial/htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
+#include "modulus.hh"                             // for modulus
+#include "serialise.h"                            // for serialise
+#include "xapian.h"                               // for Query, Query::op::OP_OR, Query::op::OP_AND
 
 
 constexpr size_t MAX_TERMS            = 50;
