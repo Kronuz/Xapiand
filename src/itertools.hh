@@ -45,7 +45,7 @@ public:
 
 	public:
 		iterator(F& fn, I it) : _fn{fn}, _it{it} { }
-		bool operator!=(const iterator& other) {
+		bool operator!=(const iterator& other) const {
 			return _it != other._it;
 		}
 		iterator& operator++() {
@@ -99,7 +99,7 @@ public:
 		iterator(I1 it1, I1 end1, I2 it2) :
 			_it1{it1}, _end1{end1}, _it2{it2} { }
 
-		bool operator!=(const iterator& other) {
+		bool operator!=(const iterator& other) const {
 			return _it1 != other._it1 || _it2 != other._it2;
 		}
 
