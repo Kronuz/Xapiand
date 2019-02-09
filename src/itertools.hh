@@ -129,7 +129,7 @@ public:
 	}
 
 	iterator end() {
-		return {_begin1, _end1, _begin2};
+		return {_end1, _end1, _end2};
 	}
 };
 
