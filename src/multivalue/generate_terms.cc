@@ -37,6 +37,42 @@ const char ctype_geo     = required_spc_t::get_ctype(FieldType::GEO);
 const char ctype_integer = required_spc_t::get_ctype(FieldType::INTEGER);
 
 
+template<typename T>
+inline int
+do_clz(T value) {
+	int c = 0;
+	while (value) {
+		value >>= 1;
+		++c;
+	}
+	return c;
+}
+
+#if HAVE_DECL___BUILTIN_CLZ
+template<>
+inline int
+do_clz(unsigned value) {
+    return __builtin_clz(value);
+}
+#endif
+
+#if HAVE_DECL___BUILTIN_CLZL
+template<>
+inline int
+do_clz(unsigned long value) {
+    return __builtin_clzl(value);
+}
+#endif
+
+#if HAVE_DECL___BUILTIN_CLZLL
+template<>
+inline int
+do_clz(unsigned long long value) {
+    return __builtin_clzll(value);
+}
+#endif
+
+
 void
 GenerateTerms::integer(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, int64_t value)
 {
@@ -130,7 +166,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
-		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id + 1));
+		uint64_t last_pos = do_clz(id) - 64 + HTM_BITS_ID;
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
@@ -273,7 +309,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
-		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id + 1));
+		uint64_t last_pos = do_clz(id) - 64 + HTM_BITS_ID;
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
@@ -624,7 +660,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 
 	const auto size_acc = accuracy.size() - 1;
 	for (const auto& id : id_trixels) {
-		uint64_t last_pos = HTM_BITS_ID - std::ceil(std::log2(id + 1));
+		uint64_t last_pos = do_clz(id) - 64 + HTM_BITS_ID;
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
