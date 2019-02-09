@@ -143,7 +143,7 @@ namespace std {
 static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
 static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
 static const std::vector<uint64_t> def_accuracy_time({ toUType(UnitTime::MINUTE), toUType(UnitTime::HOUR) });
-static const std::vector<uint64_t> def_accuracy_geo({ 20, 15, 10, 5, 0 });
+static const std::vector<uint64_t> def_accuracy_geo({ HTM_START_POS - 40, HTM_START_POS - 30, HTM_START_POS - 20, HTM_START_POS - 10, HTM_START_POS }); // HTM's level 20, 15, 10, 5, 0
 
 
 required_spc_t _get_data_id(required_spc_t& spc_id, const MsgPack& id_properties);
@@ -4546,7 +4546,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					for (const auto& _accuracy : *specification.doc_acc) {
 						const auto val_acc = _accuracy.u64();
 						if (val_acc <= HTM_MAX_LEVEL) {
-							set_acc.insert(val_acc);
+							set_acc.insert(HTM_START_POS - 2 * val_acc);
 						} else {
 							THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
 						}
@@ -8164,7 +8164,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 			case FieldType::GEO: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
-						set_acc.insert(_accuracy.u64());
+						set_acc.insert(HTM_START_POS - 2 * _accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
@@ -8172,10 +8172,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(string::format("{}", acc)).push_back(' ');
+						str_accuracy.append(string::format("{}", (HTM_START_POS - acc) / 2)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
+						_str_accuracy.append(string::format("{}", (HTM_START_POS - acc) / 2)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{} ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), repr(specification.full_meta_name));
 				}

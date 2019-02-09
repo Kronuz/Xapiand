@@ -134,12 +134,9 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
-		for (auto acc : reversed(accuracy)) {
-			acc = HTM_START_POS - (acc * 2);
-			if (acc < last_pos) {
-				break;
-			}
-			map_terms[pos--].insert(val >> acc);
+		const auto it_e = accuracy.rend();
+		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
+			map_terms[pos].insert(val >> *it);
 		}
 	}
 
@@ -280,12 +277,9 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
-		for (auto acc : reversed(accuracy)) {
-			acc = HTM_START_POS - (acc * 2);
-			if (acc < last_pos) {
-				break;
-			}
-			map_terms[pos--].insert(val >> acc);
+		const auto it_e = accuracy.rend();
+		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
+			map_terms[pos].insert(val >> *it);
 		}
 	}
 
@@ -634,17 +628,11 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = size_acc;
-		for (auto acc : accuracy) {
-			acc = HTM_START_POS - (acc * 2);
-			if (acc < last_pos) {
-				break;
-			}
-			--pos;
-		}
+		const auto it_e = accuracy.rend();
+		for (auto it = accuracy.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) { }
 		if (pos != size_acc) {
 			++pos;
-			auto acc = HTM_START_POS - (accuracy[pos] * 2);
-			map_terms[pos].insert(val >> acc);
+			map_terms[pos].insert(val >> accuracy[pos]);
 		}
 	}
 
@@ -659,7 +647,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		if (it->first != size_acc && it->first <= last_pos) {
 			size_t pos = it->first + 1;
 			auto& terms = map_terms[pos];
-			uint64_t acc = (accuracy[it->first] - accuracy[pos]) * 2;
+			uint64_t acc = accuracy[pos] - accuracy[it->first];
 			for (const auto& term : it->second) {
 				terms.insert(term >> acc);
 			}
