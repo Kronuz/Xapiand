@@ -706,24 +706,22 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 					auto lower = itertools::transform([&](uint64_t term){
 						return prefixed(Serialise::positive(term), acc_prefix[l_it->first], ctype_geo);
 					}, l_it->second.begin(), l_it->second.end());
+					auto lower_query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
 					auto upper = itertools::transform([&](uint64_t term){
 						return prefixed(Serialise::positive(term), acc_prefix[u_it->first], ctype_geo);
 					}, u_it->second.begin(), u_it->second.end());
-					auto chained = itertools::chain(
-						lower.begin(), lower.end(),
-						upper.begin(), upper.end());
-					query = Xapian::Query(Xapian::Query::OP_OR, chained.begin(), chained.end());
+					auto upper_query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
+					query = Xapian::Query(Xapian::Query::OP_AND, upper_query, lower_query);
 				} else {
 					auto lower = itertools::transform([&](uint64_t term){
 						return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[l_it->first], ctype_geo), wqf);
 					}, l_it->second.begin(), l_it->second.end());
+					auto lower_query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
 					auto upper = itertools::transform([&](uint64_t term){
 						return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[u_it->first], ctype_geo), wqf);
 					}, u_it->second.begin(), u_it->second.end());
-					auto chained = itertools::chain(
-						lower.begin(), lower.end(),
-						upper.begin(), upper.end());
-					query = Xapian::Query(Xapian::Query::OP_OR, chained.begin(), chained.end());
+					auto upper_query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
+					query = Xapian::Query(Xapian::Query::OP_AND, upper_query, lower_query);
 				}
 			} else {
 				// Process only upper terms.
