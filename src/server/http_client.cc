@@ -3438,11 +3438,15 @@ Request::append(const char* at, size_t length)
 					raw_offset = raw_peek = new_raw_offset + 1;
 					new_raw_offset = raw.find_first_of('\n', raw_peek);
 					if (!json.empty()) {
-						signal_pending = true;
-						rapidjson::Document rdoc;
-						json_load(rdoc, json);
-						std::lock_guard<std::mutex> lk(objects_mtx);
-						objects.emplace_back(rdoc);
+						try {
+							rapidjson::Document rdoc;
+							json_load(rdoc, json);
+							signal_pending = true;
+							std::lock_guard<std::mutex> lk(objects_mtx);
+							objects.emplace_back(rdoc);
+						} catch (const std::exception&) {
+							L_EXC("Cannot load object");
+						}
 					}
 				}
 			}
@@ -3451,11 +3455,15 @@ Request::append(const char* at, size_t length)
 				auto json = std::string_view(raw).substr(raw_offset);
 				raw_offset = raw_peek = raw.size();
 				if (!json.empty()) {
-					signal_pending = true;
-					rapidjson::Document rdoc;
-					json_load(rdoc, json);
-					std::lock_guard<std::mutex> lk(objects_mtx);
-					objects.emplace_back(rdoc);
+					try {
+						rapidjson::Document rdoc;
+						json_load(rdoc, json);
+						signal_pending = true;
+						std::lock_guard<std::mutex> lk(objects_mtx);
+						objects.emplace_back(rdoc);
+					} catch (const std::exception&) {
+						L_EXC("Cannot load object");
+					}
 				}
 			}
 
@@ -3469,11 +3477,15 @@ Request::append(const char* at, size_t length)
 				memcpy(unpacker.buffer(), at, length);
 				unpacker.buffer_consumed(length);
 
-				msgpack::object_handle result;
-				while (unpacker.next(result)) {
-					signal_pending = true;
-					std::lock_guard<std::mutex> lk(objects_mtx);
-					objects.emplace_back(result.get());
+				try {
+					msgpack::object_handle result;
+					while (unpacker.next(result)) {
+						signal_pending = true;
+						std::lock_guard<std::mutex> lk(objects_mtx);
+						objects.emplace_back(result.get());
+					}
+				} catch (const std::exception&) {
+					L_EXC("Cannot load object");
 				}
 			}
 
