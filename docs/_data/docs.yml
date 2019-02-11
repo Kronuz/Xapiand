@@ -1,37 +1,38 @@
 - title: Getting Started
   docs:
-    - url: welcome
-    - url: quickstart
+    - url: /docs/welcome
+    - url: /docs/quickstart
       docs:
-        - url: modifying
-        - url: exploring
-        - url: next
+        - url: /docs/modifying
+        - url: /docs/exploring
+        - url: /docs/next
+    - url: /tutorials/home
 
 - title: Reference Guide
   docs:
-    - url: reference-guide/api
-    - url: reference-guide/indices
-    - url: reference-guide/documents
-    - url: reference-guide/info
-    - url: reference-guide/schemas
+    - url: /docs/reference-guide/api
+    - url: /docs/reference-guide/indices
+    - url: /docs/reference-guide/documents
+    - url: /docs/reference-guide/info
+    - url: /docs/reference-guide/schemas
       docs:
-        - url: reference-guide/schemas/field-types
+        - url: /docs/reference-guide/schemas/field-types
           docs:
-            - url: reference-guide/schemas/types/text-type
+            - url: /docs/reference-guide/schemas/types/text-type
               title: Text datatype
-            - url: reference-guide/schemas/types/keyword-type
+            - url: /docs/reference-guide/schemas/types/keyword-type
               title: Keyword datatype
-            - url: reference-guide/schemas/types/numeric-type
+            - url: /docs/reference-guide/schemas/types/numeric-type
               title: Numeric datatype
-            - url: reference-guide/schemas/types/date-type
+            - url: /docs/reference-guide/schemas/types/date-type
               title: Date datatype
-            - url: reference-guide/schemas/types/boolean-type
+            - url: /docs/reference-guide/schemas/types/boolean-type
               title: Boolean datatype
-        - url: reference-guide/schemas/dynamic-typing
-    - url: reference-guide/search
-    - url: reference-guide/query-dsl
+        - url: /docs/reference-guide/schemas/dynamic-typing
+    - url: /docs/reference-guide/search
+    - url: /docs/reference-guide/query-dsl
       docs:
-        - url: reference-guide/query-dsl/queries
+        - url: /docs/reference-guide/query-dsl/queries
           title: Queries
           docs:
             - link: '#simple-queries'
@@ -48,22 +49,22 @@
               title: Near
             - link: '#phrase'
               title: Phrase
-        - url: reference-guide/query-dsl/text-queries
+        - url: /docs/reference-guide/query-dsl/text-queries
           title: Text Queries
           docs:
-            - url: reference-guide/query-dsl/text-queries/simple-query
+            - url: /docs/reference-guide/query-dsl/text-queries/simple-query
               title: Simple Query
-            - url: reference-guide/query-dsl/text-queries/match-query
+            - url: /docs/reference-guide/query-dsl/text-queries/match-query
               title: Match Query
-            - url: reference-guide/query-dsl/text-queries/phrase-query
+            - url: /docs/reference-guide/query-dsl/text-queries/phrase-query
               title: Phrase Query
-            - url: reference-guide/query-dsl/text-queries/partial-query
+            - url: /docs/reference-guide/query-dsl/text-queries/partial-query
               title: Partial Query
-        - url: reference-guide/query-dsl/namespace-queries
+        - url: /docs/reference-guide/query-dsl/namespace-queries
           title: Namespace Queries
-        - url: reference-guide/query-dsl/cast-queries
+        - url: /docs/reference-guide/query-dsl/cast-queries
           title: Cast Queries
-        - url: reference-guide/query-dsl/geo-queries
+        - url: /docs/reference-guide/query-dsl/geo-queries
           title: Geospatial Queries
           docs:
             - link: '#point'
@@ -88,67 +89,67 @@
               title: Multichull
             - link: '#extended_well_known_text'
               title: EWKT
-        - url: reference-guide/query-dsl/like-this-queries
+        - url: /docs/reference-guide/query-dsl/like-this-queries
           title: Find Docs. Like This
-        - url: reference-guide/query-dsl/near-queries
+        - url: /docs/reference-guide/query-dsl/near-queries
           title: Near Queries
-    - url: reference-guide/aggregations
+    - url: /docs/reference-guide/aggregations
       docs:
-        - url: reference-guide/aggregations/metrics
+        - url: /docs/reference-guide/aggregations/metrics
           title: Metrics
           docs:
-            - url: reference-guide/aggregations/metrics/count-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/count-aggregation
               title: Count
-            - url: reference-guide/aggregations/metrics/sum-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/sum-aggregation
               title: Sum
-            - url: reference-guide/aggregations/metrics/avg-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/avg-aggregation
               title: Average
-            - url: reference-guide/aggregations/metrics/max-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/max-aggregation
               title: Max
-            - url: reference-guide/aggregations/metrics/min-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/min-aggregation
               title: Min
-            - url: reference-guide/aggregations/metrics/variance-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/variance-aggregation
               title: Variance
-            - url: reference-guide/aggregations/metrics/std_deviation-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/std_deviation-aggregation
               title: Standard Deviation
-            - url: reference-guide/aggregations/metrics/median-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/median-aggregation
               title: Median
-            - url: reference-guide/aggregations/metrics/mode-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/mode-aggregation
               title: Mode
-            - url: reference-guide/aggregations/metrics/stats-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/stats-aggregation
               title: Statistics
-            - url: reference-guide/aggregations/metrics/extended_stats-aggregation
+            - url: /docs/reference-guide/aggregations/metrics/extended_stats-aggregation
               title: Extended Statistics
-        - url: reference-guide/aggregations/bucket
+        - url: /docs/reference-guide/aggregations/bucket
           title: Bucket
           docs:
-            - url: reference-guide/aggregations/bucket/filter-aggregation
+            - url: /docs/reference-guide/aggregations/bucket/filter-aggregation
               title: Filter
-            - url: reference-guide/aggregations/bucket/values-aggregation
+            - url: /docs/reference-guide/aggregations/bucket/values-aggregation
               title: Values
-            - url: reference-guide/aggregations/bucket/terms-aggregation
+            - url: /docs/reference-guide/aggregations/bucket/terms-aggregation
               title: Terms
-            - url: reference-guide/aggregations/bucket/histogram-aggregation
+            - url: /docs/reference-guide/aggregations/bucket/histogram-aggregation
               title: Histogram
-            - url: reference-guide/aggregations/bucket/range-aggregation
+            - url: /docs/reference-guide/aggregations/bucket/range-aggregation
               title: Range
-    - url: reference-guide/scripting
-    - url: reference-guide/storage
-    - url: reference-guide/stats
-    - url: reference-guide/monitoring
-    - url: reference-guide/wal
-    - url: reference-guide/backups
-    - url: reference-guide/kubernetes
+    - url: /docs/reference-guide/scripting
+    - url: /docs/reference-guide/storage
+    - url: /docs/reference-guide/stats
+    - url: /docs/reference-guide/monitoring
+    - url: /docs/reference-guide/wal
+    - url: /docs/reference-guide/backups
+    - url: /docs/reference-guide/kubernetes
 
 - title: Set up
   docs:
-    - url: installation
-    - url: building
+    - url: /docs/installation
+    - url: /docs/building
 
 - title: Miscellaneous
   docs:
-    - url: faq
+    - url: /docs/faq
       title: FAQ
-    - url: contributing
-    - url: conduct
-    - url: history
+    - url: /docs/contributing
+    - url: /docs/conduct
+    - url: /docs/history

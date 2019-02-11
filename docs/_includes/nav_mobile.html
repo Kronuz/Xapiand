@@ -1,5 +1,5 @@
 <ul>
-	<li class="{% if page.url contains '/docs/' %}current{% endif %}">
+	<li class="{% if page.url contains '/docs/' or page.url contains '/tutorials/' %}current{% endif %}">
 		<a href="{{ '/docs/' | relative_url }}">Docs</a>
 	</li>
 	<li class="{% if page.url contains '/news/' %}current{% endif %}">

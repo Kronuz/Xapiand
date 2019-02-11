@@ -1,24 +1,32 @@
 <div class="unit one-fifth hide-on-mobiles">
 	<aside id="sidebar">
-	{% for section in site.data.tutorials %}
-		<h4>{{ section.title }}</h4>
+	{% for l0 in site.data.tutorials %}
+		<h4>{{ l0.title }}</h4>
 		<ul>
-		{% for l1 in section.tutorials %}
-			{% assign l1_url = l1.url | prepend:"/tutorials/" | append:"/" %}
-			{% assign l1_doc = site.tutorials | where:"url", l1_url | first %}
+		{% for l1 in l0.docs %}
+			{% assign l1_url = l1.url | append:"/" %}
+			{% assign l1_doc = site.docs | where:"url", l1_url | first %}
+			{% if l1_doc %}
+			{% else %}
+				{% assign l1_doc = site.tutorials | where:"url", l1_url | first %}
+				{% if l1_doc %}
+				{% else %}
+					{% assign l1_doc = site.projects | where:"url", l1_url | first %}
+				{% endif %}
+			{% endif %}
 			{% if l1_doc or l1.link %}
 				<li class="{% if l1_doc.url == page.url %}current{% endif %}">
 					<a href="{% if l1.link %}{{ l1.link }}{% else %}{{ l1_doc.url | relative_url }}{% endif %}" onclick="selectLink(this)" class="{% if l1.link %}link{% endif %}">{{ l1.title | default: l1_doc.title }}</a>
 					<ul {% if l1_doc.url != page.url %}style="display:none"{% endif %}>
-						{% for l2 in l1.tutorials %}
-							{% assign l2_url = l2.url | prepend:"/tutorials/" | append:"/" %}
+						{% for l2 in l1.docs %}
+							{% assign l2_url = l2.url | append:"/" %}
 							{% assign l2_doc = site.tutorials | where:"url", l2_url | first %}
 							{% if l2_doc or l2.link %}
 								<li class="{% if l2_doc.url == page.url %}current{% endif %}">
 									<a href="{% if l2.link %}{{ l2.link }}{% else %}{{ l2_doc.url | relative_url }}{% endif %}" onclick="selectLink(this)" class="{% if l2.link %}link{% endif %}">{{ l2.title | default: l2_doc.title }}</a>
 									<ul {% if l2_doc.url != page.url %}style="display:none"{% endif %}>
-										{% for l3 in l2.tutorials %}
-											{% assign l3_url = l3.url | prepend:"/tutorials/" | append:"/" %}
+										{% for l3 in l2.docs %}
+											{% assign l3_url = l3.url | append:"/" %}
 											{% assign l3_doc = site.tutorials | where:"url", l3_url | first %}
 											{% if l3_doc or l3.link %}
 												<li class="{% if l3_doc.url == page.url %}current{% endif %}">

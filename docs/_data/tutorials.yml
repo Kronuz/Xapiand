@@ -1,9 +1,14 @@
-- title: Tutorials
-  tutorials:
-    - url: home
-    - url: spatial-search
-      title: Spatial Search
+- title: Getting Started
+  docs:
+    - url: /docs/welcome
+    - url: /docs/quickstart
+      docs:
+        - url: /docs/modifying
+        - url: /docs/exploring
+        - url: /docs/next
+    - url: /tutorials/home
 
-- title: Another section
-  tutorials:
-    - url: sample
+- title: Tutorials
+  docs:
+    - url: /tutorials/spatial-search
+      title: Spatial Search
