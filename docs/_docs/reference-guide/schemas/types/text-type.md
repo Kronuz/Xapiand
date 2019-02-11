@@ -106,3 +106,4 @@ The following parameters are accepted by text fields:
 | `_slot`                               | The slot number                                                                         |
 | `_index`                              | One or a pair of : `none`, `field_terms`, `field_values`, `field_all`, `field`, `global_terms`, `global_values`, `global_all`, `global`, `terms`, `values`, `all`      |
 | `_prefix`                             | The prefix with the term is going to be indexed     |
+| `_weight`                             | The weight with the term is going to be indexed     |

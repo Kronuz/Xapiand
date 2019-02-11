@@ -14,13 +14,13 @@ in a document:
 
 ### Numeric datatypes
 
-* `integer`
-* `positive`
-* `float`
+* [integer](../types/numeric-type)
+* [positive](../types/numeric-type)
+* [float](../types/numeric-type)
 
 ### Date/Time datatypes
 
-* `date`
+* [date](../types/date-type)
 * `time`
 * `timedelta`
 

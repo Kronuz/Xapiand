@@ -29,10 +29,17 @@ PUT /bank/1:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .warning }
-**_Warning_**<br>
+{: .note .caution }
+**_Caution_**<br>
 Notice we are using the same index "bank" as before, if you already indexed at this index with previous examples you are going to get a error for change types for the field  "employer" from `text` to `keyword`
 
 ## Parameters for the text fields
 
 The following parameters are accepted by text fields:
+
+|---------------------------------------|-----------------------------------------------------------------------------------------|
+| `_index`                              | One or a pair of : `none`, `field_terms`, `field_values`, `field_all`, `field`, `global_terms`, `global_values`, `global_all`, `global`, `terms`, `values`, `all`      |
+| `_value`                              | The value for the field                                                                 |
+| `_slot`                               | The slot number                                                                         |
+| `_prefix`                             | The prefix with the term is going to be indexed     |
+| `_weight`                             | The weight with the term is going to be indexed     |
