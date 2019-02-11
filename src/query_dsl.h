@@ -92,5 +92,7 @@ public:
 	MsgPack make_dsl_query(const query_field_t& e);
 
 	Xapian::Query get_query(const MsgPack& obj);
+
+	void get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const MsgPack& obj);
 	std::unique_ptr<Multi_MultiValueKeyMaker> get_sorter(const MsgPack& obj);
 };

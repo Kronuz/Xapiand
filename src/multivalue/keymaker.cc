@@ -336,7 +336,7 @@ BoolKey::findSmallest(const Xapian::Document& doc) const
 
 	StringList values(multiValues);
 
-	if (values.front().at(0) == _ref_val.at(0) || values.back().at(0) == _ref_val.at(0)) {
+	if (values.front().at(0) == _ser_ref_val.at(0) || values.back().at(0) == _ser_ref_val.at(0)) {
 		return SERIALISED_ZERO;
 	}
 	return SERIALISED_ONE;
@@ -353,7 +353,7 @@ BoolKey::findBiggest(const Xapian::Document& doc) const
 
 	StringList values(multiValues);
 
-	if (values.front().at(0) != _ref_val.at(0) || values.back().at(0) != _ref_val.at(0)) {
+	if (values.front().at(0) != _ser_ref_val.at(0) || values.back().at(0) != _ser_ref_val.at(0)) {
 		return SERIALISED_ONE;
 	}
 	return SERIALISED_ZERO;
@@ -413,102 +413,6 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 	}
 
 	return Serialise::_float(max_angle);
-}
-
-
-void
-Multi_MultiValueKeyMaker::add_value(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf)
-{
-	if (value.empty()) {
-		if (field_spc.get_type() != FieldType::GEO) {
-			slots.push_back(std::make_unique<SerialiseKey>(field_spc.slot, reverse));
-		}
-	} else {
-		switch (field_spc.get_type()) {
-			case FieldType::FLOAT:
-				slots.push_back(std::make_unique<FloatKey>(field_spc.slot, reverse, value));
-				break;
-			case FieldType::INTEGER:
-				slots.push_back(std::make_unique<IntegerKey>(field_spc.slot, reverse, value));
-				break;
-			case FieldType::POSITIVE:
-				slots.push_back(std::make_unique<PositiveKey>(field_spc.slot, reverse, value));
-				break;
-			case FieldType::DATE:
-				slots.push_back(std::make_unique<DateKey>(field_spc.slot, reverse, value));
-				break;
-			case FieldType::BOOLEAN:
-				slots.push_back(std::make_unique<BoolKey>(field_spc.slot, reverse, value));
-				break;
-			case FieldType::UUID:  // FIXME: Should UUID be here?
-			case FieldType::KEYWORD:
-			case FieldType::TEXT:
-			case FieldType::STRING: {
-				constexpr static auto _ = phf::make_phf({
-					hh("levenshtein"),
-					hh("leven"),
-					hh("jarowinkler"),
-					hh("jarow"),
-					hh("sorensendice"),
-					hh("sorensen"),
-					hh("dice"),
-					hh("jaccard"),
-					hh("lcsubstr"),
-					hh("lcs"),
-					hh("lcsubsequence"),
-					hh("lcsq"),
-					hh("soundex"),
-					hh("sound"),
-					hh("jaro"),
-				});
-				switch (_.fhh(qf.metric)) {
-					case _.fhh("levenshtein"):
-					case _.fhh("leven"):
-						levenshtein(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("jarowinkler"):
-					case _.fhh("jarow"):
-						jaro_winkler(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("sorensendice"):
-					case _.fhh("sorensen"):
-					case _.fhh("dice"):
-						sorensen_dice(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("jaccard"):
-						jaccard(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("lcsubstr"):
-					case _.fhh("lcs"):
-						lcs(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("lcsubsequence"):
-					case _.fhh("lcsq"):
-						lcsq(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("soundex"):
-					case _.fhh("sound"):
-						soundex(field_spc, reverse, value, qf);
-						break;
-					case _.fhh("jaro"):
-					default:
-						jaro(field_spc, reverse, value, qf);
-						break;
-				}
-				break;
-			}
-			case FieldType::GEO: {
-				EWKT ewkt(value);
-				auto centroids = ewkt.getGeometry()->getCentroids();
-				if (!centroids.empty()) {
-					slots.push_back(std::make_unique<GeoKey>(field_spc, reverse, std::move(centroids)));
-				}
-				break;
-			}
-			default:
-				THROW(InvalidArgumentError, "Type '{}' is not supported", field_spc.get_type());
-		}
-	}
 }
 
 

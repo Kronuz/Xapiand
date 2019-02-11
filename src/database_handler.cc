@@ -1257,12 +1257,13 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	auto check_at_least = query_field.check_at_least;
 	auto offset = query_field.offset;
 
+	QueryDSL query_object(schema);
+
 	Xapian::Query query;
 	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
 	switch (method) {
 		case HTTP_GET:
 		case HTTP_POST: {
-			QueryDSL query_object(schema);
 
 			if (qdsl && qdsl->find(RESERVED_QUERYDSL_SORT) != qdsl->end()) {
 				auto value = qdsl->at(RESERVED_QUERYDSL_SORT);
@@ -1314,28 +1315,14 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	// Configure sorter.
 	if (!sorter && !query_field.sort.empty()) {
 		sorter = std::make_unique<Multi_MultiValueKeyMaker>();
-		std::string field, value;
 		for (const auto& sort : query_field.sort) {
-			size_t pos = sort.find(":");
+			size_t pos = sort.find(':');
 			if (pos == std::string::npos) {
-				field.assign(sort);
-				value.clear();
+				auto field = sort.substr(0, pos);
+				auto value = sort.substr(pos);
+				query_object.get_sorter(sorter, { field, value });
 			} else {
-				field.assign(sort.substr(0, pos));
-				value.assign(sort.substr(pos + 1));
-			}
-			bool descending = false;
-			switch (field.at(0)) {
-				case '-':
-					descending = true;
-					/* FALLTHROUGH */
-				case '+':
-					field.erase(field.begin());
-					break;
-			}
-			const auto field_spc = schema->get_slot_field(field);
-			if (field_spc.get_type() != FieldType::EMPTY) {
-				sorter->add_value(field_spc, descending, value, query_field);
+				query_object.get_sorter(sorter, sort);
 			}
 		}
 	}

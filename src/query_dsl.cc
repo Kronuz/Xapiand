@@ -1122,19 +1122,19 @@ QueryDSL::get_query(const MsgPack& obj)
 }
 
 
-std::unique_ptr<Multi_MultiValueKeyMaker>
-QueryDSL::get_sorter(const MsgPack& obj)
+void
+QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const MsgPack& obj)
 {
 	L_CALL("QueryDSL::get_sorter({})", repr(obj.to_string()));
 
-	sorter = std::make_unique<Multi_MultiValueKeyMaker>();
 	switch (obj.getType()) {
 		case MsgPack::Type::MAP: {
 			const auto it_e = obj.end();
 			for (auto it = obj.begin(); it != it_e; ++it) {
-				query_field_t e;
-				std::string value;
+				std::string_view metric;
+				const MsgPack* value = nullptr;
 				bool descending = false;
+				bool icase = false;
 				const auto field = it->str_view();
 				const auto field_spc = schema->get_slot_field(field);
 				auto const& o = it.value();
@@ -1142,13 +1142,36 @@ QueryDSL::get_sorter(const MsgPack& obj)
 				for (auto it_val = o.begin(); it_val != it_val_e; ++it_val) {
 					const auto field_key = it_val->str_view();
 					auto const& val = it_val.value();
-					constexpr static auto _srt = phf::make_phf({
+					constexpr static auto _ = phf::make_phf({
 						hh(RESERVED_QUERYDSL_ORDER),
-						hh(RESERVED_VALUE),
 						hh(RESERVED_QUERYDSL_METRIC),
+						hh(RESERVED_VALUE),
+						// Reserved cast words
+						hh(RESERVED_FLOAT),
+						hh(RESERVED_POSITIVE),
+						hh(RESERVED_INTEGER),
+						hh(RESERVED_BOOLEAN),
+						hh(RESERVED_TERM),
+						hh(RESERVED_KEYWORD),
+						hh(RESERVED_STRING),
+						hh(RESERVED_TEXT),
+						hh(RESERVED_DATE),
+						hh(RESERVED_UUID),
+						hh(RESERVED_EWKT),
+						hh(RESERVED_POINT),
+						hh(RESERVED_POLYGON),
+						hh(RESERVED_CIRCLE),
+						hh(RESERVED_CHULL),
+						hh(RESERVED_MULTIPOINT),
+						hh(RESERVED_MULTIPOLYGON),
+						hh(RESERVED_MULTICIRCLE),
+						hh(RESERVED_MULTICONVEX),
+						hh(RESERVED_MULTICHULL),
+						hh(RESERVED_GEO_COLLECTION),
+						hh(RESERVED_GEO_INTERSECTION),
 					});
-					switch (_srt.fhh(field_key)) {
-						case _srt.fhh(RESERVED_QUERYDSL_ORDER):
+					switch (_.fhh(field_key)) {
+						case _.fhh(RESERVED_QUERYDSL_ORDER):
 							if (!val.is_string()) {
 								THROW(QueryDslError, "{} must be string (asc/desc) [{}]", RESERVED_QUERYDSL_ORDER, repr(val.to_string()));
 							}
@@ -1156,46 +1179,192 @@ QueryDSL::get_sorter(const MsgPack& obj)
 								descending = true;
 							}
 							break;
-						case _srt.fhh(RESERVED_VALUE):
-							// value = Cast::cast(field_spc.get_type(), val);
-							value = val.as_str();
-							break;
-						case _srt.fhh(RESERVED_QUERYDSL_METRIC):
+						case _.fhh(RESERVED_QUERYDSL_METRIC):
 							if (!val.is_string()) {
 								THROW(QueryDslError, "{} must be string ({}) [{}]", RESERVED_QUERYDSL_METRIC, "levenshtein, leven, jarowinkler, jarow, sorensendice, sorensen, dice, jaccard, lcsubstr, lcs, lcsubsequence, lcsq, soundex, sound, jaro" ,repr(val.to_string()));
 							}
-							e.metric = val.as_str();
+							metric = val.str_view();
+							break;
+						case _.fhh(RESERVED_VALUE):
+							if (value) {
+								THROW(QueryDslError, "Value for field {} is already defined", field);
+							}
+							value = &val;
+							break;
+						// Reserved cast words
+						case _.fhh(RESERVED_FLOAT):
+						case _.fhh(RESERVED_POSITIVE):
+						case _.fhh(RESERVED_INTEGER):
+						case _.fhh(RESERVED_BOOLEAN):
+						case _.fhh(RESERVED_TERM):  // FIXME: remove legacy term
+						case _.fhh(RESERVED_KEYWORD):
+						case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
+						case _.fhh(RESERVED_TEXT):
+						case _.fhh(RESERVED_DATE):
+						case _.fhh(RESERVED_UUID):
+						case _.fhh(RESERVED_EWKT):
+						case _.fhh(RESERVED_POINT):
+						case _.fhh(RESERVED_POLYGON):
+						case _.fhh(RESERVED_CIRCLE):
+						case _.fhh(RESERVED_CHULL):
+						case _.fhh(RESERVED_MULTIPOINT):
+						case _.fhh(RESERVED_MULTIPOLYGON):
+						case _.fhh(RESERVED_MULTICIRCLE):
+						case _.fhh(RESERVED_MULTICONVEX):
+						case _.fhh(RESERVED_MULTICHULL):
+						case _.fhh(RESERVED_GEO_COLLECTION):
+						case _.fhh(RESERVED_GEO_INTERSECTION):
+							if (value) {
+								THROW(QueryDslError, "Value for field {} is already defined", field);
+							}
+							value = &o;
 							break;
 						default:
-							break;
+							THROW(QueryDslError, "Invalid key: {}", repr(field_key));
 					}
 				}
-				if (field_spc.get_type() != FieldType::EMPTY) {
-					sorter->add_value(field_spc, descending, value, e);
+				if (value) {
+					switch (field_spc.get_type()) {
+						case FieldType::FLOAT:
+							sorter->add_float(field_spc.slot, descending, Cast::cast(FieldType::FLOAT, *value).f64());
+							break;
+						case FieldType::INTEGER:
+							sorter->add_integer(field_spc.slot, descending, Cast::cast(FieldType::INTEGER, *value).i64());
+							break;
+						case FieldType::POSITIVE:
+							sorter->add_positive(field_spc.slot, descending, Cast::cast(FieldType::POSITIVE, *value).u64());
+							break;
+						case FieldType::DATE:
+							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DateParser(Cast::cast(FieldType::DATE, *value))));
+							break;
+						case FieldType::BOOLEAN:
+							sorter->add_date(field_spc.slot, descending, Cast::cast(FieldType::BOOLEAN, *value).boolean());
+							break;
+						case FieldType::UUID:  // FIXME: Should UUID be here?
+						case FieldType::KEYWORD:
+						case FieldType::STRING:
+						case FieldType::TEXT: {
+							constexpr static auto _ = phf::make_phf({
+								hh("levenshtein"),
+								hh("leven"),
+								hh("jarowinkler"),
+								hh("jarow"),
+								hh("sorensendice"),
+								hh("sorensen"),
+								hh("dice"),
+								hh("jaccard"),
+								hh("lcsubstr"),
+								hh("lcs"),
+								hh("lcsubsequence"),
+								hh("lcsq"),
+								hh("soundex"),
+								hh("sound"),
+								hh("jaro"),
+							});
+							switch (_.fhh(metric)) {
+								case _.fhh("levenshtein"):
+								case _.fhh("leven"):
+									sorter->add_string_levenshtein(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("jarowinkler"):
+								case _.fhh("jarow"):
+									sorter->add_string_jaro_winkler(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("sorensendice"):
+								case _.fhh("sorensen"):
+								case _.fhh("dice"):
+									sorter->add_string_sorensen_dice(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("jaccard"):
+									sorter->add_string_jaccard(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("lcsubstr"):
+								case _.fhh("lcs"):
+									sorter->add_string_lcs(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("lcsubsequence"):
+								case _.fhh("lcsq"):
+									sorter->add_string_lcsq(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("soundex"):
+								case _.fhh("sound"):
+									sorter->add_string_soundex(field_spc.language, field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+								case _.fhh("jaro"):
+								default:
+									sorter->add_string_jaro(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									break;
+							}
+							break;
+						}
+						case FieldType::EMPTY:
+							break;
+						case FieldType::GEO: {
+							GeoSpatial geo(*value);
+							auto centroids = geo.getGeometry()->getCentroids();
+							if (!centroids.empty()) {
+								sorter->add_geo(field_spc.slot, descending, std::move(centroids));
+							}
+							break;
+						}
+						default:
+							THROW(QueryDslError, "Type '{}' must define a valid value", field_spc.get_str_type());
+					}
+				} else {
+					switch (field_spc.get_type()) {
+						case FieldType::EMPTY:
+							break;
+						case FieldType::GEO:
+							THROW(QueryDslError, "Type '{}' must define a reference value", field_spc.get_str_type());
+							break;
+						default:
+							sorter->add_serialise(field_spc.slot, descending);
+							break;
+					}
 				}
 			}
 			break;
 		}
+
 		case MsgPack::Type::STR: {
-			auto field = obj.as_str();
+			auto field = obj.str_view();
+			if (field.empty()) {
+				THROW(QueryDslError, "Invalid format {}: must specify a field", RESERVED_QUERYDSL_SORT);
+			}
 			bool descending = false;
-			query_field_t e;
 			switch (field.at(0)) {
 				case '-':
 					descending = true;
 					/* FALLTHROUGH */
 				case '+':
-					field.erase(field.begin());
+					field.remove_prefix(1);
 					break;
 			}
 			const auto field_spc = schema->get_slot_field(field);
-			if (field_spc.get_type() != FieldType::EMPTY) {
-				sorter->add_value(field_spc, descending, "", e);
+			switch (field_spc.get_type()) {
+				case FieldType::EMPTY:
+					break;
+				case FieldType::GEO:
+					THROW(QueryDslError, "Type '{}' must define a reference value", field_spc.get_str_type());
+					break;
+				default:
+					sorter->add_serialise(field_spc.slot, descending);
+					break;
 			}
 			break;
 		}
+
 		default:
 			THROW(QueryDslError, "Invalid format {}: {}", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
 	}
+}
 
+std::unique_ptr<Multi_MultiValueKeyMaker>
+QueryDSL::get_sorter(const MsgPack& obj)
+{
+	L_CALL("QueryDSL::get_sorter({})", repr(obj.to_string()));
+
+	auto sorter = std::make_unique<Multi_MultiValueKeyMaker>();
+	get_sorter(sorter, obj);
+	return sorter;
 }

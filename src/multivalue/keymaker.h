@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -98,9 +98,9 @@ class FloatKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	FloatKey(Xapian::valueno slot, bool reverse, std::string_view value)
+	FloatKey(Xapian::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
-		  _ref_val(strict_stod(value)),
+		  _ref_val(val),
 		  _ser_ref_val(Serialise::_float(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -114,9 +114,9 @@ class IntegerKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	IntegerKey(Xapian::valueno slot, bool reverse, std::string_view value)
+	IntegerKey(Xapian::valueno slot, bool reverse, int64_t val)
 		: BaseKey(slot, reverse),
-		  _ref_val(strict_stoll(value)),
+		  _ref_val(val),
 		  _ser_ref_val(Serialise::integer(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -130,9 +130,9 @@ class PositiveKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	PositiveKey(Xapian::valueno slot, bool reverse, std::string_view value)
+	PositiveKey(Xapian::valueno slot, bool reverse, uint64_t val)
 		: BaseKey(slot, reverse),
-		  _ref_val(strict_stoull(value)),
+		  _ref_val(val),
 		  _ser_ref_val(Serialise::positive(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -146,9 +146,9 @@ class DateKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
-	DateKey(Xapian::valueno slot, bool reverse, std::string_view value)
+	DateKey(Xapian::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
-		  _ref_val(Datetime::timestamp(Datetime::DateParser(value))),
+		  _ref_val(val),
 		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -158,12 +158,12 @@ public:
 
 // Class for creating key using as reference a boolean value.
 class BoolKey : public BaseKey {
-	std::string _ref_val;
+	std::string _ser_ref_val;
 
 public:
-	BoolKey(Xapian::valueno slot, bool reverse, std::string_view value)
+	BoolKey(Xapian::valueno slot, bool reverse, bool val)
 		: BaseKey(slot, reverse),
-		  _ref_val(Serialise::boolean(value)) { }
+		  _ser_ref_val(Serialise::boolean(val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -229,8 +229,8 @@ class GeoKey : public BaseKey {
 
 public:
 	template <typename T, typename = std::enable_if_t<std::is_same<std::vector<Cartesian>, std::decay_t<T>>::value>>
-	GeoKey(const required_spc_t& field_spc, bool reverse, T&& centroids)
-		: BaseKey(field_spc.slot, reverse),
+	GeoKey(Xapian::valueno slot, bool reverse, T&& centroids)
+		: BaseKey(slot, reverse),
 		  _centroids(std::forward<T>(centroids)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
@@ -258,53 +258,99 @@ public:
 		: slots(begin, end) { }
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
-	void add_value(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf);
 
-	void levenshtein(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<Levenshtein>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_serialise(Args... args) {
+		slots.push_back(std::make_unique<SerialiseKey>(std::forward<Args>(args)...));
 	}
 
-	void jaro(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<Jaro>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_float(Args... args) {
+		slots.push_back(std::make_unique<FloatKey>(std::forward<Args>(args)...));
 	}
 
-	void jaro_winkler(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_integer(Args... args) {
+		slots.push_back(std::make_unique<IntegerKey>(std::forward<Args>(args)...));
 	}
 
-	void sorensen_dice(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_positive(Args... args) {
+		slots.push_back(std::make_unique<PositiveKey>(std::forward<Args>(args)...));
 	}
 
-	void jaccard(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<Jaccard>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_date(Args... args) {
+		slots.push_back(std::make_unique<DateKey>(std::forward<Args>(args)...));
 	}
 
-	void lcs(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<LCSubstr>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_bool(Args... args) {
+		slots.push_back(std::make_unique<BoolKey>(std::forward<Args>(args)...));
 	}
 
-	void lcsq(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_geo(Args... args) {
+		slots.push_back(std::make_unique<GeoKey>(std::forward<Args>(args)...));
 	}
 
-	void soundex_en(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_string_levenshtein(Args... args) {
+		slots.push_back(std::make_unique<StringKey<Levenshtein>>(std::forward<Args>(args)...));
 	}
 
-	void soundex_fr(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_string_jaro(Args... args) {
+		slots.push_back(std::make_unique<StringKey<Jaro>>(std::forward<Args>(args)...));
 	}
 
-	void soundex_de(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_string_jaro_winkler(Args... args) {
+		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(std::forward<Args>(args)...));
 	}
 
-	void soundex_es(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(field_spc.slot, reverse, value, qf.icase));
+	template <typename... Args>
+	void add_string_sorensen_dice(Args... args) {
+		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(std::forward<Args>(args)...));
 	}
 
-	void soundex(const required_spc_t& field_spc, bool reverse, std::string_view value, const query_field_t& qf) {
+	template <typename... Args>
+	void add_string_jaccard(Args... args) {
+		slots.push_back(std::make_unique<StringKey<Jaccard>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_lcs(Args... args) {
+		slots.push_back(std::make_unique<StringKey<LCSubstr>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_lcsq(Args... args) {
+		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_soundex_en(Args... args) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_soundex_fr(Args... args) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_soundex_de(Args... args) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_soundex_es(Args... args) {
+		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_soundex(std::string_view language, Args... args) {
 		constexpr static auto _ = phf::make_phf({
 			hh("english"),
 			hh("en"),
@@ -316,23 +362,23 @@ public:
 			hh("es"),
 		});
 
-		switch (_.fhh(field_spc.language)) {
+		switch (_.fhh(language)) {
 			case _.fhh("english"):
 			case _.fhh("en"):
 			default:
-				soundex_en(field_spc, reverse, value, qf);
+				add_string_soundex_en(std::forward<Args>(args)...);
 				break;
 			case _.fhh("french"):
 			case _.fhh("fr"):
-				soundex_fr(field_spc, reverse, value, qf);
+				add_string_soundex_fr(std::forward<Args>(args)...);
 				break;
 			case _.fhh("german"):
 			case _.fhh("de"):
-				soundex_de(field_spc, reverse, value, qf);
+				add_string_soundex_de(std::forward<Args>(args)...);
 				break;
 			case _.fhh("spanish"):
 			case _.fhh("es"):
-				soundex_es(field_spc, reverse, value, qf);
+				add_string_soundex_es(std::forward<Args>(args)...);
 				break;
 		}
 	}
