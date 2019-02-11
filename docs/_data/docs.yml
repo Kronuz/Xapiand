@@ -25,6 +25,8 @@
               title: Numeric datatype
             - url: reference-guide/schemas/types/date-type
               title: Date datatype
+            - url: reference-guide/schemas/types/boolean-type
+              title: Boolean datatype
         - url: reference-guide/schemas/dynamic-typing
     - url: reference-guide/search
     - url: reference-guide/query-dsl

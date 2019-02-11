@@ -26,7 +26,7 @@ in a document:
 
 ### Boolean datatype
 
-* `boolean`
+* [boolean](../types/boolean-type)
 
 ## Geospatial datatypes
 
