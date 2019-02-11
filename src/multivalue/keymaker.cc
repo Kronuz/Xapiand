@@ -377,7 +377,7 @@ GeoKey::findSmallest(const Xapian::Document& doc) const
 	double min_angle = M_PI;
 	for (const auto& centroid : centroids) {
 		for (const auto& _centroid : _centroids) {
-			double rad_angle = std::acos(_centroid * centroid);
+			double rad_angle = _centroid.distance(centroid);
 			if (rad_angle < min_angle) {
 				min_angle = rad_angle;
 			}
@@ -405,7 +405,7 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 	double max_angle = 0;
 	for (const auto& centroid : centroids) {
 		for (const auto& _centroid : _centroids) {
-			double rad_angle = std::acos(_centroid * centroid);
+			double rad_angle = _centroid.distance(centroid);
 			if (rad_angle > max_angle) {
 				max_angle = rad_angle;
 			}

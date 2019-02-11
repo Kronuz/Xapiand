@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 
 #include "exception.h"
 
+#include <cmath>                                  // for std::acos
 #include <cstdio>
 #include <functional>
 #include <string>
@@ -143,7 +144,7 @@ public:
 	bool operator!=(const Cartesian& p) const noexcept;
 	bool operator<(const Cartesian& p) const noexcept;
 	bool operator>(const Cartesian& p) const noexcept;
-	// Dot product
+	// Dot product (or scalar product)
 	double operator*(const Cartesian& p) const noexcept;
 	Cartesian& operator*(double _scale) noexcept;
 	// Vector product
@@ -153,6 +154,9 @@ public:
 	Cartesian& operator+=(const Cartesian& p) noexcept;
 	Cartesian operator-(const Cartesian& p) const noexcept;
 	Cartesian& operator-=(const Cartesian& p) noexcept;
+
+	// Computing the Angular Distance Using the Scalar Product
+	double distance(const Cartesian& p);
 
 	// Returns <Latitude, Longitude, Height>
 	std::tuple<double, double, double> toGeodetic() const;
@@ -180,6 +184,10 @@ inline Cartesian operator*(const Cartesian& c, double scale) {
 
 inline Cartesian operator*(double scale, const Cartesian& c) {
 	return Cartesian(c.x * scale, c.y * scale, c.z * scale);
+}
+
+inline double distance(const Cartesian& p) {
+	return std::acos(operator*(p));
 }
 
 
