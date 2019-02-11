@@ -20,32 +20,12 @@ RUN apk add libuuid \
     git \
     zlib-dev \
     # Xapian specific:
-    make \
-    autoconf \
-    automake \
-    libtool \
     perl \
     tcl \
     # Xapiand specific:
     ninja \
     cmake \
     util-linux-dev
-
-# Build xapian using clang (from Kronuz git repo using layer cache buster)
-ADD https://api.github.com/repos/Kronuz/xapian/git/refs/heads/master xapian-version.json
-RUN mkdir -p /usr/src \
-  && git clone -b master --single-branch --depth 1 "https://github.com/Kronuz/xapian.git" /usr/src/xapian \
-  && cd /usr/src/xapian/xapian-core \
-  && ./preautoreconf \
-  && autoreconf --force --install -Im4 \
-  && CC=clang CXX=clang++ ./configure \
-    --disable-dependency-tracking \
-    --disable-documentation \
-    --enable-maintainer-mode \
-    --prefix=/usr \
-  && make install \
-  && cp bin/xapian-inspect /usr/bin \
-  && rm -rf /usr/src/xapian
 
 # Build Xapiand using clang (from Kronuz git repo using layer cache buster)
 ADD https://api.github.com/repos/Kronuz/Xapiand/git/refs/heads/master xapiand-version.json
