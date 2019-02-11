@@ -34,7 +34,7 @@ struct required_spc_t;
 
 
 static inline constexpr double geo_weight_from_angle(double angle) {
-	return (M_PI - angle) * M_PER_RADIUS_EARTH;
+	return M_PI - angle;
 }
 
 
