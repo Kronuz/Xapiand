@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,27 +22,37 @@
 
 #pragma once
 
-#include <cmath>              // for M_PI
-#include <string>             // for string
+#include <cmath>                                  // for M_PI
+#include <string>                                 // for std::string
 
-#include "geospatial/geospatial.h"   // for GeoSpatial, MsgPack
-#include "xapian.h"           // for docid, valueno, Query, ValuePostingSource
+#include "geospatial/geometry.h"                  // for M_PER_RADIUS_EARTH
+#include "msgpack.h"                              // for MsgPack
+#include "xapian.h"                               // for Xapian::*
 
 
 struct required_spc_t;
+
+
+static inline constexpr double geo_weight_from_angle(double angle) {
+	return (M_PI - angle) * M_PER_RADIUS_EARTH;
+}
 
 
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
 	std::vector<range_t> ranges;
+	std::vector<Cartesian> centroids;
 
 	/*
 	 * Calculates the smallest angle between its centroids and search centroids.
-	 * void calc_angle(const std::vector<Cartesian>& centroids_);
+	 */
+	double calculateWeight() const;
+
+	/*
 	 * Calculates if some their values is inside ranges.
 	 */
-	bool insideRanges();
+	bool insideRanges() const;
 
 public:
 	/* Construct a new match decider which returns only documents with a
@@ -51,10 +61,13 @@ public:
 	 *  @param slot_ The value slot to read values from.
 	 *  @param ranges
 	*/
-	template <typename R, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value>>
-	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_)
+	template <typename R, typename C, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value && std::is_same<std::vector<Cartesian>, std::decay_t<C>>::value>>
+	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_, C&& centroids_)
 		: Xapian::ValuePostingSource(slot_),
-		  ranges(std::forward<R>(ranges_)) { }
+		  ranges(std::forward<R>(ranges_)),
+		  centroids(std::forward<C>(centroids_)) {
+		set_maxweight(geo_weight_from_angle(0.0));
+	}
 
 	// Call this function for create a new Geo Spatial Query.
 	static Xapian::Query getQuery(const required_spc_t& field_spc, const MsgPack& obj);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,12 @@
 
 #include "geospatialrange.h"
 
-#include <cmath>               // for M_PI, acos
-#include <utility>             // for pair
+#include <cmath>                                  // for M_PI, acos
 
-#include "generate_terms.h"    // for GeneratTerms::geo
-#include "schema.h"            // for required_spc_t
-#include "serialise_list.h"    // for StringList, RangeList
+#include "generate_terms.h"                       // for GenerateTerms
+#include "geospatial/geospatial.h"                // for GeoSpatial
+#include "schema.h"                               // for required_spc_t
+#include "serialise_list.h"                       // for StringList
 
 
 Xapian::Query
@@ -35,7 +35,9 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 {
 	GeoSpatial geo(obj);
 
-	auto ranges = geo.getGeometry()->getRanges(field_spc.flags.partials, field_spc.error);
+	auto geometry = geo.getGeometry();
+	auto ranges = geometry->getRanges(field_spc.flags.partials, field_spc.error);
+	auto centroids = geometry->getCentroids();
 
 	if (ranges.empty()) {
 		return Xapian::Query();
@@ -43,7 +45,7 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 
 	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
 
-	auto gsr = new GeoSpatialRange(field_spc.slot, std::move(ranges));
+	auto gsr = new GeoSpatialRange(field_spc.slot, std::move(ranges), std::move(centroids));
 	auto geoQ = Xapian::Query(gsr->release());
 
 	if (query.empty()) {
@@ -53,8 +55,26 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 }
 
 
+double
+GeoSpatialRange::calculateWeight() const
+{
+	const auto _centroids = Unserialise::centroids(get_value());
+
+	double min_angle = M_PI;
+	for (const auto& centroid : centroids) {
+		for (const auto& _centroid : _centroids) {
+			double rad_angle = std::acos(_centroid * centroid);
+			if (rad_angle < min_angle) {
+				min_angle = rad_angle;
+			}
+		}
+	}
+	return geo_weight_from_angle(min_angle);
+}
+
+
 bool
-GeoSpatialRange::insideRanges()
+GeoSpatialRange::insideRanges() const
 {
 	const auto _ranges = Unserialise::ranges(get_value());
 
@@ -127,14 +147,14 @@ GeoSpatialRange::check(Xapian::docid min_docid, double min_wt)
 double
 GeoSpatialRange::get_weight() const
 {
-	return 1.0;
+	return calculateWeight();
 }
 
 
 GeoSpatialRange*
 GeoSpatialRange::clone() const
 {
-	return new GeoSpatialRange(get_slot(), ranges);
+	return new GeoSpatialRange(get_slot(), ranges, centroids);
 }
 
 
@@ -165,8 +185,10 @@ GeoSpatialRange::unserialise_with_registry(const std::string& serialised, const 
 
 		auto it = data.begin();
 		const auto slot_ = static_cast<Xapian::valueno>(unserialise_length(*it));
-		auto ranges_ = Unserialise::ranges(*++it);
-		return new GeoSpatialRange(slot_, std::vector<range_t>(std::make_move_iterator(ranges_.begin()), std::make_move_iterator(ranges_.end())));
+		auto ranges_centroids = Unserialise::ranges_centroids(*++it);
+		return new GeoSpatialRange(slot_,
+			std::vector<range_t>(std::make_move_iterator(ranges_centroids.first.begin()), std::make_move_iterator(ranges_centroids.first.end())),
+			std::vector<Cartesian>(std::make_move_iterator(ranges_centroids.second.begin()), std::make_move_iterator(ranges_centroids.second.end())));
 	} catch (const SerialisationError&) {
 		throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
 	}

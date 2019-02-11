@@ -32,12 +32,13 @@
 #include "database_utils.h"                       // for prefixed, RESERVED_VALUE
 #include "exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
+#include "geospatial/geospatial.h"                // for GeoSpatial
 #include "hashes.hh"                              // for fnv1ah32
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "log.h"                                  // for L_CALL, L
 #include "modulus.hh"                             // for modulus
 #include "multivalue/generate_terms.h"            // for GenerateTerms
-#include "multivalue/geospatialrange.h"           // for GeoSpatial, GeoSpatialRange
+#include "multivalue/geospatialrange.h"           // for GeoSpatialRange
 #include "multivalue/range.h"                     // for MultipleValueRange
 #include "repr.hh"                                // for repr
 #include "reserved.h"                             // for RESERVED_
