@@ -48,6 +48,42 @@ PUT /bank/1:search?pretty
 
 Data types like date and numeric are often used for range search. Due to the range searches are performed with [values](https://xapian.org/docs/facets.html) there are not equally fast like term search, to improve the performance of the search we can use the keyword `_accuracy` which index as terms thresholds and are added to the query to improve the filtering and searching for the values. In the above example terms for the day, month and year are generated.
 
+## Date Math former
+
+Date math form allow compute math operations in the date before the indexation. The expression starts with an anchor date, which can either be now, or a date string ending with \|\|. This anchor date can optionally be followed by one or more maths expressions:
+
+* +1h - add one hour
+* -1d - subtract one day
+* /d - round down to the nearest day
+
+The supported units are:
+
+|-----|--------|
+| `y` | years  |
+| `M` | months |
+| `w` | weeks  |
+| `d` | days   |
+| `h` | hours  |
+| `m` | minutes|
+| `s` | seconds|
+
+For example:
+{% capture req %}
+
+```json
+PUT /bank/1:search?pretty
+
+{
+    "MyDate": {
+      "_value": "2011-01-01||+1y+3M",
+      "_type": "date"
+    }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+The adove example is indexed as "2012-04-01".
 
 ## Parameters for the text fields
 
