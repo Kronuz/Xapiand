@@ -1266,7 +1266,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 			if (qdsl && qdsl->find(RESERVED_QUERYDSL_SORT) != qdsl->end()) {
 				auto value = qdsl->at(RESERVED_QUERYDSL_SORT);
-				query_object.get_sorter(sorter, value);
+				sorter = query_object.get_sorter(value);
 			}
 
 			if (qdsl && qdsl->find(RESERVED_QUERYDSL_QUERY) != qdsl->end()) {
