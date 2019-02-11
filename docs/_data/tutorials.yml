@@ -1,6 +1,8 @@
 - title: Tutorials
   tutorials:
     - url: home
+    - url: spatial-search
+      title: Spatial Search
 
 - title: Another section
   tutorials:
