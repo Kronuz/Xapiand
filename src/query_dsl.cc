@@ -1136,6 +1136,7 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 				std::string value;
 				bool descending = false;
 				const auto field = it->str_view();
+				const auto field_spc = schema->get_slot_field(field);
 				auto const& o = it.value();
 				const auto it_val_e = o.end();
 				for (auto it_val = o.begin(); it_val != it_val_e; ++it_val) {
@@ -1156,6 +1157,7 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 							}
 							break;
 						case _srt.fhh(RESERVED_VALUE):
+							// value = Cast::cast(field_spc.get_type(), val);
 							value = val.as_str();
 							break;
 						case _srt.fhh(RESERVED_QUERYDSL_METRIC):
@@ -1168,13 +1170,12 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 							break;
 					}
 				}
-				const auto field_spc = schema->get_slot_field(field);
 				if (field_spc.get_type() != FieldType::EMPTY) {
 					sorter->add_value(field_spc, descending, value, e);
 				}
 			}
+			break;
 		}
-		break;
 		case MsgPack::Type::STR: {
 			auto field = obj.as_str();
 			bool descending = false;
@@ -1191,8 +1192,8 @@ QueryDSL::get_sorter(std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, const Ms
 			if (field_spc.get_type() != FieldType::EMPTY) {
 				sorter->add_value(field_spc, descending, "", e);
 			}
+			break;
 		}
-		break;
 		default:
 			THROW(QueryDslError, "Invalid format {}: {}", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
 	}
