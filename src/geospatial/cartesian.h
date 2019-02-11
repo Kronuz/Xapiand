@@ -156,7 +156,7 @@ public:
 	Cartesian& operator-=(const Cartesian& p) noexcept;
 
 	// Computing the Angular Distance Using the Scalar Product
-	double distance(const Cartesian& p);
+	double distance(const Cartesian& p) const;
 
 	// Returns <Latitude, Longitude, Height>
 	std::tuple<double, double, double> toGeodetic() const;
@@ -186,7 +186,8 @@ inline Cartesian operator*(double scale, const Cartesian& c) {
 	return Cartesian(c.x * scale, c.y * scale, c.z * scale);
 }
 
-inline double distance(const Cartesian& p) {
+
+inline double Cartesian::distance(const Cartesian& p) const {
 	return std::acos(operator*(p));
 }
 
