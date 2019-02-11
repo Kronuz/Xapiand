@@ -255,6 +255,8 @@ public:
 
 	ct_type_t ct_type;
 
+	size_t size;
+
 	int indented;
 	bool expect_100;
 	bool closing;

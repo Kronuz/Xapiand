@@ -956,6 +956,8 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 		repr(at, length));
 	ignore_unused(parser);
 
+	new_request->size += length;
+
 	if likely(!closed && !new_request->ending && new_request->view) {
 		if (new_request->append(at, length)) {
 			new_request->pending.signal();
@@ -981,6 +983,10 @@ HttpClient::on_message_complete(http_parser* parser)
 		HttpParserHeaderStateNames(parser->header_state),
 		readable_http_parser_flags(parser));
 	ignore_unused(parser);
+
+	if (Logging::log_level > LOG_DEBUG) {
+		log_request(*new_request);
+	}
 
 	if likely(!closed && !new_request->ending) {
 		new_request->ending = true;
@@ -1048,10 +1054,6 @@ HttpClient::prepare()
 		request.head());
 
 	new_request->received = std::chrono::system_clock::now();
-
-	if (Logging::log_level > LOG_DEBUG) {
-		log_request(*new_request);
-	}
 
 	if (new_request->parser.http_major == 0 || (new_request->parser.http_major == 1 && new_request->parser.http_minor == 0)) {
 		new_request->closing = true;
@@ -3307,6 +3309,7 @@ Request::Request(HttpClient* client)
 	  ended{false},
 	  raw_peek{0},
 	  raw_offset{0},
+	  size{0},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},
@@ -3685,6 +3688,8 @@ Request::to_text(bool decode)
 		} else {
 			request_text += text;
 		}
+	} else {
+		request_text += "<body " + string::from_bytes(size) + ">";
 	}
 
 	return request_text;
@@ -3781,6 +3786,8 @@ Response::to_text(bool decode)
 		} else {
 			response_text += text;
 		}
+	} else {
+		response_text += "<body " + string::from_bytes(size) + ">";
 	}
 
 	return response_text;
