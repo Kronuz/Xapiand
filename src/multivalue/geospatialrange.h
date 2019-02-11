@@ -41,8 +41,8 @@ static inline constexpr double geo_weight_from_angle(double angle) {
 // New Match Decider for GeoSpatial value range.
 class GeoSpatialRange : public Xapian::ValuePostingSource {
 	// Ranges for the search.
-	std::vector<range_t> ranges;
-	std::vector<Cartesian> centroids;
+	std::vector<range_t> _ranges;
+	std::vector<Cartesian> _centroids;
 
 	/*
 	 * Calculates the smallest angle between its centroids and search centroids.
@@ -62,10 +62,10 @@ public:
 	 *  @param ranges
 	*/
 	template <typename R, typename C, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value && std::is_same<std::vector<Cartesian>, std::decay_t<C>>::value>>
-	GeoSpatialRange(Xapian::valueno slot_, R&& ranges_, C&& centroids_)
+	GeoSpatialRange(Xapian::valueno slot_, R&& ranges, C&& centroids)
 		: Xapian::ValuePostingSource(slot_),
-		  ranges(std::forward<R>(ranges_)),
-		  centroids(std::forward<C>(centroids_)) {
+		  _ranges(std::forward<R>(ranges)),
+		  _centroids(std::forward<C>(centroids)) {
 		set_maxweight(geo_weight_from_angle(0.0));
 	}
 

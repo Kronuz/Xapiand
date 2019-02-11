@@ -58,12 +58,16 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 double
 GeoSpatialRange::calculateWeight() const
 {
-	const auto _centroids = Unserialise::centroids(get_value());
+	const auto centroids = Unserialise::centroids(get_value());
+
+	if (_centroids.empty()) {
+		return geo_weight_from_angle(M_PI);
+	}
 
 	double min_angle = M_PI;
 	for (const auto& centroid : centroids) {
 		for (const auto& _centroid : _centroids) {
-			double rad_angle = _centroid.distance(centroid);
+			double rad_angle = centroid.distance(_centroid);
 			if (rad_angle < min_angle) {
 				min_angle = rad_angle;
 			}
@@ -76,16 +80,16 @@ GeoSpatialRange::calculateWeight() const
 bool
 GeoSpatialRange::insideRanges() const
 {
-	const auto _ranges = Unserialise::ranges(get_value());
+	const auto ranges = Unserialise::ranges(get_value());
 
-	if (_ranges.empty() || _ranges.front().start > ranges.back().end || _ranges.back().end < ranges.front().start) {
+	if (ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
 		return false;
 	}
 
-	auto it1 = ranges.begin();
-	auto it2 = _ranges.begin();
-	const auto it1_e = ranges.end();
-	const auto it2_e = _ranges.end();
+	auto it1 = _ranges.begin();
+	auto it2 = ranges.begin();
+	const auto it1_e = _ranges.end();
+	const auto it2_e = ranges.end();
 
 	while (it1 != it1_e && it2 != it2_e) {
 		if (it1->start < it2->start) {
@@ -154,7 +158,7 @@ GeoSpatialRange::get_weight() const
 GeoSpatialRange*
 GeoSpatialRange::clone() const
 {
-	return new GeoSpatialRange(get_slot(), ranges, centroids);
+	return new GeoSpatialRange(get_slot(), _ranges, _centroids);
 }
 
 
@@ -168,7 +172,7 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges(ranges) };
+	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges(_ranges) };
 	return StringList::serialise(data.begin(), data.end());
 }
 
