@@ -26,7 +26,7 @@ Dynamic date detection can be disabled by setting `date_detection` to `false`
 PUT my_index/:schema
 
 {
-	"date_detection": false
+  "date_detection": false
 }
 ```
 
