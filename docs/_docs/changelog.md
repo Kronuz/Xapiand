@@ -56,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
-## [0.8.14] - 2019-01-15
+## [0.8.14] - 2019-01-27
 {: #v0-8-14 }
 
 ### Added
@@ -109,7 +109,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #v0-8-10 }
 
 ### Changed
-- Default bind address is now 0.0.0.0
+- Default bind address is now again 0.0.0.0
 
 
 ---
@@ -129,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - UDP usage tweaked (for Discovery)
+- Default TCP bind address is now the current IP
 
 
 ---
@@ -208,7 +209,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #v0-7-0 }
 
 ### Added
-- Prometheus metrics exposed at /:metrics
+- Prometheus metrics exposed at `/:metrics`
 
 
 ---
@@ -216,11 +217,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #v0-6-2 }
 
 ### Added
-- Added --flush-threshold command line option
+- Added `--flush-threshold` command line option
 
 ### Changed
-- MERGE and PATCH now require the document already exists
-- Renamed command line option --force-up to simply --force
+- `MERGE` and `PATCH` now require the document already exists
+- Renamed command line option `--force-up` to simply `--force`
 
 ### Fixed
 - Fix restore command memory usage
@@ -238,6 +239,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Parallel restore commands
 - General optimizations
+
+### Changed
+- **BREAKING**: Geospatial fields changed generated terms. Reindexing needed!
 
 ### Fixed
 - Fixed geospatial terms and accuracy
