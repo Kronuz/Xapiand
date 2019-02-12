@@ -1,4 +1,4 @@
-<article>
+<article id="{{ post.title | slugify }}" class="{{ post.categories | join: ' ' }}">
 	<h2>
 		<a href="{{ post.url | relative_url }}">
 			{{ post.title }}

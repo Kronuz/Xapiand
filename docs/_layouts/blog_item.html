@@ -2,7 +2,7 @@
 layout: blog
 ---
 
-<article id="{{ page.title | slugify }}">
+<article id="{{ page.title | slugify }}" class="{{ page.categories | join: ' ' }}">
 	<h2>
 		{{ page.title }}
 		<a href="{{ page.url }}" class="header-link" title="Permalink">
