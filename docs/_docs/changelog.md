@@ -1,10 +1,32 @@
 ---
-title: History
+title: ChangeLog
 read_only: true
 ---
 
-## 0.9.0 / 2019-02-11
-{: #v0-9-0}
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+{: .note }
+**_Types of changes_**<br>
+  * `Added` for new features.<br>
+  * `Changed` for changes in existing functionality.<br>
+  * `Deprecated` for soon-to-be removed features.<br>
+  * `Removed` for now removed features.<br>
+  * `Fixed` for any bug fixes.<br>
+  * `Security` in case of vulnerabilities.
+
+
+## [Unreleased]
+### Changed
+
+- Use OP_FILTER for terms in range queries
+- Flattened range queries
+
+
+
+## [0.9.0] - 2019-02-11
 
 - Greatly improves performance
 - Embedded Xapian core 1.5.0 in the source code
@@ -19,8 +41,7 @@ read_only: true
 - Home and docs site with cosmetic improvements
 
 
-## 0.8.15 / 2019-02-01
-{: #v0-8-15}
+## [0.8.15] - 2019-02-01
 
 - Fix bug with UUIDs and macOS
 - Compress documents using LZ4 instead of gzip
@@ -28,8 +49,7 @@ read_only: true
 - Text fields no longer remove terms with Stopper
 
 
-## 0.8.14 / 2019-01-15
-{: #v0-8-14}
+## [0.8.14] - 2019-01-15
 
 - Added new Xapiand client (based on Elasticsearch client)
 - Schema dropped STRING, it now has TEXT and KEYWORD
@@ -38,108 +58,92 @@ read_only: true
 - Added `_shift` to aggregations
 
 
-## 0.8.13 / 2019-01-21
-{: #v0-8-13}
+## [0.8.13] - 2019-01-21
 
 - Remote and Replication protocol are now split in two
 - Added bounds to standard deviation aggregation
 - Range keys for aggregations fixed
 - Documentation about Aggregations
 
-## 0.8.12 / 2019-01-15
-{: #v0-8-12}
+## [0.8.12] - 2019-01-15
 
 - Documentation updated
 - Fix Docker entrypoint
 
 
-## 0.8.11 / 2019-01-14
-{: #v0-8-11}
+## [0.8.11] - 2019-01-14
 
 - Uses /var/db/xapiand directory for database by default
 
 
-## 0.8.10 / 2019-01-10
-{: #v0-8-10}
+## [0.8.10] - 2019-01-10
 
 - Default bind address is now 0.0.0.0
 
 
-## 0.8.9 / 2019-01-10
-{: #v0-8-9}
+## [0.8.9] - 2019-01-10
 
 - Fixes to multicast script for Kubernetes
 
 
-## 0.8.8 / 2018-12-27
-{: #v0-8-8}
+## [0.8.8] - 2018-12-27
 
 - Added daemon script for multicasting across k8s nodes
 - UDP usage tweaked (for Discovery)
 
 
-## 0.8.7 / 2018-12-21
-{: #v0-8-7}
+## [0.8.7] - 2018-12-21
 
 - Explicit initialization of schema for cluster database
 - Cluster database endpoints normalized
 
 
-## 0.8.6 / 2018-12-20
-{: #v0-8-6}
+## [0.8.6] - 2018-12-20
 
 - Using fnv1ah64 for clustering hash (jump_consistent_hash)
 
 
-## 0.8.5 / 2018-12-20
-{: #v0-8-5}
+## [0.8.5] - 2018-12-20
 
 - Logo adjustments + banner updated
 
 
-## 0.8.4 / 2018-12-16
-{: #v0-8-4}
+## [0.8.4] - 2018-12-16
 
 - Fix Remote storage
 - Discovery protocol fixed issues with cluster
 
 
-## 0.8.3 / 2018-12-19
-{: #v0-8-3}
+## [0.8.3] - 2018-12-19
 
 - Colorize all node names
 - Fix exit codes
 - Discovery/Raft: Merged both into Discovery
 
 
-## 0.8.2 / 2018-12-16
-{: #v0-8-2}
+## [0.8.2] - 2018-12-16
 
 - Improve efficiency of nodes update after PING
 
 
-## 0.8.1 / 2018-12-13
-{: #v0-8-1}
+## [0.8.1] - 2018-12-13
 
 - Rewrite of Database Pool
 - Thread names changed
 
 
-## 0.8.0 / 2018-11-21
-{: #v0-8-0}
+## [0.8.0] - 2018-11-21
 
 - Cluster mode enabled
 - Adds replication and remote protocol
 
 
-## 0.7.0 / 2018-09-21
-{: #v0-7-0}
+## [0.7.0] - 2018-09-21
 
 - Prometheus metrics exposed at /:metrics
 
 
-## 0.6.2 / 2018-05-03
-{: #v0-6-2}
+## [0.6.2] - 2018-05-03
 
 - Fix restore command memory usage
 - MERGE and PATCH now require the document already exists
@@ -152,8 +156,7 @@ read_only: true
 - Fix date accuracies
 
 
-## 0.6.1 / 2018-04-25
-{: #v0-6-1}
+## [0.6.1] - 2018-04-25
 
 - Parallel restore commands
 - General optimizations
@@ -162,8 +165,7 @@ read_only: true
 - Fixes multithreading bug with collected statistics
 
 
-## 0.6.0 / 2018-04-11
-{: #v0-6-0}
+## [0.6.0] - 2018-04-11
 
 - Breaking: Support for multi-content (by Content-Type) documents
 - Added :dump and :restore endpoints
@@ -177,15 +179,13 @@ read_only: true
 - Towards MultiarchSpec compatibility for Linux
 
 
-## 0.5.2 / 2018-04-02
-{: #v0-5-2}
+## [0.5.2] - 2018-04-02
 
 - Logo updated
 - Fixes issues while compiling with GCC + cleanups
 
 
-## 0.5.1 / 2018-03-28
-{: #v0-5-1}
+## [0.5.1] - 2018-03-28
 
 - Versioning of the project is now officially in the "0.x" line, after going
   through many ghost versions.
@@ -193,8 +193,7 @@ read_only: true
 - A Homebrew tap was created
 
 
-## 0.5.0 / 2018-03-23
-{: #v0-5-0}
+## [0.5.0] - 2018-03-23
 
 - Site is up and running
 - Documentation is finally cooking in the oven.
@@ -202,37 +201,32 @@ read_only: true
 - git@8cc67578b2
 
 
-## 0.4.2 / 2018-02-16
-{: #v0-4-2}
+## [0.4.2] - 2018-02-16
 
 - Fixes issues with "already locked database"
 - git@016d45cc6e
 
 
-## 0.4.1 / 2017-10-02
-{: #v0-4-1}
+## [0.4.1] - 2017-10-02
 
 - First stable release
 - Lots of optimizations
 - git@144900a8
 
 
-## 0.4.0 / 2016-11-14
-{: #v0-4-0}
+## [0.4.0] - 2016-11-14
 
 - Fixed a few issues
 - git@a72995f7
 
 
-## 0.3.0 / 2016-06-08
-{: #v0-3-0}
+## [0.3.0] - 2016-06-08
 
 - First beta release
 - Working under FreeBSD
 - git@461ce941
 
 
-## 0.0.0 / 2015-02-20
-{: #v0-0-0}
+## [0.0.0] - 2015-02-20
 
 - Birthday!
