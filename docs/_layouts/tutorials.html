@@ -8,7 +8,7 @@ layout: default
 			{% include tutorials/contents_mobile.html %}
 
 			<div class="unit four-fifths">
-				<article>
+				<article id="{{ page.title | slugify }}">
 					{% unless page.read_only %}
 						<div class="improve right hide-on-mobiles">
 							<a href="{{ site.repository }}/edit/{{ site.docs_branch }}/{{ page.path }}">
