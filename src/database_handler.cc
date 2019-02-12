@@ -1313,11 +1313,13 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	// L_DEBUG("query: {}", query.get_description());
 
 	// Configure sorter.
-	if (!sorter && !query_field.sort.empty()) {
-		sorter = std::make_unique<Multi_MultiValueKeyMaker>();
-		for (const auto& sort : query_field.sort) {
+	if (!query_field.sort.empty()) {
+		if (!sorter) {
+			sorter = std::make_unique<Multi_MultiValueKeyMaker>();
+		}
+		for (std::string_view sort : query_field.sort) {
 			size_t pos = sort.find(':');
-			if (pos == std::string::npos) {
+			if (pos != std::string_view::npos) {
 				auto field = sort.substr(0, pos);
 				auto value = sort.substr(pos);
 				query_object.get_sorter(sorter, { field, value });
