@@ -604,6 +604,8 @@ article h2:first-child { margin-top: 0; }
 	vertical-align: middle;
 	margin: -4px 4px 0;
 
+	background-color: rgba(0,0,0,.2);
+
 	width: 24px !important;
 	height: 24px !important;
 
@@ -633,8 +635,8 @@ article h2:first-child { margin-top: 0; }
 
 .blog article h2:first-child { margin-bottom: 0; }
 
-/* Code Highlighting */
 
+/* Code Highlighting */
 
 pre,
 code {
