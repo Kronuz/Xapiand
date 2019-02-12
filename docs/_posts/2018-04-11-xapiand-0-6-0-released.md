@@ -18,13 +18,18 @@ breaking change needed for some time.
 
 The release also fixes a few bugs and works towards better compatibility.
 
-- Breaking: Support for multi-content (by Content-Type) documents
+### Added
 - Added :dump and :restore endpoints
-- Fixes problem with big body responses breaking the logs
 - Added time it took (in milliseconds) to execute a :search query
 - Added sort, limit and offset to query DSL
 - Python: Xapiand client updated
+
+### Changed
+- **BREAKING**: Support for multi-content (by Content-Type) documents
 - Using C++17
-- GCC 7 compatibility
 - Updated FreeBSD port
+
+### Fixed
+- GCC 7 compatibility
+- Fixes problem with big body responses breaking the logs
 - Towards MultiarchSpec compatibility for Linux

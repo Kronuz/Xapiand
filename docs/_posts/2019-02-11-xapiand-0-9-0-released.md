@@ -11,15 +11,19 @@ Mainly this one significantly increases performance, fixes issues with Geospatia
 queries, embeds Xapian core 1.5.0, and adds lots of documentation and examples.
 
 
-v0.9.0
-- Greatly improves performance
+### Added
 - Embedded Xapian core 1.5.0 in the source code
-- Fixes a few issues with the way geospatial locations were
-  being filtered and indexed
-- Documentation extended
-- Sort accepting casts
-- Upgraded to fmtlib v5.3.1 library
-- Upgraded to ChaiScript v6.1.1 library
-- QueryDSL with flattened queries
 - Accept application/x-ndjson as input for `:restore` command
 - Home and docs site with cosmetic improvements
+
+### Changed
+- Greatly improves performance
+- Documentation extended
+- Upgraded to fmtlib v5.3.1 library
+- Upgraded to ChaiScript v6.1.1 library
+- Sort accepting casts
+- QueryDSL with flattened queries
+
+### Fixed
+- Fixes a few issues with the way geospatial locations were
+  being filtered and indexed

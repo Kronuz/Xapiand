@@ -9,4 +9,5 @@ categories: [release]
 This release provides a docker image (dubalu/xapiand) and exposes prometheus
 metrics at /:metrics
 
-- Prometheus metrics exposed at /:metrics
+### Added
+- Prometheus metrics exposed at `/:metrics`

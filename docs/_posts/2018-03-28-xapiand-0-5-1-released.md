@@ -8,7 +8,10 @@ categories: [release]
 
 This release fixes small isues that were detected since v0.5.0.
 
+### Added
+- A Homebrew tap was created
+
+### Changed
 - Versioning of the project is now officially in the "0.x" line, after going
   through many ghost versions.
 - Documentation was updated
-- A Homebrew tap was created

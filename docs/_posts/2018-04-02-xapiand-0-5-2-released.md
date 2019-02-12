@@ -8,5 +8,8 @@ categories: [release]
 
 This release updates logo
 
+### Changed
 - Logo updated
+
+### Fixed
 - Fixes issues while compiling with GCC + cleanups

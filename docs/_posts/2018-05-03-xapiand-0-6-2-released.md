@@ -27,11 +27,16 @@ Date accuracies where some times returning errors when used.
 A long standing bug which assumed read() on files always returned the
 full requested size when available.
 
+### Added
+- Added `--flush-threshold` command line option
+
+### Changed
+- `MERGE` and `PATCH` now require the document already exists
+- Renamed command line option `--force-up` to simply `--force`
+
+### Fixed
 - Fix restore command memory usage
-- MERGE and PATCH now require the document already exists
 - Fix HTTP protocol on malformed messages
-- Added --flush-threshold command line option
-- Renamed command line option --force-up to simply --force
 - Fix HTTP returning of large object bodies
 - Fix indexing documents with integer IDs
 - Fix io::read() to always return requested size when available

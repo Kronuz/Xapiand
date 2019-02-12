@@ -9,6 +9,7 @@ categories: [release]
 After many months of hard work by {{ site.name }}'s contributors, we're excited
 to announce a new minor release of the project, v0.5.0, is *finally released!*.
 
+### Added
 - Site is up and running
 - Documentation is finally cooking in the oven.
 - This release also features a new website (based on Jekyll's theme)

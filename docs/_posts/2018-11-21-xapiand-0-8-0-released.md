@@ -8,5 +8,6 @@ categories: [release]
 
 This release provides a clustering support and replication.
 
+### Added
 - Cluster mode enabled
 - Adds replication and remote protocol
