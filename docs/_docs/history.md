@@ -34,8 +34,8 @@ read_only: true
 - Added new Xapiand client (based on Elasticsearch client)
 - Schema dropped STRING, it now has TEXT and KEYWORD
 - Added sorting for Aggregations
-- Added _keyed to aggregations optional. Keyed are off by default now
-- Added _shift to aggregations
+- Added `_keyed` to aggregations optional. Keyed are off by default now
+- Added `_shift` to aggregations
 
 
 ## 0.8.13 / 2019-01-21
