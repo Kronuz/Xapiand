@@ -13,9 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Added
+- Added `_match_all` and `_match_none` to `:search` command
+
 ### Changed
 - Use OP_FILTER for terms in range queries
 - Flattened range queries
+
+### Fixed
+- Fixed `sort` query param during search
 
 
 ---

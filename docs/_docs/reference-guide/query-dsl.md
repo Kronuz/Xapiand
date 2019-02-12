@@ -6,10 +6,11 @@ Xapiand provides a full Query DSL (Domain Specific Language) based on JSON to
 define queries. Think of the Query DSL as an AST (Abstract Syntax Tree) of
 queries.
 
+
 ## Match All Query
 
 The simplest query, which matches all documents, returns all documents in any
-given database:
+given database giving them all a weight of 0.0:
 
 {% capture req %}
 
@@ -17,7 +18,28 @@ given database:
 POST /bank/:search?pretty
 
 {
-  "_query": "*"
+  "_query": {
+    "_match_all": {}
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+
+## Match None Query
+
+This is the inverse of the `_match_all` query, which matches no documents.
+
+{% capture req %}
+
+```json
+POST /bank/:search?pretty
+
+{
+  "_query": {
+    "_match_none": {}
+  }
 }
 ```
 {% endcapture %}
