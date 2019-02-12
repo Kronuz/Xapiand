@@ -761,17 +761,10 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		if (u_pos == last_pos) {
 			// All terms are in last_pos and last_pos == last_acc_pos
 			// Process only upper terms (lower terms discarded).
-			if (wqf == 1) {
-				auto upper = itertools::transform([&](uint64_t term){
-					return prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo);
-				}, u_terms.begin(), u_terms.end());
-				query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-			} else {
-				auto upper = itertools::transform([&](uint64_t term){
-					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
-				}, u_terms.begin(), u_terms.end());
-				query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-			}
+			auto upper = itertools::transform([&](uint64_t term){
+				return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
+			}, u_terms.begin(), u_terms.end());
+			query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
 		} else {
 			auto l_pos = u_pos - 1;
 			while (level_terms[l_pos].empty()) {
@@ -781,53 +774,27 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 			if (u_terms.size() == l_terms.size()) {
 				// All terms has a upper term, but for each lower term is a upper term.
 				// Process only lower terms.
-				if (wqf == 1) {
-					auto lower = itertools::transform([&](uint64_t term){
-						return prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo);
-					}, l_terms.begin(), l_terms.end());
-					query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
-				} else {
-					auto lower = itertools::transform([&](uint64_t term){
-						return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo), wqf);
-					}, l_terms.begin(), l_terms.end());
-					query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
-				}
+				auto lower = itertools::transform([&](uint64_t term){
+					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo), wqf);
+				}, l_terms.begin(), l_terms.end());
+				query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
 			} else if (l_terms.size() < MAX_TERMS) {
 				// Process upper terms *and* lower.
-				if (wqf == 1) {
-					auto lower = itertools::transform([&](uint64_t term){
-						return prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo);
-					}, l_terms.begin(), l_terms.end());
-					auto lower_query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
-					auto upper = itertools::transform([&](uint64_t term){
-						return prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo);
-					}, u_terms.begin(), u_terms.end());
-					auto upper_query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-					query = Xapian::Query(Xapian::Query::OP_AND, upper_query, lower_query);
-				} else {
-					auto lower = itertools::transform([&](uint64_t term){
-						return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo), wqf);
-					}, l_terms.begin(), l_terms.end());
-					auto lower_query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
-					auto upper = itertools::transform([&](uint64_t term){
-						return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
-					}, u_terms.begin(), u_terms.end());
-					auto upper_query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-					query = Xapian::Query(Xapian::Query::OP_AND, upper_query, lower_query);
-				}
+				auto lower = itertools::transform([&](uint64_t term){
+					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo), wqf);
+				}, l_terms.begin(), l_terms.end());
+				auto lower_query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
+				auto upper = itertools::transform([&](uint64_t term){
+					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
+				}, u_terms.begin(), u_terms.end());
+				auto upper_query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
+				query = Xapian::Query(Xapian::Query::OP_AND, upper_query, lower_query);
 			} else {
 				// Process only upper terms.
-				if (wqf == 1) {
-					auto upper = itertools::transform([&](uint64_t term){
-						return prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo);
-					}, u_terms.begin(), u_terms.end());
-					query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-				} else {
-					auto upper = itertools::transform([&](uint64_t term){
-						return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
-					}, u_terms.begin(), u_terms.end());
-					query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-				}
+				auto upper = itertools::transform([&](uint64_t term){
+					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
+				}, u_terms.begin(), u_terms.end());
+				query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
 			}
 		}
 	}
