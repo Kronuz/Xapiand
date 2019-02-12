@@ -1008,21 +1008,17 @@ code.output {
 	&:before { border-color: transparent #222 #222 transparent; }
 
 	&:after {
-		content: '\2699\fe0e';  // ⚙︎
-		font-size: 48px;
+		content: '\2699';  // ⚙
+		font-size: 32px;
 		margin-left: -2px;
-		margin-top: -6px;
 	}
 }
 
 .construction {
 	&:after {
-		content: '\2692\fe0e';  // ⚒︎
-		// content: '\2695\fe0e';  // ⚕︎
-		// content: '\2699\fe0e';  // ⚙︎
-		font-size: 48px;
+		content: '\2692';  // ⚒
+		font-size: 32px;
 		margin-left: -2px;
-		margin-top: -6px;
 	}
 }
 
