@@ -259,7 +259,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 					});
 					if (o.is_array()) {
 						switch (_.fhh(name)) {
-							// Compound query clauses
+							// Compound query operators
 							case _.fhh(RESERVED_QUERYDSL_AND):
 								query = process(Xapian::Query::OP_AND, path, o, default_op, wqf, flags, is_leaf);
 								break;
@@ -285,6 +285,9 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								// Xapian::Query(OP_SCALE_WEIGHT, subquery, factor)
 								query = process(Xapian::Query::OP_SCALE_WEIGHT, path, o, default_op, wqf, flags, is_leaf);
 								break;
+							case _.fhh(RESERVED_QUERYDSL_ELITE_SET):
+								query = process(Xapian::Query::OP_ELITE_SET, path, o, default_op, wqf, flags, is_leaf);
+								break;
 							case _.fhh(RESERVED_QUERYDSL_WILDCARD):
 								query = process(Xapian::Query::OP_WILDCARD, path, o, default_op, wqf, flags, is_leaf);
 								break;
@@ -293,7 +296,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						}
 					} else {
 						switch (_.fhh(name)) {
-							// Compound query clauses
+							// Query modifiers
 							case _.fhh(RESERVED_QUERYDSL_AND):
 								query = process(Xapian::Query::OP_AND, path, o, Xapian::Query::OP_AND, wqf, flags, true);
 								break;
