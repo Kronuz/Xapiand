@@ -1,0 +1,17 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+[**.{md,yml,yaml,json}]
+indent_style = space
+indent_size = 2
+
+[**.{c*,h*}]
+indent_style = tab
+indent_size = 4
+
+[src/xapian/**.{c*,h*}]
+indent_style = tab
+indent_size = 4
+tab_width = 8
