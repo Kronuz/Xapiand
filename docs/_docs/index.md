@@ -13,17 +13,45 @@ itself.
 
 ## So what is Xapiand, exactly?
 
-Xapiand is *A Modern Highly Available Distributed RESTful Search and Storage
-Server built for the Cloud*. It takes JSON (or MessagePack) documents and
+Xapiand is **A Modern Highly Available Distributed RESTful Search and Storage
+Server built for the Cloud**. It takes JSON (or MessagePack) documents and
 indexes them efficiently for later retrieval.
+
 
 ---
 
-## Helpful Hints
+## Document Conventions
 
-Throughout this guide there are a number of small-but-handy pieces of
-information that can make using {{ site.name }} easier, more interesting, and
-less hazardous. Here's what to look out for.
+Throughout this guide there are a few conventions in the way documentation
+is laid out and formatted, these are a few of them.
+
+
+### API Snippets
+
+Many examples of API calls that look something like this:
+
+{% capture req %}
+```json
+PUT /twitter/user/Kronuz
+
+{
+  "name" : "German M. Bravo"
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+For those, you can always copy the equivalent _curl_ code for it by hovering the
+snippet and clicking on the copy to the clipboard button:
+&nbsp;&nbsp;<i class="fa fa-clipboard" style="color: {{ site.theme_color_dark }}"></i>
+
+
+### Helpful Hints
+
+A number of small-but-handy pieces of information that can make using
+{{ site.name }} easier, more interesting, and less hazardous. We use several
+different strategies to draw your attention to certain pieces of information.
+Here's what to look out for:
 
 {: .note .tip }
 **_Tips help you get more from {{ site.name }}_**<br>
@@ -63,44 +91,6 @@ This part of the {{ site.name }} documentation is still not completed.
 - Others: ➛
 -->
 
----
-
-## API Snippets
-
-Throughout this guide there are many examples of API calls that look something
-like this:
-
-{% capture req %}
-```json
-PUT /twitter/user/Kronuz
-
-{
-  "name" : "German M. Bravo"
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-For those, you can always copy the equivalent curl code for it by hovering the
-snippet and clicking on the copy to the clipboard button: &nbsp;&nbsp;<i class="fa fa-clipboard"></i>
-
----
-
-## Donate to {{ site.name }}!
-
-### How will my donation be used?
-
-Development of *{{ site.name }}* is done as an open-source project and
-maintaining it is hard and time consuming, if you like {{ site.name }}, please
-donate whatever you feel comfortable with via PayPal. The donations will be
-directly used to support {{ site.name }}'s developers.
-
-### How do I donate?
-
-We accept donations via PayPal:
-
-<a class="paypalme" href="https://www.paypal.me/Kronuz/25" target="_blank" rel="nofollow">Donate to Kronuz via PayPal</a>
-
 
 ---
 
@@ -108,3 +98,12 @@ If you come across anything along the way that we haven't covered, or if you
 know of a tip you think others would find handy, please [file an
 issue]({{ site.repository }}/issues/new) and we'll see about
 including it in this guide.
+
+
+---
+
+Development of Xapiand is done as an open-source project and maintaining it is
+hard and time consuming, if you like Xapiand, please donate whatever
+you feel comfortable. We accept donations via PayPal:
+
+<a class="paypalme" href="https://www.paypal.me/Kronuz/25" target="_blank" rel="nofollow">Donate to Kronuz via PayPal</a>

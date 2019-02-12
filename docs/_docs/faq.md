@@ -4,13 +4,17 @@ title: Frequently Asked Questions
 
 
 ---
-
 ### Do I need to pay to get a license?
 No, {{ site.name }} is free and open source (MIT license)
 
 
 ---
+### How will my donation be used?
 
+The donations will be directly used to support {{ site.name }}'s developers.
+
+
+---
 ### How do I donate?
 
 We accept donations via PayPal:
