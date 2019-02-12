@@ -73,6 +73,9 @@ constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synony
 constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
 constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
 
+constexpr const char RESERVED_QUERYDSL_MATCH_ALL[]          = RESERVED__ "match_all";
+constexpr const char RESERVED_QUERYDSL_MATCH_NONE[]         = RESERVED__ "match_none";
+
 
 // A domain-specific language (DSL) for query
 
@@ -222,6 +225,9 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_QUERYDSL_SYNONYM),
 						hh(RESERVED_QUERYDSL_MAX),
 						hh(RESERVED_QUERYDSL_WILDCARD),
+						// Special queries.
+						hh(RESERVED_QUERYDSL_MATCH_ALL),
+						hh(RESERVED_QUERYDSL_MATCH_NONE),
 						// Leaf query clauses.
 						hh(RESERVED_QUERYDSL_PARTIAL),
 						hh(RESERVED_QUERYDSL_IN),
@@ -308,6 +314,13 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								break;
 							case _.fhh(RESERVED_QUERYDSL_MAX):
 								query = process(Xapian::Query::OP_MAX, path, o, Xapian::Query::OP_MAX, wqf, flags, true);
+								break;
+							// Special queries.
+							case _.fhh(RESERVED_QUERYDSL_MATCH_ALL):
+								query = Xapian::Query(std::string());
+								break;
+							case _.fhh(RESERVED_QUERYDSL_MATCH_NONE):
+								query = Xapian::Query();
 								break;
 							// Leaf query clauses.
 							case _.fhh(RESERVED_QUERYDSL_PARTIAL):
