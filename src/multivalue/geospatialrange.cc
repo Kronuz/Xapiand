@@ -44,14 +44,11 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 	}
 
 	auto query = GenerateTerms::geo(ranges, field_spc.accuracy, field_spc.acc_prefix);
-
 	auto gsr = new GeoSpatialRange(field_spc.slot, std::move(ranges), std::move(centroids));
-	auto geoQ = Xapian::Query(gsr->release());
-
 	if (query.empty()) {
-		return geoQ;
+		return Xapian::Query(gsr->release());
 	}
-	return Xapian::Query(Xapian::Query::OP_AND, query, geoQ);
+	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(gsr->release()), query);
 }
 
 

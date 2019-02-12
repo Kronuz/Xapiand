@@ -91,7 +91,7 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
-	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 }
 
 
@@ -118,7 +118,7 @@ Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
-	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 }
 
 
@@ -135,7 +135,7 @@ Xapian::Query getTimeQuery(const required_spc_t& field_spc, const MsgPack& start
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
-	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 }
 
 
@@ -152,7 +152,7 @@ Xapian::Query getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack& 
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
-	return Xapian::Query(Xapian::Query::OP_AND, query, Xapian::Query(mvr->release()));
+	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 }
 
 
