@@ -3,6 +3,127 @@ title: History
 read_only: true
 ---
 
+## 0.9.0 / 2019-02-11
+{: #v0-9-0}
+
+- Greatly improves performance
+- Embedded Xapian core 1.5.0 in the source code
+- Fixes a few issues with the way geospatial locations were
+  being filtered and indexed
+- Documentation extended
+- Sort accepting casts
+- Upgraded to fmtlib v5.3.1 library
+- Upgraded to ChaiScript v6.1.1 library
+- QueryDSL with flattened queries
+- Accept application/x-ndjson as input for `:restore` command
+- Home and docs site with cosmetic improvements
+
+
+## 0.8.15 / 2019-02-01
+{: #v0-8-15}
+
+- Fix bug with UUIDs and macOS
+- Compress documents using LZ4 instead of gzip
+- Keep-Alive and Close connection support
+- Text fields no longer remove terms with Stopper
+
+
+## 0.8.14 / 2019-01-15
+{: #v0-8-14}
+
+- Added new Xapiand client (based on Elasticsearch client)
+- Schema dropped STRING, it now has TEXT and KEYWORD
+- Added sorting for Aggregations
+- Added _keyed to aggregations optional. Keyed are off by default now
+- Added _shift to aggregations
+
+
+## 0.8.13 / 2019-01-21
+{: #v0-8-13}
+
+- Remote and Replication protocol are now split in two
+- Added bounds to standard deviation aggregation
+- Range keys for aggregations fixed
+- Documentation about Aggregations
+
+## 0.8.12 / 2019-01-15
+{: #v0-8-12}
+
+- Documentation updated
+- Fix Docker entrypoint
+
+
+## 0.8.11 / 2019-01-14
+{: #v0-8-11}
+
+- Uses /var/db/xapiand directory for database by default
+
+
+## 0.8.10 / 2019-01-10
+{: #v0-8-10}
+
+- Default bind address is now 0.0.0.0
+
+
+## 0.8.9 / 2019-01-10
+{: #v0-8-9}
+
+- Fixes to multicast script for Kubernetes
+
+
+## 0.8.8 / 2018-12-27
+{: #v0-8-8}
+
+- Added daemon script for multicasting across k8s nodes
+- UDP usage tweaked (for Discovery)
+
+
+## 0.8.7 / 2018-12-21
+{: #v0-8-7}
+
+- Explicit initialization of schema for cluster database
+- Cluster database endpoints normalized
+
+
+## 0.8.6 / 2018-12-20
+{: #v0-8-6}
+
+- Using fnv1ah64 for clustering hash (jump_consistent_hash)
+
+
+## 0.8.5 / 2018-12-20
+{: #v0-8-5}
+
+- Logo adjustments + banner updated
+
+
+## 0.8.4 / 2018-12-16
+{: #v0-8-4}
+
+- Fix Remote storage
+- Discovery protocol fixed issues with cluster
+
+
+## 0.8.3 / 2018-12-19
+{: #v0-8-3}
+
+- Colorize all node names
+- Fix exit codes
+- Discovery/Raft: Merged both into Discovery
+
+
+## 0.8.2 / 2018-12-16
+{: #v0-8-2}
+
+- Improve efficiency of nodes update after PING
+
+
+## 0.8.1 / 2018-12-13
+{: #v0-8-1}
+
+- Rewrite of Database Pool
+- Thread names changed
+
 
 ## 0.8.0 / 2018-11-21
 {: #v0-8-0}
