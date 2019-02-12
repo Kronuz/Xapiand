@@ -3700,7 +3700,7 @@ Request::to_text(bool decode)
 		} else {
 			request_text += text;
 		}
-	} else {
+	} else if (size) {
 		request_text += "<body " + string::from_bytes(size) + ">";
 	}
 
@@ -3798,7 +3798,7 @@ Response::to_text(bool decode)
 		} else {
 			response_text += text;
 		}
-	} else {
+	} else if (size) {
 		response_text += "<body " + string::from_bytes(size) + ">";
 	}
 
