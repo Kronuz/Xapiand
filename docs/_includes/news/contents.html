@@ -16,7 +16,8 @@
 			</li>
 			{% endfor %}
 			<li>
-				<a href="{{ '/docs/history/' | relative_url }}">History »</a>
+				{% assign changelog = site.docs | where: 'url', '/docs/changelog/' | first %}
+				<a href="{{ changelog.url | relative_url }}">{{ changelog.title }} »</a>
 			</li>
 		</ul>
 		<h4>Other News</h4>
