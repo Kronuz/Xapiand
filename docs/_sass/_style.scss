@@ -1290,3 +1290,20 @@ a.paypalme {
 		text-decoration: none;
 	}
 }
+
+
+article#changelog {
+	> h3 {
+		color: #ccc;
+		font-size: .9em;
+		margin: 1em 0 0;
+	}
+
+	> ul {
+		margin: 0;
+	}
+
+	strong {
+		color: wheat;
+	}
+}
