@@ -641,9 +641,10 @@ article h2:first-child { margin-top: 0; }
 pre,
 code {
 	white-space: pre;
-	display: inline-block;
 	margin: 0;
-	font: 14px/1.8em Menlo, Consolas, "Courier New", Courier, "Liberation Mono", monospace;
+	display: inline-block;
+	font-family: Menlo, Consolas, "Courier New", Courier, "Liberation Mono", monospace;
+	line-height: 1.9em;
 	padding: 0 0.5em;
 }
 
@@ -711,14 +712,15 @@ figure.highlight {
 pre.highlighter-rouge,
 code.highlighter-rouge {
 	display: inline;
-	padding: .15em .4em;
+	line-height: 1em;
+	padding: .1em .4em;
 	margin: 0 .1em;
 
 	color: #cccccc;
 	background-color: rgba(0,0,0,.03);
 	@include border-radius(5px);
 	@include box-shadow(inset 0 1px 5px rgba(0,0,0,.1),
-		0 1px 0 rgba(255,255,255,.05),
+		0 1px 0 rgba(255,255,255,.1),
 		0 -1px 0 rgba(0,0,0,.2));
 }
 
