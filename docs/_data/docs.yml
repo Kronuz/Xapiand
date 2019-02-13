@@ -42,6 +42,7 @@
                 - url: near
                 - url: love-and-hate
                 - url: default-operator
+                - url: stop-words
             - url: casting-values
             - url: namespace-queries
         - url: compound-queries
