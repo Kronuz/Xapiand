@@ -12,8 +12,10 @@ Fields of type geo_point accept latitude-longitude pairs, which can be used:
 
 ### Example:
 
+{% capture req %}
+
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
   "checkin": {
@@ -22,9 +24,10 @@ PUT /bank/1?pretty
       "_latitude": 25.67927
     }
   }
-  ...
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
 In the above example, taken from our example dataset, the field "checkin" is
 a geospatial point but could be any of:
@@ -46,10 +49,10 @@ a geospatial point but could be any of:
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-  "MyGeo": {
+  "neighborhood": {
     "_polygon": {
       "_latitude": [
         41.502530,
@@ -76,9 +79,9 @@ PUT /bank/1?pretty
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 {
-  "MyGeo": {
+  "neighborhood": {
     "_circle": {
       "_longitude": -101.601563,
       "_latitude": 18.885498,
@@ -90,7 +93,7 @@ PUT /bank/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-The example show circle with radius of 1000 meters.
+The example show circle with radius of **1000 meters**.
 
 
 ## Convex Hull
@@ -101,9 +104,9 @@ Calculate the convex hull for the coordinates using the
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 {
-  "MyGeo": {
+  "neighborhood": {
     "_chull": {
       "_longitude": [
         -109.034104,
@@ -126,12 +129,10 @@ PUT /bank/1?pretty
 
 This is the set of coordinates generate for the convex hull for the above example:
 
-```
-latitude  longitude height
--0.166828 -0.783064 0.599148
--0.261113 -0.756863 0.599148
--0.246869 -0.715576 0.653457
--0.157728 -0.740349 0.653457
--0.166828 -0.783064 0.599148
-
-```
+| Latitude  | Longitude | Height   |
+|-----------+-----------+----------+
+| -0.166828 | -0.783064 | 0.599148 |
+| -0.261113 | -0.756863 | 0.599148 |
+| -0.246869 | -0.715576 | 0.653457 |
+| -0.157728 | -0.740349 | 0.653457 |
+| -0.166828 | -0.783064 | 0.599148 |
