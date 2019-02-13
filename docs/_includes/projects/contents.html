@@ -36,6 +36,28 @@
 											{% if l3_doc or l3.link %}
 												<li class="{% if l3_doc.url == page.url %}current{% endif %}">
 													<a href="{% if l3.link %}{{ l3.link }}{% else %}{{ l3_doc.url | relative_url }}{% endif %}" onclick="selectLink(this)" class="{% if l3.link %}link{% endif %}">{{ l3.title | default: l3_doc.title }}</a>
+													<ul {% if l3_doc.url != page.url %}style="display:none"{% endif %}>
+														{% for l4 in l3.docs %}
+															{% assign l4_url = l4.url | append: '/' %}
+															{% assign l4_doc = site.projects | where: 'url', l4_url | first %}
+															{% if l4_doc or l4.link %}
+																<li class="{% if l4_doc.url == page.url %}current{% endif %}">
+																	<a href="{% if l4.link %}{{ l4.link }}{% else %}{{ l4_doc.url | relative_url }}{% endif %}" onclick="selectLink(this)" class="{% if l4.link %}link{% endif %}">{{ l4.title | default: l4_doc.title }}</a>
+																	<ul {% if l4_doc.url != page.url %}style="display:none"{% endif %}>
+																		{% for l5 in l4.docs %}
+																			{% assign l5_url = l5.url | append: '/' %}
+																			{% assign l5_doc = site.projects | where: 'url', l5_url | first %}
+																			{% if l5_doc or l5.link %}
+																				<li class="{% if l5_doc.url == page.url %}current{% endif %}">
+																					<a href="{% if l5.link %}{{ l5.link }}{% else %}{{ l5_doc.url | relative_url }}{% endif %}" onclick="selectLink(this)" class="{% if l5.link %}link{% endif %}">{{ l5.title | default: l5_doc.title }}</a>
+																				</li>
+																			{% endif %}
+																		{% endfor %}
+																	</ul>
+																</li>
+															{% endif %}
+														{% endfor %}
+													</ul>
 												</li>
 											{% endif %}
 										{% endfor %}

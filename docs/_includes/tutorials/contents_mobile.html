@@ -22,13 +22,27 @@
 						{% if l2_doc %}
 							<option value="{{ l2_doc.url | relative_url }}"{% if l2_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;{{ l2.title | default:l2_doc.title }}</option>
 							{% for l3 in l2.docs %}
-									{% assign l3_url = l3.url | append: '/' %}
-									{% assign l3_doc = site.tutorials | where: 'url', l3_url | first %}
-									{% if l3_doc %}
-										<option value="{{ l3_doc.url | relative_url }}"{% if l3_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;&#160;&#160;{{ l3.title | default:l3_doc.title }}</option>
+								{% assign l3_url = l3.url | append: '/' %}
+								{% assign l3_doc = site.tutorials | where: 'url', l3_url | first %}
+								{% if l3_doc %}
+									<option value="{{ l3_doc.url | relative_url }}"{% if l3_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;&#160;&#160;{{ l3.title | default:l3_doc.title }}</option>
+									{% for l4 in l3.docs %}
+										{% assign l4_url = l4.url | append: '/' %}
+										{% assign l4_doc = site.tutorials | where: 'url', l4_url | first %}
+										{% if l4_doc %}
+											<option value="{{ l4_doc.url | relative_url }}"{% if l4_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;&#160;&#160;{{ l4.title | default:l4_doc.title }}</option>
+											{% for l5 in l4.docs %}
+												{% assign l5_url = l5.url | append: '/' %}
+												{% assign l5_doc = site.tutorials | where: 'url', l5_url | first %}
+												{% if l5_doc %}
+													<option value="{{ l5_doc.url | relative_url }}"{% if l5_doc.url == page.url %} selected="selected"{% endif %}>&#160;&#160;&#160;&#160;{{ l5.title | default:l5_doc.title }}</option>
+												{% endif %}
+											{% endfor %}
 										{% endif %}
-								{% endfor %}
-							{% endif %}
+									{% endfor %}
+								{% endif %}
+							{% endfor %}
+						{% endif %}
 					{% endfor %}
 			{% endif %}
 		{% endfor %}
