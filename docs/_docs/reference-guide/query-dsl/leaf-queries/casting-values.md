@@ -21,10 +21,10 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-In the above example cast 2221.46 to integer, which later is internally
-converted to 2221.0.
+In the above example cast `2221.46` to integer, which later is internally
+converted to `2221.0` (as the "balance" field is a float).
 
-The following example will convert the integer 84535 to text:
+The following example will convert the integer `84535` to text `"84535"`:
 
 {% capture req %}
 
