@@ -34,9 +34,9 @@
             - url: date-type
               docs:
               - link: '#time-datatype'
-                title: Time datatype
+                title: Time
               - link: '#time-delta-datatype'
-                title: Time Delta datatype
+                title: Time Delta
             - url: boolean-type
             - url: geospatial-type
         - url: dynamic-typing
