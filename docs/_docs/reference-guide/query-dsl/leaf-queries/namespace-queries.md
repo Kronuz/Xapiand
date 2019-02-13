@@ -29,7 +29,7 @@ The above example is the document being indexed, the keyword `_namespace`
 enables the Namespace Queries functionality.
 
 Searching can be done either specifying nesting field names objects or by using
-[Field Expansion](/docs/reference-guide/api/#field-expansion) (joining the field
+[Field Expansion]({{ '/docs/reference-guide/api/#field-expansion' | relative_url }}) (joining the field
 names with `.`):
 
 {% capture req %}
