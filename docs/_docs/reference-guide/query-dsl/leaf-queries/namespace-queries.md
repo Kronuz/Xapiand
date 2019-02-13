@@ -1,5 +1,5 @@
 ---
-title: Namespace Query
+title: Namespace Queries
 ---
 
 The `_namespace` keyword allow search nested objects fields like tags.
@@ -51,7 +51,9 @@ The above example is the document indexed, the keyword `_namespace` allow nested
 GET /bank/:search?pretty
 
 {
-  "_query": { "style.clothing": "*" }
+  "_query": {
+    "style.clothing": "*"
+  }
 }
 ```
 {% endcapture %}
@@ -63,7 +65,9 @@ GET /bank/:search?pretty
 GET /bank/:search?pretty
 
 {
-  "_query": { "style.clothing.footwear": "casual shoes" }
+  "_query": {
+    "style.clothing.footwear": "casual shoes"
+  }
 }
 ```
 {% endcapture %}
@@ -76,7 +80,9 @@ GET /bank/:search?pretty
 GET /bank/:search?pretty
 
 {
-  "_query": { "style.hairstyle": "afro" }
+  "_query": {
+    "style.hairstyle": "afro"
+  }
 }
 ```
 {% endcapture %}
@@ -90,7 +96,9 @@ We can see that the nested object must be in the same order without skip a inter
 GET /bank/:search?pretty
 
 {
-  "_query": { "style.footwear": "casual shoes" }
+  "_query": {
+    "style.footwear": "casual shoes"
+  }
 }
 ```
 {% endcapture %}

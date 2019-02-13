@@ -1,5 +1,5 @@
 ---
-title: Cast Query
+title: Casting Values
 ---
 
 Cast allows explicit conversion from one data type to another as long as types

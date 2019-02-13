@@ -10,5 +10,5 @@
 
 - title: Tutorials
   docs:
-    - url: /tutorials/spatial-search
+    - url: spatial-search
       title: Spatial Search

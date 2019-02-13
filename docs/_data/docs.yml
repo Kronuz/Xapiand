@@ -9,147 +9,142 @@
     - url: /tutorials/home
 
 - title: Reference Guide
+  url: reference-guide
   docs:
-    - url: /docs/reference-guide/api
-    - url: /docs/reference-guide/indices
-    - url: /docs/reference-guide/documents
-    - url: /docs/reference-guide/info
-    - url: /docs/reference-guide/schemas
+    - url: api
+    - url: indices
+    - url: documents
+    - url: info
+    - url: schemas
       docs:
-        - url: /docs/reference-guide/schemas/field-types
+        - url: field-types
           docs:
-            - url: /docs/reference-guide/schemas/types/text-type
+            - url: text-type
               title: Text datatype
-            - url: /docs/reference-guide/schemas/types/keyword-type
+            - url: keyword-type
               title: Keyword datatype
-            - url: /docs/reference-guide/schemas/types/numeric-type
+            - url: numeric-type
               title: Numeric datatype
-            - url: /docs/reference-guide/schemas/types/date-type
+            - url: date-type
               title: Date datatype
-            - url: /docs/reference-guide/schemas/types/boolean-type
+            - url: boolean-type
               title: Boolean datatype
-        - url: /docs/reference-guide/schemas/dynamic-typing
-    - url: /docs/reference-guide/search
-    - url: /docs/reference-guide/query-dsl
+        - url: dynamic-typing
+    - url: search
+    - url: query-dsl
       docs:
-        - url: /docs/reference-guide/query-dsl/queries
-          title: Queries
+        - url: leaf-queries
+          link: '../#leaf-query-clauses'
+          title: Leaf Queries
           docs:
-            - link: '#simple-queries'
-              title: Simple Queries
-            - link: '#logical-operators'
-              title: Logical Operators
-            - link: '#maybe'
-              title: Maybe
-            - link: '#filtering'
-              title: Filtering
-            - link: '#range-searches'
-              title: Range Searches
-            - link: '#near'
-              title: Near
-            - link: '#phrase'
-              title: Phrase
-        - url: /docs/reference-guide/query-dsl/text-queries
-          title: Text Queries
+            - url: match-all-query
+            - url: simple-queries
+            - url: text-queries
+              docs:
+                - url: simple-query
+                - url: phrase-query
+                - url: partial-query
+            - url: modifiers
+              link: '#'
+              title: Modifiers
+              docs:
+                - url: near
+                - url: phrase
+                - url: partial
+                - url: love-and-hate
+                - url: elite-set
+                - url: casting-values
+            - url: namespace-queries
+        - url: compound-queries
+          link: '../#compound-query-clauses'
+          title: Compound Queries
           docs:
-            - url: /docs/reference-guide/query-dsl/text-queries/simple-query
-              title: Simple Query
-            - url: /docs/reference-guide/query-dsl/text-queries/match-query
-              title: Match Query
-            - url: /docs/reference-guide/query-dsl/text-queries/phrase-query
-              title: Phrase Query
-            - url: /docs/reference-guide/query-dsl/text-queries/partial-query
-              title: Partial Query
-        - url: /docs/reference-guide/query-dsl/namespace-queries
-          title: Namespace Queries
-        - url: /docs/reference-guide/query-dsl/cast-queries
-          title: Cast Queries
-        - url: /docs/reference-guide/query-dsl/geo-queries
-          title: Geospatial Queries
-          docs:
-            - link: '#point'
-              title: Point
-            - link: '#circle'
-              title: Circle
-            - link: '#polygon'
-              title: Polygon
-            - link: '#convex'
-              title: Convex
-            - link: '#chull'
-              title: Chull
-            - link: '#multipoint'
-              title: Multipoint
-            - link: '#multicircle'
-              title: Multicircle
-            - link: '#multiconvex'
-              title: Multiconvex
-            - link: '#multipolygon'
-              title: Multipolygon
-            - link: '#multichull'
-              title: Multichull
-            - link: '#extended_well_known_text'
-              title: EWKT
-        - url: /docs/reference-guide/query-dsl/like-this-queries
-          title: Find Docs. Like This
-        - url: /docs/reference-guide/query-dsl/near-queries
-          title: Near Queries
-    - url: /docs/reference-guide/aggregations
+            - url: logical-operators
+            - url: maybe-operator
+            - url: filter-operator
+            - url: elite-set-operator
+            - url: geospatial-searches
+              docs:
+                - link: '#point'
+                  title: Point
+                - link: '#circle'
+                  title: Circle
+                - link: '#polygon'
+                  title: Polygon
+                - link: '#convex'
+                  title: Convex
+                - link: '#chull'
+                  title: Chull
+                - link: '#multipoint'
+                  title: Multipoint
+                - link: '#multicircle'
+                  title: Multicircle
+                - link: '#multiconvex'
+                  title: Multiconvex
+                - link: '#multipolygon'
+                  title: Multipolygon
+                - link: '#multichull'
+                  title: Multichull
+                - link: '#extended_well_known_text'
+                  title: EWKT
+            - url: range-searches
+    - url: aggregations
       docs:
-        - url: /docs/reference-guide/aggregations/metrics
+        - url: metrics
           title: Metrics
           docs:
-            - url: /docs/reference-guide/aggregations/metrics/count-aggregation
+            - url: count-aggregation
               title: Count
-            - url: /docs/reference-guide/aggregations/metrics/sum-aggregation
+            - url: sum-aggregation
               title: Sum
-            - url: /docs/reference-guide/aggregations/metrics/avg-aggregation
+            - url: avg-aggregation
               title: Average
-            - url: /docs/reference-guide/aggregations/metrics/max-aggregation
+            - url: max-aggregation
               title: Max
-            - url: /docs/reference-guide/aggregations/metrics/min-aggregation
+            - url: min-aggregation
               title: Min
-            - url: /docs/reference-guide/aggregations/metrics/variance-aggregation
+            - url: variance-aggregation
               title: Variance
-            - url: /docs/reference-guide/aggregations/metrics/std_deviation-aggregation
+            - url: std_deviation-aggregation
               title: Standard Deviation
-            - url: /docs/reference-guide/aggregations/metrics/median-aggregation
+            - url: median-aggregation
               title: Median
-            - url: /docs/reference-guide/aggregations/metrics/mode-aggregation
+            - url: mode-aggregation
               title: Mode
-            - url: /docs/reference-guide/aggregations/metrics/stats-aggregation
+            - url: stats-aggregation
               title: Statistics
-            - url: /docs/reference-guide/aggregations/metrics/extended_stats-aggregation
+            - url: extended_stats-aggregation
               title: Extended Statistics
-        - url: /docs/reference-guide/aggregations/bucket
+        - url: bucket
           title: Bucket
           docs:
-            - url: /docs/reference-guide/aggregations/bucket/filter-aggregation
+            - url: filter-aggregation
               title: Filter
-            - url: /docs/reference-guide/aggregations/bucket/values-aggregation
+            - url: values-aggregation
               title: Values
-            - url: /docs/reference-guide/aggregations/bucket/terms-aggregation
+            - url: terms-aggregation
               title: Terms
-            - url: /docs/reference-guide/aggregations/bucket/histogram-aggregation
+            - url: histogram-aggregation
               title: Histogram
-            - url: /docs/reference-guide/aggregations/bucket/range-aggregation
+            - url: range-aggregation
               title: Range
-    - url: /docs/reference-guide/scripting
-    - url: /docs/reference-guide/storage
-    - url: /docs/reference-guide/stats
-    - url: /docs/reference-guide/monitoring
-    - url: /docs/reference-guide/wal
-    - url: /docs/reference-guide/backups
-    - url: /docs/reference-guide/kubernetes
+    - url: scripting
+    - url: storage
+    - url: stats
+    - url: monitoring
+    - url: wal
+    - url: backups
+    - url: kubernetes
 
 - title: Set up
   docs:
-    - url: /docs/installation
-    - url: /docs/building
+    - url: installation
+    - url: building
 
 - title: Miscellaneous
   docs:
-    - url: /docs/faq
+    - url: faq
       title: FAQ
-    - url: /docs/contributing
-    - url: /docs/conduct
-    - url: /docs/changelog
+    - url: contributing
+    - url: conduct
+    - url: changelog

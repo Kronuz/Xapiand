@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Added `_match_all` and `_match_none` to `:search` command
+- Added the Elite Set Operator
 
 ### Changed
 - Use OP_FILTER for terms in range queries
