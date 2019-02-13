@@ -21,24 +21,6 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "favoriteFruit": "ba*"
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-
-The same effect could be obtained by using the `_wildcard` keyword as part of
-the QueryDSL:
-
-{% capture req %}
-
-```json
-GET /bank/:search?pretty
-
-{
-  "_query": {
     "favoriteFruit": {
       "_partial": "ba"
     }
@@ -48,3 +30,20 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
+
+A similar effect could be obtained by using the wildcard ("`*`") character
+as part of the query text:
+
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+
+{
+  "_query": {
+    "favoriteFruit": "ba*"
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
