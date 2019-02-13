@@ -104,7 +104,7 @@ enum class UnitTime : uint64_t {
 };
 
 
-constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::STOP_ALL;
+constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::STOP_STEMMED;
 constexpr StemStrategy DEFAULT_STEM_STRATEGY      = StemStrategy::STEM_SOME;
 constexpr bool DEFAULT_GEO_PARTIALS               = true;
 constexpr double DEFAULT_GEO_ERROR                = 0.3;

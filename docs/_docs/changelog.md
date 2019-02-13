@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Use OP_FILTER for terms in range queries
 - Flattened range queries
+- The default stopper during indexation is now `stop_stemmed`
 
 ### Fixed
 - Fixed `sort` query param during search

@@ -1,12 +1,12 @@
 ---
 title: Date Datatype
-short_title: Date
+short_title: Date / Time
 ---
 
 JSON doesn't have a date datatype, so dates in Xapiand can either be:
 
-* Strings containing formatted dates, e.g. `"2015-11-15T13:12:00"`, `"2015-11-15"`
-or `"2015/11/15 13:12:00"`.
+* Strings containing formatted dates, e.g. `"2015-11-15T13:12:00"`,
+  `"2015-11-15"`, `"2015/11/15 13:12:00"` or ISO-8601.
 * A number representing milliseconds-since-the-epoch.
 * An object containing a `_date` type.
 
@@ -43,18 +43,26 @@ PUT /bank/1?pretty
       "_day": 15,
       "_time": "13:30:25.123"
     },
-    "_accuracy": [ "day", "month", "year"]
+    "_accuracy": [ "day", "month", "year" ]
   }
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
+
 ## Optimized Range Searches
 
-Data types like date and numeric are often used for range search. Due to the range searches are performed with [values](https://xapian.org/docs/facets.html) there are not equally fast like term search, to improve the performance of the search we can use the keyword `_accuracy` which index as terms thresholds and are added to the query to improve the filtering and searching for the values. In the above example terms for the day, month and year are generated.
+Data types like date and numeric are often used for range search. Due to the way
+range searches are implemented, searchig for values is not as performant as
+seaching by terms. To improve the performance of the search, Xapiand uses the
+`_accuracy` keyword, which indexes terms for value thresholds which later are
+used during the querying to improve the filtering and searching.
 
-## Date Math former
+In the above example terms for the day, month and year are generated.
+
+
+## Date Math Former
 
 Date math form allow compute math operations in the date before the indexation. The expression starts with an anchor date, which can either be now, or a date string ending with \|\|. This anchor date can optionally be followed by one or more maths expressions:
 
@@ -64,14 +72,14 @@ Date math form allow compute math operations in the date before the indexation. 
 
 The supported units are:
 
-|-----|--------|
-| `y` | years  |
-| `M` | months |
-| `w` | weeks  |
-| `d` | days   |
-| `h` | hours  |
-| `m` | minutes|
-| `s` | seconds|
+|-----|---------|
+| `y` | Years   |
+| `M` | Months  |
+| `w` | Weeks   |
+| `d` | Days    |
+| `h` | Hours   |
+| `m` | Minutes |
+| `s` | Seconds |
 
 For example:
 {% capture req %}
@@ -89,21 +97,23 @@ PUT /bank/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-The adove example is indexed as "2012-04-01".
+The adove example is indexed as "`2012-04-01`".
 
-## Parameters for the text fields
 
-The following parameters are accepted by text fields:
+## Parameters
+
+The following parameters are accepted by _Date_ fields:
 
 |---------------------------------------|-----------------------------------------------------------------------------------------|
-| `_index`                              | One or a pair of : `none`, `field_terms`, `field_values`, `field_all`, `field`, `global_terms`, `global_values`, `global_all`, `global`, `terms`, `values`, `all`      |
-| `_value`                              | The value for the field                                                                 |
-| `_slot`                               | The slot number                                                                         |
-| `_prefix`                             | The prefix with the term is going to be indexed     |
-| `_weight`                             | The weight with the term is going to be indexed     |
-| `_accuracy`                           | `second`, `minute`, `day`, `hour`, `month`, `year`, `decade`, `century`, `millennium`   |
+| `_accuracy`                           | Array with the accuracies to be indexed: `"second"`, `"minute"`, `"day"`, `"hour"`, `"month"`, `"year"`, `"decade"`, `"century"`, `"millennium"` |
+| `_value`                              | The value for the field (only used at index time)                                       |
+| `_index`                              | The mode the field will be indexed as (defaults to `"field_all"`): `"none"`, `"field_terms"`, `"field_values"`, `"field_all"`, `"field"`, `"global_terms"`, `"global_values"`, `"global_all"`, `"global"`, `"terms"`, `"values"`, `"all"`      |
+| `_slot`                               | The slot number (it's calculated by default)                                            |
+| `_prefix`                             | The prefix the term is going to be indexed with (it's calculated by default)            |
+| `_weight`                             | The weight the term is going to be indexed with                                         |
 
-## Time
+
+# Time Datatype
 
 The `time` can also be a type without the entire date:
 
@@ -125,7 +135,7 @@ PUT /bank/1?pretty
 
 
 
-## Time Delta
+# Time Delta Datatype
 
 For example:
 {% capture req %}

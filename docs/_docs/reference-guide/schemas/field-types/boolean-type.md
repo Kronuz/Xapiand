@@ -3,9 +3,10 @@ title: Boolean Datatype
 short_title: Boolean
 ---
 
-Boolean fields accept JSON true and false values, but can also accept strings
-which are interpreted as either true or false but you have to explicitly use
-the `_type` boolean:
+Boolean fields accept JSON `true` and `false` values, but can also accept
+strings which are interpreted as either `true` or `false`, but you have to
+explicitly use the `_type` boolean. The two following examples are equivalent:
+
 
 {% capture req %}
 
@@ -18,6 +19,7 @@ PUT /bank/1?pretty
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
 
 {% capture req %}
 
@@ -34,13 +36,21 @@ PUT /bank/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-Also you can use in `_value` "true", "false", "t", "f", "1", "0"
 
-The following parameters are accepted by text fields:
+When using strings, you can use any of the following and it gets interpreted
+as either `true` or `false`:
+
+* `"true"`, `"t"`, , `"1"` -> `true`
+* `"false"`, `"f"`, `"0"` -> `false`
+
+
+## Parameters
+
+The following parameters are accepted by _Boolean_ fields:
 
 |---------------------------------------|-----------------------------------------------------------------------------------------|
-| `_value`                              | The value for the field                                                                 |
-| `_slot`                               | The slot number                                                                         |
-| `_index`                              | One or a pair of : `none`, `field_terms`, `field_values`, `field_all`, `field`, `global_terms`, `global_values`, `global_all`, `global`, `terms`, `values`, `all`      |
-| `_prefix`                             | The prefix with the term is going to be indexed     |
-| `_weight`                             | The weight with the term is going to be indexed     |
+| `_value`                              | The value for the field (only used at index time)                                       |
+| `_index`                              | The mode the field will be indexed as (defaults to `"field_all"`): `"none"`, `"field_terms"`, `"field_values"`, `"field_all"`, `"field"`, `"global_terms"`, `"global_values"`, `"global_all"`, `"global"`, `"terms"`, `"values"`, `"all"`      |
+| `_slot`                               | The slot number (it's calculated by default)                                            |
+| `_prefix`                             | The prefix the term is going to be indexed with (it's calculated by default)            |
+| `_weight`                             | The weight the term is going to be indexed with                                         |

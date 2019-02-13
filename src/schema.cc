@@ -5167,10 +5167,10 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		case FieldType::TEXT: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
-			// if (!field_spc.language.empty()) {
-			// 	term_generator.set_stopper(getStopper(field_spc.language).get());
-			// 	term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
-			// }
+			if (!field_spc.language.empty()) {
+				term_generator.set_stopper(getStopper(field_spc.language).get());
+				term_generator.set_stopper_strategy(getGeneratorStopStrategy(field_spc.stop_strategy));
+			}
 			if (!field_spc.stem_language.empty()) {
 				term_generator.set_stemmer(Xapian::Stem(field_spc.stem_language));
 				term_generator.set_stemming_strategy(getGeneratorStemStrategy(field_spc.stem_strategy));

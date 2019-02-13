@@ -70,7 +70,8 @@ The rules applied by a stemmer are dependent on the language of the text; Xapian
 
 ## Xapiand Stem Strategy
 
-By default Xapiand doesn't use stem, only when `_language` is specified the `_stem_strategy` default is `stem_some`.
+By default Xapiand doesn't use stem text fields, only when `_language` (or
+otherwise `_stem_language`) is specified the `_stem_strategy` default is `stem_some`.
 
 The stem strategies are:
 * `none`
@@ -96,15 +97,19 @@ The stem strategies are:
 	same as `stem_all_z`
 
 
-## Parameters for the text fields
+## Parameters
 
-The following parameters are accepted by text fields:
+The following parameters are accepted by _Text_ fields:
 
 |---------------------------------------|-----------------------------------------------------------------------------------------|
-| `_stem_language`                      | The [language](https://xapian.org/docs/apidoc/html/classXapian_1_1Stem.html#a6c46cedf2047b159a7e4c9d4468242b1) that stemming algorithm is going to use                                    |
-| `_stem_strategy`                      | The [strategy](https://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html#ac7dc3b55b6083bd3ff98fc8b2726c8fd) that stemming algorithm is going to use                                    |
-| `_value`                              | The value for the field                                                                 |
-| `_slot`                               | The slot number                                                                         |
-| `_index`                              | One or a pair of : `none`, `field_terms`, `field_values`, `field_all`, `field`, `global_terms`, `global_values`, `global_all`, `global`, `terms`, `values`, `all`      |
-| `_prefix`                             | The prefix with the term is going to be indexed     |
-| `_weight`                             | The weight with the term is going to be indexed     |
+| `_language`                           | The language to use for stemming and stop words (defaults to `"none"` value)              |
+| `_stem_language`                      | The [stemming language] that stemming algorithm is going to use (defaults to `_language` value) |
+| `_stem_strategy`                      | The [stemming strategy] that stemming algorithm is going to use (defaults to `"stem_some"`) |
+| `_value`                              | The value for the field (only used at index time)                                       |
+| `_index`                              | The mode the field will be indexed as (defaults to `"field_all"`): `"none"`, `"field_terms"`, `"field_values"`, `"field_all"`, `"field"`, `"global_terms"`, `"global_values"`, `"global_all"`, `"global"`, `"terms"`, `"values"`, `"all"`      |
+| `_slot`                               | The slot number (it's calculated by default)                                            |
+| `_prefix`                             | The prefix the term is going to be indexed with (it's calculated by default)            |
+| `_weight`                             | The weight the term is going to be indexed with                                         |
+
+[stemming language]: https://xapian.org/docs/apidoc/html/classXapian_1_1Stem.html#a6c46cedf2047b159a7e4c9d4468242b1
+[stemming strategy]: https://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html#ac7dc3b55b6083bd3ff98fc8b2726c8fd

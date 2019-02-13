@@ -33,6 +33,8 @@
             - url: numeric-type
             - url: date-type
               docs:
+              - link: '#date-datatype'
+                title: Date
               - link: '#time-datatype'
                 title: Time
               - link: '#time-delta-datatype'
