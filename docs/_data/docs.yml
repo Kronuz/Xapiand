@@ -33,6 +33,7 @@
             - url: numeric-type
             - url: date-type
             - url: boolean-type
+            - url: geospatial-type
         - url: dynamic-typing
     - url: search
     - url: query-dsl

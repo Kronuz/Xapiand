@@ -30,7 +30,7 @@ in a document:
 
 ## Geospatial datatypes
 
-* `Geospatial`
+* [Geospatial](../field-types/geospatial-type)
 
 ### UUID datatype
 
