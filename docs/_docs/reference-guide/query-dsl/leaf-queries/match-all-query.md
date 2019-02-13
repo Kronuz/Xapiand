@@ -22,7 +22,7 @@ POST /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-## Match None Query
+# Match None Query
 
 The query `_match_none` is the inverse of the `_match_all` query, and matches
 no documents.

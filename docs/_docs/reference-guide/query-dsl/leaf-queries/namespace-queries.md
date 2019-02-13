@@ -101,7 +101,7 @@ GET /bank/:search?pretty
 {% include curl.html req=req %}
 
 
-# Datatype
+## Datatype
 
 The concrete datatype for all nested objects must be of the same type as the
 field with the `_namespace` keyword.
