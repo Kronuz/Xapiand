@@ -88,7 +88,7 @@ For example:
 PUT /bank/1?pretty
 
 {
-    "MyDate": {
+    "birthday": {
       "_value": "2011-01-01||+1y+3M",
       "_type": "date"
     }
@@ -124,7 +124,7 @@ For example:
 PUT /bank/1?pretty
 
 {
-  "MyTime": {
+  "wakeupTime": {
     "_value": "10:12:12.123",
     "_type": "time"
   }
@@ -144,7 +144,7 @@ For example:
 PUT /bank/1?pretty
 
 {
-  "fecha": {
+  "delay": {
     "_type": "timedelta",
     "_value": "+10:12:12.123"
   }
