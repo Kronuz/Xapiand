@@ -1491,6 +1491,7 @@ _get_stem_language(std::string_view str_stem_language)
 		hhl("turkish"),
 		hhl("tr"),
 		hhl("none"),
+		hhl(""),
 	});
 
 	switch(_.fhhl(str_stem_language)) {
@@ -1674,8 +1675,13 @@ _get_stem_language(std::string_view str_stem_language)
 			static const std::pair<bool, const std::string> tr{ true,  "tr" };
 			return tr;
 		}
-		default: {
+		case _.fhhl("none"):
+		case _.fhhl(""): {
 			static const std::pair<bool, const std::string> _{ false, "" };
+			return _;
+		}
+		default: {
+			static const std::pair<bool, const std::string> _{ false, "unknown" };
 			return _;
 		}
 	}
@@ -2473,7 +2479,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 	specification.flags.field_found = true;
 
 	const auto& stem = _get_stem_language(meta_name);
-	if (stem.first && !stem.second.empty()) {
+	if (stem.first && stem.second != "unknown") {
 		specification.language = stem.second;
 		specification.aux_language = stem.second;
 	}
@@ -6609,7 +6615,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	const auto& stem = _get_stem_language(specification.meta_name);
-	if (stem.first && !stem.second.empty()) {
+	if (stem.first && stem.second != "unknown") {
 		specification.language = stem.second;
 		specification.aux_language = stem.second;
 	}
@@ -6641,7 +6647,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	mut_properties = &(*mut_properties)[specification.meta_name];
 
 	const auto& stem = _get_stem_language(specification.meta_name);
-	if (stem.first && !stem.second.empty()) {
+	if (stem.first && stem.second != "unknown") {
 		specification.language = stem.second;
 		specification.aux_language = stem.second;
 	}
@@ -7556,7 +7562,7 @@ Schema::process_language(std::string_view prop_name, const MsgPack& doc_language
 	try {
 		const auto str_language = doc_language.str_view();
 		const auto& stem = _get_stem_language(str_language);
-		if (stem.first && !stem.second.empty()) {
+		if (stem.first && stem.second != "unknown") {
 			specification.language = stem.second;
 			specification.aux_language = stem.second;
 		} else {
@@ -7645,11 +7651,12 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& doc_ste
 	try {
 		auto str_stem_language = doc_stem_language.str_view();
 		const auto& stem = _get_stem_language(str_stem_language);
-		if (stem.second.empty()) {
+		if (stem.second != "unknown") {
+			specification.stem_language = stem.second.empty() ? stem.second : str_stem_language;
+			specification.aux_stem_language = stem.second;
+		} else {
 			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_stem_language));
 		}
-		specification.stem_language = str_stem_language;
-		specification.aux_stem_language = stem.second;
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
