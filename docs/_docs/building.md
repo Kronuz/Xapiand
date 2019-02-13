@@ -1,5 +1,6 @@
 ---
 title: Building from Sources
+short_title: Building
 ---
 
 [GitHub]: https://github.com/Kronuz/Xapiand
@@ -14,12 +15,42 @@ from [GitHub]. Once you have a local copy, procede with the
 Xapiand is written in C++14 and it has the following build requirements:
 
 * pkg-config
+* Ninja (optional)
 * Clang >= 4.0
 * CMake >= 3.5
 * perl >= 5.6 (for a few building scripts)
 * Tcl >= 8.6  (to generate unicode/unicode-data.cc)
 
 
+---
+#### macOS
+
+To install the requirements under macOS you need:
+
+##### 1. Configure Xcode
+
+Simply installing Xcode will not install all of the command line developer
+tools, the first time you must execute the following in Terminal, before trying
+to build:
+
+```sh
+# Install command tools using:
+sudo xcode-select --install
+sudo open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+```
+
+##### 2. [Install Homebrew](https://docs.brew.sh/Installation)
+
+##### 3. Install Requirements
+
+```sh
+~/ $ brew install ninja
+~/ $ brew install pkg-config
+~/ $ brew install cmake
+```
+
+
+---
 ### Dependencies
 
 Xapiand it makes use a quite few libraries: libev, Chaiscript, Xapian, LZ4,
@@ -30,6 +61,7 @@ dependencies needed for building it are:
 * libpthread (internally used by the Standard C++ thread library)
 
 
+---
 ## Building process
 
 #### Get the Sources
@@ -64,71 +96,61 @@ repository from [https://github.com/Kronuz/Xapiand.git](https://github.com/Kronu
 ~/Xapiand/build $ ninja install
 ```
 
+{: .note .tip }
+**_CPU Usage_**<br>
+When compiling using ninja, the whole machine could slow down while compiling,
+as `ninja`, by default, uses all available CPU cores; you can prevent this by
+telling ninja to use `<number of cores> - 1` jobs. Example, for a system with
+4 CPU cores: `ninja -j3`.
 
-### Notes
 
-* When compiling using ninja, the whole machine could slow down while compiling,
-  as `ninja`, by default, uses all available CPU cores; you can prevent this by
-  telling ninja to use `<number of cores> - 1` jobs. Example, for a system with
-  4 CPU cores: `ninja -j3`.
+---
+## Sanitizers
 
-* When building sanitized versions of Xapiand, you'll need to
-  **Configure the Build** using the proper library (for ASAN, for example):
+When building sanitized versions of Xapiand, you'll need to
+[Configure the Build](#configure-the-build) using the proper library:
 
-    ```sh
-~/Xapiand/build $ cmake -GNinja -DASAN=ON ..
-```
 
-#### Address Sanitizer (ASAN)
+### Address Sanitizer (ASAN)
 
-* For developing and debugging, generally you'd want to enable the
-  *Address Sanitizer*, tracebacks in exceptions and debugging symbols,
-  so you'll have to **Configure the Build** using something like:
+For developing and debugging, generally you'd want to enable the
+*Address Sanitizer*, tracebacks in exceptions and debugging symbols,
+so you'll have to **Configure the Build** using something like:
 
-    ```sh
-~/Xapiand/build $ brew switch xapian 1.5-asan
+```sh
 ~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON ..
 ```
 
-#### UndefinedBehavior Sanitizer (ASAN + UBSAN)
 
-* For developing and debugging, generally you'd want to enable the
-  *Address Sanitizer* and *UndefinedBehavior Sanitizer*, tracebacks in
-  exceptions and debugging symbols, so you'll have to **Configure the Build**
-  using something like:
+### UndefinedBehavior Sanitizer (ASAN + UBSAN)
 
-    ```sh
-~/Xapiand/build $ brew switch xapian 1.5-asan
+For developing and debugging, generally you'd want to enable the
+*Address Sanitizer* and *UndefinedBehavior Sanitizer*, tracebacks in
+exceptions and debugging symbols, so you'll have to **Configure the Build**
+using something like:
+
+```sh
 ~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DASAN=ON -DUBSAN=ON ..
 ```
 
-#### Memory Sanitizer (MSAN)
 
-* For debugging memory issues, enable *Memory Sanitizer* and debugging
-  symbols in release mode, so you'll have to **Configure the Build** using
-  something like:
+### Memory Sanitizer (MSAN)
 
-    ```sh
-~/Xapiand/build $ brew switch xapian 1.5-msan
+For debugging memory issues, enable *Memory Sanitizer* and debugging
+symbols in release mode, so you'll have to **Configure the Build** using
+something like:
+
+```sh
 ~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DMSAN=ON ..
 ```
 
-#### Thread Sanitizer (TSAN)
 
-* For debugging multithread issues, enable *Thread Sanitizer* and debugging
-  symbols in release mode, so you'll have to **Configure the Build** using
-  something like:
+### Thread Sanitizer (TSAN)
 
-    ```sh
-~/Xapiand/build $ brew switch xapian 1.5-tsan
+For debugging multithread issues, enable *Thread Sanitizer* and debugging
+symbols in release mode, so you'll have to **Configure the Build** using
+something like:
+
+```sh
 ~/Xapiand/build $ cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DTRACEBACKS=ON -DASSERTS=ON -DTSAN=ON ..
 ```
-
-#### macOS specifics
-
-
-1. Simply installing Xcode will not install all of the command line developer
-   tools, the first time you must execute `xcode-select --install` in Terminal
-   before trying to build.
-
-2. You need CMake installed `brew install cmake`.
