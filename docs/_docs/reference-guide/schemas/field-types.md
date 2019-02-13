@@ -9,45 +9,45 @@ in a document:
 
 ### String datatypes
 
-* [keyword](../types/keyword-type)
-* [text](../types/text-type)
+* [Keyword](../field-types/keyword-type)
+* [Text](../field-types/text-type)
 
 ### Numeric datatypes
 
-* [integer](../types/numeric-type)
-* [positive](../types/numeric-type)
-* [float](../types/numeric-type)
+* [Integer](../field-types/numeric-type)
+* [Positive](../field-types/numeric-type)
+* [Float](../field-types/numeric-type)
 
 ### Date/Time datatypes
 
-* [date](../types/date-type)
-* `time`
-* `timedelta`
+* [Date](../field-types/date-type)
+* `Time`
+* `Timedelta`
 
 ### Boolean datatype
 
-* [boolean](../types/boolean-type)
+* [Boolean](../field-types/boolean-type)
 
 ## Geospatial datatypes
 
-* `geospatial`
+* `Geospatial`
 
 ### UUID datatype
 
-* `uuid`
+* `Uuid`
 
 ### Script datatype
 
-* `script`
+* `Script`
 
 
 ## Complex datatypes
 
 ### Object type
-* `object`
+* `Object`
 
 ### Array type
-* `array`
+* `Array`
 
 ### Foreign type
-* `foreign`
+* `Foreign`

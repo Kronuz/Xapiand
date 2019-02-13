@@ -3,14 +3,19 @@ title: Date Datatype
 short_title: Date
 ---
 
-JSON doesn’t have a date datatype, so dates in Xapiand can either be:
+JSON doesn't have a date datatype, so dates in Xapiand can either be:
 
-strings containing formatted dates, e.g. "2015-11-15T13:12:00", "2015-11-15" or "2015/11/15 13:12:00".
-a long number representing milliseconds-since-the-epoch.
-an integer representing seconds-since-the-epoch.
-Internally, dates are converted to UTC (if the time-zone is specified) and stored as a long number representing milliseconds-since-the-epoch.
+* Strings containing formatted dates, e.g. `"2015-11-15T13:12:00"`, `"2015-11-15"`
+or `"2015/11/15 13:12:00"`.
+* A number representing milliseconds-since-the-epoch.
+* An object containing a `_date` type.
 
-Queries on dates are internally converted to range queries on this long representation, and the result of aggregations and stored fields is converted back to a string depending on the date format that is associated with the field.
+Internally, dates are converted to UTC (if the time-zone is specified) and
+stored as a number representing milliseconds-since-the-epoch.
+
+Queries on dates are internally converted to range queries on this
+representation, and the result of aggregations and stored fields is converted
+back to a string depending on the date format that is associated with the field.
 
 {% capture req %}
 

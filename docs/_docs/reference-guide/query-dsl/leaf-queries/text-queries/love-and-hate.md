@@ -1,5 +1,5 @@
 ---
-title: Love and Hate Modifiers
+title: Love and Hate Query
 ---
 
 The `+` and `-` operators, select documents based on the presence or absence of

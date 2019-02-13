@@ -18,14 +18,13 @@ If you are following the documentation examples you may notice that the field "e
 PUT /bank/1:search?pretty
 
 {
-	...
     "accountNumber": 148040,
     "balance": 1494.65,
     "employer": {
     	"_type": "keyword",
     	"_value": "Cubicide"
-    },
-    ...
+    }
+}
 ```
 {% endcapture %}
 {% include curl.html req=req %}

@@ -38,8 +38,8 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-   "_wildcard": {
-      "favoriteFruit": "ba"
+    "favoriteFruit": {
+      "_partial": "ba"
     }
   }
 }

@@ -1,5 +1,5 @@
 ---
-title: Phrase Modifier
+title: Phrase Query
 ---
 
 A phrase is surrounded with double quotes (`""`) and allows searching for a

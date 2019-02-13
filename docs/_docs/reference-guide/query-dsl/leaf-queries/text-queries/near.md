@@ -1,5 +1,5 @@
 ---
-title: Near Modifier
+title: Near Query
 ---
 
 Another commonly used operator is `NEAR`, which finds terms within 10 words

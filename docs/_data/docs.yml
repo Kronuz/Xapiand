@@ -37,18 +37,12 @@
             - url: text-queries
               docs:
                 - url: simple-query
-                - url: phrase-query
-                - url: partial-query
-            - url: modifiers
-              link: '#'
-              title: Modifiers
-              docs:
-                - url: near
                 - url: phrase
                 - url: partial
+                - url: near
                 - url: love-and-hate
-                - url: elite-set
-                - url: casting-values
+                - url: default-operator
+            - url: casting-values
             - url: namespace-queries
         - url: compound-queries
           link: '../#compound-query-clauses'
@@ -58,6 +52,7 @@
             - url: maybe-operator
             - url: filter-operator
             - url: elite-set-operator
+            - url: range-searches
             - url: geospatial-searches
               docs:
                 - link: '#point'
@@ -82,7 +77,6 @@
                   title: Multichull
                 - link: '#extended_well_known_text'
                   title: EWKT
-            - url: range-searches
     - url: aggregations
       docs:
         - url: metrics

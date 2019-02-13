@@ -21,7 +21,7 @@ the match, term or range queries. These queries can be used by themselves.
 * [**_Simple Queries_**](leaf-queries/simple-queries)
 * [**_Text Queries_**](leaf-queries/text-queries)
 * [**_Namespace Queries_**](leaf-queries/namespace-queries)
-
+* [**_Casting Values_**](leaf-queries/casting-values)
 
 ## Compound Query Clauses
 
@@ -45,15 +45,4 @@ alter their behaviour.
 * `_wildcard`     - Wildcard expansion.
 * `_scale_weight` -
 * `_synonym`      -
- -->
-
-<!--
-## [Query Modifiers](query-modifiers)
-The way simple queries are parsed can be adjusted using .
-
-
-* [**_Text Queries_**](text-queries)
-* [**_Namespace Queries_**](namespace-queries)
-* [**_Cast Queries_**](cast-queries)
-* [**_Geospatial Queries_**](geo-queries)
  -->
