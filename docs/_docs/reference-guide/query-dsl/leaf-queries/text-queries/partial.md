@@ -11,8 +11,10 @@ keypress, or whenever the user pauses for a short period of time (or some other
 similar strategy).
 
 This allows for prefix matches, matching any number of trailing characters, so,
-for instance, _wildc_* would match *wildc*ard, *wildc*arded, *wildc*ards,
-*wildc*at, *wildc*ats, etc.
+for instance, `"_partial": "wildc"` or `"wildc*"` would match _**wildc**ard_,
+_**wildc**arded_, _**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc.
+
+### Example
 
 {% capture req %}
 
@@ -29,7 +31,6 @@ GET /bank/:search?pretty
 ```
 {% endcapture %}
 {% include curl.html req=req %}
-
 
 A similar effect could be obtained by using the wildcard ("`*`") character
 as part of the query text:
