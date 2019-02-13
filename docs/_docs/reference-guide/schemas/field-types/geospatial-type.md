@@ -9,15 +9,13 @@ Fields of type geo_point accept latitude-longitude pairs, which can be used:
 * to aggregate documents geographically or by distance from a central point.
 * to sort documents by distance.
 
-For example:
 
-{% capture req %}
+### Example:
 
 ```json
 PUT /bank/1?pretty
 
 {
-  ...
   "checkin": {
     "_point": {
       "_longitude": -80.31727,
@@ -27,21 +25,21 @@ PUT /bank/1?pretty
   ...
 }
 ```
-{% endcapture %}
-{% include curl.html req=req %}
 
-In the above example the field "checkin" is a geospatial point but could be any of:
+In the above example, taken from our example dataset, the field "checkin" is
+a geospatial point but could be any of:
 
-* [point](./#)
-* [polygon](./#polygon)
-* [circle](./#circle)
-* `_covex`
-* [chull](./#convex-hull)
-* `_multipoint`
-* `_multipcircle`
-* `_multiconvex`
-* `_multipolygon`
-* `_multichull`
+* [Point](#)
+* [Polygon](#polygon)
+* [Circle](#circle)
+* `Covex`
+* [Chull](#convex-hull)
+* `Multipoint`
+* `Multipcircle`
+* `Multiconvex`
+* `Multipolygon`
+* `Multichull`
+
 
 ## Polygon
 
@@ -72,6 +70,7 @@ PUT /bank/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
+
 ## Circle
 
 {% capture req %}
@@ -93,9 +92,11 @@ PUT /bank/1?pretty
 
 The example show circle with radius of 1000 meters.
 
-## Convex hull
 
-Calculate the convex hull for the coordinates using the Graham Scan Algorithm:
+## Convex Hull
+
+Calculate the convex hull for the coordinates using the
+[Graham Scan Algorithm](https://en.wikipedia.org/wiki/Graham_scan#Algorithm){:target="_blank"}:
 
 {% capture req %}
 
@@ -134,4 +135,3 @@ latitude  longitude height
 -0.166828 -0.783064 0.599148
 
 ```
-

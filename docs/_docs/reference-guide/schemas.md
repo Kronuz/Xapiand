@@ -20,7 +20,7 @@ Each field has a data type which can be:
 
 * a simple type like `text`, `string`, `keyword`, `date`, `float` or `boolean`.
 * a sub-type which supports the hierarchical nature of JSON such as `object` or `array`.
-* or a specialised type like `geo`.
+* or a specialised type like `geospatial`.
 
 
 ## [Dynamic Typing](dynamic-typing)

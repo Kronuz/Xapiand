@@ -2,7 +2,7 @@
 title: Geospatial Searches
 ---
 
-Geospatial allow searching within arbitrary geo shapes such as rectangles,
+Geospatial allow searching within arbitrary "geo-shapes" such as rectangles,
 polygons, circles, points etc.
 
 
