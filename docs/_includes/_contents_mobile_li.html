@@ -1,0 +1,17 @@
+{%- for doc in doc.docs -%}
+	{%- include _doc2url.liquid doc=doc base_url=include.base_url -%}
+	{%- include _url2post.liquid url=url -%}
+	{%- include _post2link.liquid doc=doc url=url post=post -%}
+	{%- include _post2title.liquid doc=doc url=url post=post -%}
+
+	{%- if link and doc.link != '#' -%}
+		<option value="{{ link | relative_url }}" {% if post.url == page.url %}selected="selected"{% endif %}>
+		{{ include.prefix }}{{ title }}
+		</option>
+	{%- endif -%}
+
+	{%- if doc.docs -%}
+		{%- assign prefix = '&#160;&#160;' | append: include.prefix -%}
+		{%- include _contents_mobile_li.html base_url=url prefix=prefix -%}
+	{%- endif -%}
+{%- endfor -%}

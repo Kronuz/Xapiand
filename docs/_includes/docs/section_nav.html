@@ -1,64 +1,14 @@
-{% comment %}
-Map grabs the docs sections, giving us an array of arrays. Join, flattens all
+{%- comment -%}
+Map grabs all the sections, giving us an array of arrays. Join, flattens all
 the items to a comma delimited string. Split turns it into an array again.
-{% endcomment %}
-{% assign _urls = "" %}
-{% for section in site.data.docs %}
-	{% for l1 in section.docs %}
-		{% assign l1_url = l1.url | prepend:"/docs/" | append:"/" %}
-		{% assign l1_doc = site.docs | where:"url", l1_url | first %}
-		{% if l1_doc %}
-			{% capture _urls %}{{ _urls }},{{ l1_url }}{% endcapture %}
-			{% for l2 in l1.docs %}
-				{% assign l2_url = l2.url | prepend:"/docs/" | append:"/" %}
-				{% assign l2_doc = site.docs | where:"url", l2_url | first %}
-				{% if l2_doc %}
-					{% capture _urls %}{{ _urls }},{{ l2_url }}{% endcapture %}
-					{% for l3 in l2.docs %}
-						{% assign l3_url = l3.url | prepend:"/docs/" | append:"/" %}
-						{% assign l3_doc = site.docs | where:"url", l3_url | first %}
-						{% if l3_doc %}
-							{% capture _urls %}{{ _urls }},{{ l3_url }}{% endcapture %}
-						{% endif %}
-					{% endfor %}
-				{% endif %}
-			{% endfor %}
-		{% endif %}
-	{% endfor %}
-{% endfor %}
-{% assign docs = _urls | remove_first: ',' | split: ',' %}
+{%- endcomment -%}
 
-{% comment %}
-Because this is built for every page, lets find where we are in the ordered
-document list by comparing url strings. Then if there's something previous or
-next, lets build a link to it.
-{% endcomment %}
+{%- capture _urls -%}
+	{%- for doc in site.data.docs -%}
+		{%- include _doc2url.liquid doc=doc base_url='/docs/' -%}
+		{%- include _urls.liquid base_url=url -%}
+	{%- endfor -%}
+{%- endcapture -%}
+{%- assign urls = _urls | remove_first: ',' | split: ',' -%}
 
-{% for doc_url in docs %}
-	{% if doc_url == page.url %}
-		<div class="section-nav">
-			<div class="left align-right">
-				{% if forloop.first %}
-					<span class="prev disabled">Back</span>
-				{% else %}
-					{% assign prev = forloop.index0 | minus: 1 %}
-					{% assign prev_url = docs[prev] %}
-					{% assign prev_doc = site.docs | where: "url", prev_url | first %}
-					<a href="{{ prev_doc.url | relative_url }}" class="prev" title="{{ prev_doc.title }}">Back</a>
-				{% endif %}
-			</div>
-			<div class="right align-left">
-				{% if forloop.last %}
-					<span class="next disabled">Next</span>
-				{% else %}
-					{% assign next = forloop.index0 | plus: 1 %}
-					{% assign next_url = docs[next] %}
-					{% assign next_doc = site.docs | where: "url", next_url | first %}
-					<a href="{{ next_doc.url | relative_url }}" class="next" title="{{ next_doc.title }}">Next</a>
-				{% endif %}
-			</div>
-		</div>
-		<div class="clear"></div>
-		{% break %}
-	{% endif %}
-{% endfor %}
+{%- include _section_nav.html urls=urls -%}

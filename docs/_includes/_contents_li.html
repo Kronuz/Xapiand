@@ -1,0 +1,20 @@
+{%- for doc in doc.docs -%}
+	{%- include _doc2url.liquid doc=doc base_url=include.base_url -%}
+	{%- include _url2post.liquid url=url -%}
+	{%- include _post2link.liquid doc=doc url=url post=post -%}
+	{%- include _post2title.liquid doc=doc url=url post=post -%}
+
+	<li class="{% if post.url == page.url %}current{% endif %} {% unless doc.link or doc.title or post %}error{% endunless %}">
+	{%- if link and doc.link != '#' -%}
+		<a href="{{ link | relative_url }}" onclick="selectLink(this)" class="{% if doc.link %} link {% endif %}">{{ title }}</a>
+	{%- else -%}
+		<span>{{ title }}</span>
+	{%- endif -%}
+
+	{%- if doc.docs -%}
+		<ul {% if post or doc.link %}{% if post.url != page.url %}style="display:none"{% endif %}{% endif %}>
+		{%- include _contents_li.html base_url=url -%}
+		</ul>
+	{%- endif -%}
+	</li>
+{%- endfor -%}

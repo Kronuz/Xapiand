@@ -389,6 +389,8 @@ article {
 /* Right-side nav - used by both docs and news */
 
 aside {
+	color: #ddd;
+
 	padding-top: 30px;
 	position: relative;
 
@@ -410,6 +412,11 @@ aside {
 
 	li {
 		list-style-type: none;
+
+		span {
+			font-size: 16px;
+			color: #999;
+		}
 
 		a {
 			font-size: 16px;
@@ -433,6 +440,13 @@ aside {
 		}
 		&.current > a {
 			color: $theme_color_dark;
+		}
+
+		&.error {
+			color: red;
+			a {
+				color: red;
+			}
 		}
 	}
 }
@@ -516,9 +530,7 @@ aside {
 	}
 }
 
-.docs-nav-mobile select,
-.tutorials-nav-mobile select,
-.projects-nav-mobile select {
+.nav-mobile select {
 	padding: 5px;
 	width: 100%;
 	font-size: 0.85em;

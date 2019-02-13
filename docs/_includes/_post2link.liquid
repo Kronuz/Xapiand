@@ -1,0 +1,12 @@
+{%- assign link0 = include.doc.link | slice: 0 -%}
+{%- if link0 == '#' or link0 == '.' -%}
+	{%- assign link = include.doc.link | prepend: include.url -%}
+{%- else -%}
+	{%- assign link = include.doc.link -%}
+{%- endif -%}
+{%- unless link-%}
+	{%- assign link = include.post.url -%}
+{%- endunless -%}
+{%- unless link -%}
+	{%- assign link = include.url -%}
+{%- endunless -%}

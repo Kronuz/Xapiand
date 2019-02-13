@@ -1,0 +1,10 @@
+{%- if include.doc.url -%}
+	{%- assign url0 = include.doc.url | slice: 0 -%}
+	{%- if url0 == '/' -%}
+		{%- assign url = include.doc.url | append: '/' -%}
+	{%- else -%}
+		{%- assign url = include.doc.url | prepend: include.base_url | append: '/' -%}
+	{%- endif -%}
+{%- else -%}
+	{%- assign url = include.base_url -%}
+{%- endif -%}

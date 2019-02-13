@@ -1,0 +1,13 @@
+{%- for doc in doc.docs -%}
+	{%- include _doc2url.liquid doc=doc base_url=include.base_url -%}
+
+	{%- unless doc.link -%}
+		{%- if url -%}
+			,{{ url }}
+		{%- endif -%}
+	{%- endunless -%}
+
+	{%- if doc.docs -%}
+		{%- include _urls.liquid base_url=url -%}
+	{%- endif -%}
+{%- endfor -%}

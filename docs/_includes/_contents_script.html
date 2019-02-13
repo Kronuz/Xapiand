@@ -1,0 +1,31 @@
+<script>
+	var sidebar = document.getElementById('sidebar');
+	function selectLink(element) {
+		if (element) {
+			if (element.className != 'link') return;
+			var curr = sidebar.querySelectorAll('.current');
+			for (var i = 0; i < curr.length; i++) {
+				curr[i].className = '';
+				var p = curr[i].parentElement;
+				while (p != sidebar) {
+					if (p.tagName == 'UL') {
+						p.style.display = 'none';
+					}
+					p = p.parentElement;
+				}
+			}
+			element.parentElement.className = 'current';
+		}
+		var curr = sidebar.querySelectorAll('.current,.error');
+		for (var i = 0; i < curr.length; i++) {
+			var p = curr[i].parentElement;
+			while (p != sidebar) {
+				if (p.tagName == 'UL') {
+					p.style.display = 'block';
+				}
+				p = p.parentElement;
+			}
+		}
+	}
+	selectLink();
+</script>
