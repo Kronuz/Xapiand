@@ -70,6 +70,30 @@ JSON can have trailing commas.
 JSON Accepts binary codes as escaped `"\xHH"` in strings.
 
 
+## Field Expansion
+
+JSON or MsgPack fields in objects passed to Xapiand are expanded. For example,
+the following nested object:
+
+```json
+{
+  "address": {
+    "country": {
+      "name": "Italy"
+    }
+  }
+}
+```
+
+Is equivalent to:
+
+```json
+{
+  "address.country.name": "Italy"
+}
+```
+
+
 ## Multiple Indices
 
 Most APIs that refer to an index parameter support execution across multiple

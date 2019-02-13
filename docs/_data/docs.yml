@@ -12,6 +12,15 @@
   url: reference-guide
   docs:
     - url: api
+      docs:
+        - link: '#restful-features-of-the-xapiand-api'
+          title: RESTful Features
+        - link: '#json-and-msgpack'
+          title: JSON and MsgPack
+        - link: '#field-expansion'
+          title: Field Expansion
+        - link: '#multiple-indices'
+          title: Multiple Indices
     - url: indices
     - url: documents
     - url: info
