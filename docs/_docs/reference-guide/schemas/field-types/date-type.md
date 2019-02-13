@@ -5,8 +5,8 @@ short_title: Date / Time
 
 JSON doesn't have a date datatype, so dates in Xapiand can either be:
 
-* Strings containing formatted dates, e.g. `"2015-11-15T13:12:00"`,
-  `"2015-11-15"`, `"2015/11/15 13:12:00"` or ISO-8601.
+* Strings containing formatted dates, e.g. `"2001-11-15T13:12:00"`,
+  `"2001-11-15"`, `"2001/11/15 13:12:00"` or ISO-8601.
 * A number representing milliseconds-since-the-epoch.
 * An object containing a `_date` type.
 
@@ -20,10 +20,10 @@ back to a string depending on the date format that is associated with the field.
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-  "MyDate": "2015-11-15T13:12:00"
+  "birthday": "2001-11-15T13:12:00"
 }
 ```
 {% endcapture %}
@@ -33,12 +33,12 @@ PUT /bank/1?pretty
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-  "MyDate": {
+  "birthday": {
     "_date": {
-      "_year": 2015,
+      "_year": 2001,
       "_month": 11,
       "_day": 15,
       "_time": "13:30:25.123"
@@ -62,13 +62,19 @@ used during the querying to improve the filtering and searching.
 In the above example terms for the day, month and year are generated.
 
 
-## Date Math Former
+## Date Math Expressions
 
-Date math form allow compute math operations in the date before the indexation. The expression starts with an anchor date, which can either be now, or a date string ending with \|\|. This anchor date can optionally be followed by one or more maths expressions:
+The _Date Datatype_ supports using date math expressions when using it in a
+query/filter or during indexation. Whenever durations need to be specified,
+e.g. for a timeout parameter, the duration can be specified.
 
-* +1h - add one hour
-* -1d - subtract one day
-* /d - round down to the nearest day
+The expression starts with an "_anchor_" date, which can be either `now` or a
+date string (in the applicable format) ending with `||`. This anchor date can
+optionally be followed by one or more maths expressions:
+
+* `+1h` - add one hour
+* `-1d` - subtract one day
+* `/d` - round down to the nearest day
 
 The supported units are:
 
@@ -81,11 +87,13 @@ The supported units are:
 | `m` | Minutes |
 | `s` | Seconds |
 
-For example:
+
+### Example
+
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/2?pretty
 
 {
     "birthday": {
@@ -121,7 +129,7 @@ For example:
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
   "wakeupTime": {
@@ -141,7 +149,7 @@ For example:
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
   "delay": {
