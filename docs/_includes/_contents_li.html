@@ -4,7 +4,7 @@
 	{%- include _post2link.liquid doc=doc url=url post=post -%}
 	{%- include _post2title.liquid doc=doc url=url post=post -%}
 
-	<li class="{% if post.url == page.url %}current{% endif %} {% unless doc.link or doc.title or post %}error{% endunless %}">
+	<li class="{% unless doc.link %}{% if post.url == page.url %}current{% endif %}{% endunless %} {% unless doc.link or doc.title or post %}error{% endunless %}">
 	{%- if link and doc.link != '#' -%}
 		<a href="{{ link | relative_url }}" onclick="selectLink(this)" class="{% if doc.link %} link {% endif %}">{{ title }}</a>
 	{%- else -%}

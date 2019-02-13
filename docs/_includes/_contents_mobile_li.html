@@ -4,11 +4,13 @@
 	{%- include _post2link.liquid doc=doc url=url post=post -%}
 	{%- include _post2title.liquid doc=doc url=url post=post -%}
 
-	{%- if link and doc.link != '#' -%}
-		<option value="{{ link | relative_url }}" {% if post.url == page.url %}selected="selected"{% endif %}>
-		{{ include.prefix }}{{ title }}
-		</option>
-	{%- endif -%}
+	{%- unless doc.link -%}
+		{%- if link and doc.link != '#' -%}
+			<option value="{{ link | relative_url }}" {% if post.url == page.url %}selected="selected"{% endif %}>
+			{{ include.prefix }}{{ title }}
+			</option>
+		{%- endif -%}
+	{% endunless %}
 
 	{%- if doc.docs -%}
 		{%- assign prefix = '&#160;&#160;' | append: include.prefix -%}
