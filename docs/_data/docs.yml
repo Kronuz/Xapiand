@@ -36,7 +36,7 @@
             - url: simple-queries
             - url: text-queries
               docs:
-                - url: simple-query
+                - url: simple
                 - url: phrase
                 - url: partial
                 - url: near

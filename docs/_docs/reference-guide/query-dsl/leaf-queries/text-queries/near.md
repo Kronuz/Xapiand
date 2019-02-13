@@ -1,5 +1,6 @@
 ---
 title: Near Query
+short_title: Near
 ---
 
 Another commonly used operator is `NEAR`, which finds terms within 10 words

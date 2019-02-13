@@ -1,5 +1,6 @@
 ---
 title: Phrase Query
+short_title: Phrase
 ---
 
 A phrase is surrounded with double quotes (`""`) and allows searching for a

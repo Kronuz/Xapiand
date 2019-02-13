@@ -1,5 +1,6 @@
 ---
 title: Partial Query
+short_title: Partial
 ---
 
 This is intended for use with "incremental search" systems, which don't wait

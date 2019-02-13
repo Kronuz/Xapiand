@@ -1,5 +1,6 @@
 ---
 title: Simple Query
+short_title: Simple
 ---
 
 This is the standard query for performing **Text** queries, if you use the

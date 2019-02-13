@@ -1,5 +1,6 @@
 ---
 title: Love and Hate Query
+short_title: Love and Hate
 ---
 
 The `+` and `-` operators, select documents based on the presence or absence of
