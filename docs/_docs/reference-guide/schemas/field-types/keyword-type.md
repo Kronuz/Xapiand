@@ -39,8 +39,8 @@ Notice we are using the same index "bank" as before, if you already indexed at t
 The following parameters are accepted by _Keyword_ fields:
 
 |---------------------------------------|-----------------------------------------------------------------------------------------|
-| `_value`                              | The value for the field (only used at index time)                                       |
-| `_index`                              | The mode the field will be indexed as (defaults to `"field_all"`): `"none"`, `"field_terms"`, `"field_values"`, `"field_all"`, `"field"`, `"global_terms"`, `"global_values"`, `"global_all"`, `"global"`, `"terms"`, `"values"`, `"all"`      |
-| `_slot`                               | The slot number (it's calculated by default)                                            |
-| `_prefix`                             | The prefix the term is going to be indexed with (it's calculated by default)            |
-| `_weight`                             | The weight the term is going to be indexed with                                         |
+| `_value`                              | The value for the field. (Only used at index time).                                     |
+| `_index`                              | The mode the field will be indexed as: `"none"`, `"field_terms"`, `"field_values"`, `"field_all"`, `"field"`, `"global_terms"`, `"global_values"`, `"global_all"`, `"global"`, `"terms"`, `"values"`, `"all"`. (The default is `"field_all"`). |
+| `_slot`                               | The slot number. (It's calculated by default).                                          |
+| `_prefix`                             | The prefix the term is going to be indexed with. (It's calculated by default)           |
+| `_weight`                             | The weight the term is going to be indexed with.                                        |
