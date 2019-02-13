@@ -98,7 +98,8 @@ specified in the Schema.
 ## Stem Strategy
 
 The default `_stem_strategy` is `"stem_some"`, but you can choose others.
-Available stem strategies are:
+
+Other available stemming strategies are:
 
 |---------------------------|-----------------------------------------------------------------|
 | `stem_none`, `none`       | Don't perform any stemming.                                     |
@@ -109,8 +110,11 @@ Available stem strategies are:
 
 ## Stop Strategy
 
-The default `_stop_strategy` is `"stop_stemmed"`, but you can choose others.
-Available stop strategies are:
+The default `_stop_strategy` is `"stop_stemmed"`, so stemmed forms of stopwords
+aren't indexed, but unstemmed forms still are so that searches for phrases
+including stop words still work.
+
+Other available stop strategies are:
 
 |---------------------------|-----------------------------------------------------------------|
 | `stop_none`, `none`       | Don't use the stopper.                                          |
@@ -124,6 +128,7 @@ The following parameters are accepted by _Text_ fields:
 
 |---------------------------------------|-----------------------------------------------------------------------------------------|
 | `_language`                           | The language to use for stemming and stop words. (The default is `"none"`)              |
+| `_stop_strategy`                      | The [stopper strategy]{:target="_blank"} that the stopper is going to use (defaults to `"stop_stemmed"`) |
 | `_stem_language`                      | The [stemming language]{:target="_blank"} that stemming algorithm is going to use (defaults to `_language` value) |
 | `_stem_strategy`                      | The [stemming strategy]{:target="_blank"} that stemming algorithm is going to use (defaults to `"stem_some"`) |
 | `_value`                              | The value for the field. (Only used at index time).                                     |
@@ -134,5 +139,6 @@ The following parameters are accepted by _Text_ fields:
 
 
 [Snowball]: http://snowballstem.org
+[stopper strategy]: https://xapian.org/docs/apidoc/html/classXapian_1_1TermGenerator.html#aec58751aec187d8b2647579c150667c2
 [stemming language]: https://xapian.org/docs/apidoc/html/classXapian_1_1Stem.html#a6c46cedf2047b159a7e4c9d4468242b1
 [stemming strategy]: https://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html#ac7dc3b55b6083bd3ff98fc8b2726c8fd
