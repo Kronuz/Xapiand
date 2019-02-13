@@ -1677,7 +1677,7 @@ _get_stem_language(std::string_view str_stem_language)
 		}
 		case _.fhhl("none"):
 		case _.fhhl(""): {
-			static const std::pair<bool, const std::string> _{ false, "" };
+			static const std::pair<bool, const std::string> _{ true, "" };
 			return _;
 		}
 		default: {
