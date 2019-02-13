@@ -20,7 +20,7 @@ back to a string depending on the date format that is associated with the field.
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
   "MyDate": "2015-11-15T13:12:00"
@@ -33,7 +33,7 @@ PUT /bank/1:search?pretty
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
   "MyDate": {
@@ -77,7 +77,7 @@ For example:
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
     "MyDate": {
@@ -102,3 +102,43 @@ The following parameters are accepted by text fields:
 | `_prefix`                             | The prefix with the term is going to be indexed     |
 | `_weight`                             | The weight with the term is going to be indexed     |
 | `_accuracy`                           | `second`, `minute`, `day`, `hour`, `month`, `year`, `decade`, `century`, `millennium`   |
+
+## Time
+
+The `time` can also be a type without the entire date:
+
+For example:
+{% capture req %}
+
+```json
+PUT /bank/1?pretty
+
+{
+  "MyTime": {
+    "_value": "10:12:12.123",
+    "_type": "time"
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+
+
+## Time Delta
+
+For example:
+{% capture req %}
+
+```json
+PUT /bank/1?pretty
+
+{
+  "fecha": {
+    "_type": "timedelta",
+    "_value": "+10:12:12.123"
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}

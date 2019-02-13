@@ -12,7 +12,7 @@ By default every field in the document with text value is interpreted as type `t
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
     "accountNumber": 148040,

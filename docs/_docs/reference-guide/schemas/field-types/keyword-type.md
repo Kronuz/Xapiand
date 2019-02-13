@@ -15,7 +15,7 @@ If you are following the documentation examples you may notice that the field "e
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
     "accountNumber": 148040,

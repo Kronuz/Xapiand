@@ -32,6 +32,11 @@
             - url: keyword-type
             - url: numeric-type
             - url: date-type
+              docs:
+              - link: '#time-datatype'
+                title: Time datatype
+              - link: '#time-delta-datatype'
+                title: Time Delta datatype
             - url: boolean-type
             - url: geospatial-type
         - url: dynamic-typing

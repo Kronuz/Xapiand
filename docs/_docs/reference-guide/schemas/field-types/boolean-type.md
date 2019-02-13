@@ -10,7 +10,7 @@ the `_type` boolean:
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
     "is_published": true
@@ -22,7 +22,7 @@ PUT /bank/1:search?pretty
 {% capture req %}
 
 ```json
-PUT /bank/1:search?pretty
+PUT /bank/1?pretty
 
 {
     "is_published": {

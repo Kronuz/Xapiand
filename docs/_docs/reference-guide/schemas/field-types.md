@@ -21,8 +21,8 @@ in a document:
 ### Date/Time datatypes
 
 * [Date](../field-types/date-type)
-* `Time`
-* `Timedelta`
+* [Time](../field-types/date-type/#time)
+* [Timedelta](../field-types/date-type/#time-delta)
 
 ### Boolean datatype
 
