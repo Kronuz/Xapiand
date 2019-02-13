@@ -656,7 +656,7 @@ code {
 	margin: 0;
 	display: inline-block;
 	font-family: Menlo, Consolas, "Courier New", Courier, "Liberation Mono", monospace;
-	line-height: 1.9em;
+	line-height: 2em;
 	padding: 0 0.5em;
 }
 
@@ -724,9 +724,9 @@ figure.highlight {
 pre.highlighter-rouge,
 code.highlighter-rouge {
 	display: inline;
-	line-height: 1em;
-	padding: .1em .4em;
-	margin: 0 .1em;
+	line-height: 1.3em;
+	padding: 1px 4px;
+	margin: 0 1px;
 
 	color: #cccccc;
 	background-color: rgba(0,0,0,.03);
