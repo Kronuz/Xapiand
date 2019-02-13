@@ -24,46 +24,47 @@ _Text Datatype_:
 PUT /bank/1?pretty
 
 {
-    "accountNumber": 148040,
-    "balance": 1494.65,
-    "employer": "Cubicide",
-    "name": {
-      "firstName": "Todd",
-      "lastName": "Le"
-    },
-    "age": 29,
-    "gender": "male",
-    "contact": {
-      "address": "409 Williams Place",
-      "city": "Suitland",
-      "state": "Virginia",
-      "postcode": "05192",
-      "phone": "+1 (830) 555-2707",
-      "email": "todd.le@cubicide.net"
-    },
-    "checkin": {
-      "_point": {
-        "_longitude": -80.31727,
-        "_latitude": 25.67927
-      }
-    },
-    "favoriteFruit": "strawberry",
-    "eyeColor": "brown",
-    "style": {
-      "_namespace": true,
-      "_partial_paths": true,
-      "clothing": {
-        "pants": "khakis",
-        "footwear": "casual shoes"
-      },
-      "hairstyle": "afro"
-    },
-    "personality": {
-      "_language": "en",
-      "_value": "Theres a lot to say about Todd Le, but if theres anything you should know its that hes individualistic and determined. Of course hes also charming, cheerful and precise, but far less strongly and often mixed with being grim as well. His individualism though, this is what hes pretty much loved for. Friends usually count on this and his appreciative nature especially when they need comforting or support. All in all, Todd has a fair share of lesser days too. His slyness and dominating nature sour the mood many a time and beyond what people are willing to deal with. Fortunately his determination is there to relift spirits when needed.",
-      "_type": "text"
+  "accountNumber": 148040,
+  "balance": 1494.65,
+  "employer": "Cubicide",
+  "name": {
+    "firstName": "Todd",
+    "lastName": "Le"
+  },
+  "age": 29,
+  "gender": "male",
+  "contact": {
+    "address": "409 Williams Place",
+    "city": "Suitland",
+    "state": "Virginia",
+    "postcode": "05192",
+    "phone": "+1 (830) 555-2707",
+    "email": "todd.le@cubicide.net"
+  },
+  "checkin": {
+    "_point": {
+      "_longitude": -80.31727,
+      "_latitude": 25.67927
     }
-  }
+  },
+  "favoriteFruit": "strawberry",
+  "eyeColor": "brown",
+  "style": {
+    "_namespace": true,
+    "_partial_paths": true,
+    "clothing": {
+      "pants": "khakis",
+      "footwear": "casual shoes"
+    },
+    "hairstyle": "afro"
+  },
+  "personality": {
+    "_language": "en",
+    "_value": "There's a lot to say about Todd Le, but if there's anything you should know it's that he's individualistic and determined. Of course he's also charming, cheerful and precise, but far less strongly and often mixed with being grim as well. His individualism though, this is what he's pretty much loved for. Friends usually count on this and his appreciative nature especially when they need comforting or support. All in all, Todd has a fair share of lesser days too. His slyness and dominating nature sour the mood many a time and beyond what people are willing to deal with. Fortunately his determination is there to relift spirits when needed.",
+    "_type": "text"
+  },
+  "_id": 2
+}
 ```
 {% endcapture %}
 {% include curl.html req=req %}
