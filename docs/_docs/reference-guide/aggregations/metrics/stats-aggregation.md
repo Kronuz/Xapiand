@@ -1,5 +1,6 @@
 ---
 title: Statistics Aggregation
+short_title: Statistics
 ---
 
 A _multi-value_ metrics aggregation that computes statistics over numeric values

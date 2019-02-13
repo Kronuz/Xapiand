@@ -1,5 +1,6 @@
 ---
 title: Text Datatype
+short_title: Text
 ---
 
 A field to index full-text values, such as the body of an email or the description of a product. These fields are analyzed, that is they are passed through an analyzer to convert the string into a list of individual terms before being indexed. The analysis process allows Xapiand to search for individual words within each full text field. Text fields are not used for sorting and seldom used for aggregations (although the significant text aggregation is a notable exception).

@@ -1,5 +1,6 @@
 ---
 title: Frequently Asked Questions
+short_title: FAQ
 ---
 
 

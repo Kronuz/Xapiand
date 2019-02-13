@@ -20,15 +20,10 @@
         - url: field-types
           docs:
             - url: text-type
-              title: Text datatype
             - url: keyword-type
-              title: Keyword datatype
             - url: numeric-type
-              title: Numeric datatype
             - url: date-type
-              title: Date datatype
             - url: boolean-type
-              title: Boolean datatype
         - url: dynamic-typing
     - url: search
     - url: query-dsl
@@ -94,40 +89,24 @@
           title: Metrics
           docs:
             - url: count-aggregation
-              title: Count
             - url: sum-aggregation
-              title: Sum
             - url: avg-aggregation
-              title: Average
             - url: max-aggregation
-              title: Max
             - url: min-aggregation
-              title: Min
             - url: variance-aggregation
-              title: Variance
             - url: std_deviation-aggregation
-              title: Standard Deviation
             - url: median-aggregation
-              title: Median
             - url: mode-aggregation
-              title: Mode
             - url: stats-aggregation
-              title: Statistics
             - url: extended_stats-aggregation
-              title: Extended Statistics
         - url: bucket
           title: Bucket
           docs:
             - url: filter-aggregation
-              title: Filter
             - url: values-aggregation
-              title: Values
             - url: terms-aggregation
-              title: Terms
             - url: histogram-aggregation
-              title: Histogram
             - url: range-aggregation
-              title: Range
     - url: scripting
     - url: storage
     - url: stats
@@ -144,7 +123,6 @@
 - title: Miscellaneous
   docs:
     - url: faq
-      title: FAQ
     - url: contributing
     - url: conduct
     - url: changelog

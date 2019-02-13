@@ -1,5 +1,6 @@
 ---
 title: Count Aggregation
+short_title: Count
 ---
 
 A _single-value_ metrics aggregation that counts the number of values that are

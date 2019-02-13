@@ -1,5 +1,6 @@
 ---
 title: Sum Aggregation
+short_title: Sum
 ---
 
 A _single-value_ metrics aggregation that sums up numeric values that are

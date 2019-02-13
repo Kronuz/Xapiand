@@ -1,5 +1,6 @@
 ---
 title: Average Aggregation
+short_title: Average
 ---
 
 A _single-value_ metrics aggregation that computes the average of numeric values

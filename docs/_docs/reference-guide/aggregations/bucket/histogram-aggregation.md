@@ -1,5 +1,6 @@
 ---
 title: Histogram Aggregation
+short_title: Histogram
 ---
 
 A _multi-bucket_ values source based aggregation that can be applied on numeric

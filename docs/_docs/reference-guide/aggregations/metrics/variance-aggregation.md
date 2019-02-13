@@ -1,5 +1,6 @@
 ---
 title: Variance Aggregation
+short_title: Variance
 ---
 
 {: .note .construction }

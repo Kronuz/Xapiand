@@ -1,5 +1,6 @@
 ---
 title: Boolean Datatype
+short_title: Boolean
 ---
 
 Boolean fields accept JSON true and false values, but can also accept strings which are interpreted as either true or false but you have to explicitly use the `_type` boolean:

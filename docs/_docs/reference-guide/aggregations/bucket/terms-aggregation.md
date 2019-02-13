@@ -1,5 +1,6 @@
 ---
 title: Terms Aggregation
+short_title: Terms
 ---
 
 {: .note .construction }

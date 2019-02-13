@@ -1,5 +1,6 @@
 ---
 title: Keyword Datatype
+short_title: Keyword
 ---
 
 A field to index structured content such as email addresses, hostnames, status codes, zip codes or tags.

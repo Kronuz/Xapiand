@@ -1,5 +1,6 @@
 ---
 title: Range Aggregation
+short_title: Range
 ---
 
 A _multi-bucket_ value source based aggregation that enables the user to define

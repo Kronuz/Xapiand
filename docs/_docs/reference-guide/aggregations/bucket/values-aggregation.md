@@ -1,5 +1,6 @@
 ---
 title: Values Aggregation
+short_title: Values
 ---
 
 A _multi-bucket_ value source based aggregation where buckets are dynamically

@@ -1,5 +1,6 @@
 ---
 title: Numeric Datatype
+short_title: Numeric
 ---
 
 The following numeric types are supported:

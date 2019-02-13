@@ -1,5 +1,6 @@
 ---
 title: Extended Statistics Aggregation
+short_title: Extended Statistics
 ---
 
 A _multi-value_ metrics aggregation that computes extended statistics over

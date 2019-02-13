@@ -1,5 +1,6 @@
 ---
 title: Standard Deviation Aggregation
+short_title: Standard Deviation
 ---
 
 A _single-value_ metrics aggregation that computes the standard deviation of

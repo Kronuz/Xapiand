@@ -1,5 +1,6 @@
 ---
 title: Median Aggregation
+short_title: Median
 ---
 
 {: .note .construction }

@@ -1,5 +1,6 @@
 ---
 title: Min Aggregation
+short_title: Min
 ---
 
 A _single-value_ metrics aggregation that keeps track and returns the minimum

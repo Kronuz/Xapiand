@@ -1,5 +1,6 @@
 ---
 title: Max Aggregation
+short_title: Max
 ---
 
 A _single-value_ metrics aggregation that keeps track and returns the maximum

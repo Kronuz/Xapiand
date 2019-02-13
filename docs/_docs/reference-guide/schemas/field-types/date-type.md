@@ -1,5 +1,6 @@
 ---
 title: Date Datatype
+short_title: Date
 ---
 
 JSON doesn’t have a date datatype, so dates in Xapiand can either be:

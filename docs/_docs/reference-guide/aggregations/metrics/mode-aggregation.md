@@ -1,5 +1,6 @@
 ---
 title: Mode Aggregation
+short_title: Mode
 ---
 
 {: .note .construction }

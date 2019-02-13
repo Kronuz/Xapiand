@@ -1,5 +1,6 @@
 ---
 title: Filter Aggregation
+short_title: Filter
 ---
 
 Defines a _single-bucket_ of all the documents in the current document set
