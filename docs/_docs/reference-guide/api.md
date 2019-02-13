@@ -77,9 +77,11 @@ the following nested object:
 
 ```json
 {
-  "address": {
-    "country": {
-      "name": "Italy"
+  "contact": {
+    "address": {
+      "country": {
+        "name": "Italy"
+      }
     }
   }
 }
@@ -89,7 +91,7 @@ Is equivalent to:
 
 ```json
 {
-  "address.country.name": "Italy"
+  "contact.address.country.name": "Italy"
 }
 ```
 
