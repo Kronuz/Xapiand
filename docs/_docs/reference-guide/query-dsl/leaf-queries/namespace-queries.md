@@ -2,32 +2,16 @@
 title: Namespace Queries
 ---
 
-The `_namespace` keyword allow search nested objects fields like tags.
+Namespace enabled fields allow efficiently searching for nested object names
+in use-cases where it's not feasible/convenient to create a new field in the
+schema for each name inside a tree. For example, this feature can be used for
+tags, file-system path names, or any tree-like structure for which contained
+names can be many, dynamic and/or not known in advance.
 
-{% capture req %}
+The `_namespace` keyword must be specified during Schema creation:
 
 ```json
-PUT /bank/1?pretty
-
 {
-  "accountNumber": 121931,
-  "balance": 221.46,
-  "employer": "Globoil",
-  "name": {
-    "firstName": "Juan",
-    "lastName": "Ash"
-  },
-  "age": 24,
-  "gender": "male",
-  "contact": {
-    "address": "630 Victor Road",
-    "city": "Leyner",
-    "state": "Indiana",
-    "phone": "+1 (924) 594-3216",
-    "email": "juan.ash@globoil.co.uk"
-  },
-  "favoriteFruit": "raspberry",
-  "eyeColor": "blue",
   "style": {
     "_namespace": true,
     "_partial_paths": true,
@@ -37,13 +21,16 @@ PUT /bank/1?pretty
     },
     "hairstyle": "afro"
   },
-  "personality": "It's hard to describe..."
+  ...
 }
 ```
-{% endcapture %}
-{% include curl.html req=req %}
 
-The above example is the document indexed, the keyword `_namespace` allow nested fields search joined with `.`:
+The above example is the document being indexed, the keyword `_namespace`
+enables the Namespace Queries functionality.
+
+Searching can be done either specifying nesting field names objects or by using
+[Field Expansion](/docs/reference-guide/api/#field-expansion) (joining the field
+names with `.`):
 
 {% capture req %}
 
@@ -52,12 +39,15 @@ GET /bank/:search?pretty
 
 {
   "_query": {
-    "style.clothing": "*"
+    "style": {
+      "clothing": "*"
+    }
   }
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
 
 {% capture req %}
 
@@ -88,7 +78,13 @@ GET /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-We can see that the nested object must be in the same order without skip a intermediate field. If we want to skip any field in the middle the keyword `_partial_path`must be set to true and you can perform searches like this:
+## Skipping Fields
+
+We can see that all nested field names are listed in the object (without
+skipping any intermediate fields). If we want to skip fields, the keyword
+`_partial_path` should have been be set to `true` in advance, during Schema
+creation. Having make sure of that, you can perform searches like the following
+(note how `"clothing"` was skipped):
 
 {% capture req %}
 
@@ -103,3 +99,9 @@ GET /bank/:search?pretty
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+
+# Datatype
+
+The concrete datatype for all nested objects must be of the same type as the
+field with the `_namespace` keyword.
