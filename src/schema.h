@@ -22,26 +22,26 @@
 
 #pragma once
 
-#include "config.h"                // for XAPIAND_CHAISCRIPT, XAPIAND_V8
+#include "config.h"                               // for XAPIAND_CHAISCRIPT, XAPIAND_V8
 
-#include <array>                   // for std::array
-#include <cstdint>                 // for uint8_t
-#include <memory>                  // for std::shared_ptr
-#include <string>                  // for std::string
-#include "string_view.hh"          // for std::string_view
-#include <tuple>                   // for std::tuple
-#include <unordered_map>           // for std::unordered_map
-#include <unordered_set>           // for std::unordered_set
-#include <utility>                 // for std::pair
-#include <vector>                  // for std::vector
+#include <array>                                  // for std::array
+#include <cstdint>                                // for uint8_t
+#include <memory>                                 // for std::shared_ptr
+#include <string>                                 // for std::string
+#include "string_view.hh"                         // for std::string_view
+#include <tuple>                                  // for std::tuple
+#include <unordered_map>                          // for std::unordered_map
+#include <unordered_set>                          // for std::unordered_set
+#include <utility>                                // for std::pair
+#include <vector>                                 // for std::vector
 
 #include "database_utils.h"
-#include "geospatial/htm.h"        // for range_t, GeoSpatial
-#include "log.h"                   // for L_CALL
-#include "msgpack.h"               // for MsgPack
-#include "repr.hh"                 // for repr
-#include "utype.hh"                // for toUType
-#include "xapian.h"                // for Xapian::QueryParser
+#include "geospatial/htm.h"                       // for range_t, GeoSpatial
+#include "log.h"                                  // for L_CALL
+#include "msgpack.h"                              // for MsgPack
+#include "repr.hh"                                // for repr
+#include "utype.hh"                               // for toUType
+#include "xapian.h"                               // for Xapian::QueryParser
 
 
 enum class TypeIndex : uint8_t {

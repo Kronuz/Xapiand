@@ -22,36 +22,37 @@
 
 #include "schema.h"
 
-#include <algorithm>                       // for move
-#include <cmath>                           // for pow
-#include <cstdint>                         // for uint64_t
-#include <cstring>                         // for size_t, strlen
-#include <cctype>                          // for tolower
-#include <functional>                      // for ref, reference_wrapper
-#include <mutex>                           // for mutex
-#include <ostream>                         // for operator<<, basic_ostream
-#include <set>                             // for __tree_const_iterator, set
-#include <stdexcept>                       // for out_of_range
-#include <type_traits>                     // for remove_reference<>::type
+#include <algorithm>                               // for move
+#include <cmath>                                   // for pow
+#include <cstdint>                                 // for uint64_t
+#include <cstring>                                 // for size_t, strlen
+#include <cctype>                                  // for tolower
+#include <functional>                              // for ref, reference_wrapper
+#include <mutex>                                   // for mutex
+#include <ostream>                                 // for operator<<, basic_ostream
+#include <set>                                     // for __tree_const_iterator, set
+#include <stdexcept>                               // for out_of_range
+#include <type_traits>                             // for remove_reference<>::type
 #include <utility>
 
-#include "cassert.h"                       // for ASSERT
-#include "cast.h"                          // for Cast
-#include "cuuid/uuid.h"                    // for UUIDGenerator
-#include "database_handler.h"              // for DatabaseHandler
-#include "datetime.h"                      // for isDate, tm_t
-#include "exception.h"                     // for ClientError
-#include "geospatial/geospatial.h"         // for GeoSpatial
-#include "ignore_unused.h"                 // for ignore_unused
-#include "manager.h"                       // for XapiandManager, XapiandMan...
-#include "multivalue/generate_terms.h"     // for integer, geo, date, positive
-#include "opts.h"                          // for opts::*
-#include "random.hh"                       // for random_int
-#include "script.h"                        // for Script
-#include "serialise_list.h"                // for StringList
-#include "split.h"                         // for Split
-#include "string.hh"                       // for string::format, string::tolower
-#include "static_string.hh"                // for static_string
+#include "cassert.h"                              // for ASSERT
+#include "cast.h"                                 // for Cast
+#include "cuuid/uuid.h"                           // for UUIDGenerator
+#include "database_handler.h"                     // for DatabaseHandler
+#include "datetime.h"                             // for isDate, tm_t
+#include "exception.h"                            // for ClientError
+#include "geospatial/geospatial.h"                // for GeoSpatial
+#include "ignore_unused.h"                        // for ignore_unused
+#include "manager.h"                              // for XapiandManager, XapiandMan...
+#include "multivalue/generate_terms.h"            // for integer, geo, date, positive
+#include "opts.h"                                 // for opts::*
+#include "random.hh"                              // for random_int
+#include "script.h"                               // for Script
+#include "serialise_list.h"                       // for StringList
+#include "split.h"                                // for Split
+#include "static_string.hh"                       // for static_string
+#include "stopper.h"                              // for getStopper
+#include "string.hh"                              // for string::format, string::tolower
 
 
 // #undef L_DEBUG
