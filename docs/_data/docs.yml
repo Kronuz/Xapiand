@@ -7,6 +7,7 @@
         - url: /docs/exploring
         - url: /docs/next
     - url: /tutorials/home
+    - url: /docs/benchmarks
 
 - title: Reference Guide
   url: reference-guide
