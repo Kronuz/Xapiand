@@ -76,8 +76,8 @@ Sure enough, Xapiand returns a list of cities in the Bay Area, nearest first:
       "Richmond",
       "Berkeley",
       "Oakland",
-      "Vallejo",
-      "San Francisco"
+      "San Francisco",
+      "Vallejo"
     ]
   }
 }
