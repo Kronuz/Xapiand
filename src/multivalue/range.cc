@@ -22,6 +22,7 @@
 
 #include "range.h"
 
+#include <limits>                                 // for std::numeric_limits
 #include <stdexcept>                              // for out_of_range
 #include <sys/types.h>                            // for int64_t, uint64_t
 #include <type_traits>                            // for decay_t, enable_if_t, is_i...
@@ -38,16 +39,23 @@
 #include "serialise_list.h"                       // for StringList
 
 
-static inline
-double min_f64(const required_spc_t& field_spc)
+template<typename T>
+static T min(const std::vector<uint64_t>& accuracy);
+
+template<typename T>
+static T max(const std::vector<uint64_t>& accuracy);
+
+template<>
+inline double
+min<double>(const std::vector<uint64_t>& accuracy)
 {
 	double min = std::numeric_limits<double>::min();
 
-	if (field_spc.accuracy.empty()) {
+	if (accuracy.empty()) {
 		return min;
 	}
 
-	uint64_t back = field_spc.accuracy.back();
+	uint64_t back = accuracy.back();
 	if (back + back > back) {
 		back += back;
 	} else {
@@ -61,17 +69,17 @@ double min_f64(const required_spc_t& field_spc)
 	return -static_cast<double>(back);
 }
 
-
-static inline
-double max_f64(const required_spc_t& field_spc)
+template<>
+inline double
+max<double>(const std::vector<uint64_t>& accuracy)
 {
 	double max = std::numeric_limits<double>::max();
 
-	if (field_spc.accuracy.empty()) {
+	if (accuracy.empty()) {
 		return max;
 	}
 
-	uint64_t back = field_spc.accuracy.back();
+	uint64_t back = accuracy.back();
 	if (back + back > back) {
 		back += back;
 	} else {
@@ -85,17 +93,17 @@ double max_f64(const required_spc_t& field_spc)
 	return static_cast<double>(back);
 }
 
-
-static inline
-int64_t min_i64(const required_spc_t& field_spc)
+template<>
+inline int64_t
+min<int64_t>(const std::vector<uint64_t>& accuracy)
 {
 	int64_t min = std::numeric_limits<int64_t>::min();
 
-	if (field_spc.accuracy.empty()) {
+	if (accuracy.empty()) {
 		return min;
 	}
 
-	uint64_t back = field_spc.accuracy.back();
+	uint64_t back = accuracy.back();
 	if (back + back > back) {
 		back += back;
 	} else {
@@ -109,17 +117,17 @@ int64_t min_i64(const required_spc_t& field_spc)
 	return -static_cast<int64_t>(back);
 }
 
-
-static inline
-int64_t max_i64(const required_spc_t& field_spc)
+template<>
+inline int64_t
+max<int64_t>(const std::vector<uint64_t>& accuracy)
 {
 	int64_t max = std::numeric_limits<int64_t>::max();
 
-	if (field_spc.accuracy.empty()) {
+	if (accuracy.empty()) {
 		return max;
 	}
 
-	uint64_t back = field_spc.accuracy.back();
+	uint64_t back = accuracy.back();
 	if (back + back > back) {
 		back += back;
 	} else {
@@ -133,26 +141,26 @@ int64_t max_i64(const required_spc_t& field_spc)
 	return static_cast<int64_t>(back);
 }
 
-
-static inline
-uint64_t min_u64(const required_spc_t&)
+template<>
+inline uint64_t
+min<uint64_t>(const std::vector<uint64_t>&)
 {
 	uint64_t min = std::numeric_limits<uint64_t>::min();
 
 	return min;
 }
 
-
-static inline
-uint64_t max_u64(const required_spc_t& field_spc)
+template<>
+inline uint64_t
+max<uint64_t>(const std::vector<uint64_t>& accuracy)
 {
 	uint64_t max = std::numeric_limits<uint64_t>::max();
 
-	if (field_spc.accuracy.empty()) {
+	if (accuracy.empty()) {
 		return max;
 	}
 
-	uint64_t back = field_spc.accuracy.back();
+	uint64_t back = accuracy.back();
 	if (back + back > back) {
 		back += back;
 	} else {
@@ -171,8 +179,8 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
 		case FieldType::FLOAT: {
-			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::_float(*start) : min_f64(field_spc);
-			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::_float(*end) : max_f64(field_spc);
+			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::_float(*start) : min<double>(field_spc.accuracy);
+			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::_float(*end) : max<double>(field_spc.accuracy);
 
 			if (val_s > val_e) {
 				return Xapian::Query();
@@ -185,8 +193,8 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			break;
 		}
 		case FieldType::INTEGER: {
-			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : min_i64(field_spc);
-			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : max_i64(field_spc);
+			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : min<int64_t>(field_spc.accuracy);
+			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : max<int64_t>(field_spc.accuracy);
 
 			if (val_s > val_e) {
 				return Xapian::Query();
@@ -199,8 +207,8 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			break;
 		}
 		case FieldType::POSITIVE: {
-			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : min_u64(field_spc);
-			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : max_u64(field_spc);
+			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : min<uint64_t>(field_spc.accuracy);
+			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : max<uint64_t>(field_spc.accuracy);
 
 			if (val_s > val_e) {
 				return Xapian::Query();
@@ -270,8 +278,8 @@ getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgP
 Xapian::Query
 getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	double timestamp_s = start ? Datetime::timestamp(Datetime::DateParser(*start)) : min_f64(field_spc);;
-	double timestamp_e = end ? Datetime::timestamp(Datetime::DateParser(*end)) : max_f64(field_spc);;
+	double timestamp_s = start ? Datetime::timestamp(Datetime::DateParser(*start)) : min<double>(field_spc.accuracy);
+	double timestamp_e = end ? Datetime::timestamp(Datetime::DateParser(*end)) : max<double>(field_spc.accuracy);
 
 	if (timestamp_s > timestamp_e) {
 		return Xapian::Query();
@@ -309,8 +317,8 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 Xapian::Query
 getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	double time_s = start ? Datetime::time_to_double(*start) : min_f64(field_spc);;
-	double time_e = end ? Datetime::time_to_double(*end) : max_f64(field_spc);;
+	double time_s = start ? Datetime::time_to_double(*start) : min<double>(field_spc.accuracy);
+	double time_e = end ? Datetime::time_to_double(*end) : max<double>(field_spc.accuracy);
 
 	if (time_s > time_e) {
 		return Xapian::Query();
@@ -347,8 +355,8 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 Xapian::Query
 getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end) {
-	double timedelta_s = start ? Datetime::timedelta_to_double(*start) : min_f64(field_spc);;
-	double timedelta_e = end ? Datetime::timedelta_to_double(*end) : max_f64(field_spc);;
+	double timedelta_s = start ? Datetime::timedelta_to_double(*start) : min<double>(field_spc.accuracy);
+	double timedelta_e = end ? Datetime::timedelta_to_double(*end) : max<double>(field_spc.accuracy);
 
 	if (timedelta_s > timedelta_e) {
 		return Xapian::Query();
