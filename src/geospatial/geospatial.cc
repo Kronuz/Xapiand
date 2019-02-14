@@ -290,20 +290,30 @@ GeoSpatial::make_convex(const MsgPack& o)
 			if (data.lat->size() != data.height->size()) {
 				THROW(GeoSpatialError, "{}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_HEIGHT);
 			}
+			if (data.lat->size() != data.radius->size()) {
+				THROW(GeoSpatialError, "{}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_RADIUS);
+			}
 			auto it = data.lon->begin();
 			auto hit = data.height->begin();
+			auto it_radius = data.radius->begin();
 			convex.reserve(data.lat->size());
 			for (const auto& latitude : *data.lat) {
-				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
+				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), it_radius->f64()));
 				++it;
 				++hit;
+				++it_radius;
 			}
 		} else {
+			if (data.lat->size() != data.radius->size()) {
+				THROW(GeoSpatialError, "{}, {} and {} must have the same size", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_RADIUS);
+			}
 			auto it = data.lon->begin();
+			auto it_radius = data.radius->begin();
 			convex.reserve(data.lat->size());
 			for (const auto& latitude : *data.lat) {
-				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
+				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), it_radius->f64()));
 				++it;
+				++it_radius;
 			}
 		}
 		return convex;
