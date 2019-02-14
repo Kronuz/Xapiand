@@ -29,8 +29,9 @@ MERGE /bank/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-In the above example, taken from our example dataset, the field "checkin" is
-a geospatial point but could be any of:
+In the above example, taken from our
+[example dataset]({{ '/docs/exploring/#sample-dataset' | relative_url }}),
+the field "checkin" is a geospatial point but could be any of:
 
 * [Point](#)
 * [Polygon](#polygon)
