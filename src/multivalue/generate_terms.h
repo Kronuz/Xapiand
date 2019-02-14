@@ -36,8 +36,9 @@
 #include "xapian.h"                               // for Query, Query::op::OP_OR, Query::op::OP_AND
 
 
-constexpr size_t MAX_TERMS            = 50;
-constexpr size_t MAX_SERIALISE_LENGTH = 18;
+constexpr size_t MAX_TERMS_LEVEL        = 256;
+constexpr size_t MAX_TERMS              = 128;
+constexpr size_t MAX_SERIALISE_LENGTH   = 18;
 
 
 extern const char ctype_date;
