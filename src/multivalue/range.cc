@@ -39,13 +39,18 @@
 
 
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
-Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
+Xapian::Query
+getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
+{
 	std::string ser_start, ser_end;
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
 		case FieldType::FLOAT: {
-			double val_s = start.is_map() ? Cast::cast(start).f64() : Cast::_float(start);
-			double val_e = end.is_map() ? Cast::cast(end).f64() : Cast::_float(end);
+			double min = field_spc.accuracy.empty() ? std::numeric_limits<double>::min() : field_spc.accuracy.front();
+			double max = field_spc.accuracy.empty() ? std::numeric_limits<double>::max() : field_spc.accuracy.back();
+			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::_float(*start) : min;
+			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::_float(*end) : max;
+
 			if (val_s > val_e) {
 				return Xapian::Query();
 			}
@@ -57,8 +62,11 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			break;
 		}
 		case FieldType::INTEGER: {
-			int64_t val_s = start.is_map() ? Cast::cast(start).i64() : Cast::integer(start);
-			int64_t val_e = end.is_map() ? Cast::cast(end).i64() : Cast::integer(end);
+			int64_t min = field_spc.accuracy.empty() ? std::numeric_limits<int64_t>::min() : field_spc.accuracy.front();
+			int64_t max = field_spc.accuracy.empty() ? std::numeric_limits<int64_t>::max() : field_spc.accuracy.back();
+			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : min;
+			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : max;
+
 			if (val_s > val_e) {
 				return Xapian::Query();
 			}
@@ -70,8 +78,11 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 			break;
 		}
 		case FieldType::POSITIVE: {
-			uint64_t val_s = start.is_map() ? Cast::cast(start).u64() : Cast::positive(start);
-			uint64_t val_e = end.is_map() ? Cast::cast(end).u64() : Cast::positive(end);
+			uint64_t min = field_spc.accuracy.empty() ? std::numeric_limits<uint64_t>::min() : field_spc.accuracy.front();
+			uint64_t max = field_spc.accuracy.empty() ? std::numeric_limits<uint64_t>::max() : field_spc.accuracy.back();
+			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : min;
+			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : max;
+
 			if (val_s > val_e) {
 				return Xapian::Query();
 			}
@@ -87,6 +98,23 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 	}
 
 	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix);
+
+	if (!start) {
+		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvle->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+	}
+
+	if (!end) {
+		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+		if (query.empty()) {
+			return Xapian::Query(mvge->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+	}
+
 	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
@@ -95,7 +123,22 @@ Xapian::Query getNumericQuery(const required_spc_t& field_spc, const MsgPack& st
 }
 
 
-Xapian::Query getStringQuery(const required_spc_t& field_spc, std::string&& start_s, std::string&& end_s) {
+Xapian::Query
+getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
+{
+	std::string start_s = start ? Serialise::MsgPack(field_spc, *start) : "";
+	std::string end_s = end ? Serialise::MsgPack(field_spc, *end) : "";
+
+	if (!start) {
+		auto mvle = new MultipleValueLE(field_spc.slot, std::move(end_s));
+		return Xapian::Query(mvle->release());
+	}
+
+	if (!end) {
+		auto mvge = new MultipleValueGE(field_spc.slot, std::move(start_s));
+		return Xapian::Query(mvge->release());
+	}
+
 	if (start_s > end_s) {
 		return Xapian::Query();
 	}
@@ -105,16 +148,40 @@ Xapian::Query getStringQuery(const required_spc_t& field_spc, std::string&& star
 }
 
 
-Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
-	auto timestamp_s = Datetime::timestamp(Datetime::DateParser(start));
-	auto timestamp_e = Datetime::timestamp(Datetime::DateParser(end));
+Xapian::Query
+getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
+{
+	double min = field_spc.accuracy.empty() ? std::numeric_limits<double>::min() : field_spc.accuracy.front();
+	double max = field_spc.accuracy.empty() ? std::numeric_limits<double>::max() : field_spc.accuracy.back();
+	double timestamp_s = start ? Datetime::timestamp(Datetime::DateParser(*start)) : min;
+	double timestamp_e = end ? Datetime::timestamp(Datetime::DateParser(*end)) : max;
 
 	if (timestamp_s > timestamp_e) {
 		return Xapian::Query();
 	}
 
+	auto ser_start = Serialise::timestamp(timestamp_s);
+	auto ser_end = Serialise::timestamp(timestamp_e);
+
 	auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
-	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(timestamp_s), Serialise::timestamp(timestamp_e));
+
+	if (!start) {
+		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvle->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+	}
+
+	if (!end) {
+		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+		if (query.empty()) {
+			return Xapian::Query(mvge->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+	}
+
+	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
@@ -122,16 +189,40 @@ Xapian::Query getDateQuery(const required_spc_t& field_spc, const MsgPack& start
 }
 
 
-Xapian::Query getTimeQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
-	auto time_s = Datetime::time_to_double(start);
-	auto time_e = Datetime::time_to_double(end);
+Xapian::Query
+getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
+{
+	double min = field_spc.accuracy.empty() ? std::numeric_limits<double>::min() : field_spc.accuracy.front();
+	double max = field_spc.accuracy.empty() ? std::numeric_limits<double>::max() : field_spc.accuracy.back();
+	double time_s = start ? Datetime::time_to_double(*start) : min;
+	double time_e = end ? Datetime::time_to_double(*end) : max;
 
 	if (time_s > time_e) {
 		return Xapian::Query();
 	}
 
+	auto ser_start = Serialise::timestamp(time_s);
+	auto ser_end = Serialise::timestamp(time_e);
+
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(time_s), static_cast<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix);
-	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(time_s), Serialise::timestamp(time_e));
+
+	if (!start) {
+		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvle->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+	}
+
+	if (!end) {
+		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+		if (query.empty()) {
+			return Xapian::Query(mvge->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+	}
+
+	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
@@ -139,16 +230,39 @@ Xapian::Query getTimeQuery(const required_spc_t& field_spc, const MsgPack& start
 }
 
 
-Xapian::Query getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack& start, const MsgPack& end) {
-	auto timedelta_s = Datetime::timedelta_to_double(start);
-	auto timedelta_e = Datetime::timedelta_to_double(end);
+Xapian::Query
+getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end) {
+	double min = field_spc.accuracy.empty() ? std::numeric_limits<double>::min() : field_spc.accuracy.front();
+	double max = field_spc.accuracy.empty() ? std::numeric_limits<double>::max() : field_spc.accuracy.back();
+	double timedelta_s = start ? Datetime::timedelta_to_double(*start) : min;
+	double timedelta_e = end ? Datetime::timedelta_to_double(*end) : max;
 
 	if (timedelta_s > timedelta_e) {
 		return Xapian::Query();
 	}
 
+	auto ser_start = Serialise::timestamp(timedelta_s);
+	auto ser_end = Serialise::timestamp(timedelta_e);
+
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(timedelta_s), static_cast<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix);
-	auto mvr = new MultipleValueRange(field_spc.slot, Serialise::timestamp(timedelta_s), Serialise::timestamp(timedelta_e));
+
+	if (!start) {
+		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvle->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+	}
+
+	if (!end) {
+		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+		if (query.empty()) {
+			return Xapian::Query(mvge->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+	}
+
+	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
 	if (query.empty()) {
 		return Xapian::Query(mvr->release());
 	}
@@ -173,44 +287,35 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 	}
 
 	try {
-		if (start == nullptr) {
-			if (end == nullptr) {
-				return Xapian::Query(std::string());
-			}
-			if (field_spc.get_type() == FieldType::GEO) {
-				return GeoSpatialRange::getQuery(field_spc, *end);
-			}
-			auto mvle = new MultipleValueLE(field_spc.slot, Serialise::MsgPack(field_spc, *end));
-			return Xapian::Query(mvle->release());
-		}
-
-		if (end == nullptr) {
-			if (field_spc.get_type() == FieldType::GEO) {
-				return GeoSpatialRange::getQuery(field_spc, *start);
-			}
-			auto mvge = new MultipleValueGE(field_spc.slot, Serialise::MsgPack(field_spc, *start));
-			return Xapian::Query(mvge->release());
+		if (!start && !end) {
+			return Xapian::Query(std::string());
 		}
 
 		switch (field_spc.get_type()) {
 			case FieldType::INTEGER:
 			case FieldType::FLOAT:
-				return getNumericQuery<int64_t>(field_spc, *start, *end);
+				return getNumericQuery<int64_t>(field_spc, start, end);
 			case FieldType::POSITIVE:
-				return getNumericQuery<uint64_t>(field_spc, *start, *end);
+				return getNumericQuery<uint64_t>(field_spc, start, end);
 			case FieldType::UUID:
 			case FieldType::BOOLEAN:
 			case FieldType::KEYWORD:
 			case FieldType::TEXT:
 			case FieldType::STRING:
-				return getStringQuery(field_spc, Serialise::MsgPack(field_spc, *start), Serialise::MsgPack(field_spc, *end));
+				return getStringQuery(field_spc, start, end);
 			case FieldType::DATE:
-				return getDateQuery(field_spc, *start, *end);
+				return getDateQuery(field_spc, start, end);
 			case FieldType::TIME:
-				return getTimeQuery(field_spc, *start, *end);
+				return getTimeQuery(field_spc, start, end);
 			case FieldType::TIMEDELTA:
-				return getTimedeltaQuery(field_spc, *start, *end);
+				return getTimedeltaQuery(field_spc, start, end);
 			case FieldType::GEO:
+				if (!start) {
+					return GeoSpatialRange::getQuery(field_spc, *end);
+				}
+				if (!end) {
+					return GeoSpatialRange::getQuery(field_spc, *start);
+				}
 				THROW(QueryParserError, "The format for Geo Spatial range is: <field>: [\"EWKT\"]");
 			default:
 				return Xapian::Query();
