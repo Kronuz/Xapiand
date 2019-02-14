@@ -175,7 +175,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 	try {
 		if (start == nullptr) {
 			if (end == nullptr) {
-				return Xapian::Query::MatchAll;
+				return Xapian::Query(std::string());
 			}
 			if (field_spc.get_type() == FieldType::GEO) {
 				return GeoSpatialRange::getQuery(field_spc, *end);
