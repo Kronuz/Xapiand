@@ -61,7 +61,8 @@ Content-Type: application/x-ndjson
 {% include curl.html req=req %}
 
 
-And then you can use `:info` to get information about the new index:
+And then you can use [Info API](../reference-guide/info) to get information
+about the new index:
 
 {% capture req %}
 
