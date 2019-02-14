@@ -801,3 +801,143 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 
 	return query;
 }
+
+
+template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
+static inline Xapian::Query
+_numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+{
+	Xapian::Query query;
+
+	if (accuracy.empty() || end < start) {
+		return query;
+	}
+
+	uint64_t size_r = end - start;
+
+	// Find the upper or equal accuracy.
+	size_t pos = 0, len = accuracy.size();
+	while (pos < len && accuracy[pos] < size_r) {
+		++pos;
+	}
+
+	// If there is a upper or equal accuracy.
+	if (pos < len) {
+		auto up_acc = accuracy[pos];
+		T up_start = start - modulus(start, up_acc);
+		T up_end = end - modulus(end, up_acc);
+		const std::string& prefix_up = acc_prefix[pos];
+
+		// If there is a lower accuracy.
+		if (pos > 0) {
+			--pos;
+			auto low_acc = accuracy[pos];
+			T low_start = start - modulus(start, low_acc);
+			T low_end = end - modulus(end, low_acc);
+			// If terms are not too many terms (num_unions + 1).
+			if (static_cast<size_t>((low_end - low_start) / low_acc) < MAX_TERMS) {
+				const std::string& prefix_low = acc_prefix[pos];
+
+				if (up_start == up_end) {
+					size_t num_unions = (low_end - low_start) / low_acc;
+					if (num_unions == 0) {
+						query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+					} else {
+						std::vector<Xapian::Query> query_low;
+						query_low.reserve(num_unions);
+						query_low.emplace_back(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+						while (low_start != low_end) {
+							low_start += low_acc;
+							query_low.emplace_back(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+						}
+						query = Xapian::Query(Xapian::Query::OP_AND,
+							Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, ctype_integer), wqf),
+							Xapian::Query(Xapian::Query::OP_OR, query_low.begin(), query_low.end()));
+					}
+
+				} else {
+					size_t num_unions1 = (up_end - low_start) / low_acc;
+					if (num_unions1 == 0) {
+						query = Xapian::Query(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+					} else {
+						std::vector<Xapian::Query> query_low;
+						query_low.reserve(num_unions1);
+						query_low.emplace_back(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+						while (low_start < up_end) {
+							low_start += low_acc;
+							if (low_start < up_end) {
+								query_low.emplace_back(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+							}
+						}
+						query = Xapian::Query(Xapian::Query::OP_AND,
+							Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, ctype_integer), wqf),
+							Xapian::Query(Xapian::Query::OP_OR, query_low.begin(), query_low.end()));
+					}
+
+					size_t num_unions2 = (low_end - low_start) / low_acc;
+					if (num_unions2 == 0) {
+						Xapian::Query query_low(prefixed(Serialise::serialise(low_end), prefix_low, ctype_integer), wqf);
+						query = Xapian::Query(Xapian::Query::OP_OR, query, query_low);
+					} else {
+						std::vector<Xapian::Query> query_low;
+						query_low.reserve(num_unions2);
+						query_low.emplace_back(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+						while (low_start != low_end) {
+							low_start += low_acc;
+							query_low.emplace_back(prefixed(Serialise::serialise(low_start), prefix_low, ctype_integer), wqf);
+						}
+						;
+						query = Xapian::Query(Xapian::Query::OP_OR,
+							query,
+							Xapian::Query(Xapian::Query::OP_AND,
+								Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up, ctype_integer), wqf),
+								Xapian::Query(Xapian::Query::OP_OR, query_low.begin(), query_low.end())));
+					}
+				}
+				return query;
+			}
+		}
+
+		// Only upper accuracy.
+		query = Xapian::Query(prefixed(Serialise::serialise(up_end), prefix_up, ctype_integer), wqf);
+		if (up_start != up_end) {
+			query = Xapian::Query(Xapian::Query::OP_OR, query, Xapian::Query(prefixed(Serialise::serialise(up_start), prefix_up, ctype_integer), wqf));
+		}
+
+	} else if (pos > 0) { // If only there is a lower accuracy.
+		--pos;
+		auto low_acc = accuracy[pos];
+		start -= modulus(start, low_acc);
+		end -= modulus(end, low_acc);
+		size_t num_unions = (end - start) / low_acc;
+		// If terms are not too many terms (num_unions + 1).
+		if (num_unions < MAX_TERMS) {
+			const std::string& prefix = acc_prefix[pos];
+			// Reserve upper bound.
+			std::vector<Xapian::Query> query_low;
+			query_low.reserve(num_unions);
+			query_low.emplace_back(prefixed(Serialise::serialise(end), prefix, ctype_integer), wqf);
+			while (start != end) {
+				query_low.emplace_back(prefixed(Serialise::serialise(start), prefix, ctype_integer), wqf);
+				start += low_acc;
+			}
+			query = Xapian::Query(Xapian::Query::OP_OR, query_low.begin(), query_low.end());
+		}
+	}
+
+	return query;
+}
+
+
+Xapian::Query
+GenerateTerms::numeric(int64_t start, int64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+{
+	return _numeric(start, end, accuracy, acc_prefix, wqf);
+}
+
+
+Xapian::Query
+GenerateTerms::numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+{
+	return _numeric(start, end, accuracy, acc_prefix, wqf);
+}
