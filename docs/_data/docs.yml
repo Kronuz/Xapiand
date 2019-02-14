@@ -21,8 +21,8 @@
           title: Field Expansion
         - link: '#multiple-indices'
           title: Multiple Indices
-    - url: indices
-    - url: documents
+    # - url: indices
+    # - url: documents
     - url: info
     - url: schemas
       docs:
@@ -42,7 +42,7 @@
             - url: boolean-type
             - url: geospatial-type
         - url: dynamic-typing
-    - url: search
+    # - url: search
     - url: query-dsl
       docs:
         - url: leaf-queries
@@ -119,13 +119,13 @@
             - url: terms-aggregation
             - url: histogram-aggregation
             - url: range-aggregation
-    - url: scripting
+    # - url: scripting
     - url: storage
-    - url: stats
+    # - url: stats
     - url: monitoring
-    - url: wal
+    # - url: wal
     - url: backups
-    - url: kubernetes
+    # - url: kubernetes
 
 - title: Set up
   docs:
