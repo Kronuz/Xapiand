@@ -140,11 +140,49 @@ namespace std {
 /*
  * Default accuracies.
  */
+static const std::vector<uint64_t> def_accuracy_num({
+	toUType(PowTwo::POW_11),            // 2048
+	toUType(PowTwo::POW_13),            // 8192
+	toUType(PowTwo::POW_16),            // 65536
+	toUType(PowTwo::POW_20),            // 1048576
+	toUType(PowTwo::POW_25),            // 33554432
+	toUType(PowTwo::POW_31),            // 2147483648
+	toUType(PowTwo::POW_38),            // 274877906944
+	toUType(PowTwo::POW_46),            // 70368744177664
+	toUType(PowTwo::POW_55),            // 36028797018963968
+ });
 
-static const std::vector<uint64_t> def_accuracy_num({ 100, 1000, 10000, 100000, 1000000, 10000000 });
-static const std::vector<uint64_t> def_accuracy_date({ toUType(UnitTime::HOUR), toUType(UnitTime::DAY), toUType(UnitTime::MONTH), toUType(UnitTime::YEAR), toUType(UnitTime::DECADE), toUType(UnitTime::CENTURY) });
-static const std::vector<uint64_t> def_accuracy_time({ toUType(UnitTime::MINUTE), toUType(UnitTime::HOUR) });
-static const std::vector<uint64_t> def_accuracy_geo({ 0, 5, 10, 15, 20 });
+static const std::vector<uint64_t> def_accuracy_date({
+	toUType(UnitTime::MINUTE),          // 60
+	toUType(UnitTime::HOUR),            // 3600
+	toUType(UnitTime::DAY),             // 86400
+	toUType(UnitTime::MONTH),           // 2592000
+	toUType(UnitTime::YEAR),            // 31536000
+	toUType(UnitTime::CENTURY),         // 3153600000
+	toUType(UnitTime::MILLENNIUM),      // 31536000000
+	toUType(UnitTime::AGE),             // 31536000000000
+	toUType(UnitTime::EON),             // 31536000000000000
+});
+
+static const std::vector<uint64_t> def_accuracy_time({
+	toUType(UnitTime::MINUTE),          // 60
+	toUType(UnitTime::HOUR),            // 3600
+	toUType(UnitTime::DAY),             // 86400
+	toUType(UnitTime::MONTH),           // 2592000
+	toUType(UnitTime::YEAR),            // 31536000
+	toUType(UnitTime::CENTURY),         // 3153600000
+	toUType(UnitTime::MILLENNIUM),      // 31536000000
+	toUType(UnitTime::AGE),             // 31536000000000
+	toUType(UnitTime::EON),             // 31536000000000000
+});
+
+static const std::vector<uint64_t> def_accuracy_geo({
+	0,
+	5,
+	10,
+	15,
+	20,
+});
 
 
 required_spc_t _get_data_id(required_spc_t& spc_id, const MsgPack& id_properties);

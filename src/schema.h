@@ -90,6 +90,19 @@ enum class StemStrategy : uint8_t {
 };
 
 
+enum class PowTwo : uint64_t {
+	POW_11     = (1ULL << 11),          // 2048
+	POW_13     = (1ULL << 13),          // 8192
+	POW_16     = (1ULL << 16),          // 65536
+	POW_20     = (1ULL << 20),          // 1048576
+	POW_25     = (1ULL << 25),          // 33554432
+	POW_31     = (1ULL << 31),          // 2147483648
+	POW_38     = (1ULL << 38),          // 274877906944
+	POW_46     = (1ULL << 46),          // 70368744177664
+	POW_55     = (1ULL << 55),          // 36028797018963968
+};
+
+
 enum class UnitTime : uint64_t {
 	SECOND     = 1,                     // 1
 	MINUTE     = SECOND * 60,           // 60
