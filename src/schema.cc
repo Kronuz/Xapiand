@@ -163,6 +163,8 @@ validate_acc_date(UnitTime unit) noexcept
 		case UnitTime::DECADE:
 		case UnitTime::CENTURY:
 		case UnitTime::MILLENNIUM:
+		case UnitTime::AGE:
+		case UnitTime::EON:
 			return true;
 		default:
 			return false;
@@ -213,6 +215,14 @@ _get_str_acc_date(UnitTime unit) noexcept
 		case UnitTime::MILLENNIUM: {
 			static const std::string millennium("millennium");
 			return millennium;
+		}
+		case UnitTime::AGE: {
+			static const std::string age("age");
+			return age;
+		}
+		case UnitTime::EON: {
+			static const std::string eon("eon");
+			return eon;
 		}
 		default: {
 			static const std::string unknown("unknown");

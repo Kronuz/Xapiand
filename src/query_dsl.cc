@@ -543,8 +543,16 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
 		}
+		case UnitTime::AGE: {
+			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000000));
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
+		case UnitTime::EON: {
+			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000000000));
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+		}
 		case UnitTime::INVALID:
-		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
+			THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 }
 

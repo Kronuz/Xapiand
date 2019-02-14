@@ -91,15 +91,17 @@ enum class StemStrategy : uint8_t {
 
 
 enum class UnitTime : uint64_t {
-	SECOND     = 1,
-	MINUTE     = SECOND * 60,
-	HOUR       = MINUTE * 60,
-	DAY        = HOUR * 24,
-	MONTH      = DAY * 30,
-	YEAR       = DAY * 365,
-	DECADE     = YEAR * 10,
-	CENTURY    = YEAR * 100,
-	MILLENNIUM = YEAR * 1000,
+	SECOND     = 1,                     // 1
+	MINUTE     = SECOND * 60,           // 60
+	HOUR       = MINUTE * 60,           // 3600
+	DAY        = HOUR * 24,             // 86400
+	MONTH      = DAY * 30,              // 2592000
+	YEAR       = DAY * 365,             // 31536000
+	DECADE     = YEAR * 10,             // 315360000
+	CENTURY    = YEAR * 100,            // 3153600000
+	MILLENNIUM = YEAR * 1000,           // 31536000000
+	AGE        = YEAR * 1000000,        // 31536000000000
+	EON        = YEAR * 1000000000,     // 31536000000000000
 	INVALID    = static_cast<uint64_t>(-1),
 };
 
