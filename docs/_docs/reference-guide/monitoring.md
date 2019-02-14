@@ -1,5 +1,6 @@
 ---
-title: Monitoring
+title: Monitoring Xapiand
+short_title: Monitoring
 ---
 
 You can retrieve information about the server usage by using the `:metrics`
