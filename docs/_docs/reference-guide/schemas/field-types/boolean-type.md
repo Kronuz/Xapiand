@@ -11,10 +11,10 @@ explicitly use the `_type` boolean. The two following examples are equivalent:
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-    "is_published": true
+    "isPublished": true
 }
 ```
 {% endcapture %}
@@ -24,10 +24,10 @@ PUT /bank/1?pretty
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-    "is_published": {
+    "isPublished": {
       "_value": "true",
       "_type": "boolean"
     }

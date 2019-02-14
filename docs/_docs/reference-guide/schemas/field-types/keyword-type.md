@@ -15,14 +15,12 @@ If you are following the documentation examples you may notice that the field "e
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-    "accountNumber": 148040,
-    "balance": 1494.65,
-    "employer": {
+    "username": {
     	"_type": "keyword",
-    	"_value": "Cubicide"
+    	"_value": "mlee"
     }
 }
 ```

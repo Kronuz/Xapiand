@@ -21,49 +21,14 @@ _Text Datatype_:
 {% capture req %}
 
 ```json
-PUT /bank/1?pretty
+MERGE /bank/1?pretty
 
 {
-  "accountNumber": 148040,
-  "balance": 1494.65,
-  "employer": "Cubicide",
-  "name": {
-    "firstName": "Todd",
-    "lastName": "Le"
-  },
-  "age": 29,
-  "gender": "male",
-  "contact": {
-    "address": "409 Williams Place",
-    "city": "Suitland",
-    "state": "Virginia",
-    "postcode": "05192",
-    "phone": "+1 (830) 555-2707",
-    "email": "todd.le@cubicide.net"
-  },
-  "checkin": {
-    "_point": {
-      "_longitude": -80.31727,
-      "_latitude": 25.67927
-    }
-  },
-  "favoriteFruit": "strawberry",
-  "eyeColor": "brown",
-  "style": {
-    "_namespace": true,
-    "_partial_paths": true,
-    "clothing": {
-      "pants": "khakis",
-      "footwear": "casual shoes"
-    },
-    "hairstyle": "afro"
-  },
-  "personality": {
+  "resume": {
+    "_type": "text",
     "_language": "en",
-    "_value": "There's a lot to say about Todd Le, but if there's anything you should know it's that he's individualistic and determined. Of course he's also charming, cheerful and precise, but far less strongly and often mixed with being grim as well. His individualism though, this is what he's pretty much loved for. Friends usually count on this and his appreciative nature especially when they need comforting or support. All in all, Todd has a fair share of lesser days too. His slyness and dominating nature sour the mood many a time and beyond what people are willing to deal with. Fortunately his determination is there to relift spirits when needed.",
-    "_type": "text"
-  },
-  "_id": 2
+    "_value": "Four years experience in early childhood development with a diverse background in the care of special needs children and adults. OBJECTIVE: To begin my post-graduate career in an insignificant, entry-level position that will provide me with income and a sense of self-worth. EDUCATION: Small Collage you Haven't Heard Of, BS in Early Childhood Development. EXPERIENCE: None really, but please let me articulate the many reasons why I think my minimum-wage work history is extremely relevant and has adequately prepared me for this job."
+  }
 }
 ```
 {% endcapture %}
