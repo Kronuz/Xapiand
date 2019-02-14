@@ -160,8 +160,6 @@ static const std::vector<uint64_t> def_accuracy_date({
 	toUType(UnitTime::YEAR),            // 31536000
 	toUType(UnitTime::CENTURY),         // 3153600000
 	toUType(UnitTime::MILLENNIUM),      // 31536000000
-	toUType(UnitTime::AGE),             // 31536000000000
-	toUType(UnitTime::EON),             // 31536000000000000
 });
 
 static const std::vector<uint64_t> def_accuracy_time({
@@ -201,8 +199,6 @@ validate_acc_date(UnitTime unit) noexcept
 		case UnitTime::DECADE:
 		case UnitTime::CENTURY:
 		case UnitTime::MILLENNIUM:
-		case UnitTime::AGE:
-		case UnitTime::EON:
 			return true;
 		default:
 			return false;
@@ -253,14 +249,6 @@ _get_str_acc_date(UnitTime unit) noexcept
 		case UnitTime::MILLENNIUM: {
 			static const std::string millennium("millennium");
 			return millennium;
-		}
-		case UnitTime::AGE: {
-			static const std::string age("age");
-			return age;
-		}
-		case UnitTime::EON: {
-			static const std::string eon("eon");
-			return eon;
 		}
 		default: {
 			static const std::string unknown("unknown");

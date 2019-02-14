@@ -93,8 +93,6 @@ namespace GenerateTerms {
 	 * Auxiliar functions for date ranges.
 	 */
 
-	Xapian::Query eon(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
-	Xapian::Query age(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
 	Xapian::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
 	Xapian::Query century(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);
 	Xapian::Query decade(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);

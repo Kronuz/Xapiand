@@ -104,16 +104,6 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		switch (static_cast<UnitTime>(acc)) {
-			case UnitTime::EON: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000000000));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
-				break;
-			}
-			case UnitTime::AGE: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000000));
-				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
-				break;
-			}
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
@@ -247,20 +237,6 @@ GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		switch (static_cast<UnitTime>(acc)) {
-			case UnitTime::EON: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000000000));
-				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
-				break;
-			}
-			case UnitTime::AGE: {
-				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000000));
-				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
-				doc.add_term(prefixed(term_v, *it, ctype_date));
-				doc.add_term(prefixed(term_v, *itg, ctype_date));
-				break;
-			}
 			case UnitTime::MILLENNIUM: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
@@ -390,11 +366,7 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	uint64_t diff = tm_e.year - tm_s.year, acc = -1;
 	// Find the accuracy needed.
 	if (diff != 0u) {
-		if (diff >= 1000000000) {
-			acc = toUType(UnitTime::EON);
-		} else if (diff >= 1000000) {
-			acc = toUType(UnitTime::AGE);
-		} else if (diff >= 1000) {
+		if (diff >= 1000) {
 			acc = toUType(UnitTime::MILLENNIUM);
 		} else if (diff >= 100) {
 			acc = toUType(UnitTime::CENTURY);
@@ -429,12 +401,6 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 		auto c_tm_s = tm_s;
 		auto c_tm_e = tm_e;
 		switch (static_cast<UnitTime>(accuracy[pos])) {
-			case UnitTime::EON:
-				query_upper = eon(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
-				break;
-			case UnitTime::AGE:
-				query_upper = age(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
-				break;
 			case UnitTime::MILLENNIUM:
 				query_upper = millennium(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
@@ -470,12 +436,6 @@ GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& acc
 	// If there is the needed accuracy.
 	if (pos > 0 && acc == accuracy[--pos]) {
 		switch (static_cast<UnitTime>(accuracy[pos])) {
-			case UnitTime::EON:
-				query_needed = eon(tm_s, tm_e, acc_prefix[pos], wqf);
-				break;
-			case UnitTime::AGE:
-				query_needed = age(tm_s, tm_e, acc_prefix[pos], wqf);
-				break;
 			case UnitTime::MILLENNIUM:
 				query_needed = millennium(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
