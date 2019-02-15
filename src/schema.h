@@ -90,31 +90,16 @@ enum class StemStrategy : uint8_t {
 };
 
 
-enum class PowTwo : uint64_t {
-	POW_11     = (1ULL << 11),          // 2048
-	POW_13     = (1ULL << 13),          // 8192
-	POW_16     = (1ULL << 16),          // 65536
-	POW_20     = (1ULL << 20),          // 1048576
-	POW_25     = (1ULL << 25),          // 33554432
-	POW_31     = (1ULL << 31),          // 2147483648
-	POW_38     = (1ULL << 38),          // 274877906944
-	POW_46     = (1ULL << 46),          // 70368744177664
-	POW_55     = (1ULL << 55),          // 36028797018963968
-};
-
-
 enum class UnitTime : uint64_t {
-	SECOND     = 1,                     // 1
-	MINUTE     = SECOND * 60,           // 60
-	HOUR       = MINUTE * 60,           // 3600
-	DAY        = HOUR * 24,             // 86400
-	MONTH      = DAY * 30,              // 2592000
-	YEAR       = DAY * 365,             // 31536000
-	DECADE     = YEAR * 10,             // 315360000
-	CENTURY    = YEAR * 100,            // 3153600000
-	MILLENNIUM = YEAR * 1000,           // 31536000000
-	AGE        = YEAR * 1000000,        // 31536000000000
-	EON        = YEAR * 1000000000,     // 31536000000000000
+	SECOND     = 1,                     // 1                  60
+	MINUTE     = SECOND * 60,           // 60                 60
+	HOUR       = MINUTE * 60,           // 3600               24
+	DAY        = HOUR * 24,             // 86400              30
+	MONTH      = DAY * 30,              // 2592000            12
+	YEAR       = DAY * 365,             // 31536000           10
+	DECADE     = YEAR * 10,             // 315360000          10
+	CENTURY    = YEAR * 100,            // 3153600000         10
+	MILLENNIUM = YEAR * 1000,           // 31536000000        8
 	INVALID    = static_cast<uint64_t>(-1),
 };
 
