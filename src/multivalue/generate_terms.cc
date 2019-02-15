@@ -94,7 +94,7 @@ struct Tree {
 
 
 /*
-template <typename Tree, typename S>
+template <size_t mode, typename Tree, typename S>
 static inline void
 print(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& acc_prefix, char field_type, size_t& max_terms, int level = 0)
 {
@@ -105,21 +105,21 @@ print(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& ac
 
 	const auto accuracy_size = accuracy.size();
 	const auto terms_size = tree.terms.size();
-	size_t max_terms_level = tree.pos >= accuracy_size ? 2 : tree.pos > 0 ? accuracy[tree.pos] / accuracy[tree.pos - 1] : 0;
+	size_t max_terms_level = tree.pos >= accuracy_size ? mode : tree.pos > 0 ? mode == 2 ? accuracy[tree.pos] / accuracy[tree.pos - 1] : 1 << (accuracy[tree.pos] - accuracy[tree.pos - 1]) : 0;
 	const auto& prefix = tree.pos >= accuracy_size ? "" : acc_prefix[tree.pos];
 
 	for (const auto& t : tree.terms) {
 		const auto size = t.second.terms.size();
 		if ((terms_size == 1 && size == 1) || tree.pos >= accuracy_size) {
-			print("{}{} ({}/{})", indent, repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
-			print(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
+			L_GENERATE_TERMS("{}{} ({}/{})", indent, repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+			print<mode>(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 		} else {
 			const bool skip = size > max_terms_level * 0.9;
-			print("{}{} ({}/{}){}", indent, repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level, skip ? " (skip)" : "");
+			L_GENERATE_TERMS("{}{} ({}/{}){}", indent, repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level, skip ? " (skip)" : "");
 			if (skip || size > max_terms) {
 			} else {
 				if (size) {
-					print(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
+					print<mode>(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 				}
 				max_terms -= size;
 			}
@@ -129,13 +129,13 @@ print(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& ac
 */
 
 
-template <typename Tree, typename S>
+template <size_t mode, typename Tree, typename S>
 static inline Xapian::Query
 get_query(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& acc_prefix, Xapian::termcount wqf, char field_type, size_t& max_terms)
 {
 	const auto accuracy_size = accuracy.size();
 	const auto terms_size = tree.terms.size();
-	size_t max_terms_level = tree.pos >= accuracy_size ? 2 : tree.pos > 0 ? accuracy[tree.pos] / accuracy[tree.pos - 1] : 0;
+	size_t max_terms_level = tree.pos >= accuracy_size ? mode : tree.pos > 0 ? mode == 2 ? accuracy[tree.pos] / accuracy[tree.pos - 1] : 1 << (accuracy[tree.pos] - accuracy[tree.pos - 1]) : 0;
 	const auto& prefix = tree.pos >= accuracy_size ? "" : acc_prefix[tree.pos];
 
 	std::vector<Xapian::Query> queries;
@@ -144,7 +144,7 @@ get_query(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>
 		const auto size = t.second.terms.size();
 		if ((terms_size == 1 && size == 1) || tree.pos >= accuracy_size) {
 			// Skip current single-node level and go for the inner one:
-			return get_query(t.second, accuracy, acc_prefix, wqf, field_type, max_terms);
+			return get_query<mode>(t.second, accuracy, acc_prefix, wqf, field_type, max_terms);
 		} else {
 			const bool skip = size > max_terms_level * 0.9;
 			Xapian::Query query;
@@ -154,7 +154,7 @@ get_query(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>
 				query = Xapian::Query(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
 				if (size) {
 					query = Xapian::Query(Xapian::Query::OP_AND, query,
-						get_query(t.second, accuracy, acc_prefix, wqf, field_type, max_terms)
+						get_query<mode>(t.second, accuracy, acc_prefix, wqf, field_type, max_terms)
 					);
 				}
 				max_terms -= size;
@@ -256,10 +256,10 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	const auto last_acc_pos = accuracy.size() - 1;
 
 	// Convert accuracy to accuracy bits
-	std::vector<uint64_t> acc_bits;
-	acc_bits.resize(last_acc_pos + 1);
+	std::vector<uint64_t> inv_acc_bits;
+	inv_acc_bits.resize(last_acc_pos + 1);
 	for (size_t pos = 0; pos <= last_acc_pos; ++pos) {
-		acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
+		inv_acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
 	}
 
 	std::vector<std::unordered_set<uint64_t>> level_terms;
@@ -272,8 +272,8 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = last_acc_pos;
-		const auto it_e = acc_bits.rend();
-		for (auto it = acc_bits.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
+		const auto it_e = inv_acc_bits.rend();
+		for (auto it = inv_acc_bits.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
 			level_terms[pos].insert(val >> *it);
 		}
 	}
@@ -409,10 +409,10 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	const auto last_acc_pos = accuracy.size() - 1;
 
 	// Convert accuracy to accuracy bits
-	std::vector<uint64_t> acc_bits;
-	acc_bits.resize(last_acc_pos + 1);
+	std::vector<uint64_t> inv_acc_bits;
+	inv_acc_bits.resize(last_acc_pos + 1);
 	for (size_t pos = 0; pos <= last_acc_pos; ++pos) {
-		acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
+		inv_acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
 	}
 
 	std::vector<std::unordered_set<uint64_t>> level_terms;
@@ -425,8 +425,8 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 		last_pos &= ~1;  // Must be multiple of two.
 		uint64_t val = id << last_pos;
 		size_t pos = last_acc_pos;
-		const auto it_e = acc_bits.rend();
-		for (auto it = acc_bits.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
+		const auto it_e = inv_acc_bits.rend();
+		for (auto it = inv_acc_bits.rbegin(); it != it_e && *it >= last_pos; ++it, --pos) {
 			level_terms[pos].insert(val >> *it);
 		}
 	}
@@ -751,10 +751,13 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	const auto last_acc_pos = accuracy.size() - 1;
 
 	// Convert accuracy to accuracy bits
-	std::vector<uint64_t> acc_bits;
-	acc_bits.resize(last_acc_pos + 1);
+	std::vector<uint64_t> inv_acc_bits;
+	inv_acc_bits.resize(last_acc_pos + 1);
+	std::vector<std::string_view> inv_acc_prefix;
+	inv_acc_prefix.resize(last_acc_pos + 1);
 	for (size_t pos = 0; pos <= last_acc_pos; ++pos) {
-		acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
+		inv_acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
+		inv_acc_prefix[pos] = acc_prefix[last_acc_pos - pos];
 	}
 
 	std::vector<std::unordered_set<uint64_t>> level_terms;
@@ -769,11 +772,11 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		bits &= ~1;  // Must be multiple of two.
 		uint64_t val = id << bits;
 		size_t pos = last_acc_pos;
-		const auto it_e = acc_bits.rend();
-		for (auto it = acc_bits.rbegin(); it != it_e && *it >= bits; ++it, --pos) { }
+		const auto it_e = inv_acc_bits.rend();
+		for (auto it = inv_acc_bits.rbegin(); it != it_e && *it >= bits; ++it, --pos) { }
 		if (pos != last_acc_pos) {
 			++pos;
-			level_terms[pos].insert(val >> acc_bits[pos]);
+			level_terms[pos].insert(val >> inv_acc_bits[pos]);
 			if (level_terms_size < pos + 1) {
 				level_terms_size = pos + 1;
 			}
@@ -786,68 +789,25 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 	}
 
 	// Simplify terms.
-	const auto last_pos = level_terms_size - 1;
-	for (size_t prev_pos = 0; prev_pos <= last_pos && prev_pos != last_acc_pos; ++prev_pos) {
-		auto& terms = level_terms[prev_pos];
-		if (!terms.empty()) {
-			size_t pos = prev_pos + 1;
-			auto& next_terms = level_terms[pos];
-			if (level_terms_size < pos + 1) {
-				level_terms_size = pos + 1;
-			}
-			uint64_t acc = acc_bits[pos] - acc_bits[prev_pos];
-			for (const auto& term : terms) {
-				next_terms.insert(term >> acc);
-			}
-		}
-	}
-
-	Xapian::Query query;
-	auto u_pos = level_terms_size - 1;
-	auto& u_terms = level_terms[u_pos];
-	if (u_terms.size() < MAX_TERMS_LEVEL) {
-		if (u_pos == last_pos) {
-			// All terms are in last_pos and last_pos == last_acc_pos
-			// Process only upper terms (lower terms discarded).
-			auto upper = itertools::transform([&](uint64_t term){
-				return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
-			}, u_terms.begin(), u_terms.end());
-			query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-		} else {
-			auto l_pos = u_pos - 1;
-			while (level_terms[l_pos].empty()) {
-				--l_pos;
-			}
-			auto& l_terms = level_terms[l_pos];
-			if (u_terms.size() == l_terms.size()) {
-				// All terms has a upper term, but for each lower term is a upper term.
-				// Process only lower terms.
-				auto lower = itertools::transform([&](uint64_t term){
-					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo), wqf);
-				}, l_terms.begin(), l_terms.end());
-				query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
-			} else if (l_terms.size() < MAX_TERMS_LEVEL) {
-				// Process upper terms *and* lower.
-				auto lower = itertools::transform([&](uint64_t term){
-					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - l_pos], ctype_geo), wqf);
-				}, l_terms.begin(), l_terms.end());
-				auto lower_query = Xapian::Query(Xapian::Query::OP_OR, lower.begin(), lower.end());
-				auto upper = itertools::transform([&](uint64_t term){
-					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
-				}, u_terms.begin(), u_terms.end());
-				auto upper_query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
-				query = Xapian::Query(Xapian::Query::OP_AND, upper_query, lower_query);
-			} else {
-				// Process only upper terms.
-				auto upper = itertools::transform([&](uint64_t term){
-					return Xapian::Query(prefixed(Serialise::positive(term), acc_prefix[last_acc_pos - u_pos], ctype_geo), wqf);
-				}, u_terms.begin(), u_terms.end());
-				query = Xapian::Query(Xapian::Query::OP_OR, upper.begin(), upper.end());
+	Tree<uint64_t> root;
+	root.pos = level_terms_size;
+	for (size_t pos = 0; pos < level_terms_size; ++pos) {
+		const auto& terms = level_terms[pos];
+		const auto acc = inv_acc_bits[pos];
+		for (const auto& term : terms) {
+			auto current = &root;
+			size_t current_pos = level_terms_size + 1;
+			while (current_pos-- != pos) {
+				current->pos = current_pos;
+				auto current_term = current_pos <= last_acc_pos ? term >> (inv_acc_bits[current_pos] - acc) : 0;
+				current = &current->terms[current_term];
 			}
 		}
 	}
 
-	return query;
+	// Create query.
+	size_t max_terms = MAX_TERMS;
+	return get_query<8>(root, inv_acc_bits, inv_acc_prefix, wqf, ctype_geo, max_terms);
 }
 
 
@@ -984,7 +944,7 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 	}
 
 	// Create query.
-	return get_query(root, accuracy, acc_prefix, wqf, ctype_integer, max_terms);
+	return get_query<2>(root, accuracy, acc_prefix, wqf, ctype_integer, max_terms);
 }
 
 
