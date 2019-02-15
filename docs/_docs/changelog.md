@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use OP_FILTER for terms in range queries
 - Flattened range queries
 - The default stopper during indexation is now `stop_stemmed`
+- Numeric ranges are now properly calculating the filtering terms
+- Geospatial queries are now calculating better the filtering trixels terms
+- Default accuracies changed
 
 ### Fixed
 - Fixed `sort` query param during search
