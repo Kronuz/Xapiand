@@ -43,7 +43,7 @@ applies to the result, not the resource itself.
 
 If your firewall rules don't support HTTP methods like _PATCH_, _MERGE_, _STORE_
 or _DELETE_, use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"} (or _HTTP-Method-Override_) header. Pass the method you want to use in the
-`X-HTTP-Method-Override` header and make your call using the POST method. The
+`X-HTTP-Method-Override` header and use the **_POST_** method. The
 override won't work with any other method, so if you try and use the override
 header with a _GET_, _PATCH_, _MERGE_, _STORE_, _PUT_, or _DELETE_ method,
 you'll receive an error.
