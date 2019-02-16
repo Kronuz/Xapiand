@@ -30,14 +30,27 @@
 #include "cassert.h"    // for ASSERT
 
 
-size_t
-sortable_serialise_(long double value, char * buf)
+#if FLT_RADIX != 2
+# error Code currently assumes FLT_RADIX == 2
+#endif
+
+
+#ifdef _MSC_VER
+// Disable warning about negating an unsigned type, which we do deliberately.
+# pragma warning(disable:4146)
+#endif
+
+
+std::string
+sortable_serialise(long double value)
 {
 	long double mantissa;
 	int exponent;
 
 	// Negative infinity.
-	if (value < -LDBL_MAX) { return 0; }
+	if (value < -LDBL_MAX) {
+		return std::string();
+	}
 
 	mantissa = frexpl(value, &exponent);
 
@@ -50,8 +63,7 @@ sortable_serialise_(long double value, char * buf)
 	 *  numbers to 0.
 	 */
 	if (mantissa == 0.0 || exponent < -(LDBL_MAX_EXP + LDBL_MAX_EXP - 1 - 8)) {
-		*buf = '\x80';
-		return 1;
+		return std::string(1, '\x80');
 	}
 
 	bool negative = (mantissa < 0);
@@ -62,10 +74,9 @@ sortable_serialise_(long double value, char * buf)
 		if (negative) {
 			// This can only happen with a non-IEEE representation, because
 			// we've already tested for value < -LDBL_MAX
-			return 0;
+			return std::string();
 		}
-		memset(buf, '\xff', 18);
-		return 18;
+		return std::string(18, '\xff');
 	}
 
 	// Encoding:
@@ -86,6 +97,7 @@ sortable_serialise_(long double value, char * buf)
 		next ^= 0x60;
 	}
 
+	char buf[18];
 	size_t len = 0;
 
 	/* We store the exponent in 7 or 15 bits.  If the number is negative, we
@@ -204,13 +216,7 @@ sortable_serialise_(long double value, char * buf)
 		--len;
 	}
 
-	return len;
-}
-
-
-std::string sortable_serialise(long double value) {
-	char buf[18];
-	return std::string(buf, sortable_serialise_(value, buf));
+	return std::string(buf, len);
 }
 
 
