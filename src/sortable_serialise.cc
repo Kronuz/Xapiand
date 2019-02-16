@@ -76,7 +76,7 @@ sortable_serialise(long double value)
 			// we've already tested for value < -LDBL_MAX
 			return std::string();
 		}
-		return std::string(18, '\xff');
+		return std::string(17, '\xff');
 	}
 
 	// Encoding:
@@ -97,7 +97,7 @@ sortable_serialise(long double value)
 		next ^= 0x60;
 	}
 
-	char buf[18];
+	char buf[17];
 	size_t len = 0;
 
 	/* We store the exponent in 7 or 15 bits.  If the number is negative, we
@@ -236,8 +236,8 @@ sortable_unserialise(std::string_view value)
 	if (value.size() == 1 && value[0] == '\x80') { return 0.0; }
 
 	// Positive infinity.
-	if (value.size() == 18 &&
-		memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", 18) == 0  // NOLINT
+	if (value.size() == 17 &&
+		memcmp(value.data(), "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff", 17) == 0  // NOLINT
 	) {
 		#ifdef INFINITY
 			// INFINITY is C99.  Oddly, it's of type "float" so sanity check in
