@@ -22,27 +22,26 @@
 
 #pragma once
 
-#include <algorithm>                        // for std::sort, std::sort_heap
-#include <cstdint>                          // for int64_t, uint64_t
-#include <limits>                           // for std::numeric_limits
-#include <map>                              // for std::map
-#include <math.h>                           // for fmodl
-#include <memory>                           // for std::shared_ptr
-#include <string>                           // for std::string
-#include <sys/types.h>                      // for int64_t, uint64_t
-#include <tuple>                            // for std::forward_as_tuple
-#include <utility>                          // for std::pair, std::make_pair
-#include <vector>                           // for std::vector
+#include <algorithm>                              // for std::sort, std::sort_heap
+#include <cstdint>                                // for int64_t, uint64_t
+#include <limits>                                 // for std::numeric_limits
+#include <map>                                    // for std::map
+#include <math.h>                                 // for fmodl
+#include <memory>                                 // for std::shared_ptr
+#include <string>                                 // for std::string
+#include <sys/types.h>                            // for int64_t, uint64_t
+#include <tuple>                                  // for std::forward_as_tuple
+#include <utility>                                // for std::pair, std::make_pair
+#include <vector>                                 // for std::vector
 
-#include "aggregations.h"                   // for Aggregation, RESERVED_AGGS_*
-#include "metrics.h"                        // for HandledSubAggregation
-#include "msgpack.h"                        // for MsgPack, object::object, ...
-#include "exception.h"                      // for AggregationError, MSG_Agg...
-#include "schema.h"                         // for FieldType
-#include "serialise.h"                      // for _float
-#include "string.hh"                        // for string::format
-#include "hashes.hh"                        // for xxh64
-#include "xapian.h"                         // for Document, valueno
+#include "aggregations.h"                         // for Aggregation, RESERVED_AGGS_*
+#include "metrics.h"                              // for HandledSubAggregation
+#include "msgpack.h"                              // for MsgPack, object::object, ...
+#include "exception.h"                            // for AggregationError, MSG_Agg...
+#include "schema.h"                               // for FieldType
+#include "string.hh"                              // for string::format
+#include "hashes.hh"                              // for xxh64
+#include "xapian.h"                               // for Document, valueno
 
 
 class Schema;

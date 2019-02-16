@@ -22,13 +22,14 @@
 
 #include "bucket.h"
 
-#include <algorithm>                      // for std::move, std::set_intersection
-#include <iterator>                       // for std::inserter
-#include <set>                            // for std::set
+#include <algorithm>                              // for std::move, std::set_intersection
+#include <iterator>                               // for std::inserter
+#include <set>                                    // for std::set
 
-#include "aggregations.h"                 // for Aggregation
-#include "metrics/basic_string_metric.h"  // for Counter
-#include "schema.h"                       // for Schema, required_spc_t
+#include "aggregations.h"                         // for Aggregation
+#include "metrics/basic_string_metric.h"          // for Counter
+#include "schema.h"                               // for Schema, required_spc_t
+#include "serialise.h"                            // for Serialise::MsgPack
 
 
 FilterAggregation::FilterAggregation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
