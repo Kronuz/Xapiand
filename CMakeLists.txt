@@ -61,9 +61,10 @@ option(UUID_GUID     "Allow GUID as UUID encoding"                  OFF)
 option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
 option(RANDOM_ERRORS "Allow adding randomized errors"               OFF)
 option(CHECK_SIZES   "Print the objects sizes"                      OFF)
+option(LTO           "Link Time Optimizations"                       ON)
 
 
-foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS CHECK_IO_FDES TRACKED_MEM V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS)
+foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -669,7 +670,10 @@ add_required_cxx_compiler_flag("-std=c++1z")
 
 add_cxx_compiler_flag("-fdiagnostics-color=always")
 add_cxx_compiler_flag("-fno-common")
-add_cxx_compiler_flag("-flto" RELEASE)
+
+if (XAPIAND_LTO)
+	add_cxx_compiler_flag("-flto" RELEASE)
+endif ()
 
 add_cxx_compiler_flag("-Wall")
 add_cxx_compiler_flag("-Wextra")
