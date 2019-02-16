@@ -5294,7 +5294,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 		case FieldType::FLOAT: {
 			try {
 				const auto f_val = value.f64();
-				auto ser_value = Serialise::_float(f_val);
+				auto ser_value = Serialise::floating(f_val);
 				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
 				}
@@ -5490,7 +5490,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 		case FieldType::FLOAT: {
 			try {
 				const auto f_val = value.f64();
-				auto ser_value = Serialise::_float(f_val);
+				auto ser_value = Serialise::floating(f_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
 				}

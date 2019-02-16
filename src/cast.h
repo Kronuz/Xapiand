@@ -81,7 +81,7 @@ namespace Cast {
 	MsgPack cast(FieldType type, const MsgPack& obj);
 	int64_t integer(const MsgPack& obj);
 	uint64_t positive(const MsgPack& obj);
-	long double _float(const MsgPack& obj);
+	long double floating(const MsgPack& obj);
 	std::string string(const MsgPack& obj);
 	bool boolean(const MsgPack& obj);
 	std::string uuid(const MsgPack& obj);

@@ -124,7 +124,7 @@ namespace Serialise {
 	 * Serialise field_value according to field_type.
 	 */
 
-	std::string _float(FieldType field_type, long double field_value);
+	std::string floating(FieldType field_type, long double field_value);
 	std::string integer(FieldType field_type, std::int64_t field_value);
 	std::string positive(FieldType field_type, std::uint64_t field_value);
 	std::string boolean(FieldType field_type, bool field_value);
@@ -167,9 +167,9 @@ namespace Serialise {
 	std::string timedelta(double field_value);
 
 	// Serialise field_value like float.
-	std::string _float(std::string_view field_value);
+	std::string floating(std::string_view field_value);
 
-	inline std::string _float(long double field_value) {
+	inline std::string floating(long double field_value) {
 		return sortable_serialise(field_value);
 	}
 
@@ -251,7 +251,7 @@ namespace Serialise {
 	}
 
 	inline std::string serialise(long double val) {
-		return _float(val);
+		return floating(val);
 	}
 
 	inline std::string serialise(Datetime::tm_t& tm) {
@@ -289,7 +289,7 @@ namespace Unserialise {
 	double timedelta_d(std::string_view serialised_time);
 
 	// Unserialise a serialised float.
-	inline long double _float(std::string_view serialised_float) {
+	inline long double floating(std::string_view serialised_float) {
 		return sortable_unserialise(serialised_float);
 	}
 

@@ -48,15 +48,15 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
 		case FieldType::FLOAT: {
-			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::_float(*start) : min<double>(field_spc.accuracy);
-			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::_float(*end) : max<double>(field_spc.accuracy);
+			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::floating(*start) : min<double>(field_spc.accuracy);
+			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::floating(*end) : max<double>(field_spc.accuracy);
 
 			if (val_s > val_e) {
 				return Xapian::Query();
 			}
 
-			ser_start = Serialise::_float(val_s);
-			ser_end = Serialise::_float(val_e);
+			ser_start = Serialise::floating(val_s);
+			ser_end = Serialise::floating(val_e);
 			value_s = val_s;
 			value_e = val_e;
 			break;

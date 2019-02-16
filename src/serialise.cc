@@ -133,7 +133,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.f64());
+			return floating(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		case MsgPack::Type::MAP:
@@ -158,7 +158,7 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 			case Cast::Hash::POSITIVE:
 				return positive(field_spc.get_type(), Cast::positive(o.at(str_key)));
 			case Cast::Hash::FLOAT:
-				return _float(field_spc.get_type(), Cast::_float(o.at(str_key)));
+				return floating(field_spc.get_type(), Cast::floating(o.at(str_key)));
 			case Cast::Hash::BOOLEAN:
 				return boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
 			case Cast::Hash::KEYWORD:
@@ -207,7 +207,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 		case FieldType::POSITIVE:
 			return positive(field_value.u64());
 		case FieldType::FLOAT:
-			return _float(field_value.f64());
+			return floating(field_value.f64());
 		case FieldType::DATE:
 			return date(field_value);
 		case FieldType::TIME:
@@ -241,7 +241,7 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 		case FieldType::POSITIVE:
 			return positive(field_value);
 		case FieldType::FLOAT:
-			return _float(field_value);
+			return floating(field_value);
 		case FieldType::DATE:
 			return date(field_value);
 		case FieldType::TIME:
@@ -299,13 +299,13 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.f64());
+			return floating(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		case MsgPack::Type::MAP:
 			switch (field_spc.get_type()) {
 				case FieldType::FLOAT:
-					return _float(Datetime::timestamp(Datetime::DateParser(field_value)));
+					return floating(Datetime::timestamp(Datetime::DateParser(field_value)));
 				case FieldType::DATE:
 					return date(field_value);
 				case FieldType::TIME:
@@ -332,7 +332,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.f64());
+			return floating(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
@@ -350,7 +350,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return integer(field_spc.get_type(), field_value.i64());
 		case MsgPack::Type::FLOAT:
-			return _float(field_spc.get_type(), field_value.f64());
+			return floating(field_spc.get_type(), field_value.f64());
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
@@ -360,7 +360,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 
 
 std::string
-Serialise::_float(FieldType field_type, long double field_value)
+Serialise::floating(FieldType field_type, long double field_value)
 {
 	switch (field_type) {
 		case FieldType::DATE:
@@ -370,7 +370,7 @@ Serialise::_float(FieldType field_type, long double field_value)
 		case FieldType::TIMEDELTA:
 			return timedelta(field_value);
 		case FieldType::FLOAT:
-			return _float(field_value);
+			return floating(field_value);
 		default:
 			THROW(SerialisationError, "Type: {} is not a float", type(field_type));
 	}
@@ -393,7 +393,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 		case FieldType::TIMEDELTA:
 			return timedelta(field_value);
 		case FieldType::FLOAT:
-			return _float(field_value);
+			return floating(field_value);
 		case FieldType::INTEGER:
 			return integer(field_value);
 		default:
@@ -409,7 +409,7 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::DATE:
 			return timestamp(field_value);
 		case FieldType::FLOAT:
-			return _float(field_value);
+			return floating(field_value);
 		case FieldType::TIME:
 			return time(field_value);
 		case FieldType::TIMEDELTA:
@@ -563,10 +563,10 @@ Serialise::timedelta(double field_value)
 
 
 std::string
-Serialise::_float(std::string_view field_value)
+Serialise::floating(std::string_view field_value)
 {
 	try {
-		return _float(strict_stold(field_value));
+		return floating(strict_stold(field_value));
 	} catch (const std::invalid_argument& exc) {
 		RETHROW(SerialisationError, "Invalid float format: {}", repr(field_value));
 	} catch (const std::out_of_range& exc) {
@@ -998,7 +998,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 			return std::make_pair(FieldType::POSITIVE, positive(field_value.u64()));
 
 		case MsgPack::Type::FLOAT:
-			return std::make_pair(FieldType::FLOAT, _float(field_value.f64()));
+			return std::make_pair(FieldType::FLOAT, floating(field_value.f64()));
 
 		case MsgPack::Type::BOOLEAN:
 			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.boolean()));
@@ -1043,7 +1043,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 
 			// Try like FLOAT
 			try {
-				return std::make_pair(FieldType::FLOAT, _float(str_value));
+				return std::make_pair(FieldType::FLOAT, floating(str_value));
 			} catch (const SerialisationError&) { }
 
 			// String bool terms are keywords
@@ -1073,7 +1073,7 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 					case Cast::Hash::POSITIVE:
 						return std::make_pair(FieldType::POSITIVE, positive(Cast::positive(it.value())));
 					case Cast::Hash::FLOAT:
-						return std::make_pair(FieldType::FLOAT, _float(Cast::_float(it.value())));
+						return std::make_pair(FieldType::FLOAT, floating(Cast::floating(it.value())));
 					case Cast::Hash::BOOLEAN:
 						return std::make_pair(FieldType::BOOLEAN, boolean(Cast::boolean(it.value())));
 					case Cast::Hash::KEYWORD:
@@ -1132,7 +1132,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 	class MsgPack result;
 	switch (field_type) {
 		case FieldType::FLOAT:
-			result = static_cast<double>(_float(serialised_val));
+			result = static_cast<double>(floating(serialised_val));
 			break;
 		case FieldType::INTEGER:
 			result = integer(serialised_val);

@@ -37,7 +37,7 @@ Cast::cast(const MsgPack& obj)
 			case Hash::POSITIVE:
 				return positive(obj.at(str_key));
 			case Hash::FLOAT:
-				return static_cast<double>(_float(obj.at(str_key)));
+				return static_cast<double>(floating(obj.at(str_key)));
 			case Hash::BOOLEAN:
 				return boolean(obj.at(str_key));
 			case Hash::KEYWORD:
@@ -84,7 +84,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 		case FieldType::POSITIVE:
 			return positive(obj);
 		case FieldType::FLOAT:
-			return static_cast<double>(_float(obj));
+			return static_cast<double>(floating(obj));
 		case FieldType::BOOLEAN:
 			return boolean(obj);
 		case FieldType::KEYWORD:
@@ -197,7 +197,7 @@ Cast::positive(const MsgPack& obj)
 
 
 long double
-Cast::_float(const MsgPack& obj)
+Cast::floating(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:

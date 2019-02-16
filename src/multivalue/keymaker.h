@@ -42,12 +42,12 @@
 #include "xapian.h"                       // for valueno, KeyMaker
 
 
-const std::string MAX_CMPVALUE(Serialise::_float(DBL_MAX));
-const std::string MIN_CMPVALUE(Serialise::_float(-DBL_MAX));
+const std::string MAX_CMPVALUE(Serialise::floating(DBL_MAX));
+const std::string MIN_CMPVALUE(Serialise::floating(-DBL_MAX));
 
-const std::string SERIALISED_ZERO(Serialise::_float(0));
-const std::string SERIALISED_ONE(Serialise::_float(1));
-const std::string SERIALISED_M_PI(Serialise::_float(M_PI));
+const std::string SERIALISED_ZERO(Serialise::floating(0));
+const std::string SERIALISED_ONE(Serialise::floating(1));
+const std::string SERIALISED_M_PI(Serialise::floating(M_PI));
 
 const std::string MAX_STR_CMPVALUE("\xff");
 const std::string MIN_STR_CMPVALUE("\x00");
@@ -101,7 +101,7 @@ public:
 	FloatKey(Xapian::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
-		  _ser_ref_val(Serialise::_float(_ref_val)) { }
+		  _ser_ref_val(Serialise::floating(_ref_val)) { }
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -199,7 +199,7 @@ public:
 			}
 		}
 
-		return Serialise::_float(min_distance);
+		return Serialise::floating(min_distance);
 	}
 
 	std::string findBiggest(const Xapian::Document& doc) const override {
@@ -218,7 +218,7 @@ public:
 			}
 		}
 
-		return Serialise::_float(max_distance);
+		return Serialise::floating(max_distance);
 	}
 };
 

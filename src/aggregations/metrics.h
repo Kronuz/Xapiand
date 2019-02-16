@@ -150,7 +150,7 @@ public:
 
 	void _aggregate_float(const Xapian::Document& doc) {
 		for (const auto& value : _handler.values(doc)) {
-			aggregate_float(Unserialise::_float(value), doc);
+			aggregate_float(Unserialise::floating(value), doc);
 		}
 	}
 

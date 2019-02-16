@@ -419,7 +419,7 @@ const std::vector<sort_t> string_soundex_es_tests({
 const std::vector<sort_t> float_tests({
 	/*
 	 * Table reference data to verify the ordering
-	 * dist(fieldname:value) -> fabs(Unserialise::_float(get_value(fieldname)) - value)
+	 * dist(fieldname:value) -> fabs(Unserialise::floating(get_value(fieldname)) - value)
 	 * value for sort -> It is the value's field that is selected for the ordering when in the slot
 	 *                   there are several values (in array).
 	 * In arrays, for ascending order we take the smallest value and for descending order we take the largest.

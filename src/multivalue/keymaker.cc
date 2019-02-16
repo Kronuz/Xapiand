@@ -67,17 +67,17 @@ FloatKey::findSmallest(const Xapian::Document& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
+		return Serialise::floating(std::fabs(Unserialise::floating(values.front()) - _ref_val));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::_float(Unserialise::_float(*it) - _ref_val);
+		return Serialise::floating(Unserialise::floating(*it) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::_float(_ref_val - Unserialise::_float(*last));
+		return Serialise::floating(_ref_val - Unserialise::floating(*last));
 	}
 
 	auto it_p = it++;
@@ -87,9 +87,9 @@ FloatKey::findSmallest(const Xapian::Document& doc) const
 		return SERIALISED_ZERO;
 	}
 
-	double distance1 = _ref_val - Unserialise::_float(*it_p);
-	double distance2 = Unserialise::_float(*it) - _ref_val;
-	return Serialise::_float(distance1 < distance2 ? distance1 : distance2);
+	double distance1 = _ref_val - Unserialise::floating(*it_p);
+	double distance2 = Unserialise::floating(*it) - _ref_val;
+	return Serialise::floating(distance1 < distance2 ? distance1 : distance2);
 }
 
 
@@ -104,22 +104,22 @@ FloatKey::findBiggest(const Xapian::Document& doc) const
 	StringList values(multiValues);
 
 	if (values.single()) {
-		return Serialise::_float(std::fabs(Unserialise::_float(values.front()) - _ref_val));
+		return Serialise::floating(std::fabs(Unserialise::floating(values.front()) - _ref_val));
 	}
 
 	auto it = values.cbegin();
 	if (it.compare(_ser_ref_val) >= 0) {
-		return Serialise::_float(Unserialise::_float(values.back()) - _ref_val);
+		return Serialise::floating(Unserialise::floating(values.back()) - _ref_val);
 	}
 
 	auto last = values.clast();
 	if (last.compare(_ser_ref_val) <= 0) {
-		return Serialise::_float(_ref_val - Unserialise::_float(*it));
+		return Serialise::floating(_ref_val - Unserialise::floating(*it));
 	}
 
-	double distance1 = _ref_val - Unserialise::_float(*it);
-	double distance2 = Unserialise::_float(*last) - _ref_val;
-	return Serialise::_float(distance1 > distance2 ? distance1 : distance2);
+	double distance1 = _ref_val - Unserialise::floating(*it);
+	double distance2 = Unserialise::floating(*last) - _ref_val;
+	return Serialise::floating(distance1 > distance2 ? distance1 : distance2);
 }
 
 
@@ -384,7 +384,7 @@ GeoKey::findSmallest(const Xapian::Document& doc) const
 		}
 	}
 
-	return Serialise::_float(min_angle);
+	return Serialise::floating(min_angle);
 }
 
 
@@ -412,7 +412,7 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 		}
 	}
 
-	return Serialise::_float(max_angle);
+	return Serialise::floating(max_angle);
 }
 
 
