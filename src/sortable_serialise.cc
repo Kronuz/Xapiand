@@ -1,7 +1,6 @@
-/** @file sortable-serialise.cc
- * @brief Serialise floating point values to string which sort the same way.
- */
-/* Copyright (C) 2007,2009,2015,2016 Olly Betts
+/*
+ * Copyright (c) 2015-2019 Dubalu LLC
+ * Copyright (C) 2007,2009,2015,2016 Olly Betts
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ */
+/** @file sortable-serialise.cc
+ * @brief Serialise floating point values to string which sort the same way.
  */
 
 #include "sortable_serialise.h"
@@ -219,6 +221,7 @@ numfromstr(std::string_view str, std::size_t pos)
 {
 	return (pos < str.size()) ? static_cast<unsigned char>(str[pos]) : '\0';
 }
+
 
 long double
 sortable_unserialise(std::string_view value)
