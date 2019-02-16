@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Numeric ranges are now properly calculating the filtering terms
 - Geospatial queries are now calculating better the filtering trixels terms
 - Default accuracies changed
+- Removed `_raw` from QueryDSL
 
 ### Fixed
 - Fixed `sort` query param during search
