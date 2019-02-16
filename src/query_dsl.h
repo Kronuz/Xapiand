@@ -39,7 +39,6 @@ constexpr const char RESERVED_QUERYDSL_FROM[]               = RESERVED__ "from";
 constexpr const char RESERVED_QUERYDSL_IN[]                 = RESERVED__ "in";
 constexpr const char RESERVED_QUERYDSL_QUERY[]              = RESERVED__ "query";
 constexpr const char RESERVED_QUERYDSL_RANGE[]              = RESERVED__ "range";
-constexpr const char RESERVED_QUERYDSL_RAW[]                = RESERVED__ "raw";
 constexpr const char RESERVED_QUERYDSL_TO[]                 = RESERVED__ "to";
 constexpr const char RESERVED_QUERYDSL_LIMIT[]              = RESERVED__ "limit";
 constexpr const char RESERVED_QUERYDSL_CHECK_AT_LEAST[]     = RESERVED__ "check_at_least";
@@ -66,7 +65,6 @@ class QueryDSL {
 
 	Xapian::Query process(Xapian::Query::op op, std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags, bool is_leaf);
 	Xapian::Query get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
-	Xapian::Query get_raw_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
 	Xapian::Query get_value_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);
 
 	Xapian::Query get_acc_date_query(const required_spc_t& field_spc, std::string_view field_accuracy, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags);

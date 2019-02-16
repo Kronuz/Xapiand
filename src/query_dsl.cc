@@ -231,7 +231,6 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						// Leaf query clauses.
 						hh(RESERVED_QUERYDSL_PARTIAL),
 						hh(RESERVED_QUERYDSL_IN),
-						hh(RESERVED_QUERYDSL_RAW),
 						hh(RESERVED_VALUE),
 						// Reserved cast words
 						hh(RESERVED_FLOAT),
@@ -331,9 +330,6 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								break;
 							case _.fhh(RESERVED_QUERYDSL_IN):
 								query = get_in_query(path, o, default_op, wqf, flags);
-								break;
-							case _.fhh(RESERVED_QUERYDSL_RAW):
-								query = get_raw_query(path, o, default_op, wqf, flags);
 								break;
 							case _.fhh(RESERVED_VALUE):
 								query = get_value_query(path, o, default_op, wqf, flags);
@@ -437,38 +433,6 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query:
 		return get_regular_in_query(field_spc, obj, default_op, wqf, flags);
 	} catch (const SerialisationError&) {
 		return get_namespace_in_query(field_spc, obj, default_op, wqf, flags);
-	}
-}
-
-
-
-inline Xapian::Query
-QueryDSL::get_raw_query(std::string_view path, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
-{
-	L_CALL("QueryDSL::get_raw_query({}, {}, <default_op>, <wqf>, <flags>)", repr(path), repr(obj.to_string()));
-
-	if (path.empty()) {
-		if (obj.is_string()) {
-			const auto aux = Cast::cast(FieldType::EMPTY, obj.str_view());
-			return get_namespace_query(default_spc, aux, default_op, wqf, flags);
-		}
-		return get_namespace_query(default_spc, obj, default_op, wqf, flags);
-	}
-	auto data_field = schema->get_data_field(path, false);
-	const auto& field_spc = data_field.first;
-
-	if (!data_field.second.empty()) {
-		return get_accuracy_query(field_spc, data_field.second, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, default_op, wqf, flags);
-	}
-
-	if (field_spc.flags.inside_namespace) {
-		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, default_op, wqf, flags);
-	}
-
-	try {
-		return get_regular_query(field_spc, obj.is_string() ? Cast::cast(field_spc.get_type(), obj.str_view()) : obj, default_op, wqf, flags);
-	} catch (const SerialisationError&) {
-		return get_namespace_query(field_spc, obj.is_string() ? Cast::cast(FieldType::EMPTY, obj.str_view()) : obj, default_op, wqf, flags);
 	}
 }
 
@@ -1064,9 +1028,9 @@ QueryDSL::make_dsl_query(std::string_view query)
 
 					MsgPack object;
 					if (field_name.empty()) {
-						object[RESERVED_QUERYDSL_RAW] = value;
+						object[RESERVED_VALUE] = value;
 					} else {
-						object[field_name][RESERVED_QUERYDSL_RAW] = value;
+						object[field_name][RESERVED_VALUE] = value;
 					}
 					stack_msgpack.push_back(std::move(object));
 					break;
