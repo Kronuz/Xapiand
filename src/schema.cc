@@ -145,36 +145,28 @@ namespace std {
  * deltas = [8, 7, 7, 7, 7, 7, 5, 5, 2, 1]; w = [(0, 64)]; print('\n'.join(reversed(['\t(1ULL << {}),                       // {} (max_terms: {}, delta: {})'.format(y, 1 << y, int((1 << x) / (1 << y)), x - y) for x, y in ((lambda delta: w.append((w[-1][1], w[-1][1] - delta)))(delta) or w[-1] for delta in reversed(deltas))])))
  */
 static const std::vector<uint64_t> def_accuracy_num({
-	(1ULL << 8),                       // 256 (max_terms: 256, delta: 8)
-	(1ULL << 16),                       // 65536 (max_terms: 128, delta: 7)
-	(1ULL << 23),                       // 8388608 (max_terms: 128, delta: 7)
-	(1ULL << 30),                       // 1073741824 (max_terms: 128, delta: 7)
-	// (1ULL << 37),                       // 137438953472 (max_terms: 128, delta: 7)
-	// (1ULL << 44),                       // 17592186044416 (max_terms: 128, delta: 7)
-	// (1ULL << 51),                       // 2251799813685248 (max_terms: 32, delta: 5)
-	// (1ULL << 56),                       // 72057594037927936 (max_terms: 32, delta: 5)
-	// (1ULL << 61),                       // 2305843009213693952 (max_terms: 4, delta: 2)
-	// (1ULL << 63),                       // 9223372036854775808 (max_terms: 2, delta: 1)
+	100,
+	1000,
+	10000,
+	100000,
+	1000000,
+	10000000,
  });
 
 
 static const std::vector<uint64_t> def_accuracy_date({
-	toUType(UnitTime::MINUTE),          // 60 s
 	toUType(UnitTime::HOUR),            // 3600 s
 	toUType(UnitTime::DAY),             // 86400 s
 	toUType(UnitTime::MONTH),           // 2592000 s
 	toUType(UnitTime::YEAR),            // 31536000 s
+	toUType(UnitTime::DECADE),          // 315360000 s
 	toUType(UnitTime::CENTURY),         // 3153600000 s
-	toUType(UnitTime::MILLENNIUM),      // 31536000000 s
 });
 
 
 static const std::vector<uint64_t> def_accuracy_time({
 	toUType(UnitTime::MINUTE),          // 60 s
 	toUType(UnitTime::HOUR),            // 3600 s
-	toUType(UnitTime::DAY),             // 86400 s
-	toUType(UnitTime::MONTH),           // 2592000 s
-	toUType(UnitTime::YEAR),            // 31536000 s
 });
 
 
@@ -185,17 +177,14 @@ static const std::vector<uint64_t> def_accuracy_time({
  *    0.30 * 2 ** (25 - level)
  *
  * Python script to generate the def_accuracy_geo:
- * levels = [0, 2, 5, 8, 12, 16, 21, 25]; print('\n'.join('\t{},                                 // ~ {} m'.format(level, 0.30 * 2 ** (25 - level)) for level in levels))
+ * levels = [0, 5, 10, 15, 20]; print('\n'.join('\t{},                                 // ~ {} m'.format(level, 0.30 * 2 ** (25 - level)) for level in levels))
  */
 static const std::vector<uint64_t> def_accuracy_geo({
-	0,                                  // ~ 10,066,329.6 m
-	2,                                  //  ~ 2,516,582.4 m
-	5,                                  //    ~ 314,572.8 m
-	8,                                  //     ~ 39,321.6 m
-	12,                                 //      ~ 2,457.6 m
-	16,                                 //        ~ 153.6 m
-	21,                                 //          ~ 4.8 m
-	25,                                 //          ~ 0.3 m
+	0,                                  // ~ 10066329.6 m
+	5,                                  //   ~ 314572.8 m
+	10,                                 //     ~ 9830.4 m
+	15,                                 //      ~ 307.2 m
+	20,                                 //        ~ 9.6 m
 });
 
 
