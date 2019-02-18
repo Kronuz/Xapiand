@@ -3079,6 +3079,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				FieldVector fields;
 				properties = &index_subproperties(properties, data, name, item, fields, pos);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				set_type_to_array();
 				index_item_value(properties, doc, data_pos, fields);
 				specification = spc_start;
 				break;
@@ -3089,6 +3090,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				set_type_to_array();
 				index_item_value(doc, *data_pos, item);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
@@ -3108,6 +3110,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				set_type_to_array();
 				index_partial_paths(doc);
 				if (specification.flags.store) {
 					*data_pos = item;
@@ -3127,6 +3130,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				set_type_to_array();
 				index_item_value(doc, *data_pos, item, pos);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
