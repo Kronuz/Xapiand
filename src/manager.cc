@@ -631,7 +631,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{"./", leader_node.get()};
+	Endpoint cluster_endpoint{".cluster/", leader_node.get()};
 	try {
 		bool found = false;
 		if (is_leader) {
@@ -697,10 +697,10 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Replicate database from the leader
 		if (!is_leader) {
 			ASSERT(!cluster_endpoint.is_local());
-			Endpoint local_endpoint{"./"};
 			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
-			_replication->trigger_replication({cluster_endpoint, local_endpoint, true});
+			_replication->trigger_replication({cluster_endpoint, Endpoint{".cluster/"}, true});
+			_replication->trigger_replication({cluster_endpoint, Endpoint{".index/"}, true});
 		} else {
 			load_nodes();
 			set_cluster_database_ready_impl();
@@ -1313,7 +1313,7 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	Endpoint cluster_endpoint{"./"};
+	Endpoint cluster_endpoint{".cluster/"};
 	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_all_mset();
 	const auto m_e = mset.end();
@@ -1359,57 +1359,60 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 	if (!opts.solo) {
 		DatabaseHandler db_handler;
 
-		std::string serialised;
+		MsgPack obj;
 
 		static std::mutex resolve_index_lru_mtx;
-		static lru::LRU<std::string, std::string> resolve_index_lru(1000);
+		static lru::LRU<std::string, MsgPack> resolve_index_lru(1000);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(normalized_slashed_path);
 		if (it != resolve_index_lru.end()) {
-			serialised = it->second;
+			obj = it->second;
 			lk.unlock();
 		} else {
 			lk.unlock();
-			db_handler.reset(Endpoints{Endpoint{"./"}});
-			serialised = db_handler.get_metadata(normalized_slashed_path);
-			if (!serialised.empty()) {
-				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, serialised));
-				lk.unlock();
-			}
+			try {
+				db_handler.reset(Endpoints{Endpoint{".index/"}});
+				obj = db_handler.get_document(normalized_slashed_path).get_obj();
+			} catch (const NotFoundError&) {}
+			lk.lock();
+			resolve_index_lru.insert(std::make_pair(normalized_slashed_path, obj));
+			lk.unlock();
 		}
 
-		if (serialised.empty()) {
+		if (obj.empty()) {
 			auto indexed_nodes = Node::indexed_nodes();
 			if (indexed_nodes) {
+				MsgPack replicas(MsgPack::Type::ARRAY);
 				size_t consistent_hash = jump_consistent_hash(normalized_slashed_path, indexed_nodes);
-				for (size_t replicas = std::min(opts.num_replicas, indexed_nodes); replicas; --replicas) {
+				for (size_t i = std::min(opts.num_replicas, indexed_nodes); i; --i) {
 					auto idx = consistent_hash + 1;
 					auto node = Node::get_node(idx);
 					ASSERT(node);
 					nodes.push_back(std::move(node));
 					consistent_hash = idx % indexed_nodes;
-					serialised.append(serialise_length(idx));
+					replicas.append(idx);
 				}
-				ASSERT(!serialised.empty());
+				ASSERT(!replicas.empty());
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, serialised));
+				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, obj));
 				lk.unlock();
 				auto leader_node = Node::leader_node();
-				Endpoint cluster_endpoint{"./", leader_node.get()};
+				Endpoint cluster_endpoint{".index/", leader_node.get()};
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				db_handler.set_metadata(normalized_slashed_path, serialised, false);
+				obj = {
+					{ RESERVED_INDEX, "none" },
+					{ "replicas",         { { RESERVED_TYPE,  "array/positive" }, { RESERVED_VALUE, std::move(replicas) } } },
+				};
+				db_handler.index(normalized_slashed_path, false, obj, false, msgpack_type);
 			}
 		} else {
-			const char *p = serialised.data();
-			const char *p_end = p + serialised.size();
-			do {
-				auto idx = unserialise_length(&p, p_end);
-				auto node = Node::get_node(idx);
-				ASSERT(node);
+			const auto& replicas = obj["replicas"];
+			auto itv = replicas.find(RESERVED_VALUE);
+			for (const auto& idx : itv != replicas.end() ? itv.value() : replicas) {
+				auto node = Node::get_node(idx.as_u64());
 				nodes.push_back(std::move(node));
-			} while (p != p_end);
+			}
 		}
 	}
 	else

@@ -1487,7 +1487,7 @@ HttpClient::home_view(Request& request)
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
-	endpoints.add(Endpoint{"./", leader_node.get()});
+	endpoints.add(Endpoint{".cluster/", leader_node.get()});
 
 	request.processing = std::chrono::system_clock::now();
 
