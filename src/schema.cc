@@ -4755,38 +4755,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 
-	// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-	if (!set_acc.empty()) {
-		specification.acc_prefix.clear();
-		for (const auto& acc : set_acc) {
-			specification.acc_prefix.push_back(get_prefix(acc));
-		}
-		specification.accuracy.assign(set_acc.begin(), set_acc.end());
-		switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-			case FieldType::DATE:
-			case FieldType::TIME:
-			case FieldType::TIMEDELTA:
-				mut_properties[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
-				for (auto& acc : specification.accuracy) {
-					mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
-				}
-				break;
-			default:
-				mut_properties[RESERVED_ACCURACY] = specification.accuracy;
-				break;
-		}
-		mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
-	}
-
-	if (specification.flags.concrete) {
-		// Process RESERVED_SLOT
-		if (specification.slot == Xapian::BAD_VALUENO) {
-			specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
-		}
-
-		mut_properties[RESERVED_SLOT] = specification.slot;
-	}
-
 	// If field is namespace fallback to index anything but values.
 	if (!specification.flags.has_index && !specification.partial_prefixes.empty()) {
 		const auto index = specification.index & ~TypeIndex::VALUES;
@@ -4795,6 +4763,43 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			mut_properties[RESERVED_INDEX] = _get_str_index(index);
 		}
 		specification.flags.has_index = true;
+	}
+
+	if (specification.index != TypeIndex::NONE) {
+		// Write prefix in properties.
+		mut_properties[RESERVED_PREFIX] = specification.local_prefix.field;
+
+		// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
+		if (!set_acc.empty()) {
+			specification.acc_prefix.clear();
+			for (const auto& acc : set_acc) {
+				specification.acc_prefix.push_back(get_prefix(acc));
+			}
+			specification.accuracy.assign(set_acc.begin(), set_acc.end());
+			switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+				case FieldType::DATE:
+				case FieldType::TIME:
+				case FieldType::TIMEDELTA:
+					mut_properties[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
+					for (auto& acc : specification.accuracy) {
+						mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
+					}
+					break;
+				default:
+					mut_properties[RESERVED_ACCURACY] = specification.accuracy;
+					break;
+			}
+			mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+		}
+
+		if (specification.flags.concrete) {
+			// Process RESERVED_SLOT
+			if (specification.slot == Xapian::BAD_VALUENO) {
+				specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+			}
+
+			mut_properties[RESERVED_SLOT] = specification.slot;
+		}
 	}
 
 	// Process RESERVED_TYPE
@@ -6692,9 +6697,6 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	// Load default specifications.
 	dispatch_set_default_spc(*mut_properties);
 
-	// Write prefix in properties.
-	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
-
 	update_prefixes();
 }
 
@@ -6720,9 +6722,6 @@ Schema::add_field(MsgPack*& mut_properties)
 
 	// Load default specifications.
 	dispatch_set_default_spc(*mut_properties);
-
-	// Write prefix in properties.
-	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
 
 	update_prefixes();
 }
