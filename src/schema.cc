@@ -3099,11 +3099,15 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
+				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				index_item_value(doc, *data_pos, item);
 				if (specification.flags.store) {
-					auto &data_pos = (*data)[pos];
-					index_item_value(doc, data_pos, item);
-				} else {
-					index_item_value(doc, *data, item);
+					if (data_pos->is_map() && data_pos->size() == 1) {
+						auto it = data_pos->find(RESERVED_VALUE);
+						if (it != data_pos->end()) {
+							*data_pos = it.value();
+						}
+					}
 				}
 				specification = spc_start;
 				break;
@@ -3114,9 +3118,16 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
+				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
 				index_partial_paths(doc);
 				if (specification.flags.store) {
-					(*data)[pos] = item;
+					*data_pos = item;
+					if (data_pos->is_map() && data_pos->size() == 1) {
+						auto it = data_pos->find(RESERVED_VALUE);
+						if (it != data_pos->end()) {
+							*data_pos = it.value();
+						}
+					}
 				}
 				specification = spc_start;
 				break;
@@ -3126,11 +3137,15 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
+				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				index_item_value(doc, *data_pos, item, pos);
 				if (specification.flags.store) {
-					auto &data_pos = (*data)[pos];
-					index_item_value(doc, data_pos, item, pos);
-				} else {
-					index_item_value(doc, *data, item, pos);
+					if (data_pos->is_map() && data_pos->size() == 1) {
+						auto it = data_pos->find(RESERVED_VALUE);
+						if (it != data_pos->end()) {
+							*data_pos = it.value();
+						}
+					}
 				}
 				specification = spc_start;
 				break;
