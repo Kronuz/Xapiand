@@ -161,7 +161,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	bool replicated = false;
 
-	if (args.src_endpoint.path == ".cluster/" || args.src_endpoint.path == ".index/") {
+	if (args.src_endpoint.path == ".cluster" || args.src_endpoint.path == ".index") {
 		// Cluster database is always updated
 		replicated = true;
 	}

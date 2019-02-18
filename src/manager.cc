@@ -631,7 +631,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{".cluster/", leader_node.get()};
+	Endpoint cluster_endpoint{".cluster", leader_node.get()};
 	try {
 		bool found = false;
 		if (is_leader) {
@@ -704,8 +704,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			ASSERT(!cluster_endpoint.is_local());
 			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
-			_replication->trigger_replication({cluster_endpoint, Endpoint{".cluster/"}, true});
-			_replication->trigger_replication({cluster_endpoint, Endpoint{".index/"}, true});
+			_replication->trigger_replication({cluster_endpoint, Endpoint{".cluster"}, true});
+			_replication->trigger_replication({cluster_endpoint, Endpoint{".index"}, true});
 		} else {
 			load_nodes();
 			set_cluster_database_ready_impl();
@@ -1318,7 +1318,7 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	Endpoint cluster_endpoint{".cluster/"};
+	Endpoint cluster_endpoint{".cluster"};
 	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_all_mset();
 	const auto m_e = mset.end();
@@ -1382,7 +1382,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 		} else {
 			lk.unlock();
 			try {
-				db_handler.reset(Endpoints{Endpoint{".index/"}});
+				db_handler.reset(Endpoints{Endpoint{".index"}});
 				obj = db_handler.get_document(normalized_slashed_path).get_obj();
 			} catch (const NotFoundError&) {}
 			lk.lock();
@@ -1408,7 +1408,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, obj));
 				lk.unlock();
 				auto leader_node = Node::leader_node();
-				Endpoint cluster_endpoint{".index/", leader_node.get()};
+				Endpoint cluster_endpoint{".index", leader_node.get()};
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				obj = {
 					{ ID_FIELD_NAME, {
