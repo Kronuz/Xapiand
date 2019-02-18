@@ -669,8 +669,13 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		auto did = db_handler.index(local_node->lower_name(), false, {
 			{ RESERVED_INDEX, "field_all" },
-			{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-			{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, local_node->name() } } },
+			{ ID_FIELD_NAME, {
+				{ RESERVED_TYPE,  KEYWORD_STR },
+			} },
+			{ "name", {
+				{ RESERVED_TYPE,  KEYWORD_STR },
+				{ RESERVED_VALUE, local_node->name() },
+			} },
 		}, false, msgpack_type).first;
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
@@ -1335,8 +1340,13 @@ XapiandManager::load_nodes()
 				L_WARNING("Adding missing node: [{}] {}", node->idx, node->name());
 				auto prepared = db_handler.prepare(node->lower_name(), false, {
 					{ RESERVED_INDEX, "field_all" },
-					{ ID_FIELD_NAME,  { { RESERVED_TYPE,  KEYWORD_STR } } },
-					{ "name",         { { RESERVED_TYPE,  KEYWORD_STR }, { RESERVED_VALUE, node->name() } } },
+					{ ID_FIELD_NAME, {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "name", {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+						{ RESERVED_VALUE, node->name() },
+					} },
 				}, msgpack_type);
 				auto& doc = std::get<1>(prepared);
 				db_handler.replace_document(node->idx, std::move(doc), false);
@@ -1401,8 +1411,14 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 				Endpoint cluster_endpoint{".index/", leader_node.get()};
 				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				obj = {
-					{ RESERVED_INDEX, "none" },
-					{ "replicas",         { { RESERVED_TYPE,  "array/positive" }, { RESERVED_VALUE, std::move(replicas) } } },
+					{ ID_FIELD_NAME, {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "replicas", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  "array/positive" },
+						{ RESERVED_VALUE, std::move(replicas) },
+					} },
 				};
 				db_handler.index(normalized_slashed_path, false, obj, false, msgpack_type);
 			}
