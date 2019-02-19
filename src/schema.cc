@@ -177,14 +177,15 @@ static const std::vector<uint64_t> def_accuracy_time({
  *    0.30 * 2 ** (25 - level)
  *
  * Python script to generate the def_accuracy_geo:
- * levels = [0, 5, 10, 15, 20]; print('\n'.join('\t{},                                 // ~ {} m'.format(level, 0.30 * 2 ** (25 - level)) for level in levels))
+ * levels = [3, 5, 8, 10, 12, 15]; print('\n'.join('\t{},                                 // ~ {} m'.format(level, 0.30 * 2 ** (25 - level)) for level in levels))
  */
 static const std::vector<uint64_t> def_accuracy_geo({
-	0,                                  // ~ 10066329.6 m
-	5,                                  //   ~ 314572.8 m
-	10,                                 //     ~ 9830.4 m
-	15,                                 //      ~ 307.2 m
-	20,                                 //        ~ 9.6 m
+	3,                                  //  ~ 1,258,291.2 m
+	5,                                  //    ~ 314,572.8 m
+	8,                                  //     ~ 39,321.6 m
+	10,                                 //      ~ 9,830.4 m
+	12,                                 //      ~ 2,457.6 m
+	15,                                 //        ~ 307.2 m
 });
 
 
