@@ -145,12 +145,19 @@ namespace std {
  * deltas = [8, 7, 7, 7, 7, 7, 5, 5, 2, 1]; w = [(0, 64)]; print('\n'.join(reversed(['\t(1ULL << {}),                       // {} (max_terms: {}, delta: {})'.format(y, 1 << y, int((1 << x) / (1 << y)), x - y) for x, y in ((lambda delta: w.append((w[-1][1], w[-1][1] - delta)))(delta) or w[-1] for delta in reversed(deltas))])))
  */
 static const std::vector<uint64_t> def_accuracy_num({
-	100,
-	1000,
-	10000,
-	100000,
-	1000000,
-	10000000,
+	100ULL,
+	1000ULL,
+	10000ULL,
+	100000ULL,
+	1000000ULL,
+	10000000ULL,
+	1000000000ULL,
+	100000000000ULL,
+	10000000000000ULL,
+	1000000000000000ULL,
+	100000000000000000ULL,
+	1000000000000000000ULL,
+	10000000000000000000ULL,
  });
 
 
