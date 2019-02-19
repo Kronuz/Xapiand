@@ -148,20 +148,20 @@ print(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& ac
 			// Skip level if:
 			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
 			//   It's the topmost "magic" level
-			L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (skipped)", indent, tree.pos, t.first, HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+			L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (skipped)", indent, tree.pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 			print<mode>(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 		} else {
 			// Add level and...
 			// don't filter children if level is leaf or it has too many children
 			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
 				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
-				L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (filtered)", indent, tree.pos, t.first, HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+				L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (filtered)", indent, tree.pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 				if (size) {
 					print<mode>(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 				}
 				max_terms -= size;
 			} else {
-				L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (whole)", indent, tree.pos, t.first, HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+				L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (whole)", indent, tree.pos, t.first, mode == 2 ? "" : HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 			}
 		}
 	}
