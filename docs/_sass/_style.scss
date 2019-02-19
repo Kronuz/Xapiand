@@ -1318,3 +1318,12 @@ article#changelog {
 		}
 	}
 }
+
+
+article > p {
+	overflow: hidden;
+	@include border-radius(5px);
+	> img {
+		margin-bottom: -7px;
+	}
+}

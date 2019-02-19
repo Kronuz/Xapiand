@@ -30,8 +30,11 @@ Content-Type: application/x-ndjson
 
 ## Searching
 
+
 Let's look for the nearest big cities near **_El Cerrito_, CA**, a city
 neighboring Berkeley in the San Francisco Bay Area.
+
+![El Cerrito, CA]({{ '/assets/el_cerrito.png' | absolute_url }})
 
 The latitude/longitude of _El Cerrito_ is **(37.9180233, -122.3198401)**.
 
