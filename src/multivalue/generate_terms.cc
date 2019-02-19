@@ -905,7 +905,8 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 			acc = std::numeric_limits<T>::max();
 		}
 
-		auto lower_start = add<T>(sub<T>(start, modulus(start, acc)), acc);
+		auto lower_start = add<T>(start, acc - 1);
+		lower_start = sub<T>(lower_start, modulus(lower_start, acc));
 		if (start == std::numeric_limits<T>::min()) {
 			lower_start = std::numeric_limits<T>::min();
 		}
@@ -932,16 +933,19 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 					lower_start = std::numeric_limits<T>::min();
 					if (pos != last_pos && !invalid_initial) {
 						level_terms[pos].push_back(initial);
+						// L_GENERATE_TERMS("      >> {} (initial)", initial);
 					}
 				} else {
 					L_GENERATE_TERMS("    LOWER: lower_start={} -> lower_end={}", lower_start, lower_end);
-					invalid_initial = false;
 					initial = sub<T>(lower_start, acc, invalid_initial);
+					invalid_initial = initial <= min_acc;
 					for (auto lower = lower_start; lower < lower_end; lower = add<T>(lower, acc, invalid_initial), ++total) {
 						level_terms[pos].push_back(lower);
+						// L_GENERATE_TERMS("      >> {}", lower);
 					}
 					if (pos == 0 && !invalid_initial) {
 						level_terms[pos].push_back(initial);
+						// L_GENERATE_TERMS("      >> {} (initial)", initial);
 					}
 				}
 				if (level_terms_size < pos + 1) {
@@ -956,16 +960,19 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 					upper_end = std::numeric_limits<T>::max();
 					if (pos != last_pos && !invalid_final) {
 						level_terms[pos].push_back(final);
+						// L_GENERATE_TERMS("      >> {} (final)", final);
 					}
 				} else {
 					L_GENERATE_TERMS("    UPPER: upper_start={} -> upper_end={}", upper_start, upper_end);
-					invalid_final = lower_start >= upper_end;
 					final = add<T>(upper_end, acc, invalid_final);
+					invalid_final = final >= max_acc || lower_start >= upper_end;
 					for (auto upper = upper_end; upper > upper_start; upper = sub<T>(upper, acc, invalid_final), ++total) {
 						level_terms[pos].push_back(upper);
+						// L_GENERATE_TERMS("      >> {}", upper);
 					}
 					if (pos == 0 && !invalid_final) {
 						level_terms[pos].push_back(final);
+						// L_GENERATE_TERMS("      >> {} (final)", final);
 					}
 				}
 				if (level_terms_size < pos + 1) {
