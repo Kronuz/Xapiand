@@ -2894,7 +2894,7 @@ HttpClient::log_request(Request& request)
 	L_CALL("HttpClient::log_request()");
 
 	std::string request_prefix = " 🌎  ";
-	int priority = -LOG_DEBUG;
+	int priority = LOG_DEBUG;
 	auto request_text = request.to_text(true);
 	L(priority, NO_COLOR, "{}{}", request_prefix, string::indent(request_text, ' ', 4, false));
 }
@@ -2906,17 +2906,17 @@ HttpClient::log_response(Response& response)
 	L_CALL("HttpClient::log_response()");
 
 	std::string response_prefix = " 💊  ";
-	int priority = -LOG_DEBUG;
+	int priority = LOG_DEBUG;
 	if ((int)response.status >= 300 && (int)response.status <= 399) {
 		response_prefix = " 💫  ";
 	} else if ((int)response.status == 404) {
 		response_prefix = " 🕸  ";
 	} else if ((int)response.status >= 400 && (int)response.status <= 499) {
 		response_prefix = " 💥  ";
-		priority = -LOG_INFO;
+		priority = LOG_INFO;
 	} else if ((int)response.status >= 500 && (int)response.status <= 599) {
 		response_prefix = " 🔥  ";
-		priority = -LOG_NOTICE;
+		priority = LOG_NOTICE;
 	}
 	auto response_text = response.to_text(true);
 	L(priority, NO_COLOR, "{}{}", response_prefix, string::indent(response_text, ' ', 4, false));
