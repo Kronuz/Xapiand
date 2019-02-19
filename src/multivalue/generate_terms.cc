@@ -849,6 +849,14 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 
 	size_t max_terms = MAX_TERMS;
 
+	// std::vector<std::string> trixels;
+	// get_trixels<8>(trixels, root, inv_acc_bits, max_terms);
+	// HTM::writeGoogleMap("GoogleMap.py", "GoogleMap.html", nullptr, trixels);
+	// max_terms = MAX_TERMS;
+
+	// print<8>(root, inv_acc_bits, inv_acc_prefix, ctype_geo, max_terms);
+	// max_terms = MAX_TERMS;
+
 	// Create query.
 	return get_query<8>(root, inv_acc_bits, inv_acc_prefix, wqf, ctype_geo, max_terms);
 }
@@ -987,6 +995,9 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 			current->leaf = true;
 		}
 	}
+
+	// print<2>(root, accuracy, acc_prefix, ctype_integer, max_terms);
+	// max_terms = MAX_TERMS;
 
 	// Create query.
 	return get_query<2>(root, accuracy, acc_prefix, wqf, ctype_integer, max_terms);
