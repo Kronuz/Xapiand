@@ -24,6 +24,7 @@
 
 #include <set>                                    // for std::set
 #include <unordered_set>                          // for std::unordered_set
+#include <unordered_map>                          // for std::unordered_map
 #include <vector>                                 // for std::vector
 
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
@@ -89,7 +90,7 @@ do_clz(unsigned long long value) {
 template <typename T>
 struct Tree {
 	size_t pos;
-	std::map<T, Tree<T>> terms;
+	std::unordered_map<T, Tree<T>> terms;
 };
 
 
