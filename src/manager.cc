@@ -1423,9 +1423,14 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 				db_handler.index(normalized_slashed_path, false, obj, false, msgpack_type);
 			}
 		} else {
-			const auto& replicas = obj["replicas"];
-			auto itv = replicas.find(RESERVED_VALUE);
-			for (const auto& idx : itv != replicas.end() ? itv.value() : replicas) {
+			auto replicas = &obj["replicas"];
+			if (replicas->is_map()) {
+				auto itv = replicas->find(RESERVED_VALUE);
+				if (itv != replicas->end()) {
+					replicas = &itv.value();
+				}
+			}
+			for (const auto& idx : *replicas) {
 				auto node = Node::get_node(idx.as_u64());
 				nodes.push_back(std::move(node));
 			}
