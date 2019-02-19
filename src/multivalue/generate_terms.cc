@@ -898,7 +898,12 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 	const auto last_pos = accuracy.size() - 1;
 	auto pos = last_pos;
 	do {
-		auto acc = accuracy[pos];
+		T acc;
+		if (accuracy[pos] < std::numeric_limits<T>::max()) {
+			acc = accuracy[pos];
+		} else {
+			acc = std::numeric_limits<T>::max();
+		}
 
 		auto lower_start = add<T>(sub<T>(start, modulus(start, acc)), acc);
 		if (start == std::numeric_limits<T>::min()) {
@@ -921,7 +926,7 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 			}
 
 			if (lower_start <= lower_end) {
-				auto num_unions = (lower_end - lower_start) / acc;
+				size_t num_unions = (lower_end - lower_start) / acc;
 				L_GENERATE_TERMS("  [lower_start={}, lower_end={}] (num_unions={})",lower_start, lower_end, num_unions);
 				if (num_unions > max_terms_level || total + num_unions > max_terms) {
 					lower_start = std::numeric_limits<T>::min();
@@ -945,7 +950,7 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 			}
 
 			if (upper_start <= upper_end) {
-				auto num_unions = (upper_end - upper_start) / acc;
+				size_t num_unions = (upper_end - upper_start) / acc;
 				L_GENERATE_TERMS("  [upper_start={}, upper_end={}] (num_unions={})", upper_start, upper_end, num_unions);
 				if (num_unions > max_terms_level || total + num_unions > max_terms) {
 					upper_end = std::numeric_limits<T>::max();
