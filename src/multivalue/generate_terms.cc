@@ -39,7 +39,7 @@
 // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
-// #define L_QUERY L_DIM_GREY
+// #define L_GENERATE_TERMS L_DIM_GREY
 
 
 #ifndef L_GENERATE_TERMS
@@ -89,12 +89,45 @@ do_clz(unsigned long long value) {
 
 template <typename T>
 struct Tree {
+	bool leaf;
 	size_t pos;
 	std::unordered_map<T, Tree<T>> terms;
+
+	Tree() : leaf{false}, pos{0} {}
 };
 
 
-/*
+template <size_t mode, typename Tree>
+static inline void
+get_trixels(std::vector<std::string>& trixels, Tree tree, const std::vector<uint64_t>& accuracy, size_t& max_terms)
+{
+	const auto accuracy_size = accuracy.size();
+	const auto terms_size = tree.terms.size();
+	size_t max_terms_level = tree.pos >= accuracy_size ? mode : tree.pos > 0 ? mode == 2 ? accuracy[tree.pos] / accuracy[tree.pos - 1] : 1 << (accuracy[tree.pos] - accuracy[tree.pos - 1]) : 0;
+
+	for (const auto& t : tree.terms) {
+		const auto size = t.second.terms.size();
+		if ((!t.second.leaf && terms_size == 1 && size <= max_terms_level * 0.1) || tree.pos >= accuracy_size) {
+			// Skip level if:
+			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
+			//   It's the topmost "magic" level
+			get_trixels<mode>(trixels, t.second, accuracy, max_terms);
+		} else {
+			// Add level and...
+			trixels.push_back(HTM::getTrixelName(t.first));
+			// don't filter children if level is leaf or it has too many children
+			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
+				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
+				if (size) {
+					get_trixels<mode>(trixels, t.second, accuracy, max_terms);
+				}
+				max_terms -= size;
+			}
+		}
+	}
+}
+
+
 template <size_t mode, typename Tree, typename S>
 static inline void
 print(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& acc_prefix, char field_type, size_t& max_terms, int level = 0)
@@ -111,23 +144,28 @@ print(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& ac
 
 	for (const auto& t : tree.terms) {
 		const auto size = t.second.terms.size();
-		if ((terms_size == 1 && size == 1) || tree.pos >= accuracy_size) {
-			L_GENERATE_TERMS("{}{} ({}/{})", indent, repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
+		if ((!t.second.leaf && terms_size == 1 && size <= max_terms_level * 0.1) || tree.pos >= accuracy_size) {
+			// Skip level if:
+			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
+			//   It's the topmost "magic" level
+			L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (skipped)", indent, tree.pos, t.first, HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 			print<mode>(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 		} else {
-			const bool skip = size > max_terms_level * 0.9;
-			L_GENERATE_TERMS("{}{} ({}/{}){}", indent, repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level, skip ? " (skip)" : "");
-			if (skip || size > max_terms) {
-			} else {
+			// Add level and...
+			// don't filter children if level is leaf or it has too many children
+			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
+				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
+				L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (filtered)", indent, tree.pos, t.first, HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 				if (size) {
 					print<mode>(t.second, accuracy, acc_prefix, field_type, max_terms, level + 2);
 				}
 				max_terms -= size;
+			} else {
+				L_GENERATE_TERMS("{}{} - {}:{}:{} ({}/{}) (whole)", indent, tree.pos, t.first, HTM::getTrixelName(t.first), repr(prefixed(Serialise::serialise(t.first), prefix, field_type)), size, max_terms_level);
 			}
 		}
 	}
 }
-*/
 
 
 template <size_t mode, typename Tree, typename S>
@@ -143,16 +181,17 @@ get_query(Tree tree, const std::vector<uint64_t>& accuracy, const std::vector<S>
 	queries.reserve(terms_size);
 	for (const auto& t : tree.terms) {
 		const auto size = t.second.terms.size();
-		if ((terms_size == 1 && size == 1) || tree.pos >= accuracy_size) {
-			// Skip current single-node level and go for the inner one:
+		if ((!t.second.leaf && terms_size == 1 && size <= max_terms_level * 0.1) || tree.pos >= accuracy_size) {
+			// Skip level if:
+			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
+			//   It's the topmost "magic" level
 			return get_query<mode>(t.second, accuracy, acc_prefix, wqf, field_type, max_terms);
 		} else {
-			const bool skip = size > max_terms_level * 0.9;
-			Xapian::Query query;
-			if (skip || size > max_terms) {
-				query = Xapian::Query(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
-			} else {
-				query = Xapian::Query(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
+			// Add level and...
+			auto query = Xapian::Query(prefixed(Serialise::serialise(t.first), prefix, field_type), wqf);
+			// don't filter children if level is leaf or it has too many children
+			if (!t.second.leaf && size <= max_terms && size < max_terms_level * 0.9) {
+				// filter if there are less than 90% of its children terms set and there's still available room in max_terms
 				if (size) {
 					query = Xapian::Query(Xapian::Query::OP_AND, query,
 						get_query<mode>(t.second, accuracy, acc_prefix, wqf, field_type, max_terms)
@@ -789,7 +828,7 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		return Xapian::Query();
 	}
 
-	// Simplify terms.
+	// Generate tree.
 	Tree<uint64_t> root;
 	root.pos = level_terms_size;
 	for (size_t pos = 0; pos < level_terms_size; ++pos) {
@@ -797,17 +836,20 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 		const auto acc = inv_acc_bits[pos];
 		for (const auto& term : terms) {
 			auto current = &root;
-			size_t current_pos = level_terms_size + 1;
-			while (current_pos-- != pos) {
+			for (size_t current_pos = level_terms_size; current_pos > pos; --current_pos) {
 				current->pos = current_pos;
 				auto current_term = current_pos <= last_acc_pos ? term >> (inv_acc_bits[current_pos] - acc) : 0;
 				current = &current->terms[current_term];
 			}
+			current->pos = pos;
+			current = &current->terms[term];
+			current->leaf = true;
 		}
 	}
 
-	// Create query.
 	size_t max_terms = MAX_TERMS;
+
+	// Create query.
 	return get_query<8>(root, inv_acc_bits, inv_acc_prefix, wqf, ctype_geo, max_terms);
 }
 
@@ -928,19 +970,21 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 		return Xapian::Query();
 	}
 
-	// Simplify terms.
+	// Generate tree.
 	Tree<T> root;
 	root.pos = level_terms_size;
 	for (pos = 0; pos < level_terms_size; ++pos) {
 		const auto& terms = level_terms[pos];
 		for (const auto& term : terms) {
 			auto current = &root;
-			size_t current_pos = level_terms_size + 1;
-			while (current_pos-- != pos) {
+			for (size_t current_pos = level_terms_size; current_pos > pos; --current_pos) {
 				current->pos = current_pos;
 				auto current_term = current_pos <= last_pos ? term - modulus(term, accuracy[current_pos]) : 0;
 				current = &current->terms[current_term];
 			}
+			current->pos = pos;
+			current = &current->terms[term];
+			current->leaf = true;
 		}
 	}
 
