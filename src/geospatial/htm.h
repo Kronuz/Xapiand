@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -251,9 +251,9 @@ namespace HTM {
 	std::tuple<Cartesian, Cartesian, Cartesian> getCorners(const std::string& name);
 
 	// Functions to test HTM trixels.
-	void writeGoogleMap(const std::string& file, const std::string& output_file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map);
+	void writeGoogleMap(const std::string& file, const std::string& output_file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels);
 	void writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels);
 	// Functions to test Graham scan algorithm.
-	void writeGrahamScanMap(const std::string& file, const std::string& output_file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map);
+	void writeGrahamScanMap(const std::string& file, const std::string& output_file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points);
 	void writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points);
 }

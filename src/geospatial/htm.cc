@@ -906,7 +906,7 @@ static void writeGoogleMap(std::ofstream& fs, const Point& point) {
 
 
 static void writeGoogleMap(std::ofstream& fs, const MultiPoint& multipoint) {
-	for (const auto& point :  multipoint.getPoints()) {
+	for (const auto& point : multipoint.getPoints()) {
 		writeGoogleMap(fs, point);
 	}
 }
@@ -1041,7 +1041,7 @@ static void writeGoogleMap(std::ofstream& fs, const Intersection& intersection) 
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const Point& point) {
 	const auto latlon = point.getCartesian().toLatLon();
-	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  18)\n";
+	fs << "mymap = gmplot.GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  18)\n";
 }
 
 
@@ -1061,7 +1061,7 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const MultiPoint& multipoin
 			}
 		}
 		const auto latlon = points.back().getCartesian().toLatLon();
-		fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(std::acos(distance) * M_PER_RADIUS_EARTH)) << ")\n";
+		fs << "mymap = gmplot.GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(std::acos(distance) * M_PER_RADIUS_EARTH)) << ")\n";
 	}
 }
 
@@ -1069,7 +1069,7 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const MultiPoint& multipoin
 static void writeGoogleMapPlotter(std::ofstream& fs, const Circle& circle) {
 	const auto& constraint = circle.getConstraint();
 	auto latlon = constraint.center.toLatLon();
-	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
+	fs << "mymap = gmplot.GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(constraint.radius)) << ")\n";
 }
 
 
@@ -1081,7 +1081,7 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const Convex& convex) {
 static void writeGoogleMapPlotter(std::ofstream& fs, const Polygon& polygon) {
 	const auto& convexpolygon = polygon.getConvexPolygons().back();
 	const auto latlon = convexpolygon.getCentroid().toLatLon();
-	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(convexpolygon.getRadius())) << ")\n";
+	fs << "mymap = gmplot.GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(convexpolygon.getRadius())) << ")\n";
 }
 
 
@@ -1224,129 +1224,157 @@ static void writeGoogleMapPlotter(std::ofstream& fs, const Intersection& interse
 
 
 static void writeGoogleMapPlotter(std::ofstream& fs, const std::vector<std::string>& trixels) {
-	if (trixels.empty()) {
-		// Default center
-		fs << "mymap = GoogleMapPlotter(0, 0, 1)\n";
-	} else {
-		const auto& trixel = trixels.front();
+	// Default center (0, 0)
+	double lat = 0.0;
+	double lng = 0.0;
+	double alt = 1.0;
+
+	size_t min_level = HTM_MAX_LEVEL;
+	for (const auto& trixel : trixels) {
 		auto corners = HTM::getCorners(trixel);
-		auto& corner = std::get<0>(corners);
-		corner.scale = M_PER_RADIUS_EARTH;
 
-		const auto latlon = corner.toLatLon();
+		std::get<0>(corners).scale = M_PER_RADIUS_EARTH;
+		const auto latlon0 = std::get<0>(corners).toLatLon();
+		lat += latlon0.first;
+		lng += latlon0.second;
 
-		fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ",  " << (20 - 2 * std::log10(ERROR_NIVEL[trixel.length() - 2])) << ")\n";
+		std::get<1>(corners).scale = M_PER_RADIUS_EARTH;
+		const auto latlon1 = std::get<1>(corners).toLatLon();
+		lat += latlon1.first;
+		lng += latlon1.second;
+
+		std::get<2>(corners).scale = M_PER_RADIUS_EARTH;
+		const auto latlon2 = std::get<2>(corners).toLatLon();
+		lat += latlon2.first;
+		lng += latlon2.second;
+
+		auto level = trixel.length() - 2;
+		if (min_level > level) {
+			min_level = level;
+		}
 	}
+
+	auto size = trixels.size();
+	if (size) {
+		lat /= size * 3;
+		lng /= size * 3;
+		alt = (20 - 2 * std::log10(ERROR_NIVEL[min_level]));
+	}
+
+	fs << "mymap = gmplot.GoogleMapPlotter(" << lat << ", " << lng << ",  " << alt << ")\n";
 }
 
 
 void
-HTM::writeGoogleMap(const std::string& file, const std::string& output_file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels, const std::string& path_google_map)
+HTM::writeGoogleMap(const std::string& file, const std::string& output_file, const std::shared_ptr<Geometry>& g, const std::vector<std::string>& trixels)
 {
 	std::ofstream fs(file);
 	fs.precision(HTM_DIGITS);
 
 	fs << "import sys\n";
 	fs << "import os\n\n";
-	fs << "sys.path.append(os.path.abspath('" << path_google_map << "'))\n\n";
-	fs << "from google_map_plotter import GoogleMapPlotter\n";
+	fs << "from gmplot import gmplot\n";
 
 	// Draw Geometry.
-	switch (g->getType()) {
-		case Geometry::Type::POINT: {
-			const auto& point = *std::static_pointer_cast<Point>(g);
-			writeGoogleMapPlotter(fs, point);
-			writeGoogleMap(fs, point);
-			break;
-		}
-		case Geometry::Type::MULTIPOINT: {
-			const auto& multipoint = *std::static_pointer_cast<MultiPoint>(g);
-			if (!multipoint.empty()) {
-				writeGoogleMapPlotter(fs, multipoint);
-				writeGoogleMap(fs, multipoint);
-			} else {
-				writeGoogleMapPlotter(fs, trixels);
+	if (g) {
+		switch (g->getType()) {
+			case Geometry::Type::POINT: {
+				const auto& point = *std::static_pointer_cast<Point>(g);
+				writeGoogleMapPlotter(fs, point);
+				writeGoogleMap(fs, point);
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::CIRCLE: {
-			const auto& circle = *std::static_pointer_cast<Circle>(g);
-			writeGoogleMapPlotter(fs, circle);
-			writeGoogleMap(fs, circle);
-			break;
-		}
-		case Geometry::Type::CONVEX: {
-			const auto& convex = *std::static_pointer_cast<Convex>(g);
-			if (!convex.empty()) {
-				writeGoogleMapPlotter(fs, convex);
-				writeGoogleMap(fs, convex);
-			} else {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::MULTIPOINT: {
+				const auto& multipoint = *std::static_pointer_cast<MultiPoint>(g);
+				if (!multipoint.empty()) {
+					writeGoogleMapPlotter(fs, multipoint);
+					writeGoogleMap(fs, multipoint);
+				} else {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::POLYGON:
-		case Geometry::Type::CHULL: {
-			const auto& polygon = *std::static_pointer_cast<Polygon>(g);
-			if (!polygon.empty()) {
-				writeGoogleMapPlotter(fs, polygon);
-				writeGoogleMap(fs, polygon);
-			} else {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::CIRCLE: {
+				const auto& circle = *std::static_pointer_cast<Circle>(g);
+				writeGoogleMapPlotter(fs, circle);
+				writeGoogleMap(fs, circle);
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::MULTICIRCLE: {
-			const auto& multicircle = *std::static_pointer_cast<MultiCircle>(g);
-			if (!multicircle.empty()) {
-				writeGoogleMapPlotter(fs, multicircle);
-				writeGoogleMap(fs, multicircle);
-			} else {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::CONVEX: {
+				const auto& convex = *std::static_pointer_cast<Convex>(g);
+				if (!convex.empty()) {
+					writeGoogleMapPlotter(fs, convex);
+					writeGoogleMap(fs, convex);
+				} else {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::MULTICONVEX: {
-			const auto& multiconvex = *std::static_pointer_cast<MultiConvex>(g);
-			if (!multiconvex.empty()) {
-				writeGoogleMapPlotter(fs, multiconvex);
-				writeGoogleMap(fs, multiconvex);
-			} else {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::POLYGON:
+			case Geometry::Type::CHULL: {
+				const auto& polygon = *std::static_pointer_cast<Polygon>(g);
+				if (!polygon.empty()) {
+					writeGoogleMapPlotter(fs, polygon);
+					writeGoogleMap(fs, polygon);
+				} else {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::MULTICHULL:
-		case Geometry::Type::MULTIPOLYGON: {
-			const auto& multipolygon = *std::static_pointer_cast<MultiPolygon>(g);
-			if (!multipolygon.empty()) {
-				writeGoogleMapPlotter(fs, multipolygon);
-				writeGoogleMap(fs, multipolygon);
-			} else {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::MULTICIRCLE: {
+				const auto& multicircle = *std::static_pointer_cast<MultiCircle>(g);
+				if (!multicircle.empty()) {
+					writeGoogleMapPlotter(fs, multicircle);
+					writeGoogleMap(fs, multicircle);
+				} else {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::COLLECTION: {
-			const auto& collection = *std::static_pointer_cast<Collection>(g);
-			try {
-				writeGoogleMapPlotter(fs, collection);
-				writeGoogleMap(fs, collection);
-			} catch (const NullConvex&) {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::MULTICONVEX: {
+				const auto& multiconvex = *std::static_pointer_cast<MultiConvex>(g);
+				if (!multiconvex.empty()) {
+					writeGoogleMapPlotter(fs, multiconvex);
+					writeGoogleMap(fs, multiconvex);
+				} else {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
 			}
-			break;
-		}
-		case Geometry::Type::INTERSECTION: {
-			const auto& intersection = *std::static_pointer_cast<Intersection>(g);
-			try {
-				writeGoogleMapPlotter(fs, intersection);
-				writeGoogleMap(fs, intersection);
-			} catch (const NullConvex&) {
-				writeGoogleMapPlotter(fs, trixels);
+			case Geometry::Type::MULTICHULL:
+			case Geometry::Type::MULTIPOLYGON: {
+				const auto& multipolygon = *std::static_pointer_cast<MultiPolygon>(g);
+				if (!multipolygon.empty()) {
+					writeGoogleMapPlotter(fs, multipolygon);
+					writeGoogleMap(fs, multipolygon);
+				} else {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
 			}
-			break;
+			case Geometry::Type::COLLECTION: {
+				const auto& collection = *std::static_pointer_cast<Collection>(g);
+				try {
+					writeGoogleMapPlotter(fs, collection);
+					writeGoogleMap(fs, collection);
+				} catch (const NullConvex&) {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
+			}
+			case Geometry::Type::INTERSECTION: {
+				const auto& intersection = *std::static_pointer_cast<Intersection>(g);
+				try {
+					writeGoogleMapPlotter(fs, intersection);
+					writeGoogleMap(fs, intersection);
+				} catch (const NullConvex&) {
+					writeGoogleMapPlotter(fs, trixels);
+				}
+				break;
+			}
 		}
+	} else {
+		writeGoogleMapPlotter(fs, trixels);
 	}
 
 	// Draw trixels.
@@ -1669,18 +1697,17 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 
 
 void
-HTM::writeGrahamScanMap(const std::string& file, const std::string& output_file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points, const std::string& path_google_map)
+HTM::writeGrahamScanMap(const std::string& file, const std::string& output_file, const std::vector<Cartesian>& points, const std::vector<Cartesian>& convex_points)
 {
 	std::ofstream fs(file);
 	fs.precision(HTM_DIGITS);
 
 	fs << "import sys\n";
 	fs << "import os\n\n";
-	fs << "sys.path.append(os.path.abspath('" << path_google_map << "'))\n\n";
-	fs << "from google_map_plotter import GoogleMapPlotter\n";
+	fs << "from gmplot import gmplot\n";
 
 	auto latlon = convex_points.back().toLatLon();
-	fs << "mymap = GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ", 6)\n";
+	fs << "mymap = gmplot.GoogleMapPlotter(" << latlon.first << ", " << latlon.second << ", 6)\n";
 
 	// Original Points.
 	for (const auto& point : points) {
