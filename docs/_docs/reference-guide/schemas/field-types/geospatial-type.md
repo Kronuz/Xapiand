@@ -131,7 +131,7 @@ MERGE /bank/1?pretty
 This is the set of coordinates generate for the convex hull for the above example:
 
 | Latitude  | Longitude | Height   |
-|-----------+-----------+----------+
+|----------:|----------:|---------:|
 | -0.166828 | -0.783064 | 0.599148 |
 | -0.261113 | -0.756863 | 0.599148 |
 | -0.246869 | -0.715576 | 0.653457 |
