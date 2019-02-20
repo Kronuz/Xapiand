@@ -45,6 +45,30 @@ the field "checkin" is a geospatial point but could be any of:
 * `Multichull`
 
 
+## Accuracy
+
+Xapiand handles numerical ranges by **trie indexing** numerical values in a
+special string-encoded format with variable precision.
+
+All numerical (and also dates, times and geospatial) values are converted to
+lexicographic sortable string representations and indexed with different
+precisions. A range of values is divided recursively into multiple intervals
+for searching: The center of the range is searched only with the lowest possible
+precision in the **trie**, while the boundaries are matched more exactly.
+
+Default accuracy in geospatial fields is:
+
+```json
+[ 3, 5, 8, 10, 12, 15 ]
+```
+
+This means the precisions for geospatial values will be calculated for each of
+those _HTM_ levels.
+
+See [Hierarchical Triangular Mesh]({{ '/docs/reference-guide/htm' | relative_url }})
+to find how _HTM_ levels work.
+
+
 ## Polygon
 
 {% capture req %}

@@ -11,6 +11,37 @@ The following _Numeric_ types are supported:
 | `_float`                              | A double-precision 64-bit IEEE 754 floating point number, restricted to finite values |
 
 
+## Accuracy
+
+Xapiand handles numerical ranges by **trie indexing** numerical values in a
+special string-encoded format with variable precision.
+
+All numerical (and also dates, times and geospatial) values are converted to
+lexicographic sortable string representations and indexed with different
+precisions. A range of values is divided recursively into multiple intervals
+for searching: The center of the range is searched only with the lowest possible
+precision in the **trie**, while the boundaries are matched more exactly.
+
+Default accuracy in numeric fields is:
+
+```json
+[
+  1000,
+  10000,
+  100000,
+  1000000,
+  10000000,
+  1000000000,
+  100000000000,
+  10000000000000,
+  1000000000000000,
+  100000000000000000,
+  1000000000000000000,
+  10000000000000000000
+]
+```
+
+
 ## Parameters
 
 The following parameters are accepted by _Numeric_ fields:
