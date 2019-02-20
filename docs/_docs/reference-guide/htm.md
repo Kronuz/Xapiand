@@ -33,3 +33,6 @@ about 10 milli-arcseconds for astronomers or 0.3 meters on the earth's surface:
 | 20    | 0.3090"    |          9.54 m |
 | 25    | 0.0097"    |          0.30 m |
 | 30    | 0.0003"    |          0.01 m |
+
+An example of HTM trixels in real life can be found in the
+[Spatial Search Tutorial]({{ '/tutorials/spatial-search/#searching' | relative_url }}).
