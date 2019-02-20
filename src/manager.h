@@ -254,22 +254,30 @@ public:
 
 	static void new_leader() {
 		ASSERT(_manager);
+#ifdef XAPIAND_CLUSTERING
 		_manager->new_leader_impl();
+#endif
 	}
 
 	static void renew_leader() {
+#ifdef XAPIAND_CLUSTERING
 		ASSERT(_manager);
 		_manager->renew_leader_impl();
+#endif
 	}
 
 	static void reset_state() {
+#ifdef XAPIAND_CLUSTERING
 		ASSERT(_manager);
 		_manager->reset_state_impl();
+#endif
 	}
 
 	static void join_cluster() {
+#ifdef XAPIAND_CLUSTERING
 		ASSERT(_manager);
 		_manager->join_cluster_impl();
+#endif
 	}
 
 	static std::string server_metrics() {

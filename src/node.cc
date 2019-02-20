@@ -119,7 +119,7 @@ Node::__repr__() const
 		is_leader() ? " (leader)" : "");
 }
 
-
+#ifdef XAPIAND_CLUSTERING
 std::string
 Node::dump_nodes(int level)
 {
@@ -138,6 +138,7 @@ Node::dump_nodes(int level)
 
 	return ret;
 }
+#endif
 
 
 atomic_shared_ptr<const Node> Node::_local_node{std::make_shared<const Node>()};

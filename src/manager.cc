@@ -388,7 +388,12 @@ XapiandManager::signal_sig_impl()
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
 #endif
+
+#ifdef XAPIAND_CLUSTERING
 			print(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
+#else
+			print(STEEL_BLUE + "Workers:\n{}Databases:\n{}", dump_tree(), _database_pool->dump_databases());
+#endif
 			break;
 	}
 }
@@ -742,6 +747,7 @@ XapiandManager::make_servers()
 	int replication_port = opts.replication_port ? opts.replication_port : XAPIAND_REPLICATION_SERVERPORT;
 
 	auto local_node = Node::local_node();
+#ifdef XAPIAND_CLUSTERING
 	auto nodes = Node::nodes();
 	for (auto it = nodes.begin(); it != nodes.end();) {
 		const auto& node = *it;
@@ -775,6 +781,7 @@ XapiandManager::make_servers()
 		}
 		++it;
 	}
+#endif
 
 	// Create and initialize servers.
 
@@ -1136,6 +1143,8 @@ XapiandManager::join()
 #endif
 
 	////////////////////////////////////////////////////////////////////
+#ifdef XAPIAND_CLUSTERING
+
 	auto& db_updater_obj = db_updater(false);
 	if (db_updater_obj) {
 		L_MANAGER("Finishing database updater!");
@@ -1150,6 +1159,8 @@ XapiandManager::join()
 			}
 		}
 	}
+
+#endif
 
 	////////////////////////////////////////////////////////////////////
 	auto& fsyncher_obj = fsyncher(false);
@@ -1233,9 +1244,9 @@ XapiandManager::join()
 
 #ifdef XAPIAND_CLUSTERING
 	trigger_replication_obj.reset();
+	db_updater_obj.reset();
 #endif
 	committer_obj.reset();
-	db_updater_obj.reset();
 	fsyncher_obj.reset();
 
 	_schemas.reset();

@@ -282,9 +282,11 @@ Database::reopen_writable()
 	if (endpoint.empty()) {
 		THROW(Error, "Database must not have empty endpoints");
 	}
+#ifdef XAPIAND_CLUSTERING
 	if (endpoint.node.remote_port == 0) {
 		THROW(Error, "Endpoint must be configured with a proper node port");
 	}
+#endif  // XAPIAND_CLUSTERING
 
 	Xapian::WritableDatabase wsdb;
 	bool localdb = false;
@@ -403,9 +405,11 @@ Database::reopen_readable()
 		if (endpoint.empty()) {
 			THROW(Error, "Database must not have empty endpoints");
 		}
+#ifdef XAPIAND_CLUSTERING
 		if (endpoint.node.remote_port == 0) {
 			THROW(Error, "Endpoint must be configured with a proper node port");
 		}
+#endif  // XAPIAND_CLUSTERING
 
 		Xapian::Database rsdb;
 		bool localdb = false;
