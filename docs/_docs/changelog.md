@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.10.1] - 2019-02-20
+{: #v0-10-1 }
+
+### Fixed
+- Default database path is /var/run/xapiand
+
+
+---
 ## [0.10.0] - 2019-02-20
 {: #v0-10-0 }
 
