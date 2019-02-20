@@ -193,6 +193,8 @@ DIR* opendir(std::string_view path, bool create) {
 	if (dirp == nullptr && errno == ENOENT && create) {
 		if (::mkdir(path_string.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 			dirp = ::opendir(path_string.c_str());
+		} else {
+			L_ERR("Cannot create directory: {}", path);
 		}
 	}
 	return dirp;
