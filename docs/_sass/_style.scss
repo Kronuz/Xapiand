@@ -927,7 +927,7 @@ code.output {
 	&:before { border-color: transparent #5c4e35 #5c4e35 transparent; }
 
 	&:after {
-		content: '\2605';  // ★
+		content: '★︎';
 		color: #fc0;
 		margin-top: -3px;
 	}
@@ -946,7 +946,7 @@ code.output {
 	&:before { border-color: transparent #004E66 #004E66 transparent; }
 
 	&:after {
-		content: '\24d8\fe0e';  // ⓘ
+		content: 'ⓘ︎';
 	}
 }
 
@@ -963,7 +963,7 @@ code.output {
 	&:before { border-color: transparent #664919 #664919 transparent; }
 
 	&:after {
-		content: '\26a0\fe0e';  // ⚠
+		content: "⚠︎";
 		font-size: 36px;
 		margin-left: -4px;
 	}
@@ -983,7 +983,7 @@ code.output {
 	&:before { border-color: transparent #660b0d #660b0d transparent; }
 
 	&:after {
-		content: '\203c\fe0e';  // ‼
+		content: "‼︎";
 		font-size: 32px;
 		margin-left: 4px;
 		margin-top: -2px;
@@ -1003,7 +1003,7 @@ code.output {
 	&:before { border-color: transparent #222 #222 transparent; }
 
 	&:after {
-		content: '\2699';  // ⚙
+		content: "⚒";
 		font-size: 32px;
 		margin-left: -2px;
 	}
@@ -1011,7 +1011,7 @@ code.output {
 
 .construction {
 	&:after {
-		content: '\2692';  // ⚒
+		content: "📚";
 		font-size: 32px;
 		margin-left: -2px;
 	}
