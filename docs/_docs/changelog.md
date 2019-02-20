@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Fixed
+- Fix exit code on errors
+
 
 ---
 ## [0.10.1] - 2019-02-20
