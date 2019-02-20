@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.10.0] - 2019-02-20
+{: #v0-10-0 }
+
 ### Added
 - Added `_match_all` and `_match_none` to `:search` command
 - Added the Elite Set Operator
@@ -359,7 +364,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Kronuz/Xapiand/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Kronuz/Xapiand/compare/v0.8.15...v0.9.0
 [0.8.15]: https://github.com/Kronuz/Xapiand/compare/v0.8.14...v0.8.15
 [0.8.14]: https://github.com/Kronuz/Xapiand/compare/v0.8.13...v0.8.14
