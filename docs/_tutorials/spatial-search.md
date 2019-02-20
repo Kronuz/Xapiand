@@ -1,6 +1,5 @@
 ---
 title: Spatial Search Tutorial
-permalink: /tutorials/spatial-search/
 ---
 
 This is a trivial example to demonstrate Xapiand's spatial search capabilities.
