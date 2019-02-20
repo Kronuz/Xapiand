@@ -468,7 +468,7 @@ void parseOptions(int argc, char** argv) {
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
-		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, "", "path", cmd);
+		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_ROOT "/var/db/xapiand", "path", cmd);
 
 		std::vector<std::string> args;
 		for (int i = 0; i < argc; ++i) {
@@ -556,6 +556,9 @@ void parseOptions(int argc, char** argv) {
 #endif
 
 		opts.database = database.getValue();
+		if (opts.database.empty()) {
+			opts.database = ".";
+		}
 		opts.http_port = http_port.getValue();
 		opts.bind_address = bind_address.getValue();
 #ifdef XAPIAND_CLUSTERING
