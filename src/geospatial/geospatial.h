@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,9 @@
 
 
 constexpr const char RESERVED_GEO_LATITUDE[]                = RESERVED__ "latitude";
+constexpr const char RESERVED_GEO_LAT[]                     = RESERVED__ "lat";
 constexpr const char RESERVED_GEO_LONGITUDE[]               = RESERVED__ "longitude";
+constexpr const char RESERVED_GEO_LNG[]                     = RESERVED__ "lng";
 constexpr const char RESERVED_GEO_HEIGHT[]                  = RESERVED__ "height";
 constexpr const char RESERVED_GEO_RADIUS[]                  = RESERVED__ "radius";
 constexpr const char RESERVED_GEO_UNITS[]                   = RESERVED__ "units";

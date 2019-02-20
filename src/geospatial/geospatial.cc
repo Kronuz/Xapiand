@@ -151,7 +151,9 @@ GeoSpatial::get_data(const MsgPack& o, bool has_radius)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_GEO_LATITUDE),
+		hh(RESERVED_GEO_LAT),
 		hh(RESERVED_GEO_LONGITUDE),
+		hh(RESERVED_GEO_LNG),
 		hh(RESERVED_GEO_HEIGHT),
 		hh(RESERVED_GEO_RADIUS),
 		hh(RESERVED_GEO_UNITS),
@@ -166,9 +168,11 @@ GeoSpatial::get_data(const MsgPack& o, bool has_radius)
 		const auto str_key = it->str_view();
 		switch (_.fhh(str_key)) {
 			case _.fhh(RESERVED_GEO_LATITUDE):
+			case _.fhh(RESERVED_GEO_LAT):
 				process_latitude(data, value);
 				break;
 			case _.fhh(RESERVED_GEO_LONGITUDE):
+			case _.fhh(RESERVED_GEO_LNG):
 				process_longitude(data, value);
 				break;
 			case _.fhh(RESERVED_GEO_HEIGHT):
