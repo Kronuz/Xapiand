@@ -1293,7 +1293,6 @@ void restore() {
 void
 cleanup_manager()
 {
-	int exit_code = EX_OK;
 	try {
 		auto& manager = XapiandManager::manager(false);
 		if (manager) {
@@ -1301,15 +1300,14 @@ cleanup_manager()
 			manager->join();
 			auto sig = manager->atom_sig.load();
 			if (sig < 0) {
-				exit_code = -sig;
+				_Exit(-sig);
 			}
 		}
 	} catch (const SystemExit& exc) {
-		exit_code = exc.code;
+		_Exit(exc.code);
 	} catch (...) {
-		exit_code = EX_SOFTWARE;
+		_Exit(EX_SOFTWARE);
 	}
-	_Exit(exit_code);
 }
 
 
