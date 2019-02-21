@@ -13,7 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.10.2] - 2019-02-20
+{: #v0-10-2 }
+
 ### Fixed
+- Docker build had missing symbols since 0.10.0
 - Fix exit code on errors
 
 
