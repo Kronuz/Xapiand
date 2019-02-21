@@ -298,8 +298,10 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 	// Convert accuracy to accuracy bits
 	std::vector<uint64_t> inv_acc_bits;
 	inv_acc_bits.resize(last_acc_pos + 1);
-	for (size_t pos = 0; pos <= last_acc_pos; ++pos) {
-		inv_acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
+	if (accuracy.size() != 0) {
+		for (size_t pos = 0; pos <= last_acc_pos; ++pos) {
+			inv_acc_bits[pos] = HTM_START_POS - (accuracy[last_acc_pos - pos] * 2);
+		}
 	}
 
 	std::vector<std::unordered_set<uint64_t>> level_terms;
