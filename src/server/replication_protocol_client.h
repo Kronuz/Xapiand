@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -108,7 +108,6 @@ enum class ReplicationReplyType {
 inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 	static const std::string _[] = {
 		"REPLY_WELCOME",
-		"REPLY_GET_CHANGESETS",
 		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
 		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
 		"REPLY_CHANGESET",
