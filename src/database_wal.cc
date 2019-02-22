@@ -614,11 +614,16 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 			try {
 				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 				_database->delete_document(did, false, wal_);
-			} catch (const NotFoundError& exc) {
+			} catch (const Xapian::DocNotFoundError& exc) {
 				if (!unsafe) {
 					throw;
 				}
-				L_WARNING("Error during DELETE_DOCUMENT: {}", exc.get_message());
+				L_WARNING("Error during DELETE_DOCUMENT: {}", exc.get_msg());
+			} catch (const Xapian::DatabaseNotFoundError& exc) {
+				if (!unsafe) {
+					throw;
+				}
+				L_WARNING("Error during DELETE_DOCUMENT: {}", exc.get_msg());
 			}
 			break;
 		case Type::SET_METADATA:

@@ -209,27 +209,6 @@ public:
 };
 
 
-class NotFoundError : public ClientError {
-public:
-	template<typename... Args>
-	NotFoundError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
-};
-
-
-class DatabaseNotFoundError : public NotFoundError, public Xapian::DatabaseNotFoundError {
-public:
-	template<typename... Args>
-	DatabaseNotFoundError(Args&&... args) : NotFoundError(std::forward<Args>(args)...), Xapian::DatabaseNotFoundError(message) { }
-};
-
-
-class DocNotFoundError : public NotFoundError, public Xapian::DocNotFoundError {
-public:
-	template<typename... Args>
-	DocNotFoundError(Args&&... args) : NotFoundError(std::forward<Args>(args)...), Xapian::DocNotFoundError(message) { }
-};
-
-
 class MissingTypeError : public ClientError {
 public:
 	template<typename... Args>

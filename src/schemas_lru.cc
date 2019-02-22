@@ -228,7 +228,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 				}
 			} catch (const ForeignSchemaError&) {
 				schema_ptr = Schema::get_initial_schema();
-			} catch (const NotFoundError&) {
+			} catch (const Xapian::DocNotFoundError&) {
+				schema_ptr = Schema::get_initial_schema();
+			} catch (const Xapian::DatabaseNotFoundError&) {
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const CheckoutError&) {
 				schema_ptr = Schema::get_initial_schema();

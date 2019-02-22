@@ -406,9 +406,6 @@ HttpClient::handled_errors(Request& request, Func&& func)
 	std::string error;
 	try {
 		return func();
-	} catch (const NotFoundError& exc) {
-		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign(http_status_str(error_code));
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
@@ -421,6 +418,12 @@ HttpClient::handled_errors(Request& request, Func&& func)
 	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+	} catch (const Xapian::DocNotFoundError&) {
+		error_code = HTTP_STATUS_NOT_FOUND;
+		error.assign(http_status_str(error_code));
+	} catch (const Xapian::DatabaseNotFoundError&) {
+		error_code = HTTP_STATUS_NOT_FOUND;
+		error.assign(http_status_str(error_code));
 	} catch (const Xapian::NetworkTimeoutError& exc) {
 		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
 		error.assign(exc.get_description());
@@ -1804,7 +1807,7 @@ HttpClient::metadata_view(Request& request)
 	} else {
 		auto metadata = db_handler.get_metadata(key);
 		if (metadata.empty()) {
-			THROW(NotFoundError);
+			throw Xapian::DocNotFoundError("Metadata not found");
 		} else {
 			response_obj = MsgPack::unserialise(metadata);
 		}
@@ -2407,7 +2410,7 @@ HttpClient::search_view(Request& request)
 			mset = db_handler.get_mset(query_field, &decoded_body, &aggs);
 			aggregations = aggs.get_aggregation().at(RESERVED_AGGS_AGGREGATIONS);
 		}
-	} catch (const NotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
@@ -2513,7 +2516,7 @@ HttpClient::count_view(Request& request)
 			auto& decoded_body = request.decoded_body();
 			mset = db_handler.get_mset(query_field, &decoded_body, nullptr);
 		}
-	} catch (const NotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}

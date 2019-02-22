@@ -310,7 +310,7 @@ Database::reopen_writable()
 			wsdb = Xapian::WritableDatabase(endpoint.path, _flags | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseNotFoundError&) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
-				THROW(DatabaseNotFoundError, "Database not found: {}", repr(endpoint.to_string()));
+				throw;
 			}
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
@@ -455,7 +455,7 @@ Database::reopen_readable()
 				++failures;
 				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 					if (failures == endpoints_size) {
-						THROW(DatabaseNotFoundError, "Database not found: {}", repr(endpoint.to_string()));
+						throw;
 					}
 					incomplete.store(true, std::memory_order_relaxed);
 					continue;
@@ -855,8 +855,6 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 			} else {
 				throw;
 			}
-		} catch (const Xapian::DocNotFoundError&) {
-			THROW(DocNotFoundError, "Document not found");
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -908,8 +906,6 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 			} else {
 				throw;
 			}
-		} catch (const Xapian::DocNotFoundError&) {
-			THROW(DocNotFoundError, "Document not found");
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
@@ -1341,7 +1337,7 @@ Database::find_document(const std::string& term_id)
 		try {
 			Xapian::PostingIterator it = rdb->postlist_begin(term_id);
 			if (it == rdb->postlist_end(term_id)) {
-				THROW(DocNotFoundError, "Document not found");
+				throw Xapian::DocNotFoundError("Document not found");
 			}
 			did = *it;
 			break;
@@ -1359,9 +1355,7 @@ Database::find_document(const std::string& term_id)
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
-			THROW(DocNotFoundError, "Document not found");
-		} catch (const Xapian::DocNotFoundError&) {
-			THROW(DocNotFoundError, "Document not found");
+			throw Xapian::DocNotFoundError("Document not found");
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
@@ -1408,9 +1402,7 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
-			THROW(DocNotFoundError, "Document not found");
-		} catch (const Xapian::DocNotFoundError&) {
-			THROW(DocNotFoundError, "Document not found");
+			throw Xapian::DocNotFoundError("Document not found");
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());

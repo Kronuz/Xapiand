@@ -438,11 +438,9 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 				THROW(InvalidArgumentError, errmsg);
 			}
 		}
-	} catch (const NotFoundError& exc) {
-	} catch (const Xapian::DatabaseNotFoundError& exc) {
-	} catch (const Xapian::DatabaseModifiedError& exc) {
 	} catch (const BaseException& exc) {
 		L_EXC("ERROR: Replicating database");
+	} catch (const Xapian::DatabaseNotFoundError& exc) {
 	} catch (const Xapian::Error& exc) {
 		L_EXC("ERROR: Replicating database");
 	} catch (const std::exception& exc) {

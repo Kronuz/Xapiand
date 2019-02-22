@@ -1717,7 +1717,11 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate
 		try {
 			auto current_document = get_document_term(term_id);
 			current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, Data(current_document.get_data())));
-		} catch (const NotFoundError&) {
+		} catch (const Xapian::DocNotFoundError&) {
+			if (validate_exists) {
+				throw;
+			}
+		} catch (const Xapian::DatabaseNotFoundError&) {
 			if (validate_exists) {
 				throw;
 			}
@@ -1759,7 +1763,8 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 			try {
 				auto current_document = get_document_term(new_document_pair->first);
 				current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(new_document_pair->first, Data(current_document.get_data())));
-			} catch (const NotFoundError&) { }
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
 
 			lk.lock();
 

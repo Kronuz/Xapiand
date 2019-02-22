@@ -917,7 +917,7 @@ public:
 		DIR *dir = opendir(base_path, false);
 		if (dir == nullptr) {
 			L_DEBUG("Could not open the directory {}: {} ({}): {}", repr(base_path), error::name(errno), errno, error::description(errno));
-			THROW(NotFoundError, error::description(errno));
+			throw Xapian::DatabaseNotFoundError("Couldn't open storage file");
 		}
 
 		unsigned long long first_volume = std::numeric_limits<unsigned long long>::max();

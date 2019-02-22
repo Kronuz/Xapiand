@@ -638,27 +638,26 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	_new_cluster = 0;
 	Endpoint cluster_endpoint{".cluster", leader_node.get()};
+	bool found = false;
 	try {
-		bool found = false;
 		if (is_leader) {
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
-			if (db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-				THROW(NotFoundError);
-			}
-			auto mset = db_handler.get_all_mset();
-			const auto m_e = mset.end();
-			for (auto m = mset.begin(); m != m_e; ++m) {
-				auto did = *m;
-				auto document = db_handler.get_document(did);
-				auto obj = document.get_obj();
-				if (obj[ID_FIELD_NAME] == local_node->lower_name()) {
-					found = true;
+			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
+				auto mset = db_handler.get_all_mset();
+				const auto m_e = mset.end();
+				for (auto m = mset.begin(); m != m_e; ++m) {
+					auto did = *m;
+					auto document = db_handler.get_document(did);
+					auto obj = document.get_obj();
+					if (obj[ID_FIELD_NAME] == local_node->lower_name()) {
+						found = true;
+					}
+					#ifdef XAPIAND_CLUSTERING
+					if (!opts.solo) {
+						_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+					}
+					#endif
 				}
-				#ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
-				}
-				#endif
 			}
 		} else {
 			#ifdef XAPIAND_CLUSTERING
@@ -666,10 +665,10 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			found = node && !!node->idx;
 			#endif
 		}
-		if (!found) {
-			THROW(NotFoundError);
-		}
-	} catch (const NotFoundError&) {
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+
+	if (!found) {
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
@@ -1427,7 +1426,8 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 			try {
 				db_handler.reset(endpoints);
 				obj = db_handler.get_document(normalized_path).get_obj();
-			} catch (const NotFoundError&) {}
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
 			lk.lock();
 			resolve_index_lru.insert(std::make_pair(normalized_path, obj));
 			lk.unlock();
