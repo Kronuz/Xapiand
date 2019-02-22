@@ -83,6 +83,7 @@
 #include "server/http_client.h"                  // for HttpClient
 #include "server/http_server.h"                  // for HttpServer
 #include "storage.h"                             // for Storage
+#include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 
 #ifdef XAPIAND_CLUSTERING
@@ -1383,6 +1384,23 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 	L_CALL("XapiandManager::resolve_index_nodes_impl({})", repr(normalized_path));
 
 	std::vector<std::shared_ptr<const Node>> nodes;
+
+	if (normalized_path == ".cluster") {
+		// Cluster database is always in the master
+		nodes.push_back(Node::leader_node());
+		return nodes;
+	}
+
+	if (string::startswith(normalized_path, ".index/")) {
+		// Index databases are always in their specified node
+		int errno_save;
+		size_t idx = strict_stoll(&errno_save, &normalized_path[7]);
+		if (errno_save == 0) {
+			auto node = Node::get_node(idx);
+			nodes.push_back(node);
+			return nodes;
+		}
+	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
