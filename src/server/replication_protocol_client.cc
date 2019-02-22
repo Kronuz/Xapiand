@@ -44,6 +44,7 @@
 #include "random.hh"                          // for random_int
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
+#include "xapian/net/serialise-error.h"       // for serialise_error, unserialise_error
 
 
 // #undef L_DEBUG
@@ -216,15 +217,38 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {{type:{}}}", ReplicationMessageTypeNames(type));
 	L_OBJ_END("ReplicationProtocolClient::replication_server:END {{type:{}}}", ReplicationMessageTypeNames(type));
 
-	switch (type) {
-		case ReplicationMessageType::MSG_GET_CHANGESETS:
-			msg_get_changesets(message);
-			return;
-		default: {
-			std::string errmsg("Unexpected message type ");
-			errmsg += std::to_string(toUType(type));
-			THROW(InvalidArgumentError, errmsg);
+	try {
+		switch (type) {
+			case ReplicationMessageType::MSG_GET_CHANGESETS:
+				msg_get_changesets(message);
+				return;
+			default: {
+				std::string errmsg("Unexpected message type ");
+				errmsg += std::to_string(toUType(type));
+				THROW(InvalidArgumentError, errmsg);
+			}
 		}
+	} catch (const Xapian::NetworkTimeoutError& exc) {
+		try {
+			// We've had a timeout, so the client may not be listening, if we can't
+			// send the message right away, just exit and the client will cope.
+			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
+		} catch (...) {}
+		detach();
+	} catch (const Xapian::NetworkError&) {
+		// All other network errors mean we are fatally confused and are unlikely
+		// to be able to communicate further across this connection. So we don't
+		// try to propagate the error to the client, but instead just log the
+		// exception and close the connection.
+		detach();
+	} catch (const Xapian::Error& exc) {
+		// Propagate the exception to the client, then return to the main
+		// message handling loop.
+		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
+	} catch (...) {
+		L_EXC("ERROR: Dispatching remote protocol message");
+		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
+		detach();
 	}
 }
 
@@ -379,36 +403,52 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {{type:{}}}", ReplicationReplyTypeNames(type));
 	L_OBJ_END("ReplicationProtocolClient::replication_client:END {{type:{}}}", ReplicationReplyTypeNames(type));
 
-	switch (type) {
-		case ReplicationReplyType::REPLY_WELCOME:
-			reply_welcome(message);
-			return;
-		case ReplicationReplyType::REPLY_END_OF_CHANGES:
-			reply_end_of_changes(message);
-			return;
-		case ReplicationReplyType::REPLY_FAIL:
-			reply_fail(message);
-			return;
-		case ReplicationReplyType::REPLY_DB_HEADER:
-			reply_db_header(message);
-			return;
-		case ReplicationReplyType::REPLY_DB_FILENAME:
-			reply_db_filename(message);
-			return;
-		case ReplicationReplyType::REPLY_DB_FILEDATA:
-			reply_db_filedata(message);
-			return;
-		case ReplicationReplyType::REPLY_DB_FOOTER:
-			reply_db_footer(message);
-			return;
-		case ReplicationReplyType::REPLY_CHANGESET:
-			reply_changeset(message);
-			return;
-		default: {
-			std::string errmsg("Unexpected message type ");
-			errmsg += std::to_string(toUType(type));
-			THROW(InvalidArgumentError, errmsg);
+	try {
+		switch (type) {
+			case ReplicationReplyType::REPLY_WELCOME:
+				reply_welcome(message);
+				return;
+			case ReplicationReplyType::REPLY_EXCEPTION:
+				reply_exception(message);
+				return;
+			case ReplicationReplyType::REPLY_END_OF_CHANGES:
+				reply_end_of_changes(message);
+				return;
+			case ReplicationReplyType::REPLY_FAIL:
+				reply_fail(message);
+				return;
+			case ReplicationReplyType::REPLY_DB_HEADER:
+				reply_db_header(message);
+				return;
+			case ReplicationReplyType::REPLY_DB_FILENAME:
+				reply_db_filename(message);
+				return;
+			case ReplicationReplyType::REPLY_DB_FILEDATA:
+				reply_db_filedata(message);
+				return;
+			case ReplicationReplyType::REPLY_DB_FOOTER:
+				reply_db_footer(message);
+				return;
+			case ReplicationReplyType::REPLY_CHANGESET:
+				reply_changeset(message);
+				return;
+			default: {
+				std::string errmsg("Unexpected message type ");
+				errmsg += std::to_string(toUType(type));
+				THROW(InvalidArgumentError, errmsg);
+			}
 		}
+	} catch (const NotFoundError& exc) {
+	} catch (const Xapian::DatabaseNotFoundError& exc) {
+	} catch (const Xapian::DatabaseModifiedError& exc) {
+	} catch (const BaseException& exc) {
+		L_EXC("ERROR: Replicating database");
+	} catch (const Xapian::Error& exc) {
+		L_EXC("ERROR: Replicating database");
+	} catch (const std::exception& exc) {
+		L_EXC("ERROR: Replicating database");
+	} catch (...) {
+		L_EXC("ERROR: Replicating database");
 	}
 }
 
@@ -423,6 +463,13 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 	message.append(serialise_string(endpoints[0].path));
 
 	send_message(static_cast<ReplicationReplyType>(ReplicationMessageType::MSG_GET_CHANGESETS), message);
+}
+
+
+void
+ReplicationProtocolClient::reply_exception(const std::string& message)
+{
+	unserialise_error(message, "REPLICATION:", "");
 }
 
 

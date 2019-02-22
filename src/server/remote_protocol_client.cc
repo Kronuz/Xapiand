@@ -40,8 +40,8 @@
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
-
-#include "xapian/common/serialise-double.h"
+#include "xapian/common/serialise-double.h"   // for unserialise_double
+#include "xapian/net/serialise-error.h"       // for serialise_error
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -75,20 +75,6 @@
 
 
 constexpr int DB_ACTION_MASK_ = 0x03;  // Xapian::DB_ACTION_MASK_
-
-
-static inline std::string serialise_error(const Xapian::Error &exc) {
-	// The byte before the type name is the type code.
-	std::string result(1, (exc.get_type())[-1]);
-	result += serialise_length(exc.get_context().length());
-	result += exc.get_context();
-	result += serialise_length(exc.get_msg().length());
-	result += exc.get_msg();
-	// The "error string" goes last so we don't need to store its length.
-	const char* err = exc.get_error_string();
-	if (err) result += err;
-	return result;
-}
 
 
 static inline std::string::size_type common_prefix_length(const std::string &a, const std::string &b) {

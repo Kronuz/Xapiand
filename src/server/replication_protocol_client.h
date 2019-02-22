@@ -94,6 +94,7 @@ inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType typ
 
 enum class ReplicationReplyType {
 	REPLY_WELCOME,              // Welcome message (same as Remote Protocol's REPLY_UPDATE)
+	REPLY_EXCEPTION,            // Exception
 	REPLY_END_OF_CHANGES,       // No more changes to transfer
 	REPLY_FAIL,                 // Couldn't generate full set of changes
 	REPLY_DB_HEADER,            // The start of a whole DB copy
@@ -108,6 +109,7 @@ enum class ReplicationReplyType {
 inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 	static const std::string _[] = {
 		"REPLY_WELCOME",
+		"REPLY_EXCEPTION",
 		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
 		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
 		"REPLY_CHANGESET",
@@ -191,6 +193,7 @@ public:
 
 	void msg_get_changesets(const std::string& message);
 	void reply_welcome(const std::string& message);
+	void reply_exception(const std::string& message);
 	void reply_end_of_changes(const std::string& message);
 	void reply_fail(const std::string& message);
 	void reply_db_header(const std::string& message);
