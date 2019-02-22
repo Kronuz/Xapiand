@@ -348,6 +348,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 			auto wal_it = wal->find(to_revision);
 			for (; wal_it != wal->end(); ++wal_it) {
 				to_revision = wal_it->first + 1;
+				if (to_revision > revision) {
+					break;
+				}
 				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
 			lk_db.lock();
