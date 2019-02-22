@@ -308,10 +308,7 @@ Database::reopen_writable()
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			wsdb = Xapian::WritableDatabase(endpoint.path, _flags | XAPIAN_DB_SYNC_MODE);
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (exists(endpoint.path + "/iamglass")) {
-				throw;
-			}
+		} catch (const Xapian::DatabaseNotFoundError&) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 				THROW(DatabaseNotFoundError, "Database not found: {}", repr(endpoint.to_string()));
 			}
@@ -437,14 +434,13 @@ Database::reopen_readable()
 						incomplete.store(true, std::memory_order_relaxed);
 					} catch (...) { }
 				}
+			} catch (const Xapian::DatabaseNotFoundError& exc) {
 			} catch (const Xapian::DatabaseOpeningError& exc) {
-				if (!exists(endpoint.path + "/iamglass")) {
-					try {
-						// If remote is master (it should be), try triggering replication
-						trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
-						incomplete.store(true, std::memory_order_relaxed);
-					} catch (...) { }
-				}
+				try {
+					// If remote is master (it should be), try triggering replication
+					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, endpoint, Endpoint{endpoint.path});
+					incomplete.store(true, std::memory_order_relaxed);
+				} catch (...) { }
 			}
 #endif  // XAPIAN_LOCAL_DB_FALLBACK
 		}
@@ -455,10 +451,7 @@ Database::reopen_readable()
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				localdb = true;
-			} catch (const Xapian::DatabaseOpeningError& exc) {
-				if (exists(endpoint.path + "/iamglass")) {
-					throw;
-				}
+			} catch (const Xapian::DatabaseNotFoundError& exc) {
 				++failures;
 				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 					if (failures == endpoints_size) {
