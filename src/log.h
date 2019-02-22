@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,8 +46,8 @@
 #define L_DATABASE_WRAP_END L_NOTHING
 #define L_EV_BEGIN L_NOTHING
 #define L_EV_END L_NOTHING
-#define L_DEBUG_TRY
-#define L_DEBUG_RETHROW(...)
+#define L_DEBUG_TRY try
+#define L_DEBUG_RETHROW(...) catch(...) { L_EXC(__VA_ARGS__); throw; }
 #else
 #define L_OBJ_BEGIN L_DELAYED_1000
 #define L_OBJ_END L_DELAYED_N_UNLOG
