@@ -208,7 +208,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 				Xapian::Query query;
 
-				if (name[0] == reserved__) {
+				if (name[0] == reserved__ && name != ID_FIELD_NAME) {
 					constexpr static auto _ = phf::make_phf({
 						// Compound query clauses
 						hh(RESERVED_QUERYDSL_AND),

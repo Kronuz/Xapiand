@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Fixed
+- Cluster is now functional
+- Fix searching in "_id" field
+
 
 ---
 ## [0.10.2] - 2019-02-20
