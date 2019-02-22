@@ -1702,7 +1702,7 @@ DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate
 	L_CALL("DatabaseHandler::get_document_change_seq({}, {})", endpoints.to_string(), repr(term_id));
 
 	ASSERT(endpoints.size() == 1);
-	auto key = endpoints[0].path + std::string(term_id);
+	auto key = endpoints[0].path + "/" + std::string(term_id);
 	bool is_local = endpoints[0].is_local();
 
 	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
@@ -1743,7 +1743,7 @@ DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::st
 	L_CALL("DatabaseHandler::set_document_change_seq({}, {})", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
 
 	ASSERT(endpoints.size() == 1);
-	auto key = endpoints[0].path + new_document_pair->first;
+	auto key = endpoints[0].path + "/" + new_document_pair->first;
 	bool is_local = endpoints[0].is_local();
 
 	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
@@ -1795,7 +1795,7 @@ DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, 
 	L_CALL("DatabaseHandler::dec_document_change_cnt({})", endpoints.to_string(), repr(old_document_pair->first));
 
 	ASSERT(endpoints.size() == 1);
-	auto key = endpoints[0].path + old_document_pair->first;
+	auto key = endpoints[0].path + "/" + old_document_pair->first;
 	bool is_local = endpoints[0].is_local();
 
 	std::lock_guard<std::mutex> lk(DatabaseHandler::documents_mtx);

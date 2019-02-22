@@ -1378,9 +1378,9 @@ XapiandManager::load_nodes()
 
 
 std::vector<std::shared_ptr<const Node>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_path)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({})", repr(normalized_slashed_path));
+	L_CALL("XapiandManager::resolve_index_nodes_impl({})", repr(normalized_path));
 
 	std::vector<std::shared_ptr<const Node>> nodes;
 
@@ -1394,7 +1394,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 		static lru::LRU<std::string, MsgPack> resolve_index_lru(1000);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
-		auto it = resolve_index_lru.find(normalized_slashed_path);
+		auto it = resolve_index_lru.find(normalized_path);
 		if (it != resolve_index_lru.end()) {
 			obj = it->second;
 			lk.unlock();
@@ -1408,10 +1408,10 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 			}
 			try {
 				db_handler.reset(endpoints);
-				obj = db_handler.get_document(normalized_slashed_path).get_obj();
+				obj = db_handler.get_document(normalized_path).get_obj();
 			} catch (const NotFoundError&) {}
 			lk.lock();
-			resolve_index_lru.insert(std::make_pair(normalized_slashed_path, obj));
+			resolve_index_lru.insert(std::make_pair(normalized_path, obj));
 			lk.unlock();
 		}
 
@@ -1419,7 +1419,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 			auto indexed_nodes = Node::indexed_nodes();
 			if (indexed_nodes) {
 				MsgPack replicas(MsgPack::Type::ARRAY);
-				size_t consistent_hash = jump_consistent_hash(normalized_slashed_path, indexed_nodes);
+				size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
 				for (size_t i = std::min(opts.num_replicas, indexed_nodes); i; --i) {
 					auto idx = consistent_hash + 1;
 					auto node = Node::get_node(idx);
@@ -1430,7 +1430,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 				}
 				ASSERT(!replicas.empty());
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, obj));
+				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
 				lk.unlock();
 				auto node = nodes.front();  // first node is master
 				Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
@@ -1445,7 +1445,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 						{ RESERVED_VALUE, std::move(replicas) },
 					} },
 				};
-				db_handler.index(normalized_slashed_path, false, obj, false, msgpack_type);
+				db_handler.index(normalized_path, false, obj, false, msgpack_type);
 			}
 		} else {
 			auto replicas = &obj["replicas"];
@@ -1463,7 +1463,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 	}
 	else
 #else
-	ignore_unused(normalized_slashed_path);
+	ignore_unused(normalized_path);
 #endif
 	{
 		nodes.push_back(Node::local_node());

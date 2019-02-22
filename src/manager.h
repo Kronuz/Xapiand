@@ -237,9 +237,9 @@ public:
 		_manager.reset();
 	}
 
-	static std::vector<std::shared_ptr<const Node>> resolve_index_nodes(const std::string& normalized_slashed_path) {
+	static std::vector<std::shared_ptr<const Node>> resolve_index_nodes(const std::string& normalized_path) {
 		ASSERT(_manager);
-		return _manager->resolve_index_nodes_impl(normalized_slashed_path);
+		return _manager->resolve_index_nodes_impl(normalized_path);
 	}
 
 	static Endpoint resolve_index_endpoint(const Endpoint& endpoint, bool master) {
