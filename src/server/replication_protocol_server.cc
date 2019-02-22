@@ -161,8 +161,15 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	bool replicated = false;
 
-	if (args.src_endpoint.path == ".cluster" || args.src_endpoint.path == ".index") {
+	if (args.src_endpoint.path == ".cluster") {
 		// Cluster database is always updated
+		replicated = true;
+	}
+
+	auto local_node = Node::local_node();
+
+	if (string::startswith(args.src_endpoint.path, ".index/")) {
+		// Index databases are always replicated
 		replicated = true;
 	}
 
@@ -173,7 +180,6 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
-		auto local_node = Node::local_node();
 		auto nodes = XapiandManager::resolve_index_nodes(args.src_endpoint.path);
 		for (const auto& node : nodes) {
 			if (Node::is_superset(local_node, node)) {

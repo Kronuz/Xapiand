@@ -704,16 +704,24 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	#ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		// Replicate database from the leader
+		// Replicate cluster database from the leader
 		if (!is_leader) {
-			ASSERT(!cluster_endpoint.is_local());
 			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
 			_replication->trigger_replication({cluster_endpoint, Endpoint{".cluster"}, true});
-			_replication->trigger_replication({cluster_endpoint, Endpoint{".index"}, true});
 		} else {
 			load_nodes();
 			set_cluster_database_ready_impl();
+		}
+
+		// Request updates from indexes databases
+		for (auto& node : Node::nodes()) {
+			if (node->idx && !node->is_local()) {
+				auto index = string::format(".index/{}", node->idx);
+				Endpoint endpoint{index};
+				Endpoint remote_endpoint{index, node.get()};
+				_replication->trigger_replication({remote_endpoint, endpoint, false});
+			}
 		}
 	} else
 	#endif
@@ -1392,8 +1400,14 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 			lk.unlock();
 		} else {
 			lk.unlock();
+			Endpoints endpoints;
+			for (auto& node : Node::nodes()) {
+				if (node->idx) {
+					endpoints.add(Endpoint{string::format(".index/{}", node->idx)});
+				}
+			}
 			try {
-				db_handler.reset(Endpoints{Endpoint{".index"}});
+				db_handler.reset(endpoints);
 				obj = db_handler.get_document(normalized_slashed_path).get_obj();
 			} catch (const NotFoundError&) {}
 			lk.lock();
@@ -1418,9 +1432,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_slashed_p
 				lk.lock();
 				resolve_index_lru.insert(std::make_pair(normalized_slashed_path, obj));
 				lk.unlock();
-				auto leader_node = Node::leader_node();
-				Endpoint cluster_endpoint{".index", leader_node.get()};
-				db_handler.reset(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				auto node = nodes.front();  // first node is master
+				Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
+				db_handler.reset(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				obj = {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
