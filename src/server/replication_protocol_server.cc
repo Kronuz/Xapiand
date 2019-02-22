@@ -26,6 +26,7 @@
 
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
+
 #include "cassert.h"                        // for ASSERT
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
@@ -35,8 +36,8 @@
 #include "replication_protocol.h"           // for ReplicationProtocol
 #include "replication_protocol_client.h"    // for ReplicationProtocolClient
 #include "repr.hh"                          // for repr
+#include "strict_stox.hh"                   // for strict_stoll
 #include "tcp.h"                            // for TCP::socket
-
 
  // #undef L_DEBUG
  // #define L_DEBUG L_GREY
@@ -161,26 +162,32 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	bool replicated = false;
 
-	if (args.src_endpoint.path == ".cluster") {
+	const auto& normalized_path = args.src_endpoint.path;
+
+	if (normalized_path == ".cluster") {
 		// Cluster database is always updated
 		replicated = true;
 	}
 
-	auto local_node = Node::local_node();
 
-	if (string::startswith(args.src_endpoint.path, ".index/")) {
-		// Index databases are always replicated
-		replicated = true;
+	if (string::startswith(normalized_path, ".index/")) {
+		int errno_save;
+		strict_stoll(&errno_save, &normalized_path[7]);
+		if (errno_save == 0) {
+			// Index databases are always replicated
+			replicated = true;
+		}
 	}
 
-	if (!replicated && exists(args.src_endpoint.path + "/iamglass")) {
+	if (!replicated && exists(normalized_path + "/iamglass")) {
 		// If database is already there, its also always updated
 		replicated = true;
 	}
 
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
-		auto nodes = XapiandManager::resolve_index_nodes(args.src_endpoint.path);
+		auto local_node = Node::local_node();
+		auto nodes = XapiandManager::resolve_index_nodes(normalized_path);
 		for (const auto& node : nodes) {
 			if (Node::is_superset(local_node, node)) {
 				replicated = true;
