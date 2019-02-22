@@ -144,9 +144,12 @@ inline std::vector<S> split(const S& value, const T& sep) {
 template <typename... Args>
 inline std::string format(std::string_view format, Args&&... args) {
 	std::string str;
-	L_DEBUG_TRY {
+	try {
 		str = fmt::format(format, std::forward<Args>(args)...);
-	} L_DEBUG_RETHROW("Cannot format {}", repr(format));
+	} catch(...) {
+		L_EXC("Cannot format {}", repr(format));
+		str = format;
+	}
 	return str;
 }
 

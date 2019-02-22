@@ -46,8 +46,6 @@
 #define L_DATABASE_WRAP_END L_NOTHING
 #define L_EV_BEGIN L_NOTHING
 #define L_EV_END L_NOTHING
-#define L_DEBUG_TRY try
-#define L_DEBUG_RETHROW(...) catch(...) { L_EXC(__VA_ARGS__); throw; }
 #else
 #define L_OBJ_BEGIN L_DELAYED_1000
 #define L_OBJ_END L_DELAYED_N_UNLOG
@@ -57,8 +55,6 @@
 #define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
 #define L_EV_BEGIN L_DELAYED_200
 #define L_EV_END L_DELAYED_N_UNLOG
-#define L_DEBUG_TRY try
-#define L_DEBUG_RETHROW(...) catch(...) { L_EXC(__VA_ARGS__); throw; }
 #endif
 
 #define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
