@@ -681,7 +681,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 				{ RESERVED_VALUE, local_node->name() },
 			} },
-		}, false, msgpack_type).first;
+		}, true, msgpack_type).first;
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
@@ -1459,7 +1459,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 						{ RESERVED_VALUE, std::move(replicas) },
 					} },
 				};
-				db_handler.index(normalized_path, false, obj, false, msgpack_type);
+				db_handler.index(normalized_path, false, obj, true, msgpack_type);
 				lk.lock();
 				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
 				lk.unlock();
