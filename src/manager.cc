@@ -1426,11 +1426,11 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 			try {
 				db_handler.reset(endpoints);
 				obj = db_handler.get_document(normalized_path).get_obj();
+				lk.lock();
+				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
+				lk.unlock();
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
-			lk.lock();
-			resolve_index_lru.insert(std::make_pair(normalized_path, obj));
-			lk.unlock();
 		}
 
 		if (obj.empty()) {
@@ -1438,18 +1438,14 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 			if (indexed_nodes) {
 				MsgPack replicas(MsgPack::Type::ARRAY);
 				size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
-				for (size_t i = std::min(opts.num_replicas, indexed_nodes); i; --i) {
+				for (size_t i = std::min(opts.num_replicas + 1, indexed_nodes); i; --i) {
 					auto idx = consistent_hash + 1;
 					auto node = Node::get_node(idx);
 					ASSERT(node);
 					nodes.push_back(std::move(node));
-					consistent_hash = idx % indexed_nodes;
 					replicas.append(idx);
+					consistent_hash = idx % indexed_nodes;
 				}
-				ASSERT(!replicas.empty());
-				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
-				lk.unlock();
 				auto node = nodes.front();  // first node is master
 				Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
 				db_handler.reset(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
@@ -1464,6 +1460,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 					} },
 				};
 				db_handler.index(normalized_path, false, obj, false, msgpack_type);
+				lk.lock();
+				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
+				lk.unlock();
 			}
 		} else {
 			auto replicas = &obj["replicas"];
