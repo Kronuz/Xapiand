@@ -1761,7 +1761,6 @@ required_spc_t::flags_t::flags_t()
 	  uuid_detection(true),
 	  partial_paths(false),
 	  is_namespace(false),
-	  optimal(false),
 	  field_found(true),
 	  concrete(false),
 	  complete(false),
@@ -1919,7 +1918,6 @@ required_spc_t::to_obj() const
 
 	obj_flags["partial_paths"] = flags.partial_paths;
 	obj_flags["is_namespace"] = flags.is_namespace;
-	obj_flags["optimal"] = flags.optimal;
 
 	obj_flags["field_found"] = flags.field_found;
 	obj_flags["concrete"] = flags.concrete;
@@ -2120,15 +2118,15 @@ specification_t::get_global(FieldType field_type)
 {
 	switch (field_type) {
 		case FieldType::FLOAT: {
-			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::FLOAT, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_num, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_num);
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::FLOAT, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
 		case FieldType::INTEGER: {
-			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::INTEGER, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_num, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_num);
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::INTEGER, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
 		case FieldType::POSITIVE: {
-			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::POSITIVE, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_num, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_num);
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
 		case FieldType::BOOLEAN: {
@@ -2136,19 +2134,19 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		case FieldType::DATE: {
-			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_date, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_date);
+			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
 			return spc;
 		}
 		case FieldType::TIME: {
-			static const specification_t spc(DB_SLOT_TIME, FieldType::TIME, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_time, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_time);
+			static const specification_t spc(DB_SLOT_TIME, FieldType::TIME, def_accuracy_time, global_acc_prefix_time);
 			return spc;
 		}
 		case FieldType::TIMEDELTA: {
-			static const specification_t spc(DB_SLOT_TIMEDELTA, FieldType::TIMEDELTA, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_time, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_time);
+			static const specification_t spc(DB_SLOT_TIMEDELTA, FieldType::TIMEDELTA, def_accuracy_time, global_acc_prefix_time);
 			return spc;
 		}
 		case FieldType::GEO: {
-			static const specification_t spc(DB_SLOT_GEO, FieldType::GEO, default_spc.flags.optimal ? default_spc.accuracy : def_accuracy_geo, default_spc.flags.optimal ? default_spc.acc_prefix : global_acc_prefix_geo);
+			static const specification_t spc(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
 			return spc;
 		}
 		case FieldType::UUID: {
@@ -4629,7 +4627,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
-			} else if (!specification.flags.optimal) {
+			} else {
 				set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 			}
 			specification.flags.concrete = true;
@@ -4659,7 +4657,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 				}
-			} else if (!specification.flags.optimal) {
+			} else {
 				set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 			}
 			specification.flags.concrete = true;
@@ -4679,7 +4677,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
-			} else if (!specification.flags.optimal) {
+			} else {
 				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
 			}
 			specification.flags.concrete = true;
@@ -4696,7 +4694,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 				} catch (const msgpack::type_error&) {
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-			} else if (!specification.flags.optimal) {
+			} else {
 				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 			}
 			specification.flags.concrete = true;
@@ -7562,7 +7560,7 @@ Schema::write_namespace(MsgPack& mut_properties, std::string_view prop_name, con
 		// Only save in Schema if RESERVED_NAMESPACE is true.
 		specification.flags.is_namespace = doc_namespace.boolean();
 		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
-			specification.flags.partial_paths = specification.flags.partial_paths || !default_spc.flags.optimal;
+			specification.flags.partial_paths = specification.flags.partial_paths;
 		}
 		specification.flags.has_namespace = true;
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);

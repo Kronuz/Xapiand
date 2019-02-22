@@ -466,7 +466,6 @@ void parseOptions(int argc, char** argv) {
 #endif
 		SwitchArg foreign("", "foreign", "Force foreign (shared) schemas for all indexes.", cmd, false);
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
-		SwitchArg optimal("", "optimal", "Minimal optimal indexing configuration.", cmd, false);
 		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_ROOT "/var/db/xapiand", "path", cmd);
 
@@ -526,7 +525,6 @@ void parseOptions(int argc, char** argv) {
 		opts.solo = true;
 #endif
 		opts.strict = strict.getValue();
-		opts.optimal = optimal.getValue();
 		opts.foreign = foreign.getValue();
 		opts.force = force.getValue();
 
@@ -604,19 +602,6 @@ void parseOptions(int argc, char** argv) {
 			}
 		}
 		opts.ev_flags = ev_backend(use.getValue());
-		if (opts.optimal) {
-			opts.uuid_compact = true;
-			opts.uuid_partition = true;
-#if defined XAPIAND_UUID_ENCODED
-			opts.uuid_repr = fnv1ah32::hash("encoded");
-#else
-			opts.uuid_repr = fnv1ah32::hash("simple");
-#endif
-		} else {
-			opts.uuid_compact = false;
-			opts.uuid_partition = false;
-			opts.uuid_repr = fnv1ah32::hash("simple");
-		}
 
 		for (const auto& u : uuid.getValue()) {
 			switch (fnv1ah32::hash(u)) {
@@ -1126,9 +1111,6 @@ void setup() {
 	if (opts.strict) {
 		modes.emplace_back("strict");
 	}
-	if (opts.optimal) {
-		modes.emplace_back("optimal");
-	}
 	if (!modes.empty()) {
 		L_INFO("Activated " + string::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
 	}
@@ -1373,10 +1355,6 @@ int main(int argc, char **argv) {
 
 		if (opts.strict) {
 			default_spc.flags.strict = true;
-		}
-
-		if (opts.optimal) {
-			default_spc.flags.optimal = true;
 		}
 
 		banner();

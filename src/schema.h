@@ -313,7 +313,6 @@ struct required_spc_t {
 
 		bool partial_paths:1;
 		bool is_namespace:1;
-		bool optimal:1;
 
 		// Auxiliar variables.
 		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
