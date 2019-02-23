@@ -225,7 +225,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 		case FieldType::UUID:
 			return uuid(field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {:#04x} is an unknown type", field_type);
+			THROW(SerialisationError, "Type: {:#04x} is an unknown type", toUType(field_type));
 	}
 }
 
@@ -259,7 +259,7 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: {:#04x} is an unknown type", field_type);
+			THROW(SerialisationError, "Type: {:#04x} is an unknown type", toUType(field_type));
 	}
 }
 
@@ -1175,7 +1175,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 			result = uuid(serialised_val);
 			break;
 		default:
-			THROW(SerialisationError, "Type: {:#04x} is an unknown type", field_type);
+			THROW(SerialisationError, "Type: {:#04x} is an unknown type", toUType(field_type));
 	}
 
 	return result;
