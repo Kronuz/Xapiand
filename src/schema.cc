@@ -2668,7 +2668,6 @@ Schema::index(const MsgPack& object,
 		// Add ID.
 		doc.add_boolean_term(term_id);
 		doc.add_value(spc_id.slot, unprefixed_term_id);
-		data_obj[ID_FIELD_NAME] = document_id;
 
 		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
 	} catch (...) {
