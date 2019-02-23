@@ -1404,6 +1404,51 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 }
 
 
+MSet
+DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned limit, unsigned check_at_least, Xapian::KeyMaker* sorter, Xapian::MatchSpy* spy)
+{
+	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), offset, limit, check_at_least);
+
+	MSet mset;
+
+	lock_database lk_db(this);
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			auto final_query = query;
+			Xapian::Enquire enquire(*db());
+			if (spy) {
+				enquire.add_matchspy(spy);
+			}
+			if (sorter) {
+				enquire.set_sort_by_key_then_relevance(sorter, false);
+			}
+			enquire.set_query(final_query);
+			mset = enquire.get_mset(offset, limit, check_at_least);
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const Xapian::QueryParserError& exc) {
+			THROW(ClientError, exc.get_description());
+		} catch (const Xapian::Error& exc) {
+			THROW(Error, exc.get_description());
+		} catch (const std::exception& exc) {
+			THROW(ClientError, "The search was not performed: {}", exc.what());
+		}
+		database()->reopen();
+	}
+
+	return mset;
+}
+
+
 bool
 DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins)
 {

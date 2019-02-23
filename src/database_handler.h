@@ -220,6 +220,7 @@ public:
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_all_mset(std::string_view term = "", Xapian::docid initial = 0, size_t limit = -1);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
+	MSet get_mset(const Xapian::Query& query, unsigned offset = 0, unsigned limit = 10, unsigned check_at_least = 0, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr);
 
 	void dump_metadata(int fd);
 	void dump_schema(int fd);
