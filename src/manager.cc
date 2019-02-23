@@ -1419,7 +1419,7 @@ index_calculate_replicas(const std::string& normalized_path)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "replicas", {
-				{ RESERVED_SLOT, 1 },
+				{ RESERVED_SLOT, 2 },
 				{ RESERVED_STORE, false },
 				{ RESERVED_ACCURACY, MsgPack(MsgPack::Type::ARRAY) },
 				{ RESERVED_INDEX, "field_values" },
