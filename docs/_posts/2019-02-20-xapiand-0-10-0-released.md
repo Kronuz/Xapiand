@@ -6,7 +6,11 @@ version: 0.10.0
 categories: [release]
 ---
 
-This release fixes a few issues while searching geospatial data and changes
+Cluster used to save its nodes and index of databases in the root database;
+this release makes a **BREAKING CHANGE** and moves those two things into
+separate databases: `.cluster` and `.index`.
+
+This release also fixes a few issues while searching geospatial data and changes
 default accuracies for numbers and geospatial levels. It also adds
 `_match_all` and `_match_none` and changes the default stopper during indexation
 (to "stop stemmed").
@@ -17,6 +21,8 @@ default accuracies for numbers and geospatial levels. It also adds
 - Added the Elite Set Operator
 
 ### Changed
+- **BREAKING**: Cluster using `.index` and `.cluster` databases
+- **BREAKING**: Indexes paths (endpoints) no longer have a trailing slash
 - Use OP_FILTER for terms in range queries
 - Flattened range queries
 - The default stopper during indexation is now `stop_stemmed`

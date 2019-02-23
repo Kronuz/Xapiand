@@ -14,7 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #unreleased }
 
 ### Fixed
-- Cluster is now functional
+- **BREAKING**: `.index` shared by node
+- Cluster replication is now functional, it was bronken in 0.10.0
 - Fix searching in "_id" field
 
 
@@ -44,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the Elite Set Operator
 
 ### Changed
+- **BREAKING**: Cluster using `.index` and `.cluster` databases
+- **BREAKING**: Indexes paths (endpoints) no longer have a trailing slash
 - Use OP_FILTER for terms in range queries
 - Flattened range queries
 - The default stopper during indexation is now `stop_stemmed`
@@ -385,7 +388,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.10.2...HEAD
+[0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.1...v0.10.2
+[0.10.1]: https://github.com/Kronuz/Xapiand/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/Kronuz/Xapiand/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/Kronuz/Xapiand/compare/v0.8.15...v0.9.0
 [0.8.15]: https://github.com/Kronuz/Xapiand/compare/v0.8.14...v0.8.15
