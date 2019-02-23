@@ -1418,14 +1418,14 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 			lk.unlock();
 		} else {
 			lk.unlock();
-			Endpoints endpoints;
+			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					endpoints.add(Endpoint{string::format(".index/{}", node->idx)});
+					index_endpoints.add(Endpoint{string::format(".index/{}", node->idx)});
 				}
 			}
 			try {
-				db_handler.reset(endpoints);
+				db_handler.reset(index_endpoints);
 				obj = db_handler.get_document(normalized_path).get_obj();
 				lk.lock();
 				resolve_index_lru.insert(std::make_pair(normalized_path, obj));

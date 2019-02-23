@@ -2657,8 +2657,8 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 	}
 
 	if (request.path_parser.off_hst != nullptr) {
-		auto node_name = request.path_parser.get_hst();
 #ifdef XAPIAND_CLUSTERING
+		auto node_name = request.path_parser.get_hst();
 		auto node = Node::get_node(node_name);
 		if (!node) {
 			index_path = string::format("xapian://{}/{}", node_name, index_path);
@@ -2670,11 +2670,11 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 		if (endpoint.node.replication_port == 0) {
 			endpoint.node.replication_port = XAPIAND_REPLICATION_SERVERPORT;
 		}
+		endpoints.add(endpoint);
 #else
 		Endpoint endpoint(index_path);
-		ignore_unused(node_name);
-#endif
 		endpoints.add(endpoint);
+#endif
 	} else {
 		endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{index_path}, master));
 	}

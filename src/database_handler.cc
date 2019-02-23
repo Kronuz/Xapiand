@@ -1353,7 +1353,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		fuzzy_rset = get_rset(query, query_field.fuzzy.n_rset);
 	}
 
-	MSet mset{};
+	MSet mset;
 
 	lock_database lk_db(this);
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1363,7 +1363,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			if (collapse_key != Xapian::BAD_VALUENO) {
 				enquire.set_collapse_key(collapse_key, query_field.collapse_max);
 			}
-			if (aggs != nullptr) {
+			if (aggs) {
 				enquire.add_matchspy(aggs);
 			}
 			if (sorter) {
