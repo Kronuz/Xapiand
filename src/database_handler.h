@@ -218,7 +218,7 @@ public:
 	void delete_schema();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
-	MSet get_all_mset(Xapian::docid initial=0, size_t limit=-1);
+	MSet get_all_mset(std::string_view term = "", Xapian::docid initial = 0, size_t limit = -1);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
 
 	void dump_metadata(int fd);

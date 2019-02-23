@@ -1202,18 +1202,20 @@ DatabaseHandler::prepare_document(const MsgPack& obj)
 
 
 MSet
-DatabaseHandler::get_all_mset(Xapian::docid initial, size_t limit)
+DatabaseHandler::get_all_mset(std::string_view term, Xapian::docid initial, size_t limit)
 {
 	L_CALL("DatabaseHandler::get_all_mset()");
 
 	MSet mset{};
 
+	auto term_string = std::string(term);
+
 	lock_database lk_db(this);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto it = db()->postlist_begin("");
-			auto it_e = db()->postlist_end("");
+			auto it = db()->postlist_begin(term_string);
+			auto it_e = db()->postlist_end(term_string);
 			if (initial) {
 				it.skip_to(initial);
 			}
