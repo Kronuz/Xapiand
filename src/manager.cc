@@ -1387,6 +1387,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 	if (normalized_path == ".cluster") {
 		// Cluster database is always in the master
 		nodes.push_back(Node::leader_node());
+		nodes.push_back(Node::local_node());
 		return nodes;
 	}
 
@@ -1395,8 +1396,8 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 		int errno_save;
 		size_t idx = strict_stoll(&errno_save, &normalized_path[7]);
 		if (errno_save == 0) {
-			auto node = Node::get_node(idx);
-			nodes.push_back(node);
+			nodes.push_back(Node::get_node(idx));
+			nodes.push_back(Node::local_node());
 			return nodes;
 		}
 	}
