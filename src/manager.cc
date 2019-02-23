@@ -649,7 +649,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 					auto did = *m;
 					auto document = db_handler.get_document(did);
 					auto obj = document.get_obj();
-					if (obj[ID_FIELD_NAME] == local_node->lower_name()) {
+					if (document.get_value(0) == local_node->lower_name()) {
 						found = true;
 					}
 					#ifdef XAPIAND_CLUSTERING
@@ -1346,8 +1346,8 @@ XapiandManager::load_nodes()
 	for (auto m = mset.begin(); m != m_e; ++m) {
 		auto did = *m;
 		auto document = db_handler.get_document(did);
-		auto obj = document.get_obj();
-		db_nodes.push_back(std::make_pair(static_cast<size_t>(did), obj[ID_FIELD_NAME].as_str()));
+		auto id = document.get_value(0);
+		db_nodes.push_back(std::make_pair(static_cast<size_t>(did), id));
 	}
 
 	for (const auto& node : Node::nodes()) {
