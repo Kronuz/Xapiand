@@ -4771,39 +4771,42 @@ Schema::validate_required_data(MsgPack& mut_properties)
 	}
 
 	if (specification.index != TypeIndex::NONE) {
-		// Write prefix in properties.
-		mut_properties[RESERVED_PREFIX] = specification.local_prefix.field;
-
-		// Process RESERVED_ACCURACY and RESERVED_ACC_PREFIX
-		if (!set_acc.empty()) {
-			specification.acc_prefix.clear();
-			for (const auto& acc : set_acc) {
-				specification.acc_prefix.push_back(get_prefix(acc));
-			}
-			specification.accuracy.assign(set_acc.begin(), set_acc.end());
-			switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-				case FieldType::DATE:
-				case FieldType::TIME:
-				case FieldType::TIMEDELTA:
-					mut_properties[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
-					for (auto& acc : specification.accuracy) {
-						mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
-					}
-					break;
-				default:
-					mut_properties[RESERVED_ACCURACY] = specification.accuracy;
-					break;
-			}
-			mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+		if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+			// Write RESERVED_PREFIX in properties (if it has terms).
+			mut_properties[RESERVED_PREFIX] = specification.local_prefix.field;
 		}
 
 		if (specification.flags.concrete) {
-			// Process RESERVED_SLOT
-			if (specification.slot == Xapian::BAD_VALUENO) {
-				specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
-			}
+			if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
+				// Write RESERVED_SLOT in properties (if it has values).
+				if (specification.slot == Xapian::BAD_VALUENO) {
+					specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+				}
+				mut_properties[RESERVED_SLOT] = specification.slot;
 
-			mut_properties[RESERVED_SLOT] = specification.slot;
+				// Write RESERVED_ACCURACY and RESERVED_ACC_PREFIX in properties.
+				if (!set_acc.empty()) {
+					specification.acc_prefix.clear();
+					for (const auto& acc : set_acc) {
+						specification.acc_prefix.push_back(get_prefix(acc));
+					}
+					specification.accuracy.assign(set_acc.begin(), set_acc.end());
+					switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+						case FieldType::DATE:
+						case FieldType::TIME:
+						case FieldType::TIMEDELTA:
+							mut_properties[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
+							for (auto& acc : specification.accuracy) {
+								mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
+							}
+							break;
+						default:
+							mut_properties[RESERVED_ACCURACY] = specification.accuracy;
+							break;
+					}
+					mut_properties[RESERVED_ACC_PREFIX] = specification.acc_prefix;
+				}
+			}
 		}
 	}
 
