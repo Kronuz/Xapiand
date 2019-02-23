@@ -14,9 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #unreleased }
 
 ### Fixed
-- **BREAKING**: `.index` shared by node
 - Cluster replication is now functional, it was bronken in 0.10.0
 - Fix searching in "_id" field
+
+### Changed
+- **BREAKING**: `.index` shared by node
+- Never overwrite an existent database
+- Index only adds new indexes during write operations
+
+### Added
+- Added * for indexes
 
 
 ---
