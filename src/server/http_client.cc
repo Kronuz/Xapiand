@@ -2656,27 +2656,66 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 		}
 	}
 
+	std::vector<std::string> index_paths;
+
+	MSet mset;
+	if (string::endswith(index_path, '*')) {
+		index_path.pop_back();
+		stripped_index_path = index_path;
+		if (string::endswith(stripped_index_path, '/')) {
+			stripped_index_path.pop_back();
+		}
+		Endpoints index_endpoints;
+		for (auto& node : Node::nodes()) {
+			if (node->idx) {
+				index_endpoints.add(Endpoint{string::format(".index/{}", node->idx)});
+			}
+		}
+		DatabaseHandler db_handler;
+		db_handler.reset(index_endpoints);
+		if (stripped_index_path.empty()) {
+			mset = db_handler.get_all_mset("", 0, 100);
+		} else {
+			auto query = Xapian::Query(Xapian::Query::OP_OR,
+					Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query("QS" + index_path)),
+					Xapian::Query("QS" + stripped_index_path));
+			mset = db_handler.get_mset(query, 0, 100);
+		}
+		const auto m_e = mset.end();
+		for (auto m = mset.begin(); m != m_e; ++m) {
+			auto document = db_handler.get_document(*m);
+			index_path = document.get_value(0);
+			index_paths.push_back(std::move(index_path));
+		}
+	} else {
+		index_paths.push_back(std::move(index_path));
+	}
+
 	if (request.path_parser.off_hst != nullptr) {
 #ifdef XAPIAND_CLUSTERING
 		auto node_name = request.path_parser.get_hst();
 		auto node = Node::get_node(node_name);
-		if (!node) {
-			index_path = string::format("xapian://{}/{}", node_name, index_path);
+		for (const auto& path : index_paths) {
+			auto endpoint = node
+				? Endpoint{path, node.get()}
+				: Endpoint{string::format("xapian://{}/{}", node_name, path), node.get()};
+			if (endpoint.node.remote_port == 0) {
+				endpoint.node.remote_port = XAPIAND_REMOTE_SERVERPORT;
+			}
+			if (endpoint.node.replication_port == 0) {
+				endpoint.node.replication_port = XAPIAND_REPLICATION_SERVERPORT;
+			}
+			endpoints.add(endpoint);
 		}
-		Endpoint endpoint{index_path, node.get()};
-		if (endpoint.node.remote_port == 0) {
-			endpoint.node.remote_port = XAPIAND_REMOTE_SERVERPORT;
-		}
-		if (endpoint.node.replication_port == 0) {
-			endpoint.node.replication_port = XAPIAND_REPLICATION_SERVERPORT;
-		}
-		endpoints.add(endpoint);
 #else
-		Endpoint endpoint(index_path);
-		endpoints.add(endpoint);
+		for (const auto& path : index_paths) {
+			endpoints.add(Endpoint{path});
+		}
 #endif
 	} else {
-		endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{index_path}, master));
+		for (const auto& path : index_paths) {
+			endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{path}, master));
+		}
 	}
 	L_HTTP("Endpoint: -> {}", endpoints.to_string());
 }
