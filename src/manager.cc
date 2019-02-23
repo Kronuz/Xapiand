@@ -1413,11 +1413,16 @@ index_calculate_replicas(const std::string& normalized_path)
 		Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		MsgPack obj = {
+			{ RESERVED_STORE, false },
 			{ ID_FIELD_NAME, {
+				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "replicas", {
-				{ RESERVED_INDEX, "none" },
+				{ RESERVED_SLOT, 1 },
+				{ RESERVED_STORE, false },
+				{ RESERVED_ACCURACY, MsgPack(MsgPack::Type::ARRAY) },
+				{ RESERVED_INDEX, "field_values" },
 				{ RESERVED_TYPE,  "array/positive" },
 				{ RESERVED_VALUE, std::move(replicas) },
 			} },
