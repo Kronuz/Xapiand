@@ -2684,7 +2684,7 @@ HttpClient::_endpoint_maker(Request& request, bool master, bool index)
 		const auto m_e = mset.end();
 		for (auto m = mset.begin(); m != m_e; ++m) {
 			auto document = db_handler.get_document(*m);
-			index_path = document.get_value(0);
+			index_path = document.get_value(DB_SLOT_ID);
 			index_paths.push_back(std::move(index_path));
 		}
 	} else {
