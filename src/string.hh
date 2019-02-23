@@ -34,7 +34,6 @@
 #include "cassert.h"          // for ASSERT
 #include "chars.hh"           // for chars::tolower
 #include "fmt/format.h"       // for fmt::format
-#include "fmt/ostream.h"      // for operator<<
 #include "log.h"              // for L_DEBUG_TRY
 #include "repr.hh"            // for repr
 #include "split.h"            // for Split

@@ -29,7 +29,6 @@
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 
 #include "fmt/format.h"       // for fmt::format_args, fmt::vsformat, fmt::make_format_args
-#include "fmt/ostream.h"      // for operator<<
 #include "hashes.hh"          // for fnv1ah32
 #include "lazy.hh"            // for LAZY
 #include "traceback.h"        // for TRACEBACK
