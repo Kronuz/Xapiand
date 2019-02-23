@@ -1532,7 +1532,7 @@ HttpClient::metrics_view(Request& request)
 {
 	L_CALL("HttpClient::metrics_view()");
 
-	endpoints_maker(request, false);
+	endpoints_maker(request, false, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1546,7 +1546,7 @@ HttpClient::document_info_view(Request& request)
 {
 	L_CALL("HttpClient::document_info_view()");
 
-	endpoints_maker(request, false);
+	endpoints_maker(request, false, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1567,7 +1567,7 @@ HttpClient::delete_document_view(Request& request)
 	L_CALL("HttpClient::delete_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	std::string doc_id(request.path_parser.get_id());
 
@@ -1605,7 +1605,7 @@ HttpClient::delete_schema_view(Request& request)
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1641,7 +1641,7 @@ HttpClient::index_document_view(Request& request)
 	}
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1676,7 +1676,7 @@ HttpClient::write_schema_view(Request& request)
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1709,7 +1709,7 @@ HttpClient::update_document_view(Request& request)
 	L_CALL("HttpClient::update_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	std::string doc_id(request.path_parser.get_id());
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
@@ -1773,7 +1773,7 @@ HttpClient::metadata_view(Request& request)
 	enum http_status status_code = HTTP_STATUS_OK;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field.as_volatile);
+	endpoints_maker(request, query_field.as_volatile, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1869,7 +1869,7 @@ HttpClient::info_view(Request& request)
 	auto selector = request.path_parser.get_slc();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field.as_volatile);
+	endpoints_maker(request, query_field.as_volatile, false);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -1965,7 +1965,7 @@ HttpClient::touch_view(Request& request)
 {
 	L_CALL("HttpClient::touch_view()");
 
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1997,7 +1997,7 @@ HttpClient::commit_view(Request& request)
 {
 	L_CALL("HttpClient::commit_view()");
 
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, true);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2029,7 +2029,7 @@ HttpClient::dump_view(Request& request)
 {
 	L_CALL("HttpClient::dump_view()");
 
-	endpoints_maker(request, false);
+	endpoints_maker(request, false, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2094,7 +2094,7 @@ HttpClient::restore_view(Request& request)
 	L_CALL("HttpClient::restore_view()");
 
 	if (request.begining) {
-		endpoints_maker(request, true);
+		endpoints_maker(request, true, true);
 
 		request.processing = std::chrono::system_clock::now();
 
@@ -2148,7 +2148,7 @@ HttpClient::schema_view(Request& request)
 	auto selector = request.path_parser.get_slc();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field.as_volatile);
+	endpoints_maker(request, query_field.as_volatile, false);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -2193,7 +2193,7 @@ HttpClient::wal_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2225,7 +2225,7 @@ HttpClient::check_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(request, true);
+	endpoints_maker(request, true, false);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2258,7 +2258,7 @@ HttpClient::retrieve_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
-	endpoints_maker(request, query_field.as_volatile);
+	endpoints_maker(request, query_field.as_volatile, false);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -2367,7 +2367,7 @@ HttpClient::search_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
-	endpoints_maker(request, query_field.as_volatile);
+	endpoints_maker(request, query_field.as_volatile, false);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -2492,7 +2492,7 @@ HttpClient::count_view(Request& request)
 	L_CALL("HttpClient::count_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
-	endpoints_maker(request, query_field.as_volatile);
+	endpoints_maker(request, query_field.as_volatile, false);
 
 	MSet mset{};
 
@@ -2616,23 +2616,23 @@ HttpClient::url_resolve(Request& request)
 
 
 void
-HttpClient::endpoints_maker(Request& request, bool master)
+HttpClient::endpoints_maker(Request& request, bool master, bool index)
 {
-	L_CALL("HttpClient::endpoints_maker(<request>, <master>)");
+	L_CALL("HttpClient::endpoints_maker(<request>, <master>, <index>)");
 
 	endpoints.clear();
 
 	PathParser::State state;
 	while ((state = request.path_parser.next()) < PathParser::State::END) {
-		_endpoint_maker(request, master);
+		_endpoint_maker(request, master, index);
 	}
 }
 
 
 void
-HttpClient::_endpoint_maker(Request& request, bool master)
+HttpClient::_endpoint_maker(Request& request, bool master, bool index)
 {
-	L_CALL("HttpClient::_endpoint_maker(<request>, <master>)");
+	L_CALL("HttpClient::_endpoint_maker(<request>, <master>, <index>)");
 
 	std::string index_path;
 
@@ -2661,7 +2661,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 	MSet mset;
 	if (string::endswith(index_path, '*')) {
 		index_path.pop_back();
-		stripped_index_path = index_path;
+		auto stripped_index_path = index_path;
 		if (string::endswith(stripped_index_path, '/')) {
 			stripped_index_path.pop_back();
 		}
@@ -2714,7 +2714,7 @@ HttpClient::_endpoint_maker(Request& request, bool master)
 #endif
 	} else {
 		for (const auto& path : index_paths) {
-			endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{path}, master));
+			endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{path}, master, index));
 		}
 	}
 	L_HTTP("Endpoint: -> {}", endpoints.to_string());

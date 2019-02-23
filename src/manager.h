@@ -196,8 +196,8 @@ private:
 	void join_cluster_impl();
 #endif
 
-	std::vector<std::shared_ptr<const Node>> resolve_index_nodes_impl(const std::string& normalized_slashed_path);
-	Endpoint resolve_index_endpoint_impl(const Endpoint& endpoint, bool master);
+	std::vector<std::shared_ptr<const Node>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool index);
+	Endpoint resolve_index_endpoint_impl(const Endpoint& endpoint, bool master, bool index);
 
 	std::string server_metrics_impl();
 
@@ -237,14 +237,14 @@ public:
 		_manager.reset();
 	}
 
-	static std::vector<std::shared_ptr<const Node>> resolve_index_nodes(const std::string& normalized_path) {
+	static std::vector<std::shared_ptr<const Node>> resolve_index_nodes(const std::string& normalized_path, bool index) {
 		ASSERT(_manager);
-		return _manager->resolve_index_nodes_impl(normalized_path);
+		return _manager->resolve_index_nodes_impl(normalized_path, index);
 	}
 
-	static Endpoint resolve_index_endpoint(const Endpoint& endpoint, bool master) {
+	static Endpoint resolve_index_endpoint(const Endpoint& endpoint, bool master, bool index) {
 		ASSERT(_manager);
-		return _manager->resolve_index_endpoint_impl(endpoint, master);
+		return _manager->resolve_index_endpoint_impl(endpoint, master, index);
 	}
 
 	static void setup_node() {

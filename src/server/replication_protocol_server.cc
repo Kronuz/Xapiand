@@ -187,7 +187,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::local_node();
-		auto nodes = XapiandManager::resolve_index_nodes(normalized_path);
+		auto nodes = XapiandManager::resolve_index_nodes(normalized_path, false);
 		for (const auto& node : nodes) {
 			if (Node::is_superset(local_node, node)) {
 				replicated = true;

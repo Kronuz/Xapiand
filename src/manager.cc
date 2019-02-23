@@ -1377,10 +1377,61 @@ XapiandManager::load_nodes()
 #endif
 
 
-std::vector<std::shared_ptr<const Node>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
+std::vector<size_t>
+calculate_replicas(const std::string& normalized_path)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({})", repr(normalized_path));
+	L_CALL("calculate_replicas({})", repr(normalized_path));
+
+	std::vector<size_t> replicas;
+	auto indexed_nodes = Node::indexed_nodes();
+	if (indexed_nodes) {
+		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
+		for (size_t i = std::min(opts.num_replicas + 1, indexed_nodes); i; --i) {
+			auto idx = consistent_hash + 1;
+			replicas.push_back(idx);
+			consistent_hash = idx % indexed_nodes;
+		}
+	}
+	return replicas;
+}
+
+
+std::vector<size_t>
+index_calculate_replicas(const std::string& normalized_path)
+{
+	L_CALL("index_calculate_replicas({})", repr(normalized_path));
+
+	auto replicas = calculate_replicas(normalized_path);
+	if (!replicas.empty()) {
+		std::vector<std::shared_ptr<const Node>> nodes;
+		for (auto idx : replicas) {
+			auto node = Node::get_node(idx);
+			ASSERT(node);
+			nodes.push_back(std::move(node));
+		}
+		auto node = nodes.front();  // first node is master
+		Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
+		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		MsgPack obj = {
+			{ ID_FIELD_NAME, {
+				{ RESERVED_TYPE,  KEYWORD_STR },
+			} },
+			{ "replicas", {
+				{ RESERVED_INDEX, "none" },
+				{ RESERVED_TYPE,  "array/positive" },
+				{ RESERVED_VALUE, std::move(replicas) },
+			} },
+		};
+		db_handler.index(normalized_path, false, obj, true, msgpack_type);
+	}
+	return replicas;
+}
+
+
+std::vector<std::shared_ptr<const Node>>
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool index)
+{
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {})", repr(normalized_path), index ? "true" : "false");
 
 	std::vector<std::shared_ptr<const Node>> nodes;
 
@@ -1404,17 +1455,15 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		DatabaseHandler db_handler;
-
-		MsgPack obj;
+		std::vector<size_t> replicas;
 
 		static std::mutex resolve_index_lru_mtx;
-		static lru::LRU<std::string, MsgPack> resolve_index_lru(1000);
+		static lru::LRU<std::string, std::vector<size_t>> resolve_index_lru(1000);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(normalized_path);
 		if (it != resolve_index_lru.end()) {
-			obj = it->second;
+			replicas = it->second;
 			lk.unlock();
 		} else {
 			lk.unlock();
@@ -1425,58 +1474,43 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 				}
 			}
 			try {
-				db_handler.reset(index_endpoints);
-				obj = db_handler.get_document(normalized_path).get_obj();
+				DatabaseHandler db_handler(index_endpoints);
+				auto obj = db_handler.get_document(normalized_path).get_obj();
+				auto obj_replicas = &obj["replicas"];
+				if (obj_replicas->is_map()) {
+					auto itv = obj_replicas->find(RESERVED_VALUE);
+					if (itv != obj_replicas->end()) {
+						obj_replicas = &itv.value();
+					}
+				}
+				for (const auto& item : *obj_replicas) {
+					size_t idx = item.u64();
+					replicas.push_back(idx);
+					auto node = Node::get_node(idx);
+					ASSERT(node);
+					nodes.push_back(std::move(node));
+				}
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
+				resolve_index_lru.insert(std::make_pair(normalized_path, replicas));
 				lk.unlock();
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 		}
 
-		if (obj.empty()) {
-			auto indexed_nodes = Node::indexed_nodes();
-			if (indexed_nodes) {
-				MsgPack replicas(MsgPack::Type::ARRAY);
-				size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
-				for (size_t i = std::min(opts.num_replicas + 1, indexed_nodes); i; --i) {
-					auto idx = consistent_hash + 1;
-					auto node = Node::get_node(idx);
-					ASSERT(node);
-					nodes.push_back(std::move(node));
-					replicas.append(idx);
-					consistent_hash = idx % indexed_nodes;
-				}
-				auto node = nodes.front();  // first node is master
-				Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
-				db_handler.reset(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				obj = {
-					{ ID_FIELD_NAME, {
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-					{ "replicas", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  "array/positive" },
-						{ RESERVED_VALUE, std::move(replicas) },
-					} },
-				};
-				db_handler.index(normalized_path, false, obj, true, msgpack_type);
-				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_path, obj));
-				lk.unlock();
+		if (replicas.empty()) {
+			if (index) {
+				replicas = index_calculate_replicas(normalized_path);
+			} else {
+				replicas = calculate_replicas(normalized_path);
 			}
-		} else {
-			auto replicas = &obj["replicas"];
-			if (replicas->is_map()) {
-				auto itv = replicas->find(RESERVED_VALUE);
-				if (itv != replicas->end()) {
-					replicas = &itv.value();
-				}
-			}
-			for (const auto& idx : *replicas) {
-				auto node = Node::get_node(idx.as_u64());
+			for (auto idx : replicas) {
+				auto node = Node::get_node(idx);
+				ASSERT(node);
 				nodes.push_back(std::move(node));
 			}
+			lk.lock();
+			resolve_index_lru.insert(std::make_pair(normalized_path, replicas));
+			lk.unlock();
 		}
 	}
 	else
@@ -1492,11 +1526,11 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path)
 
 
 Endpoint
-XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool master)
+XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool master, bool index)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, {})", repr(endpoint.to_string()), master ? "true" : "false");
+	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, {}, {})", repr(endpoint.to_string()), master ? "true" : "false", index ? "true" : "false");
 
-	for (const auto& node : resolve_index_nodes_impl(endpoint.path)) {
+	for (const auto& node : resolve_index_nodes_impl(endpoint.path, index)) {
 		if (Node::is_active(node)) {
 			L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 			return {endpoint, node.get()};
