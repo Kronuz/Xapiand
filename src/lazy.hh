@@ -26,6 +26,8 @@
 #include <type_traits>       // for std::enable_if_t
 #include <utility>           // for std::forward, std::move
 
+#include "fmt/format.h"      // for fmt::formatter
+
 
 template <typename F, std::enable_if_t<std::is_invocable<F&>::value, int> = 0>
 auto eval(F&& invocable) {
@@ -39,11 +41,13 @@ auto eval(Val&& val) {
 }
 
 
-template <class L>
+template <typename L>
 class lazy_eval {
 	const L& lambda;
 
 public:
+	using type = decltype(std::declval<L>()());
+
 	lazy_eval(const L& lambda) : lambda(lambda) {}
 	lazy_eval(lazy_eval&& other) : lambda(std::move(other.lambda)) { }
 	lazy_eval& operator=(lazy_eval&& other) {
@@ -53,11 +57,9 @@ public:
 	lazy_eval(const lazy_eval&) = delete;
 	lazy_eval& operator=(const lazy_eval&) = delete;
 
-	using expression_type = decltype(std::declval<L>()());
+	type operator()() const { return lambda(); }
 
-	explicit operator expression_type() const { return lambda(); }
-
-	expression_type operator()() const { return lambda(); }
+	explicit operator type() const { return lambda(); }
 
 	friend std::ostream& operator<<(std::ostream& os, const lazy_eval<L>& obj) {
 		return os << obj();
@@ -66,9 +68,18 @@ public:
 
 
 template <typename L>
-lazy_eval<L>
+struct fmt::formatter<lazy_eval<L>> : fmt::formatter<typename lazy_eval<L>::type> {
+  auto format(const lazy_eval<L>& val, format_context& ctx) {
+    return fmt::formatter<typename lazy_eval<L>::type>::format(val(), ctx);
+  }
+};
+
+
+template <typename L>
+auto
 make_lazy_eval(L&& lambda) {
-	return {std::forward<L>(lambda)};
+	return lazy_eval<L>{std::forward<L>(lambda)};
 }
+
 
 #define LAZY(Expr) make_lazy_eval([&]() { return eval(Expr); })
