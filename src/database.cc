@@ -251,7 +251,7 @@ Database::~Database() noexcept
 }
 
 
-void
+bool
 Database::reopen_writable()
 {
 	////////////////////////////////////////////////////////////////
@@ -262,6 +262,8 @@ Database::reopen_writable()
 	//    \_/\_/ |_|  |_|\__\__,_|_.__/|_|\___| |____/|____/
 	//
 	L_CALL("Database::reopen_writable()");
+
+	bool created = false;
 
 	if (is_closed()) {
 		THROW(Error, "database is closed");
@@ -302,18 +304,17 @@ Database::reopen_writable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) {
-			build_path_index(endpoint.path);
-		}
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint.path, _flags | XAPIAN_DB_SYNC_MODE);
-		} catch (const Xapian::DatabaseNotFoundError&) {
+			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
+		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 				throw;
 			}
+			build_path_index(endpoint.path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE | XAPIAN_DB_SYNC_MODE);
+			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
+			created = true;
 		}
 		localdb = true;
 	}
@@ -367,9 +368,11 @@ Database::reopen_writable()
 
 	// Ends Writable DB
 	////////////////////////////////////////////////////////////////
+
+	return created;
 }
 
-void
+bool
 Database::reopen_readable()
 {
 	////////////////////////////////////////////////////////////////
@@ -380,6 +383,8 @@ Database::reopen_readable()
 	// |_| \_\___|\__,_|\__,_|\__,_|_.__/|_|\___| |____/|____/
 	//
 	L_CALL("Database::reopen_readable()");
+
+	bool created = false;
 
 	if (is_closed()) {
 		THROW(Error, "database is closed");
@@ -450,7 +455,6 @@ Database::reopen_readable()
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				localdb = true;
 			} catch (const Xapian::DatabaseNotFoundError& exc) {
 				++failures;
 				if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
@@ -459,17 +463,16 @@ Database::reopen_readable()
 					}
 					incomplete.store(true, std::memory_order_relaxed);
 					continue;
-				} else {
-					{
-						build_path_index(endpoint.path);
-						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-						Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE_OR_OVERWRITE);
-					}
-					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-					rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-					localdb = true;
 				}
+				build_path_index(endpoint.path);
+				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+				Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE);
+				created = true;
+
+				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 			}
+			localdb = true;
 		}
 
 		database->add_database(rsdb);
@@ -493,6 +496,8 @@ Database::reopen_readable()
 	reopen_time = std::chrono::system_clock::now();
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
+
+	return created;
 }
 
 bool

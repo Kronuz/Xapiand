@@ -81,8 +81,8 @@ private:
 	void storage_commit();
 #endif /* XAPIAND_DATA_STORAGE */
 
-	void reopen_writable();
-	void reopen_readable();
+	bool reopen_writable();
+	bool reopen_readable();
 
 public:
 	DatabaseEndpoint& endpoints;
