@@ -5024,7 +5024,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 inline void
 Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos)
 {
-	L_CALL("Schema::void(<doc>, <field_spc>, {})", pos);
+	L_CALL("Schema::index_simple_term(<doc>, {}, <field_spc>, {})", repr(term), pos);
 
 	if (term.size() > 245) {
 		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
