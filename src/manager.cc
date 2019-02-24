@@ -79,6 +79,7 @@
 #include "readable_revents.hh"                   // for readable_revents
 #include "schemas_lru.h"                         // for SchemasLRU
 #include "serialise.h"                           // for KEYWORD_STR
+#include "serialise_list.h"                      // for StringList
 #include "server/http.h"                         // for Http
 #include "server/http_client.h"                  // for HttpClient
 #include "server/http_server.h"                  // for HttpServer
@@ -1480,16 +1481,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			}
 			try {
 				DatabaseHandler db_handler(index_endpoints);
-				auto obj = db_handler.get_document(normalized_path).get_obj();
-				auto obj_replicas = &obj["replicas"];
-				if (obj_replicas->is_map()) {
-					auto itv = obj_replicas->find(RESERVED_VALUE);
-					if (itv != obj_replicas->end()) {
-						obj_replicas = &itv.value();
-					}
-				}
-				for (const auto& item : *obj_replicas) {
-					size_t idx = item.u64();
+				auto document = db_handler.get_document(normalized_path);
+				for (auto& val : StringList(document.get_value(2))) {
+					size_t idx = unserialise_length(val);
 					replicas.push_back(idx);
 					auto node = Node::get_node(idx);
 					ASSERT(node);
