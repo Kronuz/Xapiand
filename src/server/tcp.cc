@@ -79,7 +79,7 @@ TCP::~TCP() noexcept
 
 bool
 TCP::close(bool close) {
-	L_CALL("TCP::close({})", close ? "true" : "false");
+	L_CALL("TCP::close({})", close);
 
 	bool was_closed = closed.exchange(true);
 	if (!was_closed && sock != -1) {

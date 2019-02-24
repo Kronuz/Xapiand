@@ -1436,7 +1436,7 @@ index_calculate_replicas(const std::string& normalized_path)
 std::vector<std::shared_ptr<const Node>>
 XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool index)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {})", repr(normalized_path), index ? "true" : "false");
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {})", repr(normalized_path), index);
 
 	std::vector<std::shared_ptr<const Node>> nodes;
 
@@ -1533,7 +1533,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 Endpoint
 XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool master, bool index)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, {}, {})", repr(endpoint.to_string()), master ? "true" : "false", index ? "true" : "false");
+	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, {}, {})", repr(endpoint.to_string()), master, index);
 
 	for (const auto& node : resolve_index_nodes_impl(endpoint.path, index)) {
 		if (Node::is_active(node)) {

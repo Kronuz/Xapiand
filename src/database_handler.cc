@@ -518,7 +518,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 std::tuple<std::string, Xapian::Document, MsgPack>
 DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -561,7 +561,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 DataType
 DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit)
 {
-	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit ? "true" : "false");
+	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit);
 
 	auto prepared = prepare(document_id, obj, data, old_document_pair);
 	auto& term_id = std::get<0>(prepared);
@@ -577,7 +577,7 @@ DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& dat
 DataType
 DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored ? "true" : "false", repr(body.to_string()), commit ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -620,7 +620,7 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 DataType
 DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool commit, const ct_type_t& /*ct_type*/)
 {
-	L_CALL("DatabaseHandler::patch({}, <patches>, {})", repr(document_id.to_string()), commit ? "true" : "false");
+	L_CALL("DatabaseHandler::patch({}, <patches>, {})", repr(document_id.to_string()), commit);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -662,7 +662,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 DataType
 DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::merge({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored ? "true" : "false", commit ? "true" : "false", ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::merge({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored, commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -1539,7 +1539,7 @@ DatabaseHandler::get_metadata(std::string_view key)
 bool
 DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit, bool overwrite)
 {
-	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit ? "true" : "false", overwrite ? "true" : "false");
+	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, overwrite);
 
 	lock_database lk_db(this);
 	if (!overwrite) {
@@ -1636,7 +1636,7 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 MsgPack
 DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 {
-	L_CALL("DatabaseHandler::get_document_info({}, {})", repr(document_id), raw_data ? "true" : "false");
+	L_CALL("DatabaseHandler::get_document_info({}, {})", repr(document_id), raw_data);
 
 	auto document = get_document(document_id);
 	const auto data = Data(document.get_data());
@@ -1725,7 +1725,7 @@ DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
 bool
 DatabaseHandler::commit(bool wal)
 {
-	L_CALL("DatabaseHandler::commit({})", wal ? "true" : "false");
+	L_CALL("DatabaseHandler::commit({})", wal);
 
 	lock_database lk_db(this);
 	return database()->commit(wal);

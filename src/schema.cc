@@ -2266,7 +2266,7 @@ template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
 Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless)
 {
-	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{}, allow_versionless:{})", repr(object.to_string()), allow_foreign ? "true" : "false", allow_root ? "true" : "false", allow_versionless ? "true" : "false");
+	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{}, allow_versionless:{})", repr(object.to_string()), allow_foreign, allow_root, allow_versionless);
 
 	// Check foreign:
 	if (allow_foreign) {
@@ -3780,7 +3780,7 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 bool
 Schema::write(const MsgPack& object, bool replace)
 {
-	L_CALL("Schema::write({}, {}, {})", repr(object.to_string()), replace ? "true" : "false");
+	L_CALL("Schema::write({}, {}, {})", repr(object.to_string()), replace);
 
 	try {
 		map_values.clear();
@@ -4208,7 +4208,7 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 std::unordered_set<std::string>
 Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes, bool uuid_path)
 {
-	L_CALL("Schema::get_partial_paths({}, {})", partial_prefixes.size(), uuid_path ? "true" : "false");
+	L_CALL("Schema::get_partial_paths({}, {})", partial_prefixes.size(), uuid_path);
 
 	if (partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
 		THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
@@ -4908,7 +4908,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
 {
-	L_CALL("Schema::index_item(<doc>, {}, {}, {}, {})", repr(value.to_string()), repr(data.to_string()), pos, add_value ? "true" : "false");
+	L_CALL("Schema::index_item(<doc>, {}, {}, {}, {})", repr(value.to_string()), repr(data.to_string()), pos, add_value);
 
 	L_SCHEMA("Final Specification: {}", specification.to_string(4));
 
@@ -4948,7 +4948,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 void
 Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
 {
-	L_CALL("Schema::index_item(<doc>, {}, {}, {})", repr(values.to_string()), repr(data.to_string()), add_values ? "true" : "false");
+	L_CALL("Schema::index_item(<doc>, {}, {}, {})", repr(values.to_string()), repr(data.to_string()), add_values);
 
 	if (values.is_array()) {
 		set_type_to_array();
@@ -5261,7 +5261,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			} else {
 				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix.field + field_spc.get_ctype());
 			}
-			L_INDEX("Field Text to Index [{}] => {}:{} [Positions: {}]", pos, field_spc.prefix.field, serialise_val, positions ? "true" : "false");
+			L_INDEX("Field Text to Index [{}] => {}:{} [Positions: {}]", pos, field_spc.prefix.field, serialise_val, positions);
 			break;
 		}
 
@@ -8357,7 +8357,7 @@ Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& doc_boo
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
-				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.flags.bool_term ? "true" : "false", _bool_term ? "true" : "false", repr(specification.full_meta_name));
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.bool_term), _bool_term, repr(specification.full_meta_name));
 			}
 		} else {
 			THROW(ClientError, "{} only is allowed in keyword type fields", repr(prop_name));
@@ -8378,7 +8378,7 @@ Schema::consistency_partials(std::string_view prop_name, const MsgPack& doc_part
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
 			const auto _partials = doc_partials.boolean();
 			if (specification.flags.partials != _partials) {
-				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.partials ? "true" : "false", _partials ? "true" : "false");
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.partials), _partials);
 			}
 		} else {
 			THROW(ClientError, "{} only is allowed in geospatial type fields", repr(prop_name));
@@ -8419,7 +8419,7 @@ Schema::consistency_dynamic(std::string_view prop_name, const MsgPack& doc_dynam
 	try {
 		const auto _dynamic = doc_dynamic.boolean();
 		if (specification.flags.dynamic != _dynamic) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.dynamic ? "true" : "false", _dynamic ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.dynamic), _dynamic);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8436,7 +8436,7 @@ Schema::consistency_strict(std::string_view prop_name, const MsgPack& doc_strict
 	try {
 		const auto _strict = doc_strict.boolean();
 		if (specification.flags.strict != _strict) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.strict ? "true" : "false", _strict ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.strict), _strict);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8453,7 +8453,7 @@ Schema::consistency_date_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _date_detection = doc_date_detection.boolean();
 		if (specification.flags.date_detection != _date_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.date_detection ? "true" : "false", _date_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.date_detection), _date_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8470,7 +8470,7 @@ Schema::consistency_time_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _time_detection = doc_time_detection.boolean();
 		if (specification.flags.time_detection != _time_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.time_detection ? "true" : "false", _time_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.time_detection), _time_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8487,7 +8487,7 @@ Schema::consistency_timedelta_detection(std::string_view prop_name, const MsgPac
 	try {
 		const auto _timedelta_detection = doc_timedelta_detection.boolean();
 		if (specification.flags.timedelta_detection != _timedelta_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.timedelta_detection ? "true" : "false", _timedelta_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.timedelta_detection), _timedelta_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8504,7 +8504,7 @@ Schema::consistency_numeric_detection(std::string_view prop_name, const MsgPack&
 	try {
 		const auto _numeric_detection = doc_numeric_detection.boolean();
 		if (specification.flags.numeric_detection != _numeric_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.numeric_detection ? "true" : "false", _numeric_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.numeric_detection), _numeric_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8521,7 +8521,7 @@ Schema::consistency_geo_detection(std::string_view prop_name, const MsgPack& doc
 	try {
 		const auto _geo_detection = doc_geo_detection.boolean();
 		if (specification.flags.geo_detection != _geo_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.geo_detection ? "true" : "false", _geo_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.geo_detection), _geo_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8538,7 +8538,7 @@ Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _bool_detection = doc_bool_detection.boolean();
 		if (specification.flags.bool_detection != _bool_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.bool_detection ? "true" : "false", _bool_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.bool_detection), _bool_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8555,7 +8555,7 @@ Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _text_detection = doc_text_detection.boolean();
 		if (specification.flags.text_detection != _text_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.text_detection ? "true" : "false", _text_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.text_detection), _text_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8572,7 +8572,7 @@ Schema::consistency_term_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _term_detection = doc_term_detection.boolean();
 		if (specification.flags.term_detection != _term_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.term_detection ? "true" : "false", _term_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.term_detection), _term_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8589,7 +8589,7 @@ Schema::consistency_uuid_detection(std::string_view prop_name, const MsgPack& do
 	try {
 		const auto _uuid_detection = doc_uuid_detection.boolean();
 		if (specification.flags.uuid_detection != _uuid_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.uuid_detection ? "true" : "false", _uuid_detection ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.uuid_detection), _uuid_detection);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8606,7 +8606,7 @@ Schema::consistency_namespace(std::string_view prop_name, const MsgPack& doc_nam
 	try {
 		const auto _is_namespace = doc_namespace.boolean();
 		if (specification.flags.is_namespace != _is_namespace) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), specification.flags.is_namespace ? "true" : "false", _is_namespace ? "true" : "false");
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.is_namespace), _is_namespace);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
@@ -8710,7 +8710,7 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 const MsgPack
 Schema::get_full(bool readable) const
 {
-	L_CALL("Schema::get_full({})", readable ? "true" : "false");
+	L_CALL("Schema::get_full({})", readable);
 
 	auto full_schema = get_schema().clone();
 	if (readable) {
@@ -8758,7 +8758,7 @@ Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
 void
 Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 {
-	L_CALL("Schema::dispatch_readable({}, {})", repr(item_schema.to_string()), at_root ? "true" : "false");
+	L_CALL("Schema::dispatch_readable({}, {})", repr(item_schema.to_string()), at_root);
 
 	// Change this item of schema in readable form.
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {

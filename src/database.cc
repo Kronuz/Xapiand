@@ -625,7 +625,7 @@ Database::reset() noexcept
 void
 Database::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)
 {
-	L_CALL("Database::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_ ? "true" : "false", closed_ ? "true" : "false", repr(endpoints.to_string()), _database ? "<database>" : "null", is_modified() ? "true" : "false", is_closed() ? "true" : "false", transaction == Database::Transaction::none ? "<none>" : "<transaction>", throw_exceptions ? "true" : "false");
+	L_CALL("Database::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, repr(endpoints.to_string()), _database ? "<database>" : "null", is_modified(), is_closed(), transaction == Database::Transaction::none ? "<none>" : "<transaction>", throw_exceptions);
 
 	if (
 		commit_ &&
@@ -704,7 +704,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 bool
 Database::commit(bool wal_, bool send_update)
 {
-	L_CALL("Database::commit({})", wal_ ? "true" : "false");
+	L_CALL("Database::commit({})", wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -773,7 +773,7 @@ Database::commit(bool wal_, bool send_update)
 void
 Database::begin_transaction(bool flushed)
 {
-	L_CALL("Database::begin_transaction({})", flushed ? "true" : "false");
+	L_CALL("Database::begin_transaction({})", flushed);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -830,7 +830,7 @@ Database::cancel_transaction()
 void
 Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
-	L_CALL("Database::delete_document({}, {}, {})", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::delete_document({}, {}, {})", did, commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -881,7 +881,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 void
 Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 {
-	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -1020,7 +1020,7 @@ Database::storage_commit()
 Xapian::docid
 Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 {
-	L_CALL("Database::add_document(<doc>, {}, {})", commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::add_document(<doc>, {}, {})", commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -1088,7 +1088,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 Xapian::docid
 Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_, bool wal_)
 {
-	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -1155,7 +1155,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 Xapian::docid
 Database::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_)
 {
-	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -1223,7 +1223,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 void
 Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_, bool wal_)
 {
-	L_CALL("Database::add_spelling(<word, <freqinc>, {}, {})", commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");
@@ -1273,7 +1273,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 Xapian::termcount
 Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_, bool wal_)
 {
-	L_CALL("Database::remove_spelling(<word>, <freqdec>, {}, {})", commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
 
 	Xapian::termcount result = 0;
 
@@ -1529,7 +1529,7 @@ Database::get_metadata_keys()
 void
 Database::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {
-	L_CALL("Database::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_ ? "true" : "false", wal_ ? "true" : "false");
+	L_CALL("Database::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
 	if (!is_writable()) {
 		THROW(Error, "database is read-only");

@@ -136,7 +136,7 @@ int test_url_path() {
 	for (const auto& url : urls) {
 		std::string result = run_url_path(url.path, url.clear_id);
 		if (result != url.expected) {
-			L_ERR("Error: the value obtained from the url path: {{ \"{}\", {} }}\n  should be:\n    {}\n  but it is:\n    {}\n", url.path, url.clear_id ? "true" : "false", url.expected, result);
+			L_ERR("Error: the value obtained from the url path: {{ \"{}\", {} }}\n  should be:\n    {}\n  but it is:\n    {}\n", url.path, url.clear_id, url.expected, result);
 			++count;
 		}
 	}

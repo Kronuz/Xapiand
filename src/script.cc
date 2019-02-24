@@ -224,7 +224,7 @@ Script::process_ecma(const MsgPack& _ecma)
 MsgPack
 Script::process_chai(bool strict)
 {
-	L_CALL("Script::process_chai({})", strict ? "true" : "false");
+	L_CALL("Script::process_chai({})", strict);
 
 #if defined(XAPIAND_CHAISCRIPT)
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
@@ -289,7 +289,7 @@ Script::process_chai(bool strict)
 MsgPack
 Script::process_ecma(bool strict)
 {
-	L_CALL("Script::process_ecma({})", strict ? "true" : "false");
+	L_CALL("Script::process_ecma({})", strict);
 
 #if defined(XAPIAND_V8)
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
@@ -355,7 +355,7 @@ Script::process_ecma(bool strict)
 MsgPack
 Script::process_script(bool strict)
 {
-	L_CALL("Script::process_script({})", strict ? "true" : "false");
+	L_CALL("Script::process_script({})", strict);
 
 	switch (type) {
 		case Type::CHAI:

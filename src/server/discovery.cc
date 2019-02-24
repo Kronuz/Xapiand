@@ -535,7 +535,7 @@ Discovery::raft_request_vote(Message type, const std::string& message)
 		granted = raft_voted_for == *node;
 	}
 
-	L_RAFT("   << REQUEST_VOTE_RESPONSE {{node:{}, term:{}, granted:{}}}", node->name(), term, granted ? "true" : "false");
+	L_RAFT("   << REQUEST_VOTE_RESPONSE {{node:{}, term:{}, granted:{}}}", node->name(), term, granted);
 	send_message(Message::RAFT_REQUEST_VOTE_RESPONSE,
 		node->serialise() +
 		serialise_length(term) +
@@ -775,7 +775,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		response_type = Message::RAFT_HEARTBEAT_RESPONSE;
 	}
 	L_RAFT("   << {} {{node:{}, term:{}, success:{}}}",
-		MessageNames(response_type), local_node->name(), term, success ? "true" : "false");
+		MessageNames(response_type), local_node->name(), term, success);
 	send_message(response_type,
 		local_node->serialise() +
 		serialise_length(term) +
@@ -845,7 +845,7 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 			size_t match_index = unserialise_length(&p, p_end);
 			raft_next_indexes[node->lower_name()] = next_index;
 			raft_match_indexes[node->lower_name()] = match_index;
-			L_RAFT("   {{success:{}, next_index:{}, match_index:{}}}", success ? "true" : "false", next_index, match_index);
+			L_RAFT("   {{success:{}, next_index:{}, match_index:{}}}", success, next_index, match_index);
 		} else {
 			// If AppendEntries fails because of raft_log inconsistency:
 			// decrement nextIndex and retry
@@ -856,7 +856,7 @@ Discovery::raft_append_entries_response(Message type, const std::string& message
 			if (next_index > 1) {
 				--next_index;
 			}
-			L_RAFT("   {{success:{}, next_index:{}}}", success ? "true" : "false", next_index);
+			L_RAFT("   {{success:{}, next_index:{}}}", success, next_index);
 		}
 		_raft_commit_log();
 
@@ -1215,7 +1215,7 @@ Discovery::_raft_commit_log()
 void
 Discovery::_raft_request_vote(bool immediate)
 {
-	L_CALL("Discovery::_raft_request_vote({})", immediate ? "true" : "false");
+	L_CALL("Discovery::_raft_request_vote({})", immediate);
 
 	if (immediate) {
 		++raft_current_term;

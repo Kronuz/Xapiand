@@ -163,7 +163,7 @@ DatabaseWAL::get_revision() const
 bool
 DatabaseWAL::execute(bool only_committed, bool unsafe)
 {
-	L_CALL("DatabaseWAL::execute({}, {})", only_committed ? "true" : "false", unsafe ? "true" : "false");
+	L_CALL("DatabaseWAL::execute({}, {})", only_committed, unsafe);
 
 	if (!_database) {
 		THROW(Error, "Database is not defined");
@@ -551,7 +551,7 @@ DatabaseWAL::highest_valid_slot()
 bool
 DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bool unsafe)
 {
-	L_CALL("DatabaseWAL::execute_line(<line>, {}, {}, {})", wal_ ? "true" : "false", send_update ? "true" : "false", unsafe ? "true" : "false");
+	L_CALL("DatabaseWAL::execute_line(<line>, {}, {}, {})", wal_, send_update, unsafe);
 
 	if (!_database) {
 		THROW(Error, "Database is not defined");
@@ -720,7 +720,7 @@ DatabaseWAL::init_database()
 void
 DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update)
 {
-	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", ::repr(uuid.to_string()), revision, names[toUType(type)], send_update ? "true" : "false");
+	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", ::repr(uuid.to_string()), revision, names[toUType(type)], send_update);
 
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);

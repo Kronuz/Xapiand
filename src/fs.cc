@@ -186,7 +186,7 @@ bool build_path_index(std::string_view path_index) {
 
 
 DIR* opendir(std::string_view path, bool create) {
-	L_CALL("opendir({}, {})", repr(path), create ? "true" : "false");
+	L_CALL("opendir({}, {})", repr(path), create);
 
 	stringified path_string(path);
 	DIR* dirp = ::opendir(path_string.c_str());

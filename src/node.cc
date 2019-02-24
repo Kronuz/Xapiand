@@ -341,7 +341,7 @@ Node::get_node(size_t idx)
 std::pair<std::shared_ptr<const Node>, bool>
 Node::touch_node(const Node& node, bool activate)
 {
-	L_CALL("Node::touch_node({}, {})", node.__repr__(), activate ? "true" : "false");
+	L_CALL("Node::touch_node({}, {})", node.__repr__(), activate);
 
 	auto now = epoch::now<std::chrono::milliseconds>();
 
@@ -394,7 +394,7 @@ Node::touch_node(const Node& node, bool activate)
 					modified = true;
 				}
 			}
-			L_NODE_NODES("touch_node({}) -> {} (1)", node_ref->__repr__(), modified ? "true" : "false");
+			L_NODE_NODES("touch_node({}) -> {} (1)", node_ref->__repr__(), modified);
 			return std::make_pair(node_ref, modified);
 		} else if (is_active(node_ref)) {
 			L_NODE_NODES("touch_node({}) -> nullptr (2)", node.__repr__());

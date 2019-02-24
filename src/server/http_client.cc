@@ -3128,7 +3128,7 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 std::pair<std::string, std::string>
 HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
-	L_CALL("HttpClient::serialize_response({}, {}, {}, {})", repr(obj.to_string(), true, '\'', 200), repr(ct_type.to_string()), indent, serialize_error ? "true" : "false");
+	L_CALL("HttpClient::serialize_response({}, {}, {}, {})", repr(obj.to_string(), true, '\'', 200), repr(ct_type.to_string()), indent, serialize_error);
 
 	if (ct_type == no_type) {
 		return std::make_pair("", "");
@@ -3599,7 +3599,7 @@ Request::head()
 std::string
 Request::to_text(bool decode)
 {
-	L_CALL("Request::to_text({})", decode ? "true" : "false");
+	L_CALL("Request::to_text({})", decode);
 
 	static constexpr auto no_col = NO_COLOR;
 	auto request_headers_color = no_col.c_str();
@@ -3760,7 +3760,7 @@ Response::Response()
 std::string
 Response::to_text(bool decode)
 {
-	L_CALL("Response::to_text({})", decode ? "true" : "false");
+	L_CALL("Response::to_text({})", decode);
 
 	static constexpr auto no_col = NO_COLOR;
 	auto response_headers_color = no_col.c_str();
