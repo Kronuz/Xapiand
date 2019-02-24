@@ -5008,14 +5008,16 @@ Schema::index_partial_paths(Xapian::Document& doc)
 {
 	L_CALL("Schema::index_partial_paths(<Xapian::Document>)");
 
-	if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
-		if (specification.partial_prefixes.size() > 2) {
-			const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
-			for (const auto& path : paths) {
-				doc.add_boolean_term(path);
+	if (specification.flags.partial_paths) {
+		if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
+			if (specification.partial_prefixes.size() > 2) {
+				const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
+				for (const auto& path : paths) {
+					doc.add_boolean_term(path);
+				}
+			} else {
+				doc.add_boolean_term(specification.prefix.field);
 			}
-		} else {
-			doc.add_boolean_term(specification.prefix.field);
 		}
 	}
 }
