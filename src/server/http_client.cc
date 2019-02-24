@@ -2283,7 +2283,8 @@ HttpClient::retrieve_view(Request& request)
 
 	// Retrive document data
 	auto document = db_handler.get_document(did);
-	const auto data = Data(document.get_data());
+	auto document_data = document.get_data();
+	const Data data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 	auto accepted = data.get_accepted(request.accept_set);
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
@@ -2433,7 +2434,8 @@ HttpClient::search_view(Request& request)
 
 		// Retrive document data
 		auto document = db_handler.get_document(*m);
-		const auto data = Data(document.get_data());
+		auto document_data = document.get_data();
+		const auto data = Data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 
 		MsgPack hit_obj;
 		auto main_locator = data.get("");

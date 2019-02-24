@@ -965,6 +965,9 @@ Database::storage_push_blobs(std::string&& doc_data)
 	ASSERT(is_writable());
 
 	std::pair<std::string, std::string> pushed;
+	if (doc_data.empty()) {
+		return pushed;
+	}
 
 	// Writable databases have only one subdatabase,
 	// simply get the single storage:

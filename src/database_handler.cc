@@ -501,7 +501,10 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 		// Finish document: add data, ID term and ID value.
 		data.set_obj(data_obj);
 		data.flush();
-		doc.set_data(data.serialise());
+		auto serialised = data.serialise();
+		if (!serialised.empty()) {
+			doc.set_data(serialised);
+		}
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 		auto current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, data));

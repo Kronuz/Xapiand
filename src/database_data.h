@@ -39,7 +39,9 @@ constexpr int STORED_BLOB          = 1;
 constexpr char DATABASE_DATA_HEADER_MAGIC        = 0x11;
 constexpr char DATABASE_DATA_FOOTER_MAGIC        = 0x15;
 
-constexpr char DATABASE_DATA_DEFAULT[]  = { DATABASE_DATA_HEADER_MAGIC, 0x03, 0x00, 0x00, '\x80', 0x00, DATABASE_DATA_FOOTER_MAGIC };
+constexpr std::string_view DATABASE_DATA_EMPTY     = std::string_view("\x11\x00\x15", 3);
+constexpr std::string_view DATABASE_DATA_MAP       = std::string_view("\x11\x03\x00\x00\x80\x00\x15", 7);
+constexpr std::string_view DATABASE_DATA_UNDEFINED = std::string_view("\x11\x05\x00\x00\xd4\x00\x00\x00\x15", 9);
 
 constexpr std::string_view ANY_CONTENT_TYPE               = "*/*";
 constexpr std::string_view HTML_CONTENT_TYPE              = "text/html";
@@ -416,7 +418,7 @@ class Data {
 
 public:
 	Data() {
-		feed(std::string(DATABASE_DATA_DEFAULT, sizeof(DATABASE_DATA_DEFAULT)));
+		feed(std::string(DATABASE_DATA_MAP));
 	}
 
 	Data(std::string&& serialised) {
@@ -480,6 +482,10 @@ public:
 	}
 
 	const std::string& serialise() const {
+		if (serialised == DATABASE_DATA_EMPTY || serialised == DATABASE_DATA_MAP || serialised == DATABASE_DATA_UNDEFINED) {
+			static const std::string empty;
+			return empty;
+		}
 		return serialised;
 	}
 
