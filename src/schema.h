@@ -406,10 +406,10 @@ struct required_spc_t {
 			case FieldType::UUID:
 				return 'U';
 
-			case FieldType::SCRIPT:
-				return 'X';
-
 			case FieldType::KEYWORD:
+				return 'K';
+
+			case FieldType::SCRIPT:
 			case FieldType::STRING:
 			case FieldType::TEXT:
 				return 'S';

@@ -2677,8 +2677,8 @@ HttpClient::_endpoint_maker(Request& request, bool master, bool index)
 			mset = db_handler.get_all_mset("", 0, 100);
 		} else {
 			auto query = Xapian::Query(Xapian::Query::OP_OR,
-					Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, TEXT_CHAR))),  // FIXME: it should be KEYWORD_CHAR, not TEXT_CHAR
-					Xapian::Query(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, TEXT_CHAR)));  // FIXME: it should be KEYWORD_CHAR, not TEXT_CHAR
+					Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
+					Xapian::Query(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR)));
 			mset = db_handler.get_mset(query, 0, 100);
 		}
 		const auto m_e = mset.end();
