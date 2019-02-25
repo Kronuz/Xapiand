@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,4 +55,24 @@ random_time(std::chrono::milliseconds initial, std::chrono::milliseconds last)
 {
 	std::uniform_int_distribution<std::chrono::milliseconds::rep> distribution(initial.count(), last.count());
 	return std::chrono::milliseconds{distribution(rng())};
+}
+
+
+std::string
+random_string(size_t length)
+{
+    static auto& chrs = "0123456789"
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static thread_local std::uniform_int_distribution<std::string::size_type> pick(0, sizeof(chrs) - 2);
+
+    std::string s;
+    s.reserve(length);
+
+	auto& r = rng();
+    while (length--) {
+        s.push_back(chrs[pick(r)]);
+    }
+
+    return s;
 }

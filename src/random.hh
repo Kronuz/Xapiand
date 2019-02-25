@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,3 +32,5 @@ double random_real(double initial, double last);
 std::uint64_t random_int(std::uint64_t initial, std::uint64_t last);
 
 std::chrono::milliseconds random_time(std::chrono::milliseconds initial, std::chrono::milliseconds last);
+
+std::string random_string(size_t length);
