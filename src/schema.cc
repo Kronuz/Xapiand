@@ -2614,7 +2614,7 @@ Schema::index(const MsgPack& object,
 				case FieldType::TEXT:
 				case FieldType::STRING:
 				case FieldType::KEYWORD:
-					document_id = Base64::rfc4648url().encode(generator(true).serialise());
+					document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					break;
 				default:
