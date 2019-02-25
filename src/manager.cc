@@ -1377,7 +1377,7 @@ XapiandManager::load_nodes()
 
 #endif
 
-
+#ifdef XAPIAND_CLUSTERING
 std::vector<size_t>
 calculate_replicas(const std::string& normalized_path)
 {
@@ -1432,6 +1432,7 @@ index_calculate_replicas(const std::string& normalized_path)
 	}
 	return replicas;
 }
+#endif
 
 
 std::vector<std::shared_ptr<const Node>>
@@ -1453,7 +1454,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		int errno_save;
 		size_t idx = strict_stoll(&errno_save, &normalized_path[7]);
 		if (errno_save == 0) {
+#ifdef XAPIAND_CLUSTERING
 			nodes.push_back(Node::get_node(idx));
+#endif
 			nodes.push_back(Node::local_node());
 			return nodes;
 		}

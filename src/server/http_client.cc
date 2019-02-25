@@ -2660,6 +2660,7 @@ HttpClient::_endpoint_maker(Request& request, bool master, bool index)
 
 	std::vector<std::string> index_paths;
 
+#ifdef XAPIAND_CLUSTERING
 	MSet mset;
 	if (string::endswith(index_path, '*')) {
 		index_path.pop_back();
@@ -2690,8 +2691,11 @@ HttpClient::_endpoint_maker(Request& request, bool master, bool index)
 			index_paths.push_back(std::move(index_path));
 		}
 	} else {
+#endif
 		index_paths.push_back(std::move(index_path));
+#ifdef XAPIAND_CLUSTERING
 	}
+#endif
 
 	if (request.path_parser.off_hst != nullptr) {
 #ifdef XAPIAND_CLUSTERING
