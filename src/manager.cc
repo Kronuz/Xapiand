@@ -1416,12 +1416,10 @@ index_calculate_replicas(const std::string& normalized_path)
 		MsgPack obj = {
 			{ RESERVED_STORE, false },
 			{ ID_FIELD_NAME, {
-				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "replicas", {
 				{ RESERVED_SLOT, 2 },
-				{ RESERVED_STORE, false },
 				{ RESERVED_ACCURACY, MsgPack(MsgPack::Type::ARRAY) },
 				{ RESERVED_INDEX, "field_values" },
 				{ RESERVED_TYPE,  "array/positive" },
