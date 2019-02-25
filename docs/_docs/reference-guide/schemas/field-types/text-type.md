@@ -69,7 +69,7 @@ Other available stemming strategies are:
 
 |---------------------------|-----------------------------------------------------------------|
 | `stem_none`, `none`       | Don't perform any stemming.                                     |
-| `stem_some`, `some`       | Stem all terms except for those which start with a capital letter, or are followed by certain characters (currently: `(`, `/`, `@`, `<`, `>`, `=`, `*`, `[`, `{`, `"`), or are used with operators which need positional information. _(note: stemmed terms are prefixed with 'Z')_. (This is the default mode). |
+| `stem_some`, `some`       | Stem all terms except for those which start with a capital letter, or are followed by certain characters (currently: `(`, `/`, `\`, `@`, `<`, `>`, `=`, `*`, `[`, `{`, `"`), or are used with operators which need positional information. _(note: stemmed terms are prefixed with 'Z')_. (This is the default mode). |
 | `stem_all`, `all`         | Stem all terms _(note: no '`Z`' prefix is added)_.              |
 | `stem_all_z`, `all_z`     | Stem all terms _(note: '`Z`' prefix is added)._.                |
 
