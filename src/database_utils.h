@@ -40,7 +40,14 @@ constexpr double DB_VERSION_SCHEMA = 2.0;
 
 constexpr Xapian::valueno DB_SLOT_RESERVED        = 20; // Reserved slots by special data
 constexpr Xapian::valueno DB_SLOT_ID              = 0;  // Slot for document ID
-constexpr Xapian::valueno DB_SLOT_CONTENT_TYPE    = 1;  // Slot for data content type
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_1    = 1;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_2    = 2;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_3    = 3;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_4    = 4;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_5    = 5;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_6    = 6;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_7    = 7;  // Slot for user value 1
+constexpr Xapian::valueno DB_SLOT_USER_VALUE_8    = 8;  // Slot for user value 1
 constexpr Xapian::valueno DB_SLOT_ROOT            = 9;  // Slot for root
 constexpr Xapian::valueno DB_SLOT_NUMERIC         = 10; // Slot for saving global float/integer/positive values
 constexpr Xapian::valueno DB_SLOT_DATE            = 11; // Slot for saving global date values

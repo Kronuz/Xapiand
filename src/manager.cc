@@ -1419,10 +1419,9 @@ index_calculate_replicas(const std::string& normalized_path)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "replicas", {
-				{ RESERVED_SLOT, 2 },
-				{ RESERVED_ACCURACY, MsgPack(MsgPack::Type::ARRAY) },
 				{ RESERVED_INDEX, "field_values" },
 				{ RESERVED_TYPE,  "array/positive" },
+				{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
 				{ RESERVED_VALUE, std::move(replicas) },
 			} },
 		};
@@ -1483,7 +1482,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			try {
 				DatabaseHandler db_handler(index_endpoints);
 				auto document = db_handler.get_document(normalized_path);
-				for (auto& val : StringList(document.get_value(2))) {
+				for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_1))) {
 					size_t idx = unserialise_length(val);
 					replicas.push_back(idx);
 					auto node = Node::get_node(idx);
