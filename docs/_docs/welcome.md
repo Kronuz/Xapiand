@@ -30,6 +30,7 @@ is laid out and formatted, these are a few of them.
 Many examples of API calls that look something like this:
 
 {% capture req %}
+
 ```json
 PUT /twitter/user/Kronuz
 

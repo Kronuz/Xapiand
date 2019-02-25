@@ -41,6 +41,7 @@ twitter user, and add some tweets (the twitter index will be created
 automatically):
 
 {% capture req %}
+
 ```json
 PUT /twitter/user/Kronuz?pretty
 
@@ -53,6 +54,7 @@ PUT /twitter/user/Kronuz?pretty
 
 
 {% capture req %}
+
 ```json
 PUT /twitter/tweet/1?pretty
 
@@ -67,6 +69,7 @@ PUT /twitter/tweet/1?pretty
 
 
 {% capture req %}
+
 ```json
 PUT /twitter/tweet/2?pretty
 
@@ -88,6 +91,7 @@ You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying/' |
 Now, let's see if the information that was added by GETting it:
 
 {% capture req %}
+
 ```json
 GET /twitter/user/Kronuz?pretty
 ```
@@ -95,6 +99,7 @@ GET /twitter/user/Kronuz?pretty
 {% include curl.html req=req %}
 
 {% capture req %}
+
 ```json
 GET /twitter/tweet/1?pretty
 ```
@@ -102,6 +107,7 @@ GET /twitter/tweet/1?pretty
 {% include curl.html req=req %}
 
 {% capture req %}
+
 ```json
 GET /twitter/tweet/2?pretty
 ```
@@ -111,6 +117,7 @@ GET /twitter/tweet/2?pretty
 Let's find all the tweets that Kronuz posted:
 
 {% capture req %}
+
 ```json
 GET /twitter/tweet/:search?q=user:Kronuz&pretty
 ```
