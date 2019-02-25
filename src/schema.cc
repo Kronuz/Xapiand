@@ -6358,6 +6358,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_CHAI),
 		hh(RESERVED_ECMA),
 		// Next functions only check the consistency of user provided data.
+		hh(RESERVED_SLOT),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_STOP_STRATEGY),
 		hh(RESERVED_STEM_STRATEGY),
@@ -6429,6 +6430,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_CHAI),
 		hh(RESERVED_ECMA),
 		// Next functions only check the consistency of user provided data.
+		hh(RESERVED_SLOT),
 		hh(RESERVED_LANGUAGE),
 		hh(RESERVED_STOP_STRATEGY),
 		hh(RESERVED_STEM_STRATEGY),
@@ -6567,6 +6569,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		// Next functions only check the consistency of user provided data.
+		case _.fhh(RESERVED_SLOT):
+			Schema::consistency_slot(prop_name, value);
+			return true;
 		case _.fhh(RESERVED_LANGUAGE):
 			Schema::consistency_language(prop_name, value);
 			return true;
@@ -8128,6 +8133,23 @@ Schema::process_cast_object(std::string_view prop_name, const MsgPack& doc_cast_
 		specification.value_rec = std::make_unique<const MsgPack>(MsgPack({
 			{ prop_name, doc_cast_object },
 		}));
+	}
+}
+
+
+inline void
+Schema::consistency_slot(std::string_view prop_name, const MsgPack& doc_slot)
+{
+	// RESERVED_SLOT isn't heritable and can't change once fixed.
+	L_CALL("Schema::consistency_slot({})", repr(doc_slot.to_string()));
+
+	try {
+		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
+		if (specification.slot != slot) {
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.slot, slot, repr(specification.full_meta_name));
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, {} must be integer", repr(prop_name));
 	}
 }
 

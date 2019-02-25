@@ -873,6 +873,7 @@ class Schema {
 	void process_cast_object(std::string_view prop_name, const MsgPack& doc_cast_object);
 	void process_script(std::string_view prop_name, const MsgPack& doc_script);
 	// Next functions only check the consistency of user provided data.
+	void consistency_slot(std::string_view prop_name, const MsgPack& doc_language);
 	void consistency_language(std::string_view prop_name, const MsgPack& doc_language);
 	void consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc_stop_strategy);
 	void consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc_stem_strategy);
