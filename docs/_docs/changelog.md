@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **BREAKING**: `.index` shared by node
 - **BREAKING**: Keyword datatype term prefix is now 'K'
+- **BREAKING**: Guessed IDs are now strings also for numeric IDs
 - Never overwrite an existent database
 - Index only adds new indexes during write operations
 - Do not save empty data inside database
