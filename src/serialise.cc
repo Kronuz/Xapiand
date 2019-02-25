@@ -27,6 +27,7 @@
 
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
+#include "chars.hh"                                   // for iskeyword
 #include "cuuid/uuid.h"                               // for UUID
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
@@ -47,6 +48,22 @@ constexpr char UUID_SEPARATOR_LIST = ';';
 #ifdef XAPIAND_UUID_ENCODED
 #define UUID_ENCODER (Base59::dubaluchk())
 #endif
+
+
+bool
+Serialise::isText(std::string_view field_value) noexcept
+{
+	auto size = field_value.size();
+	if (!size || size >= 128) {
+		return true;
+	}
+	for (size_t i = 0; i < size; ++i) {
+		if (!chars::iskeyword(field_value[i])) {
+			return true;
+		}
+	}
+	return false;
+}
 
 
 bool
@@ -846,7 +863,7 @@ Serialise::type(FieldType field_type)
 
 
 FieldType
-Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
+Serialise::guess_type(const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -911,15 +928,12 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 				}
 			}
 
-			if (bool_term) {
-				return FieldType::KEYWORD;
-			}
-
+			// Try like TEXT
 			if (isText(str_value)) {
 				return FieldType::TEXT;
 			}
 
-			return FieldType::STRING;
+			return FieldType::KEYWORD;
 		}
 
 		case MsgPack::Type::MAP: {
@@ -972,15 +986,6 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 			}
 		}
 
-		case MsgPack::Type::UNDEFINED:
-		case MsgPack::Type::NIL:
-			if (bool_term) {
-				return FieldType::KEYWORD;
-			}
-
-			// Default type STRING.
-			return FieldType::STRING;
-
 		default:
 			THROW(SerialisationError, "Unexpected type {}", field_value.getStrType());
 	}
@@ -988,7 +993,7 @@ Serialise::guess_type(const class MsgPack& field_value, bool bool_term)
 
 
 std::pair<FieldType, std::string>
-Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
+Serialise::guess_serialise(const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -1046,18 +1051,13 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 				return std::make_pair(FieldType::FLOAT, floating(str_value));
 			} catch (const SerialisationError&) { }
 
-			// String bool terms are keywords
-			if (bool_term) {
-				return std::make_pair(FieldType::KEYWORD, std::string(str_value));
-			}
-
-			// Like TEXT
+			// Try like TEXT
 			if (isText(str_value)) {
 				return std::make_pair(FieldType::TEXT, std::string(str_value));
 			}
 
-			// Default type STRING.
-			return std::make_pair(FieldType::STRING, std::string(str_value));
+			// Default type KEYWORD.
+			return std::make_pair(FieldType::KEYWORD, std::string(str_value));
 		}
 
 		case MsgPack::Type::MAP: {
@@ -1110,15 +1110,6 @@ Serialise::guess_serialise(const class MsgPack& field_value, bool bool_term)
 				THROW(SerialisationError, "Expected map with one element");
 			}
 		}
-
-		case MsgPack::Type::UNDEFINED:
-		case MsgPack::Type::NIL:
-			if (bool_term) {
-				return std::make_pair(FieldType::KEYWORD, "");
-			}
-
-			// Default type STRING.
-			return std::make_pair(FieldType::STRING, "");
 
 		default:
 			THROW(SerialisationError, "Unexpected type {}", field_value.getStrType());

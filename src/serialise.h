@@ -88,9 +88,7 @@ struct required_spc_t;
 
 
 namespace Serialise {
-	inline bool isText(std::string_view field_value) noexcept {
-		return field_value.size() > 100 && field_value.find(' ') != std::string::npos;
-	}
+	bool isText(std::string_view field_value) noexcept;
 
 	// Returns if field_value is UUID.
 	bool possiblyUUID(std::string_view field_value) noexcept;
@@ -223,7 +221,7 @@ namespace Serialise {
 	const std::string& type(FieldType field_type);
 
 	// Guess type of field_value. If bool_term can not return FieldType::TEXT.
-	FieldType guess_type(const class MsgPack& field_value, bool bool_term=false);
+	FieldType guess_type(const class MsgPack& field_value);
 
 
 	/*
@@ -232,7 +230,7 @@ namespace Serialise {
 	 * Returns the guess type and the serialised values according to type.
 	 */
 
-	std::pair<FieldType, std::string> guess_serialise(const class MsgPack& field_value, bool bool_term=false);
+	std::pair<FieldType, std::string> guess_serialise(const class MsgPack& field_value);
 
 	inline std::string serialise(std::string_view val) {
 		return std::string(val);
