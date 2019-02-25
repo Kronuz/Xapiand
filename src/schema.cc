@@ -54,6 +54,10 @@
 #include "stopper.h"                              // for getStopper
 #include "string.hh"                              // for string::format, string::tolower
 
+#ifndef XAPIAND_UUID_ENCODED
+#include "cppcodec/base64_url_unpadded.hpp"       // for cppcodec::base64_url_unpadded
+#endif
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -2585,19 +2589,35 @@ Schema::index(const MsgPack& object,
 
 		std::string unprefixed_term_id;
 		if (!document_id) {
-			if (id_type == FieldType::EMPTY) {
-				id_type = FieldType::UUID;
-				spc_id.set_type(id_type);
-				set_data_id(spc_id);
-				properties = &get_mutable_properties();
-				unprefixed_term_id = generator(opts.uuid_compact).serialise();
-				document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
-			} else if (id_type == FieldType::UUID) {
-				unprefixed_term_id = generator(opts.uuid_compact).serialise();
-				document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
-			} else {
-				document_id = Cast::cast(id_type, random_int(1, static_cast<Xapian::docid>(-1)));
-				unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+			switch (id_type) {
+				case FieldType::EMPTY:
+					id_type = FieldType::UUID;
+					spc_id.set_type(id_type);
+					set_data_id(spc_id);
+					properties = &get_mutable_properties();
+				/* FALLTHROUGH */
+				case FieldType::UUID:
+					unprefixed_term_id = generator(opts.uuid_compact).serialise();
+					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
+					break;
+				case FieldType::INTEGER:
+				case FieldType::POSITIVE:
+				case FieldType::FLOAT:
+					document_id = random_int(1, static_cast<Xapian::docid>(-1));
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					break;
+				case FieldType::TEXT:
+				case FieldType::STRING:
+				case FieldType::KEYWORD:
+					unprefixed_term_id = generator(true).serialise();
+#ifdef XAPIAND_UUID_ENCODED
+					document_id = Unserialise::uuid(unprefixed_term_id, UUIDRepr::encoded);
+#else
+					document_id = cppcodec::base64_url_unpadded(unprefixed_term_id);
+#endif
+					break;
+				default:
+					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
 			}
 		} else {
 			// Get early term ID when possible
