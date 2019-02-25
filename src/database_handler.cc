@@ -126,13 +126,13 @@ to_docid(std::string_view document_id)
 {
 	size_t sz = document_id.size();
 	if (sz > 2 && document_id[0] == ':' && document_id[1] == ':') {
-		std::string_view did_str(document_id.data() + 2, document_id.size() - 2);
+		document_id.remove_prefix(2);
 		try {
-			return static_cast<Xapian::docid>(strict_stol(did_str));
+			return static_cast<Xapian::docid>(strict_stoull(document_id));
 		} catch (const InvalidArgument& er) {
-			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(did_str), er.what());
+			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(document_id), er.what());
 		} catch (const OutOfRange& er) {
-			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(did_str), er.what());
+			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(document_id), er.what());
 		}
 	}
 	return static_cast<Xapian::docid>(0);
