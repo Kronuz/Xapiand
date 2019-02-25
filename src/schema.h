@@ -548,7 +548,8 @@ class Schema {
 	using dispatcher_feed_properties     = void (Schema::*)(const MsgPack&);
 	using dispatcher_readable            = bool (*)(MsgPack&, MsgPack&);
 
-	using FieldVector = std::vector<std::pair<std::string, const MsgPack*>>;
+	using Field = std::pair<std::string, const MsgPack*>;
+	using FieldVector = std::vector<Field>;
 
 	bool _dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value);
 	bool _dispatch_feed_properties(uint32_t key, const MsgPack& value);
@@ -749,12 +750,12 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, const MsgPack** id_field = nullptr);
-	void dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, const MsgPack** id_field = nullptr);
-	void dispatch_process_properties(const MsgPack& object, FieldVector& fields, const MsgPack** id_field = nullptr);
-	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, const MsgPack** id_field = nullptr);
-	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, const MsgPack** id_field = nullptr);
-	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, const MsgPack** id_field = nullptr);
+	void dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
+	void dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
+	void dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
+	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
+	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
+	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
 	void dispatch_set_default_spc(MsgPack& mut_properties);
 
 
