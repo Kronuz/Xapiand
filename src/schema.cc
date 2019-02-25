@@ -1798,12 +1798,11 @@ required_spc_t::required_spc_t()
 	  error(DEFAULT_GEO_ERROR) { }
 
 
-required_spc_t::required_spc_t(Xapian::valueno _slot, FieldType type, std::vector<uint64_t>  acc,
-	std::vector<std::string>  _acc_prefix)
+required_spc_t::required_spc_t(Xapian::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix)
 	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, type }}),
-	  slot(_slot),
-	  accuracy(std::move(acc)),
-	  acc_prefix(std::move(_acc_prefix)),
+	  slot(slot),
+	  accuracy(std::move(accuracy)),
+	  acc_prefix(std::move(acc_prefix)),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
 	  error(DEFAULT_GEO_ERROR) { }
@@ -1981,9 +1980,8 @@ specification_t::specification_t()
 	  index_uuid_field(DEFAULT_INDEX_UUID_FIELD) { }
 
 
-specification_t::specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc,
-	const std::vector<std::string>& _acc_prefix)
-	: required_spc_t(_slot, type, acc, _acc_prefix),
+specification_t::specification_t(Xapian::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix)
+	: required_spc_t(slot, type, accuracy, acc_prefix),
 	  position({ 0 }),
 	  weight({ 1 }),
 	  spelling({ DEFAULT_SPELLING }),

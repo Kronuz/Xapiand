@@ -379,7 +379,7 @@ struct required_spc_t {
 	// Methods:
 
 	required_spc_t();
-	required_spc_t(Xapian::valueno _slot, FieldType type, std::vector<uint64_t>  acc, std::vector<std::string>  _acc_prefix);
+	required_spc_t(Xapian::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix);
 	required_spc_t(const required_spc_t& o);
 	required_spc_t(required_spc_t&& o) noexcept;
 
@@ -461,12 +461,12 @@ struct index_spc_t {
 
 	template <typename S=std::string, typename Uint64Vector=std::vector<uint64_t>, typename StringVector=std::vector<std::string>, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value &&
 		std::is_same<std::vector<uint64_t>, std::decay_t<Uint64Vector>>::value && std::is_same<std::vector<std::string>, std::decay_t<StringVector>>::value>>
-	explicit index_spc_t(FieldType _type, S&& _prefix=S(), Xapian::valueno _slot=Xapian::BAD_VALUENO, Uint64Vector&& _acc=Uint64Vector(), StringVector&& _acc_p=StringVector())
-		: type(_type),
-		  prefix(std::forward<S>(_prefix)),
-		  slot(_slot),
-		  accuracy(std::forward<Uint64Vector>(_acc)),
-		  acc_prefix(std::forward<StringVector>(_acc_p)) { }
+	explicit index_spc_t(FieldType type, S&& prefix=S{}, Xapian::valueno slot=Xapian::BAD_VALUENO, Uint64Vector&& accuracy=Uint64Vector(), StringVector&& acc_prefix=StringVector())
+		: type(type),
+		  prefix(std::forward<S>(prefix)),
+		  slot(slot),
+		  accuracy(std::forward<Uint64Vector>(accuracy)),
+		  acc_prefix(std::forward<StringVector>(acc_prefix)) { }
 
 	explicit index_spc_t(required_spc_t&& spc);
 	explicit index_spc_t(const required_spc_t& spc);
@@ -513,7 +513,7 @@ struct specification_t : required_spc_t {
 	// Methods:
 
 	specification_t();
-	specification_t(Xapian::valueno _slot, FieldType type, const std::vector<uint64_t>& acc, const std::vector<std::string>& _acc_prefix);
+	specification_t(Xapian::valueno slot, FieldType type, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix);
 	specification_t(const specification_t& o);
 	specification_t(specification_t&& o) noexcept;
 
