@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,7 +45,7 @@
 #include "stringified.hh"       // for stringified
 
 
-constexpr long long NODE_LIFESPAN = 120000;  // in milliseconds
+constexpr long long NODE_LIFESPAN = 3000;  // in milliseconds
 
 
 class Node {
