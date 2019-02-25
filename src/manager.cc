@@ -1386,11 +1386,9 @@ calculate_replicas(const std::string& normalized_path)
 	std::vector<size_t> replicas;
 	auto indexed_nodes = Node::indexed_nodes();
 	if (indexed_nodes) {
-		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
-		for (size_t i = std::min(opts.num_replicas + 1, indexed_nodes); i; --i) {
-			auto idx = consistent_hash + 1;
-			replicas.push_back(idx);
-			consistent_hash = idx % indexed_nodes;
+		auto consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
+		for (size_t i = std::min(opts.num_replicas + 1, indexed_nodes); i; --i, ++consistent_hash) {
+			replicas.push_back((consistent_hash % indexed_nodes) + 1);
 		}
 	}
 	return replicas;
@@ -1407,9 +1405,11 @@ index_calculate_replicas(const std::string& normalized_path)
 		std::vector<std::shared_ptr<const Node>> nodes;
 		for (auto idx : replicas) {
 			auto node = Node::get_node(idx);
-			ASSERT(node);
-			nodes.push_back(std::move(node));
+			if (node) {
+				nodes.push_back(std::move(node));
+			}
 		}
+		ASSERT(!nodes.empty());
 		auto node = nodes.front();  // first node is master
 		Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
@@ -1473,8 +1473,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			lk.unlock();
 			for (auto idx : replicas) {
 				auto node = Node::get_node(idx);
-				ASSERT(node);
-				nodes.push_back(std::move(node));
+				if (node) {
+					nodes.push_back(std::move(node));
+				}
 			}
 		} else {
 			lk.unlock();
@@ -1491,8 +1492,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 					size_t idx = unserialise_length(val);
 					replicas.push_back(idx);
 					auto node = Node::get_node(idx);
-					ASSERT(node);
-					nodes.push_back(std::move(node));
+					if (node) {
+						nodes.push_back(std::move(node));
+					}
 				}
 				lk.lock();
 				resolve_index_lru.insert(std::make_pair(normalized_path, replicas));
@@ -1501,7 +1503,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 		}
 
-		if (replicas.empty()) {
+		if (nodes.empty()) {
 			if (index) {
 				replicas = index_calculate_replicas(normalized_path);
 			} else {
@@ -1509,8 +1511,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			}
 			for (auto idx : replicas) {
 				auto node = Node::get_node(idx);
-				ASSERT(node);
-				nodes.push_back(std::move(node));
+				if (node) {
+					nodes.push_back(std::move(node));
+				}
 			}
 			lk.lock();
 			resolve_index_lru.insert(std::make_pair(normalized_path, replicas));

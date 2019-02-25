@@ -19,17 +19,16 @@ command again:
 PUT /customer/1?pretty
 
 {
-  "name": "John Doe",
-  "gender": "male"
+  "name": "John Doe"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
 The above will index the specified document into the customer index, with the
-ID of 1. If we then executed the above command again with a different (or same)
+ID of `1`. If we then executed the above command again with a different (or same)
 document, Xapiand will replace (i.e. reindex) a new document on top of the
-existing one with the ID of 1:
+existing one with the ID of `1`:
 
 {% capture req %}
 
@@ -37,14 +36,14 @@ existing one with the ID of 1:
 PUT /customer/1?pretty
 
 {
-  "name": "Jane Doe"
+  "name": "Johnny Doe"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above changes the name of the document with the ID of 1 from "John Doe" to
-"Jane Doe".
+The above completely overwrites the existent document with the ID of `1` with
+the new one.
 
 If, on the other hand, we use a different ID, a new document will be indexed
 and the existing document(s) already in the index remains untouched.
@@ -55,13 +54,14 @@ and the existing document(s) already in the index remains untouched.
 PUT /customer/2?pretty
 
 {
-  "name": "Jane Doe"
+  "name": "Jane Doe",
+  "age": 20
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above indexes a new document with an ID of 2.
+The above indexes a new document with an ID of `2`.
 
 When indexing, the ID part is optional. If not specified, Xapiand will generate
 an ID and then use it to index the document. The actual ID Xapiand generates
@@ -76,14 +76,14 @@ This example shows how to index a document without an explicit ID:
 POST /customer?pretty
 
 {
-  "name": "Jane Doe"
+  "name": "Richard Roe"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-Note that in the above case, we are using the POST verb instead of PUT since we
-didn't specify an ID.
+Note that in the above case, we are using the `POST` verb instead of `PUT`
+as we're not specifying an explicit ID.
 
 
 ## Updating Documents
@@ -91,8 +91,8 @@ didn't specify an ID.
 In addition to being able to index and replace documents, we can also update
 documents.
 
-This example shows how to update our previous document (ID of 1) by changing
-the name field to "Jane Doe":
+This example shows how to update our previous document (ID of `1`) by changing
+the name field from "Johnny Doe" to "John Doe":
 
 {% capture req %}
 
@@ -100,14 +100,14 @@ the name field to "Jane Doe":
 PUT /customer/1?pretty
 
 {
-  "name": "Jane Doe",
-  "age": 20
+  "name": "Johnny Doe",
+  "age": 17
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-This example shows how to update our previous document (ID of 1) by changing
+This example shows how to update our previous document (ID of `1`) by changing
 the name field to "John Doe" and at the same time add a gender field to it:
 
 {% capture req %}
@@ -180,7 +180,7 @@ MERGE /customer/:search?q=*&pretty
 ## Deleting Documents
 
 Deleting a document is fairly straightforward. This example shows how to delete
-our previous customer with the ID of 2:
+our previous customer with the ID of `2`:
 
 {% capture req %}
 
