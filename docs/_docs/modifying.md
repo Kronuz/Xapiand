@@ -92,7 +92,7 @@ In addition to being able to index and replace documents, we can also update
 documents.
 
 This example shows how to update our previous document (ID of `1`) by changing
-the name field from "Johnny Doe" to "John Doe":
+the name field from _"Johnny Doe"_ to _"John Doe"_:
 
 {% capture req %}
 
@@ -108,7 +108,7 @@ PUT /customer/1?pretty
 {% include curl.html req=req %}
 
 This example shows how to update our previous document (ID of `1`) by changing
-the name field to "John Doe" and at the same time add a gender field to it:
+the name field to _"John Doe"_ and at the same time add a _"gender"_ field to it:
 
 {% capture req %}
 
