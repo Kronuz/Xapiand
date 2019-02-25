@@ -35,6 +35,7 @@
 #include <type_traits>                             // for remove_reference<>::type
 #include <utility>
 
+#include "base_x.hh"                              // for Base64
 #include "cassert.h"                              // for ASSERT
 #include "cast.h"                                 // for Cast
 #include "cuuid/uuid.h"                           // for UUIDGenerator
@@ -53,10 +54,6 @@
 #include "static_string.hh"                       // for static_string
 #include "stopper.h"                              // for getStopper
 #include "string.hh"                              // for string::format, string::tolower
-
-#ifndef XAPIAND_UUID_ENCODED
-#include "cppcodec/base64_url_unpadded.hpp"       // for cppcodec::base64_url_unpadded
-#endif
 
 
 // #undef L_DEBUG
@@ -2617,12 +2614,8 @@ Schema::index(const MsgPack& object,
 				case FieldType::TEXT:
 				case FieldType::STRING:
 				case FieldType::KEYWORD:
-					unprefixed_term_id = generator(true).serialise();
-#ifdef XAPIAND_UUID_ENCODED
-					document_id = Unserialise::uuid(unprefixed_term_id, UUIDRepr::encoded);
-#else
-					document_id = cppcodec::base64_url_unpadded(unprefixed_term_id);
-#endif
+					document_id = Base64::rfc4648url().encode(generator(true).serialise());
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					break;
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
