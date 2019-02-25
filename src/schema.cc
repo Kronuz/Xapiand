@@ -4603,72 +4603,77 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			// Set partials and error.
 			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
 			mut_properties[RESERVED_ERROR] = specification.error;
-
-			if (specification.doc_acc) {
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						const auto val_acc = _accuracy.u64();
-						if (val_acc <= HTM_MAX_LEVEL) {
-							set_acc.insert(val_acc);
-						} else {
-							THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							const auto val_acc = _accuracy.u64();
+							if (val_acc <= HTM_MAX_LEVEL) {
+								set_acc.insert(val_acc);
+							} else {
+								THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+							}
 						}
+					} catch (const msgpack::type_error&) {
+						THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 					}
-				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+				} else {
+					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 				}
-			} else {
-				set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
 			}
 			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::DATE: {
-			if (specification.doc_acc) {
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						uint64_t accuracy;
-						if (_accuracy.is_string()) {
-							auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
-							if (accuracy_date != UnitTime::INVALID) {
-								accuracy = toUType(accuracy_date);
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							uint64_t accuracy;
+							if (_accuracy.is_string()) {
+								auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+								if (accuracy_date != UnitTime::INVALID) {
+									accuracy = toUType(accuracy_date);
+								} else {
+									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+								}
 							} else {
-								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+								accuracy = _accuracy.u64();
+								if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
+								} else {
+									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+								}
 							}
-						} else {
-							accuracy = _accuracy.u64();
-							if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
-							} else {
-								THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
-							}
+							set_acc.insert(accuracy);
 						}
-						set_acc.insert(accuracy);
+					} catch (const msgpack::type_error&) {
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 					}
-				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+				} else {
+					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 				}
-			} else {
-				set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
 			}
 			specification.flags.concrete = true;
 			break;
 		}
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA: {
-			if (specification.doc_acc) {
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						try {
-							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
-						} catch (const std::out_of_range&) {
-							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							try {
+								set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
+							} catch (const std::out_of_range&) {
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+							}
 						}
+					} catch (const msgpack::type_error&) {
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 					}
-				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+				} else {
+					set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
 				}
-			} else {
-				set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
 			}
 			specification.flags.concrete = true;
 			break;
@@ -4676,16 +4681,18 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
 		case FieldType::FLOAT: {
-			if (specification.doc_acc) {
-				try {
-					for (const auto& _accuracy : *specification.doc_acc) {
-						set_acc.insert(_accuracy.u64());
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					try {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							set_acc.insert(_accuracy.u64());
+						}
+					} catch (const msgpack::type_error&) {
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
-				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+				} else {
+					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 				}
-			} else {
-				set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
 			}
 			specification.flags.concrete = true;
 			break;
