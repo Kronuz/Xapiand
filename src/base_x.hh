@@ -2,7 +2,7 @@
 base_x.hh
 BaseX encoder / decoder for C++
 
-Copyright (c) 2017 German Mendez Bravo (Kronuz) @ german dot mb at gmail.com
+Copyright (c) 2017,2019 German Mendez Bravo (Kronuz) @ german dot mb at gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -597,6 +597,10 @@ struct Base64 {
 	}
 	static const BaseX& rfc4648url() {
 		static constexpr BaseX encoder(BaseX::block_padding, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", "", "====", "\n\r");
+		return encoder;
+	}
+	static const BaseX& rfc4648url_unpadded() {
+		static constexpr BaseX encoder(BaseX::block_padding, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", "", "", "\n\r");
 		return encoder;
 	}
 };
