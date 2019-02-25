@@ -2627,7 +2627,13 @@ Schema::index(const MsgPack& object,
 				case FieldType::EMPTY: {
 					const auto type_ser = Serialise::guess_serialise(document_id);
 					id_type = type_ser.first;
-					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
+					if (
+						id_type == FieldType::TEXT ||
+						id_type == FieldType::STRING ||
+						id_type == FieldType::INTEGER ||
+						id_type == FieldType::POSITIVE ||
+						id_type == FieldType::FLOAT
+					) {
 						id_type = FieldType::KEYWORD;
 					}
 					spc_id.set_type(id_type);
