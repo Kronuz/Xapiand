@@ -28,6 +28,7 @@
 #include <cstring>                                 // for size_t, strlen
 #include <cctype>                                  // for tolower
 #include <functional>                              // for ref, reference_wrapper
+#include <limits>                                  // for std::numeric_limits
 #include <mutex>                                   // for mutex
 #include <ostream>                                 // for operator<<, basic_ostream
 #include <set>                                     // for __tree_const_iterator, set
@@ -2608,7 +2609,7 @@ Schema::index(const MsgPack& object,
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
 				case FieldType::FLOAT:
-					document_id = random_int(1, static_cast<Xapian::docid>(-1));
+					document_id = random_int(1, static_cast<Xapian::docid>(std::numeric_limits<Xapian::docid>::max() - 1));
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					break;
 				case FieldType::TEXT:
