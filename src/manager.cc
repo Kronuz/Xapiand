@@ -1471,6 +1471,11 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		if (it != resolve_index_lru.end()) {
 			replicas = it->second;
 			lk.unlock();
+			for (auto idx : replicas) {
+				auto node = Node::get_node(idx);
+				ASSERT(node);
+				nodes.push_back(std::move(node));
+			}
 		} else {
 			lk.unlock();
 			Endpoints index_endpoints;
