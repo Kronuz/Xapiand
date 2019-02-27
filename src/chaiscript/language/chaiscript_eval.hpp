@@ -622,6 +622,17 @@ namespace chaiscript
           Boxed_Value retval = this->children[0]->eval(t_ss);
           std::vector<Boxed_Value> params{retval};
 
+          if (this->children[1]->identifier == AST_Node_Type::Id) {
+            params.push_back(const_var(m_fun_name));
+            try {
+              fpp.save_params(params);
+              return t_ss->call_function("[]", m_loc, params, t_ss.conversions());
+            }
+            catch(const exception::dispatch_error &e){
+              throw exception::eval_error("Can not find appropriate array lookup operator '[]'.", e.parameters, e.functions, false, *t_ss );
+            }
+          }
+
           bool has_function_params = false;
           if (this->children[1]->children.size() > 1) {
             has_function_params = true;
