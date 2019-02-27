@@ -176,7 +176,7 @@ class DatabaseHandler : public LockableDatabase {
 
 	std::shared_ptr<std::unordered_set<std::string>> context;
 
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
@@ -259,7 +259,7 @@ public:
 	bool commit(bool wal = true);
 	bool reopen();
 
-#if defined(XAPIAND_V8) || defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 	const std::shared_ptr<std::pair<std::string, const Data>> get_document_change_seq(std::string_view term_id, bool validate_exists = false);
 	bool set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 	void dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);

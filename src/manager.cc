@@ -44,11 +44,8 @@
 #include <utility>                               // for std::move
 #include <vector>                                // for std::vector
 
-#if defined(XAPIAND_V8)
-#include <v8-version.h>                          // for V8_MAJOR_VERSION, V8_MINOR_VERSION
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
-#include <chaiscript/chaiscript_defines.hpp>     // for chaiscript::Build_Info
+#ifdef XAPIAND_CHAISCRIPT
+#include "chaiscript/chaiscript_defines.hpp"     // for chaiscript::Build_Info
 #endif
 
 #include "allocator.h"                           // for allocator::total_allocated

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "config.h"                // for XAPIAND_CHAISCRIPT, XAPIAND_V8
+#include "config.h"                // for XAPIAND_CHAISCRIPT
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 
 #include <string>
 #include <unordered_map>
@@ -44,7 +44,6 @@ class Script {
 	enum class Type : uint8_t {
 		EMPTY,
 		CHAI,
-		ECMA,
 	};
 
 	void process_body(const MsgPack& _body);
@@ -52,7 +51,6 @@ class Script {
 	void process_type(const MsgPack& _type);
 	void process_value(const MsgPack& _value);
 	void process_chai(const MsgPack& _chai);
-	void process_ecma(const MsgPack& _ecma);
 
 	std::string body;
 	std::string name;
@@ -65,7 +63,6 @@ public:
 	Script(const MsgPack& _obj);
 
 	MsgPack process_chai(bool strict);
-	MsgPack process_ecma(bool strict);
 	MsgPack process_script(bool strict);
 };
 

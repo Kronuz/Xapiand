@@ -22,7 +22,7 @@
 
 #include "xapiand.h"
 
-#include "config.h"                 // for XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_UUID...
+#include "config.h"                 // for XAPIAND_CHAISCRIPT, XAPIAND_UUID...
 
 #include <algorithm>                // for min
 #include <chrono>                   // for system_clock, time_point
@@ -53,11 +53,8 @@
 #include <sys/prctl.h>
 #endif
 
-#if defined(XAPIAND_V8)
-#include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
-#include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
+#ifdef XAPIAND_CHAISCRIPT
+#include "chaiscript/chaiscript_defines.hpp"  // for chaiscript::Build_Info
 #endif
 
 #include "check_size.h"             // for check_size
@@ -1055,10 +1052,7 @@ void banner() {
 
 	std::vector<std::string> values({
 			string::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
-#if defined(XAPIAND_V8)
-			string::format("V8 v{}.{}", V8_MAJOR_VERSION, V8_MINOR_VERSION),
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 			string::format("ChaiScript v{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
 #endif
 	});

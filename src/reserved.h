@@ -51,7 +51,6 @@ constexpr const char RESERVED_SLOT[]                        = RESERVED__ "slot";
 constexpr const char RESERVED_INDEX[]                       = RESERVED__ "index";
 constexpr const char RESERVED_PREFIX[]                      = RESERVED__ "prefix";
 constexpr const char RESERVED_CHAI[]                        = RESERVED__ "chai";
-constexpr const char RESERVED_ECMA[]                        = RESERVED__ "ecma";
 constexpr const char RESERVED_SCRIPT[]                      = RESERVED__ "script";
 constexpr const char RESERVED_NAME[]                        = RESERVED__ "name";
 constexpr const char RESERVED_BODY[]                        = RESERVED__ "body";

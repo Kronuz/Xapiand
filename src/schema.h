@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"                               // for XAPIAND_CHAISCRIPT, XAPIAND_V8
+#include "config.h"                               // for XAPIAND_CHAISCRIPT
 
 #include <array>                                  // for std::array
 #include <cstdint>                                // for uint8_t
@@ -321,7 +321,7 @@ struct required_spc_t {
 		bool uuid_field:1;           // Flag if the field is uuid
 		bool uuid_path:1;            // Flag if the paths has uuid fields.
 		bool inside_namespace:1;     // Flag if the field is inside a namespace
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 		bool normalized_script:1;    // Flag if the script is normalized.
 #endif
 
@@ -489,7 +489,7 @@ struct specification_t : required_spc_t {
 	std::unique_ptr<const MsgPack> value_rec;
 	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<const MsgPack> doc_acc;
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	std::unique_ptr<const MsgPack> script;
 #endif
 
@@ -902,7 +902,7 @@ class Schema {
 	void consistency_schema(std::string_view prop_name, const MsgPack& doc_schema);
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	/*
 	 * Auxiliar functions for RESERVED_SCRIPT.
 	 */

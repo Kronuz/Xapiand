@@ -1769,7 +1769,7 @@ required_spc_t::flags_t::flags_t()
 	  uuid_field(false),
 	  uuid_path(false),
 	  inside_namespace(false),
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	  normalized_script(false),
 #endif
 	  has_uuid_prefix(false),
@@ -1926,7 +1926,7 @@ required_spc_t::to_obj() const
 	obj_flags["uuid_field"] = flags.uuid_field;
 	obj_flags["uuid_path"] = flags.uuid_path;
 	obj_flags["inside_namespace"] = flags.inside_namespace;
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	obj_flags["normalized_script"] = flags.normalized_script;
 #endif
 	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
@@ -2046,7 +2046,7 @@ specification_t::operator=(const specification_t& o)
 	value_rec.reset();
 	value.reset();
 	doc_acc.reset();
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	script.reset();
 #endif
 	meta_name = o.meta_name;
@@ -2073,7 +2073,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	value_rec.reset();
 	value.reset();
 	doc_acc.reset();
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	script.reset();
 #endif
 	meta_name = std::move(o.meta_name);
@@ -2226,7 +2226,7 @@ specification_t::to_obj() const
 	obj["value_rec"] = value_rec ? value_rec->to_string() : MsgPack(MsgPack::Type::NIL);
 	obj["value"] = value ? value->to_string() : MsgPack(MsgPack::Type::NIL);
 	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : MsgPack(MsgPack::Type::NIL);
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	obj["script"] = script ? script->to_string() : MsgPack(MsgPack::Type::NIL);
 #endif
 
@@ -2659,7 +2659,7 @@ Schema::index(const MsgPack& object,
 		}
 		auto term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 		std::unique_ptr<MsgPack> mut_object;
 		if (specification.script) {
 			mut_object = db_handler.run_script(object, term_id, old_document_pair, *specification.script);
@@ -5938,7 +5938,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 		}
 	}
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	normalize_script();
 #endif
 }
@@ -5964,7 +5964,7 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 		}
 	}
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	normalize_script();
 #endif
 }
@@ -6001,7 +6001,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 		}
 	}
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	write_script(mut_properties);
 #endif
 }
@@ -6393,7 +6393,6 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_GEO_COLLECTION),
 		hh(RESERVED_GEO_INTERSECTION),
 		hh(RESERVED_CHAI),
-		hh(RESERVED_ECMA),
 		// Next functions only check the consistency of user provided data.
 		hh(RESERVED_SLOT),
 		hh(RESERVED_LANGUAGE),
@@ -6465,7 +6464,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_GEO_COLLECTION),
 		hh(RESERVED_GEO_INTERSECTION),
 		hh(RESERVED_CHAI),
-		hh(RESERVED_ECMA),
 		// Next functions only check the consistency of user provided data.
 		hh(RESERVED_SLOT),
 		hh(RESERVED_LANGUAGE),
@@ -6602,9 +6600,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_CHAI):
 			Schema::process_cast_object(prop_name, value);
 			return true;
-		case _.fhh(RESERVED_ECMA):
-			Schema::process_cast_object(prop_name, value);
-			return true;
 		// Next functions only check the consistency of user provided data.
 		case _.fhh(RESERVED_SLOT):
 			Schema::consistency_slot(prop_name, value);
@@ -6703,7 +6698,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 		}
 	}
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	write_script(mut_properties);
 #endif
 }
@@ -7325,12 +7320,12 @@ Schema::feed_script(const MsgPack& prop_script)
 {
 	L_CALL("Schema::feed_script({})", repr(prop_script.to_string()));
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	specification.script = std::make_unique<const MsgPack>(prop_script);
 	specification.flags.normalized_script = true;
 #else
 	ignore_unused(prop_script);
-	THROW(ClientError, "{} only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "{} only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
 #endif
 }
 
@@ -8113,12 +8108,12 @@ Schema::process_script(std::string_view /*unused*/, const MsgPack& doc_script)
 	// RESERVED_SCRIPT isn't heritable.
 	L_CALL("Schema::process_script({})", repr(doc_script.to_string()));
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	specification.script = std::make_unique<const MsgPack>(doc_script);
 	specification.flags.normalized_script = false;
 #else
 	ignore_unused(doc_script);
-	THROW(ClientError, "'{}' only is allowed when ChaiScript or ECMAScript/JavaScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "'{}' only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
 #endif
 }
 
@@ -8709,7 +8704,7 @@ Schema::consistency_schema(std::string_view prop_name, const MsgPack& doc_schema
 }
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 inline void
 Schema::write_script(MsgPack& mut_properties)
 {

@@ -49,10 +49,7 @@
 #include "script.h"                         // for Script
 #include "serialise.h"                      // for cast, serialise, type
 
-#if defined(XAPIAND_V8)
-#include "v8pp/v8pp.h"                      // for v8pp namespace
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 #include "chaipp/chaipp.h"                  // for chaipp namespace
 #endif
 
@@ -347,7 +344,7 @@ DatabaseHandler::get_document_term(std::string_view term_id)
 }
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 std::mutex DatabaseHandler::documents_mtx;
 std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
 
@@ -394,13 +391,7 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 			(*processor)(http_method, *mut_object, MsgPack());
 		}
 		return mut_object;
-#if defined(XAPIAND_V8)
-	} catch (const v8pp::ReferenceError&) {
-		return nullptr;
-	} catch (const v8pp::Error& exc) {
-		THROW(ClientError, exc.what());
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 	} catch (const chaipp::ReferenceError&) {
 		return nullptr;
 	} catch (const chaipp::Error& exc) {
@@ -423,44 +414,26 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 		} else {
 			auto it_s = data_script.find(RESERVED_CHAI);
 			if (it_s == data_script.end()) {
-#if defined(XAPIAND_V8)
-				const auto& ecma = data_script.at(RESERVED_ECMA);
-				auto body_hash = ecma.at(RESERVED_BODY_HASH).u64();
-				auto it_hash = ecma.find(RESERVED_HASH);
-				uint64_t hash = (it_hash == ecma.end()) ? body_hash : it_hash.value().u64();
-				auto it_name = ecma.find(RESERVED_NAME);
-				std::string_view name = (it_name == ecma.end()) ? "" : it_name.value().str_view();
-				return call_script<v8pp::Processor>(
-					obj,
-					term_id,
-					hash,
-					body_hash,
-					name,
-					ecma.at(RESERVED_BODY).str_view(),
-					old_document_pair);
-#else
-				THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
-#endif
-			} else {
-#if defined(XAPIAND_CHAISCRIPT)
-				const auto& chai = it_s.value();
-				auto body_hash = chai.at(RESERVED_BODY_HASH).u64();
-				auto it_hash = chai.find(RESERVED_HASH);
-				uint64_t hash = (it_hash == chai.end()) ? body_hash : it_hash.value().u64();
-				auto it_name = chai.find(RESERVED_NAME);
-				std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
-				return call_script<chaipp::Processor>(
-					obj,
-					term_id,
-					hash,
-					body_hash,
-					name,
-					chai.at(RESERVED_BODY).str_view(),
-					old_document_pair);
-#else
-				THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
-#endif
+				THROW(ClientError, "Script type '{}' (ChaiScript) not available.", RESERVED_CHAI);
 			}
+#ifdef XAPIAND_CHAISCRIPT
+			const auto& chai = it_s.value();
+			auto body_hash = chai.at(RESERVED_BODY_HASH).u64();
+			auto it_hash = chai.find(RESERVED_HASH);
+			uint64_t hash = (it_hash == chai.end()) ? body_hash : it_hash.value().u64();
+			auto it_name = chai.find(RESERVED_NAME);
+			std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
+			return call_script<chaipp::Processor>(
+				obj,
+				term_id,
+				hash,
+				body_hash,
+				name,
+				chai.at(RESERVED_BODY).str_view(),
+				old_document_pair);
+#else
+			THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+#endif
 		}
 	}
 
@@ -476,7 +449,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 	while (true) {
 #endif
 		auto schema_begins = std::chrono::system_clock::now();
@@ -498,7 +471,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 			doc.set_data(serialised);
 		}
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 		auto current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, data));
 		if (set_document_change_seq(current_document_pair, old_document_pair)) {
 			break;
@@ -1760,7 +1733,7 @@ DatabaseHandler::reopen()
 }
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 const std::shared_ptr<std::pair<std::string, const Data>>
 DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate_exists)
 {

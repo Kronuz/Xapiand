@@ -58,8 +58,7 @@ namespace Cast {
 		OPTION(MULTICHULL) \
 		OPTION(GEO_COLLECTION) \
 		OPTION(GEO_INTERSECTION) \
-		OPTION(CHAI) \
-		OPTION(ECMA)
+		OPTION(CHAI)
 
 	constexpr static auto cast_hash = phf::make_phf({
 		#define OPTION(name) hh(RESERVED_##name),

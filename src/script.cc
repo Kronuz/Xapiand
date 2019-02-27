@@ -23,12 +23,11 @@
 #include "script.h"
 
 
-#if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
+#ifdef XAPIAND_CHAISCRIPT
 
 #include "chaipp/chaipp.h"
 #include "ignore_unused.h"
 #include "serialise.h"
-#include "v8pp/v8pp.h"
 #include "hashes.hh"        // for fnv1ah32
 #include "phf.hh"           // for phf
 
@@ -37,7 +36,6 @@ static const auto str_set_dispatch_script(string::join<std::string>({
 	RESERVED_TYPE,
 	RESERVED_VALUE,
 	RESERVED_CHAI,
-	RESERVED_ECMA,
 	RESERVED_BODY,
 	RESERVED_NAME,
 }, ",", " or "));
@@ -69,7 +67,6 @@ Script::Script(const MsgPack& _obj)
 					hh(RESERVED_TYPE),
 					hh(RESERVED_VALUE),
 					hh(RESERVED_CHAI),
-					hh(RESERVED_ECMA),
 					hh(RESERVED_BODY),
 					hh(RESERVED_NAME),
 				});
@@ -82,9 +79,6 @@ Script::Script(const MsgPack& _obj)
 						break;
 					case _.fhh(RESERVED_CHAI):
 						process_chai(value);
-						break;
-					case _.fhh(RESERVED_ECMA):
-						process_ecma(value);
 						break;
 					case _.fhh(RESERVED_BODY):
 						process_body(value);
@@ -211,22 +205,12 @@ Script::process_chai(const MsgPack& _chai)
 }
 
 
-void
-Script::process_ecma(const MsgPack& _ecma)
-{
-	L_CALL("Script::process_ecma({})", repr(_ecma.to_string()));
-
-	process_value(_ecma);
-	type = Type::ECMA;
-}
-
-
 MsgPack
 Script::process_chai(bool strict)
 {
 	L_CALL("Script::process_chai({})", strict);
 
-#if defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 	switch (sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::EMPTY:
 			if (strict) {
@@ -289,99 +273,14 @@ Script::process_chai(bool strict)
 
 
 MsgPack
-Script::process_ecma(bool strict)
-{
-	L_CALL("Script::process_ecma({})", strict);
-
-#if defined(XAPIAND_V8)
-	switch (sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::EMPTY:
-			if (strict) {
-				THROW(MissingTypeError, "Type of field {} is missing", RESERVED_SCRIPT);
-			}
-			sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
-			/* FALLTHROUGH */
-		case FieldType::SCRIPT: {
-			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-				if (name.empty()) {
-					return MsgPack({
-						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-						{ RESERVED_ECMA, body      },
-					});
-				} else {
-					THROW(ClientError, "For type {}, {} must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
-				}
-			} else if (name.empty()) {
-				uint64_t body_hash = v8pp::hash(body);
-				try {
-					v8pp::Processor::compile(body_hash, body_hash, name, body);
-					return MsgPack({
-						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-						{ RESERVED_ECMA, {
-							{ RESERVED_NAME,      name },
-							{ RESERVED_HASH,      body_hash },
-							{ RESERVED_BODY_HASH, body_hash },
-							{ RESERVED_BODY,      body      },
-						}}
-					});
-				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: {}", repr(body));
-				}
-			} else {
-				auto script_hash = v8pp::hash(name);
-				auto body_hash = v8pp::hash(body);
-				try {
-					v8pp::Processor::compile(body_hash, body_hash, name, body);
-					return MsgPack({
-						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-						{ RESERVED_ECMA, {
-							{ RESERVED_NAME,      name },
-							{ RESERVED_HASH,      script_hash },
-							{ RESERVED_BODY_HASH, body_hash },
-							{ RESERVED_BODY,      body      },
-						}}
-					});
-				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: {}", repr(body));
-				}
-			}
-		}
-		default:
-			THROW(ClientError, "Only type {} is allowed in {}", Serialise::type(FieldType::SCRIPT), RESERVED_SCRIPT);
-	}
-#else
-	ignore_unused(strict);
-	THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
-#endif
-}
-
-
-MsgPack
 Script::process_script(bool strict)
 {
 	L_CALL("Script::process_script({})", strict);
 
 	switch (type) {
 		case Type::CHAI:
-			return process_chai(strict);
-		case Type::ECMA:
-			return process_ecma(strict);
 		case Type::EMPTY:
-#if defined(XAPIAND_V8)
-			try {
-				return process_ecma(strict);
-			} catch (const ScriptNotFoundError& er) {
-#if defined(XAPIAND_CHAISCRIPT)
-				try {
-					return process_chai(strict);
-				} catch (const ScriptNotFoundError& er) {
-					THROW(ClientError, "{}", er.what());
-				}
-#else
-				THROW(ClientError, "{}", er.what());
-#endif
-			}
-#elif defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 			try {
 				return process_chai(strict);
 			} catch (const ScriptNotFoundError& er) {

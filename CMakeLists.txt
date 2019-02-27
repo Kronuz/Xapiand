@@ -54,7 +54,6 @@ option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
 option(TRACKED_MEM   "Enable tracked memory allocator"              OFF)
 option(CHECK_IO_FDES "Check file descriptors"                       OFF)
-option(V8            "Enable v8 engine"                             OFF)
 option(CHAISCRIPT    "Enable ChaiScript engine"                      ON)
 option(UUID_ENCODED  "Allow encoded (base59) as UUID encoding"       ON)
 option(UUID_GUID     "Allow GUID as UUID encoding"                  OFF)
@@ -64,7 +63,7 @@ option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
 
 
-foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES V8 CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
+foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -545,16 +544,6 @@ if (ZLIB_FOUND)
 	target_link_libraries(${PROJECT_NAME} PRIVATE ${ZLIB_LIBRARIES})
 else ()
 	set (HAVE_ZLIB 0)
-endif ()
-
-
-########################################################################
-if (V8)
-	# V8 Engine Library
-	####################################################################
-	find_package(V8 REQUIRED)
-	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${V8_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${V8_LIBRARIES})
 endif ()
 
 
@@ -1142,8 +1131,6 @@ if (BUILD_TESTS)
 				${GTEST_BOTH_LIBRARIES}
 				${CMAKE_THREAD_LIBS_INIT}
 				${UUID_LIBRARIES}
-				${CHAISCRIPT_LIBRARIES}
-				${V8_LIBRARIES}
 				${M_LIBRARIES}
 				${ZLIB_LIBRARIES}
 			)

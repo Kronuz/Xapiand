@@ -408,7 +408,6 @@ Cast::getType(std::string_view cast_word)
 		case Hash::GEO_COLLECTION:    return FieldType::GEO;
 		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
 		case Hash::CHAI:              return FieldType::SCRIPT;
-		case Hash::ECMA:              return FieldType::SCRIPT;
 		default:
 			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}

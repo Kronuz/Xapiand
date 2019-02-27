@@ -22,7 +22,7 @@
 
 #include "http_client.h"
 
-#include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_V8, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
+#include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
 
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
@@ -33,12 +33,8 @@
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <utility>                          // for std::move
 
-#if defined(XAPIAND_V8)
-#include <v8-version.h>                       // for V8_MAJOR_VERSION, V8_MINOR_VERSION
-#endif
-
-#if defined(XAPIAND_CHAISCRIPT)
-#include <chaiscript/chaiscript_defines.hpp>  // for chaiscript::Build_Info
+#ifdef XAPIAND_CHAISCRIPT
+#include "chaiscript/chaiscript_defines.hpp"  // for chaiscript::Build_Info
 #endif
 
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
@@ -1509,10 +1505,7 @@ HttpClient::home_view(Request& request)
 	obj[RESPONSE_VERSIONS] = {
 		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
 		{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
-#if defined(XAPIAND_V8)
-		{ "V8", string::format("{}.{}", V8_MAJOR_VERSION, V8_MINOR_VERSION) },
-#endif
-#if defined(XAPIAND_CHAISCRIPT)
+#ifdef XAPIAND_CHAISCRIPT
 		{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 	};

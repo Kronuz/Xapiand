@@ -101,7 +101,6 @@
 #include "server/raft.h"
 #include "server/remote_protocol.h"
 #include "server/replication_protocol.h"
-#include "v8pp/v8pp.h"
 
 #define TINY 8
 #define SMALL 128
@@ -350,11 +349,6 @@ CHECK_MAX_SIZE(SMALL, (Discovery))
 #if XAPIAND_CHAISCRIPT
 // chaipp/chaipp.h
 CHECK_MAX_SIZE(SMALL, (chaipp::Processor))
-#endif
-
-#ifdef XAPIAND_V8
-// v8pp/v8pp.h
-CHECK_MAX_SIZE(SMALL, (v8pp::Processor))
 #endif
 
 }
