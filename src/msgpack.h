@@ -136,8 +136,6 @@ public:
 	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
 	MsgPack(T&& v);
 
-	MsgPack clone() const;
-
 	MsgPack& operator=(const MsgPack& other);
 	MsgPack& operator=(MsgPack&& other);
 	MsgPack& operator=(std::initializer_list<MsgPack> list);
@@ -250,13 +248,13 @@ public:
 	MsgPack& append(T&& v);
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	MsgPack& operator[](M&& o);
+	MsgPack& get(M&& o);
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	const MsgPack& operator[](M&& o) const;
-	MsgPack& operator[](std::string_view s);
-	const MsgPack& operator[](std::string_view s) const;
-	MsgPack& operator[](size_t pos);
-	const MsgPack& operator[](size_t pos) const;
+	const MsgPack& get(M&& o) const;
+	MsgPack& get(std::string_view s);
+	const MsgPack& get(std::string_view s) const;
+	MsgPack& get(size_t pos);
+	const MsgPack& get(size_t pos) const;
 
 	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	MsgPack& at(M&& o);
@@ -266,6 +264,11 @@ public:
 	const MsgPack& at(std::string_view s) const;
 	MsgPack& at(size_t pos);
 	const MsgPack& at(size_t pos) const;
+
+	template <typename T>
+	MsgPack& operator[](T&& o);
+	template <typename T>
+	const MsgPack& operator[](T&& o) const;
 
 	template <typename T>
 	MsgPack& path(const std::vector<T>& path);
@@ -289,19 +292,19 @@ public:
 	std::size_t hash() const;
 
 	explicit operator bool() const;
-	explicit operator unsigned long long() const;
-	explicit operator long long() const;
-	explicit operator double() const;
-
 	explicit operator unsigned char() const;
 	explicit operator unsigned short() const;
 	explicit operator unsigned int() const;
 	explicit operator unsigned long() const;
+	explicit operator unsigned long long() const;
 	explicit operator char() const;
 	explicit operator short() const;
 	explicit operator int() const;
 	explicit operator long() const;
+	explicit operator long long() const;
 	explicit operator float() const;
+	explicit operator double() const;
+	explicit operator std::string() const;
 
 	void reserve(size_t n);
 
@@ -343,8 +346,27 @@ public:
 
 	bool operator==(const MsgPack& other) const;
 	bool operator!=(const MsgPack& other) const;
-	MsgPack operator+(double val);
-	MsgPack& operator+=(double val);
+
+	template <typename T>
+	MsgPack operator+(T&& val);
+	template <typename T>
+	MsgPack& operator+=(T&& val);
+
+	template <typename T>
+	MsgPack operator-(T&& val);
+	template <typename T>
+	MsgPack& operator-=(T&& val);
+
+	template <typename T>
+	MsgPack operator*(T&& val);
+	template <typename T>
+	MsgPack& operator*=(T&& val);
+
+	template <typename T>
+	MsgPack operator/(T&& val);
+	template <typename T>
+	MsgPack& operator/=(T&& val);
+
 	std::ostream& operator<<(std::ostream& s) const;
 
 	std::string_view unformatted_string_view() const;
@@ -854,13 +876,6 @@ inline MsgPack::MsgPack(Type type)
 		default:
 			THROW(msgpack::type_error);
 	}
-}
-
-
-inline MsgPack MsgPack::clone() const {
-	MsgPack cloned;
-	cloned._assignment(msgpack::object(*this, *cloned._body->_zone));
-	return cloned;
 }
 
 
@@ -1703,18 +1718,18 @@ inline MsgPack& MsgPack::append(T&& v) {
 
 
 template <typename M, typename>
-inline MsgPack& MsgPack::operator[](M&& o) {
+inline MsgPack& MsgPack::get(M&& o) {
 	_fill(false, false);
 	switch (o._body->getType()) {
 		case Type::STR:
-			return operator[](std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
+			return get(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
 			}
-			return operator[](static_cast<size_t>(o._body->_obj->via.i64));
+			return get(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
-			return operator[](static_cast<size_t>(o._body->_obj->via.u64));
+			return get(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
 			THROW(msgpack::type_error);
 	}
@@ -1722,25 +1737,25 @@ inline MsgPack& MsgPack::operator[](M&& o) {
 
 
 template <typename M, typename>
-inline const MsgPack& MsgPack::operator[](M&& o) const {
+inline const MsgPack& MsgPack::get(M&& o) const {
 	_fill(false, false);
 	switch (o._const_body->getType()) {
 		case Type::STR:
-			return operator[](std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
+			return get(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
 				THROW(msgpack::type_error);
 			}
-			return operator[](static_cast<size_t>(o._const_body->_obj->via.i64));
+			return get(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
-			return operator[](static_cast<size_t>(o._const_body->_obj->via.u64));
+			return get(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
 			THROW(msgpack::type_error);
 	}
 }
 
 
-inline MsgPack& MsgPack::operator[](std::string_view key) {
+inline MsgPack& MsgPack::get(std::string_view key) {
 	auto it = find(key);
 	if (it == end()) {
 		return *_put(key, MsgPack::undefined(), false).first;
@@ -1749,7 +1764,7 @@ inline MsgPack& MsgPack::operator[](std::string_view key) {
 }
 
 
-inline const MsgPack& MsgPack::operator[](std::string_view key) const {
+inline const MsgPack& MsgPack::get(std::string_view key) const {
 	auto it = find(key);
 	if (it == cend()) {
 		return MsgPack::undefined();
@@ -1758,7 +1773,7 @@ inline const MsgPack& MsgPack::operator[](std::string_view key) const {
 }
 
 
-inline MsgPack& MsgPack::operator[](size_t pos) {
+inline MsgPack& MsgPack::get(size_t pos) {
 	auto it = find(pos);
 	if (it == end()) {
 		return *_put(pos, MsgPack::undefined(), false).first;
@@ -1767,7 +1782,7 @@ inline MsgPack& MsgPack::operator[](size_t pos) {
 }
 
 
-inline const MsgPack& MsgPack::operator[](size_t pos) const {
+inline const MsgPack& MsgPack::get(size_t pos) const {
 	auto it = find(pos);
 	if (it == cend()) {
 		return MsgPack::undefined();
@@ -1872,6 +1887,17 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 		default:
 			THROW(msgpack::type_error);
 	}
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::operator[](T&& o) {
+	return get(std::forward<T>(o));
+}
+
+template <typename T>
+inline const MsgPack& MsgPack::operator[](T&& o) const {
+	return get(std::forward<T>(o));
 }
 
 
@@ -2138,132 +2164,71 @@ inline std::size_t MsgPack::hash() const {
 
 
 inline MsgPack::operator bool() const {
-	switch (_const_body->getType()) {
-		case Type::MAP:
-		case Type::ARRAY:
-		case Type::STR:
-			return size() > 0;
-		case Type::NEGATIVE_INTEGER:
-			return _const_body->_obj->via.i64 != 0;
-		case Type::POSITIVE_INTEGER:
-			return _const_body->_obj->via.u64 != 0;
-		case Type::FLOAT:
-			return _const_body->_obj->via.f64 != 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean;
-		default:
-			return false;
-	}
+	return as_boolean();
 }
 
-
-inline MsgPack::operator unsigned long long() const {
-	switch (_const_body->getType()) {
-		case Type::NIL:
-			return 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? 1 : 0;
-		case Type::POSITIVE_INTEGER:
-			return _const_body->_obj->via.u64;
-		case Type::NEGATIVE_INTEGER:
-			return _const_body->_obj->via.i64;
-		case Type::FLOAT:
-			return _const_body->_obj->via.f64;
-		case Type::STR:
-			return strict_stoull(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-		case Type::BIN:
-			return strict_stoull(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
-		default:
-			return 0;
-	}
-}
-
-
-inline MsgPack::operator long long() const {
-	switch (_const_body->getType()) {
-		case Type::NIL:
-			return 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? 1 : 0;
-		case Type::POSITIVE_INTEGER:
-			return _const_body->_obj->via.u64;
-		case Type::NEGATIVE_INTEGER:
-			return _const_body->_obj->via.i64;
-		case Type::FLOAT:
-			return _const_body->_obj->via.f64;
-		case Type::STR:
-			return strict_stoll(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-		case Type::BIN:
-			return strict_stoll(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
-		default:
-			return 0;
-	}
-}
 
 inline MsgPack::operator unsigned char() const {
-	return static_cast<unsigned long long>(*this);
+	return as_u64();
 }
 
 
 inline MsgPack::operator unsigned short() const {
-	return static_cast<unsigned long long>(*this);
+	return as_u64();
 }
 
 
 inline MsgPack::operator unsigned int() const {
-	return static_cast<unsigned long long>(*this);
+	return as_u64();
 }
 
 
 inline MsgPack::operator unsigned long() const {
-	return static_cast<unsigned long long>(*this);
+	return as_u64();
+}
+
+
+inline MsgPack::operator unsigned long long() const {
+	return as_u64();
 }
 
 
 inline MsgPack::operator char() const {
-	return static_cast<long long>(*this);
+	return as_i64();
 }
 
 
 inline MsgPack::operator short() const {
-	return static_cast<long long>(*this);
+	return as_i64();
 }
 
 
 inline MsgPack::operator int() const {
-	return static_cast<long long>(*this);
+	return as_i64();
 }
 
 
 inline MsgPack::operator long() const {
-	return static_cast<long long>(*this);
+	return as_i64();
 }
 
 
+inline MsgPack::operator long long() const {
+	return as_i64();
+}
+
 inline MsgPack::operator float() const {
-	return static_cast<double>(*this);
+	return as_f64();
 }
 
 
 inline MsgPack::operator double() const {
-	switch (_const_body->getType()) {
-		case Type::NIL:
-			return 0;
-		case Type::BOOLEAN:
-			return _const_body->_obj->via.boolean ? 1 : 0;
-		case Type::POSITIVE_INTEGER:
-			return _const_body->_obj->via.u64;
-		case Type::NEGATIVE_INTEGER:
-			return _const_body->_obj->via.i64;
-		case Type::FLOAT:
-			return _const_body->_obj->via.f64;
-		case Type::STR:
-			return strict_stod(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
-		case Type::BIN:
-			return strict_stod(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
-		default:
-			return 0;
-	}
+	return as_f64();
+}
+
+
+inline MsgPack::operator std::string() const {
+	return as_str();
 }
 
 
@@ -2366,17 +2331,68 @@ inline bool MsgPack::boolean() const {
 
 
 inline uint64_t MsgPack::as_u64() const {
-	return static_cast<unsigned long long>(*this);
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64;
+		case Type::NEGATIVE_INTEGER:
+			return _const_body->_obj->via.i64;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64;
+		case Type::STR:
+			return strict_stoull(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+		case Type::BIN:
+			return strict_stoull(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+		default:
+			return 0;
+	}
 }
 
 
 inline int64_t MsgPack::as_i64() const {
-	return static_cast<long long>(*this);
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64;
+		case Type::NEGATIVE_INTEGER:
+			return _const_body->_obj->via.i64;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64;
+		case Type::STR:
+			return strict_stoll(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+		case Type::BIN:
+			return strict_stoll(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+		default:
+			return 0;
+	}
 }
 
 
 inline double MsgPack::as_f64() const {
-	return static_cast<double>(*this);
+	switch (_const_body->getType()) {
+		case Type::NIL:
+			return 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean ? 1 : 0;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64;
+		case Type::NEGATIVE_INTEGER:
+			return _const_body->_obj->via.i64;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64;
+		case Type::STR:
+			return strict_stod(nullptr, std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size));
+		case Type::BIN:
+			return strict_stod(nullptr, std::string_view(_const_body->_obj->via.bin.ptr, _const_body->_obj->via.bin.size));
+		default:
+			return 0;
+	}
 }
 
 
@@ -2411,7 +2427,22 @@ inline std::string MsgPack::as_str() const {
 
 
 inline bool MsgPack::as_boolean() const {
-	return static_cast<bool>(*this);
+	switch (_const_body->getType()) {
+		case Type::MAP:
+		case Type::ARRAY:
+		case Type::STR:
+			return size() > 0;
+		case Type::NEGATIVE_INTEGER:
+			return _const_body->_obj->via.i64 != 0;
+		case Type::POSITIVE_INTEGER:
+			return _const_body->_obj->via.u64 != 0;
+		case Type::FLOAT:
+			return _const_body->_obj->via.f64 != 0;
+		case Type::BOOLEAN:
+			return _const_body->_obj->via.boolean;
+		default:
+			return false;
+	}
 }
 
 
@@ -2502,38 +2533,107 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 }
 
 
-inline MsgPack MsgPack::operator+(double val) {
-	MsgPack o(_body);
-	switch (o.getType()) {
+template <typename T>
+inline MsgPack& MsgPack::operator+=(T&& val) {
+	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
-			o._body->_obj->via.i64 += val;
-			return o;
+			_body->_obj->via.i64 += static_cast<long long>(val);
+			return *this;
 		case Type::POSITIVE_INTEGER:
-			o._body->_obj->via.u64 += val;
-			return o;
+			_body->_obj->via.u64 += static_cast<unsigned long long>(val);
+			return *this;
 		case Type::FLOAT:
-			o._body->_obj->via.f64 += val;
-			return o;
+			_body->_obj->via.f64 += static_cast<double>(val);
+			return *this;
 		default:
 			THROW(msgpack::type_error);
 	}
 }
 
 
-inline MsgPack& MsgPack::operator+=(double val) {
+template <typename T>
+inline MsgPack MsgPack::operator+(T&& val) {
+	MsgPack o = *this;
+	o += std::forward<T>(val);
+	return o;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::operator-=(T&& val) {
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
-			_body->_obj->via.i64 += val;
+			_body->_obj->via.i64 -= static_cast<long long>(val);
 			return *this;
 		case Type::POSITIVE_INTEGER:
-			_body->_obj->via.u64 += val;
+			_body->_obj->via.u64 -= static_cast<unsigned long long>(val);
 			return *this;
 		case Type::FLOAT:
-			_body->_obj->via.f64 += val;
+			_body->_obj->via.f64 -= static_cast<double>(val);
 			return *this;
 		default:
 			THROW(msgpack::type_error);
 	}
+}
+
+
+template <typename T>
+inline MsgPack MsgPack::operator-(T&& val) {
+	MsgPack o = *this;
+	o -= std::forward<T>(val);
+	return o;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::operator*=(T&& val) {
+	switch (_body->getType()) {
+		case Type::NEGATIVE_INTEGER:
+			_body->_obj->via.i64 *= static_cast<long long>(val);
+			return *this;
+		case Type::POSITIVE_INTEGER:
+			_body->_obj->via.u64 *= static_cast<unsigned long long>(val);
+			return *this;
+		case Type::FLOAT:
+			_body->_obj->via.f64 *= static_cast<double>(val);
+			return *this;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+template <typename T>
+inline MsgPack MsgPack::operator*(T&& val) {
+	MsgPack o = *this;
+	o *= std::forward<T>(val);
+	return o;
+}
+
+
+template <typename T>
+inline MsgPack& MsgPack::operator/=(T&& val) {
+	switch (_body->getType()) {
+		case Type::NEGATIVE_INTEGER:
+			_body->_obj->via.i64 /= static_cast<long long>(val);
+			return *this;
+		case Type::POSITIVE_INTEGER:
+			_body->_obj->via.u64 /= static_cast<unsigned long long>(val);
+			return *this;
+		case Type::FLOAT:
+			_body->_obj->via.f64 /= static_cast<double>(val);
+			return *this;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+template <typename T>
+inline MsgPack MsgPack::operator/(T&& val) {
+	MsgPack o = *this;
+	o /= std::forward<T>(val);
+	return o;
 }
 
 
