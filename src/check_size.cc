@@ -352,7 +352,7 @@ CHECK_MAX_SIZE(SMALL, (Discovery))
 CHECK_MAX_SIZE(SMALL, (chaipp::Processor))
 #endif
 
-#if XAPIAND_V8
+#ifdef XAPIAND_V8
 // v8pp/v8pp.h
 CHECK_MAX_SIZE(SMALL, (v8pp::Processor))
 #endif

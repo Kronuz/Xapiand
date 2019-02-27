@@ -354,78 +354,46 @@ std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Dat
 
 template<typename Processor>
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
 	try {
-		auto processor = Processor::compile(script_hash, body_hash, std::string(script_body));
+		auto processor = Processor::compile(script_hash, body_hash, script_name, script_body);
+		std::string http_method;
 		switch (method) {
-			case HTTP_PUT: {
-				auto mut_object = std::make_unique<MsgPack>(object);
-				if (old_document_pair == nullptr && !term_id.empty()) {
-					old_document_pair = get_document_change_seq(term_id);
-				}
-				if (old_document_pair != nullptr) {
-					auto old_object = old_document_pair->second.get_obj();
-					L_INDEX("Script: on_put({}, {})", mut_object->to_string(4), old_object.to_string(4));
-					*mut_object = (*processor)["on_put"](*mut_object, old_object);
-				} else {
-					L_INDEX("Script: on_put({})", mut_object->to_string(4));
-					*mut_object = (*processor)["on_put"](*mut_object, MsgPack(MsgPack::Type::MAP));
-				}
-				return mut_object;
-			}
-
-			case HTTP_PATCH:
-			case HTTP_MERGE: {
-				auto mut_object = std::make_unique<MsgPack>(object);
-				if (old_document_pair == nullptr && !term_id.empty()) {
-					old_document_pair = get_document_change_seq(term_id);
-				}
-				if (old_document_pair != nullptr) {
-					auto old_object = old_document_pair->second.get_obj();
-					L_INDEX("Script: on_patch({}, {})", mut_object->to_string(4), old_object.to_string(4));
-					*mut_object = (*processor)["on_patch"](*mut_object, old_object);
-				} else {
-					L_INDEX("Script: on_patch({})", mut_object->to_string(4));
-					*mut_object = (*processor)["on_patch"](*mut_object, MsgPack(MsgPack::Type::MAP));
-				}
-				return mut_object;
-			}
-
-			case HTTP_DELETE: {
-				auto mut_object = std::make_unique<MsgPack>(object);
-				if (old_document_pair == nullptr && !term_id.empty()) {
-					old_document_pair = get_document_change_seq(term_id);
-				}
-				if (old_document_pair != nullptr) {
-					auto old_object = old_document_pair->second.get_obj();
-					L_INDEX("Script: on_delete({}, {})", mut_object->to_string(4), old_object.to_string(4));
-					*mut_object = (*processor)["on_delete"](*mut_object, old_object);
-				} else {
-					L_INDEX("Script: on_delete({})", mut_object->to_string(4));
-					*mut_object = (*processor)["on_delete"](*mut_object, MsgPack(MsgPack::Type::MAP));
-				}
-				return mut_object;
-			}
-
-			case HTTP_GET: {
-				auto mut_object = std::make_unique<MsgPack>(object);
-				L_INDEX("Script: on_get({})", mut_object->to_string(4));
-				*mut_object = (*processor)["on_get"](*mut_object);
-				return mut_object;
-			}
-
-			case HTTP_POST: {
-				auto mut_object = std::make_unique<MsgPack>(object);
-				L_INDEX("Script: on_post({})", mut_object->to_string(4));
-				*mut_object = (*processor)["on_post"](*mut_object);
-				return mut_object;
-			}
-
-			default:
+			case HTTP_PUT:
+				http_method = "PUT";
 				break;
+			case HTTP_PATCH:
+				http_method = "PATCH";
+				break;
+			case HTTP_MERGE:
+				http_method = "MERGE";
+				break;
+			case HTTP_DELETE:
+				http_method = "DELETE";
+				break;
+			case HTTP_GET:
+				http_method = "GET";
+				break;
+			case HTTP_POST:
+				http_method = "POST";
+				break;
+			default:
+				return nullptr;
 		}
-		return nullptr;
+		if (old_document_pair == nullptr && !term_id.empty()) {
+			old_document_pair = get_document_change_seq(term_id);
+		}
+		auto mut_object = std::make_unique<MsgPack>(object);
+		if (old_document_pair != nullptr) {
+			auto old_obj = old_document_pair->second.get_obj();
+			L_INDEX("Script: call({}, {})", mut_object->to_string(4), old_obj.to_string(4));
+			(*processor)(http_method, *mut_object, old_obj);
+		} else {
+			L_INDEX("Script: call({})", mut_object->to_string(4));
+			(*processor)(http_method, *mut_object, MsgPack());
+		}
+		return mut_object;
 #if defined(XAPIAND_V8)
 	} catch (const v8pp::ReferenceError&) {
 		return nullptr;
@@ -443,7 +411,7 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 
 
 std::unique_ptr<MsgPack>
-DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script)
+DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script)
 {
 	L_CALL("DatabaseHandler::run_script(...)");
 
@@ -457,14 +425,38 @@ DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std
 			if (it_s == data_script.end()) {
 #if defined(XAPIAND_V8)
 				const auto& ecma = data_script.at(RESERVED_ECMA);
-				return call_script<v8pp::Processor>(object, term_id, ecma.at(RESERVED_HASH).u64(), ecma.at(RESERVED_BODY_HASH).u64(), ecma.at(RESERVED_BODY).str_view(), old_document_pair);
+				auto body_hash = ecma.at(RESERVED_BODY_HASH).u64();
+				auto it_hash = ecma.find(RESERVED_HASH);
+				uint64_t hash = (it_hash == ecma.end()) ? body_hash : it_hash.value().u64();
+				auto it_name = ecma.find(RESERVED_NAME);
+				std::string_view name = (it_name == ecma.end()) ? "" : it_name.value().str_view();
+				return call_script<v8pp::Processor>(
+					obj,
+					term_id,
+					hash,
+					body_hash,
+					name,
+					ecma.at(RESERVED_BODY).str_view(),
+					old_document_pair);
 #else
 				THROW(ClientError, "Script type 'ecma' (ECMAScript or JavaScript) not available.");
 #endif
 			} else {
 #if defined(XAPIAND_CHAISCRIPT)
 				const auto& chai = it_s.value();
-				return call_script<chaipp::Processor>(object, term_id, chai.at(RESERVED_HASH).u64(), chai.at(RESERVED_BODY_HASH).u64(), chai.at(RESERVED_BODY).str_view(), old_document_pair);
+				auto body_hash = chai.at(RESERVED_BODY_HASH).u64();
+				auto it_hash = chai.find(RESERVED_HASH);
+				uint64_t hash = (it_hash == chai.end()) ? body_hash : it_hash.value().u64();
+				auto it_name = chai.find(RESERVED_NAME);
+				std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
+				return call_script<chaipp::Processor>(
+					obj,
+					term_id,
+					hash,
+					body_hash,
+					name,
+					chai.at(RESERVED_BODY).str_view(),
+					old_document_pair);
 #else
 				THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif

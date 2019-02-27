@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,17 +26,19 @@
 
 #if XAPIAND_CHAISCRIPT
 
+#include "string_view.hh"
 #include <unordered_map>
 
 #include "exception.h"
 #include "lru.h"
 #include "module.h"
+#include "msgpack.h"
 
 
 namespace chaipp {
 
-inline size_t hash(const std::string& source) {
-	std::hash<std::string> hash_fn;
+inline size_t hash(std::string_view source) {
+	std::hash<std::string_view> hash_fn;
 	return hash_fn(source);
 }
 
@@ -58,7 +60,7 @@ class Processor {
 		explicit Engine(ssize_t max_size)
 			: script_lru(max_size) { }
 
-		std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
+		std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body) {
 			std::unique_lock<std::mutex> lk(mtx);
 			auto it = script_lru.find(script_hash);
 			if (it != script_lru.end()) {
@@ -68,90 +70,59 @@ class Processor {
 			}
 			lk.unlock();
 
-			auto processor = std::make_shared<Processor>(script_body);
+			auto processor = std::make_shared<Processor>(script_name, script_body);
 
 			lk.lock();
 			return script_lru.emplace(script_hash, std::make_pair(body_hash, std::move(processor))).first->second.second;
 		}
 
-		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
+		std::shared_ptr<Processor> compile(std::string_view script_name, std::string_view script_body) {
 			if (script_name.empty()) {
 				auto body_hash = hash(script_body);
-				return compile(body_hash, body_hash, script_body);
+				return compile(body_hash, body_hash, "", script_body);
 			} else if (script_body.empty()) {
 				auto script_hash = hash(script_name);
-				return compile(script_hash, script_hash, script_name);
+				return compile(script_hash, script_hash, "", script_name);
 			} else {
 				auto script_hash = hash(script_name);
 				auto body_hash = hash(script_body);
-				return compile(script_hash, body_hash, script_body);
-			}
-		}
-	};
-
-	/*
-	 * Wrap ChaiScript function into new C++ function.
-	 */
-	class Function {
-		chaiscript::Boxed_Value value;
-
-	public:
-		explicit Function(chaiscript::Boxed_Value&& value_)
-			: value(std::move(value_)) { }
-
-		explicit Function(const chaiscript::Boxed_Value& value_)
-			: value(value_) { }
-
-		Function(Function&& o) noexcept
-			: value(std::move(o.value)) { }
-
-		Function(const Function& o) = delete;
-
-		Function& operator=(Function&& o) noexcept {
-			value = std::move(o.value);
-			return *this;
-		}
-
-		Function& operator=(const Function& o) = delete;
-
-		template <typename... Args>
-		MsgPack operator()(Args&&... args) const {
-			try {
-				auto func = chaiscript::boxed_cast<std::function<MsgPack(Args...)>>(value);
-				return func(std::forward<Args>(args)...);
-			} catch (const chaiscript::exception::bad_boxed_cast& er) {
-				throw InvalidArgument(er.what());
-			} catch (const chaiscript::exception::eval_error& er) {
-				throw ScriptSyntaxError(er.pretty_print());
+				return compile(script_hash, body_hash, script_name, script_body);
 			}
 		}
 	};
 
 	chaiscript::ChaiScript chai;
-	std::unordered_map<std::string, const Function> functions;
+	chaiscript::AST_NodePtr ast;
 
 public:
-	Processor(const std::string& script_source) {
+	Processor(std::string_view script_name, std::string_view script_body) {
 		static auto module_msgpack = ModuleMsgPack();
 		chai.add(module_msgpack);
-
-		try {
-			chai.eval(script_source);
-		} catch (const std::exception& er) {
-			throw ScriptSyntaxError(er.what());
-		}
+		ast = chai.get_parser().parse(std::string(script_body), std::string(script_name));
+		L_MAGENTA(ast->to_string());
 	}
 
-	const Function& operator[](const std::string& name) {
-		auto it = functions.find(name);
-		if (it == functions.end()) {
+	void operator()(std::string_view method, MsgPack& obj, const MsgPack& old) {
+		chai.add(chaiscript::const_var(std::ref(method)), "method");
+		chai.add(chaiscript::var(std::ref(obj)), "obj");
+		chai.add(chaiscript::const_var(std::ref(old)), "old");
+		L_GREEN("{}", obj.to_string());
+		try {
+			chai.eval(*ast);
+		} catch (chaiscript::Boxed_Value &bv) {
 			try {
-				it = functions.emplace(name, Function(chai.eval(name))).first;
-			} catch (const chaiscript::exception::eval_error& er) {
-				throw ReferenceError(er.pretty_print());
+				auto exc = chai.boxed_cast<chaiscript::exception::eval_error>(bv);
+				L_ERR(exc.pretty_print());
+			} catch (const chaiscript::exception::bad_boxed_cast &) {
+				try {
+					auto exc = chai.boxed_cast<std::exception>(bv);
+					L_ERR("Exception: {}", exc.what());
+				} catch (const chaiscript::exception::bad_boxed_cast &exc) {
+					L_ERR("Exception (bad_boxed_cast): {}", exc.what());
+					throw;
+				}
 			}
 		}
-		return it->second;
 	}
 
 	static Engine& engine() {
@@ -159,11 +130,11 @@ public:
 		return *engine;
 	}
 
-	static auto compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
-		return engine().compile(script_hash, body_hash, script_body);
+	static auto compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body) {
+		return engine().compile(script_hash, body_hash, script_name, script_body);
 	}
 
-	static auto compile(const std::string& script_name, const std::string& script_body) {
+	static auto compile(std::string_view script_name, std::string_view script_body) {
 		return engine().compile(script_name, script_body);
 	}
 };

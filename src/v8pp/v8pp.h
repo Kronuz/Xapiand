@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 #include "config.h"            // for XAPIAND_V8
 
-#if XAPIAND_V8
+#ifdef XAPIAND_V8
 
 #include <array>               // for array
 #include <atomic>              // for atomic_bool
@@ -49,7 +49,7 @@ namespace v8pp {
 constexpr auto DURATION_SCRIPT = std::chrono::milliseconds(100);
 
 
-inline size_t hash(const std::string& source) {
+inline size_t hash(std::string_view source) {
 	std::hash<std::string> hash_fn;
 	return hash_fn(source);
 }
@@ -158,7 +158,7 @@ class Processor {
 			delete platform;
 		}
 
-		std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
+		std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body) {
 			std::unique_lock<std::mutex> lk(mtx);
 			auto it = script_lru.find(script_hash);
 			if (it != script_lru.end()) {
@@ -168,23 +168,23 @@ class Processor {
 			}
 			lk.unlock();
 
-			auto processor = std::make_shared<Processor>(script_body);
+			auto processor = std::make_shared<Processor>(script_name, script_body);
 
 			lk.lock();
 			return script_lru.emplace(script_hash, std::make_pair(body_hash, std::move(processor))).first->second.second;
 		}
 
-		std::shared_ptr<Processor> compile(const std::string& script_name, const std::string& script_body) {
+		std::shared_ptr<Processor> compile(std::string_view script_name, std::string_view script_body) {
 			if (script_name.empty()) {
 				auto body_hash = hash(script_body);
-				return compile(body_hash, body_hash, script_body);
+				return compile(body_hash, body_hash, "", script_body);
 			} else if (script_body.empty()) {
 				auto script_hash = hash(script_name);
-				return compile(script_hash, script_hash, script_name);
+				return compile(script_hash, script_hash, "", script_name);
 			} else {
 				auto script_hash = hash(script_name);
 				auto body_hash = hash(script_body);
-				return compile(script_hash, body_hash, script_body);
+				return compile(script_hash, body_hash, script_name, script_body);
 			}
 		}
 	};
@@ -398,7 +398,7 @@ class Processor {
 	std::condition_variable kill_cond;
 	std::atomic_bool finished;
 
-	void Initialize(const std::string& script_source_) {
+	void Initialize(std::string_view script_name, std::string_view script_body) {
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
@@ -416,19 +416,18 @@ class Processor {
 		v8::Context::Scope context_scope(context_);
 		v8::TryCatch try_catch;
 
-		std::string script_name_("_script");
-		v8::Local<v8::String> script_name = v8::String::NewFromUtf8(isolate, script_name_.data(), v8::NewStringType::kNormal, script_name_.size()).ToLocalChecked();
-		v8::Local<v8::String> script_source = v8::String::NewFromUtf8(isolate, script_source_.data(), v8::NewStringType::kNormal, script_source_.size()).ToLocalChecked();
-		v8::Local<v8::Script> script = v8::Script::Compile(script_source, script_name);
+		v8::Local<v8::String> v8_script_name = v8::String::NewFromUtf8(isolate, script_name.data(), v8::NewStringType::kNormal, script_name.size()).ToLocalChecked();
+		v8::Local<v8::String> v8_script_body = v8::String::NewFromUtf8(isolate, script_body.data(), v8::NewStringType::kNormal, script_body.size()).ToLocalChecked();
+		v8::Local<v8::Script> v8_script = v8::Script::Compile(v8_script_body, v8_script_name);
 
-		script->Run();
+		v8_script->Run();
 
 		if (try_catch.HasCaught()) {
 			throw ScriptSyntaxError(std::string("ScriptSyntaxError: ").append(report_exception(&try_catch)));
 		}
 	}
 
-	v8::Global<v8::Function> extract_function(const std::string& name) {
+	v8::Global<v8::Function> extract_function(std::string_view name) {
 		v8::Locker locker(isolate);
 		v8::Isolate::Scope isolate_scope(isolate);
 		v8::HandleScope handle_scope(isolate);
@@ -493,11 +492,11 @@ class Processor {
 	}
 
 public:
-	Processor(const std::string& script_source)
+	Processor(std::string_view script_name, std::string_view script_body)
 		: isolate(v8::Isolate::New(engine().create_params)),
 		  finished(false)
 	{
-		Initialize(script_source);
+		Initialize(script_name, script_body);
 	}
 
 	Processor(Processor&&) = delete;
@@ -517,7 +516,7 @@ public:
 		isolate->Dispose();
 	}
 
-	const Function& operator[](const std::string& name) {
+	const Function& operator[](std::string_view name) {
 		auto it = functions.find(name);
 		if (it == functions.end()) {
 			it = functions.emplace(name, Function(this, extract_function(name))).first;
@@ -530,12 +529,12 @@ public:
 		return engine;
 	}
 
-	static auto compile(const std::string& script_name, const std::string& script_body) {
+	static auto compile(std::string_view script_name, std::string_view script_body) {
 		return engine().compile(script_name, script_body);
 	}
 
-	static auto compile(size_t script_hash, size_t body_hash, const std::string& script_body) {
-		return engine().compile(script_hash, body_hash, script_body);
+	static auto compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body) {
+		return engine().compile(script_hash, body_hash, script_name, script_body);
 	}
 };
 

@@ -246,10 +246,11 @@ Script::process_chai(bool strict)
 			} else if (name.empty()) {
 				auto body_hash = chaipp::hash(body);
 				try {
-					chaipp::Processor::compile(body_hash, body_hash, body);
+					chaipp::Processor::compile(body_hash, body_hash, name, body);
 					return MsgPack({
 						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, {
+							{ RESERVED_NAME,      name },
 							{ RESERVED_HASH,      body_hash },
 							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      body      },
@@ -262,10 +263,11 @@ Script::process_chai(bool strict)
 				auto script_hash = chaipp::hash(name);
 				auto body_hash = chaipp::hash(body);
 				try {
-					chaipp::Processor::compile(script_hash, body_hash, body);
+					chaipp::Processor::compile(script_hash, body_hash, name, body);
 					return MsgPack({
 						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, {
+							{ RESERVED_NAME,      name },
 							{ RESERVED_HASH,      script_hash },
 							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      body      },
@@ -312,10 +314,11 @@ Script::process_ecma(bool strict)
 			} else if (name.empty()) {
 				uint64_t body_hash = v8pp::hash(body);
 				try {
-					v8pp::Processor::compile(body_hash, body_hash, body);
+					v8pp::Processor::compile(body_hash, body_hash, name, body);
 					return MsgPack({
 						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_ECMA, {
+							{ RESERVED_NAME,      name },
 							{ RESERVED_HASH,      body_hash },
 							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      body      },
@@ -328,10 +331,11 @@ Script::process_ecma(bool strict)
 				auto script_hash = v8pp::hash(name);
 				auto body_hash = v8pp::hash(body);
 				try {
-					v8pp::Processor::compile(body_hash, body_hash, body);
+					v8pp::Processor::compile(body_hash, body_hash, name, body);
 					return MsgPack({
 						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_ECMA, {
+							{ RESERVED_NAME,      name },
 							{ RESERVED_HASH,      script_hash },
 							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      body      },
