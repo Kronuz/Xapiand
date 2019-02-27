@@ -4854,11 +4854,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 	}
 
 	if (specification.index != TypeIndex::NONE) {
-		if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
-			// Write RESERVED_PREFIX in properties (if it has terms).
-			mut_properties[RESERVED_PREFIX] = specification.local_prefix.field;
-		}
-
 		if (specification.flags.concrete) {
 			if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 				// Write RESERVED_SLOT in properties (if it has values).
@@ -6802,6 +6797,9 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	// Load default specifications.
 	dispatch_set_default_spc(*mut_properties);
 
+	// Write prefix in properties.
+	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
+
 	update_prefixes();
 }
 
@@ -6827,6 +6825,9 @@ Schema::add_field(MsgPack*& mut_properties)
 
 	// Load default specifications.
 	dispatch_set_default_spc(*mut_properties);
+
+	// Write prefix in properties.
+	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
 
 	update_prefixes();
 }
