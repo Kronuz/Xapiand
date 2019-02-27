@@ -163,15 +163,16 @@ inline std::string indent(std::string_view str, char sep, int level, bool indent
 
 	Split<std::string_view> lines(str, '\n');
 	auto it = lines.begin();
-	ASSERT(it != lines.end());
-	for (; !it.last(); ++it) {
+	if (it != lines.end()) {
+		for (; !it.last(); ++it) {
+			const auto& line = *it;
+			result.append(line);
+			result.push_back('\n');
+			result.append(level, sep);
+		}
 		const auto& line = *it;
 		result.append(line);
-		result.push_back('\n');
-		result.append(level, sep);
 	}
-	const auto& line = *it;
-	result.append(line);
 
 	return result;
 }
