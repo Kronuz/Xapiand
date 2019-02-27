@@ -62,12 +62,12 @@ BaseException::BaseException(const BaseException* exc)
 { }
 
 
-BaseException::BaseException(BaseException::private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, fmt::format_args args)
+BaseException::BaseException(BaseException::private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, format_args args)
 	: type(type),
 	  function(function_),
 	  filename(filename_),
 	  line(line_),
-	  message(fmt::vformat(format, args))
+	  message(vformat(format, args))
 {
 	if (!exc.type.empty()) {
 		function = exc.function;
