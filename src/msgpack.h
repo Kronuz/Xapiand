@@ -775,7 +775,6 @@ inline MsgPack::MsgPack(const MsgPack& other)
 	: _body(std::make_shared<Body>(other)),
 	  _const_body(_body.get())
 {
-	ASSERT(!other._body->_lock);
 }
 
 
@@ -866,7 +865,6 @@ inline MsgPack MsgPack::clone() const {
 
 
 inline MsgPack& MsgPack::operator=(const MsgPack& other) {
-	ASSERT(!other._body->_lock);
 	_assignment(msgpack::object(other, *_body->_zone));
 	return *this;
 }

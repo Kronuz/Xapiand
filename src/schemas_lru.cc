@@ -464,7 +464,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					}
 					// FIXME: Process the foreign_path's subfields instead of ignoring.
 					auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-					_db_handler.index(foreign_id.substr(0, needle), true, new_schema->clone(), false, msgpack_type);
+						auto new_schema_copy = *new_schema;
+					_db_handler.index(foreign_id.substr(0, needle), true, new_schema_copy, false, msgpack_type);
 				} catch(...) {
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
