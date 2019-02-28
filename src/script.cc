@@ -148,10 +148,6 @@ Script::process_params(const MsgPack& _params)
 {
 	L_CALL("Script::process_params({})", repr(_params.to_string()));
 
-	if (with_value) {
-		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
-	}
-
 	if (!_params.is_map()) {
 		THROW(ClientError, "{} must be an object", RESERVED_PARAMS);
 	}
