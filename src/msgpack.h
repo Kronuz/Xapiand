@@ -48,6 +48,7 @@
 #endif
 
 
+constexpr size_t  MSGPACK_STR_INIT_SIZE   = 4;
 constexpr size_t  MSGPACK_MAP_INIT_SIZE   = 4;
 constexpr size_t  MSGPACK_ARRAY_INIT_SIZE = 4;
 constexpr double  MSGPACK_GROWTH_FACTOR   = 1.5;  // Choosing 1.5 as the factor allows memory reuse after 4 reallocations (https://github.com/facebook/folly/blob/master/folly/docs/FBVector.md)
@@ -150,13 +151,18 @@ private:
 	MsgPack* _init_array(size_t pos);
 	void _update_array(size_t pos);
 
-	void _init();
-	void _deinit();
+	void _initialize();
+	void _deinitialize();
 
+	void _init_nil();
 	void _init_negative_integer();
 	void _init_positive_integer();
 	void _init_float();
 	void _init_boolean();
+	void _init_str();
+	void _init_bin();
+	void _init_array();
+	void _init_map();
 
 	void _init_type(const int&);
 	void _init_type(const long&);
@@ -168,7 +174,9 @@ private:
 	void _init_type(const double&);
 	void _init_type(const bool&);
 	void _init_type(const MsgPack& val);
+	void _init_type(std::string_view val);
 
+	void _reserve_str(size_t rsize);
 	void _reserve_map(size_t rsize);
 	void _reserve_array(size_t rsize);
 
@@ -183,6 +191,10 @@ private:
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
 
 	void _clear();
+
+	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	inline void _append(M&& o);
+	inline void _append(std::string_view val);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
 	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
@@ -365,23 +377,24 @@ public:
 
 	template <typename T>
 	MsgPack operator+(T&& val);
-	template <typename T>
-	MsgPack& operator+=(T&& val);
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack& operator+=(T&& o);
+	MsgPack& operator+=(std::string_view o);
 
 	template <typename T>
 	MsgPack operator-(T&& val);
-	template <typename T>
-	MsgPack& operator-=(T&& val);
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack& operator-=(T&& o);
 
 	template <typename T>
 	MsgPack operator*(T&& val);
-	template <typename T>
-	MsgPack& operator*=(T&& val);
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack& operator*=(T&& o);
 
 	template <typename T>
 	MsgPack operator/(T&& val);
-	template <typename T>
-	MsgPack& operator/=(T&& val);
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack& operator/=(T&& o);
 
 	std::ostream& operator<<(std::ostream& s) const;
 
@@ -724,10 +737,8 @@ inline void MsgPack::_initializer_array(std::initializer_list<MsgPack> list) {
 	if (_body->_obj->type != msgpack::type::ARRAY) {
 		_body->_capacity = 0;
 	}
-	_deinit();
-	_body->_obj->type = msgpack::type::ARRAY;
-	_body->_obj->via.array.ptr = nullptr;
-	_body->_obj->via.array.size = 0;
+	_deinitialize();
+	_init_array();
 	_reserve_array(list.size());
 	for (const auto& val : list) {
 		_put(size(), val, true);
@@ -739,10 +750,8 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	if (_body->_obj->type != msgpack::type::MAP) {
 		_body->_capacity = 0;
 	}
-	_deinit();
-	_body->_obj->type = msgpack::type::MAP;
-	_body->_obj->via.map.ptr = nullptr;
-	_body->_obj->via.map.size = 0;
+	_deinitialize();
+	_init_map();
 	_reserve_map(list.size());
 	bool inserted;
 	for (const auto& val : list) {
@@ -799,7 +808,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 			}
 		}
 	}
-	_deinit();
+	_deinitialize();
 	*_body->_obj = obj;
 	_body->_capacity = _body->size();
 }
@@ -846,46 +855,34 @@ inline MsgPack::MsgPack(std::initializer_list<MsgPack> list)
 inline MsgPack::MsgPack(Type type)
 	: MsgPack(_undefined())
 {
-	_deinit();
+	_deinitialize();
 	switch (type) {
 		case Type::NIL:
-			_body->_obj->type = msgpack::type::NIL;
-			break;
-		case Type::BOOLEAN:
-			_body->_obj->type = msgpack::type::BOOLEAN;
-			_body->_obj->via.boolean = false;
-			break;
-		case Type::POSITIVE_INTEGER:
-			_body->_obj->type = msgpack::type::POSITIVE_INTEGER;
-			_body->_obj->via.u64 = 0;
+			_init_nil();
 			break;
 		case Type::NEGATIVE_INTEGER:
-			_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
-			_body->_obj->via.i64 = 0;
+			_init_negative_integer();
+			break;
+		case Type::POSITIVE_INTEGER:
+			_init_positive_integer();
 			break;
 		case Type::FLOAT:
-			_body->_obj->type = msgpack::type::FLOAT;
-			_body->_obj->via.f64 = 0;
+			_init_float();
+			break;
+		case Type::BOOLEAN:
+			_init_boolean();
 			break;
 		case Type::STR:
-			_body->_obj->type = msgpack::type::STR;
-			_body->_obj->via.str.ptr = nullptr;
-			_body->_obj->via.str.size = 0;
+			_init_str();
 			break;
 		case Type::BIN:
-			_body->_obj->type = msgpack::type::BIN;
-			_body->_obj->via.bin.ptr = nullptr;
-			_body->_obj->via.bin.size = 0;
+			_init_bin();
 			break;
 		case Type::ARRAY:
-			_body->_obj->type = msgpack::type::ARRAY;
-			_body->_obj->via.array.ptr = nullptr;
-			_body->_obj->via.array.size = 0;
+			_init_array();
 			break;
 		case Type::MAP:
-			_body->_obj->type = msgpack::type::MAP;
-			_body->_obj->via.map.ptr = nullptr;
-			_body->_obj->via.map.size = 0;
+			_init_map();
 			break;
 		case Type::UNDEFINED:
 			break;
@@ -994,7 +991,7 @@ inline void MsgPack::_update_array(size_t pos) {
 }
 
 
-inline void MsgPack::_init() {
+inline void MsgPack::_initialize() {
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::MAP:
@@ -1010,7 +1007,7 @@ inline void MsgPack::_init() {
 }
 
 
-inline void MsgPack::_deinit() {
+inline void MsgPack::_deinitialize() {
 	ASSERT(!_body->_lock);
 	_body->_initialized = false;
 
@@ -1027,39 +1024,60 @@ inline void MsgPack::_deinit() {
 }
 
 
+inline void MsgPack::_init_nil() {
+	_body->_obj->type = msgpack::type::NIL;
+}
+
+
 inline void MsgPack::_init_negative_integer() {
-	ASSERT(!_body->_lock);
-	if (_body->getType() == Type::UNDEFINED) {
-		_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
-		_body->_obj->via.i64 = 0;
-	}
+	_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
+	_body->_obj->via.i64 = 0;
 }
 
 
 inline void MsgPack::_init_positive_integer() {
-	ASSERT(!_body->_lock);
-	if (_body->getType() == Type::UNDEFINED) {
-		_body->_obj->type = msgpack::type::POSITIVE_INTEGER;
-		_body->_obj->via.u64 = 0;
-	}
+	_body->_obj->type = msgpack::type::POSITIVE_INTEGER;
+	_body->_obj->via.u64 = 0;
 }
 
 
 inline void MsgPack::_init_float() {
-	ASSERT(!_body->_lock);
-	if (_body->getType() == Type::UNDEFINED) {
-		_body->_obj->type = msgpack::type::FLOAT;
-		_body->_obj->via.f64 = 0;
-	}
+	_body->_obj->type = msgpack::type::FLOAT;
+	_body->_obj->via.f64 = 0;
 }
 
 
 inline void MsgPack::_init_boolean() {
-	ASSERT(!_body->_lock);
-	if (_body->getType() == Type::UNDEFINED) {
-		_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
-		_body->_obj->via.i64 = 0;
-	}
+	_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
+	_body->_obj->via.i64 = 0;
+}
+
+
+inline void MsgPack::_init_str() {
+	_body->_obj->type = msgpack::type::STR;
+	_body->_obj->via.str.ptr = nullptr;
+	_body->_obj->via.str.size = 0;
+}
+
+
+inline void MsgPack::_init_bin() {
+	_body->_obj->type = msgpack::type::BIN;
+	_body->_obj->via.bin.ptr = nullptr;
+	_body->_obj->via.bin.size = 0;
+}
+
+
+inline void MsgPack::_init_array() {
+	_body->_obj->type = msgpack::type::ARRAY;
+	_body->_obj->via.array.ptr = nullptr;
+	_body->_obj->via.array.size = 0;
+}
+
+
+inline void MsgPack::_init_map() {
+	_body->_obj->type = msgpack::type::MAP;
+	_body->_obj->via.map.ptr = nullptr;
+	_body->_obj->via.map.size = 0;
 }
 
 
@@ -1110,6 +1128,9 @@ inline void MsgPack::_init_type(const bool&) {
 
 inline void MsgPack::_init_type(const MsgPack& val) {
 	switch (val.getType()) {
+		case Type::NIL:
+			_init_nil();
+			break;
 		case Type::NEGATIVE_INTEGER:
 			_init_negative_integer();
 			break;
@@ -1119,8 +1140,48 @@ inline void MsgPack::_init_type(const MsgPack& val) {
 		case Type::FLOAT:
 			_init_float();
 			break;
-		default:
+		case Type::BOOLEAN:
+			_init_boolean();
 			break;
+		case Type::STR:
+			_init_str();
+			break;
+		case Type::BIN:
+			_init_bin();
+			break;
+		case Type::ARRAY:
+			_init_array();
+			break;
+		case Type::MAP:
+			_init_map();
+			break;
+		case Type::UNDEFINED:
+			break;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
+void MsgPack::_init_type(std::string_view) {
+	_init_str();
+}
+
+
+inline void MsgPack::_reserve_str(size_t rsize) {
+	ASSERT(!_body->_lock);
+	if (_body->_capacity <= rsize) {
+		size_t nsize = _body->_capacity < MSGPACK_STR_INIT_SIZE ? MSGPACK_STR_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
+		while (nsize < rsize) {
+			nsize *= MSGPACK_GROWTH_FACTOR;
+		}
+		auto ptr = static_cast<char*>(_body->_zone->allocate_align(nsize));
+		if (_body->_obj->via.str.ptr != nullptr && _body->_capacity > 0) {
+			std::memcpy(ptr, _body->_obj->via.str.ptr, _body->_obj->via.str.size);
+			// std::memset(_body->_obj->via.str.ptr, 0, _body->_obj->via.str.size * sizeof(msgpack::object_kv));  // clear memory for debugging
+		}
+		_body->_obj->via.str.ptr = ptr;
+		_body->_capacity = nsize;
 	}
 }
 
@@ -1393,6 +1454,44 @@ inline void MsgPack::_clear() {
 }
 
 
+template <typename M, typename>
+inline void MsgPack::_append(M&& o) {
+	switch (o._body->getType()) {
+		case Type::STR:
+			_append(o.str_view());
+			break;
+		default:
+			_append(o.as_str());
+			break;
+	}
+}
+
+
+inline void MsgPack::_append(std::string_view val) {
+	if (_body->_const) {
+		THROW(msgpack::const_error);
+	}
+	ASSERT(!_body->_lock);
+	switch (_body->getType()) {
+		case Type::UNDEFINED:
+			_init_str();
+			/* FALLTHROUGH */
+		case Type::STR: {
+			auto val_size = static_cast<uint32_t>(val.size());
+			_reserve_str(_body->_obj->via.str.size + val_size);
+			if (val_size) {
+				auto ptr = const_cast<char*>(_body->_obj->via.str.ptr + _body->_obj->via.str.size);
+				std::memcpy(ptr, val.data(), val_size);
+				_body->_obj->via.str.size += val_size;
+			}
+			break;
+		}
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 	if (_body->_const) {
@@ -1423,9 +1522,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
-			_body->_obj->type = msgpack::type::MAP;
-			_body->_obj->via.map.ptr = nullptr;
-			_body->_obj->via.map.size = 0;
+			_init_map();
 			/* FALLTHROUGH */
 		case Type::MAP: {
 			auto it = _body->map.find(key);
@@ -1464,9 +1561,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
-			_body->_obj->type = msgpack::type::ARRAY;
-			_body->_obj->via.array.ptr = nullptr;
-			_body->_obj->via.array.size = 0;
+			_init_array();
 			/* FALLTHROUGH */
 		case Type::ARRAY:
 			if (pos >= _body->_obj->via.array.size) {
@@ -1527,9 +1622,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool over
 	ASSERT(!_body->_lock);
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
-			_body->_obj->type = msgpack::type::ARRAY;
-			_body->_obj->via.array.ptr = nullptr;
-			_body->_obj->via.array.size = 0;
+			_init_array();
 			/* FALLTHROUGH */
 		case Type::ARRAY:
 			if (pos >= _body->_obj->via.array.size) {
@@ -1571,7 +1664,7 @@ inline void MsgPack::_fill(bool recursive, bool lock) {
 		return;
 	}
 	if (!_body->_initialized) {
-		_init();
+		_initialize();
 	}
 	_body->_lock = lock;
 	if (recursive) {
@@ -1826,8 +1919,15 @@ inline MsgPack& MsgPack::add(size_t pos, T&& val) {
 template <typename T>
 inline MsgPack& MsgPack::append(T&& v) {
 	_fill(false, false);
-	auto pair = _put(size(), std::forward<T>(v), false);
-	return *pair.first;
+	switch (_body->getType()) {
+		case Type::STR:
+			_append(std::forward<T>(v));
+			return *this;
+		default: {
+			auto pair = _put(size(), std::forward<T>(v), false);
+			return *pair.first;
+		}
+	}
 }
 
 
@@ -2647,9 +2747,12 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 }
 
 
-template <typename T>
+template <typename T, typename>
 inline MsgPack& MsgPack::operator+=(T&& val) {
-	_init_type(val);
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_init_type(val);
+	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 += static_cast<long long>(val);
@@ -2659,6 +2762,23 @@ inline MsgPack& MsgPack::operator+=(T&& val) {
 			return *this;
 		case Type::FLOAT:
 			_body->_obj->via.f64 += static_cast<double>(val);
+			return *this;
+		case Type::STR:
+			_append(val);
+			return *this;
+		default:
+			THROW(msgpack::type_error);
+	}
+}
+
+inline MsgPack& MsgPack::operator+=(std::string_view val) {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_init_type(val);
+	}
+	switch (_body->getType()) {
+		case Type::STR:
+			_append(val);
 			return *this;
 		default:
 			THROW(msgpack::type_error);
@@ -2674,9 +2794,12 @@ inline MsgPack MsgPack::operator+(T&& val) {
 }
 
 
-template <typename T>
-inline MsgPack& MsgPack::operator-=(T&& val) {
-	_init_type(val);
+template <typename M, typename>
+inline MsgPack& MsgPack::operator-=(M&& val) {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_init_type(val);
+	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 -= static_cast<long long>(val);
@@ -2701,9 +2824,12 @@ inline MsgPack MsgPack::operator-(T&& val) {
 }
 
 
-template <typename T>
-inline MsgPack& MsgPack::operator*=(T&& val) {
-	_init_type(val);
+template <typename M, typename>
+inline MsgPack& MsgPack::operator*=(M&& val) {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_init_type(val);
+	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 *= static_cast<long long>(val);
@@ -2728,9 +2854,12 @@ inline MsgPack MsgPack::operator*(T&& val) {
 }
 
 
-template <typename T>
-inline MsgPack& MsgPack::operator/=(T&& val) {
-	_init_type(val);
+template <typename M, typename>
+inline MsgPack& MsgPack::operator/=(M&& val) {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_init_type(val);
+	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 /= static_cast<long long>(val);
