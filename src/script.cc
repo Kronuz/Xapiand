@@ -38,13 +38,15 @@ static const auto str_set_dispatch_script(string::join<std::string>({
 	RESERVED_CHAI,
 	RESERVED_BODY,
 	RESERVED_NAME,
-}, ",", " or "));
+	RESERVED_PARAMS,
+}, ", ", " or "));
 
 
 static const auto str_set_dispatch_value(string::join<std::string>({
 	RESERVED_BODY,
 	RESERVED_NAME,
-}, ",", " or "));
+	RESERVED_PARAMS,
+}, ", ", " or "));
 
 
 Script::Script(const MsgPack& _obj)
@@ -69,6 +71,7 @@ Script::Script(const MsgPack& _obj)
 					hh(RESERVED_CHAI),
 					hh(RESERVED_BODY),
 					hh(RESERVED_NAME),
+					hh(RESERVED_PARAMS),
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_TYPE):
@@ -85,6 +88,9 @@ Script::Script(const MsgPack& _obj)
 						break;
 					case _.fhh(RESERVED_NAME):
 						process_name(value);
+						break;
+					case _.fhh(RESERVED_PARAMS):
+						process_params(value);
 						break;
 					default:
 						THROW(ClientError, "{} in {} is not valid, only can use {}", repr(str_key), RESERVED_SCRIPT, str_set_dispatch_script);
@@ -110,12 +116,12 @@ Script::process_body(const MsgPack& _body)
 		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
 	}
 
-	try {
-		body = _body.str();
-		with_data = true;
-	} catch (const msgpack::type_error&) {
+	if (!_body.is_string()) {
 		THROW(ClientError, "{} must be string", RESERVED_BODY);
 	}
+
+	body = _body.str();
+	with_data = true;
 }
 
 
@@ -128,12 +134,29 @@ Script::process_name(const MsgPack& _name)
 		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
 	}
 
-	try {
-		name = _name.str();
-		with_data = true;
-	} catch (const msgpack::type_error&) {
+	if (!_name.is_string()) {
 		THROW(ClientError, "{} must be string", RESERVED_NAME);
 	}
+
+	name = _name.str();
+	with_data = true;
+}
+
+
+void
+Script::process_params(const MsgPack& _params)
+{
+	L_CALL("Script::process_params({})", repr(_params.to_string()));
+
+	if (with_value) {
+		THROW(ClientError, "{} is ill-formed", RESERVED_SCRIPT);
+	}
+
+	if (!_params.is_map()) {
+		THROW(ClientError, "{} must be an object", RESERVED_PARAMS);
+	}
+
+	params = _params;
 }
 
 
@@ -142,11 +165,11 @@ Script::process_type(const MsgPack& _type)
 {
 	L_CALL("Script::process_type({})", repr(_type.to_string()));
 
-	try {
-		sep_types = required_spc_t::get_types(_type.str());
-	} catch (const msgpack::type_error&) {
+	if (!_type.is_string()) {
 		THROW(ClientError, "{} must be string", RESERVED_TYPE);
 	}
+
+	sep_types = required_spc_t::get_types(_type.str());
 }
 
 
@@ -171,6 +194,7 @@ Script::process_value(const MsgPack& _value)
 				constexpr static auto _ = phf::make_phf({
 					hh(RESERVED_BODY),
 					hh(RESERVED_NAME),
+					hh(RESERVED_PARAMS),
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_BODY):
@@ -178,6 +202,9 @@ Script::process_value(const MsgPack& _value)
 						break;
 					case _.fhh(RESERVED_NAME):
 						process_name(value);
+						break;
+					case _.fhh(RESERVED_PARAMS):
+						process_params(value);
 						break;
 					default:
 						THROW(ClientError, "{} in {} is not valid, only can use {}", repr(str_key), RESERVED_VALUE, str_set_dispatch_value);
@@ -238,6 +265,7 @@ Script::process_chai(bool strict)
 							{ RESERVED_HASH,      body_hash },
 							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      body      },
+							{ RESERVED_PARAMS,    params    },
 						}}
 					});
 				} catch (...) {
@@ -255,6 +283,7 @@ Script::process_chai(bool strict)
 							{ RESERVED_HASH,      script_hash },
 							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      body      },
+							{ RESERVED_PARAMS,    params    },
 						}}
 					});
 				} catch (...) {

@@ -424,7 +424,7 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 			auto it_name = chai.find(RESERVED_NAME);
 			std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
 			const MsgPack no_params;
-			auto it_params = chai.find("_params");
+			auto it_params = chai.find(RESERVED_PARAMS);
 			const MsgPack& params = (it_params == chai.end()) ? no_params : it_params.value();
 			return call_script<chaipp::Processor>(
 				obj,

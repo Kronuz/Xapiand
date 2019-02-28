@@ -404,7 +404,7 @@ static const std::string str_set_acc_date(string::join<std::string>({
 	"decade",
 	"century",
 	"millennium",
-}, ",", " or "));
+}, ", ", " or "));
 
 
 inline UnitTime
@@ -457,7 +457,7 @@ static const std::string str_set_acc_time(string::join<std::string>({
 	"second",
 	"minute",
 	"hour",
-}, ",", " or "));
+}, ", ", " or "));
 
 inline UnitTime
 _get_accuracy_time(std::string_view str_accuracy_time)
@@ -495,7 +495,7 @@ static const std::string str_set_stop_strategy(string::join<std::string>({
 	"all",
 	"stop_stemmed",
 	"stemmed",
-}, ",", " or "));
+}, ", ", " or "));
 
 inline StopStrategy
 _get_stop_strategy(std::string_view str_stop_strategy)
@@ -537,7 +537,7 @@ static const std::string str_set_stem_strategy(string::join<std::string>({
 	"all",
 	"stem_all_z",
 	"all_z",
-}, ",", " or "));
+}, ", ", " or "));
 
 static inline StemStrategy
 _get_stem_strategy(std::string_view str_stem_strategy)
@@ -580,7 +580,7 @@ static const std::string str_set_index_uuid_field(string::join<std::string>({
 	"uuid",
 	"uuid_field",
 	"both",
-}, ",", " or "));
+}, ", ", " or "));
 
 static inline UUIDFieldIndex
 _get_index_uuid_field(std::string_view str_index_uuid_field)
@@ -648,7 +648,7 @@ static const std::string str_set_index(string::join<std::string>({
 	"field_all,global_all",
 	"global_all,field_all",
 	"all",
-}, ",", " or "));
+}, ", ", " or "));
 
 static inline TypeIndex
 _get_index(std::string_view str_index)

@@ -51,9 +51,11 @@ class Script {
 	void process_type(const MsgPack& _type);
 	void process_value(const MsgPack& _value);
 	void process_chai(const MsgPack& _chai);
+	void process_params(const MsgPack& _params);
 
 	std::string body;
 	std::string name;
+	MsgPack params;
 	Type type;
 	bool with_value;
 	bool with_data;

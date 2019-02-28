@@ -56,6 +56,7 @@ constexpr const char RESERVED_NAME[]                        = RESERVED__ "name";
 constexpr const char RESERVED_BODY[]                        = RESERVED__ "body";
 constexpr const char RESERVED_HASH[]                        = RESERVED__ "hash";
 constexpr const char RESERVED_BODY_HASH[]                   = RESERVED__ "body_hash";
+constexpr const char RESERVED_PARAMS[]                      = RESERVED__ "params";
 constexpr const char RESERVED_RECURSE[]                     = RESERVED__ "recurse";
 constexpr const char RESERVED_NAMESPACE[]                   = RESERVED__ "namespace";
 constexpr const char RESERVED_PARTIAL_PATHS[]               = RESERVED__ "partial_paths";
