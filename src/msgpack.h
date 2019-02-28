@@ -438,7 +438,7 @@ class MsgPack::Iterator : public std::iterator<std::input_iterator_tag, MsgPack>
 			case MsgPack::Type::UNDEFINED:
 				return;
 			default:
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "{} is not iterable", _mobj->_const_body->getStrType());
 		}
 	}
 
@@ -755,7 +755,7 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	for (const auto& val : list) {
 		std::tie(std::ignore, inserted) = _put(val.at(0), val.at(1), false);
 		if unlikely(!inserted) {
-			THROW(duplicate_key, "Duplicate key");
+			THROW(duplicate_key, "Duplicate key {} in MAP", val.at(0).as_str());
 		}
 	}
 }
@@ -783,7 +783,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 		// Rename key, if the assignment is acting on a map key...
 		// We expect obj to be a string:
 		if (obj.type != msgpack::type::STR) {
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "MAP keys must be of type STR");
 		}
 		if (auto parent_body = _body->_parent.lock()) {
 			// If there's a parent, and it's initialized...
@@ -799,7 +799,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
 						parent_body->map.erase(it);
 					} else {
-						THROW(duplicate_key, "Cannot rename to duplicate key");
+						THROW(duplicate_key, "Duplicate key {} in MAP", str_key);
 					}
 					ASSERT(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
@@ -885,7 +885,7 @@ inline MsgPack::MsgPack(Type type)
 		case Type::UNDEFINED:
 			break;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Invalid type");
 	}
 }
 
@@ -922,14 +922,14 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		if (p->key.type != msgpack::type::STR) {
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "MAP keys must be of type STR");
 		}
 		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
 		std::string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
 		if (!inserted.second) {
-			THROW(duplicate_key, "Duplicate key");
+			THROW(duplicate_key, "Duplicate key {} in MAP", str_key);
 		}
 		ret = &inserted.first->second.second;
 	}
@@ -1156,7 +1156,7 @@ inline void MsgPack::_init_type(const MsgPack& val) {
 		case Type::UNDEFINED:
 			break;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Invalid type");
 	}
 }
 
@@ -1240,7 +1240,7 @@ inline MsgPack::iterator MsgPack::_find(std::string_view key) {
 			return MsgPack::iterator(this, it->second.second._body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -1257,7 +1257,7 @@ inline MsgPack::const_iterator MsgPack::_find(std::string_view key) const {
 			return MsgPack::const_iterator(this, it->second.second._const_body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _const_body->getStrType());
 	}
 }
 
@@ -1287,7 +1287,7 @@ inline MsgPack::iterator MsgPack::_find(size_t pos) {
 			return MsgPack::iterator(this, it->_body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -1317,7 +1317,7 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 			return MsgPack::const_iterator(this, it->_const_body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _const_body->getStrType());
 	}
 }
 
@@ -1333,13 +1333,13 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 			return _erase(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 			}
 			return _erase(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return _erase(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 	}
 }
 
@@ -1376,7 +1376,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key
 			return std::make_pair(1, MsgPack::iterator(this, next->second.second._body->_pos));
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -1422,7 +1422,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 			return std::make_pair(1, MsgPack::iterator(this, next->_body->_pos));
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -1485,7 +1485,7 @@ inline void MsgPack::_append(std::string_view val) {
 			break;
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot append STR to {}", _body->getStrType());
 	}
 }
 
@@ -1501,13 +1501,13 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 			return _put(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 			}
 			return _put(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
 		case Type::POSITIVE_INTEGER:
 			return _put(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 	}
 }
 
@@ -1545,8 +1545,10 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 				return std::make_pair(&_body->at(key), false);
 			}
 		}
+		case Type::ARRAY:
+			THROW(msgpack::type_error, "{} cannot have string keys", _body->getStrType());
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a container that can have keys", _body->getStrType());
 	}
 }
 
@@ -1584,8 +1586,10 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 				}
 				return std::make_pair(&_body->at(pos), false);
 			}
+		case Type::MAP:
+			THROW(msgpack::type_error, "{} cannot have numeric keys", _body->getStrType());
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a container that can have keys", _body->getStrType());
 	}
 }
 
@@ -1601,13 +1605,13 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 			return _put(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 			}
 			return _insert(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
 		case Type::POSITIVE_INTEGER:
 			return _insert(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 	}
 }
 
@@ -1651,8 +1655,10 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool over
 				}
 			}
 			break;
+		case Type::MAP:
+			THROW(msgpack::type_error, "{} cannot have numeric keys", _body->getStrType());
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a container that can have keys", _body->getStrType());
 	}
 }
 
@@ -1696,13 +1702,13 @@ inline MsgPack::iterator MsgPack::_find(M&& o) {
 			return _find(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 			}
 			return _find(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return _find(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 	}
 }
 
@@ -1714,13 +1720,13 @@ inline MsgPack::const_iterator MsgPack::_find(M&& o) const {
 			return _find(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._const_body->getStrType(), _const_body->getStrType());
 			}
 			return _find(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return _find(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._const_body->getStrType(), _const_body->getStrType());
 	}
 }
 
@@ -1859,7 +1865,7 @@ inline void MsgPack::update(M&& o) {
 			}
 			break;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot update {} with {}", _body->getStrType(), o._body->getStrType());
 	}
 }
 
@@ -1937,13 +1943,13 @@ inline MsgPack& MsgPack::get(M&& o) {
 			return get(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 			}
 			return get(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return get(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 	}
 }
 
@@ -1956,13 +1962,13 @@ inline const MsgPack& MsgPack::get(M&& o) const {
 			return get(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._const_body->getStrType(), _const_body->getStrType());
 			}
 			return get(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return get(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._const_body->getStrType(), _const_body->getStrType());
 	}
 }
 
@@ -2011,13 +2017,13 @@ inline MsgPack& MsgPack::at(M&& o) {
 			return at(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 			}
 			return at(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return at(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._body->getStrType(), _body->getStrType());
 	}
 }
 
@@ -2030,13 +2036,13 @@ inline const MsgPack& MsgPack::at(M&& o) const {
 			return at(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", o._const_body->getStrType(), _const_body->getStrType());
 			}
 			return at(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return at(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", o._const_body->getStrType(), _const_body->getStrType());
 	}
 }
 
@@ -2048,8 +2054,10 @@ inline MsgPack& MsgPack::at(std::string_view key) {
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			return _body->at(key);
+		case Type::ARRAY:
+			THROW(msgpack::type_error, "{} cannot have string keys", _body->getStrType());
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -2060,8 +2068,10 @@ inline const MsgPack& MsgPack::at(std::string_view key) const {
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			return _const_body->at(key);
+		case Type::ARRAY:
+			THROW(msgpack::type_error, "{} cannot have string keys", _const_body->getStrType());
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _const_body->getStrType());
 	}
 }
 
@@ -2079,7 +2089,7 @@ inline MsgPack& MsgPack::at(size_t pos) {
 		case Type::ARRAY:
 			return _body->at(pos);
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -2097,7 +2107,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 		case Type::ARRAY:
 			return _const_body->at(pos);
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "{} is not iterable", _body->getStrType());
 	}
 }
 
@@ -2358,7 +2368,7 @@ inline std::size_t MsgPack::hash() const {
 			const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 			for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 				if (p->key.type != msgpack::type::STR) {
-					THROW(msgpack::type_error);
+					THROW(msgpack::type_error, "MAP keys must be of type STR");
 				}
 				auto val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->val));
 				static const std::hash<std::string_view> hasher;
@@ -2476,14 +2486,14 @@ inline uint64_t MsgPack::u64() const {
 		case Type::NEGATIVE_INTEGER: {
 			auto val = _const_body->_obj->via.i64;
 			if (val < 0) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Negative value of NEGATIVE_INTEGER is not a valid POSITIVE_INTEGER");
 			}
 			return val;
 		}
 		case Type::POSITIVE_INTEGER:
 			return _const_body->_obj->via.u64;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Value of {} is not a valid POSITIVE_INTEGER", _const_body->getStrType());
 	}
 }
 
@@ -2495,12 +2505,12 @@ inline int64_t MsgPack::i64() const {
 		case Type::POSITIVE_INTEGER: {
 			auto val = _const_body->_obj->via.u64;
 			if (val > INT64_MAX) {
-				THROW(msgpack::type_error);
+				THROW(msgpack::type_error, "Value of POSITIVE_INTEGER is not a valid NEGATIVE_INTEGER");
 			}
 			return val;
 		}
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Value of {} is not a valid NEGATIVE_INTEGER", _const_body->getStrType());
 	}
 }
 
@@ -2514,7 +2524,7 @@ inline double MsgPack::f64() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Value of {} is not a valid FLOAT", _const_body->getStrType());
 	}
 }
 
@@ -2523,8 +2533,7 @@ inline std::string_view MsgPack::str_view() const {
 	if (_const_body->getType() == Type::STR) {
 		return std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 	}
-
-	THROW(msgpack::type_error);
+	THROW(msgpack::type_error, "Value of {} is not a valid STR", _const_body->getStrType());
 }
 
 
@@ -2537,8 +2546,7 @@ inline bool MsgPack::boolean() const {
 	if (_const_body->getType() == Type::BOOLEAN) {
 		return _const_body->_obj->via.boolean;
 	}
-
-	THROW(msgpack::type_error);
+	THROW(msgpack::type_error, "Value of {} is not a valid BOOLEAN", _const_body->getStrType());
 }
 
 
@@ -2765,7 +2773,7 @@ inline MsgPack& MsgPack::operator+=(T&& val) {
 			_append(val);
 			return *this;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot add to value of {}", _body->getStrType());
 	}
 }
 
@@ -2779,7 +2787,7 @@ inline MsgPack& MsgPack::operator+=(std::string_view val) {
 			_append(val);
 			return *this;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot add to value of {}", _body->getStrType());
 	}
 }
 
@@ -2809,7 +2817,7 @@ inline MsgPack& MsgPack::operator-=(M&& val) {
 			_body->_obj->via.f64 -= static_cast<double>(val);
 			return *this;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot subtract from value of {}", _body->getStrType());
 	}
 }
 
@@ -2839,7 +2847,7 @@ inline MsgPack& MsgPack::operator*=(M&& val) {
 			_body->_obj->via.f64 *= static_cast<double>(val);
 			return *this;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot multiply by value of {}", _body->getStrType());
 	}
 }
 
@@ -2869,7 +2877,7 @@ inline MsgPack& MsgPack::operator/=(M&& val) {
 			_body->_obj->via.f64 /= static_cast<double>(val);
 			return *this;
 		default:
-			THROW(msgpack::type_error);
+			THROW(msgpack::type_error, "Cannot divide value of {}", _body->getStrType());
 	}
 }
 
@@ -2910,18 +2918,6 @@ inline std::string MsgPack::to_string(int indent) const {
 inline std::ostream& MsgPack::operator<<(std::ostream& s) const {
 	s << *_const_body->_obj;
 	return s;
-}
-
-
-inline std::string_view MsgPack::unformatted_string_view() const {
-	if (_body->getType() == Type::STR) {
-		return std::string_view(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-	}
-	THROW(msgpack::type_error);
-}
-
-inline std::string MsgPack::unformatted_string() const {
-	return std::string(unformatted_string_view());
 }
 
 
