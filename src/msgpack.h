@@ -113,11 +113,6 @@ public:
 		duplicate_key(Args&&... args) : OutOfRange(std::forward<Args>(args)...) { }
 	};
 
-	static MsgPack& undefined() {
-		static MsgPack undefined(_undefined(), true);
-		return undefined;
-	}
-
 	using iterator = Iterator<MsgPack>;
 	using const_iterator = Iterator<const MsgPack>;
 
@@ -144,6 +139,23 @@ public:
 	template <typename T>
 	MsgPack& operator=(T&& v);
 
+	// Shortcuts:
+	static MsgPack NIL() { return MsgPack(Type::NIL); }
+	static MsgPack BOOLEAN() { return MsgPack(Type::BOOLEAN); }
+	static MsgPack POSITIVE_INTEGER() { return MsgPack(Type::POSITIVE_INTEGER); }
+	static MsgPack NEGATIVE_INTEGER() { return MsgPack(Type::NEGATIVE_INTEGER); }
+	static MsgPack FLOAT() { return MsgPack(Type::FLOAT); }
+	static MsgPack STR() { return MsgPack(Type::STR); }
+	static MsgPack ARRAY() { return MsgPack(Type::ARRAY); }
+	static MsgPack MAP() { return MsgPack(Type::MAP); }
+	static MsgPack BIN() { return MsgPack(Type::BIN); }
+
+	static MsgPack& undefined() {
+		// MsgPack::undefined() always returns a reference to the const "undefined" object
+		static MsgPack undefined(_undefined(), true);
+		return undefined;
+	}
+
 private:
 	MsgPack* _init_map(size_t pos);
 	void _update_map(size_t pos);
@@ -163,6 +175,7 @@ private:
 	void _init_bin();
 	void _init_array();
 	void _init_map();
+	void _init_undefined();
 
 	void _init_type(const int&);
 	void _init_type(const long&);
@@ -904,6 +917,7 @@ inline MsgPack::MsgPack(Type type)
 			_init_map();
 			break;
 		case Type::UNDEFINED:
+			_init_undefined();
 			break;
 		default:
 			THROW(msgpack::type_error, "Invalid type");
@@ -1118,6 +1132,13 @@ inline void MsgPack::_init_map() {
 }
 
 
+inline void MsgPack::_init_undefined() {
+	_body->_obj->type = msgpack::type::EXT;
+	_body->_obj->via.ext.ptr = ::undefined;
+	_body->_obj->via.ext.size = 1;
+}
+
+
 inline void MsgPack::_init_type(const int&) {
 	_init_negative_integer();
 }
@@ -1198,6 +1219,7 @@ inline void MsgPack::_init_type(const MsgPack& val) {
 			_init_map();
 			break;
 		case Type::UNDEFINED:
+			_init_undefined();
 			break;
 		default:
 			THROW(msgpack::type_error, "Invalid type");
