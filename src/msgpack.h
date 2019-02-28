@@ -2929,16 +2929,16 @@ inline MsgPack& MsgPack::operator+=(std::string_view o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T operator+(const T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T operator+(const T& o, const M& m) {
 	auto val = o;
 	val += static_cast<T>(m);
 	return val;
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T& operator+=(T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T& operator+=(T& o, const M& m) {
 	return o += static_cast<T>(m);
 }
 
@@ -2982,16 +2982,16 @@ inline MsgPack& MsgPack::operator-=(T&& o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T operator-(const T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T operator-(const T& o, const M& m) {
 	auto val = o;
 	val -= static_cast<T>(m);
 	return val;
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T& operator-=(T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T& operator-=(T& o, const M& m) {
 	return o -= static_cast<T>(m);
 }
 
@@ -3035,16 +3035,16 @@ inline MsgPack& MsgPack::operator*=(T&& o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T operator*(const T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T operator*(const T& o, const M& m) {
 	auto val = o;
 	val *= static_cast<T>(m);
 	return val;
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T& operator*=(T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T& operator*=(T& o, const M& m) {
 	return o *= static_cast<T>(m);
 }
 
@@ -3088,16 +3088,16 @@ inline MsgPack& MsgPack::operator/=(T&& o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T operator/(const T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T operator/(const T& o, const M& m) {
 	auto val = o;
 	val /= static_cast<T>(m);
 	return val;
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
-inline T& operator/=(T& o, const MsgPack& m) {
+template <typename T, typename M, std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value and std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
+inline T& operator/=(T& o, const M& m) {
 	return o /= static_cast<T>(m);
 }
 
