@@ -186,14 +186,14 @@ private:
 		}
 
 		if (_keyed) {
-			MsgPack result(MsgPack::Type::MAP);
+			auto result = MsgPack::MAP();
 			for (auto& agg : ordered) {
 				result[agg->first] = agg->second.get_result();
 			}
 			return result;
 		}
 
-		MsgPack result(MsgPack::Type::ARRAY);
+		auto result = MsgPack::ARRAY();
 		for (auto& agg : ordered) {
 			result.append(agg->second.get_result())[RESERVED_AGGS_KEY] = agg->first;
 		}

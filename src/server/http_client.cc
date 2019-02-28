@@ -1790,7 +1790,7 @@ HttpClient::metadata_view(Request& request)
 	}
 
 	if (key.empty()) {
-		response_obj = MsgPack(MsgPack::Type::MAP);
+		response_obj = MsgPack::MAP();
 		for (auto& _key : db_handler.get_metadata_keys()) {
 			auto metadata = db_handler.get_metadata(_key);
 			if (!metadata.empty()) {
@@ -1924,12 +1924,12 @@ HttpClient::nodes_view(Request& request)
 		return;
 	}
 
-	MsgPack nodes(MsgPack::Type::ARRAY);
+	auto nodes = MsgPack::ARRAY();
 
 #ifdef XAPIAND_CLUSTERING
 	for (auto& node : Node::nodes()) {
 		if (node->idx) {
-			MsgPack obj(MsgPack::Type::MAP);
+			auto obj = MsgPack::MAP();
 			obj["id"] = node->idx;
 			obj["name"] = node->name();
 			if (Node::is_active(node)) {
@@ -2418,7 +2418,7 @@ HttpClient::search_view(Request& request)
 	obj[RESPONSE_QUERY] = {
 		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
 		{ RESPONSE_TOTAL_COUNT, total_count},
-		{ RESPONSE_HITS, MsgPack(MsgPack::Type::ARRAY) },
+		{ RESPONSE_HITS, MsgPack::ARRAY() },
 	};
 	auto& hits = obj[RESPONSE_QUERY][RESPONSE_HITS];
 
@@ -3398,7 +3398,7 @@ Request::decode(std::string_view body)
 	switch (_.fhhl(ct_type_str)) {
 		case _.fhhl(NDJSON_CONTENT_TYPE):
 		case _.fhhl(X_NDJSON_CONTENT_TYPE):
-			decoded = MsgPack(MsgPack::Type::ARRAY);
+			decoded = MsgPack::ARRAY();
 			for (auto json : Split<std::string_view>(body, '\n')) {
 				json_load(rdoc, json);
 				decoded.append(rdoc);

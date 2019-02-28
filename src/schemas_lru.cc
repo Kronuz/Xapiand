@@ -264,7 +264,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			THROW(MissingTypeError, "Type of field '{}' for the foreign schema is missing", ID_FIELD_NAME);
 		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
-			o[SCHEMA_FIELD_NAME] = MsgPack(MsgPack::Type::MAP);
+			o[SCHEMA_FIELD_NAME] = MsgPack::MAP();
 		}
 		Schema schema(schema_ptr, nullptr, "");
 		schema.update(o);

@@ -443,7 +443,7 @@ DatabaseWAL::repr(Xapian::rev start_revision, Xapian::rev end_revision, bool uns
 		start_revision = volumes.first;
 	}
 
-	MsgPack repr(MsgPack::Type::ARRAY);
+	auto repr = MsgPack::ARRAY();
 
 	bool end = false;
 	Xapian::rev end_rev;

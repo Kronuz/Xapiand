@@ -510,11 +510,11 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 					}
 					data.update(ct_type, blob);
 				}
-				return prepare(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair);
+				return prepare(document_id, MsgPack::MAP(), data, old_document_pair);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return prepare(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair);
+				return prepare(document_id, MsgPack::MAP(), data, old_document_pair);
 			case MsgPack::Type::MAP:
 				inject_data(data, body);
 				return prepare(document_id, body, data, old_document_pair);
@@ -569,11 +569,11 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 					}
 					data.update(ct_type, blob);
 				}
-				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit);
+				return index(document_id, MsgPack::MAP(), data, old_document_pair, commit);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return index(document_id, MsgPack(MsgPack::Type::MAP), data, old_document_pair, commit);
+				return index(document_id, MsgPack::MAP(), data, old_document_pair, commit);
 			case MsgPack::Type::MAP:
 				inject_data(data, body);
 				return index(document_id, body, data, old_document_pair, commit);
@@ -1023,7 +1023,7 @@ DatabaseHandler::restore(int fd)
 				thread_pool.finish();
 				break;
 			}
-			MsgPack obj(MsgPack::Type::MAP);
+			auto obj = MsgPack::MAP();
 			Data data;
 			try {
 				bool eof = true;
@@ -2189,7 +2189,7 @@ Document::get_value(std::string_view slot_name)
 		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
 		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
 	}
-	return MsgPack(MsgPack::Type::NIL);
+	return MsgPack::NIL();
 }
 
 
@@ -2229,7 +2229,7 @@ Document::get_field(std::string_view slot_name, const MsgPack& obj)
 		return value;
 	}
 
-	return MsgPack(MsgPack::Type::NIL);
+	return MsgPack::NIL();
 }
 
 

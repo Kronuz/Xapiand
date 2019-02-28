@@ -127,7 +127,6 @@ public:
 	MsgPack(const MsgPack& other);
 	MsgPack(MsgPack&& other);
 	MsgPack(std::initializer_list<MsgPack> list);
-	MsgPack(Type type);
 
 	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
 	MsgPack(T&& v);
@@ -157,6 +156,8 @@ public:
 	}
 
 private:
+	MsgPack(Type type);
+
 	MsgPack* _init_map(size_t pos);
 	void _update_map(size_t pos);
 

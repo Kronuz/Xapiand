@@ -171,7 +171,7 @@ public:
 	// Construct an empty AggregationMatchSpy.
 	AggregationMatchSpy()
 		: _total(0),
-		  _result(MsgPack::Type::MAP) { }
+		  _result(MsgPack::MAP()) { }
 
 	/*
 	 * Construct a AggregationMatchSpy which aggregates the values.
@@ -181,7 +181,7 @@ public:
 	template <typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<T>>::value>>
 	AggregationMatchSpy(T&& aggs, const std::shared_ptr<Schema>& schema)
 		: _total(0),
-		  _result(MsgPack::Type::MAP),
+		  _result(MsgPack::MAP()),
 		  _aggs(std::forward<T>(aggs)),
 		  _schema(schema),
 		  _aggregation(_aggs, _schema) { }

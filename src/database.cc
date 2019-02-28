@@ -1737,7 +1737,7 @@ Database::dump_documents()
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
-	MsgPack docs(MsgPack::Type::ARRAY);
+	auto docs = MsgPack::ARRAY();
 	Xapian::docid initial = 1;
 	for (int t = DB_RETRIES; t; --t) {
 		Xapian::docid did = initial;

@@ -130,7 +130,7 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 	}
 
 	MsgPack value;
-	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
+	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack::MAP();
 	auto start = fp.get_start();
 	auto field_type = FieldType::EMPTY;
 	if (!start.empty()) {
@@ -161,7 +161,7 @@ QueryDSL::parse_range(const required_spc_t& field_spc, std::string_view range)
 	}
 
 	MsgPack value;
-	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack(MsgPack::Type::MAP);
+	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack::MAP();
 	auto start = fp.get_start();
 	if (!start.empty()) {
 		_range[RESERVED_QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
@@ -796,7 +796,7 @@ QueryDSL::make_dsl_query(const query_field_t& e)
 {
 	L_CALL("Query::make_dsl_query(<query_field_t>)");
 
-	MsgPack dsl(MsgPack::Type::MAP);
+	auto dsl = MsgPack::MAP();
 	if (e.query.empty()) {
 		dsl = "*";
 	} else if (e.query.size() == 1) {

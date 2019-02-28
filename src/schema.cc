@@ -1898,7 +1898,7 @@ required_spc_t::to_obj() const
 	obj["prefix"] = prefix.to_string();
 	obj["slot"] = slot;
 
-	auto& obj_flags = obj["flags"] = MsgPack(MsgPack::Type::MAP);
+	auto& obj_flags = obj["flags"] = MsgPack::MAP();
 	obj_flags["bool_term"] = flags.bool_term;
 	obj_flags["partials"] = flags.partials;
 
@@ -1936,12 +1936,12 @@ required_spc_t::to_obj() const
 	obj_flags["has_partial_paths"] = flags.has_partial_paths;
 	obj_flags["static_endpoint"] = flags.static_endpoint;
 
-	auto& obj_accuracy = obj["accuracy"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_accuracy = obj["accuracy"] = MsgPack::ARRAY();
 	for (const auto& a : accuracy) {
 		obj_accuracy.append(a);
 	}
 
-	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack::ARRAY();
 	for (const auto& a : acc_prefix) {
 		obj_acc_prefix.append(a);
 	}
@@ -2199,22 +2199,22 @@ specification_t::to_obj() const
 
 	obj["local_prefix"] = local_prefix.to_string();
 
-	auto& obj_position = obj["position"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_position = obj["position"] = MsgPack::ARRAY();
 	for (const auto& p : position) {
 		obj_position.append(p);
 	}
 
-	auto& obj_weight = obj["weight"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_weight = obj["weight"] = MsgPack::ARRAY();
 	for (const auto& w : weight) {
 		obj_weight.append(w);
 	}
 
-	auto& obj_spelling = obj["spelling"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_spelling = obj["spelling"] = MsgPack::ARRAY();
 	for (const auto& s : spelling) {
 		obj_spelling.append(static_cast<bool>(s));
 	}
 
-	auto& obj_positions = obj["positions"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_positions = obj["positions"] = MsgPack::ARRAY();
 	for (const auto& p : positions) {
 		obj_positions.append(static_cast<bool>(p));
 	}
@@ -2223,11 +2223,11 @@ specification_t::to_obj() const
 
 	obj["index_uuid_field"] = _get_str_index_uuid_field(index_uuid_field);
 
-	obj["value_rec"] = value_rec ? value_rec->to_string() : MsgPack(MsgPack::Type::NIL);
-	obj["value"] = value ? value->to_string() : MsgPack(MsgPack::Type::NIL);
-	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : MsgPack(MsgPack::Type::NIL);
+	obj["value_rec"] = value_rec ? value_rec->to_string() : MsgPack::NIL();
+	obj["value"] = value ? value->to_string() : MsgPack::NIL();
+	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : MsgPack::NIL();
 #ifdef XAPIAND_CHAISCRIPT
-	obj["script"] = script ? script->to_string() : MsgPack(MsgPack::Type::NIL);
+	obj["script"] = script ? script->to_string() : MsgPack::NIL();
 #endif
 
 	obj["endpoint"] = endpoint;
@@ -2238,12 +2238,12 @@ specification_t::to_obj() const
 	obj["aux_stem_language"] = aux_stem_language;
 	obj["aux_language"] = aux_language;
 
-	auto& obj_partial_prefixes = obj["partial_prefixes"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_partial_prefixes = obj["partial_prefixes"] = MsgPack::ARRAY();
 	for (const auto& p : partial_prefixes) {
 		obj_partial_prefixes.append(p.to_string());
 	}
 
-	auto& obj_partial_index_spcs = obj["partial_index_spcs"] = MsgPack(MsgPack::Type::ARRAY);
+	auto& obj_partial_index_spcs = obj["partial_index_spcs"] = MsgPack::ARRAY();
 	for (const auto& s : partial_index_spcs) {
 		obj_partial_index_spcs.append(MsgPack({
 			{ "prefix", repr(s.prefix) },
@@ -2374,7 +2374,7 @@ Schema::get_initial_schema()
 	static const MsgPack initial_schema_tpl({
 		{ RESERVED_RECURSE, false },
 		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
-		{ SCHEMA_FIELD_NAME, MsgPack(MsgPack::Type::MAP) },
+		{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
 	});
 	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);
 	initial_schema->lock();
@@ -3117,7 +3117,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 	if (array.empty()) {
 		set_type_to_array();
 		if (specification.flags.store) {
-			(*parent_data)[name] = MsgPack(MsgPack::Type::ARRAY);
+			(*parent_data)[name] = MsgPack::ARRAY();
 		}
 		return;
 	}
@@ -3346,7 +3346,7 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		if (fields.empty()) {
 			index_partial_paths(doc);
 			if (specification.flags.store && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
-				*data = MsgPack(MsgPack::Type::MAP);
+				*data = MsgPack::MAP();
 			}
 		}
 	}
@@ -4850,7 +4850,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						case FieldType::DATE:
 						case FieldType::TIME:
 						case FieldType::TIMEDELTA:
-							mut_properties[RESERVED_ACCURACY] = MsgPack(MsgPack::Type::ARRAY);
+							mut_properties[RESERVED_ACCURACY] = MsgPack::ARRAY();
 							for (auto& acc : specification.accuracy) {
 								mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
 							}
@@ -5016,7 +5016,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
 				switch (data_value.getType()) {
 					case MsgPack::Type::UNDEFINED:
-						data_value = MsgPack(MsgPack::Type::ARRAY);
+						data_value = MsgPack::ARRAY();
 						for (const auto& value : values) {
 							data_value.push_back(normalize_uuid(value));
 						}

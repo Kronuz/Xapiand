@@ -532,7 +532,7 @@ public:
 
 	MsgPack get_obj() const {
 		auto main_locator = get("");
-		return main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack(MsgPack::Type::MAP);
+		return main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
 	}
 
 	void set_obj(const MsgPack& object) {
