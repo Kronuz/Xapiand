@@ -128,7 +128,7 @@ public:
 	MsgPack(MsgPack&& other);
 	MsgPack(std::initializer_list<MsgPack> list);
 
-	template <typename T, typename = std::enable_if_t<not std::is_same<std::shared_ptr<Body>, std::decay_t<T>>::value>>
+	template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, std::shared_ptr<Body>>::value>>
 	MsgPack(T&& v);
 
 	MsgPack& operator=(const MsgPack& other);
@@ -207,7 +207,9 @@ private:
 
 	void _clear();
 
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
+	inline void _append(T&& o);
+	template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	inline void _append(T&& o);
 	inline void _append(std::string_view val);
 
@@ -267,7 +269,9 @@ public:
 	template <typename T>
 	void push_back(T&& v);
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value, int> = 0>
+	void update(M&& o);
+	template <typename M, std::enable_if_t<std::is_convertible<M, MsgPack>::value and not std::is_same<MsgPack, std::decay_t<M>>::value, int> = 0>
 	void update(M&& o);
 
 	// Same as replace(), but returning a reference:
@@ -394,7 +398,9 @@ public:
 	template <typename T>
 	MsgPack operator+(T&& o);
 
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
+	MsgPack& operator+=(T&& o);
+	template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator+=(T&& o);
 
 	MsgPack& operator+=(std::string_view o);
@@ -403,21 +409,27 @@ public:
 	template <typename T>
 	MsgPack operator-(T&& o);
 
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
+	MsgPack& operator-=(T&& o);
+	template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator-=(T&& o);
 
 
 	template <typename T>
 	MsgPack operator*(T&& o);
 
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
+	MsgPack& operator*=(T&& o);
+	template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator*=(T&& o);
 
 
 	template <typename T>
 	MsgPack operator/(T&& o);
 
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
+	MsgPack& operator/=(T&& o);
+	template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator/=(T&& o);
 
 
@@ -1540,9 +1552,15 @@ inline void MsgPack::_clear() {
 }
 
 
-template <typename T, typename>
+template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int>>
 inline void MsgPack::_append(T&& o) {
-	_append(std::to_string(o));
+	_append(std::to_string(std::forward<T>(o)));
+}
+
+
+template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int>>
+inline void MsgPack::_append(T&& o) {
+	_append(MsgPack(std::forward<T>(o)));
 }
 
 
@@ -1945,7 +1963,7 @@ inline void MsgPack::push_back(T&& v) {
 }
 
 
-template <typename M, typename>
+template <typename M, std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value, int>>
 inline void MsgPack::update(M&& o) {
 	switch (o._body->getType()) {
 		case Type::MAP:
@@ -1968,6 +1986,10 @@ inline void MsgPack::update(M&& o) {
 	}
 }
 
+template <typename M, std::enable_if_t<std::is_convertible<M, MsgPack>::value and not std::is_same<MsgPack, std::decay_t<M>>::value, int>>
+inline void MsgPack::update(M&& o) {
+	update(MsgPack(std::forward<M>(o)));
+}
 
 // Following are helper functions to directly return references:
 
@@ -2855,7 +2877,7 @@ inline MsgPack MsgPack::operator+(T&& o) {
 }
 
 
-template <typename T, typename>
+template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int>>
 inline MsgPack& MsgPack::operator+=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
@@ -2883,6 +2905,12 @@ inline MsgPack& MsgPack::operator+=(T&& o) {
 }
 
 
+template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int>>
+inline MsgPack& MsgPack::operator+=(T&& o) {
+	return operator+=(MsgPack(std::forward<T>(o)));
+}
+
+
 inline MsgPack& MsgPack::operator+=(std::string_view o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
@@ -2901,7 +2929,7 @@ inline MsgPack& MsgPack::operator+=(std::string_view o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T operator+(const T& o, const MsgPack& m) {
 	auto val = o;
 	val += static_cast<T>(m);
@@ -2909,7 +2937,7 @@ inline T operator+(const T& o, const MsgPack& m) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T& operator+=(T& o, const MsgPack& m) {
 	return o += static_cast<T>(m);
 }
@@ -2923,7 +2951,7 @@ inline MsgPack MsgPack::operator-(T&& o) {
 }
 
 
-template <typename T, typename>
+template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int>>
 inline MsgPack& MsgPack::operator-=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
@@ -2948,7 +2976,13 @@ inline MsgPack& MsgPack::operator-=(T&& o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int>>
+inline MsgPack& MsgPack::operator-=(T&& o) {
+	return operator-=(MsgPack(std::forward<T>(o)));
+}
+
+
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T operator-(const T& o, const MsgPack& m) {
 	auto val = o;
 	val -= static_cast<T>(m);
@@ -2956,7 +2990,7 @@ inline T operator-(const T& o, const MsgPack& m) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T& operator-=(T& o, const MsgPack& m) {
 	return o -= static_cast<T>(m);
 }
@@ -2970,7 +3004,7 @@ inline MsgPack MsgPack::operator*(T&& o) {
 }
 
 
-template <typename T, typename>
+template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int>>
 inline MsgPack& MsgPack::operator*=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
@@ -2995,7 +3029,13 @@ inline MsgPack& MsgPack::operator*=(T&& o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int>>
+inline MsgPack& MsgPack::operator*=(T&& o) {
+	return operator*=(MsgPack(std::forward<T>(o)));
+}
+
+
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T operator*(const T& o, const MsgPack& m) {
 	auto val = o;
 	val *= static_cast<T>(m);
@@ -3003,7 +3043,7 @@ inline T operator*(const T& o, const MsgPack& m) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T& operator*=(T& o, const MsgPack& m) {
 	return o *= static_cast<T>(m);
 }
@@ -3017,7 +3057,7 @@ inline MsgPack MsgPack::operator/(T&& o) {
 }
 
 
-template <typename T, typename>
+template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int>>
 inline MsgPack& MsgPack::operator/=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
@@ -3042,7 +3082,13 @@ inline MsgPack& MsgPack::operator/=(T&& o) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, std::enable_if_t<std::is_convertible<T, MsgPack>::value and not std::is_arithmetic<std::remove_reference_t<T>>::value and not std::is_same<std::decay_t<T>, MsgPack>::value, int>>
+inline MsgPack& MsgPack::operator/=(T&& o) {
+	return operator/=(MsgPack(std::forward<T>(o)));
+}
+
+
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T operator/(const T& o, const MsgPack& m) {
 	auto val = o;
 	val /= static_cast<T>(m);
@@ -3050,7 +3096,7 @@ inline T operator/(const T& o, const MsgPack& m) {
 }
 
 
-template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+template <typename T, typename = std::enable_if_t<not std::is_same<std::decay_t<T>, MsgPack>::value>>
 inline T& operator/=(T& o, const MsgPack& m) {
 	return o /= static_cast<T>(m);
 }
