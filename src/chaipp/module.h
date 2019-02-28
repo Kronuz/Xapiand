@@ -35,7 +35,7 @@ class Std_Lib
 {
 public:
 	static void msgpack(chaiscript::Module& m) {
-		m.add(chaiscript::type_conversion<const MsgPack, unsigned>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, unsigned>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -44,7 +44,7 @@ public:
 			}
 			return obj.as_u64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, int>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, int>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -53,7 +53,7 @@ public:
 			}
 			return obj.as_i64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, unsigned long>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, unsigned long>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -62,7 +62,7 @@ public:
 			}
 			return obj.as_u64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, long>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, long>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -71,7 +71,7 @@ public:
 			}
 			return obj.as_i64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, unsigned long long>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, unsigned long long>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -80,7 +80,7 @@ public:
 			}
 			return obj.as_u64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, long long>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, long long>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -89,7 +89,7 @@ public:
 			}
 			return obj.as_i64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, float>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, float>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -98,7 +98,7 @@ public:
 			}
 			return obj.as_f64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, double>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, double>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -107,7 +107,7 @@ public:
 			}
 			return obj.as_f64();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, bool>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, bool>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -116,7 +116,7 @@ public:
 			}
 			return obj.as_boolean();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, std::string>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, std::string>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -125,7 +125,7 @@ public:
 			}
 			return obj.as_str();
 		}));
-		m.add(chaiscript::type_conversion<const MsgPack, std::string_view>([](const MsgPack& obj) {
+		m.add(chaiscript::type_conversion<const MsgPack&, std::string_view>([](const MsgPack& obj) {
 			if (obj.is_map()) {
 				auto it = obj.find("_value");
 				if (it != obj.end()) {
@@ -135,13 +135,14 @@ public:
 			return obj.str_view();
 		}));
 
+		m.add(chaiscript::type_conversion<const std::string&, std::string_view>([](const std::string& obj) { return std::string_view(obj); }));
+
 		m.add(chaiscript::type_conversion<const unsigned&, size_t>([](const unsigned& orig) { return static_cast<size_t>(orig); }));
 		m.add(chaiscript::type_conversion<const int&, size_t>([](const int& orig) { return static_cast<size_t>(orig); }));
 		m.add(chaiscript::type_conversion<const unsigned long&, size_t>([](const unsigned long& orig) { return static_cast<size_t>(orig); }));
 		m.add(chaiscript::type_conversion<const long&, size_t>([](const long& orig) { return static_cast<size_t>(orig); }));
 		m.add(chaiscript::type_conversion<const unsigned long long&, size_t>([](const unsigned long long& orig) { return static_cast<size_t>(orig); }));
 		m.add(chaiscript::type_conversion<const long long&, size_t>([](const long long& orig) { return static_cast<size_t>(orig); }));
-		m.add(chaiscript::type_conversion<const std::string&, std::string_view>([](const std::string& obj) { return std::string_view(obj); }));
 
 		chaiscript::utility::add_class<MsgPack>(
 			m,
@@ -160,9 +161,6 @@ public:
 				chaiscript::constructor<MsgPack(const float&)>(),
 				chaiscript::constructor<MsgPack(const double&)>(),
 				chaiscript::constructor<MsgPack(const bool&)>(),
-				chaiscript::constructor<MsgPack(std::string&&)>(),
-				chaiscript::constructor<MsgPack(const std::string&)>(),
-				chaiscript::constructor<MsgPack(std::string_view&&)>(),
 				chaiscript::constructor<MsgPack(const std::string_view&)>(),
 				chaiscript::constructor<MsgPack(std::vector<MsgPack>&&)>(),
 				chaiscript::constructor<MsgPack(const std::vector<MsgPack>&)>(),
@@ -193,13 +191,13 @@ public:
 					}
 					return MsgPack::undefined();
 				}), "[]" },
-				{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> MsgPack& {
+				{ chaiscript::fun([](MsgPack& obj, const std::string_view& str) -> MsgPack& {
 					if (obj.is_map()) {
 						return obj.operator[](str);
 					}
 					return MsgPack::undefined();
 				}), "[]" },
-				{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> const MsgPack& {
+				{ chaiscript::fun([](const MsgPack& obj, const std::string_view& str) -> const MsgPack& {
 					if (obj.is_map()) {
 						return obj.operator[](str);
 					}
@@ -219,13 +217,13 @@ public:
 					}
 					return MsgPack::undefined();
 				}), "at" },
-				{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> MsgPack& {
+				{ chaiscript::fun([](MsgPack& obj, const std::string_view& str) -> MsgPack& {
 					if (obj.is_map()) {
 						return obj.at(str);
 					}
 					return MsgPack::undefined();
 				}), "at" },
-				{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> const MsgPack& {
+				{ chaiscript::fun([](const MsgPack& obj, const std::string_view& str) -> const MsgPack& {
 					if (obj.is_map()) {
 						return obj.at(str);
 					}
@@ -239,10 +237,10 @@ public:
 				{ chaiscript::fun([](const MsgPack& obj, size_t idx) -> MsgPack::const_iterator {
 					return obj.find(idx);
 				}), "find" },
-				{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> MsgPack::iterator {
+				{ chaiscript::fun([](MsgPack& obj, const std::string_view& str) -> MsgPack::iterator {
 					return obj.find(str);
 				}), "find" },
-				{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> MsgPack::const_iterator {
+				{ chaiscript::fun([](const MsgPack& obj, const std::string_view& str) -> MsgPack::const_iterator {
 					return obj.find(str);
 				}), "find" },
 
@@ -255,7 +253,7 @@ public:
 				{ chaiscript::fun([](const MsgPack& obj, size_t idx) -> size_t {
 					return obj.count(idx);
 				}), "count" },
-				{ chaiscript::fun([](const MsgPack& obj, const std::string& str) -> size_t {
+				{ chaiscript::fun([](const MsgPack& obj, const std::string_view& str) -> size_t {
 					return obj.count(str);
 				}), "count" },
 
@@ -266,7 +264,7 @@ public:
 					}
 					return 0;
 				}), "erase" },
-				{ chaiscript::fun([](MsgPack& obj, const std::string& str) -> size_t {
+				{ chaiscript::fun([](MsgPack& obj, const std::string_view& str) -> size_t {
 					if (obj.is_map()) {
 						return obj.erase(str);
 					}
@@ -310,86 +308,159 @@ public:
 				{ chaiscript::fun(&MsgPack::operator!=),     "!="           },
 				{ chaiscript::fun(&MsgPack::operator<<),     "<<"           },
 
+
 				{ chaiscript::fun(&MsgPack::operator+<const unsigned&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const unsigned&>),     "+="           },
+				{ chaiscript::fun(&::operator+<unsigned, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<unsigned, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const unsigned&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const unsigned&>),     "-="           },
+				{ chaiscript::fun(&::operator-<unsigned, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<unsigned, const MsgPack&>),   "-"            },
 				{ chaiscript::fun(&MsgPack::operator*<const unsigned&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const unsigned&>),     "*="           },
+				{ chaiscript::fun(&::operator*<unsigned, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<unsigned, const MsgPack&>),   "*"            },
 				{ chaiscript::fun(&MsgPack::operator/<const unsigned&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const unsigned&>),     "/="           },
+				{ chaiscript::fun(&::operator/<unsigned, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<unsigned, const MsgPack&>),   "/"            },
 
 				{ chaiscript::fun(&MsgPack::operator+<const int&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const int&>),     "+="           },
+				{ chaiscript::fun(&::operator+<int, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<int, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const int&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const int&>),     "-="           },
+				{ chaiscript::fun(&::operator-<int, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<int, const MsgPack&>),   "-"            },
 				{ chaiscript::fun(&MsgPack::operator*<const int&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const int&>),     "*="           },
+				{ chaiscript::fun(&::operator*<int, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<int, const MsgPack&>),   "*"            },
 				{ chaiscript::fun(&MsgPack::operator/<const int&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const int&>),     "/="           },
+				{ chaiscript::fun(&::operator/<int, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<int, const MsgPack&>),   "/"            },
 
 				{ chaiscript::fun(&MsgPack::operator+<const unsigned long&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const unsigned long&>),     "+="           },
+				{ chaiscript::fun(&::operator+<unsigned, const MsgPack&>),         "+"            },
+				{ chaiscript::fun(&::operator+=<unsigned, const MsgPack&>),        "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const unsigned long&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const unsigned long&>),     "-="           },
+				{ chaiscript::fun(&::operator-<unsigned, const MsgPack&>),         "-"            },
+				{ chaiscript::fun(&::operator-=<unsigned, const MsgPack&>),        "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const unsigned long&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const unsigned long&>),     "*="           },
+				{ chaiscript::fun(&::operator*<unsigned, const MsgPack&>),         "*"            },
+				{ chaiscript::fun(&::operator*=<unsigned, const MsgPack&>),        "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const unsigned long&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const unsigned long&>),     "/="           },
+				{ chaiscript::fun(&::operator/<unsigned, const MsgPack&>),         "/"            },
+				{ chaiscript::fun(&::operator/=<unsigned, const MsgPack&>),        "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const long&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const long&>),     "+="           },
+				{ chaiscript::fun(&::operator+<long, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<long, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const long&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const long&>),     "-="           },
+				{ chaiscript::fun(&::operator-<long, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<long, const MsgPack&>),   "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const long&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const long&>),     "*="           },
+				{ chaiscript::fun(&::operator*<long, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<long, const MsgPack&>),   "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const long&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const long&>),     "/="           },
+				{ chaiscript::fun(&::operator/<long, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<long, const MsgPack&>),   "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const long long&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const long long&>),     "+="           },
+				{ chaiscript::fun(&::operator+<long long, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<long long, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const long long&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const long long&>),     "-="           },
+				{ chaiscript::fun(&::operator-<long long, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<long long, const MsgPack&>),   "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const long long&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const long long&>),     "*="           },
+				{ chaiscript::fun(&::operator*<long long, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<long long, const MsgPack&>),   "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const long long&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const long long&>),     "/="           },
+				{ chaiscript::fun(&::operator/<long long, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<long long, const MsgPack&>),   "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const unsigned long long&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const unsigned long long&>),     "+="           },
+				{ chaiscript::fun(&::operator+<unsigned long long, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<unsigned long long, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const unsigned long long&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const unsigned long long&>),     "-="           },
+				{ chaiscript::fun(&::operator-<unsigned long long, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<unsigned long long, const MsgPack&>),   "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const unsigned long long&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const unsigned long long&>),     "*="           },
+				{ chaiscript::fun(&::operator*<unsigned long long, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<unsigned long long, const MsgPack&>),   "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const unsigned long long&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const unsigned long long&>),     "/="           },
+				{ chaiscript::fun(&::operator/<unsigned long long, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<unsigned long long, const MsgPack&>),   "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const float&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const float&>),     "+="           },
+				{ chaiscript::fun(&::operator+<float, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<float, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const float&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const float&>),     "-="           },
+				{ chaiscript::fun(&::operator-<float, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<float, const MsgPack&>),   "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const float&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const float&>),     "*="           },
+				{ chaiscript::fun(&::operator*<float, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<float, const MsgPack&>),   "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const float&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const float&>),     "/="           },
+				{ chaiscript::fun(&::operator/<float, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<float, const MsgPack&>),   "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const double&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const double&>),     "+="           },
+				{ chaiscript::fun(&::operator+<double, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<double, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const double&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const double&>),     "-="           },
+				{ chaiscript::fun(&::operator-<double, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<double, const MsgPack&>),   "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const double&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const double&>),     "*="           },
+				{ chaiscript::fun(&::operator*<double, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<double, const MsgPack&>),   "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const double&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const double&>),     "/="           },
+				{ chaiscript::fun(&::operator/<double, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<double, const MsgPack&>),   "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const bool&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const bool&>),     "+="           },
+				{ chaiscript::fun(&::operator+<bool, const MsgPack&>),    "+"            },
+				{ chaiscript::fun(&::operator+=<bool, const MsgPack&>),   "+="           },
 				{ chaiscript::fun(&MsgPack::operator-<const bool&>),      "-"            },
 				{ chaiscript::fun(&MsgPack::operator-=<const bool&>),     "-="           },
+				{ chaiscript::fun(&::operator-<bool, const MsgPack&>),    "-"            },
+				{ chaiscript::fun(&::operator-=<bool, const MsgPack&>),   "-="           },
 				{ chaiscript::fun(&MsgPack::operator*<const bool&>),      "*"            },
 				{ chaiscript::fun(&MsgPack::operator*=<const bool&>),     "*="           },
+				{ chaiscript::fun(&::operator*<bool, const MsgPack&>),    "*"            },
+				{ chaiscript::fun(&::operator*=<bool, const MsgPack&>),   "*="           },
 				{ chaiscript::fun(&MsgPack::operator/<const bool&>),      "/"            },
 				{ chaiscript::fun(&MsgPack::operator/=<const bool&>),     "/="           },
+				{ chaiscript::fun(&::operator/<bool, const MsgPack&>),    "/"            },
+				{ chaiscript::fun(&::operator/=<bool, const MsgPack&>),   "/="           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const MsgPack&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator+=<const MsgPack&>),     "+="           },
@@ -417,9 +488,6 @@ public:
 				{ chaiscript::fun(&MsgPack::operator=<const float&>),                                               "=" },
 				{ chaiscript::fun(&MsgPack::operator=<const double&>),                                              "=" },
 				{ chaiscript::fun(&MsgPack::operator=<const bool&>),                                                "=" },
-				{ chaiscript::fun(&MsgPack::operator=<std::string&&>),                                              "=" },
-				{ chaiscript::fun(&MsgPack::operator=<const std::string&>),                                         "=" },
-				{ chaiscript::fun(&MsgPack::operator=<std::string_view&&>),                                         "=" },
 				{ chaiscript::fun(&MsgPack::operator=<const std::string_view&>),                                    "=" },
 				{ chaiscript::fun(&MsgPack::operator=<std::vector<MsgPack>&&>),                                     "=" },
 				{ chaiscript::fun(&MsgPack::operator=<const std::vector<MsgPack>&>),                                "=" },
@@ -446,8 +514,6 @@ public:
 				{ chaiscript::fun(&MsgPack::append<const double&>),              "append" },
 				{ chaiscript::fun(&MsgPack::append<const bool&>),                "append" },
 				{ chaiscript::fun(&MsgPack::append<const std::string_view&>),    "append" },
-				{ chaiscript::fun(&MsgPack::append<std::string&&>),              "append" },
-				{ chaiscript::fun(&MsgPack::append<const std::string&>),         "append" },
 				{ chaiscript::fun(&MsgPack::append<MsgPack&&>),                  "append" },
 				{ chaiscript::fun(&MsgPack::append<const MsgPack&>),             "append" },
 
@@ -465,8 +531,6 @@ public:
 				{ chaiscript::fun(&MsgPack::put<const MsgPack&, const double&>),                                                                               "put" },
 				{ chaiscript::fun(&MsgPack::put<const MsgPack&, const bool&>),                                                                                 "put" },
 				{ chaiscript::fun(&MsgPack::put<const MsgPack&, const std::string_view&>),                                                                     "put" },
-				{ chaiscript::fun(&MsgPack::put<const MsgPack&, std::string&&>),                                                                               "put" },
-				{ chaiscript::fun(&MsgPack::put<const MsgPack&, const std::string&>),                                                                          "put" },
 				{ chaiscript::fun(&MsgPack::put<const MsgPack&, MsgPack&&>),                                                                                   "put" },
 				{ chaiscript::fun(&MsgPack::put<const MsgPack&, const MsgPack&>),                                                                              "put" },
 				// Specific instantiation of the template MsgPack::put<std::string_view, T>.
@@ -480,8 +544,6 @@ public:
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const double&)>(&MsgPack::put<const double&>)),                          "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const bool&)>(&MsgPack::put<const bool&>)),                              "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const std::string_view&)>(&MsgPack::put<const std::string_view&>)),      "put" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, std::string&&)>(&MsgPack::put<std::string&&>)),                          "put" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const std::string&)>(&MsgPack::put<const std::string&>)),                "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, MsgPack&&)>(&MsgPack::put<MsgPack&&>)),                                  "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const MsgPack&)>(&MsgPack::put<const MsgPack&>)),                        "put" },
 				// Specific instantiation of the template MsgPack::put<size_t, T>.
@@ -495,8 +557,6 @@ public:
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const double&)>(&MsgPack::put<const double&>)),                                    "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const bool&)>(&MsgPack::put<const bool&>)),                                        "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const std::string_view&)>(&MsgPack::put<const std::string_view&>)),                "put" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, std::string&&)>(&MsgPack::put<std::string&&>)),                                    "put" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const std::string&)>(&MsgPack::put<const std::string&>)),                          "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, MsgPack&&)>(&MsgPack::put<MsgPack&&>)),                                            "put" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const MsgPack&)>(&MsgPack::put<const MsgPack&>)),                                  "put" },
 
@@ -511,8 +571,6 @@ public:
 				{ chaiscript::fun(&MsgPack::add<const MsgPack&, const double&>),                                                                               "add" },
 				{ chaiscript::fun(&MsgPack::add<const MsgPack&, const bool&>),                                                                                 "add" },
 				{ chaiscript::fun(&MsgPack::add<const MsgPack&, const std::string_view&>),                                                                     "add" },
-				{ chaiscript::fun(&MsgPack::add<const MsgPack&, std::string&&>),                                                                               "add" },
-				{ chaiscript::fun(&MsgPack::add<const MsgPack&, const std::string&>),                                                                          "add" },
 				{ chaiscript::fun(&MsgPack::add<const MsgPack&, MsgPack&&>),                                                                                   "add" },
 				{ chaiscript::fun(&MsgPack::add<const MsgPack&, const MsgPack&>),                                                                              "add" },
 				// Specific instantiation of the template MsgPack::add<std::string_view, T&&>.
@@ -526,8 +584,6 @@ public:
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const double&)>(&MsgPack::add<const double&>)),                          "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const bool&)>(&MsgPack::add<const bool&>)),                              "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const std::string_view&)>(&MsgPack::add<const std::string_view&>)),      "add" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, std::string&&)>(&MsgPack::add<std::string&&>)),                          "add" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const std::string&)>(&MsgPack::add<const std::string&>)),                "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, MsgPack&&)>(&MsgPack::add<MsgPack&&>)),                                  "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(std::string_view, const MsgPack&)>(&MsgPack::add<const MsgPack&>)),                        "add" },
 				// Specific instantiation of the template MsgPack::add<size_t, T&&>.
@@ -541,88 +597,8 @@ public:
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const double&)>(&MsgPack::add<const double&>)),                                    "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const bool&)>(&MsgPack::add<const bool&>)),                                        "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const std::string_view&)>(&MsgPack::add<const std::string_view&>)),                "add" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, std::string&&)>(&MsgPack::add<std::string&&>)),                                    "add" },
-				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const std::string&)>(&MsgPack::add<const std::string&>)),                          "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, MsgPack&&)>(&MsgPack::add<MsgPack&&>)),                                            "add" },
 				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)(size_t, const MsgPack&)>(&MsgPack::add<const MsgPack&>)),                                  "add" },
-
-				// Overload operator +
-				{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() + value; }),                     "+" },
-				{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() + value; }),                          "+" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() + value; }),                "+" },
-				{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() + value; }),                         "+" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() + value; }),           "+" },
-				{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() + value; }),                    "+" },
-				{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() + value; }),                        "+" },
-				{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() + value; }),                       "+" },
-				{ chaiscript::fun([](const MsgPack& obj, const std::string& value) { return obj.as_str() + value; }),           "+" },
-
-				{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value + obj.as_i64(); }),                     "+" },
-				{ chaiscript::fun([](int value, const MsgPack& obj) { return value + obj.as_i64(); }),                          "+" },
-				{ chaiscript::fun([](unsigned long value, const MsgPack& obj) { return value + obj.as_i64(); }),                "+" },
-				{ chaiscript::fun([](long value, const MsgPack& obj) { return value + obj.as_i64(); }),                         "+" },
-				{ chaiscript::fun([](unsigned long long value, const MsgPack& obj) { return value + obj.as_i64(); }),           "+" },
-				{ chaiscript::fun([](long long value, const MsgPack& obj) { return value + obj.as_i64(); }),                    "+" },
-				{ chaiscript::fun([](float value, const MsgPack& obj) { return value + obj.as_f64(); }),                        "+" },
-				{ chaiscript::fun([](double value, const MsgPack& obj) { return value + obj.as_f64(); }),                       "+" },
-				{ chaiscript::fun([](const std::string& value, const MsgPack& obj) { return value + obj.as_str(); }),           "+" },
-
-				// Overload operator -
-				{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() - value; }),                     "-" },
-				{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() - value; }),                          "-" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() - value; }),                "-" },
-				{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() - value; }),                         "-" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() - value; }),           "-" },
-				{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() - value; }),                    "-" },
-				{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() - value; }),                        "-" },
-				{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() - value; }),                       "-" },
-
-				{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value - obj.as_i64(); }),                     "-" },
-				{ chaiscript::fun([](int value, const MsgPack& obj) { return value - obj.as_i64(); }),                          "-" },
-				{ chaiscript::fun([](unsigned long value, const MsgPack& obj) { return value - obj.as_i64(); }),                "-" },
-				{ chaiscript::fun([](long value, const MsgPack& obj) { return value - obj.as_i64(); }),                         "-" },
-				{ chaiscript::fun([](unsigned long long value, const MsgPack& obj) { return value - obj.as_i64(); }),           "-" },
-				{ chaiscript::fun([](long long value, const MsgPack& obj) { return value - obj.as_i64(); }),                    "-" },
-				{ chaiscript::fun([](float value, const MsgPack& obj) { return value - obj.as_f64(); }),                        "-" },
-				{ chaiscript::fun([](double value, const MsgPack& obj) { return value - obj.as_f64(); }),                       "-" },
-
-				// Overload operator *
-				{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() * value; }),                     "*" },
-				{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() * value; }),                          "*" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() * value; }),                "*" },
-				{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() * value; }),                         "*" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() * value; }),           "*" },
-				{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() * value; }),                    "*" },
-				{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() * value; }),                        "*" },
-				{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() * value; }),                       "*" },
-
-				{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value * obj.as_i64(); }),                     "*" },
-				{ chaiscript::fun([](int value, const MsgPack& obj) { return value * obj.as_i64(); }),                          "*" },
-				{ chaiscript::fun([](unsigned long value, const MsgPack& obj) { return value * obj.as_i64(); }),                "*" },
-				{ chaiscript::fun([](long value, const MsgPack& obj) { return value * obj.as_i64(); }),                         "*" },
-				{ chaiscript::fun([](unsigned long long value, const MsgPack& obj) { return value * obj.as_i64(); }),           "*" },
-				{ chaiscript::fun([](long long value, const MsgPack& obj) { return value * obj.as_i64(); }),                    "*" },
-				{ chaiscript::fun([](float value, const MsgPack& obj) { return value * obj.as_f64(); }),                        "*" },
-				{ chaiscript::fun([](double value, const MsgPack& obj) { return value * obj.as_f64(); }),                       "*" },
-
-				// Overload operator /
-				{ chaiscript::fun([](const MsgPack& obj, unsigned value) { return obj.as_i64() / value; }),                     "/" },
-				{ chaiscript::fun([](const MsgPack& obj, int value) { return obj.as_i64() / value; }),                          "/" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long value) { return obj.as_i64() / value; }),                "/" },
-				{ chaiscript::fun([](const MsgPack& obj, long value) { return obj.as_i64() / value; }),                         "/" },
-				{ chaiscript::fun([](const MsgPack& obj, unsigned long long value) { return obj.as_i64() / value; }),           "/" },
-				{ chaiscript::fun([](const MsgPack& obj, long long value) { return obj.as_i64() / value; }),                    "/" },
-				{ chaiscript::fun([](const MsgPack& obj, float value) { return obj.as_f64() / value; }),                        "/" },
-				{ chaiscript::fun([](const MsgPack& obj, double value) { return obj.as_f64() / value; }),                       "/" },
-
-				{ chaiscript::fun([](unsigned value, const MsgPack& obj) { return value / obj.as_i64(); }),                     "/" },
-				{ chaiscript::fun([](int value, const MsgPack& obj) { return value / obj.as_i64(); }),                          "/" },
-				{ chaiscript::fun([](unsigned long value, const MsgPack& obj) { return value / obj.as_i64(); }),                "/" },
-				{ chaiscript::fun([](long value, const MsgPack& obj) { return value / obj.as_i64(); }),                         "/" },
-				{ chaiscript::fun([](unsigned long long value, const MsgPack& obj) { return value / obj.as_i64(); }),           "/" },
-				{ chaiscript::fun([](long long value, const MsgPack& obj) { return value / obj.as_i64(); }),                    "/" },
-				{ chaiscript::fun([](float value, const MsgPack& obj) { return value / obj.as_f64(); }),                        "/" },
-				{ chaiscript::fun([](double value, const MsgPack& obj) { return value / obj.as_f64(); }),                       "/" },
 
 				// Adding special value method.
 				{
