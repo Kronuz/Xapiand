@@ -172,6 +172,7 @@ private:
 	void _init_type(const unsigned long long&);
 	void _init_type(const float&);
 	void _init_type(const double&);
+	void _init_type(const long double&);
 	void _init_type(const bool&);
 	void _init_type(const MsgPack& val);
 	void _init_type(std::string_view val);
@@ -192,8 +193,8 @@ private:
 
 	void _clear();
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
-	inline void _append(M&& o);
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	inline void _append(T&& o);
 	inline void _append(std::string_view val);
 
 	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
@@ -375,26 +376,36 @@ public:
 	bool operator==(const MsgPack& other) const;
 	bool operator!=(const MsgPack& other) const;
 
+
 	template <typename T>
-	MsgPack operator+(T&& val);
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack operator+(T&& o);
+
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
 	MsgPack& operator+=(T&& o);
+
 	MsgPack& operator+=(std::string_view o);
 
+
 	template <typename T>
-	MsgPack operator-(T&& val);
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack operator-(T&& o);
+
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
 	MsgPack& operator-=(T&& o);
 
-	template <typename T>
-	MsgPack operator*(T&& val);
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
-	MsgPack& operator*=(T&& o);
 
 	template <typename T>
-	MsgPack operator/(T&& val);
-	template <typename T, typename = std::enable_if_t<std::is_arithmetic<T>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack operator*(T&& o);
+
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
+	MsgPack& operator*=(T&& o);
+
+
+	template <typename T>
+	MsgPack operator/(T&& o);
+
+	template <typename T, typename = std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value || std::is_same<MsgPack, std::decay_t<T>>::value>>
 	MsgPack& operator/=(T&& o);
+
 
 	std::ostream& operator<<(std::ostream& s) const;
 
@@ -689,6 +700,13 @@ struct MsgPack::Body {
 		}
 	}
 };
+
+
+namespace std {
+	inline auto to_string(const MsgPack& o) {
+		return o.as_str();
+	}
+}
 
 
 inline MsgPack::iterator MsgPack::begin() {
@@ -1140,6 +1158,11 @@ inline void MsgPack::_init_type(const double&) {
 }
 
 
+inline void MsgPack::_init_type(const long double&) {
+	_init_float();
+}
+
+
 inline void MsgPack::_init_type(const bool&) {
 	_init_boolean();
 }
@@ -1494,16 +1517,9 @@ inline void MsgPack::_clear() {
 }
 
 
-template <typename M, typename>
-inline void MsgPack::_append(M&& o) {
-	switch (o._body->getType()) {
-		case Type::STR:
-			_append(o.str_view());
-			break;
-		default:
-			_append(o.as_str());
-			break;
-	}
+template <typename T, typename>
+inline void MsgPack::_append(T&& o) {
+	_append(std::to_string(o));
 }
 
 
@@ -2677,11 +2693,9 @@ inline double MsgPack::as_f64() const {
 
 
 inline std::string MsgPack::as_str() const {
-	std::ostringstream oss;
-
 	switch (_const_body->getType()) {
 		case Type::NIL:
-			return "<nil>";
+			return "<null>";
 		case Type::BOOLEAN:
 			return _const_body->_obj->via.boolean ? "true" : "false";
 		case Type::POSITIVE_INTEGER:
@@ -2693,13 +2707,10 @@ inline std::string MsgPack::as_str() const {
 		case Type::STR:
 			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 		case Type::ARRAY:
-			oss << *_const_body->_obj;
-			return oss.str();
 		case Type::MAP:
-			oss << *_const_body->_obj;
-			return oss.str();
+			return "<" + to_string() + ">";
 		case Type::BIN:
-			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
+			return "<" + std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size) + ">";
 		case Type::UNDEFINED:
 			return "<undefined>";
 	}
@@ -2814,43 +2825,44 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 
 
 template <typename T, typename>
-inline MsgPack& MsgPack::operator+=(T&& val) {
+inline MsgPack& MsgPack::operator+=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
 	if (_body->getType() == Type::UNDEFINED) {
-		_init_type(val);
+		_init_type(o);
 	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
-			_body->_obj->via.i64 += static_cast<long long>(val);
+			_body->_obj->via.i64 += static_cast<long long>(o);
 			return *this;
 		case Type::POSITIVE_INTEGER:
-			_body->_obj->via.u64 += static_cast<unsigned long long>(val);
+			_body->_obj->via.u64 += static_cast<unsigned long long>(o);
 			return *this;
 		case Type::FLOAT:
-			_body->_obj->via.f64 += static_cast<double>(val);
+			_body->_obj->via.f64 += static_cast<double>(o);
 			return *this;
 		case Type::STR:
-			_append(val);
+			_append(std::to_string(o));
 			return *this;
 		default:
 			THROW(msgpack::type_error, "Cannot add to value of {}", _body->getStrType());
 	}
 }
 
-inline MsgPack& MsgPack::operator+=(std::string_view val) {
+
+inline MsgPack& MsgPack::operator+=(std::string_view o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
 	if (_body->getType() == Type::UNDEFINED) {
-		_init_type(val);
+		_init_type(o);
 	}
 	switch (_body->getType()) {
 		case Type::STR:
-			_append(val);
+			_append(o);
 			return *this;
 		default:
 			THROW(msgpack::type_error, "Cannot add to value of {}", _body->getStrType());
@@ -2859,31 +2871,31 @@ inline MsgPack& MsgPack::operator+=(std::string_view val) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator+(T&& val) {
-	MsgPack o = *this;
-	o += std::forward<T>(val);
-	return o;
+inline MsgPack MsgPack::operator+(T&& o) {
+	MsgPack val = *this;
+	val += std::forward<T>(o);
+	return val;
 }
 
 
 template <typename M, typename>
-inline MsgPack& MsgPack::operator-=(M&& val) {
+inline MsgPack& MsgPack::operator-=(M&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
 	if (_body->getType() == Type::UNDEFINED) {
-		_init_type(val);
+		_init_type(o);
 	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
-			_body->_obj->via.i64 -= static_cast<long long>(val);
+			_body->_obj->via.i64 -= static_cast<long long>(o);
 			return *this;
 		case Type::POSITIVE_INTEGER:
-			_body->_obj->via.u64 -= static_cast<unsigned long long>(val);
+			_body->_obj->via.u64 -= static_cast<unsigned long long>(o);
 			return *this;
 		case Type::FLOAT:
-			_body->_obj->via.f64 -= static_cast<double>(val);
+			_body->_obj->via.f64 -= static_cast<double>(o);
 			return *this;
 		default:
 			THROW(msgpack::type_error, "Cannot subtract from value of {}", _body->getStrType());
@@ -2892,31 +2904,31 @@ inline MsgPack& MsgPack::operator-=(M&& val) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator-(T&& val) {
-	MsgPack o = *this;
-	o -= std::forward<T>(val);
-	return o;
+inline MsgPack MsgPack::operator-(T&& o) {
+	MsgPack val = *this;
+	val -= std::forward<T>(o);
+	return val;
 }
 
 
 template <typename M, typename>
-inline MsgPack& MsgPack::operator*=(M&& val) {
+inline MsgPack& MsgPack::operator*=(M&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
 	if (_body->getType() == Type::UNDEFINED) {
-		_init_type(val);
+		_init_type(o);
 	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
-			_body->_obj->via.i64 *= static_cast<long long>(val);
+			_body->_obj->via.i64 *= static_cast<long long>(o);
 			return *this;
 		case Type::POSITIVE_INTEGER:
-			_body->_obj->via.u64 *= static_cast<unsigned long long>(val);
+			_body->_obj->via.u64 *= static_cast<unsigned long long>(o);
 			return *this;
 		case Type::FLOAT:
-			_body->_obj->via.f64 *= static_cast<double>(val);
+			_body->_obj->via.f64 *= static_cast<double>(o);
 			return *this;
 		default:
 			THROW(msgpack::type_error, "Cannot multiply by value of {}", _body->getStrType());
@@ -2925,31 +2937,31 @@ inline MsgPack& MsgPack::operator*=(M&& val) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator*(T&& val) {
-	MsgPack o = *this;
-	o *= std::forward<T>(val);
-	return o;
+inline MsgPack MsgPack::operator*(T&& o) {
+	MsgPack val = *this;
+	val *= std::forward<T>(o);
+	return val;
 }
 
 
 template <typename M, typename>
-inline MsgPack& MsgPack::operator/=(M&& val) {
+inline MsgPack& MsgPack::operator/=(M&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
 	if (_body->getType() == Type::UNDEFINED) {
-		_init_type(val);
+		_init_type(o);
 	}
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
-			_body->_obj->via.i64 /= static_cast<long long>(val);
+			_body->_obj->via.i64 /= static_cast<long long>(o);
 			return *this;
 		case Type::POSITIVE_INTEGER:
-			_body->_obj->via.u64 /= static_cast<unsigned long long>(val);
+			_body->_obj->via.u64 /= static_cast<unsigned long long>(o);
 			return *this;
 		case Type::FLOAT:
-			_body->_obj->via.f64 /= static_cast<double>(val);
+			_body->_obj->via.f64 /= static_cast<double>(o);
 			return *this;
 		default:
 			THROW(msgpack::type_error, "Cannot divide value of {}", _body->getStrType());
@@ -2958,10 +2970,10 @@ inline MsgPack& MsgPack::operator/=(M&& val) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator/(T&& val) {
-	MsgPack o = *this;
-	o /= std::forward<T>(val);
-	return o;
+inline MsgPack MsgPack::operator/(T&& o) {
+	MsgPack val = *this;
+	val /= std::forward<T>(o);
+	return val;
 }
 
 
