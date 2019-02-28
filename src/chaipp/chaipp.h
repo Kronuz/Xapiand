@@ -91,22 +91,22 @@ class Processor {
 		}
 	};
 
-	chaiscript::ChaiScript chai;
+	chaiscript::ChaiScript_Basic chai;
 	chaiscript::AST_NodePtr ast;
 
 public:
-	Processor(std::string_view script_name, std::string_view script_body) {
-		static auto module_msgpack = ModuleMsgPack();
-		chai.add(module_msgpack);
+	Processor(std::string_view script_name, std::string_view script_body) :
+		chai(chaipp::Std_Lib::library(),
+			std::make_unique<chaiscript::parser::ChaiScript_Parser<chaiscript::eval::Noop_Tracer, chaiscript::optimizer::Optimizer_Default>>()) {
 		ast = chai.get_parser().parse(std::string(script_body), std::string(script_name));
 		L_MAGENTA(ast->to_string());
 	}
 
-	void operator()(std::string_view method, MsgPack& obj, const MsgPack& old) {
+	void operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params) {
 		chai.add(chaiscript::const_var(std::ref(method)), "method");
-		chai.add(chaiscript::var(std::ref(obj)), "obj");
-		chai.add(chaiscript::const_var(std::ref(old)), "old");
-		L_GREEN("{}", obj.to_string());
+		chai.add(chaiscript::var(std::ref(doc)), "doc");
+		chai.add(chaiscript::const_var(std::ref(old_doc)), "old_doc");
+		chai.add(chaiscript::const_var(std::ref(params)), "params");
 		try {
 			chai.eval(*ast);
 		} catch (chaiscript::Boxed_Value &bv) {
