@@ -1327,7 +1327,24 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			if (pos != std::string_view::npos) {
 				auto field = sort.substr(0, pos);
 				auto value = sort.substr(pos);
-				query_object.get_sorter(sorter, { field, value });
+				MsgPack sort_obj;
+				if (!query_field.metric.empty()) {
+					if (field[0] == '-') {
+						field = field.substr(1, field.size());
+						sort_obj = MsgPack({{ field, {{ RESERVED_VALUE, value }, { RESERVED_QUERYDSL_METRIC , query_field.metric}, { RESERVED_QUERYDSL_ORDER , QUERYDSL_DESC }} }});
+					} else {
+						sort_obj = MsgPack({{ field, {{ RESERVED_VALUE, value }, { RESERVED_QUERYDSL_METRIC , query_field.metric}} }});
+					}
+				} else {
+					if (field[0] == '-') {
+						field = field.substr(1, field.size());
+						sort_obj = MsgPack({{ field, {{ RESERVED_VALUE, value }, { RESERVED_QUERYDSL_ORDER , QUERYDSL_DESC }} }});
+					} else {
+						sort_obj = MsgPack({{ field, {{ RESERVED_VALUE, value }} }});
+					}
+				}
+
+				query_object.get_sorter(sorter, sort_obj);
 			} else {
 				query_object.get_sorter(sorter, sort);
 			}
