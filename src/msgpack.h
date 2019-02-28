@@ -1240,7 +1240,7 @@ inline void MsgPack::_init_type(const MsgPack& val) {
 }
 
 
-void MsgPack::_init_type(std::string_view) {
+inline void MsgPack::_init_type(std::string_view) {
 	_init_str();
 }
 
