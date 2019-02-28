@@ -103,9 +103,9 @@ public:
 	}
 
 	void operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params) {
-		chai.add(chaiscript::const_var(std::ref(method)), "method");
-		chai.add(chaiscript::var(std::ref(doc)), "doc");
-		chai.add(chaiscript::const_var(std::ref(old_doc)), "old_doc");
+		chai.add(chaiscript::const_var(std::ref(method)), "_method");
+		chai.add(chaiscript::var(std::ref(doc)), "_doc");
+		chai.add(chaiscript::const_var(std::ref(old_doc)), "_old_doc");
 		for (auto it = params.begin(); it != params.end(); ++it) {
 			chai.add(chaiscript::const_var(std::ref(it.value())), it->str());
 		}
