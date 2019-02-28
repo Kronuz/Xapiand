@@ -47,10 +47,10 @@ The following snippet captures the structure of aggregations types for buckets:
 ```json
 "<aggregation_name>": {
   "<bucket_aggregation_type>": {
-      ("_sort": {  <sort_body> }, )?
-      ("_limit": <limit_count>, )?
-      ("_min_doc_count": <min_doc_count>, )?
-      ("_keyed": <keyed_boolean>, )?
+      ( "_sort": {  <sort_body> }, )?
+      ( "_limit": <limit_count>, )?
+      ( "_min_doc_count": <min_doc_count>, )?
+      ( "_keyed": <keyed_boolean>, )?
       ...
   },
   ...
