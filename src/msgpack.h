@@ -398,8 +398,6 @@ public:
 
 	std::ostream& operator<<(std::ostream& s) const;
 
-	std::string_view unformatted_string_view() const;
-	std::string unformatted_string() const;
 	std::string to_string(int indent=-1) const;
 
 	template <typename B=msgpack::sbuffer>

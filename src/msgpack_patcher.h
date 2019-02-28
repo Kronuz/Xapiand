@@ -143,7 +143,7 @@ inline void _incr(MsgPack& o, double val, double limit) {
 inline void _tokenizer(const MsgPack& obj, std::vector<std::string>& path_split, const char* path_c, const char* patch_op) {
 	try {
 		const auto& path = obj.at(path_c);
-		auto path_str = path.unformatted_string_view();
+		auto path_str = path.str_view();
 		rapidjson::GenericPointer<rapidjson::GenericValue<rapidjson::UTF8<>>> json_pointer(path_str.data(), path_str.size());
 		size_t n_tok = json_pointer.GetTokenCount();
 
