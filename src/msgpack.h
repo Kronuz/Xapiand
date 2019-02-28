@@ -2847,6 +2847,14 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 }
 
 
+template <typename T>
+inline MsgPack MsgPack::operator+(T&& o) {
+	MsgPack val = *this;
+	val += std::forward<T>(o);
+	return val;
+}
+
+
 template <typename T, typename>
 inline MsgPack& MsgPack::operator+=(T&& o) {
 	if (_body->_lock) {
@@ -2893,16 +2901,30 @@ inline MsgPack& MsgPack::operator+=(std::string_view o) {
 }
 
 
-template <typename T>
-inline MsgPack MsgPack::operator+(T&& o) {
-	MsgPack val = *this;
-	val += std::forward<T>(o);
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T operator+(const T& o, const MsgPack& m) {
+	auto val = o;
+	val += static_cast<T>(m);
 	return val;
 }
 
 
-template <typename M, typename>
-inline MsgPack& MsgPack::operator-=(M&& o) {
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T& operator+=(T& o, const MsgPack& m) {
+	return o += static_cast<T>(m);
+}
+
+
+template <typename T>
+inline MsgPack MsgPack::operator-(T&& o) {
+	MsgPack val = *this;
+	val -= std::forward<T>(o);
+	return val;
+}
+
+
+template <typename T, typename>
+inline MsgPack& MsgPack::operator-=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
@@ -2926,16 +2948,30 @@ inline MsgPack& MsgPack::operator-=(M&& o) {
 }
 
 
-template <typename T>
-inline MsgPack MsgPack::operator-(T&& o) {
-	MsgPack val = *this;
-	val -= std::forward<T>(o);
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T operator-(const T& o, const MsgPack& m) {
+	auto val = o;
+	val -= static_cast<T>(m);
 	return val;
 }
 
 
-template <typename M, typename>
-inline MsgPack& MsgPack::operator*=(M&& o) {
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T& operator-=(T& o, const MsgPack& m) {
+	return o -= static_cast<T>(m);
+}
+
+
+template <typename T>
+inline MsgPack MsgPack::operator*(T&& o) {
+	MsgPack val = *this;
+	val *= std::forward<T>(o);
+	return val;
+}
+
+
+template <typename T, typename>
+inline MsgPack& MsgPack::operator*=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
@@ -2959,16 +2995,30 @@ inline MsgPack& MsgPack::operator*=(M&& o) {
 }
 
 
-template <typename T>
-inline MsgPack MsgPack::operator*(T&& o) {
-	MsgPack val = *this;
-	val *= std::forward<T>(o);
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T operator*(const T& o, const MsgPack& m) {
+	auto val = o;
+	val *= static_cast<T>(m);
 	return val;
 }
 
 
-template <typename M, typename>
-inline MsgPack& MsgPack::operator/=(M&& o) {
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T& operator*=(T& o, const MsgPack& m) {
+	return o *= static_cast<T>(m);
+}
+
+
+template <typename T>
+inline MsgPack MsgPack::operator/(T&& o) {
+	MsgPack val = *this;
+	val /= std::forward<T>(o);
+	return val;
+}
+
+
+template <typename T, typename>
+inline MsgPack& MsgPack::operator/=(T&& o) {
 	if (_body->_lock) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
@@ -2992,11 +3042,17 @@ inline MsgPack& MsgPack::operator/=(M&& o) {
 }
 
 
-template <typename T>
-inline MsgPack MsgPack::operator/(T&& o) {
-	MsgPack val = *this;
-	val /= std::forward<T>(o);
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T operator/(const T& o, const MsgPack& m) {
+	auto val = o;
+	val /= static_cast<T>(m);
 	return val;
+}
+
+
+template <typename T, typename = std::enable_if_t<not std::is_same<MsgPack, std::decay_t<T>>::value>>
+inline T& operator/=(T& o, const MsgPack& m) {
+	return o /= static_cast<T>(m);
 }
 
 
