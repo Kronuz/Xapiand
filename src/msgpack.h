@@ -401,7 +401,7 @@ public:
 	MsgPack operator--(int);
 
 	template <typename T>
-	MsgPack operator+(T&& o);
+	MsgPack operator+(T&& o) const;
 
 	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator+=(T&& o);
@@ -412,7 +412,7 @@ public:
 
 
 	template <typename T>
-	MsgPack operator-(T&& o);
+	MsgPack operator-(T&& o) const;
 
 	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator-=(T&& o);
@@ -421,7 +421,7 @@ public:
 
 
 	template <typename T>
-	MsgPack operator*(T&& o);
+	MsgPack operator*(T&& o) const;
 
 	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator*=(T&& o);
@@ -430,7 +430,7 @@ public:
 
 
 	template <typename T>
-	MsgPack operator/(T&& o);
+	MsgPack operator/(T&& o) const;
 
 	template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int> = 0>
 	MsgPack& operator/=(T&& o);
@@ -2899,7 +2899,7 @@ inline MsgPack MsgPack::operator--(int) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator+(T&& o) {
+inline MsgPack MsgPack::operator+(T&& o) const {
 	MsgPack val = *this;
 	val += std::forward<T>(o);
 	return val;
@@ -2973,7 +2973,7 @@ inline T& operator+=(T& o, const M& m) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator-(T&& o) {
+inline MsgPack MsgPack::operator-(T&& o) const {
 	MsgPack val = *this;
 	val -= std::forward<T>(o);
 	return val;
@@ -3026,7 +3026,7 @@ inline T& operator-=(T& o, const M& m) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator*(T&& o) {
+inline MsgPack MsgPack::operator*(T&& o) const {
 	MsgPack val = *this;
 	val *= std::forward<T>(o);
 	return val;
@@ -3079,7 +3079,7 @@ inline T& operator*=(T& o, const M& m) {
 
 
 template <typename T>
-inline MsgPack MsgPack::operator/(T&& o) {
+inline MsgPack MsgPack::operator/(T&& o) const {
 	MsgPack val = *this;
 	val /= std::forward<T>(o);
 	return val;
