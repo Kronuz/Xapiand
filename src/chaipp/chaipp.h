@@ -106,7 +106,9 @@ public:
 		chai.add(chaiscript::const_var(std::ref(method)), "method");
 		chai.add(chaiscript::var(std::ref(doc)), "doc");
 		chai.add(chaiscript::const_var(std::ref(old_doc)), "old_doc");
-		chai.add(chaiscript::const_var(std::ref(params)), "params");
+		for (auto it = params.begin(); it != params.end(); ++it) {
+			chai.add(chaiscript::const_var(std::ref(it.value())), it->str());
+		}
 		try {
 			chai.eval(*ast);
 		} catch (chaiscript::Boxed_Value &bv) {
