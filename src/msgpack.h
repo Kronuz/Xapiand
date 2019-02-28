@@ -2615,7 +2615,7 @@ inline std::string MsgPack::as_str() const {
 
 	switch (_const_body->getType()) {
 		case Type::NIL:
-			return "nil";
+			return "<nil>";
 		case Type::BOOLEAN:
 			return _const_body->_obj->via.boolean ? "true" : "false";
 		case Type::POSITIVE_INTEGER:
@@ -2635,7 +2635,7 @@ inline std::string MsgPack::as_str() const {
 		case Type::BIN:
 			return std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 		case Type::UNDEFINED:
-			return "undefined";
+			return "<undefined>";
 	}
 }
 
