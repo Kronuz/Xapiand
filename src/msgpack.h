@@ -394,6 +394,11 @@ public:
 	bool operator==(const MsgPack& other) const;
 	bool operator!=(const MsgPack& other) const;
 
+	MsgPack& operator++();
+	MsgPack operator++(int);
+
+	MsgPack& operator--();
+	MsgPack operator--(int);
 
 	template <typename T>
 	MsgPack operator+(T&& o);
@@ -2866,6 +2871,30 @@ inline bool MsgPack::operator==(const MsgPack& other) const {
 
 inline bool MsgPack::operator!=(const MsgPack& other) const {
 	return !operator==(other);
+}
+
+
+inline MsgPack& MsgPack::operator++() {
+	return *this += 1;
+}
+
+
+inline MsgPack MsgPack::operator++(int) {
+	MsgPack val = *this;
+	val += 1;
+	return val;
+}
+
+
+inline MsgPack& MsgPack::operator--() {
+	return *this -= 1;
+}
+
+
+inline MsgPack MsgPack::operator--(int) {
+	MsgPack val = *this;
+	val -= 1;
+	return val;
 }
 
 

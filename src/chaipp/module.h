@@ -307,7 +307,8 @@ public:
 				{ chaiscript::fun(&MsgPack::operator==),     "=="           },
 				{ chaiscript::fun(&MsgPack::operator!=),     "!="           },
 				{ chaiscript::fun(&MsgPack::operator<<),     "<<"           },
-
+				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)()>(&MsgPack::operator++)),     "++"           },
+				{ chaiscript::fun(static_cast<MsgPack& (MsgPack::*)()>(&MsgPack::operator--)),     "--"           },
 
 				{ chaiscript::fun(&MsgPack::operator+<const unsigned&>),      "+"            },
 				{ chaiscript::fun(&MsgPack::operator-<const unsigned&>),      "-"            },
