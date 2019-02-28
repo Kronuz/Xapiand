@@ -181,7 +181,7 @@ class DatabaseHandler : public LockableDatabase {
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
 	template<typename ProcessorCompile>
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& params);
 	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script);
 #endif
 

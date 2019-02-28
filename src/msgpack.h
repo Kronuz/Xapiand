@@ -153,6 +153,22 @@ private:
 	void _init();
 	void _deinit();
 
+	void _init_negative_integer();
+	void _init_positive_integer();
+	void _init_float();
+	void _init_boolean();
+
+	void _init_type(const int&);
+	void _init_type(const long&);
+	void _init_type(const long long&);
+	void _init_type(const unsigned&);
+	void _init_type(const unsigned long&);
+	void _init_type(const unsigned long long&);
+	void _init_type(const float&);
+	void _init_type(const double&);
+	void _init_type(const bool&);
+	void _init_type(const MsgPack& val);
+
 	void _reserve_map(size_t rsize);
 	void _reserve_array(size_t rsize);
 
@@ -1004,6 +1020,104 @@ inline void MsgPack::_deinit() {
 			break;
 		case Type::ARRAY:
 			_body->array.clear();
+			break;
+		default:
+			break;
+	}
+}
+
+
+inline void MsgPack::_init_negative_integer() {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
+		_body->_obj->via.i64 = 0;
+	}
+}
+
+
+inline void MsgPack::_init_positive_integer() {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_body->_obj->type = msgpack::type::POSITIVE_INTEGER;
+		_body->_obj->via.u64 = 0;
+	}
+}
+
+
+inline void MsgPack::_init_float() {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_body->_obj->type = msgpack::type::FLOAT;
+		_body->_obj->via.f64 = 0;
+	}
+}
+
+
+inline void MsgPack::_init_boolean() {
+	ASSERT(!_body->_lock);
+	if (_body->getType() == Type::UNDEFINED) {
+		_body->_obj->type = msgpack::type::NEGATIVE_INTEGER;
+		_body->_obj->via.i64 = 0;
+	}
+}
+
+
+inline void MsgPack::_init_type(const int&) {
+	_init_negative_integer();
+}
+
+
+inline void MsgPack::_init_type(const long&) {
+	_init_negative_integer();
+}
+
+
+inline void MsgPack::_init_type(const long long&) {
+	_init_negative_integer();
+}
+
+
+inline void MsgPack::_init_type(const unsigned&) {
+	_init_positive_integer();
+}
+
+
+inline void MsgPack::_init_type(const unsigned long&) {
+	_init_positive_integer();
+}
+
+
+inline void MsgPack::_init_type(const unsigned long long&) {
+	_init_positive_integer();
+}
+
+
+inline void MsgPack::_init_type(const float&) {
+	_init_float();
+}
+
+
+inline void MsgPack::_init_type(const double&) {
+	_init_float();
+}
+
+
+inline void MsgPack::_init_type(const bool&) {
+	_init_boolean();
+}
+
+
+inline void MsgPack::_init_type(const MsgPack& val) {
+	switch (val.getType()) {
+		case Type::NEGATIVE_INTEGER:
+			_init_negative_integer();
+			break;
+		case Type::POSITIVE_INTEGER:
+			_init_positive_integer();
+			break;
+		case Type::FLOAT:
+			_init_float();
 			break;
 		default:
 			break;
@@ -2535,6 +2649,7 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 
 template <typename T>
 inline MsgPack& MsgPack::operator+=(T&& val) {
+	_init_type(val);
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 += static_cast<long long>(val);
@@ -2561,6 +2676,7 @@ inline MsgPack MsgPack::operator+(T&& val) {
 
 template <typename T>
 inline MsgPack& MsgPack::operator-=(T&& val) {
+	_init_type(val);
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 -= static_cast<long long>(val);
@@ -2587,6 +2703,7 @@ inline MsgPack MsgPack::operator-(T&& val) {
 
 template <typename T>
 inline MsgPack& MsgPack::operator*=(T&& val) {
+	_init_type(val);
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 *= static_cast<long long>(val);
@@ -2613,6 +2730,7 @@ inline MsgPack MsgPack::operator*(T&& val) {
 
 template <typename T>
 inline MsgPack& MsgPack::operator/=(T&& val) {
+	_init_type(val);
 	switch (_body->getType()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 /= static_cast<long long>(val);

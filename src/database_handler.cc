@@ -351,7 +351,7 @@ std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Dat
 
 template<typename Processor>
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& params)
 {
 	try {
 		auto processor = Processor::compile(script_hash, body_hash, script_name, script_body);
@@ -381,16 +381,16 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 		if (old_document_pair == nullptr && !term_id.empty()) {
 			old_document_pair = get_document_change_seq(term_id);
 		}
-		auto mut_object = std::make_unique<MsgPack>(object);
+		auto doc = std::make_unique<MsgPack>(object);
 		if (old_document_pair != nullptr) {
-			auto old_obj = old_document_pair->second.get_obj();
-			L_INDEX("Script: call({}, {})", mut_object->to_string(4), old_obj.to_string(4));
-			(*processor)(http_method, *mut_object, old_obj);
+			auto old_doc = old_document_pair->second.get_obj();
+			L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
+			(*processor)(http_method, *doc, old_doc, params);
 		} else {
-			L_INDEX("Script: call({})", mut_object->to_string(4));
-			(*processor)(http_method, *mut_object, MsgPack());
+			L_INDEX("Script: call({})", doc->to_string(4));
+			(*processor)(http_method, *doc, MsgPack(), params);
 		}
-		return mut_object;
+		return doc;
 #ifdef XAPIAND_CHAISCRIPT
 	} catch (const chaipp::ReferenceError&) {
 		return nullptr;
@@ -423,6 +423,9 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 			uint64_t hash = (it_hash == chai.end()) ? body_hash : it_hash.value().u64();
 			auto it_name = chai.find(RESERVED_NAME);
 			std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
+			const MsgPack no_params;
+			auto it_params = chai.find("_params");
+			const MsgPack& params = (it_params == chai.end()) ? no_params : it_params.value();
 			return call_script<chaipp::Processor>(
 				obj,
 				term_id,
@@ -430,7 +433,8 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 				body_hash,
 				name,
 				chai.at(RESERVED_BODY).str_view(),
-				old_document_pair);
+				old_document_pair,
+				params);
 #else
 			THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
