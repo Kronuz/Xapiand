@@ -24,6 +24,12 @@ PUT /customer/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .note .tip }
+**_Dot Access_**<br>
+When accessing document objects in the scripts, you can either use _dot access_
+notation as exeplified above (i.e. `doc.serial`) or _array call_ notation
+(i.e. `doc["serial"]`).
+
 
 ## How to Use Scripts
 
@@ -60,7 +66,7 @@ hard-code the multiplier into the script:
 ```json
   "_script": {
     "_type": "script",
-    "_value": "doc['my_field'] * 2"
+    "_value": "doc.my_field * 2"
   }
 ```
 
@@ -69,7 +75,7 @@ Instead, pass it in as a named parameter:
 ```json
   "_script": {
     "_type": "script",
-    "_value": "doc['my_field'] * multiplier"
+    "_value": "doc.my_field * multiplier"
     "_params": {
       "multiplier": 2
     }
