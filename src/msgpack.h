@@ -200,7 +200,7 @@ private:
 	MsgPack::iterator _find(size_t pos);
 	MsgPack::const_iterator _find(size_t pos) const;
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	std::pair<size_t, MsgPack::iterator> _erase(M&& o);
 	std::pair<size_t, MsgPack::iterator> _erase(std::string_view key);
 	std::pair<size_t, MsgPack::iterator> _erase(size_t pos);
@@ -213,14 +213,14 @@ private:
 	inline void _append(T&& o);
 	inline void _append(std::string_view val);
 
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	std::pair<MsgPack*, bool> _put(M&& o, T&& val, bool overwrite);
 	template <typename T>
 	std::pair<MsgPack*, bool> _put(std::string_view key, T&& val, bool overwrite);
 	template <typename T>
 	std::pair<MsgPack*, bool> _put(size_t pos, T&& val, bool overwrite);
 
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	std::pair<MsgPack*, bool> _emplace(M&& o, T&& val, bool overwrite);
 	template <typename T>
 	std::pair<MsgPack*, bool> _insert(size_t pos, T&& val, bool overwrite);
@@ -228,9 +228,9 @@ private:
 	void _fill(bool recursive, bool lock);
 	void _fill(bool recursive, bool lock) const;
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack::iterator _find(M&& o);
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack::const_iterator _find(M&& o) const;
 
 public:
@@ -240,7 +240,7 @@ public:
 	void lock() const;
 	bool locked() const;
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	size_t erase(M&& o);
 	size_t erase(std::string_view s);
 	size_t erase(size_t pos);
@@ -248,14 +248,14 @@ public:
 
 	void clear();
 
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack::iterator replace(M&& o, T&& val);
 	template <typename T>
 	MsgPack::iterator replace(std::string_view s, T&& val);
 	template <typename T>
 	MsgPack::iterator replace(size_t pos, T&& val);
 
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	std::pair<MsgPack::iterator, bool> emplace(M&& o, T&& val);
 	template <typename T>
 	std::pair<MsgPack::iterator, bool> emplace(std::string_view s, T&& val);
@@ -269,13 +269,13 @@ public:
 	template <typename T>
 	void push_back(T&& v);
 
-	template <typename M, std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value, int> = 0>
+	template <typename M, std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
 	void update(M&& o);
-	template <typename M, std::enable_if_t<std::is_convertible<M, MsgPack>::value and not std::is_same<MsgPack, std::decay_t<M>>::value, int> = 0>
+	template <typename M, std::enable_if_t<std::is_convertible<M, MsgPack>::value and not std::is_same<std::decay_t<M>, MsgPack>::value, int> = 0>
 	void update(M&& o);
 
 	// Same as replace(), but returning a reference:
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack& put(M&& o, T&& val);
 	template <typename T>
 	MsgPack& put(std::string_view s, T&& val);
@@ -283,7 +283,7 @@ public:
 	MsgPack& put(size_t pos, T&& val);
 
 	// Same as emplace(), but returning a reference:
-	template <typename M, typename T, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename T, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack& add(M&& o, T&& val);
 	template <typename T>
 	MsgPack& add(std::string_view s, T&& val);
@@ -294,18 +294,18 @@ public:
 	template <typename T>
 	MsgPack& append(T&& v);
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack& get(M&& o);
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	const MsgPack& get(M&& o) const;
 	MsgPack& get(std::string_view s);
 	const MsgPack& get(std::string_view s) const;
 	MsgPack& get(size_t pos);
 	const MsgPack& get(size_t pos) const;
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	MsgPack& at(M&& o);
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	const MsgPack& at(M&& o) const;
 	MsgPack& at(std::string_view s);
 	const MsgPack& at(std::string_view s) const;
@@ -324,9 +324,9 @@ public:
 
 	MsgPack select(std::string_view selector) const;
 
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	iterator find(M&& o);
-	template <typename M, typename = std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value>>
+	template <typename M, typename = std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value>>
 	const_iterator find(M&& o) const;
 	iterator find(std::string_view s);
 	const_iterator find(std::string_view s) const;
@@ -1963,7 +1963,7 @@ inline void MsgPack::push_back(T&& v) {
 }
 
 
-template <typename M, std::enable_if_t<std::is_same<MsgPack, std::decay_t<M>>::value, int>>
+template <typename M, std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value, int>>
 inline void MsgPack::update(M&& o) {
 	switch (o._body->getType()) {
 		case Type::MAP:
@@ -1986,7 +1986,7 @@ inline void MsgPack::update(M&& o) {
 	}
 }
 
-template <typename M, std::enable_if_t<std::is_convertible<M, MsgPack>::value and not std::is_same<MsgPack, std::decay_t<M>>::value, int>>
+template <typename M, std::enable_if_t<std::is_convertible<M, MsgPack>::value and not std::is_same<std::decay_t<M>, MsgPack>::value, int>>
 inline void MsgPack::update(M&& o) {
 	update(MsgPack(std::forward<M>(o)));
 }
