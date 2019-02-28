@@ -401,7 +401,6 @@ public:
 
 				{ chaiscript::fun(&MsgPack::lock),           "lock"         },
 
-				{ chaiscript::fun(&MsgPack::unformatted_string),           "unformatted_string" },
 				{ chaiscript::fun(&MsgPack::to_string),                    "to_string"          },
 				{ chaiscript::fun(&MsgPack::serialise<msgpack::sbuffer>),  "serialise"          },
 
