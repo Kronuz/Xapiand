@@ -776,9 +776,12 @@ inline void MsgPack::_initializer(std::initializer_list<MsgPack> list) {
 
 inline void MsgPack::_assignment(const msgpack::object& obj) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->_is_key) {
 		// Rename key, if the assignment is acting on a map key...
 		// We expect obj to be a string:
@@ -916,7 +919,10 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 
 
 inline MsgPack* MsgPack::_init_map(size_t pos) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	MsgPack* ret = nullptr;
 	_body->map.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
@@ -940,7 +946,10 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 
 
 inline void MsgPack::_update_map(size_t pos) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
 	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
 		std::string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
@@ -956,7 +965,10 @@ inline void MsgPack::_update_map(size_t pos) {
 
 
 inline MsgPack* MsgPack::_init_array(size_t pos) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (pos < _body->array.size()) {
 		// Destroy the previous objects to update
 		_body->array.resize(pos);
@@ -976,7 +988,10 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 
 
 inline void MsgPack::_update_array(size_t pos) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
 		// If the previous item was a MAP, force map update.
@@ -990,7 +1005,10 @@ inline void MsgPack::_update_array(size_t pos) {
 
 
 inline void MsgPack::_initialize() {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::MAP:
 			_init_map(0);
@@ -1006,7 +1024,10 @@ inline void MsgPack::_initialize() {
 
 
 inline void MsgPack::_deinitialize() {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	_body->_initialized = false;
 
 	switch (_body->getType()) {
@@ -1167,7 +1188,10 @@ void MsgPack::_init_type(std::string_view) {
 
 
 inline void MsgPack::_reserve_str(size_t rsize) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity < MSGPACK_STR_INIT_SIZE ? MSGPACK_STR_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
 		while (nsize < rsize) {
@@ -1185,7 +1209,10 @@ inline void MsgPack::_reserve_str(size_t rsize) {
 
 
 inline void MsgPack::_reserve_map(size_t rsize) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity < MSGPACK_MAP_INIT_SIZE ? MSGPACK_MAP_INIT_SIZE : _body->_capacity * MSGPACK_GROWTH_FACTOR;
 		while (nsize < rsize) {
@@ -1207,7 +1234,10 @@ inline void MsgPack::_reserve_map(size_t rsize) {
 
 
 inline void MsgPack::_reserve_array(size_t rsize) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->_capacity <= rsize) {
 		size_t nsize = _body->_capacity >= MSGPACK_ARRAY_INIT_SIZE ? _body->_capacity * MSGPACK_GROWTH_FACTOR : MSGPACK_ARRAY_INIT_SIZE;
 		while (nsize < rsize) {
@@ -1325,9 +1355,12 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 template <typename M, typename>
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _erase(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
@@ -1346,9 +1379,12 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
@@ -1383,9 +1419,12 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key
 
 inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
@@ -1429,9 +1468,12 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 
 inline void MsgPack::_clear() {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	_body->_initialized = false;
 
 	switch (_body->getType()) {
@@ -1467,9 +1509,12 @@ inline void MsgPack::_append(M&& o) {
 
 inline void MsgPack::_append(std::string_view val) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_str();
@@ -1493,9 +1538,12 @@ inline void MsgPack::_append(std::string_view val) {
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1515,9 +1563,12 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bool overwrite) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_map();
@@ -1556,9 +1607,12 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwrite) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_array();
@@ -1597,9 +1651,12 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 template <typename M, typename T, typename>
 inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrite) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (o._body->getType()) {
 		case Type::STR:
 			return _put(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
@@ -1619,9 +1676,12 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 template <typename T>
 inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool overwrite) {
 	if (_body->_const) {
-		THROW(msgpack::const_error);
+		THROW(msgpack::const_error, "Constant object");
 	}
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_array();
@@ -2755,7 +2815,10 @@ inline bool MsgPack::operator!=(const MsgPack& other) const {
 
 template <typename T, typename>
 inline MsgPack& MsgPack::operator+=(T&& val) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->getType() == Type::UNDEFINED) {
 		_init_type(val);
 	}
@@ -2778,7 +2841,10 @@ inline MsgPack& MsgPack::operator+=(T&& val) {
 }
 
 inline MsgPack& MsgPack::operator+=(std::string_view val) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->getType() == Type::UNDEFINED) {
 		_init_type(val);
 	}
@@ -2802,7 +2868,10 @@ inline MsgPack MsgPack::operator+(T&& val) {
 
 template <typename M, typename>
 inline MsgPack& MsgPack::operator-=(M&& val) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->getType() == Type::UNDEFINED) {
 		_init_type(val);
 	}
@@ -2832,7 +2901,10 @@ inline MsgPack MsgPack::operator-(T&& val) {
 
 template <typename M, typename>
 inline MsgPack& MsgPack::operator*=(M&& val) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->getType() == Type::UNDEFINED) {
 		_init_type(val);
 	}
@@ -2862,7 +2934,10 @@ inline MsgPack MsgPack::operator*(T&& val) {
 
 template <typename M, typename>
 inline MsgPack& MsgPack::operator/=(M&& val) {
-	ASSERT(!_body->_lock);
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	if (_body->getType() == Type::UNDEFINED) {
 		_init_type(val);
 	}
