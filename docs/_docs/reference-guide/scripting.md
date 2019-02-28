@@ -18,18 +18,20 @@ to atomically increment a "serial" number field:
 PUT /customer/1?pretty
 
 {
-  "serial": 1,
-  "_script": "doc.serial = (old ? old.serial + 1 : doc.serial)"
+  "_script": "_doc.serial = _old_doc.serial + 1"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
+The above example initializes the first serial number of the document to `1`
+and increments the counter by one thereafter.
+
 {: .note .tip }
 **_Dot Access Notation_**<br>
 When accessing document objects in the scripts, you can either use _dot access_
-notation as exeplified above (i.e. `doc.serial`) or _array call_ notation
-(i.e. `doc["serial"]`).
+notation as exemplified above (i.e. `_doc.serial`) or _array call_ notation
+(i.e. `_doc["serial"]`).
 
 
 ## How to Use Scripts
@@ -53,19 +55,20 @@ Or, for short:
 ```
 
 
-{: .note .tip }
-**_Prefer Parameters_**<br>
-The first time Xapiand sees a new script, it compiles it and stores the compiled
-version in a cache. Compilation can be a **heavy** process, so try using
-_Named Scripts_ and _Variables_.
-
-
 ### Variables
 
-If you need to pass variables into the script, you should pass them in as named
-parameters instead of hard-coding values into the script itself. For example, if
-you want to be able to multiply a field value by different multipliers, don't
-hard-code the multiplier into the script:
+Xapiand adds a few default variables to the running script context:
+
+| Variable       | Description                                                  |
+|----------------|--------------------------------------------------------------|
+| `_doc`         | Current document.                                            |
+| `_old_doc`     | Old document (in case of updates / deletes).                 |
+| `_method`      | HTTP method that triggered the script.                       |
+
+If you need to pass additional variables into the script, you should pass them
+in as named parameters instead of hard-coding values into the script itself.
+For example, if you want to be able to multiply a field value by different
+multipliers, don't hard-code the multiplier into the script:
 
 {% capture req %}
 
@@ -76,7 +79,7 @@ PUT /customer/1?pretty
   "multiplied_field": 7,
   "_script": {
     "_type": "script",
-    "_value": "doc.multiplied_field *= 2"
+    "_value": "_doc.multiplied_field *= 2"
   }
 }
 ```
@@ -94,7 +97,7 @@ PUT /customer/1?pretty
   "multiplied_field": 7,
   "_script": {
     "_type": "script",
-    "_value": "doc.multiplied_field *= multiplier",
+    "_value": "_doc.multiplied_field *= multiplier",
     "_params": {
       "multiplier": 2
     }
@@ -106,6 +109,12 @@ PUT /customer/1?pretty
 
 The first version has to be recompiled every time the multiplier changes. The
 second version is only compiled once.
+
+{: .note .tip }
+**_Prefer Parameters_**<br>
+The first time Xapiand sees a new script, it compiles it and stores the compiled
+version in a cache. Compilation can be a **heavy** process, so try using
+_Named Scripts_ and _Variables_.
 
 
 ### Script Caching
