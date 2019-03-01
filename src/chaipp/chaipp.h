@@ -29,6 +29,7 @@
 #include "string_view.hh"
 
 #include "chaiscript/chaiscript_basic.hpp"
+#include "script.h"
 
 
 class MsgPack;
@@ -37,14 +38,20 @@ class MsgPack;
 namespace chaipp {
 
 class Processor {
+	size_t hash;
 	chaiscript::ChaiScript_Basic chai;
 	chaiscript::AST_NodePtr ast;
+	MsgPack script_params;
 
 public:
-	Processor(std::string_view script_name, std::string_view script_body);
+	Processor(const Script& script);
 
 	void operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params);
-	static std::shared_ptr<Processor> compile(std::string_view script_name, std::string_view script_body);
+	static std::shared_ptr<Processor> compile(const Script& script);
+
+	size_t get_hash() {
+		return hash;
+	}
 };
 
 }; // End namespace chaipp

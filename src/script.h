@@ -47,9 +47,10 @@ class Script {
 	};
 
 	Type type;
-	std::array<FieldType, SPC_TOTAL_TYPES> _sep_types;
+	mutable std::array<FieldType, SPC_TOTAL_TYPES> _sep_types;
 
-	std::string name_holder;
+	mutable std::string name_holder;
+
 	std::string_view value;
 	std::string_view body;
 	std::string_view name;
@@ -61,12 +62,12 @@ class Script {
 public:
 	Script(const MsgPack& _obj);
 
-	MsgPack process_script(bool strict);
+	MsgPack process_script(bool strict) const;
 
-	const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(bool strict = false);
-	std::string_view get_endpoint();
-	std::pair<std::string_view, std::string_view> get_name_body();
-	const MsgPack& get_params();
+	const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(bool strict = false) const;
+	std::string_view get_endpoint() const;
+	std::pair<std::string_view, std::string_view> get_name_body() const;
+	const MsgPack& get_params() const;
 };
 
 #endif

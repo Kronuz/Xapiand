@@ -161,7 +161,7 @@ Script::process_value(const MsgPack& _value)
 
 
 const std::array<FieldType, SPC_TOTAL_TYPES>&
-Script::get_types(bool strict)
+Script::get_types(bool strict) const
 {
 	if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 		if (!body.empty()) {
@@ -194,7 +194,7 @@ Script::get_types(bool strict)
 
 
 std::string_view
-Script::get_endpoint()
+Script::get_endpoint() const
 {
 	auto script_endpoint = endpoint.empty() ? value : endpoint;
 	if (script_endpoint.empty()) {
@@ -205,7 +205,7 @@ Script::get_endpoint()
 
 
 std::pair<std::string_view, std::string_view>
-Script::get_name_body()
+Script::get_name_body() const
 {
 	auto script_name = name.empty() ? value : name;
 	auto script_body = body.empty() ? value : body;
@@ -222,14 +222,14 @@ Script::get_name_body()
 
 
 const MsgPack&
-Script::get_params()
+Script::get_params() const
 {
 	return params;
 }
 
 
 MsgPack
-Script::process_script(bool strict)
+Script::process_script(bool strict) const
 {
 	L_CALL("Script::process_script({})", strict);
 
@@ -237,26 +237,23 @@ Script::process_script(bool strict)
 	auto sep_types = get_types(strict);
 
 	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-		return MsgPack({
+		chaipp::Processor::compile(*this);
+		return {
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_ENDPOINT,  get_endpoint() },
 			{ RESERVED_PARAMS,    get_params() },
-		});
+		};
 	} else {
 		auto name_body = get_name_body();
-		try {
-			chaipp::Processor::compile(name_body.first, name_body.second);
-			return MsgPack({
-				{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-				{ RESERVED_CHAI, {
-					{ RESERVED_NAME,      name_body.first },
-					{ RESERVED_BODY,      name_body.second },
-					{ RESERVED_PARAMS,    get_params() },
-				}}
-			});
-		} catch (...) {
-			THROW(ClientError, "Script not found: {}", repr(name_body.first));
-		}
+		chaipp::Processor::compile(*this);
+		return {
+			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
+			{ RESERVED_CHAI, {
+				{ RESERVED_NAME,      name_body.first },
+				{ RESERVED_BODY,      name_body.second },
+				{ RESERVED_PARAMS,    get_params() },
+			}}
+		};
 	}
 #else
 	ignore_unused(strict);

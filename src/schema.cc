@@ -2662,7 +2662,7 @@ Schema::index(const MsgPack& object,
 #ifdef XAPIAND_CHAISCRIPT
 		std::unique_ptr<MsgPack> mut_object;
 		if (specification.script) {
-			mut_object = db_handler.run_script(object, term_id, old_document_pair, *specification.script);
+			mut_object = db_handler.call_script(object, term_id, old_document_pair, *specification.script);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
 					THROW(ClientError, "Script must return an object, it returned {}", mut_object->getStrType());

@@ -48,6 +48,7 @@
 
 class AggregationMatchSpy;
 class Data;
+class Script;
 class Locator;
 class Database;
 class DatabaseHandler;
@@ -180,11 +181,7 @@ class DatabaseHandler : public LockableDatabase {
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
-	template <typename Processor>
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, const MsgPack& data_script, const MsgPack& data_params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
-	template <typename Processor>
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, const MsgPack& script_params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
-	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script);
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const Script& script);
 #endif
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair);

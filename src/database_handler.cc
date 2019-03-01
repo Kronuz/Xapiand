@@ -346,29 +346,12 @@ DatabaseHandler::get_document_term(std::string_view term_id)
 }
 
 
+std::unique_ptr<MsgPack>
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const Script& script)
+{
 #ifdef XAPIAND_CHAISCRIPT
-std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
-
-
-template <typename Processor>
-std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, const MsgPack& data_script, const MsgPack& data_params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
-{
-	Script script(data_script);
-	auto name_body = script.get_name_body();
-	MsgPack params = script.get_params();
-	params.update(data_params);
-	return call_script<Processor>(object, term_id, name_body.first, name_body.second, params, old_document_pair);
-}
-
-
-template <typename Processor>
-std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, const MsgPack& script_params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
-{
-	try {
-		auto processor = Processor::compile(script_name, script_body);
+	auto processor = chaipp::Processor::compile(script);
+	if (processor) {
 		std::string http_method;
 		switch (method) {
 			case HTTP_PUT:
@@ -399,66 +382,18 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, st
 		if (old_document_pair != nullptr) {
 			auto old_doc = old_document_pair->second.get_obj();
 			L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
-			(*processor)(http_method, *doc, old_doc, script_params);
+			(*processor)(http_method, *doc, old_doc, script.get_params());
 		} else {
 			L_INDEX("Script: call({})", doc->to_string(4));
-			(*processor)(http_method, *doc, MsgPack(), script_params);
+			(*processor)(http_method, *doc, MsgPack(), script.get_params());
 		}
 		return doc;
-#ifdef XAPIAND_CHAISCRIPT
-	} catch (const chaipp::Error& exc) {
-		THROW(ClientError, exc.what());
-#endif
 	}
-}
-
-
-std::unique_ptr<MsgPack>
-DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script)
-{
-	L_CALL("DatabaseHandler::run_script(...)");
-
-#ifdef XAPIAND_CHAISCRIPT
-	if (data_script.is_map()) {
-		Script script(data_script);
-		auto sep_type = script.get_types();
-		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			auto endpoint = script.get_endpoint();
-			std::string_view foreign_path;
-			std::string_view foreign_id;
-			split_path_id(endpoint, foreign_path, foreign_id);
-			std::string_view selector;
-			auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
-			if (needle != std::string_view::npos) {
-				selector = foreign_id.substr(foreign_id[needle] == '.' ? needle + 1 : needle);
-				foreign_id = foreign_id.substr(0, needle);
-			}
-			MsgPack foreign_data_script;
-			try {
-				DatabaseHandler _db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
-				auto doc = _db_handler.get_document(foreign_id);
-				foreign_data_script = doc.get_obj();
-			} catch (const Xapian::DocNotFoundError&) {
-				THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, foreign_id);
-			} catch (const Xapian::DatabaseNotFoundError& exc) {
-				THROW(ClientError, "Foreign script database {} doesn't exist", foreign_path);
-			}
-			if (!selector.empty()) {
-				foreign_data_script = foreign_data_script.select(selector);
-			}
-			auto params = script.get_params();
-			return call_script<chaipp::Processor>(obj, term_id, foreign_data_script, params, old_document_pair);
-		} else {
-			return call_script<chaipp::Processor>(obj, term_id, data_script, MsgPack(), old_document_pair);
-		}
-	}
+	return nullptr;
 #else
 	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
-
-	return nullptr;
 }
-#endif
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
@@ -1753,6 +1688,9 @@ DatabaseHandler::reopen()
 
 
 #ifdef XAPIAND_CHAISCRIPT
+std::mutex DatabaseHandler::documents_mtx;
+std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
+
 const std::shared_ptr<std::pair<std::string, const Data>>
 DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate_exists)
 {
