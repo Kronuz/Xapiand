@@ -16,11 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Cluster replication is now functional, it was bronken in 0.10.0
 - Fix searching in "_id" field
+- Fixed and documented Scripts and Foreign Scripts
 
 ### Changed
 - **BREAKING**: `.index` shared by node
 - **BREAKING**: Keyword datatype term prefix is now 'K'
 - **BREAKING**: Guessed IDs are now strings also for numeric IDs
+- **BREAKING**: URL drill selector now uses dot ('.') directly, so document IDs
+                cannot have dots in them now.
 - Never overwrite an existent database
 - Index only adds new indexes during write operations
 - Do not save empty data inside database
