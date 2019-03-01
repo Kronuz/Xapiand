@@ -213,8 +213,10 @@ Script::get_name_body() const
 		THROW(ClientError, "Script must specify '{}' or '{}'", RESERVED_NAME, RESERVED_BODY);
 	}
 	if (script_name.empty()) {
-		MD5 md5;
-		name_holder = md5(script_body);
+		if (name_holder.empty()) {
+			MD5 md5;
+			name_holder = md5(script_body);
+		}
 		script_name = name_holder;
 	}
 	return { script_name, script_body };
