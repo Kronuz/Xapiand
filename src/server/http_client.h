@@ -241,7 +241,7 @@ public:
 
 	bool begining;
 	std::atomic_bool ending;  // ending requests have received all body
-	bool ended;
+	std::atomic_bool ended;
 
 	LightweightSemaphore pending;
 
