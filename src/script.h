@@ -46,28 +46,27 @@ class Script {
 		CHAI,
 	};
 
-	void process_body(const MsgPack& _body);
-	void process_name(const MsgPack& _name);
-	void process_type(const MsgPack& _type);
-	void process_value(const MsgPack& _value);
-	void process_chai(const MsgPack& _chai);
-	void process_params(const MsgPack& _params);
-	void process_endpoint(const MsgPack& _params);
-
 	Type type;
-	std::array<FieldType, SPC_TOTAL_TYPES> sep_types;
+	std::array<FieldType, SPC_TOTAL_TYPES> _sep_types;
 
+	std::string name_holder;
 	std::string_view value;
 	std::string_view body;
 	std::string_view name;
 	std::string_view endpoint;
 	MsgPack params;
 
+	void process_value(const MsgPack& _value);
+
 public:
 	Script(const MsgPack& _obj);
 
-	MsgPack process_chai(bool strict);
 	MsgPack process_script(bool strict);
+
+	const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(bool strict = false);
+	std::string_view get_endpoint();
+	std::pair<std::string_view, std::string_view> get_name_body();
+	const MsgPack& get_params();
 };
 
 #endif

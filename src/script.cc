@@ -35,7 +35,7 @@
 
 Script::Script(const MsgPack& _obj)
 	: type(Type::EMPTY),
-	  sep_types({ { FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY } })
+	  _sep_types({ { FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY } })
 {
 	switch (_obj.getType()) {
 		case MsgPack::Type::STR: {
@@ -58,28 +58,44 @@ Script::Script(const MsgPack& _obj)
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_TYPE):
-						process_type(val);
+						if (!val.is_string()) {
+							THROW(ClientError, "'{}' must be string", RESERVED_TYPE);
+						}
+						_sep_types = required_spc_t::get_types(val.str());
 						break;
 					case _.fhh(RESERVED_VALUE):
 						process_value(val);
 						break;
 					case _.fhh(RESERVED_CHAI):
-						process_chai(val);
+						type = Type::CHAI;
+						process_value(val);
 						break;
 					case _.fhh(RESERVED_BODY):
-						process_body(val);
+						if (!val.is_string()) {
+							THROW(ClientError, "'{}' must be string", RESERVED_BODY);
+						}
+						body = val.str_view();
 						break;
 					case _.fhh(RESERVED_NAME):
-						process_name(val);
+						if (!val.is_string()) {
+							THROW(ClientError, "'{}' must be string", RESERVED_NAME);
+						}
+						name = val.str_view();
 						break;
 					case _.fhh(RESERVED_PARAMS):
-						process_params(val);
+						if (!val.is_map()) {
+							THROW(ClientError, "'{}' must be an object", RESERVED_PARAMS);
+						}
+						params = val;
 						break;
 					case _.fhh(RESERVED_ENDPOINT):
-						process_endpoint(val);
+						if (!val.is_string()) {
+							THROW(ClientError, "'{}' must be string", RESERVED_ENDPOINT);
+						}
+						endpoint = val.str_view();
 						break;
 					default:
-						if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+						if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_ENDPOINT, RESERVED_PARAMS);
 						} else {
 							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_CHAI, RESERVED_PARAMS);
@@ -91,71 +107,6 @@ Script::Script(const MsgPack& _obj)
 		default:
 			THROW(ClientError, "'{}' must be string or a valid script object", RESERVED_SCRIPT);
 	}
-}
-
-
-void
-Script::process_body(const MsgPack& _body)
-{
-	L_CALL("Script::process_body({})", repr(_body.to_string()));
-
-	if (!_body.is_string()) {
-		THROW(ClientError, "'{}' must be string", RESERVED_BODY);
-	}
-
-	body = _body.str_view();
-}
-
-
-void
-Script::process_name(const MsgPack& _name)
-{
-	L_CALL("Script::process_name({})", repr(_name.to_string()));
-
-	if (!_name.is_string()) {
-		THROW(ClientError, "'{}' must be string", RESERVED_NAME);
-	}
-
-	name = _name.str_view();
-}
-
-
-void
-Script::process_params(const MsgPack& _params)
-{
-	L_CALL("Script::process_params({})", repr(_params.to_string()));
-
-	if (!_params.is_map()) {
-		THROW(ClientError, "'{}' must be an object", RESERVED_PARAMS);
-	}
-
-	params = _params;
-}
-
-
-void
-Script::process_endpoint(const MsgPack& _endpoint)
-{
-	L_CALL("Script::process_endpoint({})", repr(_endpoint.to_string()));
-
-	if (!_endpoint.is_string()) {
-		THROW(ClientError, "'{}' must be string", RESERVED_ENDPOINT);
-	}
-
-	endpoint = _endpoint.str_view();
-}
-
-
-void
-Script::process_type(const MsgPack& _type)
-{
-	L_CALL("Script::process_type({})", repr(_type.to_string()));
-
-	if (!_type.is_string()) {
-		THROW(ClientError, "'{}' must be string", RESERVED_TYPE);
-	}
-
-	sep_types = required_spc_t::get_types(_type.str());
 }
 
 
@@ -180,13 +131,22 @@ Script::process_value(const MsgPack& _value)
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_BODY):
-						process_body(val);
+						if (!val.is_string()) {
+							THROW(ClientError, "'{}' must be string", RESERVED_BODY);
+						}
+						body = val.str_view();
 						break;
 					case _.fhh(RESERVED_NAME):
-						process_name(val);
+						if (!val.is_string()) {
+							THROW(ClientError, "'{}' must be string", RESERVED_NAME);
+						}
+						name = val.str_view();
 						break;
 					case _.fhh(RESERVED_PARAMS):
-						process_params(val);
+						if (!val.is_map()) {
+							THROW(ClientError, "'{}' must be an object", RESERVED_PARAMS);
+						}
+						params = val;
 						break;
 					default:
 						THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_BODY, RESERVED_NAME, RESERVED_PARAMS);
@@ -200,87 +160,71 @@ Script::process_value(const MsgPack& _value)
 }
 
 
-void
-Script::process_chai(const MsgPack& _chai)
+const std::array<FieldType, SPC_TOTAL_TYPES>&
+Script::get_types(bool strict)
 {
-	L_CALL("Script::process_chai({})", repr(_chai.to_string()));
+	if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (!body.empty()) {
+			THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_BODY);
+		}
+		if (!name.empty()) {
+			THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_NAME);
+		}
+		if (!value.empty() && !endpoint.empty()) {
+			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
+		}
+	} else {
+		if (strict) {
+			THROW(MissingTypeError, "Type of field '{}' is missing", RESERVED_TYPE);
+		}
+		_sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
+		if (_sep_types[SPC_CONCRETE_TYPE] != FieldType::SCRIPT) {
+			THROW(ClientError, "Only type {} is allowed in '{}'", Serialise::type(FieldType::SCRIPT), RESERVED_SCRIPT);
+		}
+		if (!endpoint.empty()) {
+			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, Serialise::type(FieldType::FOREIGN));
+		}
+		if (!value.empty() && !body.empty() && !name.empty()) {
+			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);
+		}
+	}
 
-	process_value(_chai);
-	type = Type::CHAI;
+	return _sep_types;
 }
 
 
-MsgPack
-Script::process_chai(bool strict)
+std::string_view
+Script::get_endpoint()
 {
-	L_CALL("Script::process_chai({})", strict);
-
-#ifdef XAPIAND_CHAISCRIPT
-	switch (sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::EMPTY:
-			if (strict) {
-				THROW(MissingTypeError, "Type of field '{}' is missing", RESERVED_SCRIPT);
-			}
-			sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
-			/* FALLTHROUGH */
-		case FieldType::SCRIPT: {
-			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-				if (!body.empty()) {
-					THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_BODY);
-				}
-				if (!name.empty()) {
-					THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_NAME);
-				}
-				if (!value.empty() && !endpoint.empty()) {
-					THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
-				}
-				auto& script_endpoint = endpoint.empty() ? value : endpoint;
-				if (script_endpoint.empty()) {
-					THROW(ClientError, "Script must specify '{}'", RESERVED_ENDPOINT);
-				}
-				return MsgPack({
-					{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-					{ RESERVED_ENDPOINT,  script_endpoint },
-					{ RESERVED_PARAMS,    params },
-				});
-			} else {
-				if (!endpoint.empty()) {
-					THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, Serialise::type(FieldType::FOREIGN));
-				}
-				if (!value.empty() && !body.empty() && !name.empty()) {
-					THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);
-				}
-				auto& script_name = name.empty() ? value : name;
-				auto& script_body = body.empty() ? value : body;
-				if (script_name.empty() && script_body.empty()) {
-					THROW(ClientError, "Script must specify '{}' or '{}'", RESERVED_NAME, RESERVED_BODY);
-				}
-				if (script_name.empty()) {
-					MD5 md5;
-					script_name = md5(script_body);
-				}
-				try {
-					chaipp::Processor::compile(script_name, script_body);
-					return MsgPack({
-						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-						{ RESERVED_CHAI, {
-							{ RESERVED_NAME,      script_name },
-							{ RESERVED_BODY,      script_body },
-							{ RESERVED_PARAMS,    params },
-						}}
-					});
-				} catch (...) {
-					THROW(ScriptNotFoundError, "Script not found: {}", repr(script_name));
-				}
-			}
-		}
-		default:
-			THROW(ClientError, "Only type {} is allowed in '{}'", Serialise::type(FieldType::SCRIPT), RESERVED_SCRIPT);
+	auto script_endpoint = endpoint.empty() ? value : endpoint;
+	if (script_endpoint.empty()) {
+		THROW(ClientError, "Script must specify '{}'", RESERVED_ENDPOINT);
 	}
-#else
-	ignore_unused(strict);
-	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
-#endif
+	return script_endpoint;
+}
+
+
+std::pair<std::string_view, std::string_view>
+Script::get_name_body()
+{
+	auto script_name = name.empty() ? value : name;
+	auto script_body = body.empty() ? value : body;
+	if (script_name.empty() && script_body.empty()) {
+		THROW(ClientError, "Script must specify '{}' or '{}'", RESERVED_NAME, RESERVED_BODY);
+	}
+	if (script_name.empty()) {
+		MD5 md5;
+		name_holder = md5(script_body);
+		script_name = name_holder;
+	}
+	return { script_name, script_body };
+}
+
+
+const MsgPack&
+Script::get_params()
+{
+	return params;
 }
 
 
@@ -289,19 +233,35 @@ Script::process_script(bool strict)
 {
 	L_CALL("Script::process_script({})", strict);
 
-	switch (type) {
-		case Type::CHAI:
-		case Type::EMPTY:
 #ifdef XAPIAND_CHAISCRIPT
-			try {
-				return process_chai(strict);
-			} catch (const ScriptNotFoundError& er) {
-				THROW(ClientError, "{}", er.what());
-			}
-#endif
-		default:
-			THROW(ClientError, "Type {} is not allowed in '{}'", Serialise::type(sep_types[SPC_CONCRETE_TYPE]), RESERVED_SCRIPT);
+	auto sep_types = get_types(strict);
+
+	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		return MsgPack({
+			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
+			{ RESERVED_ENDPOINT,  get_endpoint() },
+			{ RESERVED_PARAMS,    get_params() },
+		});
+	} else {
+		auto name_body = get_name_body();
+		try {
+			chaipp::Processor::compile(name_body.first, name_body.second);
+			return MsgPack({
+				{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
+				{ RESERVED_CHAI, {
+					{ RESERVED_NAME,      name_body.first },
+					{ RESERVED_BODY,      name_body.second },
+					{ RESERVED_PARAMS,    get_params() },
+				}}
+			});
+		} catch (...) {
+			THROW(ClientError, "Script not found: {}", repr(name_body.first));
+		}
 	}
+#else
+	ignore_unused(strict);
+	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+#endif
 }
 
 #endif
