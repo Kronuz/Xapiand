@@ -669,6 +669,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (!found) {
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		// Add a local schema so it doesn't break forced foreign schemas
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		auto did = db_handler.index(local_node->lower_name(), false, {
 			{ RESERVED_INDEX, "field_all" },
@@ -1422,6 +1423,8 @@ index_calculate_replicas(const std::string& normalized_path)
 				{ RESERVED_VALUE, std::move(replicas) },
 			} },
 		};
+		// Add a local schema so it doesn't break forced foreign schemas
+		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		db_handler.index(normalized_path, false, obj, true, msgpack_type);
 	}
 	return replicas;
