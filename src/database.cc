@@ -30,6 +30,7 @@
 #include "database_flags.h"       // DB_*
 #include "database_pool.h"        // for DatabaseEndpoint
 #include "database_handler.h"     // for committer
+#include "database_utils.h"       // for DB_SLOT_VERSION
 #include "database_wal.h"         // for DatabaseWAL, DatabaseWALWriter
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for exists, build_path_index
@@ -894,10 +895,43 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
+	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
+	Xapian::docid did = 0;
+	auto ver = serialise_length(version);
+
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Deleting document: '{}'  t: {}", term, t);
+		did = 0;
+
 		try {
-			wdb->delete_document(term);
+			if (is_local() && version) {
+				std::string ver_prefix;
+				auto it = wdb->postlist_begin(term);
+				if (it == wdb->postlist_end(term)) {
+					return;
+				} else {
+					did = *it;
+					ver_prefix = "V" + serialise_length(did);
+					auto ver_prefix_size = ver_prefix.size();
+					auto t_end = wdb->allterms_end(ver_prefix);
+					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+						std::string_view current_ver(*tit);
+						current_ver.remove_prefix(ver_prefix_size);
+						if (!current_ver.empty()) {
+							if (!ver.empty() && ver != current_ver) {
+								// Throw error about wrong version!
+								THROW(ClientError, "Version mismatch!");
+							}
+							break;
+						}
+					}
+				}
+			}
+			if (did) {
+				wdb->delete_document(did);
+			} else {
+				wdb->delete_document(term);
+			}
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -1178,11 +1212,49 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
+	Xapian::rev version = 0;
 	Xapian::docid did = 0;
+	auto ver = doc.get_value(DB_SLOT_VERSION);
+
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Replacing: '{}'  t: {}", term, t);
+		did = 0;
+		version = 0;
+
 		try {
-			did = wdb->replace_document(term, doc);
+			if (is_local()) {
+				std::string ver_prefix;
+				auto it = wdb->postlist_begin(term);
+				if (it == wdb->postlist_end(term)) {
+					did = wdb->get_lastdocid() + 1;
+					ver_prefix = "V" + serialise_length(did);
+				} else {
+					did = *it;
+					ver_prefix = "V" + serialise_length(did);
+					auto ver_prefix_size = ver_prefix.size();
+					auto t_end = wdb->allterms_end(ver_prefix);
+					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+						std::string_view current_ver(*tit);
+						current_ver.remove_prefix(ver_prefix_size);
+						if (!current_ver.empty()) {
+							if (!ver.empty() && ver != current_ver) {
+								// Throw error about wrong version!
+								THROW(ClientError, "Version mismatch!");
+							}
+							version = unserialise_length(current_ver);
+							break;
+						}
+					}
+				}
+				ver = serialise_length(++version);
+				doc.add_term(ver_prefix + ver);
+				doc.add_value(DB_SLOT_VERSION, ver);  // Remove version check
+			}
+			if (did) {
+				wdb->replace_document(did, doc);
+			} else {
+				did = wdb->replace_document(term, doc);
+			}
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -1343,7 +1415,7 @@ Database::find_document(const std::string& term_id)
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
-			Xapian::PostingIterator it = rdb->postlist_begin(term_id);
+			auto it = rdb->postlist_begin(term_id);
 			if (it == rdb->postlist_end(term_id)) {
 				throw Xapian::DocNotFoundError("Document not found");
 			}
