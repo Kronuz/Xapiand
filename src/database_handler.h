@@ -180,8 +180,10 @@ class DatabaseHandler : public LockableDatabase {
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
-	template<typename ProcessorCompile>
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& params);
+	template <typename Processor>
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, const MsgPack& script, const MsgPack& params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
+	template <typename Processor>
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, const MsgPack& script_params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair);
 	std::unique_ptr<MsgPack> run_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& data_script);
 #endif
 
@@ -280,7 +282,7 @@ class DocPreparer {
 		obj{std::move(obj)} { }
 
 public:
-	template<typename... Args>
+	template <typename... Args>
 	static auto make_unique(Args&&... args) {
 		/*
 		 * std::make_unique only can call a public constructor, for this reason
@@ -335,7 +337,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	void _prepare(MsgPack&& obj);
 
 public:
-	template<typename... Args>
+	template <typename... Args>
 	static auto make_shared(Args&&... args) {
 		/*
 		 * std::make_shared only can call a public constructor, for this reason

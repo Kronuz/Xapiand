@@ -350,9 +350,24 @@ std::mutex DatabaseHandler::documents_mtx;
 std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
 
 
-template<typename Processor>
+template <typename Processor>
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& params)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, const MsgPack& script, const MsgPack& params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
+{
+	auto it_name = script.find(RESERVED_NAME);
+	std::string_view script_name = (it_name == script.end()) ? "" : it_name.value().str_view();
+	auto it_body = script.find(RESERVED_BODY);
+	std::string_view script_body = (it_body == script.end()) ? "" : it_body.value().str_view();
+	auto it_params = script.find(RESERVED_PARAMS);
+	MsgPack script_params = (it_params == script.end()) ? MsgPack::MAP() : it_params.value();
+	script_params.update(params);
+	return call_script<Processor>(object, term_id, script_name, script_body, script_params, old_document_pair);
+}
+
+
+template <typename Processor>
+std::unique_ptr<MsgPack>
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, const MsgPack& script_params, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
 {
 	try {
 		auto processor = Processor::compile(script_name, script_body);
@@ -386,10 +401,10 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, st
 		if (old_document_pair != nullptr) {
 			auto old_doc = old_document_pair->second.get_obj();
 			L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
-			(*processor)(http_method, *doc, old_doc, params);
+			(*processor)(http_method, *doc, old_doc, script_params);
 		} else {
 			L_INDEX("Script: call({})", doc->to_string(4));
-			(*processor)(http_method, *doc, MsgPack(), params);
+			(*processor)(http_method, *doc, MsgPack(), script_params);
 		}
 		return doc;
 #ifdef XAPIAND_CHAISCRIPT
@@ -408,27 +423,40 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 	if (data_script.is_map()) {
 		const auto& type = data_script.at(RESERVED_TYPE);
 		const auto& sep_type = required_spc_t::get_types(type.str_view());
-		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			THROW(ClientError, "Missing Implementation for Foreign scripts");
-		} else {
-			auto it_s = data_script.find(RESERVED_CHAI);
-			if (it_s == data_script.end()) {
-				THROW(ClientError, "Script type '{}' (ChaiScript) not available.", RESERVED_CHAI);
-			}
-#ifdef XAPIAND_CHAISCRIPT
-			const auto& chai = it_s.value();
-			auto it_name = chai.find(RESERVED_NAME);
-			std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
-			auto it_body = chai.find(RESERVED_BODY);
-			std::string_view body = (it_body == chai.end()) ? "" : it_body.value().str_view();
-			const MsgPack no_params;
-			auto it_params = chai.find(RESERVED_PARAMS);
-			const MsgPack& params = (it_params == chai.end()) ? no_params : it_params.value();
-			return call_script<chaipp::Processor>(obj, term_id, name, body, old_document_pair, params);
-#else
-			THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
-#endif
+		auto it_s = data_script.find(RESERVED_CHAI);
+		if (it_s == data_script.end()) {
+			return nullptr;
 		}
+#ifdef XAPIAND_CHAISCRIPT
+		const auto& chai = it_s.value();
+		auto it_p = data_script.find(RESERVED_PARAMS);
+		MsgPack no_params_holder;
+		auto& params = (it_p == data_script.end()) ? no_params_holder : it_p.value();
+		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			if (!chai.is_string()) {
+				THROW(ClientError, "For type {}, '{}' must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
+			}
+			auto id = chai.str_view();
+			Endpoint endpoint{id};
+			DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
+			std::string_view selector;
+			auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+			if (needle != std::string_view::npos) {
+				selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
+				id = id.substr(0, needle);
+			}
+			auto doc = _db_handler.get_document(id);
+			auto foreign_chai = doc.get_obj();
+			if (!selector.empty()) {
+				foreign_chai = foreign_chai.select(selector);
+			}
+			return call_script<chaipp::Processor>(obj, term_id, foreign_chai, params, old_document_pair);
+		} else {
+			return call_script<chaipp::Processor>(obj, term_id, chai, params, old_document_pair);
+		}
+#else
+		THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+#endif
 	}
 
 	return nullptr;
