@@ -241,16 +241,12 @@ Script::process_chai(bool strict)
 					MD5 md5;
 					script_name = md5(script_body);
 				}
-				auto hash = chaipp::hash(script_name);
-				auto body_hash = chaipp::hash(script_body);
 				try {
-					chaipp::Processor::compile(hash, body_hash, script_name, script_body);
+					chaipp::Processor::compile(script_name, script_body);
 					return MsgPack({
 						{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 						{ RESERVED_CHAI, {
 							{ RESERVED_NAME,      script_name },
-							{ RESERVED_HASH,      hash },
-							{ RESERVED_BODY_HASH, body_hash },
 							{ RESERVED_BODY,      script_body },
 							{ RESERVED_PARAMS,    params },
 						}}

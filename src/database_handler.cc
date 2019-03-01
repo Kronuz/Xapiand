@@ -352,10 +352,10 @@ std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Dat
 
 template<typename Processor>
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& params)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, std::string_view script_name, std::string_view script_body, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const MsgPack& params)
 {
 	try {
-		auto processor = Processor::compile(script_hash, body_hash, script_name, script_body);
+		auto processor = Processor::compile(script_name, script_body);
 		std::string http_method;
 		switch (method) {
 			case HTTP_PUT:
@@ -417,23 +417,14 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 			}
 #ifdef XAPIAND_CHAISCRIPT
 			const auto& chai = it_s.value();
-			auto body_hash = chai.at(RESERVED_BODY_HASH).u64();
-			auto it_hash = chai.find(RESERVED_HASH);
-			uint64_t hash = (it_hash == chai.end()) ? body_hash : it_hash.value().u64();
 			auto it_name = chai.find(RESERVED_NAME);
 			std::string_view name = (it_name == chai.end()) ? "" : it_name.value().str_view();
+			auto it_body = chai.find(RESERVED_BODY);
+			std::string_view body = (it_body == chai.end()) ? "" : it_body.value().str_view();
 			const MsgPack no_params;
 			auto it_params = chai.find(RESERVED_PARAMS);
 			const MsgPack& params = (it_params == chai.end()) ? no_params : it_params.value();
-			return call_script<chaipp::Processor>(
-				obj,
-				term_id,
-				hash,
-				body_hash,
-				name,
-				chai.at(RESERVED_BODY).str_view(),
-				old_document_pair,
-				params);
+			return call_script<chaipp::Processor>(obj, term_id, name, body, old_document_pair, params);
 #else
 			THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif

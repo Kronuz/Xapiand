@@ -37,7 +37,7 @@ namespace chaipp {
 
 namespace internal {
 
-class ScriptLRU : public lru::LRU<size_t, std::pair<size_t, std::shared_ptr<Processor>>> {
+class ScriptLRU : public lru::LRU<std::string, std::pair<size_t, std::shared_ptr<Processor>>> {
 public:
 	explicit ScriptLRU(ssize_t max_size)
 		: LRU(max_size) { }
@@ -51,7 +51,6 @@ class Engine {
 public:
 	explicit Engine(ssize_t max_size);
 
-	std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body);
 	std::shared_ptr<Processor> compile(std::string_view script_name, std::string_view script_body);
 
 	static Engine& engine();
@@ -65,12 +64,15 @@ Engine::Engine(ssize_t max_size) :
 
 
 std::shared_ptr<Processor>
-Engine::compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body)
+Engine::compile(std::string_view script_name, std::string_view script_body)
 {
+	std::hash<std::string_view> hash_fn;
+	auto script_body_hash = hash_fn(script_body);
+
 	std::unique_lock<std::mutex> lk(mtx);
-	auto it = script_lru.find(script_hash);
+	auto it = script_lru.find(std::string(script_name));  // FIXME: This copies script_name as LRU's std::unordered_map cannot find std::string_view
 	if (it != script_lru.end()) {
-		if (script_body.empty() || it->second.first == body_hash) {
+		if (script_body.empty() || it->second.first == script_body_hash) {
 			return it->second.second;
 		}
 	}
@@ -78,25 +80,10 @@ Engine::compile(size_t script_hash, size_t body_hash, std::string_view script_na
 
 	auto processor = std::make_shared<Processor>(script_name, script_body);
 
+	L_INFO("Script {} #{:x} compiled and ready.", script_name, script_body_hash);
+
 	lk.lock();
-	return script_lru.emplace(script_hash, std::make_pair(body_hash, std::move(processor))).first->second.second;
-}
-
-
-std::shared_ptr<Processor>
-Engine::compile(std::string_view script_name, std::string_view script_body)
-{
-	if (script_name.empty()) {
-		auto body_hash = hash(script_body);
-		return compile(body_hash, body_hash, "", script_body);
-	} else if (script_body.empty()) {
-		auto script_hash = hash(script_name);
-		return compile(script_hash, script_hash, "", script_name);
-	} else {
-		auto script_hash = hash(script_name);
-		auto body_hash = hash(script_body);
-		return compile(script_hash, body_hash, script_name, script_body);
-	}
+	return script_lru.emplace(std::string(script_name), std::make_pair(script_body_hash, std::move(processor))).first->second.second;
 }
 
 
@@ -107,14 +94,6 @@ Engine::engine() {
 }
 
 }; // End namespace internal
-
-
-size_t
-hash(std::string_view source)
-{
-	std::hash<std::string_view> hash_fn;
-	return hash_fn(source);
-}
 
 
 Processor::Processor(std::string_view script_name, std::string_view script_body) :
@@ -151,13 +130,6 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 			}
 		}
 	}
-}
-
-
-std::shared_ptr<Processor>
-Processor::compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body)
-{
-	return internal::Engine::engine().compile(script_hash, body_hash, script_name, script_body);
 }
 
 
