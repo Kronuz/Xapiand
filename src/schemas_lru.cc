@@ -67,9 +67,9 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 		}
 		DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 		std::string_view selector;
-		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		if (needle != std::string_view::npos) {
-			selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
+			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
 		auto doc = _db_handler.get_document(id);
@@ -462,9 +462,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					if (_db_handler.get_metadata(reserved_schema).empty()) {
 						_db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
 					}
-					// FIXME: Process the foreign_path's subfields instead of ignoring.
-					auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+					auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 					auto new_schema_copy = *new_schema;
+					// FIXME: Process the foreign_path's subfields instead of ignoring.
 					_db_handler.index(foreign_id.substr(0, needle), true, new_schema_copy, false, msgpack_type);
 				} catch(...) {
 					// On error, try reverting

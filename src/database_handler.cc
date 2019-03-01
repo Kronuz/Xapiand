@@ -440,9 +440,9 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 			Endpoint endpoint{id};
 			DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 			std::string_view selector;
-			auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
+			auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 			if (needle != std::string_view::npos) {
-				selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
+				selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 				id = id.substr(0, needle);
 			}
 			auto doc = _db_handler.get_document(id);
