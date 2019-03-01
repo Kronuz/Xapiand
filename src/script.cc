@@ -83,7 +83,7 @@ Script::Script(const MsgPack& _obj)
 						name = val.str_view();
 						break;
 					case _.fhh(RESERVED_PARAMS):
-						if (!val.is_map()) {
+						if (!val.is_map() && !val.is_undefined()) {
 							THROW(ClientError, "'{}' must be an object", RESERVED_PARAMS);
 						}
 						params = val;
@@ -143,7 +143,7 @@ Script::process_value(const MsgPack& _value)
 						name = val.str_view();
 						break;
 					case _.fhh(RESERVED_PARAMS):
-						if (!val.is_map()) {
+						if (!val.is_map() && !val.is_undefined()) {
 							THROW(ClientError, "'{}' must be an object", RESERVED_PARAMS);
 						}
 						params = val;
@@ -240,22 +240,30 @@ Script::process_script(bool strict) const
 
 	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 		chaipp::Processor::compile(*this);
-		return {
+		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_ENDPOINT,  get_endpoint() },
-			{ RESERVED_PARAMS,    get_params() },
-		};
+		});
+		auto& script_params = get_params();
+		if (!script_params.empty()) {
+			script_data[RESERVED_PARAMS] = script_params;
+		}
+		return script_data;
 	} else {
 		auto name_body = get_name_body();
 		chaipp::Processor::compile(*this);
-		return {
+		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_CHAI, {
 				{ RESERVED_NAME,      name_body.first },
 				{ RESERVED_BODY,      name_body.second },
-				{ RESERVED_PARAMS,    get_params() },
 			}}
-		};
+		});
+		auto& script_params = get_params();
+		if (!script_params.empty()) {
+			script_data[RESERVED_PARAMS] = script_params;
+		}
+		return script_data;
 	}
 #else
 	ignore_unused(strict);
