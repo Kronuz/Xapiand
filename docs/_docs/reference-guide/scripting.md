@@ -24,8 +24,8 @@ PUT /customer/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above example initializes the first serial number of the document to `1`
-and increments the counter by one thereafter.
+The above example initializes the first serial number of the document to 1 and
+increments the counter by one thereafter.
 
 {: .note .tip }
 **_Dot Access Notation_**<br>
@@ -42,9 +42,11 @@ follows the same patterns:
 ```json
 "_script" {
   "_type": "script",
-  "_value": "<script_name|script_body>",
-  ( "_name": "<script_name>", )?
-  ( "_params": <params>, )?
+  "_chai": {
+    ( "_name": "<script_name>", )?
+    ( "_body": "<script_body>", )?
+    ( "_params": <params>, )?
+  }
 }
 ```
 
@@ -53,6 +55,19 @@ Or, for short:
 ```json
 "_script": "<script_name|script_body>"
 ```
+
+
+### Script Caching
+
+All scripts are cached so that they only need to be recompiled when updates
+occur. By default, the cache size is 100 and scripts do not have a time-based
+expiration.
+
+{: .note .tip }
+**_Prefer Parameters_**<br>
+The first time Xapiand sees a new script, it compiles it and stores the compiled
+version in a cache. Compilation can be a **heavy** process, so try using
+_Foreign Scripts_ and _Variables_.
 
 
 ### Variables
@@ -110,15 +125,59 @@ PUT /customer/1?pretty
 The first version has to be recompiled every time the multiplier changes. The
 second version is only compiled once.
 
-{: .note .tip }
-**_Prefer Parameters_**<br>
-The first time Xapiand sees a new script, it compiles it and stores the compiled
-version in a cache. Compilation can be a **heavy** process, so try using
-_Named Scripts_ and _Variables_.
 
+### Foreign Scripts
 
-### Script Caching
+Scripts can also be loaded from a different database / document. These are
+called _foreign scripts_. To use foreign script, first you need to create a
+document containing the script:
 
-All scripts are cached by default so that they only need to be recompiled when
-updates occur. By default, the cache size is 100 and scripts do not have a
-time-based expiration.
+{% capture req %}
+
+```json
+PUT /path/to/my_scripts/multiplier?pretty
+
+{
+  "_recurse": false,
+  "script": {
+    "_chai": {
+      "_body": "_doc.multiplied_field *= multiplier",
+      "_params": {
+        "multiplier": 1
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+We're placing the script inside the `"script"` field, but we also use
+`"_recurse": false` so `"script"` doesn't get recursed and analyzed as a regular
+field by the Schema.
+
+We then can use the foreign script by specifying the `_endpoint` (i.e. the full
+index path, the document ID and the selector). In the example, the index is
+`path/to/my_scripts`, the document ID is `multiplier` and the selector is a
+[Drill Selector]({{ '/docs/exploring/drill-selector' | relative_url }}) that
+gets the `"script"` field:
+
+{% capture req %}
+
+```json
+PUT /customer/1?pretty
+
+{
+  "multiplied_field": 7,
+  "_script": {
+    "_type": "foreign/object",
+    "_endpoint": "path/to/my_scripts/multiplier.script",
+    "_params": {
+      "multiplier": 3
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
