@@ -427,15 +427,22 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 			std::string_view foreign_path;
 			std::string_view foreign_id;
 			split_path_id(endpoint, foreign_path, foreign_id);
-			DatabaseHandler _db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 			std::string_view selector;
 			auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 			if (needle != std::string_view::npos) {
 				selector = foreign_id.substr(foreign_id[needle] == '.' ? needle + 1 : needle);
 				foreign_id = foreign_id.substr(0, needle);
 			}
-			auto doc = _db_handler.get_document(foreign_id);
-			auto foreign_data_script = doc.get_obj();
+			MsgPack foreign_data_script;
+			try {
+				DatabaseHandler _db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
+				auto doc = _db_handler.get_document(foreign_id);
+				foreign_data_script = doc.get_obj();
+			} catch (const Xapian::DocNotFoundError&) {
+				THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, foreign_id);
+			} catch (const Xapian::DatabaseNotFoundError& exc) {
+				THROW(ClientError, "Foreign script database {} doesn't exist", foreign_path);
+			}
 			if (!selector.empty()) {
 				foreign_data_script = foreign_data_script.select(selector);
 			}
