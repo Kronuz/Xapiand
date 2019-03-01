@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2014,2015 Stephan Brumme
  * see http://create.stephan-brumme.com/disclaimer.html
  *
@@ -410,9 +410,9 @@ std::string MD5::operator()(const void* data, size_t numBytes)
 
 
 /// compute MD5 of a string, excluding final zero
-std::string MD5::operator()(const std::string& text)
+std::string MD5::operator()(std::string_view text)
 {
 	reset();
-	add(text.c_str(), text.size());
+	add(text.data(), text.size());
 	return getHash();
 }

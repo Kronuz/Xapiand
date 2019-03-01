@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2014,2015 Stephan Brumme
  * see http://create.stephan-brumme.com/disclaimer.html
  *
@@ -52,7 +52,7 @@ public:
 	/// compute SHA256 of a memory block
 	std::string operator()(const void* data, size_t numBytes);
 	/// compute SHA256 of a string, excluding final zero
-	std::string operator()(const std::string& text);
+	std::string operator()(std::string_view text);
 
 	/// add arbitrary number of bytes
 	void add(const void* data, size_t numBytes);
