@@ -31,10 +31,10 @@ constexpr const char reserved__ = RESERVED__[0];
 constexpr const char ID_FIELD_NAME[]                        = RESERVED__ "id";
 constexpr const char UUID_FIELD_NAME[]                      = "<uuid_field>";
 constexpr const char SCHEMA_FIELD_NAME[]                    = "schema";
-constexpr const char VERSION_FIELD_NAME[]                   = "version";
 constexpr const char SCRIPT_FIELD_NAME[]                    = "script";
 
 // Reserved words used in schema.
+constexpr const char RESERVED_VERSION[]                     = RESERVED__ "version";
 constexpr const char RESERVED_WEIGHT[]                      = RESERVED__ "weight";
 constexpr const char RESERVED_POSITION[]                    = RESERVED__ "position";
 constexpr const char RESERVED_SPELLING[]                    = RESERVED__ "spelling";

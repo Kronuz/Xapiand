@@ -2308,22 +2308,6 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 
 	auto it_end = object.end();
 
-	// Check version:
-	auto version_it = object.find(VERSION_FIELD_NAME);
-	if (version_it == it_end) {
-		if (!allow_versionless) {
-			THROW(ErrorType, "{}'{}' field does not exist", prefix, VERSION_FIELD_NAME);
-		}
-	} else {
-		auto& version = version_it.value();
-		if (!version.is_number()) {
-			THROW(ErrorType, "{}'{}' field must be a number", prefix, VERSION_FIELD_NAME);
-		}
-		if (version.f64() != DB_VERSION_SCHEMA) {
-			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
-		}
-	}
-
 	// Check schema object:
 	auto schema_it = object.find(SCHEMA_FIELD_NAME);
 	if (schema_it == it_end) {
@@ -2350,6 +2334,23 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			THROW(ErrorType, "{}'{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 		}
 	}
+
+	// Check version:
+	auto version_it = schema.find(RESERVED_VERSION);
+	if (version_it == schema_it_end) {
+		if (!allow_versionless) {
+			THROW(ErrorType, "{}'{}' field does not exist", prefix, RESERVED_VERSION);
+		}
+	} else {
+		auto& version = version_it.value();
+		if (!version.is_number()) {
+			THROW(ErrorType, "{}'{}' field must be a number", prefix, RESERVED_VERSION);
+		}
+		if (version.f64() != DB_VERSION_SCHEMA) {
+			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
+		}
+	}
+
 	return std::make_pair(nullptr, &schema);
 }
 
@@ -2373,8 +2374,9 @@ Schema::get_initial_schema()
 
 	static const MsgPack initial_schema_tpl({
 		{ RESERVED_RECURSE, false },
-		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
-		{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
+		{ SCHEMA_FIELD_NAME, {
+			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
+		} },
 	});
 	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);
 	initial_schema->lock();
@@ -2577,7 +2579,12 @@ Schema::index(const MsgPack& object,
 
 		if (object.empty()) {
 			dispatch_feed_properties(*properties);
-		} else if (properties->empty()) {  // new schemas have empty properties
+		} else if (
+			// new schemas have empty properties
+			properties->empty() ||
+			// or a single item in it (_version)
+			(properties->size() == 1 && properties->find(RESERVED_VERSION) != properties->end())
+		) {
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties();
 			dispatch_write_properties(*mut_properties, object, fields, &id_field);
@@ -3412,7 +3419,12 @@ Schema::update(const MsgPack& object)
 
 			FieldVector fields;
 
-			if (properties->empty()) {  // new schemas have empty properties
+			if (
+				// new schemas have empty properties
+				properties->empty() ||
+				// or a single item in it (_version)
+				(properties->size() == 1 && properties->find(RESERVED_VERSION) != properties->end())
+			) {
 				specification.flags.field_found = false;
 				auto mut_properties = &get_mutable_properties();
 				dispatch_write_properties(*mut_properties, schema_obj, fields);
@@ -3857,7 +3869,12 @@ Schema::write(const MsgPack& object, bool replace)
 
 			FieldVector fields;
 
-			if (mut_properties->empty()) {  // new schemas have empty properties
+			if (
+				// new schemas have empty properties
+				mut_properties->empty() ||
+				// or a single item in it (_version)
+				(mut_properties->size() == 1 && mut_properties->find(RESERVED_VERSION) != mut_properties->end())
+			) {
 				specification.flags.field_found = false;
 			} else {
 				dispatch_feed_properties(*mut_properties);
@@ -6120,6 +6137,7 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	L_CALL("Schema::_dispatch_feed_properties({})", repr(value.to_string()));
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_VERSION),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
@@ -6158,6 +6176,8 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_VERSION):
+			return true;
 		case _.fhh(RESERVED_WEIGHT):
 			Schema::feed_weight(value);
 			return true;
@@ -6356,6 +6376,7 @@ inline bool
 has_dispatch_process_concrete_properties(uint32_t key)
 {
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_VERSION),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6427,6 +6448,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	L_CALL("Schema::_dispatch_process_concrete_properties({})", repr(prop_name));
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_VERSION),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6491,6 +6513,8 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_VERSION):
+			return true;
 		case _.fhh(RESERVED_DATA):
 			Schema::process_data(prop_name, value);
 			return true;

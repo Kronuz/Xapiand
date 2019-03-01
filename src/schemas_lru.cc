@@ -77,6 +77,12 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 		if (!selector.empty()) {
 			obj = obj.select(selector);
 		}
+		// If there's no "schema" field inside, add it (to be consistent with "script" field):
+		if (obj.find(SCHEMA_FIELD_NAME) == obj.end()) {
+			obj = {
+				{ SCHEMA_FIELD_NAME, obj },
+			};
+		}
 		context->erase(path);
 		return obj;
 	} catch (...) {
@@ -257,14 +263,15 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 			type = required_spc_t::get_str_type(sep_types);
 		}
 		o[RESERVED_RECURSE] = false;
-		if (o.find(ID_FIELD_NAME) == o.end()) {
-			o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
-		}
 		if (opts.strict && o.find(ID_FIELD_NAME) == o.end()) {
 			THROW(MissingTypeError, "Type of field '{}' for the foreign schema is missing", ID_FIELD_NAME);
 		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
 			o[SCHEMA_FIELD_NAME] = MsgPack::MAP();
+		}
+		auto& os = o[SCHEMA_FIELD_NAME];
+		if (os.find(RESERVED_VERSION) == os.end()) {
+			os[RESERVED_VERSION] = DB_VERSION_SCHEMA;
 		}
 		Schema schema(schema_ptr, nullptr, "");
 		schema.update(o);
