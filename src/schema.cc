@@ -6909,7 +6909,7 @@ Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
 		if (prop_stop_strategy.is_string()) {
 			specification.stop_strategy = _get_stop_strategy(prop_stop_strategy.str_view());
 			if (specification.stop_strategy == StopStrategy::INVALID) {
-				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name), repr(str_set_stop_strategy));
+				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STOP_STRATEGY, repr(specification.full_meta_name), str_set_stop_strategy);
 			}
 		} else {
 			specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
@@ -6929,7 +6929,7 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 		if (prop_stem_strategy.is_string()) {
 			specification.stem_strategy = _get_stem_strategy(prop_stem_strategy.str_view());
 			if (specification.stem_strategy == StemStrategy::INVALID) {
-				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name), repr(str_set_stem_strategy));
+				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STEM_STRATEGY, repr(specification.full_meta_name), str_set_stem_strategy);
 			}
 		} else {
 			specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
@@ -7053,7 +7053,7 @@ Schema::feed_index(const MsgPack& prop_index)
 	try {
 		specification.index = _get_index(prop_index.str_view());
 		if (specification.index == TypeIndex::INVALID) {
-			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX, repr(specification.full_meta_name), repr(str_set_index));
+			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX, repr(specification.full_meta_name), str_set_index);
 		}
 		specification.flags.has_index = true;
 	} catch (const msgpack::type_error&) {
@@ -7307,7 +7307,7 @@ Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 	try {
 		specification.index_uuid_field = _get_index_uuid_field(prop_index_uuid_field.str_view());
 		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
-			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name), repr(str_set_index_uuid_field));
+			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name), str_set_index_uuid_field);
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX_UUID_FIELD, repr(specification.full_meta_name));

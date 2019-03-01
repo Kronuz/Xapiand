@@ -52,13 +52,15 @@ class Script {
 	void process_value(const MsgPack& _value);
 	void process_chai(const MsgPack& _chai);
 	void process_params(const MsgPack& _params);
+	void process_endpoint(const MsgPack& _params);
 
 	Type type;
 	std::array<FieldType, SPC_TOTAL_TYPES> sep_types;
 
-	std::string value;
-	std::string body;
-	std::string name;
+	std::string_view value;
+	std::string_view body;
+	std::string_view name;
+	std::string_view endpoint;
 	MsgPack params;
 
 public:

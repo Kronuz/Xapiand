@@ -33,30 +33,13 @@
 #include "phf.hh"           // for phf
 
 
-static const auto str_set_dispatch_script(string::join<std::string>({
-	RESERVED_TYPE,
-	RESERVED_VALUE,
-	RESERVED_CHAI,
-	RESERVED_BODY,
-	RESERVED_NAME,
-	RESERVED_PARAMS,
-}, ", ", " or "));
-
-
-static const auto str_set_dispatch_value(string::join<std::string>({
-	RESERVED_BODY,
-	RESERVED_NAME,
-	RESERVED_PARAMS,
-}, ", ", " or "));
-
-
 Script::Script(const MsgPack& _obj)
 	: type(Type::EMPTY),
 	  sep_types({ { FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY } })
 {
 	switch (_obj.getType()) {
 		case MsgPack::Type::STR: {
-			body = _obj.str();
+			body = _obj.str_view();
 			break;
 		}
 		case MsgPack::Type::MAP: {
@@ -71,6 +54,7 @@ Script::Script(const MsgPack& _obj)
 					hh(RESERVED_BODY),
 					hh(RESERVED_NAME),
 					hh(RESERVED_PARAMS),
+					hh(RESERVED_ENDPOINT),
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_TYPE):
@@ -91,8 +75,15 @@ Script::Script(const MsgPack& _obj)
 					case _.fhh(RESERVED_PARAMS):
 						process_params(val);
 						break;
+					case _.fhh(RESERVED_ENDPOINT):
+						process_endpoint(val);
+						break;
 					default:
-						THROW(ClientError, "{} in '{}' must be one of {}", repr(str_key), RESERVED_VALUE, str_set_dispatch_script);
+						if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_ENDPOINT, RESERVED_PARAMS);
+						} else {
+							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_CHAI, RESERVED_PARAMS);
+						}
 				}
 			}
 			break;
@@ -112,7 +103,7 @@ Script::process_body(const MsgPack& _body)
 		THROW(ClientError, "'{}' must be string", RESERVED_BODY);
 	}
 
-	body = _body.str();
+	body = _body.str_view();
 }
 
 
@@ -125,7 +116,7 @@ Script::process_name(const MsgPack& _name)
 		THROW(ClientError, "'{}' must be string", RESERVED_NAME);
 	}
 
-	name = _name.str();
+	name = _name.str_view();
 }
 
 
@@ -139,6 +130,19 @@ Script::process_params(const MsgPack& _params)
 	}
 
 	params = _params;
+}
+
+
+void
+Script::process_endpoint(const MsgPack& _endpoint)
+{
+	L_CALL("Script::process_endpoint({})", repr(_endpoint.to_string()));
+
+	if (!_endpoint.is_string()) {
+		THROW(ClientError, "'{}' must be string", RESERVED_ENDPOINT);
+	}
+
+	endpoint = _endpoint.str_view();
 }
 
 
@@ -162,7 +166,7 @@ Script::process_value(const MsgPack& _value)
 
 	switch (_value.getType()) {
 		case MsgPack::Type::STR:
-			value = _value.str();
+			value = _value.str_view();
 			break;
 		case MsgPack::Type::MAP: {
 			const auto it_e = _value.end();
@@ -185,7 +189,7 @@ Script::process_value(const MsgPack& _value)
 						process_params(val);
 						break;
 					default:
-						THROW(ClientError, "{} in '{}' must be one of {}", repr(str_key), RESERVED_VALUE, str_set_dispatch_value);
+						THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_BODY, RESERVED_NAME, RESERVED_PARAMS);
 				}
 			}
 			break;
@@ -221,21 +225,35 @@ Script::process_chai(bool strict)
 			/* FALLTHROUGH */
 		case FieldType::SCRIPT: {
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-				if (value.empty()) {
-					THROW(ClientError, "For type {}, '{}' must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
+				if (!body.empty()) {
+					THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_BODY);
+				}
+				if (!name.empty()) {
+					THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_NAME);
+				}
+				if (!value.empty() && !endpoint.empty()) {
+					THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
+				}
+				auto& script_endpoint = endpoint.empty() ? value : endpoint;
+				if (script_endpoint.empty()) {
+					THROW(ClientError, "Script must specify '{}'", RESERVED_ENDPOINT);
 				}
 				return MsgPack({
 					{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-					{ RESERVED_CHAI, value },
+					{ RESERVED_ENDPOINT,  script_endpoint },
+					{ RESERVED_PARAMS,    params },
 				});
 			} else {
+				if (!endpoint.empty()) {
+					THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, Serialise::type(FieldType::FOREIGN));
+				}
 				if (!value.empty() && !body.empty() && !name.empty()) {
 					THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);
 				}
 				auto& script_name = name.empty() ? value : name;
 				auto& script_body = body.empty() ? value : body;
 				if (script_name.empty() && script_body.empty()) {
-					THROW(ClientError, "Script must specify a name or a body");
+					THROW(ClientError, "Script must specify '{}' or '{}'", RESERVED_NAME, RESERVED_BODY);
 				}
 				if (script_name.empty()) {
 					MD5 md5;

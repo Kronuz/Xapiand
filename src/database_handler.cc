@@ -32,6 +32,7 @@
 #include "chaipp/exception.h"               // for chaipp::Error
 #include "database.h"                       // for Database
 #include "database_wal.h"                   // for DatabaseWAL
+#include "database_utils.h"                 // for split_path_id
 #include "exception.h"                      // for ClientError
 #include "length.h"                         // for serialise_string, unserialise_string
 #include "lock_database.h"                  // for lock_database
@@ -423,35 +424,48 @@ DatabaseHandler::run_script(const MsgPack& obj, std::string_view term_id, std::s
 	if (data_script.is_map()) {
 		const auto& type = data_script.at(RESERVED_TYPE);
 		const auto& sep_type = required_spc_t::get_types(type.str_view());
-		auto it_s = data_script.find(RESERVED_CHAI);
-		if (it_s == data_script.end()) {
-			return nullptr;
-		}
+		auto it_end = data_script.end();
 #ifdef XAPIAND_CHAISCRIPT
-		const auto& chai = it_s.value();
-		auto it_p = data_script.find(RESERVED_PARAMS);
-		MsgPack no_params_holder;
-		auto& params = (it_p == data_script.end()) ? no_params_holder : it_p.value();
 		if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-			if (!chai.is_string()) {
-				THROW(ClientError, "For type {}, '{}' must be string", Serialise::type(FieldType::FOREIGN), RESERVED_VALUE);
+			auto endpoint_it = data_script.find(RESERVED_ENDPOINT);
+			if (endpoint_it == it_end) {
+				THROW(ClientError, "'{}' field does not exist", RESERVED_ENDPOINT);
 			}
-			auto id = chai.str_view();
-			Endpoint endpoint{id};
-			DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
+			auto& endpoint = endpoint_it.value();
+			if (!endpoint.is_string()) {
+				THROW(ClientError, "'{}' field must be a string", RESERVED_ENDPOINT);
+			}
+			std::string_view foreign_path;
+			std::string_view foreign_id;
+			split_path_id(endpoint.str_view(), foreign_path, foreign_id);
+			DatabaseHandler _db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 			std::string_view selector;
-			auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
+			auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 			if (needle != std::string_view::npos) {
-				selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
-				id = id.substr(0, needle);
+				selector = foreign_id.substr(foreign_id[needle] == '.' ? needle + 1 : needle);
+				foreign_id = foreign_id.substr(0, needle);
 			}
-			auto doc = _db_handler.get_document(id);
-			auto foreign_chai = doc.get_obj();
+			auto doc = _db_handler.get_document(foreign_id);
+			auto chai = doc.get_obj();
 			if (!selector.empty()) {
-				foreign_chai = foreign_chai.select(selector);
+				chai = chai.select(selector);
 			}
-			return call_script<chaipp::Processor>(obj, term_id, foreign_chai, params, old_document_pair);
+			auto params_it = data_script.find(RESERVED_PARAMS);
+			MsgPack no_params_holder;
+			auto& params = (params_it == it_end) ? no_params_holder : params_it.value();
+			return call_script<chaipp::Processor>(obj, term_id, chai, params, old_document_pair);
 		} else {
+			auto chai_it = data_script.find(RESERVED_CHAI);
+			if (chai_it == it_end) {
+				return nullptr;
+			}
+			const auto& chai = chai_it.value();
+			if (!chai.is_map()) {
+				THROW(ClientError, "'{}' field must be an object", RESERVED_CHAI);
+			}
+			auto params_it = data_script.find(RESERVED_PARAMS);
+			MsgPack no_params_holder;
+			auto& params = (params_it == it_end) ? no_params_holder : params_it.value();
 			return call_script<chaipp::Processor>(obj, term_id, chai, params, old_document_pair);
 		}
 #else
