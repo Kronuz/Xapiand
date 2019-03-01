@@ -151,6 +151,11 @@ Processor::Processor(const Script& script) :
 		if (!selector.empty()) {
 			foreign_data_script = foreign_data_script.select(selector);
 		}
+		// If there's a "script" field inside, get it (to be consistent with "schema" field):
+		auto it = foreign_data_script.find(SCRIPT_FIELD_NAME);
+		if (it != foreign_data_script.end()) {
+			foreign_data_script = it.value();
+		}
 		Script foreign_script(foreign_data_script);
 		auto foreign_sep_type = foreign_script.get_types();
 		if (foreign_sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
