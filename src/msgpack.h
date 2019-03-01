@@ -1970,8 +1970,20 @@ inline void MsgPack::push_back(T&& v) {
 
 template <typename M, std::enable_if_t<std::is_same<std::decay_t<M>, MsgPack>::value, int>>
 inline void MsgPack::update(M&& o) {
+	if (_body->_const) {
+		THROW(msgpack::const_error, "Constant object");
+	}
+	if (_body->_lock) {
+		ASSERT(!_body->_lock);
+		THROW(msgpack::const_error, "Locked object");
+	}
 	switch (o._body->getType()) {
+		case Type::UNDEFINED:
+			break;
 		case Type::MAP:
+			if (_body->getType() == Type::UNDEFINED) {
+				_init_map();
+			}
 			for (const auto& key : o) {
 				const auto& val = o.at(key);
 				if (find(key) == end()) {
