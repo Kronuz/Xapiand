@@ -20,36 +20,29 @@
  * THE SOFTWARE.
  */
 
-#pragma once
-
-#include "config.h"  // for XAPIAND_CHAISCRIPT
+#include "module.h"
 
 #if XAPIAND_CHAISCRIPT
 
-#include "string_view.hh"
-
-#include "chaiscript/chaiscript_basic.hpp"
-
-
-class MsgPack;
+#include "chaiscript/dispatchkit/bootstrap.hpp"
+#include "chaiscript/dispatchkit/bootstrap_stl.hpp"
+#include "chaiscript/language/chaiscript_prelude.hpp"
 
 
 namespace chaipp {
 
-size_t hash(std::string_view source);
+void
+Module::std_lib(chaiscript::Module& m)
+{
+	chaiscript::bootstrap::Bootstrap::bootstrap(m);
 
+	chaiscript::bootstrap::standard_library::vector_type<std::vector<chaiscript::Boxed_Value>>("Vector", m);
+	chaiscript::bootstrap::standard_library::string_type<std::string>("string", m);
+	chaiscript::bootstrap::standard_library::map_type<std::map<std::string, chaiscript::Boxed_Value>>("Map", m);
+	chaiscript::bootstrap::standard_library::pair_type<std::pair<chaiscript::Boxed_Value, chaiscript::Boxed_Value >>("Pair", m);
 
-class Processor {
-	chaiscript::ChaiScript_Basic chai;
-	chaiscript::AST_NodePtr ast;
-
-public:
-	Processor(std::string_view script_name, std::string_view script_body);
-
-	void operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params);
-	static std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body);
-	static std::shared_ptr<Processor> compile(std::string_view script_name, std::string_view script_body);
-};
+	m.eval(chaiscript::ChaiScript_Prelude::chaiscript_prelude() /*, "standard prelude"*/ );
+}
 
 }; // End namespace chaipp
 

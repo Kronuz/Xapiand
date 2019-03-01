@@ -29,6 +29,7 @@
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
+#include "chaipp/exception.h"               // for chaipp::Error
 #include "database.h"                       // for Database
 #include "database_wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
@@ -392,8 +393,6 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, si
 		}
 		return doc;
 #ifdef XAPIAND_CHAISCRIPT
-	} catch (const chaipp::ReferenceError&) {
-		return nullptr;
 	} catch (const chaipp::Error& exc) {
 		THROW(ClientError, exc.what());
 #endif

@@ -20,36 +20,27 @@
  * THE SOFTWARE.
  */
 
-#pragma once
-
-#include "config.h"  // for XAPIAND_CHAISCRIPT
+#include "module.h"
 
 #if XAPIAND_CHAISCRIPT
 
-#include "string_view.hh"
+#include "chaipp/module.h"
 
-#include "chaiscript/chaiscript_basic.hpp"
-
-
-class MsgPack;
+#include "msgpack.h"
 
 
 namespace chaipp {
 
-size_t hash(std::string_view source);
+chaiscript::ModulePtr
+Module::library() {
+	auto lib = std::make_shared<chaiscript::Module>();
 
+	std_lib(*lib);
 
-class Processor {
-	chaiscript::ChaiScript_Basic chai;
-	chaiscript::AST_NodePtr ast;
+	msgpack(*lib);
 
-public:
-	Processor(std::string_view script_name, std::string_view script_body);
-
-	void operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params);
-	static std::shared_ptr<Processor> compile(size_t script_hash, size_t body_hash, std::string_view script_name, std::string_view script_body);
-	static std::shared_ptr<Processor> compile(std::string_view script_name, std::string_view script_body);
-};
+	return lib;
+}
 
 }; // End namespace chaipp
 
