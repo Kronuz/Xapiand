@@ -1564,7 +1564,7 @@ DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 	const auto term_id = get_prefixed_term_id(document_id);
 
 	lock_database lk_db(this);
-	database()->delete_document(database()->find_document(term_id), commit);
+	database()->delete_document_term(term_id, commit);
 }
 
 
