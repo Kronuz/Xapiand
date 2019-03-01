@@ -2339,7 +2339,19 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	auto version_it = schema.find(RESERVED_VERSION);
 	if (version_it == schema_it_end) {
 		if (!allow_versionless) {
-			THROW(ErrorType, "{}'{}' field does not exist", prefix, RESERVED_VERSION);
+			// Check version (legacy):
+			auto version_it = object.find("version");
+			if (version_it == it_end) {
+				THROW(ErrorType, "{}'{}' field does not exist", prefix, RESERVED_VERSION);
+			} else {
+				auto& version = version_it.value();
+				if (!version.is_number()) {
+					THROW(ErrorType, "{}'{}' field must be a number", prefix, RESERVED_VERSION);
+				}
+				if (version.f64() != DB_VERSION_SCHEMA) {
+					THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
+				}
+			}
 		}
 	} else {
 		auto& version = version_it.value();
