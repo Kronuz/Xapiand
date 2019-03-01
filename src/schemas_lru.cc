@@ -68,7 +68,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 		DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_NO_WAL, HTTP_GET, context);
 		std::string_view selector;
 		auto needle = id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-		if (needle != std::string::npos) {
+		if (needle != std::string_view::npos) {
 			selector = id.substr(id[needle] == '|' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
@@ -464,7 +464,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					}
 					// FIXME: Process the foreign_path's subfields instead of ignoring.
 					auto needle = foreign_id.find_first_of("|{", 1);  // to get selector, find first of either | or {
-						auto new_schema_copy = *new_schema;
+					auto new_schema_copy = *new_schema;
 					_db_handler.index(foreign_id.substr(0, needle), true, new_schema_copy, false, msgpack_type);
 				} catch(...) {
 					// On error, try reverting
