@@ -1642,7 +1642,7 @@ HttpClient::index_document_view(Request& request)
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	auto& decoded_body = request.decoded_body();
-	response_obj = db_handler.index(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
+	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1714,11 +1714,11 @@ HttpClient::update_document_view(Request& request)
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	auto& decoded_body = request.decoded_body();
 	if (request.method == HTTP_PATCH) {
-		response_obj = db_handler.patch(doc_id, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.ct_type).second;
 	} else if (request.method == HTTP_STORE) {
-		response_obj = db_handler.merge(doc_id, true, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.merge(doc_id, query_field.version, true, decoded_body, query_field.commit, request.ct_type).second;
 	} else {
-		response_obj = db_handler.merge(doc_id, false, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.merge(doc_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -2749,6 +2749,11 @@ HttpClient::query_field_maker(Request& request, int flags)
 					query_field.commit = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
+		}
+
+		request.query_parser.rewind();
+		if (request.query_parser.next("version") != -1) {
+			query_field.version = strict_stou(nullptr, request.query_parser.get());
 		}
 	}
 

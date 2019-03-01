@@ -184,9 +184,9 @@ class DatabaseHandler : public LockableDatabase {
 	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const Script& script);
 #endif
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair);
 
-	DataType index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit);
+	DataType index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -207,11 +207,11 @@ public:
 
 	MsgPack check();
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
-	DataType index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
-	DataType patch(const MsgPack& document_id, const MsgPack& patches, bool commit, const ct_type_t& ct_type);
-	DataType merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, const ct_type_t& ct_type);
+	DataType merge(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 	void delete_schema();

@@ -671,7 +671,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		// Add a local schema so it doesn't break forced foreign schemas
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-		auto did = db_handler.index(local_node->lower_name(), false, {
+		auto did = db_handler.index(local_node->lower_name(), 0, false, {
 			{ RESERVED_INDEX, "field_all" },
 			{ ID_FIELD_NAME, {
 				{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1356,7 +1356,7 @@ XapiandManager::load_nodes()
 			if (node->idx) {
 				// Node is not in our local database, add it now!
 				L_WARNING("Adding missing node: [{}] {}", node->idx, node->name());
-				auto prepared = db_handler.prepare(node->lower_name(), false, {
+				auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
 					{ RESERVED_INDEX, "field_all" },
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1425,7 +1425,7 @@ index_calculate_replicas(const std::string& normalized_path)
 		};
 		// Add a local schema so it doesn't break forced foreign schemas
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-		db_handler.index(normalized_path, false, obj, true, msgpack_type);
+		db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
 	}
 	return replicas;
 }

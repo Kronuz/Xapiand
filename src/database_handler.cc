@@ -397,7 +397,7 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, st
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
+DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
 
@@ -424,6 +424,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 		if (!serialised.empty()) {
 			doc.set_data(serialised);
 		}
+		if (document_ver) {
+			doc.add_value(DB_SLOT_VERSION, serialise_length(document_ver));  // Request version
+		}
 
 #ifdef XAPIAND_CHAISCRIPT
 		auto current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, data));
@@ -438,7 +441,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& d
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack& body, const ct_type_t& ct_type)
+DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second);
 
@@ -460,14 +463,14 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 					}
 					data.update(ct_type, blob);
 				}
-				return prepare(document_id, MsgPack::MAP(), data, old_document_pair);
+				return prepare(document_id, document_ver, MsgPack::MAP(), data, old_document_pair);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return prepare(document_id, MsgPack::MAP(), data, old_document_pair);
+				return prepare(document_id, document_ver, MsgPack::MAP(), data, old_document_pair);
 			case MsgPack::Type::MAP:
 				inject_data(data, body);
-				return prepare(document_id, body, data, old_document_pair);
+				return prepare(document_id, document_ver, body, data, old_document_pair);
 			default:
 				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 		}
@@ -481,11 +484,11 @@ DatabaseHandler::prepare(const MsgPack& document_id, bool stored, const MsgPack&
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit)
 {
 	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit);
 
-	auto prepared = prepare(document_id, obj, data, old_document_pair);
+	auto prepared = prepare(document_id, document_ver, obj, data, old_document_pair);
 	auto& term_id = std::get<0>(prepared);
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -497,7 +500,7 @@ DatabaseHandler::index(const MsgPack& document_id, const MsgPack& obj, Data& dat
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
 
@@ -519,14 +522,14 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 					}
 					data.update(ct_type, blob);
 				}
-				return index(document_id, MsgPack::MAP(), data, old_document_pair, commit);
+				return index(document_id, document_ver, MsgPack::MAP(), data, old_document_pair, commit);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return index(document_id, MsgPack::MAP(), data, old_document_pair, commit);
+				return index(document_id, document_ver, MsgPack::MAP(), data, old_document_pair, commit);
 			case MsgPack::Type::MAP:
 				inject_data(data, body);
-				return index(document_id, body, data, old_document_pair, commit);
+				return index(document_id, document_ver, body, data, old_document_pair, commit);
 			default:
 				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 		}
@@ -540,7 +543,7 @@ DatabaseHandler::index(const MsgPack& document_id, bool stored, const MsgPack& b
 
 
 DataType
-DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool commit, const ct_type_t& /*ct_type*/)
+DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, const ct_type_t& /*ct_type*/)
 {
 	L_CALL("DatabaseHandler::patch({}, <patches>, {})", repr(document_id.to_string()), commit);
 
@@ -571,7 +574,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 
 		apply_patch(patches, obj);
 
-		return index(document_id, obj, data, old_document_pair, commit);
+		return index(document_id, document_ver, obj, data, old_document_pair, commit);
 	} catch (...) {
 		if (old_document_pair != nullptr) {
 			dec_document_change_cnt(old_document_pair);
@@ -582,7 +585,7 @@ DatabaseHandler::patch(const MsgPack& document_id, const MsgPack& patches, bool 
 
 
 DataType
-DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
+DatabaseHandler::merge(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::merge({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored, commit, ct_type.first, ct_type.second);
 
@@ -618,28 +621,28 @@ DatabaseHandler::merge(const MsgPack& document_id, bool stored, const MsgPack& b
 					}
 					data.update(ct_type, blob);
 				}
-				return index(document_id, obj, data, old_document_pair, commit);
+				return index(document_id, document_ver, obj, data, old_document_pair, commit);
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED:
 				data.erase(ct_type);
-				return index(document_id, obj, data, old_document_pair, commit);
+				return index(document_id, document_ver, obj, data, old_document_pair, commit);
 			case MsgPack::Type::MAP:
 				if (stored) {
 					THROW(ClientError, "Objects of this type cannot be put in storage");
 				}
 				if (obj.empty()) {
 					inject_data(data, body);
-					return index(document_id, body, data, old_document_pair, commit);
+					return index(document_id, document_ver, body, data, old_document_pair, commit);
 				} else {
 					obj.update(body);
 					inject_data(data, obj);
-					return index(document_id, obj, data, old_document_pair, commit);
+					return index(document_id, document_ver, obj, data, old_document_pair, commit);
 				}
 			default:
 				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 		}
 
-		return index(document_id, obj, data, old_document_pair, commit);
+		return index(document_id, document_ver, obj, data, old_document_pair, commit);
 	} catch (...) {
 		if (old_document_pair != nullptr) {
 			dec_document_change_cnt(old_document_pair);
@@ -1040,7 +1043,7 @@ DatabaseHandler::restore(int fd)
 				try {
 					DatabaseHandler db_handler(endpoints, flags, method);
 					std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-					queue.enqueue(db_handler.prepare(document_id, obj, data, old_document_pair));
+					queue.enqueue(db_handler.prepare(document_id, 0, obj, data, old_document_pair));
 				} catch (...) {
 					L_EXC("ERROR: Cannot prepare document");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
@@ -1119,7 +1122,7 @@ DatabaseHandler::prepare_document(const MsgPack& obj)
 	inject_data(data, obj);
 
 	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-	return prepare(document_id, obj, data, old_document_pair);
+	return prepare(document_id, 0, obj, data, old_document_pair);
 }
 
 

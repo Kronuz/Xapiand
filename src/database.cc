@@ -915,7 +915,8 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 					auto ver_prefix_size = ver_prefix.size();
 					auto t_end = wdb->allterms_end(ver_prefix);
 					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-						std::string_view current_ver(*tit);
+						std::string current_term = *tit;
+						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
 							if (!ver.empty() && ver != current_ver) {
@@ -1234,7 +1235,8 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 					auto ver_prefix_size = ver_prefix.size();
 					auto t_end = wdb->allterms_end(ver_prefix);
 					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-						std::string_view current_ver(*tit);
+						std::string current_term = *tit;
+						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
 							if (!ver.empty() && ver != current_ver) {
@@ -1248,7 +1250,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 				}
 				ver = serialise_length(++version);
 				doc.add_term(ver_prefix + ver);
-				doc.add_value(DB_SLOT_VERSION, ver);  // Remove version check
+				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 			}
 			if (did) {
 				wdb->replace_document(did, doc);
