@@ -32,6 +32,7 @@
 #include "log.h"                                  // for L_EXC
 #include "lru.h"                                  // for lru::LRU
 #include "msgpack.h"                              // for MsgPack
+#include "repr.hh"                                // for repr
 
 namespace chaipp {
 
@@ -80,7 +81,7 @@ Engine::compile(std::string_view script_name, std::string_view script_body)
 
 	auto processor = std::make_shared<Processor>(script_name, script_body);
 
-	L_INFO("Script {} #{:x} compiled and ready.", script_name, script_body_hash);
+	L_INFO("Script {} #{:x} compiled and ready.", repr(script_name), script_body_hash);
 
 	lk.lock();
 	return script_lru.emplace(std::string(script_name), std::make_pair(script_body_hash, std::move(processor))).first->second.second;

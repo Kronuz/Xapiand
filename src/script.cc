@@ -226,7 +226,7 @@ Script::process_chai(bool strict)
 				}
 				return MsgPack({
 					{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-					{ RESERVED_CHAI, body      },
+					{ RESERVED_CHAI, value },
 				});
 			} else {
 				if (!value.empty() && !body.empty() && !name.empty()) {
