@@ -282,7 +282,9 @@ Database::reopen_writable()
 	const auto& endpoint = endpoints[0];
 	ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-	ASSERT(endpoint.node.remote_port != 0);
+	if (endpoint.node.remote_port == 0) {
+		throw Xapian::NetworkError("Invalid port");
+	}
 #endif  // XAPIAND_CLUSTERING
 
 	Xapian::WritableDatabase wsdb;
@@ -399,7 +401,9 @@ Database::reopen_readable()
 	for (const auto& endpoint : endpoints) {
 		ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-		ASSERT(endpoint.node.remote_port != 0);
+		if (endpoint.node.remote_port == 0) {
+			throw Xapian::NetworkError("Invalid port");
+		}
 #endif  // XAPIAND_CLUSTERING
 
 		Xapian::Database rsdb;
