@@ -339,15 +339,8 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 }
 
 
-Document
-DatabaseHandler::get_document_term(std::string_view term_id)
-{
-	return get_document_term(std::string(term_id));
-}
-
-
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, const Script& script, const Data& data)
+DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
 #ifdef XAPIAND_CHAISCRIPT
 	auto processor = chaipp::Processor::compile(script);
@@ -1098,7 +1091,7 @@ DatabaseHandler::prepare_document(const MsgPack& obj)
 
 
 MSet
-DatabaseHandler::get_all_mset(std::string_view term, Xapian::docid initial, size_t limit)
+DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, size_t limit)
 {
 	L_CALL("DatabaseHandler::get_all_mset()");
 
@@ -1549,6 +1542,23 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 
 	lock_database lk_db(this);
 	return database()->replace_document(did, std::move(doc), commit);
+}
+
+
+Xapian::docid
+DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit)
+{
+	L_CALL("Database::replace_document({}, <doc>)", did);
+
+	auto did = to_docid(document_id);
+	if (did != 0u) {
+		return database()->replace_document(did, std::move(doc), commit);
+	}
+
+	const auto term_id = get_prefixed_term_id(document_id);
+
+	lock_database lk_db(this);
+	return database()->replace_document_term(term_id, std::move(doc), commit);
 }
 
 

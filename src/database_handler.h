@@ -181,7 +181,7 @@ class DatabaseHandler : public LockableDatabase {
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, const Script& script, const Data& data);
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
 #endif
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);
@@ -217,7 +217,7 @@ public:
 	void delete_schema();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
-	MSet get_all_mset(std::string_view term = "", Xapian::docid initial = 0, size_t limit = -1);
+	MSet get_all_mset(const std::string& term = "", Xapian::docid initial = 0, size_t limit = -1);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
 	MSet get_mset(const Xapian::Query& query, unsigned offset = 0, unsigned limit = 10, unsigned check_at_least = 0, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr);
 
@@ -240,13 +240,14 @@ public:
 
 	Document get_document(Xapian::docid did);
 	Document get_document(std::string_view document_id);
-	Document get_document_term(const std::string& term_id);
-	Document get_document_term(std::string_view term_id);
+	Document get_document_term(const std::string& term);
 	Xapian::docid get_docid(std::string_view document_id);
 
 	void delete_document(std::string_view document_id, bool commit = false);
+	void delete_document_term(const std::string& term, bool commit = false);
 
 	Xapian::docid replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit = false);
+	Xapian::docid replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit = false);
 	Xapian::docid replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit = false);
 
 	MsgPack get_document_info(std::string_view document_id, bool raw_data);
