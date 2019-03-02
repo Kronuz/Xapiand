@@ -921,7 +921,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 						if (!current_ver.empty()) {
 							if (version_ && !ver.empty() && ver != current_ver) {
 								// Throw error about wrong version!
-								THROW(ConflictError, "Version mismatch!");
+								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 							break;
 						}
@@ -1241,7 +1241,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 						if (!current_ver.empty()) {
 							if (version_ && !ver.empty() && ver != current_ver) {
 								// Throw error about wrong version!
-								THROW(ConflictError, "Version mismatch!");
+								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 							version = unserialise_length(current_ver);
 							break;

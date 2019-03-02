@@ -129,7 +129,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			THROW(TimeOutError, "Database is not available");
+			throw Xapian::DatabaseNotAvailableError("Database is not available");
 		}
 		if (!writable) {
 			writable = std::make_shared<Database>(*this, flags);
@@ -147,7 +147,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					THROW(TimeOutError, "Database is not available");
+					throw Xapian::DatabaseNotAvailableError("Database is not available");
 				}
 			} else {
 				while (!writable_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -157,7 +157,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				THROW(TimeOutError, "Database is not available");
+				throw Xapian::DatabaseNotAvailableError("Database is not available");
 			}
 		}
 	} while (true);
@@ -174,7 +174,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			THROW(TimeOutError, "Database is not available");
+			throw Xapian::DatabaseNotAvailableError("Database is not available");
 		}
 		if (readables_available > 0) {
 			for (auto& readable : readables) {
@@ -206,7 +206,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					THROW(TimeOutError, "Database is not available");
+					throw Xapian::DatabaseNotAvailableError("Database is not available");
 				}
 			} else {
 				while (!readables_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -216,7 +216,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				THROW(TimeOutError, "Database is not available");
+				throw Xapian::DatabaseNotAvailableError("Database is not available");
 			}
 		}
 	} while (true);
@@ -568,12 +568,12 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	if (timeout > 0.0) {
 		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
 		if (!database->endpoints.lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
-			THROW(TimeOutError, "Cannot grant exclusive lock database");
+			throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock database");
 		}
 	} else {
 		while (!database->endpoints.lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
 			if (database->endpoints.is_finished()) {
-				THROW(TimeOutError, "Cannot grant exclusive lock database");
+				throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock database");
 			}
 		}
 	}

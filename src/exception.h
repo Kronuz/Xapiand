@@ -113,34 +113,6 @@ public:
 };
 
 
-class CheckoutError : public Exception {
-public:
-	template<typename... Args>
-	CheckoutError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
-class CheckoutErrorReplicating : public CheckoutError {
-public:
-	template<typename... Args>
-	CheckoutErrorReplicating(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
-};
-
-
-class CheckoutErrorBadEndpoint : public CheckoutError {
-public:
-	template<typename... Args>
-	CheckoutErrorBadEndpoint(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
-};
-
-
-class CheckoutErrorEndpointNotAvailable : public CheckoutError {
-public:
-	template<typename... Args>
-	CheckoutErrorEndpointNotAvailable(Args&&... args) : CheckoutError(std::forward<Args>(args)...) { }
-};
-
-
 class SystemExit : public BaseException, public std::runtime_error {
 public:
 	int code;
@@ -162,24 +134,17 @@ public:
 };
 
 
-class TimeOutError : public ClientError {
+class UnavaliableError : public Exception {
 public:
 	template<typename... Args>
-	TimeOutError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+	UnavaliableError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
 };
 
 
-class ConflictError : public ClientError {
+class DocVersionConflictError : public ClientError, public Xapian::DocVersionConflictError {
 public:
 	template<typename... Args>
-	ConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
-};
-
-
-class LimitError : public ClientError {
-public:
-	template<typename... Args>
-	LimitError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocVersionConflictError(message) { }
 };
 
 

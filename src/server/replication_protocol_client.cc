@@ -176,7 +176,7 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 		temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
 
 		L_REPLICATION("init_replication_protocol initialized: {} -->  {}", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
-	} catch (const TimeOutError&) {
+	} catch (const Xapian::DatabaseNotAvailableError&) {
 		L_REPLICATION("init_replication_protocol deferred: {} -->  {}", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
 		return false;
 	} catch (...) {

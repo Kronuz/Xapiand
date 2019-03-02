@@ -405,24 +405,17 @@ HttpClient::handled_errors(Request& request, Func&& func)
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-	} catch (const TimeOutError& exc) {
-		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-	} catch (const ConflictError& exc) {
+	} catch (const Xapian::DocVersionConflictError& exc) {
 		error_code = HTTP_STATUS_CONFLICT;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-	} catch (const ClientError& exc) {
-		error_code = HTTP_STATUS_BAD_REQUEST;
-		error.assign(exc.what());
-	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
-		error_code = HTTP_STATUS_BAD_GATEWAY;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_description());
 	} catch (const Xapian::DocNotFoundError&) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
 	} catch (const Xapian::DatabaseNotFoundError&) {
 		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign(http_status_str(error_code));
+	} catch (const Xapian::DatabaseNotAvailableError& exc) {
+		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_description());
 	} catch (const Xapian::NetworkTimeoutError& exc) {
 		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
 		error.assign(exc.get_description());
@@ -464,6 +457,12 @@ HttpClient::handled_errors(Request& request, Func&& func)
 				error.assign(exc.get_description());
 				L_EXC("ERROR: Dispatching HTTP request");
 		}
+	} catch (const ClientError& exc) {
+		error_code = HTTP_STATUS_BAD_REQUEST;
+		error.assign(exc.what());
+	} catch (const UnavaliableError& exc) {
+		error_code = HTTP_STATUS_BAD_GATEWAY;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");

@@ -1545,7 +1545,7 @@ XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool maste
 			break;
 		}
 	}
-	THROW(CheckoutErrorEndpointNotAvailable, "Endpoint not available!");
+	THROW(UnavaliableError, "Endpoint not available!");
 }
 
 
