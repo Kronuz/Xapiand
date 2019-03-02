@@ -105,7 +105,6 @@ constexpr const char RESPONSE_NODES[]               = "#nodes";
 constexpr const char RESPONSE_COMMIT[]              = "#commit";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
-constexpr const char RESPONSE_VERSION[]             = "#version";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
 constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
@@ -2308,7 +2307,7 @@ HttpClient::retrieve_view(Request& request)
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			try {
-				obj[RESPONSE_VERSION] = unserialise_length(version);
+				obj[RESERVED_VERSION] = unserialise_length(version);
 			} catch (const SerialisationError&) {}
 		}
 
@@ -2454,7 +2453,7 @@ HttpClient::search_view(Request& request)
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			try {
-				hit_obj[RESPONSE_VERSION] = unserialise_length(version);
+				hit_obj[RESERVED_VERSION] = unserialise_length(version);
 			} catch (const SerialisationError&) {}
 		}
 		hit_obj[RESPONSE_RANK] = m.get_rank();
