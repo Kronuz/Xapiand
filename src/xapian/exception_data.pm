@@ -175,6 +175,16 @@ errorclass(21, 'DatabaseClosedError', 'DatabaseError',
 	   'Indicates an attempt to access a closed database.',
 	   '');
 
+# Xapiand specific exceptions:
+
+errorclass(22, 'DatabaseNotAvailableError', 'DatabaseOpeningError',
+	   'Indicates an attempt to access a database not present.',
+	   '');
+
+errorclass(23, 'DocVersionConflictError', 'RuntimeError',
+	   'Indicates a version conflict error when trying to update or delete a document.',
+	   '');
+
 sub for_each_nothrow {
     my $func = shift @_;
     my $class = '';
