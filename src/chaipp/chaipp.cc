@@ -146,7 +146,7 @@ Processor::Processor(const Script& script) :
 		} catch (const Xapian::DocNotFoundError&) {
 			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, foreign_id);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
-			THROW(ClientError, "Foreign script database {} doesn't exist", foreign_path);
+			THROW(ClientError, "Foreign script database {} doesn't exist", repr(foreign_path));
 		}
 		if (!selector.empty()) {
 			foreign_data_script = foreign_data_script.select(selector);
