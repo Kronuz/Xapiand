@@ -273,22 +273,16 @@ Database::reopen_writable()
 	reset();
 
 	auto endpoints_size = endpoints.size();
-	if (endpoints_size != 1) {
-		THROW(Error, "Writable database must have one single endpoint");
-	}
+	ASSERT(endpoints_size == 1);
 
 	auto database = std::make_unique<Xapian::WritableDatabase>();
 
 	local.store(true, std::memory_order_relaxed);
 
 	const auto& endpoint = endpoints[0];
-	if (endpoint.empty()) {
-		THROW(Error, "Database must not have empty endpoints");
-	}
+	ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-	if (endpoint.node.remote_port == 0) {
-		THROW(Error, "Endpoint must be configured with a proper node port");
-	}
+	ASSERT(endpoint.node.remote_port != 0);
 #endif  // XAPIAND_CLUSTERING
 
 	Xapian::WritableDatabase wsdb;
@@ -394,9 +388,7 @@ Database::reopen_readable()
 	reset();
 
 	auto endpoints_size = endpoints.size();
-	if (endpoints_size == 0) {
-		THROW(Error, "Writable database must have at least one endpoint");
-	}
+	ASSERT(endpoints_size != 0);
 
 	auto database = std::make_unique<Xapian::Database>();
 
@@ -405,13 +397,9 @@ Database::reopen_readable()
 	local.store(true, std::memory_order_relaxed);
 
 	for (const auto& endpoint : endpoints) {
-		if (endpoint.empty()) {
-			THROW(Error, "Database must not have empty endpoints");
-		}
+		ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-		if (endpoint.node.remote_port == 0) {
-			THROW(Error, "Endpoint must be configured with a proper node port");
-		}
+		ASSERT(endpoint.node.remote_port != 0);
 #endif  // XAPIAND_CLUSTERING
 
 		Xapian::Database rsdb;
@@ -707,9 +695,7 @@ Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit({})", wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	if (!is_modified()) {
 		L_DATABASE("Do not commit, because there are not changes");
@@ -776,9 +762,7 @@ Database::begin_transaction(bool flushed)
 {
 	L_CALL("Database::begin_transaction({})", flushed);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	if (transaction == Transaction::none) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -795,9 +779,7 @@ Database::commit_transaction()
 {
 	L_CALL("Database::commit_transaction()");
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	if (transaction != Transaction::none) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -814,9 +796,7 @@ Database::cancel_transaction()
 {
 	L_CALL("Database::cancel_transaction()");
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	if (transaction != Transaction::none) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -833,9 +813,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 {
 	L_CALL("Database::delete_document({}, {}, {})", did, commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -884,9 +862,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 {
 	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1060,9 +1036,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 {
 	L_CALL("Database::add_document(<doc>, {}, {})", commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1128,9 +1102,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 {
 	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1195,9 +1167,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 {
 	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1302,9 +1272,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 {
 	L_CALL("Database::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1354,9 +1322,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	Xapian::termcount result = 0;
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1608,9 +1574,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 {
 	L_CALL("Database::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
-	if (!is_writable()) {
-		THROW(Error, "database is read-only");
-	}
+	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1787,8 +1751,6 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 			} else {
 				throw;
 			}
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
@@ -1868,8 +1830,6 @@ Database::dump_documents()
 			} else {
 				throw;
 			}
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
