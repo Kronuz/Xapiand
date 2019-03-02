@@ -593,7 +593,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
-			_database->delete_document_term(term, false, wal_);
+			_database->delete_document_term(term, false, wal_, false);
 			break;
 		case Type::COMMIT:
 			_database->commit(wal_, send_update);
@@ -608,7 +608,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
 			document = std::string(p + size, p_end - p - size);
-			_database->replace_document_term(term, Xapian::Document::unserialise(document), false, wal_);
+			_database->replace_document_term(term, Xapian::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
 			try {

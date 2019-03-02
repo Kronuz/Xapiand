@@ -880,7 +880,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 
 void
-Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
+Database::delete_document_term(const std::string& term, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
@@ -919,7 +919,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_)
 						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
-							if (!ver.empty() && ver != current_ver) {
+							if (version_ && !ver.empty() && ver != current_ver) {
 								// Throw error about wrong version!
 								THROW(ConflictError, "Version mismatch!");
 							}
@@ -1191,7 +1191,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 
 
 Xapian::docid
-Database::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_)
+Database::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
 
@@ -1239,7 +1239,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
-							if (!ver.empty() && ver != current_ver) {
+							if (version_ && !ver.empty() && ver != current_ver) {
 								// Throw error about wrong version!
 								THROW(ConflictError, "Version mismatch!");
 							}

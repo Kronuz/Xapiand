@@ -170,10 +170,10 @@ public:
 	void cancel_transaction();
 
 	void delete_document(Xapian::docid did, bool commit_ = false, bool wal_ = true);
-	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true);
+	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
 	Xapian::docid add_document(Xapian::Document&& doc, bool commit_ = false, bool wal_ = true);
 	Xapian::docid replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true);
-	Xapian::docid replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true);
+	Xapian::docid replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
 
 	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	Xapian::termcount remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_ = false, bool wal_ = true);
