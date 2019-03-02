@@ -10,7 +10,7 @@ The scripting language currently supported is
 [ChaiScript](http://chaiscript.com){:target="_blank"}.
 
 For example, the following script is used while adding/updating a given document
-to atomically increment a "serial" number field:
+to increment a "serial" number field:
 
 {% capture req %}
 
@@ -66,7 +66,7 @@ expiration.
 {: .note .tip }
 **_Prefer Parameters_**<br>
 The first time Xapiand sees a new script, it compiles it and stores the compiled
-version in a cache. Compilation can be a **heavy** process, so try using
+version in a cache. Compilation can be a **heavy process**, so try using
 _Foreign Scripts_ and _Variables_.
 
 
