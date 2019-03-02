@@ -405,23 +405,24 @@ HttpClient::handled_errors(Request& request, Func&& func)
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-	} catch (const Xapian::DocVersionConflictError& exc) {
-		error_code = HTTP_STATUS_CONFLICT;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_description());
 	} catch (const Xapian::DocNotFoundError&) {
 		error_code = HTTP_STATUS_NOT_FOUND;
 		error.assign(http_status_str(error_code));
 	} catch (const Xapian::DatabaseNotFoundError&) {
 		error_code = HTTP_STATUS_NOT_FOUND;
+		error.assign(http_status_str(error_code));
+	} catch (const Xapian::DocVersionConflictError& exc) {
+		error_code = HTTP_STATUS_CONFLICT;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
 	} catch (const Xapian::DatabaseNotAvailableError& exc) {
 		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_description());
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
 	} catch (const Xapian::NetworkTimeoutError& exc) {
 		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
-		error.assign(exc.get_description());
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(exc.get_description());
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
 	} catch (const Xapian::NetworkError& exc) {
 		std::string msg;
 		const char* error_string = exc.get_error_string();
@@ -459,7 +460,7 @@ HttpClient::handled_errors(Request& request, Func&& func)
 		}
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
-		error.assign(exc.what());
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 	} catch (const UnavaliableError& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
