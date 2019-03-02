@@ -347,7 +347,7 @@ DatabaseHandler::get_document_term(std::string_view term_id)
 
 
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair, const Script& script)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, const Script& script)
 {
 #ifdef XAPIAND_CHAISCRIPT
 	auto processor = chaipp::Processor::compile(script);
@@ -375,18 +375,19 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, st
 			default:
 				return nullptr;
 		}
-		if (old_document_pair == nullptr && !term_id.empty()) {
-			old_document_pair = get_document_change_seq(term_id);
-		}
 		auto doc = std::make_unique<MsgPack>(object);
-		if (old_document_pair != nullptr) {
-			auto old_doc = old_document_pair->second.get_obj();
-			L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
-			(*processor)(http_method, *doc, old_doc, script.get_params());
-		} else {
-			L_INDEX("Script: call({})", doc->to_string(4));
-			(*processor)(http_method, *doc, MsgPack(), script.get_params());
-		}
+
+		Data data;
+		try {
+			auto current_document = get_document_term(term_id);
+			data = Data(current_document.get_data());
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {}
+		auto obj = data.get_obj();
+
+		L_INDEX("Script: call({}, {})", doc->to_string(4), obj.to_string(4));
+		(*processor)(http_method, *doc, obj, script.get_params());
+
 		return doc;
 	}
 	return nullptr;
@@ -397,44 +398,32 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, st
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
+DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data)
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
-#ifdef XAPIAND_CHAISCRIPT
-	while (true) {
-#endif
-		auto schema_begins = std::chrono::system_clock::now();
-		do {
-			schema = get_schema(&obj);
-			L_INDEX("Schema: {}", repr(schema->to_string()));
-			prepared = schema->index(obj, document_id, old_document_pair, *this);
-		} while (!update_schema(schema_begins));
+	auto schema_begins = std::chrono::system_clock::now();
+	do {
+		schema = get_schema(&obj);
+		L_INDEX("Schema: {}", repr(schema->to_string()));
+		prepared = schema->index(obj, document_id, *this);
+	} while (!update_schema(schema_begins));
 
-		auto& term_id = std::get<0>(prepared);
-		auto& doc = std::get<1>(prepared);
-		auto& data_obj = std::get<2>(prepared);
+	auto& doc = std::get<1>(prepared);
+	auto& data_obj = std::get<2>(prepared);
 
-		// Finish document: add data, ID term and ID value.
-		data.set_obj(data_obj);
-		data.flush();
-		auto serialised = data.serialise();
-		if (!serialised.empty()) {
-			doc.set_data(serialised);
-		}
-		if (document_ver) {
-			doc.add_value(DB_SLOT_VERSION, serialise_length(document_ver));  // Request version
-		}
-
-#ifdef XAPIAND_CHAISCRIPT
-		auto current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, data));
-		if (set_document_change_seq(current_document_pair, old_document_pair)) {
-			break;
-		}
+	// Finish document: add data, ID term and ID value.
+	data.set_obj(data_obj);
+	data.flush();
+	auto serialised = data.serialise();
+	if (!serialised.empty()) {
+		doc.set_data(serialised);
 	}
-#endif
+	if (document_ver) {
+		doc.add_value(DB_SLOT_VERSION, serialise_length(document_ver));  // Request version
+	}
 
 	return prepared;
 }
@@ -449,46 +438,38 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 		THROW(Error, "Database is read-only");
 	}
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-	try {
-		Data data;
-		switch (body.getType()) {
-			case MsgPack::Type::STR:
-				if (stored) {
-					data.update(ct_type, -1, 0, 0, body.str_view());
-				} else {
-					auto blob = body.str_view();
-					if (blob.size() > NON_STORED_SIZE_LIMIT) {
-						THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
-					}
-					data.update(ct_type, blob);
+	Data data;
+	switch (body.getType()) {
+		case MsgPack::Type::STR:
+			if (stored) {
+				data.update(ct_type, -1, 0, 0, body.str_view());
+			} else {
+				auto blob = body.str_view();
+				if (blob.size() > NON_STORED_SIZE_LIMIT) {
+					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
-				return prepare(document_id, document_ver, MsgPack::MAP(), data, old_document_pair);
-			case MsgPack::Type::NIL:
-			case MsgPack::Type::UNDEFINED:
-				data.erase(ct_type);
-				return prepare(document_id, document_ver, MsgPack::MAP(), data, old_document_pair);
-			case MsgPack::Type::MAP:
-				inject_data(data, body);
-				return prepare(document_id, document_ver, body, data, old_document_pair);
-			default:
-				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
-		}
-	} catch (...) {
-		if (old_document_pair != nullptr) {
-			dec_document_change_cnt(old_document_pair);
-		}
-		throw;
+				data.update(ct_type, blob);
+			}
+			return prepare(document_id, document_ver, MsgPack::MAP(), data);
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED:
+			data.erase(ct_type);
+			return prepare(document_id, document_ver, MsgPack::MAP(), data);
+		case MsgPack::Type::MAP:
+			inject_data(data, body);
+			return prepare(document_id, document_ver, body, data);
+		default:
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 	}
 }
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair, bool commit)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit)
 {
 	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit);
 
-	auto prepared = prepare(document_id, document_ver, obj, data, old_document_pair);
+	auto prepared = prepare(document_id, document_ver, obj, data);
 	auto& term_id = std::get<0>(prepared);
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -508,36 +489,28 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-	try {
-		Data data;
-		switch (body.getType()) {
-			case MsgPack::Type::STR:
-				if (stored) {
-					data.update(ct_type, -1, 0, 0, body.str_view());
-				} else {
-					auto blob = body.str_view();
-					if (blob.size() > NON_STORED_SIZE_LIMIT) {
-						THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
-					}
-					data.update(ct_type, blob);
+	Data data;
+	switch (body.getType()) {
+		case MsgPack::Type::STR:
+			if (stored) {
+				data.update(ct_type, -1, 0, 0, body.str_view());
+			} else {
+				auto blob = body.str_view();
+				if (blob.size() > NON_STORED_SIZE_LIMIT) {
+					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
-				return index(document_id, document_ver, MsgPack::MAP(), data, old_document_pair, commit);
-			case MsgPack::Type::NIL:
-			case MsgPack::Type::UNDEFINED:
-				data.erase(ct_type);
-				return index(document_id, document_ver, MsgPack::MAP(), data, old_document_pair, commit);
-			case MsgPack::Type::MAP:
-				inject_data(data, body);
-				return index(document_id, document_ver, body, data, old_document_pair, commit);
-			default:
-				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
-		}
-	} catch (...) {
-		if (old_document_pair != nullptr) {
-			dec_document_change_cnt(old_document_pair);
-		}
-		throw;
+				data.update(ct_type, blob);
+			}
+			return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED:
+			data.erase(ct_type);
+			return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+		case MsgPack::Type::MAP:
+			inject_data(data, body);
+			return index(document_id, document_ver, body, data, commit);
+		default:
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 	}
 }
 
@@ -561,26 +534,17 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	Data data;
 	try {
-		Data data;
-		if (old_document_pair == nullptr && !term_id.empty()) {
-			old_document_pair = get_document_change_seq(term_id, true);
-		}
-		if (old_document_pair != nullptr) {
-			data = old_document_pair->second;
-		}
-		auto obj = data.get_obj();
+		auto current_document = get_document_term(term_id);
+		data = Data(current_document.get_data());
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+	auto obj = data.get_obj();
 
-		apply_patch(patches, obj);
+	apply_patch(patches, obj);
 
-		return index(document_id, document_ver, obj, data, old_document_pair, commit);
-	} catch (...) {
-		if (old_document_pair != nullptr) {
-			dec_document_change_cnt(old_document_pair);
-		}
-		throw;
-	}
+	return index(document_id, document_ver, obj, data, commit);
 }
 
 
@@ -599,56 +563,47 @@ DatabaseHandler::merge(const MsgPack& document_id, Xapian::rev document_ver, boo
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
+	Data data;
 	try {
-		Data data;
-		if (old_document_pair == nullptr && !term_id.empty()) {
-			old_document_pair = get_document_change_seq(term_id, !stored);
-		}
-		if (old_document_pair != nullptr) {
-			data = old_document_pair->second;
-		}
-		auto obj = data.get_obj();
+		auto current_document = get_document_term(term_id);
+		data = Data(current_document.get_data());
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+	auto obj = data.get_obj();
 
-		switch (body.getType()) {
-			case MsgPack::Type::STR:
-				if (stored) {
-					data.update(ct_type, -1, 0, 0, body.str_view());
-				} else {
-					auto blob = body.str_view();
-					if (blob.size() > NON_STORED_SIZE_LIMIT) {
-						THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
-					}
-					data.update(ct_type, blob);
+	switch (body.getType()) {
+		case MsgPack::Type::STR:
+			if (stored) {
+				data.update(ct_type, -1, 0, 0, body.str_view());
+			} else {
+				auto blob = body.str_view();
+				if (blob.size() > NON_STORED_SIZE_LIMIT) {
+					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
-				return index(document_id, document_ver, obj, data, old_document_pair, commit);
-			case MsgPack::Type::NIL:
-			case MsgPack::Type::UNDEFINED:
-				data.erase(ct_type);
-				return index(document_id, document_ver, obj, data, old_document_pair, commit);
-			case MsgPack::Type::MAP:
-				if (stored) {
-					THROW(ClientError, "Objects of this type cannot be put in storage");
-				}
-				if (obj.empty()) {
-					inject_data(data, body);
-					return index(document_id, document_ver, body, data, old_document_pair, commit);
-				} else {
-					obj.update(body);
-					inject_data(data, obj);
-					return index(document_id, document_ver, obj, data, old_document_pair, commit);
-				}
-			default:
-				THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
-		}
-
-		return index(document_id, document_ver, obj, data, old_document_pair, commit);
-	} catch (...) {
-		if (old_document_pair != nullptr) {
-			dec_document_change_cnt(old_document_pair);
-		}
-		throw;
+				data.update(ct_type, blob);
+			}
+			return index(document_id, document_ver, obj, data, commit);
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED:
+			data.erase(ct_type);
+			return index(document_id, document_ver, obj, data, commit);
+		case MsgPack::Type::MAP:
+			if (stored) {
+				THROW(ClientError, "Objects of this type cannot be put in storage");
+			}
+			if (obj.empty()) {
+				inject_data(data, body);
+				return index(document_id, document_ver, body, data, commit);
+			} else {
+				obj.update(body);
+				inject_data(data, obj);
+				return index(document_id, document_ver, obj, data, commit);
+			}
+		default:
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 	}
+
+	return index(document_id, document_ver, obj, data, commit);
 }
 
 
@@ -1042,8 +997,7 @@ DatabaseHandler::restore(int fd)
 			]() mutable {
 				try {
 					DatabaseHandler db_handler(endpoints, flags, method);
-					std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-					queue.enqueue(db_handler.prepare(document_id, 0, obj, data, old_document_pair));
+					queue.enqueue(db_handler.prepare(document_id, 0, obj, data));
 				} catch (...) {
 					L_EXC("ERROR: Cannot prepare document");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
@@ -1121,8 +1075,7 @@ DatabaseHandler::prepare_document(const MsgPack& obj)
 	Data data;
 	inject_data(data, obj);
 
-	std::shared_ptr<std::pair<std::string, const Data>> old_document_pair;
-	return prepare(document_id, 0, obj, data, old_document_pair);
+	return prepare(document_id, 0, obj, data);
 }
 
 
@@ -1688,135 +1641,6 @@ DatabaseHandler::reopen()
 	lock_database lk_db(this);
 	return database()->reopen();
 }
-
-
-#ifdef XAPIAND_CHAISCRIPT
-std::mutex DatabaseHandler::documents_mtx;
-std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> DatabaseHandler::documents;
-
-const std::shared_ptr<std::pair<std::string, const Data>>
-DatabaseHandler::get_document_change_seq(std::string_view term_id, bool validate_exists)
-{
-	L_CALL("DatabaseHandler::get_document_change_seq({}, {})", endpoints.to_string(), repr(term_id));
-
-	ASSERT(endpoints.size() == 1);
-	auto key = endpoints[0].path + "/" + std::string(term_id);
-	bool is_local = endpoints[0].is_local();
-
-	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
-
-	auto it = is_local ? DatabaseHandler::documents.find(key) : DatabaseHandler::documents.end();
-
-	std::shared_ptr<std::pair<std::string, const Data>> current_document_pair;
-	if (it == DatabaseHandler::documents.end()) {
-		lk.unlock();
-
-		// Get document from database
-		try {
-			auto current_document = get_document_term(term_id);
-			current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(term_id, Data(current_document.get_data())));
-		} catch (const Xapian::DocNotFoundError&) {
-			if (validate_exists) {
-				throw;
-			}
-		} catch (const Xapian::DatabaseNotFoundError&) {
-			if (validate_exists) {
-				throw;
-			}
-		}
-
-		lk.lock();
-
-		if (is_local) {
-			it = DatabaseHandler::documents.emplace(key, current_document_pair).first;
-			current_document_pair = it->second;
-		}
-	} else {
-		current_document_pair = it->second;
-	}
-
-	return current_document_pair;
-}
-
-
-bool
-DatabaseHandler::set_document_change_seq(const std::shared_ptr<std::pair<std::string, const Data>>& new_document_pair, std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
-{
-	L_CALL("DatabaseHandler::set_document_change_seq({}, {})", repr(new_document_pair->first), old_document_pair ? repr(old_document_pair->first) : "nullptr");
-
-	ASSERT(endpoints.size() == 1);
-	auto key = endpoints[0].path + "/" + new_document_pair->first;
-	bool is_local = endpoints[0].is_local();
-
-	std::unique_lock<std::mutex> lk(DatabaseHandler::documents_mtx);
-
-	auto it = is_local ? DatabaseHandler::documents.find(key) : DatabaseHandler::documents.end();
-
-	std::shared_ptr<std::pair<std::string, const Data>> current_document_pair;
-	if (it == DatabaseHandler::documents.end()) {
-		if (old_document_pair != nullptr) {
-			lk.unlock();
-
-			// Get document from database
-			try {
-				auto current_document = get_document_term(new_document_pair->first);
-				current_document_pair = std::make_shared<std::pair<std::string, const Data>>(std::make_pair(new_document_pair->first, Data(current_document.get_data())));
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {}
-
-			lk.lock();
-
-			if (is_local) {
-				it = DatabaseHandler::documents.emplace(key, current_document_pair).first;
-				current_document_pair = it->second;
-			}
-		}
-	} else {
-		current_document_pair = it->second;
-	}
-
-	bool accepted = (old_document_pair == nullptr || (current_document_pair && old_document_pair->second == current_document_pair->second));
-
-	current_document_pair.reset();
-	old_document_pair.reset();
-
-	if (it != DatabaseHandler::documents.end()) {
-		if (it->second.use_count() == 1) {
-			DatabaseHandler::documents.erase(it);
-		} else if (accepted) {
-			it->second = new_document_pair;
-		}
-	}
-
-	return accepted;
-}
-
-
-void
-DatabaseHandler::dec_document_change_cnt(std::shared_ptr<std::pair<std::string, const Data>>& old_document_pair)
-{
-	L_CALL("DatabaseHandler::dec_document_change_cnt({})", endpoints.to_string(), repr(old_document_pair->first));
-
-	ASSERT(endpoints.size() == 1);
-	auto key = endpoints[0].path + "/" + old_document_pair->first;
-	bool is_local = endpoints[0].is_local();
-
-	std::lock_guard<std::mutex> lk(DatabaseHandler::documents_mtx);
-
-	auto it = DatabaseHandler::documents.end();
-	if (is_local) {
-		it = DatabaseHandler::documents.find(key);
-	}
-
-	old_document_pair.reset();
-
-	if (it != DatabaseHandler::documents.end()) {
-		if (it->second.use_count() == 1) {
-			DatabaseHandler::documents.erase(it);
-		}
-	}
-}
-#endif
 
 
 //  ____             ___           _
