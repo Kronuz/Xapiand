@@ -406,12 +406,15 @@ HttpClient::handled_errors(Request& request, Func&& func)
 	} catch (const MissingTypeError& exc) {
 		error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		error.assign(exc.what());
-	} catch (const ClientError& exc) {
-		error_code = HTTP_STATUS_BAD_REQUEST;
-		error.assign(exc.what());
 	} catch (const TimeOutError& exc) {
 		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+	} catch (const ConflictError& exc) {
+		error_code = HTTP_STATUS_CONFLICT;
+		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
+	} catch (const ClientError& exc) {
+		error_code = HTTP_STATUS_BAD_REQUEST;
+		error.assign(exc.what());
 	} catch (const CheckoutErrorEndpointNotAvailable& exc) {
 		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());

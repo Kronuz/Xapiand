@@ -155,13 +155,6 @@ public:
 };
 
 
-class TimeOutError : public Exception {
-public:
-	template<typename... Args>
-	TimeOutError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
 class ClientError : public Exception {
 public:
 	template<typename... Args>
@@ -169,10 +162,24 @@ public:
 };
 
 
-class LimitError : public Exception {
+class TimeOutError : public ClientError {
 public:
 	template<typename... Args>
-	LimitError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
+	TimeOutError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
+class ConflictError : public ClientError {
+public:
+	template<typename... Args>
+	ConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
+};
+
+
+class LimitError : public ClientError {
+public:
+	template<typename... Args>
+	LimitError(Args&&... args) : ClientError(std::forward<Args>(args)...) { }
 };
 
 
