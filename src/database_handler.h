@@ -181,7 +181,7 @@ class DatabaseHandler : public LockableDatabase {
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
-	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, const Script& script);
+	std::unique_ptr<MsgPack> call_script(const MsgPack& object, std::string_view term_id, const Script& script, const Data& data);
 #endif
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);

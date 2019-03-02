@@ -347,7 +347,7 @@ DatabaseHandler::get_document_term(std::string_view term_id)
 
 
 std::unique_ptr<MsgPack>
-DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, const Script& script)
+DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, const Script& script, const Data& data)
 {
 #ifdef XAPIAND_CHAISCRIPT
 	auto processor = chaipp::Processor::compile(script);
@@ -375,19 +375,23 @@ DatabaseHandler::call_script(const MsgPack& object, std::string_view term_id, co
 			default:
 				return nullptr;
 		}
+
+		MsgPack old_doc;
+		if (data.serialise().empty()) {
+			Data current_data;
+			try {
+				auto current_document = get_document_term(term_id);
+				current_data = Data(current_document.get_data());
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
+			old_doc = current_data.get_obj();
+		} else {
+			old_doc = data.get_obj();
+		}
+
 		auto doc = std::make_unique<MsgPack>(object);
-
-		Data data;
-		try {
-			auto current_document = get_document_term(term_id);
-			data = Data(current_document.get_data());
-		} catch (const Xapian::DocNotFoundError&) {
-		} catch (const Xapian::DatabaseNotFoundError&) {}
-		auto obj = data.get_obj();
-
-		L_INDEX("Script: call({}, {})", doc->to_string(4), obj.to_string(4));
-		(*processor)(http_method, *doc, obj, script.get_params());
-
+		L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
+		(*processor)(http_method, *doc, old_doc, script.get_params());
 		return doc;
 	}
 	return nullptr;
@@ -408,13 +412,15 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 	do {
 		schema = get_schema(&obj);
 		L_INDEX("Schema: {}", repr(schema->to_string()));
-		prepared = schema->index(obj, document_id, *this);
+		prepared = schema->index(obj, document_id, *this, data);
 	} while (!update_schema(schema_begins));
 
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
 
 	// Finish document: add data, ID term and ID value.
+	// The following flush() **must** be after passing data to Schema::index() as
+	// it uses it to get the old document during DatabaseHandler::call_script().
 	data.set_obj(data_obj);
 	data.flush();
 	auto serialised = data.serialise();

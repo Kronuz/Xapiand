@@ -2571,7 +2571,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
  */
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler)
+Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data)
 {
 	L_CALL("Schema::index({}, {}, <db_handler>)", repr(object.to_string()), repr(document_id.to_string()));
 	static UUIDGenerator generator;
@@ -2678,7 +2678,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 #ifdef XAPIAND_CHAISCRIPT
 		std::unique_ptr<MsgPack> mut_object;
 		if (specification.script) {
-			mut_object = db_handler.call_script(object, term_id, *specification.script);
+			mut_object = db_handler.call_script(object, term_id, *specification.script, data);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
 					THROW(ClientError, "Script must return an object, it returned {}", mut_object->getStrType());
