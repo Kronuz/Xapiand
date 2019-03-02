@@ -1477,7 +1477,6 @@ DatabaseHandler::get_document(Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::get_document((Xapian::docid){})", did);
 
-	lock_database lk_db(this);
 	return Document(did, this);
 }
 
