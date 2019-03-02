@@ -474,8 +474,20 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
 
-	lock_database lk_db(this);
-	auto did = database()->replace_document_term(term_id, std::move(doc), commit);
+	auto did = replace_document_term(term_id, std::move(doc), commit);
+
+	try {
+		// TODO: This may be somewhat expensive, but replace_document() doesn't
+		//       currently return the "version".
+		Document document(did, this);
+		auto version = document.get_value(DB_SLOT_VERSION);
+		if (!version.empty()) {
+			data_obj[RESERVED_VERSION] = unserialise_length(version);
+		}
+	} catch(...) {
+		L_EXC("Cannot retrieve document version for docid {}!", did);
+	}
+
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
@@ -1531,6 +1543,16 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 
 	lock_database lk_db(this);
 	return database()->replace_document(did, std::move(doc), commit);
+}
+
+
+Xapian::docid
+DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit)
+{
+	L_CALL("Database::replace_document({}, <doc>)", did);
+
+	lock_database lk_db(this);
+	return database()->replace_document_term(term, std::move(doc), commit);
 }
 
 

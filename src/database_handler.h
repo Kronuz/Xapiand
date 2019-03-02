@@ -247,6 +247,7 @@ public:
 	void delete_document(std::string_view document_id, bool commit = false);
 
 	Xapian::docid replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit = false);
+	Xapian::docid replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit = false);
 
 	MsgPack get_document_info(std::string_view document_id, bool raw_data);
 	MsgPack get_database_info();
