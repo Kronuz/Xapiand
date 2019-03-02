@@ -128,10 +128,10 @@ inline void _incr(MsgPack& o, double val, double limit) {
 		o += val;
 		if (val < 0) {
 			if (o.f64() <= limit) {
-				THROW(LimitError, "Limit exceeded");
+				THROW(ClientError, "Limit exceeded");
 			}
 		} else if (o.f64() >= limit) {
-			THROW(LimitError, "Limit exceeded");
+			THROW(ClientError, "Limit exceeded");
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Object is not numeric");

@@ -267,7 +267,7 @@ Database::reopen_writable()
 	bool created = false;
 
 	if (is_closed()) {
-		THROW(Error, "database is closed");
+		throw Xapian::DatabaseClosedError("Database has been closed");
 	}
 
 	reset();
@@ -388,7 +388,7 @@ Database::reopen_readable()
 	bool created = false;
 
 	if (is_closed()) {
-		THROW(Error, "database is closed");
+		throw Xapian::DatabaseClosedError("Database has been closed");
 	}
 
 	reset();
@@ -554,7 +554,7 @@ Database::db()
 	L_CALL("Database::db()");
 
 	if (is_closed()) {
-		THROW(Error, "database is closed");
+		throw Xapian::DatabaseClosedError("Database has been closed");
 	}
 
 	if (!_database) {

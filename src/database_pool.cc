@@ -754,14 +754,14 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 
 	if (endpoints.empty()) {
 		L_DEBUG("ERROR: Expecting at least one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
-		THROW(CheckoutErrorBadEndpoint, "Cannot checkout empty database");
+		throw Xapian::DatabaseOpeningError("Cannot checkout empty database");
 	}
 
 	bool is_writable = (flags & DB_WRITABLE) == DB_WRITABLE;
 
 	if (is_writable && endpoints.size() != 1) {
 		L_DEBUG("ERROR: Expecting exactly one database, {} requested: {}", endpoints.size(), repr(endpoints.to_string()));
-		THROW(CheckoutErrorBadEndpoint, "Cannot checkout writable multi-database");
+		throw Xapian::DatabaseOpeningError("Cannot checkout writable multi-database");
 	}
 
 	auto database = spawn(endpoints)->checkout(flags, timeout, callback);

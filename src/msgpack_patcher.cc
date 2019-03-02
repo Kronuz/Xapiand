@@ -255,8 +255,6 @@ void patch_incr(const MsgPack& obj_patch, MsgPack& object) {
 		} catch (const std::out_of_range&) {
 			_incr(o, val_num);
 		}
-	} catch (const LimitError& exc){
-		THROW(ClientError, "In patch increment: {}", exc.what());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch increment: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {
@@ -282,8 +280,6 @@ void patch_decr(const MsgPack& obj_patch, MsgPack& object) {
 		} catch (const std::out_of_range&) {
 			_incr(o, -val_num);
 		}
-	} catch (const LimitError& exc){
-		THROW(ClientError, "In patch decrement: {}", exc.what());
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "In patch decrement: Inconsistent data");
 	} catch (const std::invalid_argument& exc) {

@@ -689,9 +689,9 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
@@ -1114,9 +1114,9 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1287,9 +1287,9 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			mset = enquire.get_mset(offset, limit, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1332,9 +1332,9 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 			mset = enquire.get_mset(offset, limit, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { THROW(Error, "Problem communicating with the remote database: {}", exc.get_description()); }
+			if (t == 0) { throw; }
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1887,10 +1887,8 @@ Document::serialise(size_t retries)
 		auto doc = _get_document();
 		return doc.serialise();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return serialise(--retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
+		if (retries == 0) { throw; }
+		return serialise(--retries);
 	}
 }
 
@@ -1905,10 +1903,8 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 		auto doc = _get_document();
 		return doc.get_value(slot);
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return get_value(slot, --retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
+		if (retries == 0) { throw; }
+		return get_value(slot, --retries);
 	}
 }
 
@@ -1923,10 +1919,8 @@ Document::get_data(size_t retries)
 		auto doc = _get_document();
 		return doc.get_data();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return get_data(--retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
+		if (retries == 0) { throw; }
+		return get_data(--retries);
 	}
 }
 
@@ -1963,10 +1957,8 @@ Document::get_terms(size_t retries)
 		}
 		return terms;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return get_terms(--retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
+		if (retries == 0) { throw; }
+		return get_terms(--retries);
 	}
 }
 
@@ -1989,10 +1981,8 @@ Document::get_values(size_t retries)
 		}
 		return values;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return get_values(--retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
+		if (retries == 0) { throw; }
+		return get_values(--retries);
 	}
 }
 
@@ -2081,9 +2071,7 @@ Document::hash(size_t retries)
 
 		return hash;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
-		if (retries != 0u) {
-			return hash(--retries);
-		}
-		THROW(TimeOutError, "Database was modified, try again: {}", exc.get_description());
+		if (retries == 0) { throw; }
+		return hash(--retries);
 	}
 }
