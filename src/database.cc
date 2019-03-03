@@ -1266,26 +1266,34 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		try {
 			if (is_local()) {
 				std::string ver_prefix;
-				auto it = wdb->postlist_begin(term);
-				if (it == wdb->postlist_end(term)) {
+				if (term == "QN\x80") {
 					did = wdb->get_lastdocid() + 1;
+					auto did_serialised = sortable_serialise(did);
 					ver_prefix = "V" + serialise_length(did);
+					doc.add_boolean_term("QN" + did_serialised);
+					doc.add_value(DB_SLOT_ID, did_serialised);
 				} else {
-					did = *it;
-					ver_prefix = "V" + serialise_length(did);
-					auto ver_prefix_size = ver_prefix.size();
-					auto t_end = wdb->allterms_end(ver_prefix);
-					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-						std::string current_term = *tit;
-						std::string_view current_ver(current_term);
-						current_ver.remove_prefix(ver_prefix_size);
-						if (!current_ver.empty()) {
-							if (version_ && !ver.empty() && ver != current_ver) {
-								// Throw error about wrong version!
-								throw Xapian::DocVersionConflictError("Version mismatch!");
+					auto it = wdb->postlist_begin(term);
+					if (it == wdb->postlist_end(term)) {
+						did = wdb->get_lastdocid() + 1;
+						ver_prefix = "V" + serialise_length(did);
+					} else {
+						did = *it;
+						ver_prefix = "V" + serialise_length(did);
+						auto ver_prefix_size = ver_prefix.size();
+						auto t_end = wdb->allterms_end(ver_prefix);
+						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+							std::string current_term = *tit;
+							std::string_view current_ver(current_term);
+							current_ver.remove_prefix(ver_prefix_size);
+							if (!current_ver.empty()) {
+								if (version_ && !ver.empty() && ver != current_ver) {
+									// Throw error about wrong version!
+									throw Xapian::DocVersionConflictError("Version mismatch!");
+								}
+								version = unserialise_length(current_ver);
+								break;
 							}
-							version = unserialise_length(current_ver);
-							break;
 						}
 					}
 				}

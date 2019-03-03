@@ -48,7 +48,6 @@
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, date, positive
 #include "opts.h"                                 // for opts::*
-#include "random.hh"                              // for random_int
 #include "script.h"                               // for Script
 #include "serialise_list.h"                       // for StringList
 #include "split.h"                                // for Split
@@ -2625,7 +2624,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
 				case FieldType::FLOAT:
-					document_id = random_int(1, static_cast<Xapian::docid>(std::numeric_limits<Xapian::docid>::max() - 1));
+					document_id = 0;
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					break;
 				case FieldType::TEXT:
@@ -2725,7 +2724,9 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			L_INDEX("Slot: {}  Values: {}", elem.first, repr(val_ser));
 		}
 
-		doc.add_boolean_term(term_id);  // make sure the ID term is ALWAYS added!
+		if (term_id != "QN\x80") {
+			doc.add_boolean_term(term_id);  // make sure the ID term is ALWAYS added!
+		}
 
 		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
 	} catch (...) {
@@ -5107,6 +5108,11 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
 			THROW(ClientError, "Keyword too long");
 		}
+		return;
+	}
+
+	if (term == "QN\x80") {
+		// Term reserved for numeric (autoincremented) IDs
 		return;
 	}
 
