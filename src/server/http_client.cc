@@ -439,19 +439,19 @@ HttpClient::handled_errors(Request& request, Func&& func)
 		switch (_.fhhl(error_string)) {
 			case _.fhhl("Can't assign requested address"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint can't assign requested address!");
+				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
 				break;
 			case _.fhhl("Connection refused"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint connection refused!");
+				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
 				break;
 			case _.fhhl("Connection reset by peer"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint connection reset by peer!");
+				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
 				break;
 			case _.fhhl("Connection closed unexpectedly"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign("Endpoint connection closed unexpectedly!");
+				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
 				break;
 			default:
 				error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
