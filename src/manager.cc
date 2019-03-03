@@ -1409,23 +1409,25 @@ index_calculate_replicas(const std::string& normalized_path)
 		}
 		ASSERT(!nodes.empty());
 		auto node = nodes.front();  // first node is master
-		Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
-		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		MsgPack obj = {
-			{ RESERVED_STORE, false },
-			{ ID_FIELD_NAME, {
-				{ RESERVED_TYPE,  KEYWORD_STR },
-			} },
-			{ "replicas", {
-				{ RESERVED_INDEX, "field_values" },
-				{ RESERVED_TYPE,  "array/positive" },
-				{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
-				{ RESERVED_VALUE, std::move(replicas) },
-			} },
-		};
-		// Add a local schema so it doesn't break forced foreign schemas
-		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-		db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+		if (node->is_active()) {
+			Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
+			DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+			MsgPack obj = {
+				{ RESERVED_STORE, false },
+				{ ID_FIELD_NAME, {
+					{ RESERVED_TYPE,  KEYWORD_STR },
+				} },
+				{ "replicas", {
+					{ RESERVED_INDEX, "field_values" },
+					{ RESERVED_TYPE,  "array/positive" },
+					{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
+					{ RESERVED_VALUE, std::move(replicas) },
+				} },
+			};
+			// Add a local schema so it doesn't break forced foreign schemas
+			db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
+			db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+		}
 	}
 	return replicas;
 }
