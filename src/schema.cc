@@ -5439,7 +5439,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for integer type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
 		case FieldType::POSITIVE: {
@@ -5456,7 +5456,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
 		case FieldType::DATE: {
@@ -5647,7 +5647,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for integer type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
 		case FieldType::POSITIVE: {
