@@ -86,6 +86,8 @@ constexpr const char RESPONSE_VALUES[]              = "#values";
 constexpr const char RESPONSE_VOLUME[]              = "#volume";
 constexpr const char RESPONSE_WDF[]                 = "#wdf";
 
+constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
+
 constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
 
 const std::string dump_metadata_header ("xapiand-dump-meta");
@@ -370,11 +372,12 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 		}
 
 		MsgPack old_doc;
-		if (data.serialise().empty()) {
+		if (data.version.empty()) {
 			Data current_data;
 			try {
 				auto current_document = get_document_term(term_id);
 				current_data = Data(current_document.get_data());
+				data.version = current_document.get_value(DB_SLOT_VERSION);  // update version in data
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 			old_doc = current_data.get_obj();
@@ -401,6 +404,12 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
+	if (document_ver && !data.version.empty()) {
+		if (document_ver != unserialise_length(data.version)) {
+			throw Xapian::DocVersionConflictError("Version mismatch!");
+		}
+	}
+
 	auto schema_begins = std::chrono::system_clock::now();
 	do {
 		schema = get_schema(&obj);
@@ -420,8 +429,12 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 	if (!serialised.empty()) {
 		doc.set_data(serialised);
 	}
+
+	// Request version
 	if (document_ver) {
-		doc.add_value(DB_SLOT_VERSION, serialise_length(document_ver));  // Request version
+		doc.add_value(DB_SLOT_VERSION, serialise_length(document_ver));
+	} else if (!data.version.empty()) {
+		doc.add_value(DB_SLOT_VERSION, data.version);
 	}
 
 	return prepared;
@@ -500,28 +513,35 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
-	Data data;
-	switch (body.getType()) {
-		case MsgPack::Type::STR:
-			if (stored) {
-				data.update(ct_type, -1, 0, 0, body.str_view());
-			} else {
-				auto blob = body.str_view();
-				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
-				}
-				data.update(ct_type, blob);
+	int t = CONFLICT_RETRIES;
+	while (true) {
+		try {
+			Data data;
+			switch (body.getType()) {
+				case MsgPack::Type::STR:
+					if (stored) {
+						data.update(ct_type, -1, 0, 0, body.str_view());
+					} else {
+						auto blob = body.str_view();
+						if (blob.size() > NON_STORED_SIZE_LIMIT) {
+							THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+						}
+						data.update(ct_type, blob);
+					}
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+				case MsgPack::Type::NIL:
+				case MsgPack::Type::UNDEFINED:
+					data.erase(ct_type);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+				case MsgPack::Type::MAP:
+					inject_data(data, body);
+					return index(document_id, document_ver, body, data, commit);
+				default:
+					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
-			return index(document_id, document_ver, MsgPack::MAP(), data, commit);
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED:
-			data.erase(ct_type);
-			return index(document_id, document_ver, MsgPack::MAP(), data, commit);
-		case MsgPack::Type::MAP:
-			inject_data(data, body);
-			return index(document_id, document_ver, body, data, commit);
-		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
+		} catch (const Xapian::DocVersionConflictError&) {
+			if (--t == 0 || document_ver) { throw; }
+		}
 	}
 }
 
@@ -545,17 +565,24 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	Data data;
-	try {
-		auto current_document = get_document_term(term_id);
-		data = Data(current_document.get_data());
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
-	auto obj = data.get_obj();
+	int t = CONFLICT_RETRIES;
+	while (true) {
+		try {
+			Data data;
+			try {
+				auto current_document = get_document_term(term_id);
+				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
+			auto obj = data.get_obj();
 
-	apply_patch(patches, obj);
+			apply_patch(patches, obj);
 
-	return index(document_id, document_ver, obj, data, commit);
+			return index(document_id, document_ver, obj, data, commit);
+		} catch (const Xapian::DocVersionConflictError&) {
+			if (--t == 0 || document_ver) { throw; }
+		}
+	}
 }
 
 
@@ -574,47 +601,54 @@ DatabaseHandler::merge(const MsgPack& document_id, Xapian::rev document_ver, boo
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	Data data;
-	try {
-		auto current_document = get_document_term(term_id);
-		data = Data(current_document.get_data());
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
-	auto obj = data.get_obj();
+	int t = CONFLICT_RETRIES;
+	while (true) {
+		try {
+			Data data;
+			try {
+				auto current_document = get_document_term(term_id);
+				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
+			auto obj = data.get_obj();
 
-	switch (body.getType()) {
-		case MsgPack::Type::STR:
-			if (stored) {
-				data.update(ct_type, -1, 0, 0, body.str_view());
-			} else {
-				auto blob = body.str_view();
-				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
-				}
-				data.update(ct_type, blob);
+			switch (body.getType()) {
+				case MsgPack::Type::STR:
+					if (stored) {
+						data.update(ct_type, -1, 0, 0, body.str_view());
+					} else {
+						auto blob = body.str_view();
+						if (blob.size() > NON_STORED_SIZE_LIMIT) {
+							THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+						}
+						data.update(ct_type, blob);
+					}
+					return index(document_id, document_ver, obj, data, commit);
+				case MsgPack::Type::NIL:
+				case MsgPack::Type::UNDEFINED:
+					data.erase(ct_type);
+					return index(document_id, document_ver, obj, data, commit);
+				case MsgPack::Type::MAP:
+					if (stored) {
+						THROW(ClientError, "Objects of this type cannot be put in storage");
+					}
+					if (obj.empty()) {
+						inject_data(data, body);
+						return index(document_id, document_ver, body, data, commit);
+					} else {
+						obj.update(body);
+						inject_data(data, obj);
+						return index(document_id, document_ver, obj, data, commit);
+					}
+				default:
+					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
+
 			return index(document_id, document_ver, obj, data, commit);
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED:
-			data.erase(ct_type);
-			return index(document_id, document_ver, obj, data, commit);
-		case MsgPack::Type::MAP:
-			if (stored) {
-				THROW(ClientError, "Objects of this type cannot be put in storage");
-			}
-			if (obj.empty()) {
-				inject_data(data, body);
-				return index(document_id, document_ver, body, data, commit);
-			} else {
-				obj.update(body);
-				inject_data(data, obj);
-				return index(document_id, document_ver, obj, data, commit);
-			}
-		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
+		} catch (const Xapian::DocVersionConflictError&) {
+			if (--t == 0 || document_ver) { throw; }
+		}
 	}
-
-	return index(document_id, document_ver, obj, data, commit);
 }
 
 

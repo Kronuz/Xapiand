@@ -337,7 +337,8 @@ class Data {
 
 	std::vector<Locator> pending;
 
-	void feed(std::string&& new_serialised) {
+	void feed(std::string&& new_serialised, std::string&& new_version) {
+		version = std::move(new_version);
 		serialised = std::move(new_serialised);
 		locators.clear();
 		if (serialised.size() < 6) {
@@ -417,34 +418,42 @@ class Data {
 	}
 
 public:
+	mutable std::string version;
+
 	Data() {
-		feed(std::string(DATABASE_DATA_MAP));
+		feed(std::string(DATABASE_DATA_MAP), std::string());
 	}
 
 	Data(std::string&& serialised) {
-		feed(std::move(serialised));
+		feed(std::move(serialised), std::string());
+	}
+
+	Data(std::string&& serialised, std::string&& version) {
+		feed(std::move(serialised), std::move(version));
 	}
 
 	Data(Data&& other) {
-		feed(std::move(other.serialised));
+		feed(std::move(other.serialised), std::move(other.version));
 		pending = std::move(other.pending);
 	}
 
 	Data(const Data& other) {
-		auto tmp = other.serialised;
-		feed(std::move(tmp));
+		auto new_serialised = other.serialised;
+		auto new_version = other.version;
+		feed(std::move(new_serialised), std::move(new_version));
 		flush(other.pending);
 	}
 
 	Data& operator=(Data&& other) {
-		feed(std::move(other.serialised));
+		feed(std::move(other.serialised), std::move(other.version));
 		pending = std::move(other.pending);
 		return *this;
 	}
 
 	Data& operator=(const Data& other) {
-		auto tmp = other.serialised;
-		feed(std::move(tmp));
+		auto new_serialised = other.serialised;
+		auto new_version = other.version;
+		feed(std::move(new_serialised), std::move(new_version));
 		flush(other.pending);
 		return *this;
 	}
