@@ -488,6 +488,27 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	auto did = replace_document_term(term_id, std::move(doc), commit);
 
+	if (term_id == "QN\x80") {
+		// Set id inside serialized object:
+		auto it = data_obj.find(ID_FIELD_NAME);
+		if (it != data_obj.end()) {
+			auto& value = it.value();
+			switch (value.getType()) {
+				case MsgPack::Type::POSITIVE_INTEGER:
+					value = static_cast<uint64_t>(did);
+					break;
+				case MsgPack::Type::NEGATIVE_INTEGER:
+					value = static_cast<int64_t>(did);
+					break;
+				case MsgPack::Type::FLOAT:
+					value = static_cast<double>(did);
+					break;
+				default:
+					break;
+			}
+		}
+	}
+
 	try {
 		// TODO: This may be somewhat expensive, but replace_document() doesn't
 		//       currently return the "version".

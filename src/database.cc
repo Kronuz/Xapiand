@@ -1254,6 +1254,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
+	std::string new_term;
 	Xapian::rev version = 0;
 	Xapian::docid did = 0;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
@@ -1267,11 +1268,36 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 			if (is_local()) {
 				std::string ver_prefix;
 				if (term == "QN\x80") {
+					// Special term for autoincrement
 					did = wdb->get_lastdocid() + 1;
-					auto did_serialised = sortable_serialise(did);
 					ver_prefix = "V" + serialise_length(did);
-					doc.add_boolean_term("QN" + did_serialised);
+					auto did_serialised = sortable_serialise(did);
+					new_term = "QN" + did_serialised;
+					doc.add_boolean_term(new_term);
 					doc.add_value(DB_SLOT_ID, did_serialised);
+					// Set id inside serialized object:
+					Data data(doc.get_data());
+					auto data_obj = data.get_obj();
+					auto it = data_obj.find(ID_FIELD_NAME);
+					if (it != data_obj.end()) {
+						auto& value = it.value();
+						switch (value.getType()) {
+							case MsgPack::Type::POSITIVE_INTEGER:
+								value = static_cast<uint64_t>(did);
+								break;
+							case MsgPack::Type::NEGATIVE_INTEGER:
+								value = static_cast<int64_t>(did);
+								break;
+							case MsgPack::Type::FLOAT:
+								value = static_cast<double>(did);
+								break;
+							default:
+								break;
+						}
+						data.set_obj(data_obj);
+						data.flush();
+						doc.set_data(data.serialise());
+					}
 				} else {
 					auto it = wdb->postlist_begin(term);
 					if (it == wdb->postlist_end(term)) {
@@ -1332,7 +1358,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document_term(*this, term, std::move(doc));
+		XapiandManager::wal_writer()->write_replace_document_term(*this, new_term.empty() ? term : new_term, std::move(doc));
 	}
 #else
 	ignore_unused(wal_);

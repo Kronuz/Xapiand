@@ -2622,9 +2622,15 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				case FieldType::INTEGER:
+					document_id = MsgPack(0).as_i64();
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					break;
 				case FieldType::POSITIVE:
+					document_id = MsgPack(0).as_u64();
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					break;
 				case FieldType::FLOAT:
-					document_id = 0;
+					document_id = MsgPack(0).as_f64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					break;
 				case FieldType::TEXT:
