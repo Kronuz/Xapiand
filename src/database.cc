@@ -813,7 +813,7 @@ Database::cancel_transaction()
 
 
 void
-Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
+Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::delete_document({}, {}, {})", did, commit_, wal_);
 
@@ -826,9 +826,31 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_)
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
+	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
+	auto ver = serialise_length(version);
+
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Deleting document: {}  t: {}", did, t);
+
 		try {
+			if (is_local() && version && version_) {
+				std::string ver_prefix;
+				ver_prefix = "V" + serialise_length(did);
+				auto ver_prefix_size = ver_prefix.size();
+				auto t_end = wdb->allterms_end(ver_prefix);
+				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+					std::string current_term = *tit;
+					std::string_view current_ver(current_term);
+					current_ver.remove_prefix(ver_prefix_size);
+					if (!current_ver.empty()) {
+						if (!ver.empty() && ver != current_ver) {
+							// Throw error about wrong version!
+							throw Xapian::DocVersionConflictError("Version mismatch!");
+						}
+						break;
+					}
+				}
+			}
 			wdb->delete_document(did);
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
@@ -884,7 +906,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 		did = 0;
 
 		try {
-			if (is_local() && version) {
+			if (is_local() && version && version_) {
 				std::string ver_prefix;
 				auto it = wdb->postlist_begin(term);
 				if (it == wdb->postlist_end(term)) {
@@ -899,7 +921,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
-							if (version_ && !ver.empty() && ver != current_ver) {
+							if (!ver.empty() && ver != current_ver) {
 								// Throw error about wrong version!
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
@@ -1036,7 +1058,7 @@ Database::storage_commit()
 
 
 Xapian::docid
-Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
+Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 {
 	L_CALL("Database::add_document(<doc>, {}, {})", commit_, wal_);
 
@@ -1056,11 +1078,29 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
+	Xapian::rev version = 0;
 	Xapian::docid did = 0;
+	auto ver = doc.get_value(DB_SLOT_VERSION);
+
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Adding new document.  t: {}", t);
+		version = 0;
+		did = 0;
+
 		try {
-			did = wdb->add_document(doc);
+			if (is_local()) {
+				std::string ver_prefix;
+				did = wdb->get_lastdocid() + 1;
+				ver_prefix = "V" + serialise_length(did);
+				ver = serialise_length(++version);
+				doc.add_term(ver_prefix + ver);
+				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
+			}
+			if (did) {
+				wdb->replace_document(did, doc);
+			} else {
+				did = wdb->add_document(doc);
+			}
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -1102,7 +1142,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_)
 
 
 Xapian::docid
-Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_, bool wal_)
+Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_, wal_);
 
@@ -1122,9 +1162,36 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
+	Xapian::rev version = 0;
+	auto ver = doc.get_value(DB_SLOT_VERSION);
+
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Replacing: {}  t: {}", did, t);
+		version = 0;
+
 		try {
+			if (is_local()) {
+				std::string ver_prefix;
+				ver_prefix = "V" + serialise_length(did);
+				auto ver_prefix_size = ver_prefix.size();
+				auto t_end = wdb->allterms_end(ver_prefix);
+				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+					std::string current_term = *tit;
+					std::string_view current_ver(current_term);
+					current_ver.remove_prefix(ver_prefix_size);
+					if (!current_ver.empty()) {
+						if (version_ && !ver.empty() && ver != current_ver) {
+							// Throw error about wrong version!
+							throw Xapian::DocVersionConflictError("Version mismatch!");
+						}
+						version = unserialise_length(current_ver);
+						break;
+					}
+				}
+				ver = serialise_length(++version);
+				doc.add_term(ver_prefix + ver);
+				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
+			}
 			wdb->replace_document(did, doc);
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
 			break;
@@ -1193,8 +1260,8 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Replacing: '{}'  t: {}", term, t);
-		did = 0;
 		version = 0;
+		did = 0;
 
 		try {
 			if (is_local()) {

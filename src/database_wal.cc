@@ -588,7 +588,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 
 	switch (type) {
 		case Type::ADD_DOCUMENT:
-			_database->add_document(Xapian::Document::unserialise(data), false, wal_);
+			_database->add_document(Xapian::Document::unserialise(data), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
@@ -602,7 +602,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			document = std::string(p, p_end - p);
-			_database->replace_document(did, Xapian::Document::unserialise(document), false, wal_);
+			_database->replace_document(did, Xapian::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
@@ -613,7 +613,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 		case Type::DELETE_DOCUMENT:
 			try {
 				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-				_database->delete_document(did, false, wal_);
+				_database->delete_document(did, false, wal_, false);
 			} catch (const Xapian::DocNotFoundError& exc) {
 				if (!unsafe) {
 					throw;
