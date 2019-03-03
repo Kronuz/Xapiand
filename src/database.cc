@@ -282,8 +282,8 @@ Database::reopen_writable()
 	const auto& endpoint = endpoints[0];
 	ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-	if (endpoint.node.remote_port == 0) {
-		throw Xapian::NetworkError("Invalid port");
+	if (!endpoint.node.is_active() || endpoint.node.remote_port == 0) {
+		throw Xapian::NetworkError("Endpoint node not available");
 	}
 #endif  // XAPIAND_CLUSTERING
 
@@ -401,8 +401,8 @@ Database::reopen_readable()
 	for (const auto& endpoint : endpoints) {
 		ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-		if (endpoint.node.remote_port == 0) {
-			throw Xapian::NetworkError("Invalid port");
+		if (!endpoint.node.is_active() || endpoint.node.remote_port == 0) {
+			throw Xapian::NetworkError("Endpoint node not available");
 		}
 #endif  // XAPIAND_CLUSTERING
 

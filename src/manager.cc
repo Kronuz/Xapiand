@@ -1547,7 +1547,7 @@ XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool maste
 			break;
 		}
 	}
-	THROW(UnavaliableError, "Endpoint not available!");
+	throw Xapian::NetworkError("Endpoint node not available");
 }
 
 

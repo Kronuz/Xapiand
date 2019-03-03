@@ -437,6 +437,10 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			hhl("Connection closed unexpectedly"),
 		});
 		switch (_.fhhl(error_string)) {
+			case _.fhhl("Endpoint node not available"):
+				error_code = HTTP_STATUS_BAD_GATEWAY;
+				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
+				break;
 			case _.fhhl("Can't assign requested address"):
 				error_code = HTTP_STATUS_BAD_GATEWAY;
 				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
@@ -460,9 +464,6 @@ HttpClient::handled_errors(Request& request, Func&& func)
 		}
 	} catch (const ClientError& exc) {
 		error_code = HTTP_STATUS_BAD_REQUEST;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-	} catch (const UnavaliableError& exc) {
-		error_code = HTTP_STATUS_BAD_GATEWAY;
 		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
 	} catch (const BaseException& exc) {
 		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;

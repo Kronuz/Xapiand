@@ -134,13 +134,6 @@ public:
 };
 
 
-class UnavaliableError : public Exception {
-public:
-	template<typename... Args>
-	UnavaliableError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
 class DocVersionConflictError : public ClientError, public Xapian::DocVersionConflictError {
 public:
 	template<typename... Args>
