@@ -102,7 +102,6 @@ constexpr const char RESPONSE_QUERY[]               = "#query";
 constexpr const char RESPONSE_MESSAGE[]             = "#message";
 constexpr const char RESPONSE_STATUS[]              = "#status";
 constexpr const char RESPONSE_NODES[]               = "#nodes";
-constexpr const char RESPONSE_COMMIT[]              = "#commit";
 constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
@@ -1580,7 +1579,6 @@ HttpClient::delete_document_view(Request& request)
 
 	response_obj[RESPONSE_DELETE] = {
 		{ ID_FIELD_NAME, doc_id },
-		{ RESPONSE_COMMIT,  query_field.commit }
 	};
 
 	write_http_response(request, status_code, response_obj);
@@ -1650,7 +1648,6 @@ HttpClient::index_document_view(Request& request)
 	request.ready = std::chrono::system_clock::now();
 
 	status_code = HTTP_STATUS_OK;
-	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, status_code, response_obj);
 
@@ -1730,7 +1727,6 @@ HttpClient::update_document_view(Request& request)
 	if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
 		response_obj[ID_FIELD_NAME] = doc_id;
 	}
-	response_obj[RESPONSE_COMMIT] = query_field.commit;
 
 	write_http_response(request, status_code, response_obj);
 
