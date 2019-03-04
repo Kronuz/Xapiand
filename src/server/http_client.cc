@@ -63,6 +63,7 @@
 #include "reserved/fields.h"                // for RESERVED_*
 #include "reserved/response.h"              // for RESERVED_RESPONSE*
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
+#include "reserved/schema.h"                // for RESERVED_VERSION
 #include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
@@ -2262,6 +2263,17 @@ HttpClient::retrieve_view(Request& request)
 		// Locator doesn't have a content type, serialize and return as document
 		auto obj = MsgPack::unserialise(locator.data());
 
+		// Detailed info about the document:
+		if (obj.find(ID_FIELD_NAME) == obj.end()) {
+			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		}
+		auto version = document.get_value(DB_SLOT_VERSION);
+		if (!version.empty()) {
+			try {
+				obj[RESERVED_VERSION] = unserialise_length(version);
+			} catch (const SerialisationError&) {}
+		}
+
 		if (!selector.empty()) {
 			obj = obj.select(selector);
 		}
@@ -2397,6 +2409,15 @@ HttpClient::search_view(Request& request)
 		}
 
 		// Detailed info about the document:
+		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
+			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		}
+		auto version = document.get_value(DB_SLOT_VERSION);
+		if (!version.empty()) {
+			try {
+				hit_obj[RESERVED_VERSION] = unserialise_length(version);
+			} catch (const SerialisationError&) {}
+		}
 		hit_obj[RESERVED_RESPONSE_RANK] = m.get_rank();
 		hit_obj[RESERVED_RESPONSE_WEIGHT] = m.get_weight();
 		hit_obj[RESERVED_RESPONSE_PERCENT] = m.get_percent();

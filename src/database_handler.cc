@@ -488,10 +488,17 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 		}
 	}
 
+	Document document(did, this);
+
+	if (data_obj.find(ID_FIELD_NAME) == data_obj.end()) {
+		// TODO: This may be somewhat expensive, but replace_document()
+		//       doesn't currently return the "document_id" (not the docid).
+		data_obj[ID_FIELD_NAME] = document_id ? document_id : document.get_value(ID_FIELD_NAME);
+	}
+
 	try {
-		// TODO: This may be somewhat expensive, but replace_document() doesn't
-		//       currently return the "version".
-		Document document(did, this);
+		// TODO: This may be somewhat expensive, but replace_document()
+		//       doesn't currently return the "version".
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			data_obj[RESERVED_VERSION] = unserialise_length(version);
