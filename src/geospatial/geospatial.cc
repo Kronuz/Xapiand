@@ -25,7 +25,8 @@
 #include "cast.h"                                 // for Cast
 #include "hashes.hh"                              // for fnv1ah32
 #include "repr.hh"                                // for repr
-#include "reserved.h"                             // for RESERVED_*
+#include "reserved/geo.h"                         // for RESERVED_*
+#include "reserved/types.h"                       // for RESERVED_*
 
 
 GeoSpatial::GeoSpatial(const MsgPack& obj)

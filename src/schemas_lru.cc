@@ -23,6 +23,7 @@
 #include "schemas_lru.h"
 
 #include "database_handler.h"
+#include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
 #include "log.h"
 #include "opts.h"
 

@@ -30,7 +30,6 @@
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "phf.hh"                           // for phf
-#include "reserved.h"                       // for RESERVED_AGGS_*
 #include "schema.h"                         // for Schema
 
 

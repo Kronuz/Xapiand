@@ -40,6 +40,7 @@
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack
 #include "repr.hh"                                // for repr
+#include "reserved/fields.h"                      // for SCHEMA_FIELD_NAME
 #include "utype.hh"                               // for toUType
 #include "xapian.h"                               // for Xapian::QueryParser
 

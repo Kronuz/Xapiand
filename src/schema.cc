@@ -48,6 +48,7 @@
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, date, positive
 #include "opts.h"                                 // for opts::*
+#include "reserved/schema.h"                      // for RESERVED_
 #include "script.h"                               // for Script
 #include "serialise_list.h"                       // for StringList
 #include "split.h"                                // for Split

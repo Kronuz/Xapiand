@@ -42,6 +42,7 @@
 #include "msgpack.h"              // for MsgPack
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
+#include "reserved/fields.h"      // for ID_FIELD_NAME
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "string.hh"              // for string::from_delta, string::format
 

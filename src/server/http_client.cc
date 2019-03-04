@@ -59,7 +59,9 @@
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
 #include "rapidjson/document.h"             // for Document
-#include "reserved.h"                       // for RESERVED_*
+#include "reserved/aggregations.h"          // for RESERVED_AGGS_*
+#include "reserved/fields.h"                // for RESERVED_*
+#include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean

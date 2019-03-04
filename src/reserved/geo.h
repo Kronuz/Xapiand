@@ -22,23 +22,13 @@
 
 #pragma once
 
-// Reserved field names.
-#include "reserved/fields.h"
+#include "reserved/reserved.h"
 
-// Reserved words used in schema.
-#include "reserved/schema.h"
-
-// Reserved words used for doing explicit cast convertions
-#include "reserved/types.h"
-
-// Reserved for QueryDSL
-#include "reserved/query_dsl.h"
-
-// Reserved for Geospatial
-#include "reserved/geo.h"
-
-// Reserved for Aggregations
-#include "reserved/aggregations.h"
-
-// Reserved for Datetime
-#include "reserved/datetime.h"
+constexpr const char RESERVED_GEO_LATITUDE[]                = RESERVED__ "latitude";
+constexpr const char RESERVED_GEO_LAT[]                     = RESERVED__ "lat";
+constexpr const char RESERVED_GEO_LONGITUDE[]               = RESERVED__ "longitude";
+constexpr const char RESERVED_GEO_LNG[]                     = RESERVED__ "lng";
+constexpr const char RESERVED_GEO_HEIGHT[]                  = RESERVED__ "height";
+constexpr const char RESERVED_GEO_RADIUS[]                  = RESERVED__ "radius";
+constexpr const char RESERVED_GEO_UNITS[]                   = RESERVED__ "units";
+constexpr const char RESERVED_GEO_SRID[]                    = RESERVED__ "srid";

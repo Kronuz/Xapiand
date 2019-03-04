@@ -22,23 +22,11 @@
 
 #pragma once
 
-// Reserved field names.
-#include "reserved/fields.h"
+#include "reserved/reserved.h"
 
-// Reserved words used in schema.
-#include "reserved/schema.h"
+constexpr const char ID_FIELD_NAME[]                        = RESERVED__ "id";
+constexpr const char RESERVED_DOCID[]                       = RESERVED__ "docid";
 
-// Reserved words used for doing explicit cast convertions
-#include "reserved/types.h"
-
-// Reserved for QueryDSL
-#include "reserved/query_dsl.h"
-
-// Reserved for Geospatial
-#include "reserved/geo.h"
-
-// Reserved for Aggregations
-#include "reserved/aggregations.h"
-
-// Reserved for Datetime
-#include "reserved/datetime.h"
+constexpr const char UUID_FIELD_NAME[]                      = "<uuid_field>";
+constexpr const char SCHEMA_FIELD_NAME[]                    = "schema";
+constexpr const char SCRIPT_FIELD_NAME[]                    = "script";

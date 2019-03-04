@@ -28,6 +28,7 @@
 #include "chaipp/chaipp.h"
 #include "hash/md5.h"
 #include "ignore_unused.h"
+#include "reserved/schema.h"
 #include "serialise.h"
 #include "hashes.hh"        // for fnv1ah32
 #include "phf.hh"           // for phf

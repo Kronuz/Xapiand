@@ -22,23 +22,8 @@
 
 #pragma once
 
-// Reserved field names.
-#include "reserved/fields.h"
+#include "reserved/reserved.h"
 
-// Reserved words used in schema.
-#include "reserved/schema.h"
-
-// Reserved words used for doing explicit cast convertions
-#include "reserved/types.h"
-
-// Reserved for QueryDSL
-#include "reserved/query_dsl.h"
-
-// Reserved for Geospatial
-#include "reserved/geo.h"
-
-// Reserved for Aggregations
-#include "reserved/aggregations.h"
-
-// Reserved for Datetime
-#include "reserved/datetime.h"
+constexpr const char RESERVED_YEAR[]                        = RESERVED__ "year";
+constexpr const char RESERVED_MONTH[]                       = RESERVED__ "month";
+constexpr const char RESERVED_DAY[]                         = RESERVED__ "day";

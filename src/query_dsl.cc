@@ -41,7 +41,8 @@
 #include "multivalue/geospatialrange.h"           // for GeoSpatialRange
 #include "multivalue/range.h"                     // for MultipleValueRange
 #include "repr.hh"                                // for repr
-#include "reserved.h"                             // for RESERVED_
+#include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_*
+#include "reserved/types.h"                       // for RESERVED_POSITIVE,...
 #include "serialise.h"                            // for MsgPack, get_range_type...
 #include "stopper.h"                              // for getStopper
 #include "string.hh"                              // for string::startswith

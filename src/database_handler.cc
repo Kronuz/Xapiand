@@ -46,7 +46,9 @@
 #include "query_dsl.h"                      // for QueryDSL
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
-#include "reserved.h"                       // for RESERVED_*
+#include "reserved/fields.h"                // for RESERVED_DOCID
+#include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
+#include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema, required_spc_t
 #include "schemas_lru.h"                    // for SchemasLRU

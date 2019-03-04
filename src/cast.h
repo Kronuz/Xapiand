@@ -24,10 +24,12 @@
 
 #include "string_view.hh"        // for std::string_view
 
-#include "database_utils.h"      // for get_hashed, RESERVED_BOOLEAN, RESERV...
+#include "database_utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
 #include "hashes.hh"             // for fnv1ah32
 #include "phf.hh"                // for phf
+#include "reserved/schema.h"     // for RESERVED_CHAI
+#include "reserved/types.h"      // for RESERVED_BOOLEAN, ...
 
 
 enum class FieldType : uint8_t;

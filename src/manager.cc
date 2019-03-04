@@ -74,6 +74,7 @@
 #include "opts.h"                                // for opts::*
 #include "package.h"                             // for Package
 #include "readable_revents.hh"                   // for readable_revents
+#include "reserved/schema.h"                     // for RESERVED_INDEX, RESERVED_TYPE, ...
 #include "schemas_lru.h"                         // for SchemasLRU
 #include "serialise.h"                           // for KEYWORD_STR
 #include "serialise_list.h"                      // for StringList

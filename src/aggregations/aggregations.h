@@ -31,6 +31,7 @@
 #include <vector>                                 // for vector
 
 #include "msgpack.h"                              // for MsgPack
+#include "reserved/aggregations.h"                // for RESERVED_AGGS_*
 #include "xapian.h"                               // for MatchSpy, doccount
 
 

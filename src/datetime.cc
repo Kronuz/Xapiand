@@ -34,7 +34,8 @@
 #include "msgpack.h"                              // for MsgPack
 #include "phf.hh"                                 // for phf
 #include "repr.hh"                                // for repr
-#include "reserved.h"                             // for RESERVED__
+#include "reserved/types.h"                       // for RESERVED_TIME
+#include "reserved/datetime.h"                    // for RESERVED_
 #include "strict_stox.hh"                         // for strict_stoull
 #include "string.hh"                              // for string::format
 
