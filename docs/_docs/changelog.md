@@ -24,9 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Guessed IDs are now strings also for numeric IDs
 - **BREAKING**: URL drill selector now uses dot ('.') directly, so document IDs
                 cannot have dots in them now.
+- **BREAKING**: System-added fields in returned objects are no longer prefixed by '#'
 - Never overwrite an existent database
 - Index only adds new indexes during write operations
 - Do not save empty data inside database
+- Numeric IDs are auto-incremented when creating new documents with `POST`
 
 ### Added
 - Added '*'' for using as multiple indexes
