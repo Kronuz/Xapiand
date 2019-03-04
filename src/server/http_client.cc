@@ -1564,15 +1564,12 @@ HttpClient::delete_document_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	enum http_status status_code;
-	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 
 	db_handler.delete_document(doc_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
-	status_code = HTTP_STATUS_OK;
 
-	write_http_response(request, status_code, response_obj);
+	write_http_response(request, HTTP_STATUS_NO_CONTENT);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Deletion took {}", string::from_delta(took));
