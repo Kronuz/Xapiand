@@ -33,6 +33,8 @@ constexpr const char UUID_FIELD_NAME[]                      = "<uuid_field>";
 constexpr const char SCHEMA_FIELD_NAME[]                    = "schema";
 constexpr const char SCRIPT_FIELD_NAME[]                    = "script";
 
+constexpr const char RESERVED_DOCID[]                       = RESERVED__ "docid";
+
 // Reserved words used in schema.
 constexpr const char RESERVED_VERSION[]                     = RESERVED__ "version";
 constexpr const char RESERVED_WEIGHT[]                      = RESERVED__ "weight";
@@ -116,3 +118,18 @@ constexpr const char RESERVED_MULTIPOLYGON[]                = RESERVED__ "multip
 constexpr const char RESERVED_MULTICHULL[]                  = RESERVED__ "multichull";
 constexpr const char RESERVED_GEO_COLLECTION[]              = RESERVED__ "geometrycollection";
 constexpr const char RESERVED_GEO_INTERSECTION[]            = RESERVED__ "geometryintersection";
+
+// Reserved for QueryDSL
+constexpr const char RESERVED_QUERYDSL_FROM[]               = RESERVED__ "from";
+constexpr const char RESERVED_QUERYDSL_IN[]                 = RESERVED__ "in";
+constexpr const char RESERVED_QUERYDSL_QUERY[]              = RESERVED__ "query";
+constexpr const char RESERVED_QUERYDSL_RANGE[]              = RESERVED__ "range";
+constexpr const char RESERVED_QUERYDSL_TO[]                 = RESERVED__ "to";
+constexpr const char RESERVED_QUERYDSL_LIMIT[]              = RESERVED__ "limit";
+constexpr const char RESERVED_QUERYDSL_CHECK_AT_LEAST[]     = RESERVED__ "check_at_least";
+constexpr const char RESERVED_QUERYDSL_OFFSET[]             = RESERVED__ "offset";
+constexpr const char RESERVED_QUERYDSL_SORT[]               = RESERVED__ "sort";
+constexpr const char RESERVED_QUERYDSL_SELECTOR[]           = RESERVED__ "selector";
+constexpr const char RESERVED_QUERYDSL_ORDER[]              = RESERVED__ "order";
+constexpr const char RESERVED_QUERYDSL_METRIC[]             = RESERVED__ "metric";
+constexpr const char RESERVED_QUERYDSL_PARTIAL[]            = RESERVED__ "partial";

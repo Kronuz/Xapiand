@@ -43,9 +43,11 @@
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
-#include "query_dsl.h"                      // for RESERVED_QUERYDSL_*, QueryDSL
+#include "query_dsl.h"                      // for QueryDSL
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
+#include "reserved.h"                       // for RESERVED_*
+#include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema, required_spc_t
 #include "schemas_lru.h"                    // for SchemasLRU
 #include "script.h"                         // for Script
@@ -61,30 +63,6 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 
-
-// Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_AV_LENGTH[]           = "#av_length";
-constexpr const char RESPONSE_CONTENT_TYPE[]        = "#content_type";
-constexpr const char RESPONSE_DATA[]                = "#data";
-constexpr const char RESPONSE_DOC_COUNT[]           = "#doc_count";
-constexpr const char RESPONSE_DOC_DEL[]             = "#doc_del";
-constexpr const char RESPONSE_DOC_LEN_LOWER[]       = "#doc_len_lower";
-constexpr const char RESPONSE_DOC_LEN_UPPER[]       = "#doc_len_upper";
-constexpr const char RESPONSE_DOCID[]               = "#docid";
-constexpr const char RESPONSE_HAS_POSITIONS[]       = "#has_positions";
-constexpr const char RESPONSE_LAST_ID[]             = "#last_id";
-constexpr const char RESPONSE_OFFSET[]              = "#offset";
-constexpr const char RESPONSE_POS[]                 = "#pos";
-constexpr const char RESPONSE_RAW_DATA[]            = "#raw_data";
-constexpr const char RESPONSE_REVISION[]            = "#revision";
-constexpr const char RESPONSE_SIZE[]                = "#size";
-constexpr const char RESPONSE_TERM_FREQ[]           = "#term_freq";
-constexpr const char RESPONSE_TERMS[]               = "#terms";
-constexpr const char RESPONSE_TYPE[]                = "#type";
-constexpr const char RESPONSE_UUID[]                = "#uuid";
-constexpr const char RESPONSE_VALUES[]              = "#values";
-constexpr const char RESPONSE_VOLUME[]              = "#volume";
-constexpr const char RESPONSE_WDF[]                 = "#wdf";
 
 constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
 
@@ -1630,7 +1608,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 
 	MsgPack info;
 
-	info[RESPONSE_DOCID] = document.get_docid();
+	info[RESERVED_DOCID] = document.get_docid();
 
 	if (raw_data) {
 		info[RESPONSE_RAW_DATA] = data.serialise();

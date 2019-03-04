@@ -54,12 +54,13 @@
 #include "manager.h"                        // for XapiandManager
 #include "metrics.h"                        // for Metrics::metrics
 #include "msgpack.h"                        // for MsgPack, msgpack::object
-#include "aggregations/aggregations.h"      // for AggregationMatchSpy, RESERVED_AGGS_AGGREGATIONS
+#include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
-#include "query_dsl.h"                      // for RESERVED_QUERYDSL_SELECTOR
 #include "rapidjson/document.h"             // for Document
+#include "reserved.h"                       // for RESERVED_*
+#include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
 #include "string.hh"                        // for string::from_delta
@@ -89,29 +90,6 @@
 
 #define DEFAULT_INDENTATION 2
 
-// Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_ENDPOINT[]            = "#endpoint";
-constexpr const char RESPONSE_RANK[]                = "#rank";
-constexpr const char RESPONSE_WEIGHT[]              = "#weight";
-constexpr const char RESPONSE_PERCENT[]             = "#percent";
-constexpr const char RESPONSE_TOTAL_COUNT[]         = "#total_count";
-constexpr const char RESPONSE_MATCHES_ESTIMATED[]   = "#matches_estimated";
-constexpr const char RESPONSE_HITS[]                = "#hits";
-constexpr const char RESPONSE_AGGREGATIONS[]        = "#aggregations";
-constexpr const char RESPONSE_QUERY[]               = "#query";
-constexpr const char RESPONSE_MESSAGE[]             = "#message";
-constexpr const char RESPONSE_STATUS[]              = "#status";
-constexpr const char RESPONSE_NODES[]               = "#nodes";
-constexpr const char RESPONSE_DOCID[]               = "#docid";
-constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
-constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
-constexpr const char RESPONSE_CLUSTER_NAME[]        = "#cluster_name";
-constexpr const char RESPONSE_SERVER[]              = "#server";
-constexpr const char RESPONSE_URL[]                 = "#url";
-constexpr const char RESPONSE_VERSIONS[]            = "#versions";
-constexpr const char RESPONSE_PROCESSED[]           = "#processed";
-constexpr const char RESPONSE_INDEXED[]             = "#indexed";
-constexpr const char RESPONSE_TOTAL[]               = "#total";
 
 static const std::regex header_params_re(R"(\s*;\s*([a-z]+)=(\d+(?:\.\d+)?))", std::regex::optimize);
 static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
@@ -1544,7 +1522,7 @@ HttpClient::document_info_view(Request& request)
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
 
 	MsgPack response_obj;
-	response_obj[RESPONSE_DOCID] = db_handler.get_docid(request.path_parser.get_id());
+	response_obj[RESERVED_DOCID] = db_handler.get_docid(request.path_parser.get_id());
 
 	request.ready = std::chrono::system_clock::now();
 
