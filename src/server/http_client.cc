@@ -2281,9 +2281,6 @@ HttpClient::retrieve_view(Request& request)
 		// Locator doesn't have a content type, serialize and return as document
 		auto obj = MsgPack::unserialise(locator.data());
 
-		// Detailed info about the document:
-		obj[RESPONSE_DOCID] = document.get_docid();
-
 		if (!selector.empty()) {
 			obj = obj.select(selector);
 		}
@@ -2419,7 +2416,6 @@ HttpClient::search_view(Request& request)
 		}
 
 		// Detailed info about the document:
-		hit_obj[RESPONSE_DOCID] = document.get_docid();
 		hit_obj[RESPONSE_RANK] = m.get_rank();
 		hit_obj[RESPONSE_WEIGHT] = m.get_weight();
 		hit_obj[RESPONSE_PERCENT] = m.get_percent();
