@@ -61,6 +61,7 @@
 #include "rapidjson/document.h"             // for Document
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 #include "reserved/fields.h"                // for RESERVED_*
+#include "reserved/response.h"              // for RESERVED_RESPONSE*
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema
@@ -2396,12 +2397,12 @@ HttpClient::search_view(Request& request)
 		}
 
 		// Detailed info about the document:
-		hit_obj[RESPONSE_RANK] = m.get_rank();
-		hit_obj[RESPONSE_WEIGHT] = m.get_weight();
-		hit_obj[RESPONSE_PERCENT] = m.get_percent();
+		hit_obj[RESERVED_RESPONSE_RANK] = m.get_rank();
+		hit_obj[RESERVED_RESPONSE_WEIGHT] = m.get_weight();
+		hit_obj[RESERVED_RESPONSE_PERCENT] = m.get_percent();
 		// int subdatabase = (document.get_docid() - 1) % endpoints.size();
 		// auto endpoint = endpoints[subdatabase];
-		// hit_obj[RESPONSE_ENDPOINT] = endpoint.to_string();
+		// hit_obj[RESERVED_RESPONSE_ENDPOINT] = endpoint.to_string();
 
 		if (!selector.empty()) {
 			hit_obj = hit_obj.select(selector);

@@ -23,13 +23,10 @@
 #pragma once
 
 
-#define RESPONSE__ "#"
+#define RESPONSE__ ""
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_ENDPOINT[]                    = RESPONSE__ "endpoint";
-constexpr const char RESPONSE_RANK[]                        = RESPONSE__ "rank";
-constexpr const char RESPONSE_WEIGHT[]                      = RESPONSE__ "weight";
-constexpr const char RESPONSE_PERCENT[]                     = RESPONSE__ "percent";
 constexpr const char RESPONSE_TOTAL_COUNT[]                 = RESPONSE__ "total_count";
 constexpr const char RESPONSE_MATCHES_ESTIMATED[]           = RESPONSE__ "matches_estimated";
 constexpr const char RESPONSE_HITS[]                        = RESPONSE__ "hits";
