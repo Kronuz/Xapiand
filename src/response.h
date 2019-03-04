@@ -25,6 +25,8 @@
 
 #define RESPONSE__ ""
 
+constexpr const char RESPONSE_DOCID[]                       = RESPONSE__ "docid";
+
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_ENDPOINT[]                    = RESPONSE__ "endpoint";
 constexpr const char RESPONSE_TOTAL_COUNT[]                 = RESPONSE__ "total_count";

@@ -46,7 +46,6 @@
 #include "query_dsl.h"                      // for QueryDSL
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
-#include "reserved/fields.h"                // for RESERVED_DOCID
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
@@ -1610,7 +1609,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 
 	MsgPack info;
 
-	info[RESERVED_DOCID] = document.get_docid();
+	info[RESPONSE_DOCID] = document.get_docid();
 
 	if (raw_data) {
 		info[RESPONSE_RAW_DATA] = data.serialise();
