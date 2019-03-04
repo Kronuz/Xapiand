@@ -31,7 +31,6 @@
 #include <vector>                                 // for vector
 
 #include "msgpack.h"                              // for MsgPack
-#include "reserved/aggregations.h"                // for RESERVED_AGGS_*
 #include "xapian.h"                               // for MatchSpy, doccount
 
 
@@ -141,10 +140,5 @@ public:
 	std::string serialise() const override;
 	Xapian::MatchSpy* unserialise(const std::string& serialised, const Xapian::Registry& context) const override;
 	std::string get_description() const override;
-
-	const auto& get_aggregation() noexcept {
-		_aggregation.update();
-		_result[RESERVED_AGGS_AGGREGATIONS] = _aggregation.get_result();
-		return _result;
-	}
+	const MsgPack& get_aggregation() noexcept;
 };

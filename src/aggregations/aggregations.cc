@@ -30,6 +30,7 @@
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "phf.hh"                           // for phf
+#include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 #include "schema.h"                         // for Schema
 
 
@@ -302,4 +303,13 @@ AggregationMatchSpy::get_description() const
 	std::string desc("AggregationMatchSpy(");
 	desc.append(_aggs.to_string()).push_back(')');
 	return desc;
+}
+
+
+const MsgPack&
+AggregationMatchSpy::get_aggregation() noexcept
+{
+	_aggregation.update();
+	_result[RESERVED_AGGS_AGGREGATIONS] = _aggregation.get_result();
+	return _result;
 }

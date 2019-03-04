@@ -34,9 +34,10 @@
 #include <utility>                  // for std::pair
 #include <vector>                   // for std::vector
 
-#include "aggregations.h"           // for BaseAggregation, RESERVED_AGGS_*
+#include "aggregations.h"           // for BaseAggregation
 #include "exception.h"              // for AggregationError, MSG_AggregationError
 #include "msgpack.h"                // for MsgPack, object::object
+#include "reserved/aggregations.h"  // for RESERVED_AGGS_*
 #include "serialise_list.h"         // for StringList, RangeList
 #include "xapian.h"                 // for valueno
 
