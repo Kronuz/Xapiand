@@ -102,7 +102,6 @@ constexpr const char RESPONSE_QUERY[]               = "#query";
 constexpr const char RESPONSE_MESSAGE[]             = "#message";
 constexpr const char RESPONSE_STATUS[]              = "#status";
 constexpr const char RESPONSE_NODES[]               = "#nodes";
-constexpr const char RESPONSE_DELETE[]              = "#delete";
 constexpr const char RESPONSE_DOCID[]               = "#docid";
 constexpr const char RESPONSE_DOCUMENT_INFO[]       = "#document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]       = "#database_info";
@@ -1513,10 +1512,6 @@ HttpClient::home_view(Request& request)
 #endif
 	};
 
-	if (obj.find(ID_FIELD_NAME) == obj.end()) {
-		obj[ID_FIELD_NAME] = document.get_field(ID_FIELD_NAME) || document.get_value(ID_FIELD_NAME);
-	}
-
 	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
@@ -1576,10 +1571,6 @@ HttpClient::delete_document_view(Request& request)
 	db_handler.delete_document(doc_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
 	status_code = HTTP_STATUS_OK;
-
-	response_obj[RESPONSE_DELETE] = {
-		{ ID_FIELD_NAME, doc_id },
-	};
 
 	write_http_response(request, status_code, response_obj);
 
@@ -1724,9 +1715,6 @@ HttpClient::update_document_view(Request& request)
 	request.ready = std::chrono::system_clock::now();
 
 	status_code = HTTP_STATUS_OK;
-	if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
-		response_obj[ID_FIELD_NAME] = doc_id;
-	}
 
 	write_http_response(request, status_code, response_obj);
 
@@ -2297,16 +2285,7 @@ HttpClient::retrieve_view(Request& request)
 		auto obj = MsgPack::unserialise(locator.data());
 
 		// Detailed info about the document:
-		if (obj.find(ID_FIELD_NAME) == obj.end()) {
-			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
-		}
 		obj[RESPONSE_DOCID] = document.get_docid();
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			try {
-				obj[RESERVED_VERSION] = unserialise_length(version);
-			} catch (const SerialisationError&) {}
-		}
 
 		if (!selector.empty()) {
 			obj = obj.select(selector);
@@ -2443,16 +2422,7 @@ HttpClient::search_view(Request& request)
 		}
 
 		// Detailed info about the document:
-		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
-			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
-		}
 		hit_obj[RESPONSE_DOCID] = document.get_docid();
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			try {
-				hit_obj[RESERVED_VERSION] = unserialise_length(version);
-			} catch (const SerialisationError&) {}
-		}
 		hit_obj[RESPONSE_RANK] = m.get_rank();
 		hit_obj[RESPONSE_WEIGHT] = m.get_weight();
 		hit_obj[RESPONSE_PERCENT] = m.get_percent();
