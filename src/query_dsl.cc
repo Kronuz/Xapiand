@@ -29,7 +29,7 @@
 #include "booleanParser/LexicalException.h"       // for LexicalException
 #include "booleanParser/SyntacticException.h"     // for SyntacticException
 #include "cast.h"                                 // for Cast
-#include "database_utils.h"                       // for prefixed, RESERVED_VALUE
+#include "database_utils.h"                       // for prefixed
 #include "exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
 #include "geospatial/geospatial.h"                // for GeoSpatial
@@ -57,25 +57,6 @@
 #ifndef L_QUERY
 #define L_QUERY L_NOTHING
 #endif
-
-constexpr const char RESERVED_QUERYDSL_AND[]                = RESERVED__ "and";
-constexpr const char RESERVED_QUERYDSL_OR[]                 = RESERVED__ "or";
-constexpr const char RESERVED_QUERYDSL_NOT[]                = RESERVED__ "not";
-constexpr const char RESERVED_QUERYDSL_AND_NOT[]            = RESERVED__ "and_not";
-constexpr const char RESERVED_QUERYDSL_XOR[]                = RESERVED__ "xor";
-constexpr const char RESERVED_QUERYDSL_AND_MAYBE[]          = RESERVED__ "and_maybe";
-constexpr const char RESERVED_QUERYDSL_FILTER[]             = RESERVED__ "filter";
-constexpr const char RESERVED_QUERYDSL_NEAR[]               = RESERVED__ "near";
-constexpr const char RESERVED_QUERYDSL_PHRASE[]             = RESERVED__ "phrase";
-constexpr const char RESERVED_QUERYDSL_SCALE_WEIGHT[]       = RESERVED__ "scale_weight";
-constexpr const char RESERVED_QUERYDSL_ELITE_SET[]          = RESERVED__ "elite_set";
-constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
-constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
-constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
-
-constexpr const char RESERVED_QUERYDSL_MATCH_ALL[]          = RESERVED__ "match_all";
-constexpr const char RESERVED_QUERYDSL_MATCH_NONE[]         = RESERVED__ "match_none";
-
 
 // A domain-specific language (DSL) for query
 

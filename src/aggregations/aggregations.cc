@@ -27,11 +27,11 @@
 #include "bucket.h"                         // for FilterAggregation, Histog...
 #include "database_utils.h"                 // for is_valid
 #include "exception.h"                      // for AggregationError, MSG_Agg...
-#include "metrics.h"                        // for RESERVED_AGGS_*
-#include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
-#include "schema.h"                         // for Schema
 #include "hashes.hh"                        // for fnv1ah32
+#include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "phf.hh"                           // for phf
+#include "reserved.h"                       // for RESERVED_AGGS_*
+#include "schema.h"                         // for Schema
 
 
 Aggregation::Aggregation()

@@ -133,3 +133,93 @@ constexpr const char RESERVED_QUERYDSL_SELECTOR[]           = RESERVED__ "select
 constexpr const char RESERVED_QUERYDSL_ORDER[]              = RESERVED__ "order";
 constexpr const char RESERVED_QUERYDSL_METRIC[]             = RESERVED__ "metric";
 constexpr const char RESERVED_QUERYDSL_PARTIAL[]            = RESERVED__ "partial";
+
+constexpr const char RESERVED_QUERYDSL_AND[]                = RESERVED__ "and";
+constexpr const char RESERVED_QUERYDSL_OR[]                 = RESERVED__ "or";
+constexpr const char RESERVED_QUERYDSL_NOT[]                = RESERVED__ "not";
+constexpr const char RESERVED_QUERYDSL_AND_NOT[]            = RESERVED__ "and_not";
+constexpr const char RESERVED_QUERYDSL_XOR[]                = RESERVED__ "xor";
+constexpr const char RESERVED_QUERYDSL_AND_MAYBE[]          = RESERVED__ "and_maybe";
+constexpr const char RESERVED_QUERYDSL_FILTER[]             = RESERVED__ "filter";
+constexpr const char RESERVED_QUERYDSL_NEAR[]               = RESERVED__ "near";
+constexpr const char RESERVED_QUERYDSL_PHRASE[]             = RESERVED__ "phrase";
+constexpr const char RESERVED_QUERYDSL_SCALE_WEIGHT[]       = RESERVED__ "scale_weight";
+constexpr const char RESERVED_QUERYDSL_ELITE_SET[]          = RESERVED__ "elite_set";
+constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
+constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
+constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
+
+constexpr const char RESERVED_QUERYDSL_MATCH_ALL[]          = RESERVED__ "match_all";
+constexpr const char RESERVED_QUERYDSL_MATCH_NONE[]         = RESERVED__ "match_none";
+
+// Reserved for Geospatial
+constexpr const char RESERVED_GEO_LATITUDE[]                = RESERVED__ "latitude";
+constexpr const char RESERVED_GEO_LAT[]                     = RESERVED__ "lat";
+constexpr const char RESERVED_GEO_LONGITUDE[]               = RESERVED__ "longitude";
+constexpr const char RESERVED_GEO_LNG[]                     = RESERVED__ "lng";
+constexpr const char RESERVED_GEO_HEIGHT[]                  = RESERVED__ "height";
+constexpr const char RESERVED_GEO_RADIUS[]                  = RESERVED__ "radius";
+constexpr const char RESERVED_GEO_UNITS[]                   = RESERVED__ "units";
+constexpr const char RESERVED_GEO_SRID[]                    = RESERVED__ "srid";
+
+// Reserved for Aggregations
+constexpr const char RESERVED_AGGS_AGGS[]                   = RESERVED__ "aggs";
+constexpr const char RESERVED_AGGS_AGGREGATIONS[]           = RESERVED__ "aggregations";
+constexpr const char RESERVED_AGGS_DOC_COUNT[]              = RESERVED__ "doc_count";
+constexpr const char RESERVED_AGGS_FIELD[]                  = RESERVED__ "field";
+constexpr const char RESERVED_AGGS_FROM[]                   = RESERVED__ "from";
+constexpr const char RESERVED_AGGS_INTERVAL[]               = RESERVED__ "interval";
+constexpr const char RESERVED_AGGS_SHIFT[]                  = RESERVED__ "shift";
+constexpr const char RESERVED_AGGS_KEY[]                    = RESERVED__ "key";
+constexpr const char RESERVED_AGGS_RANGES[]                 = RESERVED__ "ranges";
+constexpr const char RESERVED_AGGS_SUM_OF_SQ[]              = RESERVED__ "sum_of_squares";
+constexpr const char RESERVED_AGGS_TO[]                     = RESERVED__ "to";
+
+constexpr const char RESERVED_AGGS_AVG[]                    = RESERVED__ "avg";
+constexpr const char RESERVED_AGGS_CARDINALITY[]            = RESERVED__ "cardinality";
+constexpr const char RESERVED_AGGS_COUNT[]                  = RESERVED__ "count";
+constexpr const char RESERVED_AGGS_EXT_STATS[]              = RESERVED__ "extended_stats";
+constexpr const char RESERVED_AGGS_GEO_BOUNDS[]             = RESERVED__ "geo_bounds";
+constexpr const char RESERVED_AGGS_GEO_CENTROID[]           = RESERVED__ "geo_centroid";
+constexpr const char RESERVED_AGGS_MAX[]                    = RESERVED__ "max";
+constexpr const char RESERVED_AGGS_MEDIAN[]                 = RESERVED__ "median";
+constexpr const char RESERVED_AGGS_MIN[]                    = RESERVED__ "min";
+constexpr const char RESERVED_AGGS_MODE[]                   = RESERVED__ "mode";
+constexpr const char RESERVED_AGGS_PERCENTILES[]            = RESERVED__ "percentiles";
+constexpr const char RESERVED_AGGS_PERCENTILES_RANK[]       = RESERVED__ "percentiles_rank";
+constexpr const char RESERVED_AGGS_SCRIPTED_METRIC[]        = RESERVED__ "scripted_metric";
+constexpr const char RESERVED_AGGS_STATS[]                  = RESERVED__ "stats";
+constexpr const char RESERVED_AGGS_STD[]                    = RESERVED__ "std_deviation";
+constexpr const char RESERVED_AGGS_STD_BOUNDS[]             = RESERVED__ "std_deviation_bounds";
+constexpr const char RESERVED_AGGS_SUM[]                    = RESERVED__ "sum";
+constexpr const char RESERVED_AGGS_VARIANCE[]               = RESERVED__ "variance";
+
+constexpr const char RESERVED_AGGS_DATE_HISTOGRAM[]         = RESERVED__ "date_histogram";
+constexpr const char RESERVED_AGGS_DATE_RANGE[]             = RESERVED__ "date_range";
+constexpr const char RESERVED_AGGS_FILTER[]                 = RESERVED__ "filter";
+constexpr const char RESERVED_AGGS_GEO_DISTANCE[]           = RESERVED__ "geo_distance";
+constexpr const char RESERVED_AGGS_GEO_IP[]                 = RESERVED__ "geo_ip";
+constexpr const char RESERVED_AGGS_GEO_TRIXELS[]            = RESERVED__ "geo_trixels";
+constexpr const char RESERVED_AGGS_HISTOGRAM[]              = RESERVED__ "histogram";
+constexpr const char RESERVED_AGGS_IP_RANGE[]               = RESERVED__ "ip_range";
+constexpr const char RESERVED_AGGS_MISSING[]                = RESERVED__ "missing";
+constexpr const char RESERVED_AGGS_RANGE[]                  = RESERVED__ "range";
+constexpr const char RESERVED_AGGS_VALUES[]                 = RESERVED__ "values";
+constexpr const char RESERVED_AGGS_TERMS[]                  = RESERVED__ "terms";
+
+constexpr const char RESERVED_AGGS_UPPER[]                  = RESERVED__ "upper";
+constexpr const char RESERVED_AGGS_LOWER[]                  = RESERVED__ "lower";
+constexpr const char RESERVED_AGGS_SIGMA[]                  = RESERVED__ "sigma";
+
+constexpr const char RESERVED_AGGS_VALUE[]                  = RESERVED__ "_value";
+constexpr const char RESERVED_AGGS_TERM[]                   = RESERVED__ "_term";
+constexpr const char RESERVED_AGGS_SORT[]                   = RESERVED__ "_sort";
+constexpr const char RESERVED_AGGS_ORDER[]                  = RESERVED__ "_order";
+constexpr const char RESERVED_AGGS_MIN_DOC_COUNT[]          = RESERVED__ "_min_doc_count";
+constexpr const char RESERVED_AGGS_LIMIT[]                  = RESERVED__ "_limit";
+constexpr const char RESERVED_AGGS_KEYED[]                  = RESERVED__ "_keyed";
+
+// Reserved for Datetime
+constexpr const char RESERVED_YEAR[]                        = RESERVED__ "year";
+constexpr const char RESERVED_MONTH[]                       = RESERVED__ "month";
+constexpr const char RESERVED_DAY[]                         = RESERVED__ "day";

@@ -28,7 +28,6 @@
 
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
-#include "reserved.h"              // for RESERVED_*
 #include "sortable_serialise.h"    // for sortable_serialise
 #include "hashes.hh"               // for xxh64
 #include "database_data.h"         // for ct_type_t, Data

@@ -39,11 +39,6 @@
 #include "string.hh"                              // for string::format
 
 
-constexpr const char RESERVED_YEAR[]                        = RESERVED__ "year";
-constexpr const char RESERVED_MONTH[]                       = RESERVED__ "month";
-constexpr const char RESERVED_DAY[]                         = RESERVED__ "day";
-
-
 const std::regex Datetime::date_re(R"(([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\|\|[ ]*([+-/\dyMwdhms]+))?)", std::regex::optimize);
 const std::regex Datetime::date_math_re("([+-]\\d+|\\/{1,2})([dyMwhms])", std::regex::optimize);
 

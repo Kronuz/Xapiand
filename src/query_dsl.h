@@ -30,7 +30,6 @@
 
 #include "msgpack.h"                              // for MsgPack
 #include "multivalue/keymaker.h"                  // for Multi_MultiValueKeyMaker"
-#include "reserved.h"                             // for RESERVED__
 #include "schema.h"                               // for Schema, FieldType, required_spc_t
 #include "xapian.h"                               // for Query, Query::op, termcount
 
