@@ -306,7 +306,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	std::atomic_size_t _processed;
 	std::atomic_size_t _indexed;
-	size_t _total;
+	std::atomic_size_t _total;
 	LightweightSemaphore limit;
 	LightweightSemaphore done;
 
