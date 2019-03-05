@@ -25,7 +25,6 @@ from __future__ import absolute_import, print_function
 import sys
 import six
 import os
-import itertools
 
 try:
     from django.core.exceptions import ObjectDoesNotExist
@@ -60,9 +59,9 @@ except ImportError:
 __all__ = ['Xapiand']
 
 
-RESPONSE_QUERY = '#query'
-RESPONSE_AGGREGATIONS = '#aggregations'
-RESPONSE_TOOK = '#took'
+RESPONSE_QUERY = '_query'
+RESPONSE_AGGREGATIONS = '_aggregations'
+RESPONSE_TOOK = '_took'
 COMMAND_PREFIX = ':'
 
 XAPIAND_HOST = os.environ.get('XAPIAND_HOST', '127.0.0.1')
@@ -84,10 +83,10 @@ class Object(NestedDict):
     def __init__(self, *args, **kwargs):
         super(Object, self).__init__(*args, **kwargs)
         for k in list(self):
-            if k[0] == '#':
-                dict.__setattr__(self, k[1:], self.pop(k))
-            elif k[0] == '_':
+            if k[0] == '_':
                 dict.__setattr__(self, k, self.get(k))
+            if k in (RESPONSE_QUERY, RESPONSE_AGGREGATIONS, RESPONSE_TOOK):
+                dict.__setattr__(self, k[1:], self.pop(k))
 
 
 class Results(object):
@@ -106,10 +105,10 @@ class Results(object):
 
     def _update(self, obj):
         for k, v in obj.items():
-            if k[0] == '#':
-                dict.__setattr__(self, k[1:], v)
-            elif k[0] == '_':
+            if k[0] == '_':
                 dict.__setattr__(self, k, v)
+            if k in (RESPONSE_QUERY, RESPONSE_AGGREGATIONS, RESPONSE_TOOK):
+                dict.__setattr__(self, k[1:], v)
 
     def __len__(self):
         return int(getattr(self, 'total_count', 0))
