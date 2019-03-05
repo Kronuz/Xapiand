@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2018 Dubalu LLC. All rights reserved.
+# Copyright (C) 2015-2019 Dubalu LLC. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -20,8 +20,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
+import sys
+import six
 import os
 import itertools
 
@@ -161,7 +163,9 @@ class Xapiand(object):
         store=(session.store, False, 'result'),
     )
 
-    def __init__(self, host=None, port=None, commit=None, prefix=None, default_accept=None, default_accept_encoding=None):
+    def __init__(self, host=None, port=None, commit=None, prefix=None,
+            default_accept=None, default_accept_encoding=None,
+            debug=False):
         if host is None:
             host = XAPIAND_HOST
         if port is None:
@@ -181,6 +185,8 @@ class Xapiand(object):
             default_accept_encoding = 'deflate, gzip, identity'
         self.default_accept_encoding = default_accept_encoding
 
+        self.debug = debug  # print queries if debug = True
+
     def _build_url(self, action_request, index, host, port, nodename, id):
         if host and ':' in host:
             host, _, port = host.partition(':')
@@ -192,8 +198,9 @@ class Xapiand(object):
 
         if not isinstance(index, (tuple, list, set)):
             index = index.split(',')
-        id = '' if id is None else '/{}'.format(id)
-        index = ','.join('{}{}{}'.format(self.prefix, i.strip('/'), id) for i in set(index))
+
+        indexes = ['{}{}'.format(self.prefix, i.strip('/')) for i in set(index)]
+        index = ','.join(['/'.join((i, id or '')) for i in indexes])
 
         nodename = '@{}'.format(nodename) if nodename else ''
 
@@ -256,6 +263,8 @@ class Xapiand(object):
                     else:
                         schema = '{}{}'.format(self.prefix, schema.strip('/'))
                     body['_schema'] = schema
+            if self.debug:
+                print("@@@>> URL: {}  ::  BODY: {}  ::  KWARGS: {}".format(url, body, kwargs))
             if isinstance(body, (dict, list)):
                 if is_msgpack:
                     body = msgpack.dumps(body)
@@ -271,6 +280,8 @@ class Xapiand(object):
                     kwargs['data'] = msgpack.dumps(data)
                 elif is_json:
                     kwargs['data'] = json.dumps(data, ensure_ascii=True)
+            if self.debug:
+                print("@@@>> URL: {}  ::  KWARGS: {}".format(url, kwargs))
             res = method(url, **kwargs)
 
         if res.status_code == 404 and action_request in ('patch', 'delete', 'get'):
@@ -278,7 +289,12 @@ class Xapiand(object):
                 raise self.DoesNotExist("Matching query does not exist.")
             return default
         else:
-            res.raise_for_status()
+            try:
+                res.raise_for_status()
+            except Exception as exc:
+                if self.debug:
+                    print("@@@RES>> {} :: {}".format(res.content, exc))
+                six.reraise(*sys.exc_info())
 
         content_type = res.headers.get('content-type', '')
         is_msgpack = 'application/x-msgpack' in content_type
@@ -486,8 +502,11 @@ class Xapiand(object):
         return self._send_request('store', index, **kwargs)
 
 
-def client():
+def client(debug=False):
+    if debug:
+        return debug_default
     return default
 
 
 default = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_PREFIX)
+debug_default = Xapiand(host=XAPIAND_HOST, port=XAPIAND_PORT, commit=XAPIAND_COMMIT, prefix=XAPIAND_PREFIX, debug=True)
