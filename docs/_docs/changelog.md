@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.11.0] - 2019-03-05
+{: #v0-11-0 }
+
 ### Fixed
 - Cluster replication is now functional, it was bronken in 0.10.0
 - Fix searching in "_id" field
@@ -403,7 +408,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.11.0...HEAD
+[0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/Kronuz/Xapiand/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/Kronuz/Xapiand/compare/v0.9.0...v0.10.0
