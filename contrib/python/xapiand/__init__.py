@@ -151,16 +151,16 @@ class Xapiand(object):
     session.trust_env = False
     session.mount('http://', requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100))
     _methods = dict(
-        search=(session.get, True, 'results'),
-        stats=(session.get, False, 'result'),
-        get=(session.get, False, 'result'),
-        delete=(session.delete, False, 'result'),
-        head=(session.head, False, 'result'),
-        post=(session.post, False, 'result'),
-        put=(session.put, False, 'result'),
-        patch=(session.patch, False, 'result'),
-        merge=(session.merge, False, 'result'),
-        store=(session.store, False, 'result'),
+        search=(session.get, 'results'),
+        stats=(session.get, 'result'),
+        get=(session.get, 'result'),
+        delete=(session.delete, 'result'),
+        head=(session.head, 'result'),
+        post=(session.post, 'result'),
+        put=(session.put, 'result'),
+        patch=(session.patch, 'result'),
+        merge=(session.merge, 'result'),
+        store=(session.store, 'result'),
     )
 
     def __init__(self, host=None, port=None, commit=None, prefix=None,
@@ -222,16 +222,12 @@ class Xapiand(object):
         :arg id: Document ID
         :arg body: File or dictionary with the body of the request
         """
-        method, stream, key = self._methods[action_request]
+        method, key = self._methods[action_request]
         url = self._build_url(action_request, index, host, port, nodename, id)
 
         params = kwargs.pop('params', None)
         if params is not None:
             kwargs['params'] = dict((k.replace('__', '.'), (v and 1 or 0) if isinstance(v, bool) else v) for k, v in params.items() if k not in ('commit', 'volatile', 'pretty', 'indent') or v)
-
-        stream = kwargs.pop('stream', stream)
-        if stream is not None:
-            kwargs['stream'] = stream
 
         kwargs.setdefault('allow_redirects', False)
         headers = kwargs.setdefault('headers', {})
@@ -300,84 +296,14 @@ class Xapiand(object):
         is_msgpack = 'application/x-msgpack' in content_type
         is_json = 'application/json' in content_type
 
-        if stream:
-            meta = {}
-
-            def results(chunks, size=100):
-                def fetch():
-                    fetch.cache = []
-                    fetch.cache.extend(l for l in itertools.islice(chunks, size) if l)
-                fetch()
-                total = None
-
-                if is_msgpack:
-                    processHeader = True
-                    while fetch.cache:
-                        for num, chunk in enumerate(fetch.cache):
-                            if num == 0 and processHeader:
-                                for o, m, v in ((-1, 0xf0, 0x90), (-3, 0xff, 0xdc), (-5, 0xff, 0xdd)):
-                                    if ord(chunk[o]) & m == v:
-                                        try:
-                                            if v == 0xdd:
-                                                total = msgpack.loads('\xce' + chunk[o + 1:]) + 1
-                                            elif v == 0xdc:
-                                                total = msgpack.loads('\xcd' + chunk[o + 1:]) + 1
-                                            else:
-                                                total = msgpack.loads(chr(ord(chunk[o]) & 0x0f)) + 1
-                                            chunk = chunk[:o] + '\x90' + msgpack.dumps({RESPONSE_TOOK: 0.0})[1:]
-                                            processHeader = False
-                                            break
-                                        except Exception:
-                                            pass
-                                else:
-                                    raise IOError("Unexpected chunk!")
-                            if total == 0:
-                                # Add single-item dictionary:
-                                meta['_']._update(msgpack.loads('\x81' + chunk))
-                            else:
-                                obj = msgpack.loads(chunk)
-                                yield obj
-                                total -= 1
-                        fetch()
-
-                elif is_json:
-                    while fetch.cache:
-                        for num, chunk in enumerate(fetch.cache):
-                            if num == 0:
-                                if chunk.rstrip().endswith('['):
-                                    chunk += ']}}'
-                                else:
-                                    raise IOError("Unexpected chunk!")
-                            elif chunk.lstrip().startswith(']'):
-                                # Remove "],}" and use as single-item dictionary:
-                                chunk = '{' + chunk.lstrip()[1:].lstrip()[1:].lstrip()[1:]
-                                total = 0
-                            else:
-                                chunk = chunk.rstrip().rstrip(',')
-                            if total == 0:
-                                meta['_']._update(json.loads(chunk))
-                            else:
-                                obj = json.loads(chunk)
-                                yield obj
-                        fetch()
-
-                else:
-                    while fetch.cache:
-                        for num, chunk in enumerate(fetch.cache):
-                            yield chunk
-                        fetch()
-
-            results = results(res.iter_content(chunk_size=None))
-            meta.update(next(results))
+        meta = {}
+        if is_msgpack:
+            content = msgpack.loads(res.content)
+        elif is_json:
+            content = json.loads(res.content)
         else:
-            meta = {}
-            if is_msgpack:
-                content = msgpack.loads(res.content)
-            elif is_json:
-                content = json.loads(res.content)
-            else:
-                content = {'content': res.content}
-            results = [content]
+            content = {'content': res.content}
+        results = [content]
 
         results = Results(meta, results)
         if key == 'result':
