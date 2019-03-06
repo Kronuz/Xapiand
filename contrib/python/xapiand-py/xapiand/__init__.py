@@ -4,16 +4,18 @@ VERSION = (6, 3, 1)
 __version__ = VERSION
 __versionstr__ = '.'.join(map(str, VERSION))
 
+import logging
+try:  # Python 2.7+
+    from logging import NullHandler
+except ImportError:
+    class NullHandler(logging.Handler):
+        def emit(self, record):
+            pass
+
 import sys
 
-if (2, 7) <= sys.version_info < (3, 2):
-    # On Python 2.7 and Python3 < 3.2, install no-op handler to silence
-    # `No handlers could be found for logger "xapiand"` message per
-    # <https://docs.python.org/2/howto/logging.html#configuring-logging-for-a-library>
-    import logging
-    logger = logging.getLogger('xapiand')
-    logger.addHandler(logging.NullHandler())
-
+logger = logging.getLogger('xapiand')
+logger.addHandler(logging.NullHandler())
 
 from .client import Xapiand
 from .transport import Transport
