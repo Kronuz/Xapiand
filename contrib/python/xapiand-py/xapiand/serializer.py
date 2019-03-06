@@ -28,6 +28,7 @@ import uuid
 
 from .exceptions import SerializationError, ImproperlyConfigured
 from .compat import text_type, binary_type
+from .collections import OrderedDictObject
 
 
 class Serializer(object):
@@ -60,7 +61,7 @@ class MsgPackSerializer(Serializer):
 
     def loads(self, s):
         try:
-            return msgpack.loads(s)
+            return msgpack.loads(s, object_pairs_hook=OrderedDictObject)
         except (ValueError, TypeError) as e:
             raise SerializationError(s, e)
 
@@ -83,7 +84,7 @@ class JSONSerializer(Serializer):
 
     def loads(self, s):
         try:
-            return json.loads(s)
+            return json.loads(s, object_pairs_hook=OrderedDictObject)
         except (ValueError, TypeError) as e:
             raise SerializationError(s, e)
 
