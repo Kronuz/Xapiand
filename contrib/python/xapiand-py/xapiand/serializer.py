@@ -38,10 +38,13 @@ except ImportError:
 
 from .exceptions import SerializationError, ImproperlyConfigured
 from .compat import text_type, binary_type
-from .collections import OrderedDictObject
+from .collections import DictObject
 
 
 class Serializer(object):
+    def __init__(self, object_pairs_hook=DictObject):
+        self.object_pairs_hook = object_pairs_hook
+
     def default(self, data):
         if isinstance(data, (date, datetime)):
             return data.isoformat()
@@ -71,7 +74,7 @@ class MsgPackSerializer(Serializer):
 
     def loads(self, s):
         try:
-            return msgpack.loads(s, object_pairs_hook=OrderedDictObject)
+            return msgpack.loads(s, object_pairs_hook=self.object_pairs_hook)
         except (ValueError, TypeError) as e:
             raise SerializationError(s, e)
 
@@ -94,7 +97,7 @@ class JSONSerializer(Serializer):
 
     def loads(self, s):
         try:
-            return json.loads(s, object_pairs_hook=OrderedDictObject)
+            return json.loads(s, object_pairs_hook=self.object_pairs_hook)
         except (ValueError, TypeError) as e:
             raise SerializationError(s, e)
 
