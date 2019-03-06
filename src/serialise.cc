@@ -58,7 +58,7 @@ Serialise::isText(std::string_view field_value) noexcept
 		return true;
 	}
 	for (size_t i = 0; i < size; ++i) {
-		if (!chars::iskeyword(field_value[i])) {
+		if (!chars::is_keyword(field_value[i])) {
 			return true;
 		}
 	}

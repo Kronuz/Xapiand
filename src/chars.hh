@@ -88,49 +88,49 @@ constexpr unsigned int char_tab[256]{
 
 
 inline constexpr int
-isspace(char c) noexcept {
+is_space(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_SPACE;
 }
 
 
 inline constexpr int
-isalpha(char c) noexcept {
+is_alpha(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_ALPHA;
 }
 
 
 inline constexpr int
-isupper(char c) noexcept {
+is_upper(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_UPPER;
 }
 
 
 inline constexpr int
-isdigit(char c) noexcept {
+is_digit(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_DIGIT;
 }
 
 
 inline constexpr int
-isalnum(char c) noexcept {
+is_alnum(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & (IS_DIGIT | IS_ALPHA);
 }
 
 
 inline constexpr int
-isascii(char c) noexcept {
+is_ascii(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_ASCII;
 }
 
 
 inline constexpr int
-iskeyword(char c) noexcept {
+is_keyword(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_KEYWORD;
 }
 
 
 inline constexpr int
-ishexdigit(char c) noexcept {
+is_hexdigit(char c) noexcept {
 	return char_tab[static_cast<unsigned char>(c)] & IS_HEX_DIGIT;
 }
 
