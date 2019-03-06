@@ -77,15 +77,15 @@ class Connection(object):
             return
 
         # include pretty in trace curls
-        path = path.replace('?', '?pretty&', 1) if '?' in path else path + '?pretty'
+        path = path.replace("?", "?pretty&", 1) if "?" in path else path + "?pretty"
         if self.url_prefix:
             path = path.replace(self.url_prefix, '', 1)
         tracer.info("curl %s-X%s 'http://localhost:8880%s' -d '%s'",
-                    "-H 'Content-Type: application/json' " if body else '',
-                    method, path, self._pretty_json(body) if body else '')
+                    "-H 'Content-Type: application/json' " if body else "",
+                    method, path, self._pretty_json(body) if body else "")
 
         if tracer.isEnabledFor(logging.DEBUG):
-            tracer.debug('#[%s] (%.3fs)\n#%s', status_code, duration, self._pretty_json(response).replace('\n', '\n#') if response else '')
+            tracer.debug("#[%s] (%.3fs)\n#%s", status_code, duration, self._pretty_json(response).replace('\n', '\n#') if response else '')
 
     def log_request_success(self, method, full_url, path, body, status_code, response, duration):
         """ Log a successful API call.  """
@@ -100,7 +100,7 @@ class Connection(object):
                 pass
 
         logger.info(
-            '%s %s [status:%s request:%.3fs]', method, full_url,
+            "%s %s [status:%s request:%.3fs]", method, full_url,
             status_code, duration
         )
         logger.debug('> %s', body)
@@ -114,8 +114,8 @@ class Connection(object):
         if method == 'HEAD' and status_code == 404:
             return
         logger.warning(
-            '%s %s [status:%s request:%.3fs]', method, full_url,
-            status_code or 'N/A', duration, exc_info=exception is not None
+            "%s %s [status:%s request:%.3fs]", method, full_url,
+            status_code or "N/A", duration, exc_info=exception is not None
         )
 
         # body has already been serialized to utf-8, deserialize it for logging
@@ -144,7 +144,7 @@ class Connection(object):
                 if isinstance(error_message, dict) and 'type' in error_message:
                     error_message = error_message['type']
         except (ValueError, TypeError) as err:
-            logger.warning('Undecodable raw error response from server: %s', err)
+            logger.warning("Undecodable raw error response from server: %s", err)
 
         raise HTTP_EXCEPTIONS.get(status_code, TransportError)(status_code, error_message, additional_info)
 

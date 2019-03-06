@@ -124,7 +124,7 @@ def _process_bulk_chunk(client, bulk_actions, bulk_data, raise_on_exception=True
 
         # emulate standard behavior for failed actions
         if raise_on_error:
-            raise BulkIndexError('%i document(s) failed to index.' % len(exc_errors), exc_errors)
+            raise BulkIndexError("%i document(s) failed to index." % len(exc_errors), exc_errors)
         else:
             for err in exc_errors:
                 yield False, err
@@ -145,7 +145,7 @@ def _process_bulk_chunk(client, bulk_actions, bulk_data, raise_on_exception=True
             yield ok, {op_type: item}
 
     if errors:
-        raise BulkIndexError('%i document(s) failed to index.' % len(errors), errors)
+        raise BulkIndexError("%i document(s) failed to index." % len(errors), errors)
 
 
 def streaming_bulk(client, actions, chunk_size=500, max_chunk_bytes=100 * 1024 * 1024,
@@ -397,13 +397,13 @@ def scan(client, query=None, scroll='5m', raise_on_error=True,
             # check if we have any errrors
             if resp["_shards"]["successful"] < resp["_shards"]["total"]:
                 logger.warning(
-                    'Scroll request has only succeeded on %d shards out of %d.',
+                    "Scroll request has only succeeded on %d shards out of %d.",
                     resp['_shards']['successful'], resp['_shards']['total']
                 )
                 if raise_on_error:
                     raise ScanError(
                         scroll_id,
-                        'Scroll request has only succeeded on %d shards out of %d.' % (
+                        "Scroll request has only succeeded on %d shards out of %d." % (
                             resp['_shards']['successful'], resp['_shards']['total']
                         )
                     )

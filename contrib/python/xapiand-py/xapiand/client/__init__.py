@@ -167,7 +167,7 @@ class Xapiand(object):
             # truncate to 5 if there are too many
             if len(cons) > 5:
                 cons = cons[:5] + ['...']
-            return '<{cls}({cons})>'.format(cls=self.__class__.__name__, cons=cons)
+            return "<{cls}({cons})>".format(cls=self.__class__.__name__, cons=cons)
         except Exception:
             # probably operating on custom transport and connection_pool, ignore
             return super(Xapiand, self).__repr__()

@@ -52,7 +52,7 @@ class TextSerializer(Serializer):
             return data.encode('utf-8')
         if isinstance(data, binary_type):
             return data
-        raise SerializationError('Cannot serialize %r into text.' % data)
+        raise SerializationError("Cannot serialize %r into text." % data)
 
 
 class MsgPackSerializer(Serializer):
@@ -115,7 +115,7 @@ class Deserializer(object):
         try:
             self.default = serializers[default_mimetype]
         except KeyError:
-            raise ImproperlyConfigured('Cannot find default serializer (%s)' % default_mimetype)
+            raise ImproperlyConfigured("Cannot find default serializer (%s)" % default_mimetype)
         self.serializers = serializers
 
     def loads(self, s, mimetype=None):
@@ -127,6 +127,6 @@ class Deserializer(object):
             try:
                 deserializer = self.serializers[mimetype]
             except KeyError:
-                raise SerializationError('Unknown mimetype, unable to deserialize: %s' % mimetype)
+                raise SerializationError("Unknown mimetype, unable to deserialize: %s" % mimetype)
 
         return deserializer.loads(s)

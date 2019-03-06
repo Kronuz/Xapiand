@@ -125,8 +125,8 @@ class ConnectionPool(object):
             avoid dog piling effect across processes
         """
         if not connections:
-            raise ImproperlyConfigured("No defined connections, you need to "
-                    "specify at least one host.")
+            raise ImproperlyConfigured(
+                "No defined connections, you need to specify at least one host.")
         self.connection_opts = connections
         self.connections = [c for (c, opts) in connections]
         # remember original connection list for resurrect(force=True)
@@ -166,7 +166,7 @@ class ConnectionPool(object):
             timeout = self.dead_timeout * 2 ** min(dead_count - 1, self.timeout_cutoff)
             self.dead.put((now + timeout, connection))
             logger.warning(
-                'Connection %r has failed for %i times in a row, putting on %i second timeout.',
+                "Connection %r has failed for %i times in a row, putting on %i second timeout.",
                 connection, dead_count, timeout
             )
 
@@ -222,7 +222,7 @@ class ConnectionPool(object):
 
         # either we were forced or the connection is elligible to be retried
         self.connections.append(connection)
-        logger.info('Resurrecting connection %r (force=%s).', connection, force)
+        logger.info("Resurrecting connection %r (force=%s).", connection, force)
         return connection
 
     def get_connection(self):
@@ -261,8 +261,8 @@ class ConnectionPool(object):
 class DummyConnectionPool(ConnectionPool):
     def __init__(self, connections, **kwargs):
         if len(connections) != 1:
-            raise ImproperlyConfigured("DummyConnectionPool needs exactly one "
-                    "connection defined.")
+            raise ImproperlyConfigured(
+                "DummyConnectionPool needs exactly one connection defined.")
         # we need connection opts for sniffing logic
         self.connection_opts = connections
         self.connection = connections[0][0]

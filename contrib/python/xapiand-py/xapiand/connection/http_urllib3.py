@@ -138,9 +138,10 @@ class Urllib3HttpConnection(Connection):
             ca_certs = CA_CERTS if ca_certs is None else ca_certs
             if verify_certs:
                 if not ca_certs:
-                    raise ImproperlyConfigured("Root certificates are missing for certificate "
-                        "validation. Either pass them in using the ca_certs parameter or "
-                        "install certifi to use it automatically.")
+                    raise ImproperlyConfigured(
+                        "Root certificates are missing for certificate validation."
+                        "Either pass them in using the ca_certs parameter or install"
+                        "certifi to use it automatically.")
 
                 kw.update({
                     'cert_reqs': 'CERT_REQUIRED',
@@ -150,7 +151,7 @@ class Urllib3HttpConnection(Connection):
                 })
             else:
                 warnings.warn(
-                    'Connecting to %s using SSL with verify_certs=False is insecure.' % host)
+                    "Connecting to %s using SSL with verify_certs=False is insecure." % host)
 
         self.pool = pool_class(host, port=port, timeout=self.timeout, maxsize=maxsize, **kw)
 
@@ -195,10 +196,10 @@ class Urllib3HttpConnection(Connection):
         except Exception as e:
             self.log_request_fail(method, full_url, url, body, time.time() - start, exception=e)
             if isinstance(e, UrllibSSLError):
-                raise SSLError('N/A', str(e), e)
+                raise SSLError("N/A", str(e), e)
             if isinstance(e, ReadTimeoutError):
-                raise ConnectionTimeout('TIMEOUT', str(e), e)
-            raise ConnectionError('N/A', str(e), e)
+                raise ConnectionTimeout("TIMEOUT", str(e), e)
+            raise ConnectionError("N/A", str(e), e)
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (200 <= status < 300) and status not in ignore:

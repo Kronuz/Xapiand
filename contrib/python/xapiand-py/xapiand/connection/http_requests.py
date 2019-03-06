@@ -78,7 +78,7 @@ class RequestsHttpConnection(Connection):
 
         if self.use_ssl and not verify_certs:
             warnings.warn(
-                'Connecting to %s using SSL with verify_certs=False is insecure.' % self.base_url)
+                "Connecting to %s using SSL with verify_certs=False is insecure." % self.base_url)
 
     def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None):
         full_url = self.base_url + url
@@ -101,10 +101,10 @@ class RequestsHttpConnection(Connection):
         except Exception as e:
             self.log_request_fail(method, full_url, prepared_request.path_url, body, time.time() - start, exception=e)
             if isinstance(e, requests.exceptions.SSLError):
-                raise SSLError('N/A', str(e), e)
+                raise SSLError("N/A", str(e), e)
             if isinstance(e, requests.Timeout):
-                raise ConnectionTimeout('TIMEOUT', str(e), e)
-            raise ConnectionError('N/A', str(e), e)
+                raise ConnectionTimeout("TIMEOUT", str(e), e)
+            raise ConnectionError("N/A", str(e), e)
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (200 <= status < 300) and status not in ignore:
