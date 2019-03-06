@@ -25,6 +25,8 @@ if PY2:
     text_type = unicode
     binary_type = str
     string_types = basestring,
+    integer_types = int,
+    integer_type = int
     from urllib import quote_plus, urlencode, unquote
     from urlparse import  urlparse
     from itertools import imap as map
@@ -33,6 +35,8 @@ else:
     text_type = str
     binary_type = bytes
     string_types = str, bytes
+    integer_types = int, long
+    integer_type = long
     from urllib.parse import quote_plus, urlencode, urlparse, unquote
     map = map
     from queue import Queue
