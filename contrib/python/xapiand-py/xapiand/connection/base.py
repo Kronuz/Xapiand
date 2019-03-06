@@ -78,8 +78,6 @@ class Connection(object):
 
         # include pretty in trace curls
         path = path.replace("?", "?pretty&", 1) if "?" in path else path + "?pretty"
-        if self.url_prefix:
-            path = path.replace(self.url_prefix, '', 1)
         tracer.info("curl %s-X%s 'http://localhost:8880%s' -d '%s'",
                     "-H 'Content-Type: application/json' " if body else "",
                     method, path, self._pretty_json(body) if body else "")

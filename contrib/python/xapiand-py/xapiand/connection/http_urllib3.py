@@ -157,8 +157,10 @@ class Urllib3HttpConnection(Connection):
 
         self.pool = pool_class(host, port=port, timeout=self.timeout, maxsize=maxsize, **kw)
 
-    def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None):
-        url = self.url_prefix + url
+    def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None, url_prefix=None):
+        if url_prefix is None:
+            url_prefix = self.url_prefix
+        url = url_prefix + url
         if params:
             url = '%s?%s' % (url, urlencode(params))
         full_url = self.host + url

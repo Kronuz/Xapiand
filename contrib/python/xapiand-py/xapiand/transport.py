@@ -211,7 +211,8 @@ class Transport(object):
                     # use small timeout for the sniffing request, should be a fast api call
                     _, headers, node_info = c.perform_request(
                         'GET', '/:nodes',
-                        timeout=self.sniff_timeout if not initial else None)
+                        timeout=self.sniff_timeout if not initial else None,
+                        url_prefix='')
                     node_info = self.deserializer.loads(node_info, headers.get('content-type'))
                     break
                 except (ConnectionError, SerializationError):
@@ -223,7 +224,7 @@ class Transport(object):
             self.last_sniff = previous_sniff
             raise
 
-        return node_info['#nodes']
+        return node_info['nodes']
 
     def _get_node_info(self, node_info):
         host = {}
@@ -266,7 +267,7 @@ class Transport(object):
         if self.sniff_on_connection_fail:
             self.sniff_hosts()
 
-    def perform_request(self, method, url, headers=None, params=None, body=None):
+    def perform_request(self, method, url, headers=None, params=None, body=None, url_prefix=None):
         """
         Perform the actual request. Retrieve a connection from the connection
         pool, pass all the information to it's perform_request method and
@@ -286,6 +287,8 @@ class Transport(object):
             underlying :class:`~xapiand.Connection` class for serialization
         :arg body: body of the request, will be serializes using serializer and
             passed to the connection
+        :arg url_prefix: url_prefix overrides the default url_prefix that was
+            configured for the connections
         """
         if body is not None:
             body = self.serializer.dumps(body)
@@ -322,7 +325,17 @@ class Transport(object):
             connection = self.get_connection()
 
             try:
-                status, headers_response, data = connection.perform_request(method, url, params, body, headers=headers, ignore=ignore, timeout=timeout, deserializer=self.deserializer)
+                status, headers_response, data = connection.perform_request(
+                    method,
+                    url,
+                    params,
+                    body,
+                    headers=headers,
+                    ignore=ignore,
+                    timeout=timeout,
+                    deserializer=self.deserializer,
+                    url_prefix=url_prefix,
+                )
 
             except TransportError as e:
                 if method == 'HEAD' and e.status_code == 404:
