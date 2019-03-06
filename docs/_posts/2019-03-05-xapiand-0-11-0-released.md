@@ -13,7 +13,7 @@ scripting language and support for Foreign Scripts.
 
 
 ### Fixed
-- Cluster replication is now functional, it was bronken in 0.10.0
+- Cluster replication is now functional, it was broken in 0.10.0
 - Fix searching in "_id" field
 - Fixed and documented Scripts and Foreign Scripts
 
