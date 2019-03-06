@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.11.1] - 2019-03-06
+{: #v0-11-1 }
+
+### Fixed
+- Fix Docker build
+
 ### Added
 - Added support to routing key hints in the API, by using `routing` query param
 
@@ -411,7 +419,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.11.1...HEAD
+[0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.11.0...v0.11.1
 [0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/Kronuz/Xapiand/compare/v0.10.0...v0.10.1
