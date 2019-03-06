@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #v0-11-0 }
 
 ### Fixed
-- Cluster replication is now functional, it was bronken in 0.10.0
+- Cluster replication is now functional, it was broken in 0.10.0
 - Fix searching in "_id" field
 - Fixed and documented Scripts and Foreign Scripts
 
