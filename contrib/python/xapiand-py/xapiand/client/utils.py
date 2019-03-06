@@ -72,7 +72,7 @@ def _make_path(*parts):
 
 
 # parameters that apply to all methods
-GLOBAL_PARAMS = ('pretty', 'human', 'error_trace', 'format', 'filter_path')
+GLOBAL_PARAMS = ('pretty', 'human', 'routing')
 
 
 def query_params(*accepted_params):
