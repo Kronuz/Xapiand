@@ -1506,9 +1506,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 
 		if (nodes.empty()) {
 			if (query_field.writable) {
-				replicas = index_calculate_replicas(normalized_path);
+				replicas = index_calculate_replicas(query_field.routing.empty() ? normalized_path : query_field.routing);
 			} else {
-				replicas = calculate_replicas(normalized_path);
+				replicas = calculate_replicas(query_field.routing.empty() ? normalized_path : query_field.routing);
 			}
 			for (auto idx : replicas) {
 				auto node = Node::get_node(idx);

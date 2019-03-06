@@ -2927,6 +2927,11 @@ HttpClient::query_field_maker(Request& request, int flags)
 		query_field.selector = request.query_parser.get();
 	}
 
+	request.query_parser.rewind();
+	if (request.query_parser.next("routing") != -1) {
+		query_field.routing = request.query_parser.get();
+	}
+
 	return query_field;
 }
 
