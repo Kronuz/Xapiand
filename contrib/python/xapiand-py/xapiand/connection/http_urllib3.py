@@ -24,6 +24,8 @@ from urllib3.util.retry import Retry
 import warnings
 import gzip
 
+from ..serializer import DEFAULT_SERIALIZER
+
 
 # sentinal value for `verify_certs`.
 # This is used to detect if a user is passing in a value for `verify_certs`
@@ -107,7 +109,7 @@ class Urllib3HttpConnection(Connection):
             self.headers.update(urllib3.make_headers(accept_encoding=True))
             self.headers.update({'content-encoding': 'gzip'})
 
-        self.headers.setdefault('content-type', 'application/x-msgpack')
+        self.headers.setdefault('content-type', DEFAULT_SERIALIZER.mimetype)
         pool_class = urllib3.HTTPConnectionPool
         kw = {}
 

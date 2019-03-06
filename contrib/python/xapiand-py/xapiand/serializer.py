@@ -18,13 +18,23 @@
 
 from datetime import date, datetime
 from decimal import Decimal
+import uuid
 
 try:
-    import simplejson as json
+    from dfw.core.utils import json
 except ImportError:
-    import json
-import msgpack
-import uuid
+    try:
+        import simplejson as json
+    except ImportError:
+        import json
+
+try:
+    from dfw.core.utils import msgpack
+except ImportError:
+    try:
+        import msgpack
+    except ImportError:
+        msgpack = None
 
 from .exceptions import SerializationError, ImproperlyConfigured
 from .compat import text_type, binary_type
@@ -105,14 +115,18 @@ class JSONSerializer(Serializer):
 
 
 DEFAULT_SERIALIZERS = {
-    MsgPackSerializer.mimetype: MsgPackSerializer(),
     JSONSerializer.mimetype: JSONSerializer(),
     TextSerializer.mimetype: TextSerializer(),
 }
+if msgpack:
+    DEFAULT_SERIALIZERS[MsgPackSerializer.mimetype] = MsgPackSerializer()
+    DEFAULT_SERIALIZER = DEFAULT_SERIALIZERS[MsgPackSerializer.mimetype]
+else:
+    DEFAULT_SERIALIZER = DEFAULT_SERIALIZERS[JSONSerializer.mimetype]
 
 
 class Deserializer(object):
-    def __init__(self, serializers, default_mimetype='application/x-msgpack'):
+    def __init__(self, serializers, default_mimetype=DEFAULT_SERIALIZER.mimetype):
         try:
             self.default = serializers[default_mimetype]
         except KeyError:

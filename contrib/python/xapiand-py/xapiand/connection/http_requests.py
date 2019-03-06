@@ -27,6 +27,7 @@ except ImportError:
 from .base import Connection
 from ..exceptions import ConnectionError, ImproperlyConfigured, ConnectionTimeout, SSLError
 from ..compat import urlencode, string_types
+from ..serializer import DEFAULT_SERIALIZER
 
 
 class RequestsHttpConnection(Connection):
@@ -54,7 +55,7 @@ class RequestsHttpConnection(Connection):
         super(RequestsHttpConnection, self).__init__(host=host, port=port, use_ssl=use_ssl, **kwargs)
         self.session = requests.Session()
         self.session.headers = headers or {}
-        self.session.headers.setdefault('content-type', 'application/x-msgpack')
+        self.session.headers.setdefault('content-type', DEFAULT_SERIALIZER.mimetype)
         if http_auth is not None:
             if isinstance(http_auth, (tuple, list)):
                 http_auth = tuple(http_auth)

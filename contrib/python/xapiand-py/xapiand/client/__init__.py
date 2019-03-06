@@ -124,7 +124,8 @@ class Xapiand(object):
             ]
         )
 
-    By default, MsgPackSerializer is used to encode all outgoing requests.
+    By default, MsgPackSerializer is used to encode all outgoing requests when
+    `msgpack` package is available, otherwise JSONSerializer is used.
     However, you can implement your own custom serializer::
 
         from xapiand.serializer import MsgPackSerializer

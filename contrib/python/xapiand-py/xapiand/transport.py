@@ -21,7 +21,7 @@ from itertools import chain
 
 from .connection import Urllib3HttpConnection
 from .connection_pool import ConnectionPool, DummyConnectionPool
-from .serializer import MsgPackSerializer, Deserializer, DEFAULT_SERIALIZERS
+from .serializer import Deserializer, DEFAULT_SERIALIZERS, DEFAULT_SERIALIZER
 from .exceptions import ConnectionError, TransportError, SerializationError, ConnectionTimeout
 
 
@@ -51,8 +51,8 @@ class Transport(object):
     def __init__(self, hosts, connection_class=Urllib3HttpConnection,
                  connection_pool_class=ConnectionPool, node_info_callback=get_node_info,
                  sniff_on_start=False, sniffer_timeout=None, sniff_timeout=.1,
-                 sniff_on_connection_fail=False, serializer=MsgPackSerializer(), serializers=None,
-                 default_mimetype='application/x-msgpack', max_retries=3, retry_on_status=(502, 503, 504),
+                 sniff_on_connection_fail=False, serializer=DEFAULT_SERIALIZER, serializers=None,
+                 default_mimetype=DEFAULT_SERIALIZER.mimetype, max_retries=3, retry_on_status=(502, 503, 504),
                  retry_on_timeout=False, send_get_body_as='GET', **kwargs):
         """
         :arg hosts: list of dictionaries, each containing keyword arguments to
