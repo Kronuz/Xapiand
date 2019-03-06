@@ -1436,9 +1436,9 @@ index_calculate_replicas(const std::string& normalized_path)
 
 
 std::vector<std::shared_ptr<const Node>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool index)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, const query_field_t& query_field)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {})", repr(normalized_path), index);
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, <query_field>)", repr(normalized_path));
 
 	std::vector<std::shared_ptr<const Node>> nodes;
 
@@ -1505,7 +1505,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		}
 
 		if (nodes.empty()) {
-			if (index) {
+			if (query_field.writable) {
 				replicas = index_calculate_replicas(normalized_path);
 			} else {
 				replicas = calculate_replicas(normalized_path);
@@ -1534,17 +1534,17 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 
 Endpoint
-XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, bool master, bool index)
+XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, const query_field_t& query_field)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, {}, {})", repr(endpoint.to_string()), master, index);
+	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, <query_field>)", repr(endpoint.to_string()));
 
-	for (const auto& node : resolve_index_nodes_impl(endpoint.path, index)) {
+	for (const auto& node : resolve_index_nodes_impl(endpoint.path, query_field)) {
 		if (Node::is_active(node)) {
 			L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 			return {endpoint, node.get()};
 		}
 		L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-		if (master) {
+		if (query_field.primary) {
 			break;
 		}
 	}

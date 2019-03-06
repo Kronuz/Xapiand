@@ -28,6 +28,7 @@
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "cassert.h"                        // for ASSERT
+#include "database_utils.h"                 // for query_field_t
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
 #include "ignore_unused.h"                  // for ignore_unused
@@ -187,7 +188,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::local_node();
-		auto nodes = XapiandManager::resolve_index_nodes(normalized_path, false);
+		auto nodes = XapiandManager::resolve_index_nodes(normalized_path, {});
 		for (const auto& node : nodes) {
 			if (Node::is_superset(local_node, node)) {
 				replicated = true;

@@ -390,8 +390,8 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void nodes_view(Request& request);
 
 	Command url_resolve(Request& request);
-	void _endpoint_maker(Request& request, bool master, bool index);
-	void endpoints_maker(Request& request, bool master, bool index);
+	void _endpoint_maker(Request& request, const query_field_t& query_field);
+	void endpoints_maker(Request& request, const query_field_t& query_field);
 	query_field_t query_field_maker(Request& request, int flags);
 
 	void log_request(Request& request);

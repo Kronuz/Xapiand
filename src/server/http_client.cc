@@ -85,12 +85,14 @@
 // #define L_HTTP_PROTO L_TEAL
 
 
-#define QUERY_FIELD_COMMIT     (1 << 0)
-#define QUERY_FIELD_SEARCH     (1 << 1)
-#define QUERY_FIELD_ID         (1 << 2)
-#define QUERY_FIELD_TIME       (1 << 3)
-#define QUERY_FIELD_PERIOD     (1 << 4)
-#define QUERY_FIELD_VOLATILE   (1 << 5)
+#define QUERY_FIELD_PRIMARY    (1 << 0)
+#define QUERY_FIELD_WRITABLE   (1 << 1)
+#define QUERY_FIELD_COMMIT     ((1 << 2) | QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE)
+#define QUERY_FIELD_SEARCH     (1 << 3)
+#define QUERY_FIELD_ID         (1 << 4)
+#define QUERY_FIELD_TIME       (1 << 5)
+#define QUERY_FIELD_PERIOD     (1 << 6)
+#define QUERY_FIELD_VOLATILE   (1 << 7)
 
 #define DEFAULT_INDENTATION 2
 
@@ -1505,7 +1507,8 @@ HttpClient::metrics_view(Request& request)
 {
 	L_CALL("HttpClient::metrics_view()");
 
-	endpoints_maker(request, false, false);
+	auto query_field = query_field_maker(request, 0);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1519,7 +1522,8 @@ HttpClient::document_info_view(Request& request)
 {
 	L_CALL("HttpClient::document_info_view()");
 
-	endpoints_maker(request, false, false);
+	auto query_field = query_field_maker(request, 0);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1540,7 +1544,7 @@ HttpClient::delete_document_view(Request& request)
 	L_CALL("HttpClient::delete_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
-	endpoints_maker(request, true, true);
+	endpoints_maker(request, query_field);
 
 	std::string doc_id(request.path_parser.get_id());
 
@@ -1570,7 +1574,8 @@ HttpClient::delete_schema_view(Request& request)
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
-	endpoints_maker(request, true, true);
+	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1606,7 +1611,7 @@ HttpClient::index_document_view(Request& request)
 	}
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
-	endpoints_maker(request, true, true);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1640,7 +1645,8 @@ HttpClient::write_schema_view(Request& request)
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	endpoints_maker(request, true, true);
+	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1673,7 +1679,7 @@ HttpClient::update_document_view(Request& request)
 	L_CALL("HttpClient::update_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
-	endpoints_maker(request, true, true);
+	endpoints_maker(request, query_field);
 
 	std::string doc_id(request.path_parser.get_id());
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
@@ -1733,14 +1739,14 @@ HttpClient::metadata_view(Request& request)
 	enum http_status status_code = HTTP_STATUS_OK;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field.as_volatile, false);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 
 	DatabaseHandler db_handler;
-	if (query_field.as_volatile) {
+	if (query_field.primary) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
@@ -1829,7 +1835,7 @@ HttpClient::info_view(Request& request)
 	auto selector = request.path_parser.get_slc();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field.as_volatile, false);
+	endpoints_maker(request, query_field);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -1838,7 +1844,7 @@ HttpClient::info_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
-	if (query_field.as_volatile) {
+	if (query_field.primary) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
@@ -1925,7 +1931,8 @@ HttpClient::touch_view(Request& request)
 {
 	L_CALL("HttpClient::touch_view()");
 
-	endpoints_maker(request, true, true);
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1957,7 +1964,8 @@ HttpClient::commit_view(Request& request)
 {
 	L_CALL("HttpClient::commit_view()");
 
-	endpoints_maker(request, true, true);
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1989,7 +1997,8 @@ HttpClient::dump_view(Request& request)
 {
 	L_CALL("HttpClient::dump_view()");
 
-	endpoints_maker(request, false, false);
+	auto query_field = query_field_maker(request, 0);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2054,7 +2063,8 @@ HttpClient::restore_view(Request& request)
 	L_CALL("HttpClient::restore_view()");
 
 	if (request.begining) {
-		endpoints_maker(request, true, true);
+		auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE);
+		endpoints_maker(request, query_field);
 
 		request.processing = std::chrono::system_clock::now();
 
@@ -2108,7 +2118,7 @@ HttpClient::schema_view(Request& request)
 	auto selector = request.path_parser.get_slc();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field.as_volatile, false);
+	endpoints_maker(request, query_field);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -2117,7 +2127,7 @@ HttpClient::schema_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
-	if (query_field.as_volatile) {
+	if (query_field.primary) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
@@ -2153,7 +2163,8 @@ HttpClient::wal_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(request, true, false);
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2185,7 +2196,8 @@ HttpClient::check_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
-	endpoints_maker(request, true, false);
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
+	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2218,7 +2230,7 @@ HttpClient::retrieve_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
-	endpoints_maker(request, query_field.as_volatile, false);
+	endpoints_maker(request, query_field);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -2228,7 +2240,7 @@ HttpClient::retrieve_view(Request& request)
 
 	// Open database
 	DatabaseHandler db_handler;
-	if (query_field.as_volatile) {
+	if (query_field.primary) {
 		if (endpoints.size() != 1) {
 			THROW(ClientError, "Expecting exactly one index with volatile");
 		}
@@ -2333,7 +2345,7 @@ HttpClient::search_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | (id.empty() ? QUERY_FIELD_SEARCH : QUERY_FIELD_ID));
-	endpoints_maker(request, query_field.as_volatile, false);
+	endpoints_maker(request, query_field);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -2347,7 +2359,7 @@ HttpClient::search_view(Request& request)
 	// Open database
 	DatabaseHandler db_handler;
 	try {
-		if (query_field.as_volatile) {
+		if (query_field.primary) {
 			if (endpoints.size() != 1) {
 				THROW(ClientError, "Expecting exactly one index with volatile");
 			}
@@ -2464,7 +2476,7 @@ HttpClient::count_view(Request& request)
 	L_CALL("HttpClient::count_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
-	endpoints_maker(request, query_field.as_volatile, false);
+	endpoints_maker(request, query_field);
 
 	MSet mset{};
 
@@ -2473,7 +2485,7 @@ HttpClient::count_view(Request& request)
 	// Open database
 	DatabaseHandler db_handler;
 	try {
-		if (query_field.as_volatile) {
+		if (query_field.primary) {
 			if (endpoints.size() != 1) {
 				THROW(ClientError, "Expecting exactly one index with volatile");
 			}
@@ -2588,23 +2600,23 @@ HttpClient::url_resolve(Request& request)
 
 
 void
-HttpClient::endpoints_maker(Request& request, bool master, bool index)
+HttpClient::endpoints_maker(Request& request, const query_field_t& query_field)
 {
-	L_CALL("HttpClient::endpoints_maker(<request>, <master>, <index>)");
+	L_CALL("HttpClient::endpoints_maker(<request>, <query_field>)");
 
 	endpoints.clear();
 
 	PathParser::State state;
 	while ((state = request.path_parser.next()) < PathParser::State::END) {
-		_endpoint_maker(request, master, index);
+		_endpoint_maker(request, query_field);
 	}
 }
 
 
 void
-HttpClient::_endpoint_maker(Request& request, bool master, bool index)
+HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 {
-	L_CALL("HttpClient::_endpoint_maker(<request>, <master>, <index>)");
+	L_CALL("HttpClient::_endpoint_maker(<request>, <query_field>)");
 
 	std::string index_path;
 
@@ -2690,7 +2702,7 @@ HttpClient::_endpoint_maker(Request& request, bool master, bool index)
 #endif
 	} else {
 		for (const auto& path : index_paths) {
-			endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{path}, master, index));
+			endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{path}, query_field));
 		}
 	}
 	L_HTTP("Endpoint: -> {}", endpoints.to_string());
@@ -2703,6 +2715,14 @@ HttpClient::query_field_maker(Request& request, int flags)
 	L_CALL("HttpClient::query_field_maker(<request>, <flags>)");
 
 	query_field_t query_field;
+
+	if ((flags & QUERY_FIELD_WRITABLE) != 0) {
+		query_field.writable = true;
+	}
+
+	if ((flags & QUERY_FIELD_PRIMARY) != 0) {
+		query_field.primary = true;
+	}
 
 	if ((flags & QUERY_FIELD_COMMIT) != 0) {
 		request.query_parser.rewind();
@@ -2724,10 +2744,10 @@ HttpClient::query_field_maker(Request& request, int flags)
 	if ((flags & QUERY_FIELD_VOLATILE) != 0) {
 		request.query_parser.rewind();
 		if (request.query_parser.next("volatile") != -1) {
-			query_field.as_volatile = true;
+			query_field.primary = true;
 			if (request.query_parser.len != 0u) {
 				try {
-					query_field.as_volatile = Serialise::boolean(request.query_parser.get()) == "t";
+					query_field.primary = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
