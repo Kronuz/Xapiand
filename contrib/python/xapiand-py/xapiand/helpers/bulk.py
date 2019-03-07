@@ -229,7 +229,7 @@ def bulk(processor, objects, serializer, stats_only=False, *args, **kwargs):
     kwargs['yield_ok'] = True
     for status, item in streaming_bulk(processor, objects, serializer, *args, **kwargs):
         # go through request-response pairs and detect failures
-        if (200 <= status < 300):
+        if 200 <= status < 300:
             success += 1
         else:
             if not stats_only:
