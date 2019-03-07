@@ -2394,18 +2394,15 @@ HttpClient::search_view(Request& request)
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
 
-	auto total_count = mset.size();
-
 	MsgPack obj;
+	obj[RESPONSE_COUNT] = mset.get_matches_estimated();
+	obj[RESPONSE_DOC_COUNT] = mset.size();
 	if (aggregations) {
 		obj[RESPONSE_AGGREGATIONS] = aggregations;
 	}
-	obj[RESPONSE_QUERY] = {
-		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
-		{ RESPONSE_TOTAL_COUNT, total_count},
-		{ RESPONSE_HITS, MsgPack::ARRAY() },
-	};
-	auto& hits = obj[RESPONSE_QUERY][RESPONSE_HITS];
+	obj[RESPONSE_HITS] = MsgPack::ARRAY();
+
+	auto& hits = obj[RESPONSE_HITS];
 
 	const auto m_e = mset.end();
 	for (auto m = mset.begin(); m != m_e; ++m) {
@@ -2507,9 +2504,7 @@ HttpClient::count_view(Request& request)
 	}
 
 	MsgPack obj;
-	obj[RESPONSE_QUERY] = {
-		{ RESPONSE_MATCHES_ESTIMATED, mset.get_matches_estimated()},
-	};
+	obj[RESPONSE_COUNT] = mset.get_matches_estimated();
 
 	request.ready = std::chrono::system_clock::now();
 

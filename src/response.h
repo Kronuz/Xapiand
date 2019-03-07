@@ -29,11 +29,10 @@ constexpr const char RESPONSE_DOCID[]                       = RESPONSE__ "docid"
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_ENDPOINT[]                    = RESPONSE__ "endpoint";
-constexpr const char RESPONSE_TOTAL_COUNT[]                 = RESPONSE__ "total_count";
+constexpr const char RESPONSE_COUNT[]                       = RESPONSE__ "count";
 constexpr const char RESPONSE_MATCHES_ESTIMATED[]           = RESPONSE__ "matches_estimated";
-constexpr const char RESPONSE_HITS[]                        = RESPONSE__ "hits";
 constexpr const char RESPONSE_AGGREGATIONS[]                = RESPONSE__ "aggregations";
-constexpr const char RESPONSE_QUERY[]                       = RESPONSE__ "query";
+constexpr const char RESPONSE_HITS[]                        = RESPONSE__ "hits";
 constexpr const char RESPONSE_NODES[]                       = RESPONSE__ "nodes";
 constexpr const char RESPONSE_DOCUMENT_INFO[]               = RESPONSE__ "document_info";
 constexpr const char RESPONSE_DATABASE_INFO[]               = RESPONSE__ "database_info";
