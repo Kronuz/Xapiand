@@ -20,41 +20,14 @@ from operator import methodcaller
 import time
 
 from ..exceptions import TransportError
-from ..compat import map, string_types, Queue
+from ..compat import map, Queue
 
-from .errors import ScanError, BulkIndexError
+from .errors import BulkIndexError
 
 import logging
 
 
 logger = logging.getLogger('xapiand.helpers')
-
-
-def expand_action(data):
-    """
-    From one document or action definition passed in by the user extract the
-    action/data lines needed for xapiand's
-    :meth:`~xapiand.Xapiand.bulk` api.
-    """
-    # when given a string, assume user wants to index raw json
-    if isinstance(data, string_types):
-        return '{"index":{}}', data
-
-    # make sure we don't alter the action
-    data = data.copy()
-    op_type = data.pop('_op_type', 'index')
-    action = {op_type: {}}
-    for key in ('_index', '_parent', '_percolate', '_routing', '_timestamp', 'routing',
-                '_type', '_version', '_version_type', '_id',
-                'retry_on_conflict', 'pipeline'):
-        if key in data:
-            action[op_type][key] = data.pop(key)
-
-    # no data payload for delete
-    if op_type == 'delete':
-        return action, None
-
-    return action, data.get('_source', data)
 
 
 def _chunk_actions(actions, chunk_size, max_chunk_bytes, serializer):
@@ -94,7 +67,7 @@ def _chunk_actions(actions, chunk_size, max_chunk_bytes, serializer):
         yield bulk_data, bulk_actions
 
 
-def _process_bulk_chunk(client, bulk_actions, bulk_data, raise_on_exception=True, raise_on_error=True, *args, **kwargs):
+def _process_bulk_chunk(processor, bulk_actions, bulk_data, raise_on_exception=True, raise_on_error=True, *args, **kwargs):
     """
     Send a bulk request to xapiand and process the output.
     """
@@ -103,7 +76,7 @@ def _process_bulk_chunk(client, bulk_actions, bulk_data, raise_on_exception=True
 
     try:
         # send the actual request
-        resp = client.bulk('\n'.join(bulk_actions) + '\n', *args, **kwargs)
+        resp = processor(bulk_actions, *args, **kwargs)
     except TransportError as e:
         # default behavior - just propagate exception
         if raise_on_exception:
@@ -149,9 +122,8 @@ def _process_bulk_chunk(client, bulk_actions, bulk_data, raise_on_exception=True
 
 
 def streaming_bulk(client, actions, chunk_size=500, max_chunk_bytes=100 * 1024 * 1024,
-                   raise_on_error=True, expand_action_callback=expand_action,
-                   raise_on_exception=True, max_retries=0, initial_backoff=2,
-                   max_backoff=600, yield_ok=True, *args, **kwargs):
+                   raise_on_error=True, raise_on_exception=True, max_retries=0,
+                   initial_backoff=2, max_backoff=600, yield_ok=True, *args, **kwargs):
     """
     Streaming bulk consumes actions from the iterable passed in and yields
     results per action. For non-streaming usecases use
@@ -173,9 +145,6 @@ def streaming_bulk(client, actions, chunk_size=500, max_chunk_bytes=100 * 1024 *
         from the execution of the last chunk when some occur. By default we raise.
     :arg raise_on_exception: if ``False`` then don't propagate exceptions from
         call to ``bulk`` and just report the items that failed as failed.
-    :arg expand_action_callback: callback executed on each action passed in,
-        should return a tuple containing the action line and the data line
-        (`None` if data line should be omitted).
     :arg max_retries: maximum number of times a document will be retried when
         ``429`` is received, set to 0 (default) for no retries on ``429``
     :arg initial_backoff: number of seconds we should wait before the first
@@ -184,8 +153,6 @@ def streaming_bulk(client, actions, chunk_size=500, max_chunk_bytes=100 * 1024 *
     :arg max_backoff: maximum number of seconds a retry will wait
     :arg yield_ok: if set to False will skip successful documents in the output
     """
-    actions = map(expand_action_callback, actions)
-
     for bulk_data, bulk_actions in _chunk_actions(actions, chunk_size,
                                                   max_chunk_bytes,
                                                   client.transport.serializer):
@@ -198,7 +165,7 @@ def streaming_bulk(client, actions, chunk_size=500, max_chunk_bytes=100 * 1024 *
             try:
                 for data, (ok, info) in zip(
                     bulk_data,
-                    _process_bulk_chunk(client, bulk_actions, bulk_data,
+                    _process_bulk_chunk(client.bulk, bulk_actions, bulk_data,
                                         raise_on_exception,
                                         raise_on_error, *args, **kwargs)
                 ):
@@ -212,7 +179,7 @@ def streaming_bulk(client, actions, chunk_size=500, max_chunk_bytes=100 * 1024 *
                                 and (attempt + 1) <= max_retries:
                             # _process_bulk_chunk expects strings so we need to
                             # re-serialize the data
-                            to_retry.extend(map(client.transport.serializer.dumps, data))
+                            to_retry.extend(map(client.bulk.transport.serializer.dumps, data))
                             to_retry_data.append(data)
                         else:
                             yield ok, {action: info}
@@ -279,7 +246,7 @@ def bulk(client, actions, stats_only=False, *args, **kwargs):
 
 def parallel_bulk(client, actions, thread_count=4, chunk_size=500,
                   max_chunk_bytes=100 * 1024 * 1024, queue_size=4,
-                  expand_action_callback=expand_action, *args, **kwargs):
+                  *args, **kwargs):
     """
     Parallel version of the bulk helper run in multiple threads at once.
 
@@ -292,17 +259,12 @@ def parallel_bulk(client, actions, thread_count=4, chunk_size=500,
         from the execution of the last chunk when some occur. By default we raise.
     :arg raise_on_exception: if ``False`` then don't propagate exceptions from
         call to ``bulk`` and just report the items that failed as failed.
-    :arg expand_action_callback: callback executed on each action passed in,
-        should return a tuple containing the action line and the data line
-        (`None` if data line should be omitted).
     :arg queue_size: size of the task queue between the main thread (producing
         chunks to send) and the processing threads.
     """
     # Avoid importing multiprocessing unless parallel_bulk is used
     # to avoid exceptions on restricted environments like App Engine
     from multiprocessing.pool import ThreadPool
-
-    actions = map(expand_action_callback, actions)
 
     class BlockingPool(ThreadPool):
         def _setup_queues(self):
@@ -314,7 +276,7 @@ def parallel_bulk(client, actions, thread_count=4, chunk_size=500,
 
     try:
         for result in pool.imap(
-            lambda bulk_chunk: list(_process_bulk_chunk(client, bulk_chunk[1], bulk_chunk[0], *args, **kwargs)),
+            lambda bulk_chunk: list(_process_bulk_chunk(client.bulk, bulk_chunk[1], bulk_chunk[0], *args, **kwargs)),
             _chunk_actions(actions, chunk_size, max_chunk_bytes, client.transport.serializer)
         ):
             for item in result:
@@ -323,154 +285,3 @@ def parallel_bulk(client, actions, thread_count=4, chunk_size=500,
     finally:
         pool.close()
         pool.join()
-
-
-def scan(client, query=None, scroll='5m', raise_on_error=True,
-         preserve_order=False, size=1000, request_timeout=None, clear_scroll=True,
-         scroll_kwargs=None, **kwargs):
-    """
-    Simple abstraction on top of the
-    :meth:`~xapiand.Xapiand.scroll` api - a simple iterator that
-    yields all hits as returned by underlining scroll requests.
-
-    By default scan does not return results in any pre-determined order. To
-    have a standard order in the returned documents (either by score or
-    explicit sort definition) when scrolling, use ``preserve_order=True``. This
-    may be an expensive operation and will negate the performance benefits of
-    using ``scan``.
-
-    :arg client: instance of :class:`~xapiand.Xapiand` to use
-    :arg query: body for the :meth:`~xapiand.Xapiand.search` api
-    :arg scroll: Specify how long a consistent view of the index should be
-        maintained for scrolled search
-    :arg raise_on_error: raises an exception (``ScanError``) if an error is
-        encountered (some shards fail to execute). By default we raise.
-    :arg preserve_order: don't set the ``search_type`` to ``scan`` - this will
-        cause the scroll to paginate with preserving the order. Note that this
-        can be an extremely expensive operation and can easily lead to
-        unpredictable results, use with caution.
-    :arg size: size (per shard) of the batch send at each iteration.
-    :arg request_timeout: explicit timeout for each call to ``scan``
-    :arg clear_scroll: explicitly calls delete on the scroll id via the clear
-        scroll API at the end of the method on completion or error, defaults
-        to true.
-    :arg scroll_kwargs: additional kwargs to be passed to
-        :meth:`~xapiand.Xapiand.scroll`
-
-    Any additional keyword arguments will be passed to the initial
-    :meth:`~xapiand.Xapiand.search` call::
-
-        scan(client,
-            query={"query": {"match": {"title": "python"}}},
-            index="orders-*",
-            doc_type="books"
-        )
-
-    """
-    scroll_kwargs = scroll_kwargs or {}
-
-    if not preserve_order:
-        query = query.copy() if query else {}
-        query["sort"] = "_doc"
-    # initial search
-    resp = client.search(body=query, scroll=scroll, size=size,
-                         request_timeout=request_timeout, **kwargs)
-
-    scroll_id = resp.get('_scroll_id')
-    if scroll_id is None:
-        return
-
-    try:
-        first_run = True
-        while True:
-            # if we didn't set search_type to scan initial search contains data
-            if first_run:
-                first_run = False
-            else:
-                resp = client.scroll(scroll_id, scroll=scroll,
-                                     request_timeout=request_timeout,
-                                     **scroll_kwargs)
-
-            for hit in resp['hits']['hits']:
-                yield hit
-
-            # check if we have any errrors
-            if resp["_shards"]["successful"] < resp["_shards"]["total"]:
-                logger.warning(
-                    "Scroll request has only succeeded on %d shards out of %d.",
-                    resp['_shards']['successful'], resp['_shards']['total']
-                )
-                if raise_on_error:
-                    raise ScanError(
-                        scroll_id,
-                        "Scroll request has only succeeded on %d shards out of %d." % (
-                            resp['_shards']['successful'], resp['_shards']['total']
-                        )
-                    )
-
-            scroll_id = resp.get('_scroll_id')
-            # end of scroll
-            if scroll_id is None or not resp['hits']['hits']:
-                break
-    finally:
-        if scroll_id and clear_scroll:
-            client.clear_scroll(body={'scroll_id': [scroll_id]}, ignore=(404, ))
-
-
-def reindex(client, source_index, target_index, query=None, target_client=None,
-            chunk_size=500, scroll='5m', scan_kwargs={}, bulk_kwargs={}):
-    """
-    Reindex all documents from one index that satisfy a given query
-    to another, potentially (if `target_client` is specified) on a different cluster.
-    If you don't specify the query you will reindex all the documents.
-
-    Since ``2.3`` a :meth:`~xapiand.Xapiand.reindex` api is
-    available as part of xapiand itself. It is recommended to use the api
-    instead of this helper wherever possible. The helper is here mostly for
-    backwards compatibility and for situations where more flexibility is
-    needed.
-
-    .. note::
-
-        This helper doesn't transfer mappings, just the data.
-
-    :arg client: instance of :class:`~xapiand.Xapiand` to use (for
-        read if `target_client` is specified as well)
-    :arg source_index: index (or list of indices) to read documents from
-    :arg target_index: name of the index in the target cluster to populate
-    :arg query: body for the :meth:`~xapiand.Xapiand.search` api
-    :arg target_client: optional, is specified will be used for writing (thus
-        enabling reindex between clusters)
-    :arg chunk_size: number of docs in one chunk sent to the server (default: 500)
-    :arg scroll: Specify how long a consistent view of the index should be
-        maintained for scrolled search
-    :arg scan_kwargs: additional kwargs to be passed to
-        :func:`~xapiand.helpers.scan`
-    :arg bulk_kwargs: additional kwargs to be passed to
-        :func:`~xapiand.helpers.bulk`
-    """
-    target_client = client if target_client is None else target_client
-
-    docs = scan(
-        client,
-        query=query,
-        index=source_index,
-        scroll=scroll,
-        **scan_kwargs
-    )
-
-    def _change_doc_index(hits, index):
-        for h in hits:
-            h['_index'] = index
-            if 'fields' in h:
-                h.update(h.pop('fields'))
-            yield h
-
-    kwargs = {
-        'stats_only': True,
-    }
-    kwargs.update(bulk_kwargs)
-    return bulk(target_client,
-                _change_doc_index(docs, target_index),
-                chunk_size=chunk_size,
-                **kwargs)
