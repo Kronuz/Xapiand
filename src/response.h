@@ -44,6 +44,7 @@ constexpr const char RESPONSE_PROCESSED[]                   = RESPONSE__ "proces
 constexpr const char RESPONSE_INDEXED[]                     = RESPONSE__ "indexed";
 constexpr const char RESPONSE_TOTAL[]                       = RESPONSE__ "total";
 constexpr const char RESPONSE_ITEMS[]                       = RESPONSE__ "items";
+constexpr const char RESPONSE_TOOK[]                        = RESPONSE__ "took";
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_AV_LENGTH[]                   = RESPONSE__ "av_length";

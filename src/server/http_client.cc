@@ -2097,6 +2097,12 @@ HttpClient::restore_view(Request& request)
 			{ RESPONSE_ITEMS, request.indexer->results() },
 		};
 
+		if (request.human) {
+			response_obj[RESPONSE_TOOK] = string::from_delta(took);
+		} else {
+			response_obj[RESPONSE_TOOK] = took / 1e9;
+		}
+
 		write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 		L_TIME("Restore took {}", string::from_delta(took));
@@ -2446,6 +2452,12 @@ HttpClient::search_view(Request& request)
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Searching took {}", string::from_delta(took));
 
+	if (request.human) {
+		obj[RESPONSE_TOOK] = string::from_delta(took);
+	} else {
+		obj[RESPONSE_TOOK] = took / 1e9;
+	}
+
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	if (aggregations) {
@@ -2564,6 +2576,17 @@ HttpClient::url_resolve(Request& request)
 		if ((u.field_set & (1 <<  UF_QUERY)) != 0) {
 			if (request.query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
 				return Command::BAD_QUERY;
+			}
+		}
+
+		request.query_parser.rewind();
+		if (request.query_parser.next("human") != -1) {
+			if (request.query_parser.len != 0u) {
+				try {
+					request.human = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+				} catch (const Exception&) { }
+			} else {
+				request.human = true;
 			}
 		}
 
@@ -3354,6 +3377,7 @@ Request::Request(HttpClient* client)
 	  raw_peek{0},
 	  raw_offset{0},
 	  size{0},
+	  human{true},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},

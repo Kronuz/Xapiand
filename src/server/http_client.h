@@ -257,6 +257,7 @@ public:
 
 	size_t size;
 
+	bool human;
 	int indented;
 	bool expect_100;
 	bool closing;
