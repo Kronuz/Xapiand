@@ -21,11 +21,8 @@
             "program": "${workspaceFolder}/build/bin/xapiand",
             "args": [
                 "--cluster=Kronuz",
-                "-Ddb",
-                "--use=kqueue",
-                "-vvvvv",
                 "--uuid=encoded",
-                "--optimal",
+                "-vvvvv",
             ],
             "stopAtEntry": false,
             "filterStdout": false,
