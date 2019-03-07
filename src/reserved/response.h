@@ -28,3 +28,5 @@ constexpr const char RESERVED_RESPONSE_RANK[]               = RESERVED__ "rank";
 constexpr const char RESERVED_RESPONSE_WEIGHT[]             = RESERVED__ "weight";
 constexpr const char RESERVED_RESPONSE_PERCENT[]            = RESERVED__ "percent";
 constexpr const char RESERVED_RESPONSE_ENDPOINT[]           = RESERVED__ "endpoint";
+constexpr const char RESERVED_RESPONSE_MESSAGE[]            = RESERVED__ "message";
+constexpr const char RESERVED_RESPONSE_STATUS[]             = RESERVED__ "status";

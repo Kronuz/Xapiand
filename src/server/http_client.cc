@@ -472,8 +472,8 @@ HttpClient::handled_errors(Request& request, Func&& func)
 		request.ending = true;
 	} else {
 		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, string::split(error, '\n') }
+			{ RESERVED_RESPONSE_STATUS, (int)error_code },
+			{ RESERVED_RESPONSE_MESSAGE, string::split(error, '\n') }
 		};
 		write_http_response(request, error_code, err_response);
 		request.ending = true;
@@ -538,8 +538,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 			if (new_request->response.status == static_cast<http_status>(0)) {
 				MsgPack err_response = {
-					{ RESPONSE_STATUS, (int)error_code },
-					{ RESPONSE_MESSAGE, string::split(message, '\n') }
+					{ RESERVED_RESPONSE_STATUS, (int)error_code },
+					{ RESERVED_RESPONSE_MESSAGE, string::split(message, '\n') }
 				};
 				write_http_response(*new_request, error_code, err_response);
 				end_http_request(*new_request);
@@ -1061,8 +1061,8 @@ HttpClient::prepare()
 	if (new_request->type_encoding == Encoding::unknown) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, { "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" } }
+			{ RESERVED_RESPONSE_STATUS, (int)error_code },
+			{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
 		};
 		write_http_response(*new_request, error_code, err_response);
 		return 1;
@@ -1100,8 +1100,8 @@ HttpClient::prepare()
 		default: {
 			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
 			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Method not implemented!" } }
+				{ RESERVED_RESPONSE_STATUS, (int)error_code },
+				{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Method not implemented!" }) } }
 			};
 			write_http_response(*new_request, error_code, err_response);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
@@ -2012,8 +2012,8 @@ HttpClient::dump_view(Request& request)
 			// No content type could be resolved, return NOT ACCEPTABLE.
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 			MsgPack err_response = {
-				{ RESPONSE_STATUS, (int)error_code },
-				{ RESPONSE_MESSAGE, { "Response type application/octet-stream not provided in the Accept header" } }
+				{ RESERVED_RESPONSE_STATUS, (int)error_code },
+				{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
 			};
 			write_http_response(request, error_code, err_response);
 			L_SEARCH("ABORTED SEARCH");
@@ -2262,8 +2262,8 @@ HttpClient::retrieve_view(Request& request)
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
-			{ RESPONSE_STATUS, (int)error_code },
-			{ RESPONSE_MESSAGE, { "Response type not accepted by the Accept header" } }
+			{ RESERVED_RESPONSE_STATUS, (int)error_code },
+			{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
 		};
 		write_http_response(request, error_code, err_response);
 		L_SEARCH("ABORTED RETRIEVE");
@@ -2522,8 +2522,8 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 	L_CALL("HttpClient::write_status_response()");
 
 	write_http_response(request, status, {
-		{ RESPONSE_STATUS, (int)status },
-		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
+		{ RESERVED_RESPONSE_STATUS, (int)status },
+		{ RESERVED_RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
 	});
 }
 
@@ -3216,8 +3216,8 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
-			{ RESPONSE_STATUS, (int)status },
-			{ RESPONSE_MESSAGE, { "Response type " + accepted_type.to_string() + " " + exc.what() } }
+			{ RESERVED_RESPONSE_STATUS, (int)status },
+			{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
 		};
 		auto response_str = response_err.to_string();
 		if (request.type_encoding != Encoding::none) {
