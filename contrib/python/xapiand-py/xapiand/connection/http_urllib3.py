@@ -90,7 +90,7 @@ class Urllib3HttpConnection(Connection):
     def __init__(self, host='localhost', port=8880, http_auth=None,
             use_ssl=False, verify_certs=VERIFY_CERTS_DEFAULT, ca_certs=None, client_cert=None,
             client_key=None, ssl_version=None, ssl_assert_hostname=None,
-            ssl_assert_fingerprint=None, maxsize=10, headers=None, ssl_context=None, http_compression='deflate', **kwargs):
+            ssl_assert_fingerprint=None, maxsize=10, headers=None, ssl_context=None, http_compression=None, **kwargs):
 
         super(Urllib3HttpConnection, self).__init__(host=host, port=port, use_ssl=use_ssl, **kwargs)
         self.http_compression = http_compression
