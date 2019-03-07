@@ -467,33 +467,29 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	auto did = replace_document_term(term_id, std::move(doc), commit);
 
-	if (term_id == "QN\x80") {
-		// Set id inside serialized object:
-		auto it = data_obj.find(ID_FIELD_NAME);
-		if (it != data_obj.end()) {
-			auto& value = it.value();
-			switch (value.getType()) {
-				case MsgPack::Type::POSITIVE_INTEGER:
-					value = static_cast<uint64_t>(did);
-					break;
-				case MsgPack::Type::NEGATIVE_INTEGER:
-					value = static_cast<int64_t>(did);
-					break;
-				case MsgPack::Type::FLOAT:
-					value = static_cast<double>(did);
-					break;
-				default:
-					break;
-			}
-		}
-	}
-
 	Document document(did, this);
 
-	if (data_obj.find(ID_FIELD_NAME) == data_obj.end()) {
+	auto it_id = data_obj.find(ID_FIELD_NAME);
+	if (it_id == data_obj.end()) {
 		// TODO: This may be somewhat expensive, but replace_document()
 		//       doesn't currently return the "document_id" (not the docid).
 		data_obj[ID_FIELD_NAME] = document_id ? document_id : document.get_value(ID_FIELD_NAME);
+	} else if (term_id == "QN\x80") {
+		// Set id inside serialized object:
+		auto& value = it_id.value();
+		switch (value.getType()) {
+			case MsgPack::Type::POSITIVE_INTEGER:
+				value = static_cast<uint64_t>(did);
+				break;
+			case MsgPack::Type::NEGATIVE_INTEGER:
+				value = static_cast<int64_t>(did);
+				break;
+			case MsgPack::Type::FLOAT:
+				value = static_cast<double>(did);
+				break;
+			default:
+				break;
+		}
 	}
 
 	try {
