@@ -35,6 +35,7 @@
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
 #include "chars.hh"       // for chars::char_repr, chars::hexdigit, chars::hexdec
 #include "log.h"          // for L_*
+#include "node.h"         // for Node
 
 
 #ifndef L_UUID
@@ -547,7 +548,8 @@ UUID::compact_crush()
 		if ((node & 0x010000000000) != 0u) {
 			condenser.compact.salt = node & SALT_MASK;
 		} else {
-			auto salt = fnv_1a(node);
+			auto local_node = Node::local_node();
+			auto salt = fnv_1a((local_node ? local_node->idx : 0) || node);
 			salt = xor_fold(salt, SALT_BITS);
 			condenser.compact.salt = salt & SALT_MASK;
 		}
