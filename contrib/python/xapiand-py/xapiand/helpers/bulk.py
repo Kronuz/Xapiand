@@ -38,7 +38,7 @@ def chunk_objects(objects, chunk_size, max_chunk_bytes, serializer):
     size, count = 0, 0
     for obj in objects:
         ser_obj = serializer.dumps(obj)
-        cur_size = len(ser_obj.encode('utf-8')) + 1
+        cur_size = len(ser_obj) + 1
 
         # full chunk, send it and start a new one
         if size + cur_size > max_chunk_bytes or count == chunk_size:

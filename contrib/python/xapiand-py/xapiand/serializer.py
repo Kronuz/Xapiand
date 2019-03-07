@@ -84,8 +84,6 @@ class MsgPackSerializer(Serializer):
     def dumps(self, data):
         if isinstance(data, binary_type):
             return data
-        if isinstance(data, text_type):
-            return data.encode('utf-8')
         try:
             return msgpack.dumps(
                 data,
@@ -110,15 +108,13 @@ class JSONSerializer(Serializer):
     def dumps(self, data):
         if isinstance(data, binary_type):
             return data
-        if isinstance(data, text_type):
-            return data.encode('utf-8')
         try:
             return json.dumps(
                 data,
                 default=self.default,
                 ensure_ascii=False,
                 separators=(',', ':'),
-            )
+            ).encode('utf-8')
         except (ValueError, TypeError) as e:
             raise SerializationError(data, e)
 
