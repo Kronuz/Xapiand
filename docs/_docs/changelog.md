@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #unreleased }
 
 ### Changed
+- **BREAKING**: Fields in responses renamed and nested differently:
+-               + `query.hits` moved to `hits`
+                + `query.matches_estimated` renamed to `count`
+                + `query.total_count` renamed to `doc_count`
 - Default UUID mode is now encoded + compact
 
 
