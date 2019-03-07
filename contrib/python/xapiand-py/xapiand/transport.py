@@ -19,7 +19,6 @@
 import time
 from itertools import chain
 
-from .compat import text_type
 from .connection import Urllib3HttpConnection
 from .connection_pool import ConnectionPool, DummyConnectionPool
 from .serializer import Deserializer, DEFAULT_SERIALIZERS, DEFAULT_SERIALIZER
@@ -54,7 +53,7 @@ class Transport(object):
                  sniff_on_start=False, sniffer_timeout=None, sniff_timeout=.1,
                  sniff_on_connection_fail=False, serializer=DEFAULT_SERIALIZER, serializers=None,
                  default_mimetype=DEFAULT_SERIALIZER.mimetype, max_retries=3, retry_on_status=(502, 503, 504),
-                 retry_on_timeout=False, send_get_body_as='GET', **kwargs):
+                 retry_on_timeout=False, http_method_override=False, **kwargs):
         """
         :arg hosts: list of dictionaries, each containing keyword arguments to
             create a `connection_class` instance
@@ -82,11 +81,10 @@ class Transport(object):
             on a different node. defaults to ``(502, 503, 504)``
         :arg retry_on_timeout: should timeout trigger a retry on different
             node? (default `False`)
-        :arg send_get_body_as: for GET requests with body this option allows
-            you to specify an alternate way of execution for environments that
-            don't support passing bodies with GET requests. If you set this to
-            'POST' a POST method will be used instead, if to 'source' then the body
-            will be serialized and passed as a query parameter `source`.
+        :arg http_method_override: for environments that don't support passing
+            bodies with GET requests or non-standard methods such as `MERGE`,
+            this option allows you to specify using `POST` and the
+            `X-HTTP-Method-Override` header instead.
         :arg kwargs: any additional arguments will be passed on to the
             :class:`~xapiand.Connection` instances.
 
@@ -108,7 +106,7 @@ class Transport(object):
         self.max_retries = max_retries
         self.retry_on_timeout = retry_on_timeout
         self.retry_on_status = retry_on_status
-        self.send_get_body_as = send_get_body_as
+        self.http_method_override = http_method_override
 
         # data serializer
         self.serializer = serializer
@@ -294,21 +292,17 @@ class Transport(object):
         if body is not None:
             body = self.serializer.dumps(body)
 
-            # some clients or environments don't support sending GET with body
-            if method in ('HEAD', 'GET') and self.send_get_body_as != 'GET':
-                # send it as post instead
-                if self.send_get_body_as == 'POST':
-                    method = 'POST'
-
-                # or as source parameter
-                elif self.send_get_body_as == 'source':
-                    if params is None:
-                        params = {}
-                    params['source'] = body
-                    body = None
-
-        if isinstance(body, text_type):
-            body = body.encode('utf-8', 'surrogatepass')
+        if self.http_method_override and (
+            (body is not None and method in ('GET', 'OPTIONS', 'HEAD')) or
+            method not in ('POST', 'PUT', 'PATCH', 'DELETE')
+        ):
+            # some clients or environments don't support sending GET with body or
+            # non-standard HTTP methods (such as `MERGE` or `STORE`), send the
+            # request it as `POST` instead, with the X-HTTP-Method-Override header.
+            if headers is None:
+                headers = {}
+            headers['X-HTTP-Method-Override'] = method
+            method = 'POST'
 
         ignore = ()
         timeout = None
