@@ -21,7 +21,7 @@
             "program": "${workspaceFolder}/build/bin/xapiand",
             "args": [
                 "--cluster=Kronuz",
-                "--uuid=encoded",
+                "--uuid=partition",
                 "-vvvvv",
             ],
             "stopAtEntry": false,

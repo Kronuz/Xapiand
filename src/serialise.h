@@ -69,7 +69,7 @@ constexpr std::uint32_t DOUBLE2INT = 1000000000;
 constexpr std::uint32_t MAXDOU2INT = 2000000000;
 
 enum class UUIDRepr : std::uint32_t {
-	simple = fnv1ah32::hash("simple"),
+	vanilla = fnv1ah32::hash("vanilla"),
 #ifdef XAPIAND_UUID_GUID
 	guid = fnv1ah32::hash("guid"),
 #endif
@@ -316,7 +316,7 @@ namespace Unserialise {
 	CartesianList centroids(std::string_view serialised_geo);
 
 	// Unserialise a serialised UUID.
-	std::string uuid(std::string_view serialised_uuid, UUIDRepr repr=UUIDRepr::simple);
+	std::string uuid(std::string_view serialised_uuid, UUIDRepr repr=UUIDRepr::vanilla);
 
 	// Unserialise a serialised cartesian coordinate.
 	Cartesian cartesian(std::string_view serialised_val);

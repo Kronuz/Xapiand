@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Changed
+- Default UUID mode is now encoded + compact
+
 
 ---
 ## [0.11.1] - 2019-03-06

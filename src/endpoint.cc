@@ -129,7 +129,7 @@ normalize_and_partition(const void *p, size_t size)
 			/* FALLTHROUGH */
 #endif
 		default:
-		case UUIDRepr::simple:
+		case UUIDRepr::vanilla:
 			// 00000000-0000-1000-8000-010000000000
 			result.reserve(2 + 8 + normalized.size());
 			result.append(&normalized[14], &normalized[18]);

@@ -375,9 +375,7 @@ void parseOptions(int argc, char** argv) {
 #endif
 
 		std::vector<std::string> uuid_allowed({
-			"simple",
-			"compact",
-			"partition",
+			"vanilla",
 #ifdef XAPIAND_UUID_GUID
 			"guid",
 #endif
@@ -385,7 +383,9 @@ void parseOptions(int argc, char** argv) {
 			"urn",
 #endif
 #ifdef XAPIAND_UUID_ENCODED
+			"compact",
 			"encoded",
+			"partition",
 #endif
 		});
 		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
@@ -600,33 +600,46 @@ void parseOptions(int argc, char** argv) {
 		}
 		opts.ev_flags = ev_backend(use.getValue());
 
+		bool uuid_configured = false;
 		for (const auto& u : uuid.getValue()) {
 			switch (fnv1ah32::hash(u)) {
-				case fnv1ah32::hash("simple"):
-					opts.uuid_repr = fnv1ah32::hash("simple");
+				case fnv1ah32::hash("vanilla"):
+					opts.uuid_repr = fnv1ah32::hash("vanilla");
+					uuid_configured = true;
 					break;
+#ifdef XAPIAND_UUID_GUID
+				case fnv1ah32::hash("guid"):
+					opts.uuid_repr = fnv1ah32::hash("guid");
+					uuid_configured = true;
+					break;
+#endif
+#ifdef XAPIAND_UUID_URN
+				case fnv1ah32::hash("urn"):
+					opts.uuid_repr = fnv1ah32::hash("urn");
+					uuid_configured = true;
+					break;
+#endif
+#ifdef XAPIAND_UUID_ENCODED
+				case fnv1ah32::hash("encoded"):
+					opts.uuid_repr = fnv1ah32::hash("encoded");
+					uuid_configured = true;
+					break;
+#endif
 				case fnv1ah32::hash("compact"):
 					opts.uuid_compact = true;
 					break;
 				case fnv1ah32::hash("partition"):
 					opts.uuid_partition = true;
 					break;
-#ifdef XAPIAND_UUID_GUID
-				case fnv1ah32::hash("guid"):
-					opts.uuid_repr = fnv1ah32::hash("guid");
-					break;
-#endif
-#ifdef XAPIAND_UUID_URN
-				case fnv1ah32::hash("urn"):
-					opts.uuid_repr = fnv1ah32::hash("urn");
-					break;
-#endif
-#ifdef XAPIAND_UUID_ENCODED
-				case fnv1ah32::hash("encoded"):
-					opts.uuid_repr = fnv1ah32::hash("encoded");
-					break;
-#endif
 			}
+		}
+		if (!uuid_configured) {
+#ifdef XAPIAND_UUID_ENCODED
+			opts.uuid_repr = fnv1ah32::hash("encoded");
+#else
+			opts.uuid_repr = fnv1ah32::hash("vanilla");
+#endif
+			opts.uuid_compact = true;
 		}
 
 		opts.dump_metadata = dump_metadata.getValue();

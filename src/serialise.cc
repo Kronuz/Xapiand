@@ -1258,7 +1258,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 			/* FALLTHROUGH */
 #endif
 		default:
-		case UUIDRepr::simple:
+		case UUIDRepr::vanilla:
 			// 00000000-0000-1000-8000-010000000000
 			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append(string::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
