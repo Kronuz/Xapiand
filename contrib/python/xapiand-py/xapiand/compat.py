@@ -30,6 +30,7 @@ if PY2:
     from urllib import quote_plus, urlencode, unquote
     from urlparse import  urlparse
     from itertools import imap as map
+    from itertools import izip as zip
     from Queue import Queue
 else:
     text_type = str
@@ -39,4 +40,5 @@ else:
     integer_type = long
     from urllib.parse import quote_plus, urlencode, urlparse, unquote
     map = map
+    zip = zip
     from queue import Queue

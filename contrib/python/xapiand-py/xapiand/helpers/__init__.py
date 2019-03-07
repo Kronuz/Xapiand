@@ -17,5 +17,5 @@
 # limitations under the License.
 
 from .errors import BulkIndexError, ScanError
-from .bulk import streaming_bulk, bulk, parallel_bulk, _chunk_actions, _process_bulk_chunk
+from .bulk import streaming_bulk, bulk, parallel_bulk, chunk_objects, process_bulk_chunk
 from .reindex import scan, reindex

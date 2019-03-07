@@ -19,6 +19,7 @@
 import time
 from itertools import chain
 
+from .compat import text_type
 from .connection import Urllib3HttpConnection
 from .connection_pool import ConnectionPool, DummyConnectionPool
 from .serializer import Deserializer, DEFAULT_SERIALIZERS, DEFAULT_SERIALIZER
@@ -306,12 +307,8 @@ class Transport(object):
                     params['source'] = body
                     body = None
 
-        if body is not None:
-            try:
-                body = body.encode('utf-8', 'surrogatepass')
-            except (UnicodeDecodeError, AttributeError):
-                # bytes/str - no need to re-encode
-                pass
+        if isinstance(body, text_type):
+            body = body.encode('utf-8', 'surrogatepass')
 
         ignore = ()
         timeout = None

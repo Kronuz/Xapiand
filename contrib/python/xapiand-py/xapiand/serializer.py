@@ -58,31 +58,34 @@ class Serializer(object):
 class TextSerializer(Serializer):
     mimetype = 'text/plain'
 
-    def loads(self, s):
-        return s.decode('utf-8')
+    def loads(self, serialized):
+        return serialized.decode('utf-8')
 
     def dumps(self, data):
-        if isinstance(data, text_type):
-            return data.encode('utf-8')
         if isinstance(data, binary_type):
             return data
+        if isinstance(data, text_type):
+            return data.encode('utf-8')
         raise SerializationError("Cannot serialize %r into text." % data)
+
+    def nddumps(self, serialized_list):
+        return 'text/plain', b'\r\n\r\n'.join(map(self.dumps, serialized_list)) + b'\r\n\r\n'
 
 
 class MsgPackSerializer(Serializer):
     mimetype = 'application/x-msgpack'
 
-    def loads(self, s):
+    def loads(self, serialized):
         try:
-            return msgpack.loads(s, object_pairs_hook=self.object_pairs_hook)
+            return msgpack.loads(serialized, object_pairs_hook=self.object_pairs_hook)
         except (ValueError, TypeError) as e:
-            raise SerializationError(s, e)
+            raise SerializationError(serialized, e)
 
     def dumps(self, data):
-        if isinstance(data, text_type):
-            return data.encode('utf-8')
         if isinstance(data, binary_type):
             return data
+        if isinstance(data, text_type):
+            return data.encode('utf-8')
         try:
             return msgpack.dumps(
                 data,
@@ -91,21 +94,24 @@ class MsgPackSerializer(Serializer):
         except (ValueError, TypeError) as e:
             raise SerializationError(data, e)
 
+    def nddumps(self, serialized_list):
+        return 'application/x-msgpack', b''.join(map(self.dumps, serialized_list))
+
 
 class JSONSerializer(Serializer):
     mimetype = 'application/json'
 
-    def loads(self, s):
+    def loads(self, serialized):
         try:
-            return json.loads(s, object_pairs_hook=self.object_pairs_hook)
+            return json.loads(serialized, object_pairs_hook=self.object_pairs_hook)
         except (ValueError, TypeError) as e:
-            raise SerializationError(s, e)
+            raise SerializationError(serialized, e)
 
     def dumps(self, data):
-        if isinstance(data, text_type):
-            return data.encode('utf-8')
         if isinstance(data, binary_type):
             return data
+        if isinstance(data, text_type):
+            return data.encode('utf-8')
         try:
             return json.dumps(
                 data,
@@ -115,6 +121,9 @@ class JSONSerializer(Serializer):
             )
         except (ValueError, TypeError) as e:
             raise SerializationError(data, e)
+
+    def nddumps(self, serialized_list):
+        return 'application/x-ndjson', b'\n'.join(map(self.dumps, serialized_list)) + b'\n'
 
 
 DEFAULT_SERIALIZERS = {

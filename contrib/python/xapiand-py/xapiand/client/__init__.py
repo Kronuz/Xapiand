@@ -338,22 +338,21 @@ class Xapiand(object):
         return self.transport.perform_request('GET', _make_path(index,
             ':search'), params=params, body=body)
 
-    @query_params('commit', 'timeout')
+    @query_params('timeout')
     def restore(self, index, body, params=None):
         """
         Perform many index operations in a single API call.
 
-        See the :func:`~xapiand.helpers.bulk` helper function for a more
+        See the :func:`~xapiand.helpers.restore` helper function for a more
         friendly API.
 
         :arg index: The name of the index
         :arg body: The list of documents to index, they can specify ``_id``
-        :arg commit: If `true` then commit the document to make this operation
-            immediately visible to search, if `false` (the default) then do
-            not manually commit anything.
         :arg timeout: Explicit operation timeout
         """
         if body in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'body'.")
+
+        content_type, body = self.transport.serializer.nddumps(body)
         return self.transport.perform_request('POST', _make_path(index,
-            ':restore'), params=params, body=body)
+            ':restore'), params=params, body=body, headers={'content-type': content_type})
