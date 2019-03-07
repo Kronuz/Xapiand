@@ -25,7 +25,7 @@ def create_git_index(client, index):
     }
 
     create_index_body = {
-        '_schema': {
+        'schema': {
             'repository': {
                 '_type': 'keyword'
             },
