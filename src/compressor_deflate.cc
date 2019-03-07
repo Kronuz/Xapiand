@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -74,7 +74,7 @@ DeflateCompressData::init()
 	strm.opaque = Z_NULL;
 	strm.next_in = Z_NULL;
 
-	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 | (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
+	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
 	if (stream < 0) {
 		THROW(DeflateException, zerr(stream));
 	}
@@ -181,9 +181,16 @@ DeflateDecompressData::init()
 	strm.avail_in = 0;
 	strm.next_in = Z_NULL;
 
-	stream = inflateInit2(&strm, 15 | (gzip ? 16 : 0));
+	stream = inflateInit2(&strm, 15 + (gzip ? 16 : 0));
 	if (stream < 0) {
-		THROW(DeflateException, zerr(stream));
+		if (gzip) {
+			THROW(DeflateException, zerr(stream));
+		} else {
+			stream = inflateInit2(&strm, -15);
+			if (stream < 0) {
+				THROW(DeflateException, zerr(stream));
+			}
+		}
 	}
 	state = DeflateState::INIT;
 
@@ -271,7 +278,7 @@ DeflateCompressFile::init()
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
 
-	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 | (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
+	stream = deflateInit2(&strm, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + (gzip ? 16 : 0), 8, Z_DEFAULT_STRATEGY);
 	if (stream < 0) {
 		THROW(DeflateException, zerr(stream));
 	}
@@ -364,9 +371,16 @@ DeflateDecompressFile::init()
 	strm.avail_in = 0;
 	strm.next_in = Z_NULL;
 
-	stream = inflateInit2(&strm, 15 | (gzip ? 16 : 0));
+	stream = inflateInit2(&strm, 15 + (gzip ? 16 : 0));
 	if (stream < 0) {
-		THROW(DeflateException, zerr(stream));
+		if (gzip) {
+			THROW(DeflateException, zerr(stream));
+		} else {
+			stream = inflateInit2(&strm, -15);
+			if (stream < 0) {
+				THROW(DeflateException, zerr(stream));
+			}
+		}
 	}
 	state = DeflateState::INIT;
 
