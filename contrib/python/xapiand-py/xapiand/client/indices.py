@@ -21,6 +21,19 @@ from .utils import NamespacedClient, query_params, _make_path, SKIP_IN_PATH
 
 class IndicesClient(NamespacedClient):
     @query_params('timeout')
+    def schema(self, index, body=None, params=None):
+        """
+        Create an index in Xapiand.
+
+        :arg index: The name of the index
+        :arg body: The configuration for the index (`_settings` and `_schema`)
+        :arg timeout: Explicit operation timeout
+        """
+        return self.transport.perform_request('POST', _make_path(index,
+            ':schema'), params=params, body=body)
+    create = schema
+
+    @query_params('timeout')
     def commit(self, index=None, params=None):
         """
         Explicitly commit one or more index, making all operations performed
@@ -31,7 +44,8 @@ class IndicesClient(NamespacedClient):
         :arg timeout: Explicit operation timeout
         """
         return self.transport.perform_request('POST', _make_path(index,
-            ':refresh'), params=params)
+            ':commit'), params=params)
+    refresh = commit
 
     @query_params('timeout')
     def open(self, index, params=None):
