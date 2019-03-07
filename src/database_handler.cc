@@ -47,6 +47,7 @@
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
+#include "reserved/response.h"              // for RESERVED_RESPONSE_*
 #include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema, required_spc_t
@@ -1726,10 +1727,14 @@ DocPreparer::operator()()
 	if (indexer->running) {
 		try {
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
-			indexer->ready_queue.enqueue(db_handler.prepare_document(obj));
+			auto prepared = db_handler.prepare_document(obj);
+			indexer->ready_queue.enqueue(std::make_tuple(std::move(std::get<0>(prepared)), std::move(std::get<1>(prepared)), std::move(std::get<2>(prepared)), idx));
 		} catch (...) {
 			L_EXC("ERROR: Cannot prepare document");
-			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{
+				{ RESERVED_RESPONSE_STATUS, 400 },
+				{ RESERVED_RESPONSE_MESSAGE, MsgPack({ "Cannot prepare document" }) },
+			}, idx));
 		}
 	}
 }
@@ -1743,7 +1748,7 @@ DocIndexer::operator()()
 	DatabaseHandler db_handler(endpoints, flags, method);
 	bool ready_ = false;
 	while (running) {
-		std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
 		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
 		if (!ready_) {
@@ -1756,15 +1761,65 @@ DocIndexer::operator()()
 
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
+			auto& data_obj = std::get<2>(prepared);
+			auto& idx = std::get<3>(prepared);
 
 			if (!term_id.empty()) {
+				MsgPack obj;
 				try {
-					lock_database lk_db(&db_handler);
-					db_handler.database()->replace_document_term(term_id, std::move(doc), false, true);
+					auto did = db_handler.replace_document_term(term_id, std::move(doc), false);
+
+					Document document(did, &db_handler);
+
+					auto it_id = data_obj.find(ID_FIELD_NAME);
+					if (it_id == data_obj.end()) {
+						// TODO: This may be somewhat expensive, but replace_document()
+						//       doesn't currently return the "document_id" (not the docid).
+						obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+					} else if (term_id == "QN\x80") {
+						// Set id inside serialized object:
+						auto& value = it_id.value();
+						switch (value.getType()) {
+							case MsgPack::Type::POSITIVE_INTEGER:
+								value = static_cast<uint64_t>(did);
+								break;
+							case MsgPack::Type::NEGATIVE_INTEGER:
+								value = static_cast<int64_t>(did);
+								break;
+							case MsgPack::Type::FLOAT:
+								value = static_cast<double>(did);
+								break;
+							default:
+								break;
+						}
+						obj[ID_FIELD_NAME] = value;
+					} else {
+						auto& value = it_id.value();
+						obj[ID_FIELD_NAME] = value;
+					}
+
+					try {
+						// TODO: This may be somewhat expensive, but replace_document()
+						//       doesn't currently return the "version".
+						auto version = document.get_value(DB_SLOT_VERSION);
+						if (!version.empty()) {
+							obj[RESERVED_VERSION] = unserialise_length(version);
+						}
+					} catch(...) {
+						L_EXC("Cannot retrieve document version for docid {}!", did);
+					}
+
 					++_indexed;
 				} catch (...) {
 					L_EXC("ERROR: Cannot replace document");
+					obj[RESERVED_RESPONSE_STATUS] = 400;
+					obj[RESERVED_RESPONSE_MESSAGE] = MsgPack({ "Cannot replace document" });
 				}
+				std::lock_guard<std::mutex> lk(_results_mtx);
+				if (_idx > _results.size()) {
+					_results.resize(_idx, MsgPack::MAP());
+				}
+				_results[idx] = std::move(obj);
 			}
 		} else {
 			processed_ = _processed.load(std::memory_order_acquire);
@@ -1794,7 +1849,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 		return;
 	}
 
-	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj));
+	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	if (bulk_cnt == bulk.size()) {
 		_total += bulk_cnt;
 		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
@@ -1844,6 +1899,13 @@ DocIndexer::wait(double timeout)
 
 	ready.store(true, std::memory_order_release);
 
+	{
+		std::lock_guard<std::mutex> lk(_results_mtx);
+		if (_idx > _results.size()) {
+			_results.resize(_idx, MsgPack::MAP());
+		}
+	}
+
 	if (_total && timeout) {
 		if (timeout > 0.0) {
 			return done.wait(timeout * 1e6);
@@ -1862,7 +1924,7 @@ DocIndexer::finish()
 	L_CALL("DocIndexer::finish()");
 
 	running = false;
-	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
+	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, 0));
 }
 
 

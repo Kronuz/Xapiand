@@ -267,12 +267,13 @@ class DocIndexer;
 
 class DocPreparer {
 	std::shared_ptr<DocIndexer> indexer;
-
 	MsgPack obj;
+	size_t idx;
 
-	DocPreparer(const std::shared_ptr<DocIndexer>& indexer, MsgPack&& obj) :
+	DocPreparer(const std::shared_ptr<DocIndexer>& indexer, MsgPack&& obj, size_t idx) :
 		indexer{indexer},
-		obj{std::move(obj)} { }
+		obj{std::move(obj)},
+		idx{idx} { }
 
 public:
 	template <typename... Args>
@@ -307,10 +308,13 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::atomic_size_t _processed;
 	std::atomic_size_t _indexed;
 	std::atomic_size_t _total;
+	std::atomic_size_t _idx;
 	LightweightSemaphore limit;
 	LightweightSemaphore done;
 
-	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> ready_queue;
+	std::mutex _results_mtx;
+	std::vector<MsgPack> _results;
+	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>> ready_queue;
 
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt;
@@ -324,6 +328,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 		_processed{0},
 		_indexed{0},
 		_total{0},
+		_idx{0},
 		limit{limit_max},
 		bulk_cnt{0} { }
 
@@ -360,6 +365,10 @@ public:
 
 	size_t total() {
 		return _total;
+	}
+
+	const std::vector<MsgPack>& results() {
+		return _results;
 	}
 };
 

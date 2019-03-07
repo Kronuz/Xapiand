@@ -2094,6 +2094,7 @@ HttpClient::restore_view(Request& request)
 			{ RESPONSE_PROCESSED, request.indexer->processed() },
 			{ RESPONSE_INDEXED, request.indexer->indexed() },
 			{ RESPONSE_TOTAL, request.indexer->total() },
+			{ RESPONSE_ITEMS, request.indexer->results() },
 		};
 
 		write_http_response(request, HTTP_STATUS_OK, response_obj);
