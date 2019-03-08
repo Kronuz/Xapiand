@@ -1328,6 +1328,12 @@ QueryDSL::get_sorter(const MsgPack& obj)
 	L_CALL("QueryDSL::get_sorter({})", repr(obj.to_string()));
 
 	auto sorter = std::make_unique<Multi_MultiValueKeyMaker>();
-	get_sorter(sorter, obj);
+	if (obj.is_array()) {
+		for (auto& o : obj) {
+			get_sorter(sorter, o);
+		}
+	} else {
+		get_sorter(sorter, obj);
+	}
 	return sorter;
 }
