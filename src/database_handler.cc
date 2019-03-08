@@ -498,7 +498,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 		//       doesn't currently return the "version".
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
-			data_obj[RESERVED_VERSION] = unserialise_length(version);
+			data_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 		}
 	} catch(...) {
 		L_EXC("Cannot retrieve document version for docid {}!", did);
@@ -1803,7 +1803,7 @@ DocIndexer::operator()()
 						//       doesn't currently return the "version".
 						auto version = document.get_value(DB_SLOT_VERSION);
 						if (!version.empty()) {
-							obj[RESERVED_VERSION] = unserialise_length(version);
+							obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 						}
 					} catch(...) {
 						L_EXC("Cannot retrieve document version for docid {}!", did);
