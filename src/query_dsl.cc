@@ -163,9 +163,6 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 	L_CALL("QueryDSL::process({}, {}, {}, <default_op>, <wqf>, <flags>)", (int)op, repr(path), repr(obj.to_string()));
 
 	Xapian::Query final_query;
-	if (op == Xapian::Query::OP_AND_NOT) {
-		final_query = Xapian::Query(std::string());
-	}
 
 	switch (obj.getType()) {
 		case MsgPack::Type::MAP: {
@@ -248,7 +245,12 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 								query = process(Xapian::Query::OP_OR, path, o, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_NOT):
-								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, is_leaf);
+								query = process(Xapian::Query::OP_AND_NOT, path, {
+									{
+										{ RESERVED_QUERYDSL_MATCH_ALL, {} },
+									},
+									o,
+								}, default_op, wqf, flags, is_leaf);
 								break;
 							case _.fhh(RESERVED_QUERYDSL_AND_NOT):
 								query = process(Xapian::Query::OP_AND_NOT, path, o, default_op, wqf, flags, is_leaf);
