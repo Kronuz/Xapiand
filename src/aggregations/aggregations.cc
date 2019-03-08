@@ -101,103 +101,113 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 				if (!sub_agg.is_map()) {
 					THROW(AggregationError, "All aggregations must be objects");
 				}
-				auto sub_agg_type = sub_agg.begin()->str_view();
-				switch (_.fhh(sub_agg_type)) {
-					case _.fhh(RESERVED_AGGS_COUNT):
-						add_metric<MetricCount>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					// case _.fhh(RESERVED_AGGS_CARDINALITY):
-					// 	add_metric<MetricCardinality>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					case _.fhh(RESERVED_AGGS_SUM):
-						add_metric<MetricSum>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_AVG):
-						add_metric<MetricAvg>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_MIN):
-						add_metric<MetricMin>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_MAX):
-						add_metric<MetricMax>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_VARIANCE):
-						add_metric<MetricVariance>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_STD):
-						add_metric<MetricStdDeviation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_MEDIAN):
-						add_metric<MetricMedian>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_MODE):
-						add_metric<MetricMode>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_STATS):
-						add_metric<MetricStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_EXT_STATS):
-						add_metric<MetricExtendedStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					// case _.fhh(RESERVED_AGGS_GEO_BOUNDS):
-					// 	add_metric<MetricGeoBounds>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_GEO_CENTROID):
-					// 	add_metric<MetricGeoCentroid>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_PERCENTILES):
-					// 	add_metric<MetricPercentiles>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_PERCENTILES_RANK):
-					// 	add_metric<MetricPercentilesRank>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_SCRIPTED_METRIC):
-					// 	add_metric<MetricScripted>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
+				bool keep_looking_agg_type;
+				const auto it_sub_agg_type = sub_agg.begin();
+				const auto it_sub_agg_type_end = sub_agg.end();
+				do {
+					keep_looking_agg_type = false;
+					auto sub_agg_type = it_sub_agg_type->str_view();
+					switch (_.fhh(sub_agg_type)) {
+						case _.fhh(RESERVED_AGGS_COUNT):
+							add_metric<MetricCount>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						// case _.fhh(RESERVED_AGGS_CARDINALITY):
+						// 	add_metric<MetricCardinality>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						case _.fhh(RESERVED_AGGS_SUM):
+							add_metric<MetricSum>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_AVG):
+							add_metric<MetricAvg>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_MIN):
+							add_metric<MetricMin>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_MAX):
+							add_metric<MetricMax>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_VARIANCE):
+							add_metric<MetricVariance>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_STD):
+							add_metric<MetricStdDeviation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_MEDIAN):
+							add_metric<MetricMedian>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_MODE):
+							add_metric<MetricMode>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_STATS):
+							add_metric<MetricStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_EXT_STATS):
+							add_metric<MetricExtendedStats>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						// case _.fhh(RESERVED_AGGS_GEO_BOUNDS):
+						// 	add_metric<MetricGeoBounds>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_GEO_CENTROID):
+						// 	add_metric<MetricGeoCentroid>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_PERCENTILES):
+						// 	add_metric<MetricPercentiles>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_PERCENTILES_RANK):
+						// 	add_metric<MetricPercentilesRank>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_SCRIPTED_METRIC):
+						// 	add_metric<MetricScripted>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
 
-					case _.fhh(RESERVED_AGGS_FILTER):
-						add_bucket<FilterAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_VALUE):
-						L_WARNING_ONCE("Aggregation '{}' has been deprecated, use '{}' instead", RESERVED_AGGS_VALUE, RESERVED_AGGS_VALUES);
-					case _.fhh(RESERVED_AGGS_VALUES):
-						add_bucket<ValuesAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					case _.fhh(RESERVED_AGGS_TERM):
-						L_WARNING_ONCE("Aggregation '{}' has been deprecated, use '{}' instead", RESERVED_AGGS_TERM, RESERVED_AGGS_TERMS);
-					case _.fhh(RESERVED_AGGS_TERMS):
-						add_bucket<TermsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					// case _.fhh(RESERVED_AGGS_DATE_HISTOGRAM):
-					// 	add_bucket<DateHistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_DATE_RANGE):
-					// 	add_bucket<DateRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_GEO_DISTANCE):
-					// 	add_bucket<GeoDistanceAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_GEO_TRIXELS):
-					// 	add_bucket<GeoTrixelsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					case _.fhh(RESERVED_AGGS_HISTOGRAM):
-						add_bucket<HistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					// case _.fhh(RESERVED_AGGS_MISSING):
-					// 	add_bucket<MissingAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					case _.fhh(RESERVED_AGGS_RANGE):
-						add_bucket<RangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-						break;
-					// case _.fhh(RESERVED_AGGS_IP_RANGE):
-					// 	add_bucket<IPRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					// case _.fhh(RESERVED_AGGS_GEO_IP):
-					// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
-					// 	break;
-					default:
-						THROW(AggregationError, "Aggregation type {} is not valid for {}", repr(sub_agg_type), repr(sub_agg_name));
-				}
+						case _.fhh(RESERVED_AGGS_FILTER):
+							add_bucket<FilterAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_VALUE):
+							L_WARNING_ONCE("Aggregation '{}' has been deprecated, use '{}' instead", RESERVED_AGGS_VALUE, RESERVED_AGGS_VALUES);
+						case _.fhh(RESERVED_AGGS_VALUES):
+							add_bucket<ValuesAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						case _.fhh(RESERVED_AGGS_TERM):
+							L_WARNING_ONCE("Aggregation '{}' has been deprecated, use '{}' instead", RESERVED_AGGS_TERM, RESERVED_AGGS_TERMS);
+						case _.fhh(RESERVED_AGGS_TERMS):
+							add_bucket<TermsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						// case _.fhh(RESERVED_AGGS_DATE_HISTOGRAM):
+						// 	add_bucket<DateHistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_DATE_RANGE):
+						// 	add_bucket<DateRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_GEO_DISTANCE):
+						// 	add_bucket<GeoDistanceAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_GEO_TRIXELS):
+						// 	add_bucket<GeoTrixelsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						case _.fhh(RESERVED_AGGS_HISTOGRAM):
+							add_bucket<HistogramAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						// case _.fhh(RESERVED_AGGS_MISSING):
+						// 	add_bucket<MissingAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						case _.fhh(RESERVED_AGGS_RANGE):
+							add_bucket<RangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+							break;
+						// case _.fhh(RESERVED_AGGS_IP_RANGE):
+						// 	add_bucket<IPRangeAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						// case _.fhh(RESERVED_AGGS_GEO_IP):
+						// 	add_bucket<GeoIPAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
+						// 	break;
+						case _.fhh(RESERVED_AGGS_AGGS):
+							++it_sub_agg_type;
+							keep_looking_agg_type = true;
+							break;
+						default:
+							THROW(AggregationError, "Aggregation type {} is not valid for {}", repr(sub_agg_type), repr(sub_agg_name));
+					}
+				} while (keep_looking_agg_type and it_sub_agg_type != it_sub_agg_type_end);
 			} else {
 				THROW(AggregationError, "Aggregation name {} is not valid", repr(sub_agg_name));
 			}
