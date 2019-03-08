@@ -63,7 +63,7 @@ def create_git_index(client, index):
                 '_language': 'en'
             },
             'files': {
-                '_type': 'text',
+                '_type': 'array/keyword',
             }
         }
     }
@@ -114,9 +114,17 @@ def load_repo(client, path=None, index='git'):
     Parse a git repository with all it's commits and load it into xapiand
     using `client`. If the index doesn't exist it will be created.
     """
-    path = dirname(dirname(abspath(__file__))) if path is None else path
+    path = dirname(abspath(__file__)) if path is None else path
+
+    while True:
+        try:
+            repo = git.Repo(path)
+        except git.exc.InvalidGitRepositoryError:
+            parent_path = dirname(path)
+            if parent_path == path:
+                raise
+            path = parent_path
     repo_name = basename(path)
-    repo = git.Repo(path)
 
     create_git_index(client, index)
 

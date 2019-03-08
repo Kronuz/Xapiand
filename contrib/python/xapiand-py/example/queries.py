@@ -60,10 +60,10 @@ result = client.search(
         '_query': {
             '_and_not': [
                 {
-                    'description': 'fix'
+                    'description': 'version'
                 },
                 {
-                    'files': 'test_elasticsearch'
+                    'files': 'adjust'
                 }
             ]
         }
