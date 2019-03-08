@@ -87,7 +87,7 @@ def parse_commits(head, name):
     Go through the git repository log and generate a document per commit
     containing all the metadata.
     """
-    for commit in head.traverse():
+    for commit in head.iter_commits():
         yield {
             '_id': commit.hexsha,
             'repository': name,
@@ -126,7 +126,7 @@ def load_repo(client, path=None, index='git'):
     # loading all the commits into memory
     for status, result in client.streaming_restore(
         index,
-        parse_commits(repo.refs.master.commit, repo_name),
+        parse_commits(repo, repo_name),
         chunk_size=50,  # keep the batch sizes small for appearances only
     ):
         doc_id = '/%s/%s' % (index, result['_id'])
