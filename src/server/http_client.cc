@@ -1455,12 +1455,11 @@ HttpClient::document_info_view(Request& request)
 
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
 
-	MsgPack response_obj;
-	response_obj[RESPONSE_DOCID] = db_handler.get_docid(request.path_parser.get_id());
+	db_handler.get_document(request.path_parser.get_id());
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_OK, response_obj);
+	write_http_response(request, HTTP_STATUS_OK);
 }
 
 
