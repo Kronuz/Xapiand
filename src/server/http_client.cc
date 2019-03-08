@@ -64,7 +64,6 @@
 #include "rapidjson/document.h"             // for Document
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 #include "reserved/fields.h"                // for RESERVED_*
-#include "reserved/response.h"              // for RESERVED_RESPONSE*
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "reserved/schema.h"                // for RESERVED_VERSION
 #include "response.h"                       // for RESPONSE_*
@@ -393,8 +392,8 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			request.ending = true;
 		} else {
 			MsgPack err_response = {
-				{ RESERVED_RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
-				{ RESERVED_RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
+				{ RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
+				{ RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
 			};
 			write_http_response(request, http_errors.error_code, err_response);
 			request.ending = true;
@@ -460,8 +459,8 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 			if (new_request->response.status == static_cast<http_status>(0)) {
 				MsgPack err_response = {
-					{ RESERVED_RESPONSE_STATUS, (int)error_code },
-					{ RESERVED_RESPONSE_MESSAGE, string::split(message, '\n') }
+					{ RESPONSE_STATUS, (int)error_code },
+					{ RESPONSE_MESSAGE, string::split(message, '\n') }
 				};
 				write_http_response(*new_request, error_code, err_response);
 				end_http_request(*new_request);
@@ -985,8 +984,8 @@ HttpClient::prepare()
 	if (new_request->type_encoding == Encoding::unknown) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
-			{ RESERVED_RESPONSE_STATUS, (int)error_code },
-			{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
 		};
 		write_http_response(*new_request, error_code, err_response);
 		return 1;
@@ -1025,8 +1024,8 @@ HttpClient::prepare()
 		default: {
 			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
 			MsgPack err_response = {
-				{ RESERVED_RESPONSE_STATUS, (int)error_code },
-				{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Method not implemented!" }) } }
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { MsgPack({ "Method not implemented!" }) } }
 			};
 			write_http_response(*new_request, error_code, err_response);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
@@ -1939,8 +1938,8 @@ HttpClient::dump_view(Request& request)
 			// No content type could be resolved, return NOT ACCEPTABLE.
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 			MsgPack err_response = {
-				{ RESERVED_RESPONSE_STATUS, (int)error_code },
-				{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
+				{ RESPONSE_STATUS, (int)error_code },
+				{ RESPONSE_MESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
 			};
 			write_http_response(request, error_code, err_response);
 			L_SEARCH("ABORTED SEARCH");
@@ -2196,8 +2195,8 @@ HttpClient::retrieve_view(Request& request)
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack err_response = {
-			{ RESERVED_RESPONSE_STATUS, (int)error_code },
-			{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
+			{ RESPONSE_STATUS, (int)error_code },
+			{ RESPONSE_MESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
 		};
 		write_http_response(request, error_code, err_response);
 		L_SEARCH("ABORTED RETRIEVE");
@@ -2361,12 +2360,12 @@ HttpClient::search_view(Request& request)
 				hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 			} catch (const SerialisationError&) {}
 		}
-		hit_obj[RESERVED_RESPONSE_RANK] = m.get_rank();
-		hit_obj[RESERVED_RESPONSE_WEIGHT] = m.get_weight();
-		hit_obj[RESERVED_RESPONSE_PERCENT] = m.get_percent();
+		hit_obj[RESPONSE_RANK] = m.get_rank();
+		hit_obj[RESPONSE_WEIGHT] = m.get_weight();
+		hit_obj[RESPONSE_PERCENT] = m.get_percent();
 		// int subdatabase = (document.get_docid() - 1) % endpoints.size();
 		// auto endpoint = endpoints[subdatabase];
-		// hit_obj[RESERVED_RESPONSE_ENDPOINT] = endpoint.to_string();
+		// hit_obj[RESPONSE_ENDPOINT] = endpoint.to_string();
 
 		if (!selector.empty()) {
 			hit_obj = hit_obj.select(selector);
@@ -2457,8 +2456,8 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 	L_CALL("HttpClient::write_status_response()");
 
 	write_http_response(request, status, {
-		{ RESERVED_RESPONSE_STATUS, (int)status },
-		{ RESERVED_RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
+		{ RESPONSE_STATUS, (int)status },
+		{ RESPONSE_MESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
 	});
 }
 
@@ -3162,8 +3161,8 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
 		MsgPack response_err = {
-			{ RESERVED_RESPONSE_STATUS, (int)status },
-			{ RESERVED_RESPONSE_MESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
+			{ RESPONSE_STATUS, (int)status },
+			{ RESPONSE_MESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
 		};
 		auto response_str = response_err.to_string();
 		if (request.type_encoding != Encoding::none) {

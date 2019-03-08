@@ -47,7 +47,6 @@
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
-#include "reserved/response.h"              // for RESERVED_RESPONSE_*
 #include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
 #include "schema.h"                         // for Schema, required_spc_t
@@ -1798,8 +1797,8 @@ DocPreparer::operator()()
 		});
 		if (http_errors.error_code != HTTP_STATUS_OK) {
 			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{
-				{ RESERVED_RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
-				{ RESERVED_RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
+				{ RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
+				{ RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
 			}, idx));
 		}
 	}
@@ -1879,8 +1878,8 @@ DocIndexer::operator()()
 					return 0;
 				});
 				if (http_errors.error_code != HTTP_STATUS_OK) {
-					obj[RESERVED_RESPONSE_STATUS] = static_cast<unsigned>(http_errors.error_code);
-					obj[RESERVED_RESPONSE_MESSAGE] = string::split(http_errors.error, '\n');
+					obj[RESPONSE_STATUS] = static_cast<unsigned>(http_errors.error_code);
+					obj[RESPONSE_MESSAGE] = string::split(http_errors.error, '\n');
 				}
 				std::lock_guard<std::mutex> lk(_results_mtx);
 				if (_idx > _results.size()) {
