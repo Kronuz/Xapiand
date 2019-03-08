@@ -6973,11 +6973,13 @@ Schema::feed_type(const MsgPack& prop_type)
 	try {
 		if (prop_type.is_string()) {
 			specification.set_types(prop_type.str_view());
-		} else {
+		} else if (prop_type.is_array() && prop_type.size() == 4) {
 			specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
 			specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
 			specification.sep_types[SPC_ARRAY_TYPE]    = (FieldType)prop_type.at(SPC_ARRAY_TYPE).u64();
 			specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)prop_type.at(SPC_CONCRETE_TYPE).u64();
+		} else {
+			THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TYPE, repr(specification.full_meta_name));
 		}
 		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
 	} catch (const msgpack::type_error&) {
@@ -7808,11 +7810,13 @@ Schema::process_type(std::string_view prop_name, const MsgPack& doc_type)
 	try {
 		if (doc_type.is_string()) {
 			specification.set_types(doc_type.str_view());
-		} else {
+		} else if (doc_type.is_array() && doc_type.size() == 4) {
 			specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)doc_type.at(SPC_FOREIGN_TYPE).u64();
 			specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)doc_type.at(SPC_OBJECT_TYPE).u64();
 			specification.sep_types[SPC_ARRAY_TYPE]    = (FieldType)doc_type.at(SPC_ARRAY_TYPE).u64();
 			specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)doc_type.at(SPC_CONCRETE_TYPE).u64();
+		} else {
+			THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 		}
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
