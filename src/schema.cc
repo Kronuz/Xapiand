@@ -9405,21 +9405,25 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 			}
 		}
 
-		try {
-			spc.properties = &spc.properties->at(field_name);
-			spc.prefix.append(spc.properties->at(RESERVED_PREFIX).str());
-		} catch (const std::out_of_range&) {
+		auto field_it = spc.properties->find(field_name);
+		if (field_it != spc.properties->end()) {
+			spc.properties = &field_it.value();
+			auto prefix_it = spc.properties->find(RESERVED_PREFIX);
+			if (prefix_it != spc.properties->end()) {
+				spc.prefix.append(prefix_it.value().str());
+			} else {
+				spc.prefix.append(get_prefix(field_name));
+			}
+		} else {
 			if (Serialise::possiblyUUID(field_name)) {
 				try {
 					const auto prefix_uuid = Serialise::uuid(field_name);
 					spc.has_uuid_prefix = true;
-					try {
-						spc.properties = &spc.properties->at(UUID_FIELD_NAME);
-						spc.prefix.append(prefix_uuid);
-						continue;
-					} catch (const std::out_of_range&) {
-						spc.prefix.append(prefix_uuid);
+					field_it = spc.properties->find(UUID_FIELD_NAME);
+					if (field_it != spc.properties->end()) {
+						spc.properties = &field_it.value();
 					}
+					spc.prefix.append(prefix_uuid);
 				} catch (const SerialisationError&) {
 					spc.prefix.append(get_prefix(field_name));
 				}
