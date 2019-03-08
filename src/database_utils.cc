@@ -130,7 +130,7 @@ int read_uuid(std::string_view dir, std::array<unsigned char, 16>& uuid)
 
 void json_load(rapidjson::Document& doc, std::string_view str)
 {
-	rapidjson::ParseResult parse_done = doc.Parse<rapidjson::kParseCommentsFlag | rapidjson::kParseTrailingCommasFlag>(str.data(), str.size());
+	rapidjson::ParseResult parse_done = doc.Parse(str.data(), str.size());
 	if (!parse_done) {
 		constexpr size_t tabsize = 3;
 		std::string tabs(tabsize, ' ');
