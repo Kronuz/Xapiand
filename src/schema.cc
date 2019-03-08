@@ -795,7 +795,20 @@ static inline const std::array<FieldType, SPC_TOTAL_TYPES>&
 _get_type(std::string_view str_type)
 {
 	constexpr static auto _ = phf::make_phf({
-		hhl("undefined"),
+		hhl("boolean"),
+		hhl("date"),
+		hhl("float"),
+		hhl("geospatial"),
+		hhl("integer"),
+		hhl("positive"),
+		hhl("string"),
+		hhl("term"),  // FIXME: remove legacy term
+		hhl("keyword"),
+		hhl("text"),
+		hhl("time"),
+		hhl("timedelta"),
+		hhl("uuid"),
+		hhl("script"),
 		hhl("array"),
 		hhl("array/boolean"),
 		hhl("array/date"),
@@ -810,15 +823,73 @@ _get_type(std::string_view str_type)
 		hhl("array/time"),
 		hhl("array/timedelta"),
 		hhl("array/uuid"),
-		hhl("boolean"),
-		hhl("date"),
-		hhl("float"),
-		hhl("foreign"),
-		hhl("foreign/object"),
-		hhl("foreign/script"),
-		hhl("geospatial"),
-		hhl("integer"),
+		hhl("boolean/array"),
+		hhl("date/array"),
+		hhl("float/array"),
+		hhl("geospatial/array"),
+		hhl("integer/array"),
+		hhl("positive/array"),
+		hhl("string/array"),
+		hhl("term/array"),  // FIXME: remove legacy term
+		hhl("keyword/array"),
+		hhl("text/array"),
+		hhl("time/array"),
+		hhl("timedelta/array"),
+		hhl("uuid/array"),
 		hhl("object"),
+		hhl("object/boolean"),
+		hhl("object/date"),
+		hhl("object/float"),
+		hhl("object/geospatial"),
+		hhl("object/integer"),
+		hhl("object/positive"),
+		hhl("object/string"),
+		hhl("object/term"),  // FIXME: remove legacy term
+		hhl("object/keyword"),
+		hhl("object/text"),
+		hhl("object/time"),
+		hhl("object/timedelta"),
+		hhl("object/uuid"),
+		hhl("boolean/object"),
+		hhl("date/object"),
+		hhl("float/object"),
+		hhl("geospatial/object"),
+		hhl("integer/object"),
+		hhl("positive/object"),
+		hhl("string/object"),
+		hhl("term/object"),  // FIXME: remove legacy term
+		hhl("keyword/object"),
+		hhl("text/object"),
+		hhl("time/object"),
+		hhl("timedelta/object"),
+		hhl("uuid/object"),
+		hhl("array/object"),
+		hhl("array/boolean/object"),
+		hhl("array/date/object"),
+		hhl("array/float/object"),
+		hhl("array/geospatial/object"),
+		hhl("array/integer/object"),
+		hhl("array/positive/object"),
+		hhl("array/string/object"),
+		hhl("array/term/object"),  // FIXME: remove legacy term
+		hhl("array/keyword/object"),
+		hhl("array/text/object"),
+		hhl("array/time/object"),
+		hhl("array/timedelta/object"),
+		hhl("array/uuid/object"),
+		hhl("array/object/boolean"),
+		hhl("array/object/date"),
+		hhl("array/object/float"),
+		hhl("array/object/geospatial"),
+		hhl("array/object/integer"),
+		hhl("array/object/positive"),
+		hhl("array/object/string"),
+		hhl("array/object/term"),  // FIXME: remove legacy term
+		hhl("array/object/keyword"),
+		hhl("array/object/text"),
+		hhl("array/object/time"),
+		hhl("array/object/timedelta"),
+		hhl("array/object/uuid"),
 		hhl("object/array"),
 		hhl("object/array/boolean"),
 		hhl("object/array/date"),
@@ -833,84 +904,52 @@ _get_type(std::string_view str_type)
 		hhl("object/array/time"),
 		hhl("object/array/timedelta"),
 		hhl("object/array/uuid"),
-		hhl("object/boolean"),
-		hhl("object/date"),
-		hhl("object/float"),
-		hhl("object/geospatial"),
-		hhl("object/integer"),
-		hhl("object/positive"),
-		hhl("object/string"),
-		hhl("object/term"),  // FIXME: remove legacy term
-		hhl("object/keyword"),
-		hhl("object/text"),
-		hhl("object/time"),
-		hhl("object/timedelta"),
-		hhl("object/uuid"),
-		hhl("positive"),
-		hhl("script"),
-		hhl("string"),
-		hhl("term"),  // FIXME: remove legacy term
-		hhl("keyword"),
-		hhl("text"),
-		hhl("time"),
-		hhl("timedelta"),
-		hhl("uuid"),
+		hhl("boolean/array/object"),
+		hhl("date/array/object"),
+		hhl("float/array/object"),
+		hhl("geospatial/array/object"),
+		hhl("integer/array/object"),
+		hhl("positive/array/object"),
+		hhl("string/array/object"),
+		hhl("term/array/object"),  // FIXME: remove legacy term
+		hhl("keyword/array/object"),
+		hhl("text/array/object"),
+		hhl("time/array/object"),
+		hhl("timedelta/array/object"),
+		hhl("uuid/array/object"),
+		hhl("boolean/object/array"),
+		hhl("date/object/array"),
+		hhl("float/object/array"),
+		hhl("geospatial/object/array"),
+		hhl("integer/object/array"),
+		hhl("positive/object/array"),
+		hhl("string/object/array"),
+		hhl("term/object/array"),  // FIXME: remove legacy term
+		hhl("keyword/object/array"),
+		hhl("text/object/array"),
+		hhl("time/object/array"),
+		hhl("timedelta/object/array"),
+		hhl("uuid/object/array"),
+		hhl("object/boolean/array"),
+		hhl("object/date/array"),
+		hhl("object/float/array"),
+		hhl("object/geospatial/array"),
+		hhl("object/integer/array"),
+		hhl("object/positive/array"),
+		hhl("object/string/array"),
+		hhl("object/term/array"),  // FIXME: remove legacy term
+		hhl("object/keyword/array"),
+		hhl("object/text/array"),
+		hhl("object/time/array"),
+		hhl("object/timedelta/array"),
+		hhl("object/uuid/array"),
+		hhl("foreign"),
+		hhl("foreign/object"),
+		hhl("object/foreign"),
+		hhl("undefined"),
 	});
 
 	switch(_.fhhl(str_type)) {
-		case _.fhhl("array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }};
-			return _;
-		}
-		case _.fhhl("array/boolean"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }};
-			return _;
-		}
-		case _.fhhl("array/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
-			return _;
-		}
-		case _.fhhl("array/float"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }};
-			return _;
-		}
-		case _.fhhl("array/geospatial"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }};
-			return _;
-		}
-		case _.fhhl("array/integer"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }};
-			return _;
-		}
-		case _.fhhl("array/positive"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }};
-			return _;
-		}
-		case _.fhhl("array/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
-			return _;
-		}
-		case _.fhhl("array/term"):  // FIXME: remove legacy term
-		case _.fhhl("array/keyword"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::KEYWORD       }};
-			return _;
-		}
-		case _.fhhl("array/text"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }};
-			return _;
-		}
-		case _.fhhl("array/time"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }};
-			return _;
-		}
-		case _.fhhl("array/timedelta"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }};
-			return _;
-		}
-		case _.fhhl("array/uuid"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }};
-			return _;
-		}
 		case _.fhhl("boolean"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
@@ -923,18 +962,6 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }};
 			return _;
 		}
-		case _.fhhl("foreign"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
-			return _;
-		}
-		case _.fhhl("foreign/object"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
-			return _;
-		}
-		case _.fhhl("foreign/script"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
-			return _;
-		}
 		case _.fhhl("geospatial"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }};
 			return _;
@@ -943,118 +970,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }};
 			return _;
 		}
-		case _.fhhl("object"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
-			return _;
-		}
-		case _.fhhl("object/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }};
-			return _;
-		}
-		case _.fhhl("object/array/boolean"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }};
-			return _;
-		}
-		case _.fhhl("object/array/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
-			return _;
-		}
-		case _.fhhl("object/array/float"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }};
-			return _;
-		}
-		case _.fhhl("object/array/geospatial"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }};
-			return _;
-		}
-		case _.fhhl("object/array/integer"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }};
-			return _;
-		}
-		case _.fhhl("object/array/positive"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }};
-			return _;
-		}
-		case _.fhhl("object/array/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
-			return _;
-		}
-		case _.fhhl("object/array/term"):  // FIXME: remove legacy term
-		case _.fhhl("object/array/keyword"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::KEYWORD       }};
-			return _;
-		}
-		case _.fhhl("object/array/text"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }};
-			return _;
-		}
-		case _.fhhl("object/array/time"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }};
-			return _;
-		}
-		case _.fhhl("object/array/timedelta"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }};
-			return _;
-		}
-		case _.fhhl("object/array/uuid"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }};
-			return _;
-		}
-		case _.fhhl("object/boolean"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }};
-			return _;
-		}
-		case _.fhhl("object/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
-			return _;
-		}
-		case _.fhhl("object/float"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }};
-			return _;
-		}
-		case _.fhhl("object/geospatial"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }};
-			return _;
-		}
-		case _.fhhl("object/integer"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }};
-			return _;
-		}
-		case _.fhhl("object/positive"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }};
-			return _;
-		}
-		case _.fhhl("object/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
-			return _;
-		}
-		case _.fhhl("object/term"):  // FIXME: remove legacy term
-		case _.fhhl("object/keyword"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::KEYWORD       }};
-			return _;
-		}
-		case _.fhhl("object/text"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }};
-			return _;
-		}
-		case _.fhhl("object/time"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }};
-			return _;
-		}
-		case _.fhhl("object/timedelta"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }};
-			return _;
-		}
-		case _.fhhl("object/uuid"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }};
-			return _;
-		}
 		case _.fhhl("positive"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }};
-			return _;
-		}
-		case _.fhhl("script"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
 			return _;
 		}
 		case _.fhhl("string"): {
@@ -1080,6 +997,270 @@ _get_type(std::string_view str_type)
 		}
 		case _.fhhl("uuid"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }};
+			return _;
+		}
+		case _.fhhl("array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }};
+			return _;
+		}
+		case _.fhhl("boolean/array"):
+		case _.fhhl("array/boolean"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case _.fhhl("date/array"):
+		case _.fhhl("array/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
+			return _;
+		}
+		case _.fhhl("float/array"):
+		case _.fhhl("array/float"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }};
+			return _;
+		}
+		case _.fhhl("geospatial/array"):
+		case _.fhhl("array/geospatial"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }};
+			return _;
+		}
+		case _.fhhl("integer/array"):
+		case _.fhhl("array/integer"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }};
+			return _;
+		}
+		case _.fhhl("positive/array"):
+		case _.fhhl("array/positive"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case _.fhhl("string/array"):
+		case _.fhhl("array/string"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
+			return _;
+		}
+		case _.fhhl("term/array"):  // FIXME: remove legacy term
+		case _.fhhl("array/term"):  // FIXME: remove legacy term
+		case _.fhhl("keyword/array"):
+		case _.fhhl("array/keyword"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::KEYWORD       }};
+			return _;
+		}
+		case _.fhhl("text/array"):
+		case _.fhhl("array/text"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }};
+			return _;
+		}
+		case _.fhhl("time/array"):
+		case _.fhhl("array/time"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }};
+			return _;
+		}
+		case _.fhhl("timedelta/array"):
+		case _.fhhl("array/timedelta"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case _.fhhl("uuid/array"):
+		case _.fhhl("array/uuid"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }};
+			return _;
+		}
+		case _.fhhl("object"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case _.fhhl("array/object"):
+		case _.fhhl("object/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }};
+			return _;
+		}
+		case _.fhhl("array/boolean/object"):
+		case _.fhhl("array/object/boolean"):
+		case _.fhhl("object/array/boolean"):
+		case _.fhhl("boolean/array/object"):
+		case _.fhhl("boolean/object/array"):
+		case _.fhhl("object/boolean/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case _.fhhl("array/date/object"):
+		case _.fhhl("array/object/date"):
+		case _.fhhl("object/array/date"):
+		case _.fhhl("date/array/object"):
+		case _.fhhl("date/object/array"):
+		case _.fhhl("object/date/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
+			return _;
+		}
+		case _.fhhl("array/float/object"):
+		case _.fhhl("array/object/float"):
+		case _.fhhl("object/array/float"):
+		case _.fhhl("float/array/object"):
+		case _.fhhl("float/object/array"):
+		case _.fhhl("object/float/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }};
+			return _;
+		}
+		case _.fhhl("array/geospatial/object"):
+		case _.fhhl("array/object/geospatial"):
+		case _.fhhl("object/array/geospatial"):
+		case _.fhhl("geospatial/array/object"):
+		case _.fhhl("geospatial/object/array"):
+		case _.fhhl("object/geospatial/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }};
+			return _;
+		}
+		case _.fhhl("array/integer/object"):
+		case _.fhhl("array/object/integer"):
+		case _.fhhl("object/array/integer"):
+		case _.fhhl("integer/array/object"):
+		case _.fhhl("integer/object/array"):
+		case _.fhhl("object/integer/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }};
+			return _;
+		}
+		case _.fhhl("array/positive/object"):
+		case _.fhhl("array/object/positive"):
+		case _.fhhl("object/array/positive"):
+		case _.fhhl("positive/array/object"):
+		case _.fhhl("positive/object/array"):
+		case _.fhhl("object/positive/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case _.fhhl("array/string/object"):
+		case _.fhhl("array/object/string"):
+		case _.fhhl("object/array/string"):
+		case _.fhhl("string/array/object"):
+		case _.fhhl("string/object/array"):
+		case _.fhhl("object/string/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
+			return _;
+		}
+		case _.fhhl("array/term/object"):  // FIXME: remove legacy term
+		case _.fhhl("array/object/term"):  // FIXME: remove legacy term
+		case _.fhhl("object/array/term"):  // FIXME: remove legacy term
+		case _.fhhl("term/array/object"):  // FIXME: remove legacy term
+		case _.fhhl("term/object/array"):  // FIXME: remove legacy term
+		case _.fhhl("object/term/array"):  // FIXME: remove legacy term
+		case _.fhhl("array/keyword/object"):
+		case _.fhhl("array/object/keyword"):
+		case _.fhhl("object/array/keyword"):
+		case _.fhhl("keyword/array/object"):
+		case _.fhhl("keyword/object/array"):
+		case _.fhhl("object/keyword/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::KEYWORD       }};
+			return _;
+		}
+		case _.fhhl("array/text/object"):
+		case _.fhhl("array/object/text"):
+		case _.fhhl("object/array/text"):
+		case _.fhhl("text/array/object"):
+		case _.fhhl("text/object/array"):
+		case _.fhhl("object/text/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }};
+			return _;
+		}
+		case _.fhhl("array/time/object"):
+		case _.fhhl("array/object/time"):
+		case _.fhhl("object/array/time"):
+		case _.fhhl("time/array/object"):
+		case _.fhhl("time/object/array"):
+		case _.fhhl("object/time/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }};
+			return _;
+		}
+		case _.fhhl("array/timedelta/object"):
+		case _.fhhl("array/object/timedelta"):
+		case _.fhhl("object/array/timedelta"):
+		case _.fhhl("timedelta/array/object"):
+		case _.fhhl("timedelta/object/array"):
+		case _.fhhl("object/timedelta/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case _.fhhl("array/uuid/object"):
+		case _.fhhl("array/object/uuid"):
+		case _.fhhl("object/array/uuid"):
+		case _.fhhl("uuid/array/object"):
+		case _.fhhl("uuid/object/array"):
+		case _.fhhl("object/uuid/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }};
+			return _;
+		}
+		case _.fhhl("boolean/object"):
+		case _.fhhl("object/boolean"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }};
+			return _;
+		}
+		case _.fhhl("date/object"):
+		case _.fhhl("object/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
+			return _;
+		}
+		case _.fhhl("float/object"):
+		case _.fhhl("object/float"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }};
+			return _;
+		}
+		case _.fhhl("geospatial/object"):
+		case _.fhhl("object/geospatial"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }};
+			return _;
+		}
+		case _.fhhl("integer/object"):
+		case _.fhhl("object/integer"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }};
+			return _;
+		}
+		case _.fhhl("positive/object"):
+		case _.fhhl("object/positive"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }};
+			return _;
+		}
+		case _.fhhl("string/object"):
+		case _.fhhl("object/string"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
+			return _;
+		}
+		case _.fhhl("term/object"):  // FIXME: remove legacy term
+		case _.fhhl("object/term"):  // FIXME: remove legacy term
+		case _.fhhl("keyword/object"):
+		case _.fhhl("object/keyword"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::KEYWORD       }};
+			return _;
+		}
+		case _.fhhl("text/object"):
+		case _.fhhl("object/text"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }};
+			return _;
+		}
+		case _.fhhl("time/object"):
+		case _.fhhl("object/time"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }};
+			return _;
+		}
+		case _.fhhl("timedelta/object"):
+		case _.fhhl("object/timedelta"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }};
+			return _;
+		}
+		case _.fhhl("uuid/object"):
+		case _.fhhl("object/uuid"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }};
+			return _;
+		}
+		case _.fhhl("foreign"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case _.fhhl("object/foreign"):
+		case _.fhhl("foreign/object"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
+			return _;
+		}
+		case _.fhhl("script"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
 			return _;
 		}
 		default:
