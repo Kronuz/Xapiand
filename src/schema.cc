@@ -2308,6 +2308,22 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 
 	auto it_end = object.end();
 
+	// Check version:
+	auto version_it = object.find(VERSION_FIELD_NAME);
+	if (version_it == it_end) {
+		if (!allow_versionless) {
+			THROW(ErrorType, "{}'{}' field does not exist", prefix, VERSION_FIELD_NAME);
+		}
+	} else {
+		auto& version = version_it.value();
+		if (!version.is_number()) {
+			THROW(ErrorType, "{}'{}' field must be a number", prefix, VERSION_FIELD_NAME);
+		}
+		if (version.f64() != DB_VERSION_SCHEMA) {
+			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
+		}
+	}
+
 	// Check schema object:
 	auto schema_it = object.find(SCHEMA_FIELD_NAME);
 	if (schema_it == it_end) {
@@ -2334,35 +2350,6 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			THROW(ErrorType, "{}'{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 		}
 	}
-
-	// Check version:
-	auto version_it = schema.find(RESERVED_VERSION);
-	if (version_it == schema_it_end) {
-		if (!allow_versionless) {
-			// Check version (legacy):
-			auto legacy_version_it = object.find("version");
-			if (legacy_version_it == it_end) {
-				THROW(ErrorType, "{}'{}' field does not exist", prefix, RESERVED_VERSION);
-			} else {
-				auto& legacy_version = legacy_version_it.value();
-				if (!legacy_version.is_number()) {
-					THROW(ErrorType, "{}'{}' field must be a number", prefix, RESERVED_VERSION);
-				}
-				if (legacy_version.f64() != DB_VERSION_SCHEMA) {
-					THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
-				}
-			}
-		}
-	} else {
-		auto& version = version_it.value();
-		if (!version.is_number()) {
-			THROW(ErrorType, "{}'{}' field must be a number", prefix, RESERVED_VERSION);
-		}
-		if (version.f64() != DB_VERSION_SCHEMA) {
-			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
-		}
-	}
-
 	return std::make_pair(nullptr, &schema);
 }
 
@@ -2386,9 +2373,8 @@ Schema::get_initial_schema()
 
 	static const MsgPack initial_schema_tpl({
 		{ RESERVED_RECURSE, false },
-		{ SCHEMA_FIELD_NAME, {
-			{ RESERVED_VERSION, DB_VERSION_SCHEMA },
-		} },
+		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
+		{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
 	});
 	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);
 	initial_schema->lock();
@@ -2588,12 +2574,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 		if (object.empty()) {
 			dispatch_feed_properties(*properties);
-		} else if (
-			// new schemas have empty properties
-			properties->empty() ||
-			// or a single item in it (_version)
-			(properties->size() == 1 && properties->find(RESERVED_VERSION) != properties->end())
-		) {
+		} else if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties();
 			dispatch_write_properties(*mut_properties, object, fields, &id_field);
@@ -3430,12 +3411,7 @@ Schema::update(const MsgPack& object)
 
 			FieldVector fields;
 
-			if (
-				// new schemas have empty properties
-				properties->empty() ||
-				// or a single item in it (_version)
-				(properties->size() == 1 && properties->find(RESERVED_VERSION) != properties->end())
-			) {
+			if (properties->empty()) {  // new schemas have empty properties
 				specification.flags.field_found = false;
 				auto mut_properties = &get_mutable_properties();
 				dispatch_write_properties(*mut_properties, schema_obj, fields);
@@ -3880,12 +3856,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 			FieldVector fields;
 
-			if (
-				// new schemas have empty properties
-				mut_properties->empty() ||
-				// or a single item in it (_version)
-				(mut_properties->size() == 1 && mut_properties->find(RESERVED_VERSION) != mut_properties->end())
-			) {
+			if (mut_properties->empty()) {  // new schemas have empty properties
 				specification.flags.field_found = false;
 			} else {
 				dispatch_feed_properties(*mut_properties);
