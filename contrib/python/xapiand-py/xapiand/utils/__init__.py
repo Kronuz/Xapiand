@@ -23,5 +23,5 @@ from __future__ import absolute_import
 
 from .hashes import fnv1ah64, jump_consistent_hash
 from .serialise import serialise_length, unserialise_length, serialise_string, \
-    unserialise_stri,ng, serialise_char, unserialise_char
+    unserialise_string, serialise_char, unserialise_char
 from .sortable import sortable_serialise, sortable_unserialise
