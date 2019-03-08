@@ -54,6 +54,7 @@
 #include "schemas_lru.h"                    // for SchemasLRU
 #include "script.h"                         // for Script
 #include "serialise.h"                      // for cast, serialise, type
+#include "server/http_utils.h"              // for catch_http_errors
 
 #ifdef XAPIAND_CHAISCRIPT
 #include "chaipp/chaipp.h"                  // for chaipp namespace
@@ -1725,15 +1726,16 @@ DocPreparer::operator()()
 
 	ASSERT(indexer);
 	if (indexer->running) {
-		try {
+		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
 			auto prepared = db_handler.prepare_document(obj);
 			indexer->ready_queue.enqueue(std::make_tuple(std::move(std::get<0>(prepared)), std::move(std::get<1>(prepared)), std::move(std::get<2>(prepared)), idx));
-		} catch (...) {
-			L_EXC("ERROR: Cannot prepare document");
+			return 0;
+		});
+		if (http_errors.error_code != HTTP_STATUS_OK) {
 			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{
-				{ RESERVED_RESPONSE_STATUS, 400 },
-				{ RESERVED_RESPONSE_MESSAGE, MsgPack({ "Cannot prepare document" }) },
+				{ RESERVED_RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
+				{ RESERVED_RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
 			}, idx));
 		}
 	}
@@ -1766,7 +1768,7 @@ DocIndexer::operator()()
 
 			if (!term_id.empty()) {
 				MsgPack obj;
-				try {
+				auto http_errors = catch_http_errors([&]{
 					auto did = db_handler.replace_document_term(term_id, std::move(doc), false);
 
 					Document document(did, &db_handler);
@@ -1810,10 +1812,11 @@ DocIndexer::operator()()
 					}
 
 					++_indexed;
-				} catch (...) {
-					L_EXC("ERROR: Cannot replace document");
-					obj[RESERVED_RESPONSE_STATUS] = 400;
-					obj[RESERVED_RESPONSE_MESSAGE] = MsgPack({ "Cannot replace document" });
+					return 0;
+				});
+				if (http_errors.error_code != HTTP_STATUS_OK) {
+					obj[RESERVED_RESPONSE_STATUS] = static_cast<unsigned>(http_errors.error_code);
+					obj[RESERVED_RESPONSE_MESSAGE] = string::split(http_errors.error, '\n');
 				}
 				std::lock_guard<std::mutex> lk(_results_mtx);
 				if (_idx > _results.size()) {
