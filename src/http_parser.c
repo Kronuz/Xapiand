@@ -1070,7 +1070,7 @@ reexecute:
           case 'R': parser->method = HTTP_REPORT; /* or REBIND */ break;
           case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, STORE */ break;
           case 'T': parser->method = HTTP_TRACE; break;
-          case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE, UNBIND, UNLINK */ break;
+          case 'U': parser->method = HTTP_UPDATE; /* or UNLOCK, UNSUBSCRIBE, UNBIND, UNLINK */ break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
@@ -1117,6 +1117,7 @@ reexecute:
             XX(PROPFIND,  4, 'P', PROPPATCH)
             XX(PUT,       2, 'R', PURGE)
             XX(LOCK,      1, 'I', LINK)
+            XX(UPDATE,    1, 'N', UNLOCK)
             XX(UNLOCK,    2, 'S', UNSUBSCRIBE)
             XX(UNLOCK,    2, 'B', UNBIND)
             XX(UNLOCK,    3, 'I', UNLINK)

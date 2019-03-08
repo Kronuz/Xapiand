@@ -206,6 +206,7 @@ enum http_status
   XX(32, UNLINK,      UNLINK)       \
   /* Dubalu */                      \
   XX(33, STORE,       STORE)        \
+  XX(34, UPDATE,      UPDATE)       \
 
 enum http_method
   {
