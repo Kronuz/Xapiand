@@ -53,6 +53,9 @@ constexpr const char RESERVED_INDEX_UUID_FIELD[]            = RESERVED__ "index_
 constexpr const char RESERVED_SCHEMA[]                      = RESERVED__ "schema";
 constexpr const char RESERVED_ENDPOINT[]                    = RESERVED__ "endpoint";
 
+// Reserved for bulk operations
+constexpr const char RESERVED_OP_TYPE[]                     = RESERVED__ "op_type";
+
 // Reserved words for detecting types.
 constexpr const char RESERVED_DATE_DETECTION[]              = RESERVED__ "date_detection";
 constexpr const char RESERVED_TIME_DETECTION[]              = RESERVED__ "time_detection";

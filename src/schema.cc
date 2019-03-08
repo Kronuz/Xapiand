@@ -1741,7 +1741,7 @@ repr_field(std::string_view name, std::string_view field_name)
 }
 
 
-bool has_dispatch_set_default_spc(std::string_view set_default_spc);
+bool has_dispatch_set_default_spc(uint32_t key);
 bool has_dispatch_process_properties(uint32_t key);
 bool has_dispatch_process_concrete_properties(uint32_t key);
 
@@ -2763,7 +2763,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
@@ -2825,7 +2825,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
@@ -2908,7 +2908,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
@@ -2970,7 +2970,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
@@ -3472,7 +3472,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
@@ -3511,7 +3511,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
@@ -3562,7 +3562,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
@@ -3601,7 +3601,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
@@ -3915,7 +3915,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
@@ -3953,7 +3953,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
@@ -4003,7 +4003,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 	} else {
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
@@ -4041,7 +4041,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 		}
 
 		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(field_name))) {
+		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
 			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
@@ -6720,10 +6720,14 @@ Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object
 
 
 inline bool
-has_dispatch_set_default_spc(std::string_view set_default_spc)
+has_dispatch_set_default_spc(uint32_t key)
 {
-	auto hash = hh(set_default_spc);
-	return hash == hh(ID_FIELD_NAME) || hash == hh(RESERVED_VERSION);
+	constexpr static auto _ = phf::make_phf({
+		hh(ID_FIELD_NAME),
+		hh(RESERVED_VERSION),
+		hh(RESERVED_OP_TYPE),
+	});
+	return _.count(key) != 0u;
 }
 
 
@@ -8879,7 +8883,7 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 				if (value.is_map()) {
 					dispatch_readable(value, false);
 				}
-			} else if (has_dispatch_set_default_spc(str_key)) {
+			} else if (has_dispatch_set_default_spc(key)) {
 				if (at_root) {
 					it = item_schema.erase(it);
 					continue;
@@ -9373,7 +9377,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 		if (!is_valid(field_name)) {
 			// Check if the field_name is accuracy.
 			if (it == it_b) {
-				if (!has_dispatch_set_default_spc(field_name)) {
+				if (!has_dispatch_set_default_spc(hh(field_name))) {
 					if (++it == it_e) {
 						auto acc_data = _get_acc_data(field_name);
 						spc.prefix.append(acc_data.first);
