@@ -1797,8 +1797,8 @@ DocPreparer::operator()()
 		});
 		if (http_errors.error_code != HTTP_STATUS_OK) {
 			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{
-				{ RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
-				{ RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
+				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
+				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
 			}, idx));
 		}
 	}
@@ -1878,8 +1878,8 @@ DocIndexer::operator()()
 					return 0;
 				});
 				if (http_errors.error_code != HTTP_STATUS_OK) {
-					obj[RESPONSE_STATUS] = static_cast<unsigned>(http_errors.error_code);
-					obj[RESPONSE_MESSAGE] = string::split(http_errors.error, '\n');
+					obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
+					obj[RESPONSE_xMESSAGE] = string::split(http_errors.error, '\n');
 				}
 				std::lock_guard<std::mutex> lk(_results_mtx);
 				if (_idx > _results.size()) {

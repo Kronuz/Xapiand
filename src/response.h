@@ -22,53 +22,60 @@
 
 #pragma once
 
-constexpr const char RESPONSE_DOCID[]                       = "_docid";
+constexpr const char RESPONSE_xRANK[]                       = "#rank";
+constexpr const char RESPONSE_xWEIGHT[]                     = "#weight";
+constexpr const char RESPONSE_xPERCENT[]                    = "#percent";
+constexpr const char RESPONSE_xENDPOINT[]                   = "#endpoint";
 
-constexpr const char RESPONSE_RANK[]                        = "_rank";
-constexpr const char RESPONSE_WEIGHT[]                      = "_weight";
-constexpr const char RESPONSE_PERCENT[]                     = "_percent";
-
-constexpr const char RESPONSE_MESSAGE[]                     = "_message";
-constexpr const char RESPONSE_STATUS[]                      = "_status";
-
-// Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_ENDPOINT[]                    = "_endpoint";
-constexpr const char RESPONSE_COUNT[]                       = "_count";
-constexpr const char RESPONSE_MATCHES_ESTIMATED[]           = "_matches_estimated";
-constexpr const char RESPONSE_AGGREGATIONS[]                = "_aggregations";
-constexpr const char RESPONSE_HITS[]                        = "_hits";
-constexpr const char RESPONSE_NODES[]                       = "_nodes";
-constexpr const char RESPONSE_DOCUMENT_INFO[]               = "_document_info";
-constexpr const char RESPONSE_DATABASE_INFO[]               = "_database_info";
-constexpr const char RESPONSE_CLUSTER_NAME[]                = "_cluster_name";
-constexpr const char RESPONSE_SERVER[]                      = "_server";
-constexpr const char RESPONSE_URL[]                         = "_url";
-constexpr const char RESPONSE_VERSIONS[]                    = "_versions";
-constexpr const char RESPONSE_PROCESSED[]                   = "_processed";
-constexpr const char RESPONSE_INDEXED[]                     = "_indexed";
-constexpr const char RESPONSE_TOTAL[]                       = "_total";
-constexpr const char RESPONSE_ITEMS[]                       = "_items";
-constexpr const char RESPONSE_TOOK[]                        = "_took";
+constexpr const char RESPONSE_xMESSAGE[]                    = "#message";
+constexpr const char RESPONSE_xSTATUS[]                     = "#status";
 
 // Reserved words only used in the responses to the user.
-constexpr const char RESPONSE_AV_LENGTH[]                   = "_av_length";
-constexpr const char RESPONSE_CONTENT_TYPE[]                = "_content_type";
-constexpr const char RESPONSE_DATA[]                        = "_data";
-constexpr const char RESPONSE_DOC_COUNT[]                   = "_doc_count";
-constexpr const char RESPONSE_DOC_DEL[]                     = "_doc_del";
-constexpr const char RESPONSE_DOC_LEN_LOWER[]               = "_doc_len_lower";
-constexpr const char RESPONSE_DOC_LEN_UPPER[]               = "_doc_len_upper";
-constexpr const char RESPONSE_HAS_POSITIONS[]               = "_has_positions";
-constexpr const char RESPONSE_LAST_ID[]                     = "_last_id";
-constexpr const char RESPONSE_OFFSET[]                      = "_offset";
-constexpr const char RESPONSE_POS[]                         = "_pos";
-constexpr const char RESPONSE_RAW_DATA[]                    = "_raw_data";
-constexpr const char RESPONSE_REVISION[]                    = "_revision";
-constexpr const char RESPONSE_SIZE[]                        = "_size";
-constexpr const char RESPONSE_TERM_FREQ[]                   = "_term_freq";
-constexpr const char RESPONSE_TERMS[]                       = "_terms";
-constexpr const char RESPONSE_TYPE[]                        = "_type";
-constexpr const char RESPONSE_UUID[]                        = "_uuid";
-constexpr const char RESPONSE_VALUES[]                      = "_values";
-constexpr const char RESPONSE_VOLUME[]                      = "_volume";
-constexpr const char RESPONSE_WDF[]                         = "_wdf";
+constexpr const char RESPONSE_COUNT[]                       = "count";
+constexpr const char RESPONSE_DOC_COUNT[]                   = "doc_count";
+constexpr const char RESPONSE_MATCHES_ESTIMATED[]           = "matches_estimated";
+constexpr const char RESPONSE_AGGREGATIONS[]                = "aggregations";
+constexpr const char RESPONSE_HITS[]                        = "hits";
+
+constexpr const char RESPONSE_DOCUMENT_INFO[]               = "document_info";
+constexpr const char RESPONSE_DATABASE_INFO[]               = "database_info";
+
+constexpr const char RESPONSE_ENDPOINT[]                    = "endpoint";
+constexpr const char RESPONSE_PROCESSED[]                   = "processed";
+constexpr const char RESPONSE_INDEXED[]                     = "indexed";
+constexpr const char RESPONSE_TOTAL[]                       = "total";
+constexpr const char RESPONSE_ITEMS[]                       = "items";
+
+constexpr const char RESPONSE_TOOK[]                        = "took";
+
+// Reserved words only used in the responses to the user.
+constexpr const char RESPONSE_UUID[]                        = "uuid";
+constexpr const char RESPONSE_REVISION[]                    = "revision";
+constexpr const char RESPONSE_LAST_ID[]                     = "last_id";
+constexpr const char RESPONSE_DOC_DEL[]                     = "doc_del";
+constexpr const char RESPONSE_AV_LENGTH[]                   = "av_length";
+constexpr const char RESPONSE_DOC_LEN_LOWER[]               = "doc_len_lower";
+constexpr const char RESPONSE_DOC_LEN_UPPER[]               = "doc_len_upper";
+constexpr const char RESPONSE_HAS_POSITIONS[]               = "has_positions";
+
+constexpr const char RESPONSE_WDF[]                         = "wdf";
+constexpr const char RESPONSE_TERM_FREQ[]                   = "term_freq";
+constexpr const char RESPONSE_POS[]                         = "pos";
+
+constexpr const char RESPONSE_DOCID[]                       = "docid";
+constexpr const char RESPONSE_DATA[]                        = "data";
+constexpr const char RESPONSE_RAW_DATA[]                    = "raw_data";
+constexpr const char RESPONSE_TERMS[]                       = "terms";
+constexpr const char RESPONSE_VALUES[]                      = "values";
+
+constexpr const char RESPONSE_TYPE[]                        = "type";
+constexpr const char RESPONSE_CONTENT_TYPE[]                = "content_type";
+constexpr const char RESPONSE_VOLUME[]                      = "volume";
+constexpr const char RESPONSE_OFFSET[]                      = "offset";
+constexpr const char RESPONSE_SIZE[]                        = "size";
+
+constexpr const char RESPONSE_CLUSTER_NAME[]                = "cluster_name";
+constexpr const char RESPONSE_NODES[]                       = "nodes";
+constexpr const char RESPONSE_SERVER[]                      = "server";
+constexpr const char RESPONSE_URL[]                         = "url";
+constexpr const char RESPONSE_VERSIONS[]                    = "versions";
