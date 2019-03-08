@@ -116,15 +116,8 @@ def load_repo(client, path=None, index='git'):
     """
     path = dirname(abspath(__file__)) if path is None else path
 
-    while True:
-        try:
-            repo = git.Repo(path)
-        except git.exc.InvalidGitRepositoryError:
-            parent_path = dirname(path)
-            if parent_path == path:
-                raise
-            path = parent_path
-    repo_name = basename(path)
+    repo = git.Repo(path, search_parent_directories=True)
+    repo_name = basename(repo.git_dir)
 
     create_git_index(client, index)
 
