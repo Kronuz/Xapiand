@@ -62,7 +62,7 @@ class RequestsHttpConnection(Connection):
             elif isinstance(http_auth, string_types):
                 http_auth = tuple(http_auth.split(':', 1))
             self.session.auth = http_auth
-        self.base_url = 'http%s://%s:%d%s' % ('s' if self.use_ssl else '', host, port)
+        self.base_url = 'http%s://%s:%d%s' % ('s' if self.use_ssl else '', host, port, self.url_prefix)
         self.session.verify = verify_certs
         if not client_key:
             self.session.cert = client_cert
@@ -78,10 +78,8 @@ class RequestsHttpConnection(Connection):
             warnings.warn(
                 "Connecting to %s using SSL with verify_certs=False is insecure." % self.base_url)
 
-    def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None, url_prefix=None):
-        if url_prefix is None:
-            url_prefix = self.url_prefix
-        full_url = self.base_url + url_prefix + url
+    def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None):
+        full_url = self.base_url + url
         if params:
             full_url = '%s?%s' % (full_url, urlencode(params or {}))
 
