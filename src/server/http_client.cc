@@ -300,7 +300,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 		}
 
 		if ((mode & HTTP_OPTIONS_RESPONSE) != 0) {
-			headers += "Allow: GET, POST, PUT, PATCH, MERGE, STORE, DELETE, HEAD, OPTIONS" + eol;
+			headers += "Allow: GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS" + eol;
 		}
 
 		if ((mode & HTTP_TOTAL_COUNT_RESPONSE) != 0) {
@@ -780,7 +780,8 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 			constexpr static auto __ = phf::make_phf({
 				hhl("PUT"),
 				hhl("PATCH"),
-				hhl("MERGE"),
+				hhl("MERGE"),  // TODO: Remove MERGE (method was renamed to UPDATE)
+				hhl("UPDATE"),
 				hhl("STORE"),
 				hhl("DELETE"),
 				hhl("GET"),
@@ -794,8 +795,9 @@ HttpClient::on_header_value(http_parser* parser, const char* at, size_t length)
 				case __.fhhl("PATCH"):
 					parser->method = HTTP_PATCH;
 					break;
-				case __.fhhl("MERGE"):
-					parser->method = HTTP_MERGE;
+				case __.fhhl("MERGE"):  // TODO: Remove MERGE (method was renamed to UPDATE)
+				case __.fhhl("UPDATE"):
+					parser->method = HTTP_UPDATE;
 					break;
 				case __.fhhl("STORE"):
 					parser->method = HTTP_STORE;
@@ -1004,8 +1006,9 @@ HttpClient::prepare()
 		case HTTP_HEAD:
 			new_request->view = _prepare_head();
 			break;
-		case HTTP_MERGE:
-			new_request->view = _prepare_merge();
+		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
+		case HTTP_UPDATE:
+			new_request->view = _prepare_update();
 			break;
 		case HTTP_STORE:
 			new_request->view = _prepare_store();
@@ -1136,9 +1139,9 @@ HttpClient::_prepare_get()
 
 
 view_function
-HttpClient::_prepare_merge()
+HttpClient::_prepare_update()
 {
-	L_CALL("HttpClient::_prepare_merge()");
+	L_CALL("HttpClient::_prepare_update()");
 
 	auto cmd = url_resolve(*new_request);
 	switch (cmd) {
@@ -1616,9 +1619,9 @@ HttpClient::update_document_view(Request& request)
 	if (request.method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.ct_type).second;
 	} else if (request.method == HTTP_STORE) {
-		response_obj = db_handler.merge(doc_id, query_field.version, true, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.ct_type).second;
 	} else {
-		response_obj = db_handler.merge(doc_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1648,7 +1651,7 @@ HttpClient::update_document_view(Request& request)
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
-				{"operation", "merge"},
+				{"operation", "update"},
 			})
 			.Observe(took / 1e9);
 	}
@@ -3607,7 +3610,8 @@ Request::to_text(bool decode)
 			request_text_color = _request_text_color.c_str();
 			break;
 		}
-		case HTTP_MERGE: {
+		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
+		case HTTP_UPDATE: {
 			// rgb(88, 226, 194)
 			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
 			request_headers_color = _request_headers_color.c_str();

@@ -336,8 +336,9 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 			case HTTP_PATCH:
 				http_method = "PATCH";
 				break;
-			case HTTP_MERGE:
-				http_method = "MERGE";
+			case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
+			case HTTP_UPDATE:
+				http_method = "UPDATE";
 				break;
 			case HTTP_DELETE:
 				http_method = "DELETE";
@@ -592,9 +593,9 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 
 DataType
-DatabaseHandler::merge(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
+DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::merge({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored, commit, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::update({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored, commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -1162,7 +1163,7 @@ DatabaseHandler::prepare_document(const MsgPack& body)
 		return prepare(document_id, 0, body, data);
 	}
 
-	if (op_type == "merge") {
+	if (op_type == "update" || op_type == "merge") {
 		if (!document_id) {
 			THROW(ClientError, "Document must have an 'id'");
 		}

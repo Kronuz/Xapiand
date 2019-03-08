@@ -356,7 +356,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	view_function _prepare_options();
 	view_function _prepare_head();
 	view_function _prepare_get();
-	view_function _prepare_merge();
+	view_function _prepare_update();
 	view_function _prepare_store();
 	view_function _prepare_put();
 	view_function _prepare_post();

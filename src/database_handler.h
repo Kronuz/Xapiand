@@ -211,7 +211,7 @@ public:
 
 	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, const ct_type_t& ct_type);
-	DataType merge(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 	void delete_schema();
