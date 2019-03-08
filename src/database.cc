@@ -828,7 +828,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool versi
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
-	auto ver = serialise_length(version);
+	auto ver = sortable_serialise(version);
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Deleting document: {}  t: {}", did, t);
@@ -836,7 +836,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool versi
 		try {
 			if (is_local() && version && version_) {
 				std::string ver_prefix;
-				ver_prefix = "V" + serialise_length(did);
+				ver_prefix = "V" + sortable_serialise(did);
 				auto ver_prefix_size = ver_prefix.size();
 				auto t_end = wdb->allterms_end(ver_prefix);
 				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -900,7 +900,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 
 	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
 	Xapian::docid did = 0;
-	auto ver = serialise_length(version);
+	auto ver = sortable_serialise(version);
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Deleting document: '{}'  t: {}", term, t);
@@ -914,7 +914,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 					return;
 				} else {
 					did = *it;
-					ver_prefix = "V" + serialise_length(did);
+					ver_prefix = "V" + sortable_serialise(did);
 					auto ver_prefix_size = ver_prefix.size();
 					auto t_end = wdb->allterms_end(ver_prefix);
 					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1092,8 +1092,8 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 			if (is_local()) {
 				std::string ver_prefix;
 				did = wdb->get_lastdocid() + 1;
-				ver_prefix = "V" + serialise_length(did);
-				ver = serialise_length(++version);
+				ver_prefix = "V" + sortable_serialise(did);
+				ver = sortable_serialise(++version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 			}
@@ -1173,7 +1173,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		try {
 			if (is_local()) {
 				std::string ver_prefix;
-				ver_prefix = "V" + serialise_length(did);
+				ver_prefix = "V" + sortable_serialise(did);
 				auto ver_prefix_size = ver_prefix.size();
 				auto t_end = wdb->allterms_end(ver_prefix);
 				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1185,11 +1185,11 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 							// Throw error about wrong version!
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
-						version = unserialise_length(current_ver);
+						version = sortable_unserialise(current_ver);
 						break;
 					}
 				}
-				ver = serialise_length(++version);
+				ver = sortable_serialise(++version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 			}
@@ -1271,7 +1271,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 				if (term == "QN\x80") {
 					// Special term for autoincrement
 					did = wdb->get_lastdocid() + 1;
-					ver_prefix = "V" + serialise_length(did);
+					ver_prefix = "V" + sortable_serialise(did);
 					auto did_serialised = sortable_serialise(did);
 					new_term = "QN" + did_serialised;
 					doc.add_boolean_term(new_term);
@@ -1303,10 +1303,10 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 					auto it = wdb->postlist_begin(term);
 					if (it == wdb->postlist_end(term)) {
 						did = wdb->get_lastdocid() + 1;
-						ver_prefix = "V" + serialise_length(did);
+						ver_prefix = "V" + sortable_serialise(did);
 					} else {
 						did = *it;
-						ver_prefix = "V" + serialise_length(did);
+						ver_prefix = "V" + sortable_serialise(did);
 						auto ver_prefix_size = ver_prefix.size();
 						auto t_end = wdb->allterms_end(ver_prefix);
 						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1318,13 +1318,13 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 									// Throw error about wrong version!
 									throw Xapian::DocVersionConflictError("Version mismatch!");
 								}
-								version = unserialise_length(current_ver);
+								version = sortable_unserialise(current_ver);
 								break;
 							}
 						}
 					}
 				}
-				ver = serialise_length(++version);
+				ver = sortable_serialise(++version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 			}
