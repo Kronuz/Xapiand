@@ -47,6 +47,8 @@
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "fs.hh"                            // for normalize_path
+#include "hashes.hh"                        // for hhl
+#include "http_utils.h"                     // for catch_http_errors
 #include "ignore_unused.h"                  // for ignore_unused
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
@@ -58,6 +60,7 @@
 #include "node.h"                           // for Node::local_node, Node::leader_node
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
+#include "phf.hh"                           // for phf::*
 #include "rapidjson/document.h"             // for Document
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 #include "reserved/fields.h"                // for RESERVED_*
@@ -380,106 +383,25 @@ HttpClient::handled_errors(Request& request, Func&& func)
 {
 	L_CALL("HttpClient::handled_errors()");
 
-	enum http_status error_code = HTTP_STATUS_OK;
-	std::string error;
-	try {
-		return func();
-	} catch (const MissingTypeError& exc) {
-		error_code = HTTP_STATUS_PRECONDITION_FAILED;
-		error.assign(exc.what());
-	} catch (const Xapian::DocNotFoundError&) {
-		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign(http_status_str(error_code));
-	} catch (const Xapian::DatabaseNotFoundError&) {
-		error_code = HTTP_STATUS_NOT_FOUND;
-		error.assign(http_status_str(error_code));
-	} catch (const Xapian::DocVersionConflictError& exc) {
-		error_code = HTTP_STATUS_CONFLICT;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
-	} catch (const Xapian::DatabaseNotAvailableError& exc) {
-		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
-	} catch (const Xapian::NetworkTimeoutError& exc) {
-		error_code = HTTP_STATUS_GATEWAY_TIMEOUT;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
-	} catch (const Xapian::DatabaseModifiedError& exc) {
-		error_code = HTTP_STATUS_SERVICE_UNAVAILABLE;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.get_msg());
-	} catch (const Xapian::NetworkError& exc) {
-		std::string msg;
-		const char* error_string = exc.get_error_string();
-		if (!error_string) {
-			msg = exc.get_msg();
-			error_string = msg.c_str();
+	auto http_errors = catch_http_errors(std::forward<Func>(func));
+
+	if (http_errors.error_code != HTTP_STATUS_OK) {
+		if (request.response.status != static_cast<http_status>(0)) {
+			// There was an error, but request already had written stuff...
+			// disconnect client!
+			detach();
+			request.ending = true;
+		} else {
+			MsgPack err_response = {
+				{ RESERVED_RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
+				{ RESERVED_RESPONSE_MESSAGE, string::split(http_errors.error, '\n') }
+			};
+			write_http_response(request, http_errors.error_code, err_response);
+			request.ending = true;
 		}
-		constexpr static auto _ = phf::make_phf({
-			hhl("Can't assign requested address"),
-			hhl("Connection refused"),
-			hhl("Connection reset by peer"),
-			hhl("Connection closed unexpectedly"),
-		});
-		switch (_.fhhl(error_string)) {
-			case _.fhhl("Endpoint node not available"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
-				break;
-			case _.fhhl("Can't assign requested address"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
-				break;
-			case _.fhhl("Connection refused"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
-				break;
-			case _.fhhl("Connection reset by peer"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
-				break;
-			case _.fhhl("Connection closed unexpectedly"):
-				error_code = HTTP_STATUS_BAD_GATEWAY;
-				error.assign(std::string(http_status_str(error_code)) + ": " + error_string);
-				break;
-			default:
-				error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-				error.assign(exc.get_description());
-				L_EXC("ERROR: Dispatching HTTP request");
-		}
-	} catch (const ClientError& exc) {
-		error_code = HTTP_STATUS_BAD_REQUEST;
-		error.assign(std::string(http_status_str(error_code)) + ": " + exc.what());
-	} catch (const BaseException& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(*exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!");
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (const Xapian::Error& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(exc.get_description());
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (const std::exception& exc) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign(*exc.what() != 0 ? exc.what() : "Unkown std::exception!");
-		L_EXC("ERROR: Dispatching HTTP request");
-	} catch (...) {
-		error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-		error.assign("Unknown exception!");
-		L_EXC("ERROR: Dispatching HTTP request");
 	}
 
-	if (request.response.status != static_cast<http_status>(0)) {
-		// There was an error, but request already had written stuff...
-		// disconnect client!
-		detach();
-		request.ending = true;
-	} else {
-		MsgPack err_response = {
-			{ RESERVED_RESPONSE_STATUS, (int)error_code },
-			{ RESERVED_RESPONSE_MESSAGE, string::split(error, '\n') }
-		};
-		write_http_response(request, error_code, err_response);
-		request.ending = true;
-	}
-
-	return 1;
+	return http_errors.ret;
 }
 
 
