@@ -5317,7 +5317,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			} else {
 				term_generator.index_text_without_positions(serialise_val, field_spc.weight[getPos(pos, field_spc.weight.size())], field_spc.prefix.field + field_spc.get_ctype());
 			}
-			L_INDEX("Field Text to Index [{}] => {}:{} [Positions: {}]", pos, field_spc.prefix.field, serialise_val, positions);
+			L_INDEX("Field Text to Index [{}] => {}:{} [Positions: {}]", pos, repr(field_spc.prefix.field), serialise_val, positions);
 			break;
 		}
 
