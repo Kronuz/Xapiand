@@ -297,6 +297,7 @@ struct required_spc_t {
 		bool bool_term:1;
 		bool partials:1;
 
+		bool ignore:1;
 		bool store:1;
 		bool parent_store:1;
 		bool is_recurse:1;

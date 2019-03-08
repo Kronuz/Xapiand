@@ -1749,6 +1749,7 @@ bool has_dispatch_process_concrete_properties(uint32_t key);
 required_spc_t::flags_t::flags_t()
 	: bool_term(DEFAULT_BOOL_TERM),
 	  partials(DEFAULT_GEO_PARTIALS),
+	  ignore(false),
 	  store(true),
 	  parent_store(true),
 	  is_recurse(true),
@@ -3025,7 +3026,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		THROW(ClientError, "Field name must not be empty");
 	}
 
-	if (name[0] == '#') {
+	if (name[0] == '#' || specification.flags.ignore) {
 		return;  // skip comments (fields starting with '#')
 	}
 
@@ -3635,7 +3636,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		THROW(ClientError, "Field name must not be empty");
 	}
 
-	if (name[0] == '#') {
+	if (name[0] == '#' || specification.flags.ignore) {
 		return;  // skip comments (fields starting with '#')
 	}
 
@@ -4074,7 +4075,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std
 		THROW(ClientError, "Field name must not be empty");
 	}
 
-	if (name[0] == '#') {
+	if (name[0] == '#' || specification.flags.ignore) {
 		return;  // skip comments (fields starting with '#')
 	}
 
@@ -6736,6 +6737,8 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 		set_default_spc_id(mut_properties);
 	} else if (hash == hh(RESERVED_VERSION)) {
 		set_default_spc_version(mut_properties);
+	} else {
+		specification.flags.ignore = true;  // ignore all other accepted default_spc fields
 	}
 }
 
