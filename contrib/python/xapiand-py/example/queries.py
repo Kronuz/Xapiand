@@ -116,5 +116,5 @@ result = client.search(
 print_search_stats(result)
 for committer in result['aggregations']['committers']:
     print('%15s: %3d commits changing %6d lines' % (
-        committer['_key'], committer['_doc_count'], committer['line_stats']['sum']))
+        committer['_key'], committer['_doc_count'], committer['line_stats']['_sum']))
 print('=' * 80)
