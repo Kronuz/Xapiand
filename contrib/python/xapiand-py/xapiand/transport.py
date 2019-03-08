@@ -297,7 +297,7 @@ class Transport(object):
             method not in ('POST', 'PUT', 'PATCH', 'DELETE')
         ):
             # some clients or environments don't support sending GET with body or
-            # non-standard HTTP methods (such as `MERGE` or `STORE`), send the
+            # non-standard HTTP methods (such as `UPDATE` or `STORE`), send the
             # request it as `POST` instead, with the X-HTTP-Method-Override header.
             if headers is None:
                 headers = {}

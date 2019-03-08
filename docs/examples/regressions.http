@@ -56,7 +56,7 @@ PUT /test/merges/german
 	"gender": "M"
 }
 ###
-MERGE /test/merges/german
+UPDATE /test/merges/german
 
 {
 	"name": "German Mendez Bravo"

@@ -218,7 +218,7 @@ class Xapiand(object):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('MERGE', _make_path(index, id),
+        return self.transport.perform_request('UPDATE', _make_path(index, id),
             params=params, body=body)
 
     @query_params('timeout')

@@ -15,7 +15,7 @@ Fields of type geo_point accept latitude-longitude pairs, which can be used:
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 
 {
   "checkin": {
@@ -33,16 +33,10 @@ In the above example, taken from our
 [example dataset]({{ '/docs/exploring/#sample-dataset' | relative_url }}),
 the field "checkin" is a geospatial point but could be any of:
 
-* [Point](#)
-* [Polygon](#polygon)
-* [Circle](#circle)
-* `Covex`
-* [Chull](#convex-hull)
-* `Multipoint`
-* `Multipcircle`
-* `Multiconvex`
-* `Multipolygon`
-* `Multichull`
+- [Accuracy](#accuracy)
+- [Polygon](#polygon)
+- [Circle](#circle)
+- [Convex Hull](#convex-hull)
 
 
 ## Accuracy
@@ -74,7 +68,7 @@ to find how _HTM_ levels work.
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 
 {
   "neighborhood": {
@@ -104,7 +98,7 @@ MERGE /bank/1?pretty
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 {
   "neighborhood": {
     "_circle": {
@@ -129,7 +123,7 @@ Calculate the convex hull for the coordinates using the
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 {
   "neighborhood": {
     "_chull": {

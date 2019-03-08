@@ -15,7 +15,7 @@ If you are following the documentation examples you may notice that the field "e
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 
 {
     "username": {

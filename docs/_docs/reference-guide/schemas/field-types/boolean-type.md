@@ -11,7 +11,7 @@ explicitly use the `_type` boolean. The two following examples are equivalent:
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 
 {
     "isPublished": true
@@ -24,7 +24,7 @@ MERGE /bank/1?pretty
 {% capture req %}
 
 ```json
-MERGE /bank/1?pretty
+UPDATE /bank/1?pretty
 
 {
     "isPublished": {

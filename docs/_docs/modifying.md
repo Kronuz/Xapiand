@@ -113,7 +113,7 @@ the name field to _"John Doe"_ and at the same time add a _"gender"_ field to it
 {% capture req %}
 
 ```json
-MERGE /customer/1?pretty
+UPDATE /customer/1?pretty
 
 {
   "name": "John Doe",
@@ -131,7 +131,7 @@ script to increment the age by 5:
 {% capture req %}
 
 ```json
-MERGE /customer/1?pretty
+UPDATE /customer/1?pretty
 
 {
   "_script": "_doc.age = _old_doc.age + 5"
@@ -160,7 +160,7 @@ query condition (like an SQL UPDATE-WHERE statement):
 {% capture req %}
 
 ```json
-MERGE /customer/:search?q=*&pretty
+UPDATE /customer/:search?q=*&pretty
 
 {
   "_script": "_doc.age = _old_doc.age + 5"
