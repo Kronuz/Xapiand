@@ -2320,8 +2320,8 @@ HttpClient::search_view(Request& request)
 	}
 
 	MsgPack obj;
-	obj[RESPONSE_COUNT] = mset.get_matches_estimated();
-	obj[RESPONSE_DOC_COUNT] = mset.size();
+	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
+	obj[RESPONSE_COUNT] = mset.size();
 	if (aggregations) {
 		obj[RESPONSE_AGGREGATIONS] = aggregations;
 	}
@@ -2435,7 +2435,7 @@ HttpClient::count_view(Request& request)
 	}
 
 	MsgPack obj;
-	obj[RESPONSE_COUNT] = mset.get_matches_estimated();
+	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
 
 	request.ready = std::chrono::system_clock::now();
 

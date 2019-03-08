@@ -31,6 +31,7 @@ constexpr const char RESPONSE_xMESSAGE[]                    = "#message";
 constexpr const char RESPONSE_xSTATUS[]                     = "#status";
 
 // Reserved words only used in the responses to the user.
+constexpr const char RESPONSE_TOTAL[]                       = "total";
 constexpr const char RESPONSE_COUNT[]                       = "count";
 constexpr const char RESPONSE_DOC_COUNT[]                   = "doc_count";
 constexpr const char RESPONSE_MATCHES_ESTIMATED[]           = "matches_estimated";
@@ -43,7 +44,6 @@ constexpr const char RESPONSE_DATABASE_INFO[]               = "database_info";
 constexpr const char RESPONSE_ENDPOINT[]                    = "endpoint";
 constexpr const char RESPONSE_PROCESSED[]                   = "processed";
 constexpr const char RESPONSE_INDEXED[]                     = "indexed";
-constexpr const char RESPONSE_TOTAL[]                       = "total";
 constexpr const char RESPONSE_ITEMS[]                       = "items";
 
 constexpr const char RESPONSE_TOOK[]                        = "took";
