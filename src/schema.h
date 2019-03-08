@@ -918,6 +918,7 @@ class Schema {
 	 */
 
 	void set_default_spc_id(MsgPack& mut_properties);
+	void set_default_spc_version(MsgPack& mut_properties);
 
 
 	/*

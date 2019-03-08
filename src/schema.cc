@@ -6119,7 +6119,6 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	L_CALL("Schema::_dispatch_feed_properties({})", repr(value.to_string()));
 
 	constexpr static auto _ = phf::make_phf({
-		hh(RESERVED_VERSION),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
@@ -6158,8 +6157,6 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	});
 
 	switch (_.find(key)) {
-		case _.fhh(RESERVED_VERSION):
-			return true;
 		case _.fhh(RESERVED_WEIGHT):
 			Schema::feed_weight(value);
 			return true;
@@ -6358,7 +6355,6 @@ inline bool
 has_dispatch_process_concrete_properties(uint32_t key)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh(RESERVED_VERSION),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6430,7 +6426,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	L_CALL("Schema::_dispatch_process_concrete_properties({})", repr(prop_name));
 
 	constexpr static auto _ = phf::make_phf({
-		hh(RESERVED_VERSION),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6495,8 +6490,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	});
 
 	switch (_.find(key)) {
-		case _.fhh(RESERVED_VERSION):
-			return true;
 		case _.fhh(RESERVED_DATA):
 			Schema::process_data(prop_name, value);
 			return true;
@@ -6726,7 +6719,8 @@ Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object
 inline bool
 has_dispatch_set_default_spc(std::string_view set_default_spc)
 {
-	return hh(set_default_spc) == hh(ID_FIELD_NAME);
+	auto hash = hh(set_default_spc);
+	return hash == hh(ID_FIELD_NAME) || hash == hh(RESERVED_VERSION);
 }
 
 
@@ -6735,8 +6729,11 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 {
 	L_CALL("Schema::dispatch_set_default_spc({})", repr(mut_properties.to_string()));
 
-	if (hh(specification.full_meta_name) == hh(ID_FIELD_NAME)) {
+	auto hash = hh(specification.full_meta_name);
+	if (hash == hh(ID_FIELD_NAME)) {
 		set_default_spc_id(mut_properties);
+	} else if (hash == hh(RESERVED_VERSION)) {
+		set_default_spc_version(mut_properties);
 	}
 }
 
@@ -8794,6 +8791,18 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 
 	// Set default RESERVED_SLOT
 	specification.slot = DB_SLOT_ID;
+}
+
+void
+Schema::set_default_spc_version(MsgPack& mut_properties)
+{
+	L_CALL("Schema::set_default_spc_version({})", repr(mut_properties.to_string()));
+	ignore_unused(mut_properties);
+
+	specification.flags.store = false;
+	specification.slot = DB_SLOT_VERSION;
+	specification.index = TypeIndex::FIELD_VALUES;
+	specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::POSITIVE;
 }
 
 
