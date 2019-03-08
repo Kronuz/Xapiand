@@ -1103,7 +1103,7 @@ DatabaseHandler::dump_documents()
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare_document(const MsgPack& body)
+DatabaseHandler::prepare_document(MsgPack& body)
 {
 	L_CALL("DatabaseHandler::prepare_document(<body>)");
 
@@ -1132,9 +1132,10 @@ DatabaseHandler::prepare_document(const MsgPack& body)
 	}
 
 	std::string op_type = "index";
-	f_it = body.find("_op_type");
+	f_it = body.find(RESERVED_OP_TYPE);
 	if (f_it != body.end()) {
 		op_type = f_it.value().as_str();
+		body.erase(f_it);
 	}
 
 	if (op_type == "index") {
