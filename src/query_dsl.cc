@@ -768,7 +768,7 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapi
 		case Cast::Hash::GEO_INTERSECTION:
 			return GeoSpatialRange::getQuery(field_spc, obj);
 		default:
-			THROW(QueryDslError, "Invalid format {}: {}", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
+			THROW(QueryDslError, "Invalid format '{}': {}", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 }
 
@@ -1292,7 +1292,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 		case MsgPack::Type::STR: {
 			auto field = obj.str_view();
 			if (field.empty()) {
-				THROW(QueryDslError, "Invalid format {}: must specify a field", RESERVED_QUERYDSL_SORT);
+				THROW(QueryDslError, "Invalid format '{}': must specify a field", RESERVED_QUERYDSL_SORT);
 			}
 			bool descending = false;
 			switch (field.at(0)) {
@@ -1318,7 +1318,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 		}
 
 		default:
-			THROW(QueryDslError, "Invalid format {}: {}", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
+			THROW(QueryDslError, "Invalid format '{}': {}", RESERVED_QUERYDSL_SORT, repr(obj.to_string()));
 	}
 }
 
