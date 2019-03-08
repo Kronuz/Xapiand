@@ -28,7 +28,7 @@ from xapiand import Xapiand
 
 def print_search_stats(results):
     print('=' * 80)
-    print('Total %d found in %s' % (results['count'], results['took']))
+    print('Total %d found in %s' % (results['total'], results['took']))
     print('-' * 80)
 
 

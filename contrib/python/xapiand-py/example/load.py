@@ -190,4 +190,4 @@ if __name__ == '__main__':
     print('%s: %s' % (initial_commit['_id'], initial_commit['committed_date']))
 
     # and now we can count the documents
-    print(client.count(index='git')['count'], 'documents in index')
+    print(client.count(index='git')['total'], 'documents in index')
