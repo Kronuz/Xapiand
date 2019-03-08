@@ -123,15 +123,7 @@ MERGE /customer/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-{% if site.serving %}
-
-
 ### Updating With Scripts
-
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
 
 Updates can also be performed by using simple scripts. This example uses a
 script to increment the age by 5:
@@ -142,14 +134,17 @@ script to increment the age by 5:
 MERGE /customer/1?pretty
 
 {
-  "_script": "obj.age += 5"
+  "_script": "_doc.age = _old_doc.age + 5"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-In the above example, `obj` refers to the current source document that is about
-to be updated.
+In the above example, `_doc` is the current document and `_old_doc` refers to
+the previous document that is about to be updated.
+
+
+{% if site.serving %}
 
 
 ### Updating Multiple Documents
@@ -168,7 +163,7 @@ query condition (like an SQL UPDATE-WHERE statement):
 MERGE /customer/:search?q=*&pretty
 
 {
-  "_script": "obj.age += 1"
+  "_script": "_doc.age = _old_doc.age + 5"
 }
 ```
 {% endcapture %}
