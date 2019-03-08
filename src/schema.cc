@@ -2390,7 +2390,7 @@ Schema::get_properties(std::string_view full_meta_name)
 	const MsgPack* prop = &get_properties();
 	Split<std::string_view> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
-		prop = &(*prop).at(field_name);
+		prop = &prop->at(field_name);
 	}
 	return *prop;
 }
@@ -2404,7 +2404,7 @@ Schema::get_mutable_properties(std::string_view full_meta_name)
 	MsgPack* prop = &get_mutable_properties();
 	Split<std::string_view> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
-		prop = &(*prop)[field_name];
+		prop = &prop->get(field_name);
 	}
 	return *prop;
 }
@@ -2418,7 +2418,7 @@ Schema::get_newest_properties(std::string_view full_meta_name)
 	const MsgPack* prop = &get_newest_properties();
 	Split<std::string_view> field_names(full_meta_name, DB_OFFSPRING_UNION);
 	for (const auto& field_name : field_names) {
-		prop = &(*prop).at(field_name);
+		prop = &prop->at(field_name);
 	}
 	return *prop;
 }
@@ -3029,7 +3029,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 	if (!specification.flags.is_recurse && name[0] != '_') {
 		if (specification.flags.store) {
-			(*parent_data)[name] = object;
+			parent_data->get(name) = object;
 		}
 		return;
 	}
@@ -3116,7 +3116,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 	if (array.empty()) {
 		set_type_to_array();
 		if (specification.flags.store) {
-			(*parent_data)[name] = MsgPack::ARRAY();
+			parent_data->get(name) = MsgPack::ARRAY();
 		}
 		return;
 	}
@@ -3130,7 +3130,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data = parent_data;
 				FieldVector fields;
 				properties = &index_subproperties(properties, data, name, item, fields, pos);
-				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				set_type_to_array();
 				index_item_value(properties, doc, data_pos, fields);
 				specification = spc_start;
@@ -3141,7 +3141,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
-				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				set_type_to_array();
 				index_item_value(doc, *data_pos, item);
 				if (specification.flags.store) {
@@ -3161,7 +3161,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
-				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				set_type_to_array();
 				index_partial_paths(doc);
 				if (specification.flags.store) {
@@ -3181,7 +3181,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
-				auto data_pos = specification.flags.store ? &(*data)[pos] : data;
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				set_type_to_array();
 				index_item_value(doc, *data_pos, item, pos);
 				if (specification.flags.store) {
@@ -3432,7 +3432,7 @@ Schema::update(const MsgPack& object)
 				if (!mut_schema) {
 					mut_schema = std::make_unique<MsgPack>(*schema);
 				}
-				(*mut_schema)[str_key] = it.value();
+				mut_schema->get(str_key) = it.value();
 			}
 		}
 
@@ -3875,7 +3875,7 @@ Schema::write(const MsgPack& object, bool replace)
 				if (!mut_schema) {
 					mut_schema = std::make_unique<MsgPack>(*schema);
 				}
-				(*mut_schema)[str_key] = it.value();
+				mut_schema->get(str_key) = it.value();
 			}
 		}
 
@@ -6748,7 +6748,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 
 	specification.flags.field_found = false;
 
-	mut_properties = &(*mut_properties)[specification.meta_name];
+	mut_properties = &mut_properties->get(specification.meta_name);
 
 	const auto& stem = _get_stem_language(specification.meta_name);
 	if (stem.first && stem.second != "unknown") {
@@ -6769,7 +6769,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& 
 	dispatch_set_default_spc(*mut_properties);
 
 	// Write prefix in properties.
-	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
+	mut_properties->get(RESERVED_PREFIX) = specification.local_prefix.field;
 
 	update_prefixes();
 }
@@ -6780,7 +6780,7 @@ Schema::add_field(MsgPack*& mut_properties)
 {
 	L_CALL("Schema::add_field({})", repr(mut_properties->to_string()));
 
-	mut_properties = &(*mut_properties)[specification.meta_name];
+	mut_properties = &mut_properties->get(specification.meta_name);
 
 	const auto& stem = _get_stem_language(specification.meta_name);
 	if (stem.first && stem.second != "unknown") {
@@ -6798,7 +6798,7 @@ Schema::add_field(MsgPack*& mut_properties)
 	dispatch_set_default_spc(*mut_properties);
 
 	// Write prefix in properties.
-	(*mut_properties)[RESERVED_PREFIX] = specification.local_prefix.field;
+	mut_properties->get(RESERVED_PREFIX) = specification.local_prefix.field;
 
 	update_prefixes();
 }
