@@ -1102,14 +1102,22 @@ DatabaseHandler::dump_documents()
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare_document(const MsgPack& obj)
+DatabaseHandler::prepare_document(const MsgPack& body)
 {
-	L_CALL("DatabaseHandler::prepare_document(<obj>)");
+	L_CALL("DatabaseHandler::prepare_document(<body>)");
+
+	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+		THROW(Error, "Database is read-only");
+	}
+
+	if (!body.is_map()) {
+		THROW(ClientError, "Object must be a JSON or MsgPack");
+	}
 
 	MsgPack document_id;
 
-	auto f_it = obj.find(ID_FIELD_NAME);
-	if (f_it != obj.end()) {
+	auto f_it = body.find(ID_FIELD_NAME);
+	if (f_it != body.end()) {
 		const auto& field = f_it.value();
 		if (field.is_map()) {
 			auto f_it_end = field.end();
@@ -1122,10 +1130,64 @@ DatabaseHandler::prepare_document(const MsgPack& obj)
 		}
 	}
 
-	Data data;
-	inject_data(data, obj);
+	std::string op_type = "index";
+	f_it = body.find("_op_type");
+	if (f_it != body.end()) {
+		op_type = f_it.value().as_str();
+	}
 
-	return prepare(document_id, 0, obj, data);
+	if (op_type == "index") {
+		Data data;
+		inject_data(data, body);
+
+		return prepare(document_id, 0, body, data);
+	}
+
+	if (op_type == "patch") {
+		if (!document_id) {
+			THROW(ClientError, "Document must have an 'id'");
+		}
+
+		const auto term_id = get_prefixed_term_id(document_id);
+
+		Data data;
+		try {
+			auto current_document = get_document_term(term_id);
+			data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {}
+		auto obj = data.get_obj();
+		apply_patch(body, obj);
+
+		return prepare(document_id, 0, body, data);
+	}
+
+	if (op_type == "merge") {
+		if (!document_id) {
+			THROW(ClientError, "Document must have an 'id'");
+		}
+
+		const auto term_id = get_prefixed_term_id(document_id);
+
+		Data data;
+		try {
+			auto current_document = get_document_term(term_id);
+			data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {}
+		auto obj = data.get_obj();
+
+		if (obj.empty()) {
+			inject_data(data, body);
+			return prepare(document_id, 0, body, data);
+		} else {
+			obj.update(body);
+			inject_data(data, obj);
+			return prepare(document_id, 0, obj, data);
+		}
+	}
+
+	THROW(ClientError, "Invalid operation type: {}", repr(op_type));
 }
 
 
