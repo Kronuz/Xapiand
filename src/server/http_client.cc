@@ -1038,7 +1038,9 @@ HttpClient::prepare()
 	if (new_request->expect_100) {
 		// Return "100 Continue" if client sent "Expect: 100-continue"
 		write(http_response(*new_request, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
-		new_request->response.status = static_cast<http_status>(0);  // go back to unknown response state
+		// Go back to unknown response state:
+		new_request->response.head.clear();
+		new_request->response.status = static_cast<http_status>(0);
 	}
 
 	if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && new_request->parser.content_length) {
