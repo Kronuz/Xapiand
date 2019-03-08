@@ -57,7 +57,7 @@ print('Find commits that says "fix" without touching tests:')
 result = client.search(
     index='git',
     body={
-        'query': {
+        '_query': {
             '_and_not': [
                 {
                     'description': 'fix'
@@ -75,17 +75,17 @@ print('Last 8 Commits for xapiand-py:')
 result = client.search(
     index='git',
     body={
-        'query': {
+        '_query': {
             'repository': 'xapiand-py'
         },
-        'sort': [
+        '_sort': [
             {
                 'committed_date': {
-                    'order': 'desc'
+                    '_order': 'desc'
                 }
             }
         ],
-        'limit': 8
+        '_limit': 8
     }
 )
 print_hits(result)
