@@ -437,15 +437,6 @@ add_library(PACKAGE_OBJ OBJECT ${PACKAGE_SRC_LIST})
 
 
 ########################################################################
-# Xapiand main() target
-########################################################################
-
-list(APPEND MAIN_SRC_LIST "${PROJECT_SOURCE_DIR}/src/xapiand.cc")
-list(APPEND MAIN_SRC_LIST ${XAPIAN_H_LIST})
-add_library(MAIN_OBJ OBJECT ${MAIN_SRC_LIST})
-
-
-########################################################################
 # Xapiand library target
 ########################################################################
 
@@ -463,8 +454,7 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h*"
 )
 list(REMOVE_ITEM XAPIAND_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/package.cc"
-	"${PROJECT_SOURCE_DIR}/src/xapiand.cc"
+"${PROJECT_SOURCE_DIR}/src/package.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
@@ -475,7 +465,6 @@ add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 ########################################################################
 
 add_executable(${PROJECT_NAME}
-	"$<TARGET_OBJECTS:MAIN_OBJ>"
 	"$<TARGET_OBJECTS:PACKAGE_OBJ>"
 	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
 	"$<TARGET_OBJECTS:XAPIAN_OBJ>"
