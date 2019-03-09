@@ -13,11 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Fixed
+- Aggregations with `_aggs` in different order
+- JSON serialization of Infinite and NaN
+
 ### Changed
 - **BREAKING**: Fields in responses renamed and nested differently:
--               + `query.hits` moved to `hits`
+                + `query.hits` moved to `hits`
                 + `query.matches_estimated` renamed to `count`
                 + `query.total_count` renamed to `doc_count`
+- `MERGE` method is deprecated and will be removed, use `UPDATE` instead
 - Default UUID mode is now encoded + compact
 
 
