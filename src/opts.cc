@@ -41,51 +41,51 @@
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
 #define NUM_REPLICAS             3                // Default number of database replicas per index
 
-#define SCRIPTS_CACHE_SIZE       100
-#define RESOLVER_CACHE_SIZE      1000
-#define DATABASE_POOL_SIZE       300              // Maximum number of database endpoints in database pool
-#define SCHEMA_POOL_SIZE         900              // Maximum number of schemas in schema pool
-#define MAX_DATABASES            400              // Maximum number of open databases
-#define MAX_CLIENTS              1000             // Maximum number of open client connections
+#define SCRIPTS_CACHE_SIZE           100
+#define RESOLVER_CACHE_SIZE         1000
+#define DATABASE_POOL_SIZE           300          // Maximum number of database endpoints in database pool
+#define SCHEMA_POOL_SIZE             900          // Maximum number of schemas in schema pool
+#define MAX_DATABASES                400          // Maximum number of open databases
+#define MAX_CLIENTS                 1000          // Maximum number of open client connections
 
-#define NUM_HTTP_SERVERS             2.0          // Number of servers per CPU
-#define MAX_HTTP_SERVERS              16
+#define NUM_HTTP_SERVERS             1.0          // Number of servers per CPU
+#define MAX_HTTP_SERVERS              10
 
-#define NUM_HTTP_CLIENTS            16.0          // Number of http client threads per CPU
-#define MAX_HTTP_CLIENTS             128
+#define NUM_HTTP_CLIENTS             1.5          // Number of http client threads per CPU
+#define MAX_HTTP_CLIENTS              20
 
-#define NUM_REMOTE_SERVERS           2.0          // Number of remote protocol client threads per CPU
-#define MAX_REMOTE_SERVERS            16
+#define NUM_REMOTE_SERVERS           1.0          // Number of remote protocol client threads per CPU
+#define MAX_REMOTE_SERVERS            10
 
-#define NUM_REMOTE_CLIENTS          16.0          // Number of remote protocol client threads per CPU
-#define MAX_REMOTE_CLIENTS           128
+#define NUM_REMOTE_CLIENTS           2.0          // Number of remote protocol client threads per CPU
+#define MAX_REMOTE_CLIENTS            20
 
-#define NUM_REPLICATION_SERVERS      2.0          // Number of replication protocol client threads per CPU
-#define MAX_REPLICATION_SERVERS       16
+#define NUM_REPLICATION_SERVERS      1.0          // Number of replication protocol client threads per CPU
+#define MAX_REPLICATION_SERVERS       10
 
-#define NUM_REPLICATION_CLIENTS     16.0          // Number of replication protocol client threads per CPU
-#define MAX_REPLICATION_CLIENTS      128
+#define NUM_REPLICATION_CLIENTS      0.5          // Number of replication protocol client threads per CPU
+#define MAX_REPLICATION_CLIENTS       10
 
-#define NUM_ASYNC_WAL_WRITERS        1.0          // Number of database async WAL writers per CPU
-#define MAX_ASYNC_WAL_WRITERS          8
+#define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
+#define MAX_ASYNC_WAL_WRITERS         10
 
-#define NUM_DOC_PREPARERS            8.0          // Number of threads handling bulk documents preparing per CPU
-#define MAX_DOC_PREPARERS             64
+#define NUM_DOC_PREPARERS            1.0          // Number of threads handling bulk documents preparing per CPU
+#define MAX_DOC_PREPARERS             10
 
 #define NUM_DOC_INDEXERS             2.0          // Number of threads handling bulk documents indexing per CPU
-#define MAX_DOC_INDEXERS              16
+#define MAX_DOC_INDEXERS              20
 
 #define NUM_COMMITTERS               0.5          // Number of threads handling the commits per CPU
-#define MAX_COMMITTERS                 8
+#define MAX_COMMITTERS                10
 
 #define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
-#define MAX_FSYNCHERS                  8
+#define MAX_FSYNCHERS                 10
 
 #define NUM_REPLICATORS              0.5          // Number of threads handling the replication per CPU
-#define MAX_REPLICATORS                4
+#define MAX_REPLICATORS               10
 
 #define NUM_DISCOVERERS              0.5          // Number of threads handling the discoverers per CPU
-#define MAX_DISCOVERERS                4
+#define MAX_DISCOVERERS               10
 
 
 #define EV_SELECT_NAME  "select"
