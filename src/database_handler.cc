@@ -75,33 +75,6 @@ const std::string dump_schema_header("xapiand-dump-schm");
 const std::string dump_documents_header("xapiand-dump-docs");
 
 
-void
-committer_commit(std::weak_ptr<Database> weak_database) {
-	if (auto database = weak_database.lock()) {
-		auto start = std::chrono::system_clock::now();
-
-		std::string error;
-
-		try {
-			DatabaseHandler db_handler(database->endpoints, DB_WRITABLE);
-			db_handler.commit();
-		} catch (const Exception& exc) {
-			error = exc.get_message();
-		} catch (const Xapian::Error& exc) {
-			error = exc.get_description();
-		}
-
-		auto end = std::chrono::system_clock::now();
-
-		if (error.empty()) {
-			L_DEBUG("Autocommit of {} succeeded after {}", repr(database->endpoints.to_string()), string::from_delta(start, end));
-		} else {
-			L_WARNING("Autocommit of {} falied after {}: {}", repr(database->endpoints.to_string()), string::from_delta(start, end), error);
-		}
-	}
-}
-
-
 Xapian::docid
 to_docid(std::string_view document_id)
 {
@@ -2234,5 +2207,32 @@ Document::hash(size_t retries)
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries == 0) { throw; }
 		return hash(--retries);
+	}
+}
+
+
+void
+committer_commit(std::weak_ptr<Database> weak_database) {
+	if (auto database = weak_database.lock()) {
+		auto start = std::chrono::system_clock::now();
+
+		std::string error;
+
+		try {
+			DatabaseHandler db_handler(database->endpoints, DB_WRITABLE);
+			db_handler.commit();
+		} catch (const Exception& exc) {
+			error = exc.get_message();
+		} catch (const Xapian::Error& exc) {
+			error = exc.get_description();
+		}
+
+		auto end = std::chrono::system_clock::now();
+
+		if (error.empty()) {
+			L_DEBUG("Autocommit of {} succeeded after {}", repr(database->endpoints.to_string()), string::from_delta(start, end));
+		} else {
+			L_WARNING("Autocommit of {} falied after {}: {}", repr(database->endpoints.to_string()), string::from_delta(start, end), error);
+		}
 	}
 }

@@ -24,32 +24,11 @@
 
 #include "config.h"
 
-#include <cmath>                         // for std::ceil
-#include <cstdint>                       // for std::uint32_t
-#include <cstdlib>                       // for std::size_t
 #include <string>                        // for std::string
-#include <sys/types.h>                   // for ssize_t
-
-
-#define NUM_SERVERS              2       // Number of servers per CPU
-#define NUM_HTTP_CLIENTS         16      // Number of http client threads per CPU
-#define NUM_REMOTE_CLIENTS       16      // Number of remote protocol client threads per CPU
-#define NUM_REPLICATION_CLIENTS  16      // Number of replication protocol client threads per CPU
-#define NUM_ASYNC_WAL_WRITERS    1       // Number of database async WAL writers per CPU
-#define NUM_DOC_PREPARERS        8       // Number of threads handling bulk documents preparing per CPU
-#define NUM_DOC_INDEXERS         2       // Number of threads handling bulk documents indexing per CPU
-#define NUM_COMMITTERS           1       // Number of threads handling the commits per CPU
-#define NUM_FSYNCHERS            1       // Number of threads handling the fsyncs per CPU
-
-#define DBPOOL_SIZE              300     // Maximum number of database endpoints in database pool
-#define MAX_CLIENTS              1000    // Maximum number of open client connections
-#define MAX_DATABASES            400     // Maximum number of open databases
-#define FLUSH_THRESHOLD          100000  // Database flush threshold (default for xapian is 10000)
-#define ENDPOINT_LIST_SIZE       10      // Endpoints List's size
-#define NUM_REPLICAS             3       // Default number of database replicas per index
 
 
 extern struct opts_t {
+	double processors = 1;
 	int verbosity = 0;
 	bool detach = false;
 	bool chert = false;
@@ -68,36 +47,40 @@ extern struct opts_t {
 	unsigned int remote_port = XAPIAND_REMOTE_SERVERPORT;
 	unsigned int replication_port = XAPIAND_REPLICATION_SERVERPORT;
 	unsigned int discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
+	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
 	std::string pidfile = "";
 	std::string logfile = "";
 	std::string uid = "";
 	std::string gid = "";
-	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
-	ssize_t num_servers = std::ceil(NUM_SERVERS);
-	ssize_t num_http_clients = std::ceil(NUM_HTTP_CLIENTS);
-	ssize_t num_remote_clients = std::ceil(NUM_REMOTE_CLIENTS);
-	ssize_t num_replication_clients = std::ceil(NUM_REPLICATION_CLIENTS);
-	ssize_t num_async_wal_writers = std::ceil(NUM_ASYNC_WAL_WRITERS);
-	ssize_t num_doc_preparers = std::ceil(NUM_DOC_PREPARERS);
-	ssize_t num_doc_indexers = std::ceil(NUM_DOC_INDEXERS);
-	ssize_t num_committers = std::ceil(NUM_COMMITTERS);
-	ssize_t num_fsynchers = std::ceil(NUM_FSYNCHERS);
-	ssize_t dbpool_size = DBPOOL_SIZE;
-	ssize_t endpoints_list_size = ENDPOINT_LIST_SIZE;
-	ssize_t max_clients = MAX_CLIENTS;
-	ssize_t max_databases = MAX_DATABASES;
+	ssize_t num_http_servers = 1;
+	ssize_t num_http_clients = 1;
+	ssize_t num_remote_servers = 1;
+	ssize_t num_remote_clients = 1;
+	ssize_t num_replication_servers = 1;
+	ssize_t num_replication_clients = 1;
+	ssize_t num_async_wal_writers = 1;
+	ssize_t num_doc_preparers = 1;
+	ssize_t num_doc_indexers = 1;
+	ssize_t num_committers = 1;
+	ssize_t num_fsynchers = 1;
+	ssize_t num_replicators = 1;
+	ssize_t num_discoverers = 1;
+	ssize_t dbpool_size = 10;
+	ssize_t endpoints_list_size = 10;
+	ssize_t max_clients = 10;
+	ssize_t max_databases = 10;
 	ssize_t max_files = 0;  // (0 = automatic)
-	int flush_threshold = FLUSH_THRESHOLD;
+	size_t num_replicas = 3;
+	int flush_threshold = 100000;
 	unsigned int ev_flags = 0;
 	bool uuid_compact = false;
-	std::uint32_t uuid_repr = 0;
+	uint32_t uuid_repr = 0;
 	bool uuid_partition = false;
 	std::string dump_metadata = "";
 	std::string dump_schema = "";
 	std::string dump_documents = "";
 	std::string restore = "";
 	std::string filename = "";
-	std::size_t num_replicas = NUM_REPLICAS;
 	bool iterm2 = false;
 	bool log_epoch = false;
 	bool log_iso8601 = false;

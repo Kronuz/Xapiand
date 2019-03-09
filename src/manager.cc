@@ -71,7 +71,6 @@
 #include "msgpack.h"                             // for MsgPack, object::object
 #include "namegen.h"                             // for name_generator
 #include "net.hh"                                // for inet_ntop
-#include "opts.h"                                // for opts::*
 #include "package.h"                             // for Package
 #include "readable_revents.hh"                   // for readable_revents
 #include "reserved/schema.h"                     // for RESERVED_INDEX, RESERVED_TYPE, ...
@@ -154,12 +153,12 @@ XapiandManager::XapiandManager()
 	  _database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  _wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
-	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_servers)),
+	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
 	  _remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
-	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_servers)),
+	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
-	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_servers)),
+	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
 	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
@@ -192,12 +191,12 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
 	  _wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
-	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_servers)),
+	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
 	  _remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
-	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_servers)),
+	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
-	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_servers)),
+	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
 	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
@@ -804,21 +803,25 @@ XapiandManager::make_servers()
 	}
 #endif
 
-	for (ssize_t i = 0; i < opts.num_servers; ++i) {
+	for (ssize_t i = 0; i < opts.num_http_servers; ++i) {
 		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
 		if (_http_server->addr.sin_family) {
 			_http->addr = _http_server->addr;
 		}
 		_http_server_pool->enqueue(std::move(_http_server));
+	}
 
 #ifdef XAPIAND_CLUSTERING
-		if (!opts.solo) {
+	if (!opts.solo) {
+		for (ssize_t i = 0; i < opts.num_remote_servers; ++i) {
 			auto _remote_server = Worker::make_shared<RemoteProtocolServer>(_remote, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? remote_tries : 0);
 			if (_remote_server->addr.sin_family) {
 				_remote->addr = _remote_server->addr;
 			}
 			_remote_server_pool->enqueue(std::move(_remote_server));
+		}
 
+		for (ssize_t i = 0; i < opts.num_replication_servers; ++i) {
 			auto _replication_server = Worker::make_shared<ReplicationProtocolServer>(_replication, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
 			if (_replication_server->addr.sin_family) {
 				_replication->addr = _replication_server->addr;
@@ -856,10 +859,12 @@ XapiandManager::make_servers()
 
 	// Now print information about servers and workers.
 	std::vector<std::string> values({
-		std::to_string(opts.num_servers) + ((opts.num_servers == 1) ? " server" : " servers"),
+		std::to_string(opts.num_http_servers) + ((opts.num_http_servers == 1) ? " http server" : " http servers"),
 		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http thread" : " http threads"),
 #ifdef XAPIAND_CLUSTERING
+		std::to_string(opts.num_remote_servers) + ((opts.num_remote_servers == 1) ? " remote protocol server" : " remote protocol servers"),
 		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol thread" : " remote protocol threads"),
+		std::to_string(opts.num_replication_servers) + ((opts.num_replication_servers == 1) ? " replication protocol server" : " replication protocol servers"),
 		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol thread" : " replication protocol threads"),
 #endif
 #if XAPIAND_DATABASE_WAL

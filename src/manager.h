@@ -36,6 +36,7 @@
 #include "ev/ev++.h"                          // for ev::loop_ref
 #include "ignore_unused.h"                    // for ignore_unused
 #include "length.h"                           // for serialise_length
+#include "opts.h"                             // for opts::*
 #include "node.h"                             // for Node, local_node
 #include "thread.hh"                          // for ThreadPolicyType::*
 #include "threadpool.hh"                      // for ThreadPool
@@ -398,7 +399,7 @@ public:
 void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
 inline auto& trigger_replication(bool create = true) {
-	static auto trigger_replication = create ? make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("TR--", "TR{:02}", 3, trigger_replication_trigger) : nullptr;
+	static auto trigger_replication = create ? make_unique_debouncer<std::string, 3000, 6000, 12000, ThreadPolicyType::replication>("TR--", "TR{:02}", opts.num_replicators, trigger_replication_trigger) : nullptr;
 	ASSERT(!create || trigger_replication);
 	return trigger_replication;
 }
