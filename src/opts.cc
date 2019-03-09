@@ -94,6 +94,9 @@
 #define EV_PORT_NAME    "port"
 
 
+#define fallback(a, b) (a) ? (a) : (b)
+
+
 unsigned int
 ev_backend(const std::string& name)
 {
@@ -256,7 +259,7 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::size_t> num_http_servers("", "http-servers", "Number of http servers.", false, 0, "servers", cmd);
 		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
 
-		ValueArg<double> processors("", "processors", "Number of processors to use.", false, 1, "processors", cmd);
+		ValueArg<double> processors("", "processors", "Number of processors to use.", false, hardware_concurrency, "processors", cmd);
 
 		auto use_allowed = ev_supported();
 		ValuesConstraint<std::string> use_constraint(use_allowed);
@@ -407,29 +410,29 @@ parseOptions(int argc, char** argv)
 		o.gid = gid.getValue();
 		o.dbpool_size = dbpool_size.getValue();
 #if XAPIAND_DATABASE_WAL
-		o.num_async_wal_writers = num_async_wal_writers.getValue() || std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)));
+		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors))));
 #endif
 #ifdef XAPIAND_CLUSTERING
 		o.num_replicas = o.solo ? 0 : num_replicas.getValue();
 #endif
-		o.num_doc_preparers = num_doc_preparers.getValue() || std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors)));
-		o.num_doc_indexers = num_doc_indexers.getValue() || std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors)));
-		o.num_committers = num_committers.getValue() || std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)));
-		o.num_fsynchers = num_fsynchers.getValue() || std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)));
-		o.num_replicators = num_replicators.getValue() || std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors)));
-		o.num_discoverers = num_discoverers.getValue() || std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors)));
+		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors))));
+		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors))));
+		o.num_committers = fallback(num_committers.getValue(), std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors))));
+		o.num_fsynchers = fallback(num_fsynchers.getValue(), std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors))));
+		o.num_replicators = fallback(num_replicators.getValue(), std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors))));
+		o.num_discoverers = fallback(num_discoverers.getValue(), std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors))));
 
 		o.max_clients = max_clients.getValue();
 		o.max_databases = max_databases.getValue();
 		o.max_files = max_files.getValue();
 		o.flush_threshold = flush_threshold.getValue();
-		o.num_http_clients = num_http_clients.getValue() || std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)));
-		o.num_http_servers = num_http_servers.getValue() || std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)));
+		o.num_http_clients = fallback(num_http_clients.getValue(), std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors))));
+		o.num_http_servers = fallback(num_http_servers.getValue(), std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors))));
 #ifdef XAPIAND_CLUSTERING
-		o.num_remote_clients = num_remote_clients.getValue() || std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors)));
-		o.num_remote_servers = num_remote_servers.getValue() || std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors)));
-		o.num_replication_clients = num_replication_clients.getValue() || std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors)));
-		o.num_replication_servers = num_replication_servers.getValue() || std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors)));
+		o.num_remote_clients = fallback(num_remote_clients.getValue(), std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors))));
+		o.num_remote_servers = fallback(num_remote_servers.getValue(), std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors))));
+		o.num_replication_clients = fallback(num_replication_clients.getValue(), std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors))));
+		o.num_replication_servers = fallback(num_replication_servers.getValue(), std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors))));
 #endif
 		o.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (o.detach) {
