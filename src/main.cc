@@ -700,12 +700,6 @@ void setup() {
 
 	adjustOpenFilesLimit();
 
-	L_INFO("With a maximum of " + string::join(std::vector<std::string>{
-		string::format("{} {}", opts.max_files, opts.max_files == 1 ? "file" : "files"),
-		string::format("{} {}", opts.max_clients, opts.max_clients == 1 ? "client" : "clients"),
-		string::format("{} {}", opts.max_databases, opts.max_databases == 1 ? "database" : "databases"),
-	}, ", ", " and ", [](const auto& s) { return s.empty(); }));
-
 	usedir(opts.database.c_str(), opts.force);
 }
 
