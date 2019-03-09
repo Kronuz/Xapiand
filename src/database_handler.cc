@@ -1886,6 +1886,8 @@ DocIndexer::operator()()
 					_results.resize(_idx, MsgPack::MAP());
 				}
 				_results[idx] = std::move(obj);
+			} else if (!data_obj.is_undefined()) {
+				_results[idx] = std::move(data_obj);
 			}
 		} else {
 			processed_ = _processed.load(std::memory_order_acquire);
