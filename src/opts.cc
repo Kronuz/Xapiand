@@ -41,11 +41,11 @@
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
 #define NUM_REPLICAS             3                // Default number of database replicas per index
 
-#define SCRIPTS_CACHE_SIZE           100
-#define RESOLVER_CACHE_SIZE         1000
-#define DATABASE_POOL_SIZE           300          // Maximum number of database endpoints in database pool
-#define SCHEMA_POOL_SIZE             900          // Maximum number of schemas in schema pool
-#define MAX_DATABASES                400          // Maximum number of open databases
+#define SCRIPTS_CACHE_SIZE           100          // Scripts cache
+#define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache
+#define SCHEMA_POOL_SIZE             100          // Maximum number of schemas in schema pool
+#define DATABASE_POOL_SIZE           200          // Maximum number of database endpoints in database pool
+#define MAX_DATABASE_READERS          10          // Maximum number simultaneous readers per database
 #define MAX_CLIENTS                 1000          // Maximum number of open client connections
 
 #define NUM_HTTP_SERVERS             1.0          // Number of servers per CPU
