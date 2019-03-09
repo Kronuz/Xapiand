@@ -176,13 +176,13 @@ def load_repo(client, path=None, index='git'):
 UPDATES = [
     {
         '_op_type': 'update',
-        '_id': '8d6dfaefa26b5352816093c5f631439add711bf4',
+        '_id': 'f11a292ae017675f82840a677a32184dff07f3a8',
         'initial_commit': True
     },
     {
         '_op_type': 'update',
-        '_id': '1085573f944d3a801d06762a875a29f9794e003d',
-        'release': '5.0.0'
+        '_id': '7921c233ffd948446cb73c0d86ef349495592b4a',
+        'release': '0.11.1'
     },
 ]
 
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     client.indices.commit(index='git')
 
     # now we can retrieve the documents
-    initial_commit = client.get(index='git', id='8d6dfaefa26b5352816093c5f631439add711bf4')
+    initial_commit = client.get(index='git', id='f11a292ae017675f82840a677a32184dff07f3a8')
     print('%s: %s' % (initial_commit['_id'], initial_commit['committed_date']))
 
     # and now we can count the documents

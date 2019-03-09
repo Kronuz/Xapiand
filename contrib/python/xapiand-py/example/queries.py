@@ -95,7 +95,7 @@ result = client.search(
     index='git',
     body={
         "_limit": 0,
-        "_check_at_least": 1000,
+        "_check_at_least": 100000,
         "_aggs": {
             "committers": {
                 "_values": {
