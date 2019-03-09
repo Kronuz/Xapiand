@@ -1829,8 +1829,8 @@ DocIndexer::operator()()
 			auto& data_obj = std::get<2>(prepared);
 			auto& idx = std::get<3>(prepared);
 
+			MsgPack obj;
 			if (!term_id.empty()) {
-				MsgPack obj;
 				auto http_errors = catch_http_errors([&]{
 					auto did = db_handler.replace_document_term(term_id, std::move(doc), false);
 
@@ -1881,14 +1881,14 @@ DocIndexer::operator()()
 					obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
 					obj[RESPONSE_xMESSAGE] = string::split(http_errors.error, '\n');
 				}
-				std::lock_guard<std::mutex> lk(_results_mtx);
-				if (_idx > _results.size()) {
-					_results.resize(_idx, MsgPack::MAP());
-				}
-				_results[idx] = std::move(obj);
 			} else if (!data_obj.is_undefined()) {
-				_results[idx] = std::move(data_obj);
+				obj = std::move(data_obj);
 			}
+			std::lock_guard<std::mutex> lk(_results_mtx);
+			if (_idx > _results.size()) {
+				_results.resize(_idx, MsgPack::MAP());
+			}
+			_results[idx] = std::move(obj);
 		} else {
 			processed_ = _processed.load(std::memory_order_acquire);
 		}
