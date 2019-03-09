@@ -1412,7 +1412,6 @@ HttpClient::home_view(Request& request)
 	obj.update(MsgPack({
 #ifdef XAPIAND_CLUSTERING
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
-		{ RESPONSE_NODE_NAME, local_node->name() },
 #endif
 		{ RESPONSE_SERVER, Package::STRING },
 		{ RESPONSE_URL, Package::BUGREPORT },
