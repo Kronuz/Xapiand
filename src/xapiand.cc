@@ -82,26 +82,53 @@
 #include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np
 #endif
 
-#define NUM_HTTP_SERVERS         2      // Number of servers per CPU
-#define NUM_HTTP_CLIENTS         16     // Number of http client threads per CPU
-#define NUM_REMOTE_SERVERS       2      // Number of remote protocol client threads per CPU
-#define NUM_REMOTE_CLIENTS       16     // Number of remote protocol client threads per CPU
-#define NUM_REPLICATION_SERVERS  2      // Number of replication protocol client threads per CPU
-#define NUM_REPLICATION_CLIENTS  16     // Number of replication protocol client threads per CPU
-#define NUM_ASYNC_WAL_WRITERS    1      // Number of database async WAL writers per CPU
-#define NUM_DOC_PREPARERS        8      // Number of threads handling bulk documents preparing per CPU
-#define NUM_DOC_INDEXERS         2      // Number of threads handling bulk documents indexing per CPU
-#define NUM_COMMITTERS           1      // Number of threads handling the commits per CPU
-#define NUM_FSYNCHERS            1      // Number of threads handling the fsyncs per CPU
-#define NUM_REPLICATORS          1      // Number of threads handling the replication per CPU
-#define NUM_DISCOVERERS          1      // Number of threads handling the discoverers per CPU
-
-#define DBPOOL_SIZE              300              // Maximum number of database endpoints in database pool
-#define MAX_CLIENTS              1000             // Maximum number of open client connections
-#define MAX_DATABASES            400              // Maximum number of open databases
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
 #define ENDPOINT_LIST_SIZE       10               // Endpoints List's size
 #define NUM_REPLICAS             3                // Default number of database replicas per index
+
+#define DBPOOL_SIZE              300              // Maximum number of database endpoints in database pool
+#define MAX_DATABASES            400              // Maximum number of open databases
+#define MAX_CLIENTS              1000             // Maximum number of open client connections
+
+#define NUM_HTTP_SERVERS             2.0          // Number of servers per CPU
+#define MAX_HTTP_SERVERS              16
+
+#define NUM_HTTP_CLIENTS            16.0          // Number of http client threads per CPU
+#define MAX_HTTP_CLIENTS             128
+
+#define NUM_REMOTE_SERVERS           2.0          // Number of remote protocol client threads per CPU
+#define MAX_REMOTE_SERVERS            16
+
+#define NUM_REMOTE_CLIENTS          16.0          // Number of remote protocol client threads per CPU
+#define MAX_REMOTE_CLIENTS           128
+
+#define NUM_REPLICATION_SERVERS      2.0          // Number of replication protocol client threads per CPU
+#define MAX_REPLICATION_SERVERS       16
+
+#define NUM_REPLICATION_CLIENTS     16.0          // Number of replication protocol client threads per CPU
+#define MAX_REPLICATION_CLIENTS      128
+
+#define NUM_ASYNC_WAL_WRITERS        1.0          // Number of database async WAL writers per CPU
+#define MAX_ASYNC_WAL_WRITERS          8
+
+#define NUM_DOC_PREPARERS            8.0          // Number of threads handling bulk documents preparing per CPU
+#define MAX_DOC_PREPARERS             64
+
+#define NUM_DOC_INDEXERS             2.0          // Number of threads handling bulk documents indexing per CPU
+#define MAX_DOC_INDEXERS              16
+
+#define NUM_COMMITTERS               0.5          // Number of threads handling the commits per CPU
+#define MAX_COMMITTERS                 8
+
+#define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
+#define MAX_FSYNCHERS                  8
+
+#define NUM_REPLICATORS              0.5          // Number of threads handling the replication per CPU
+#define MAX_REPLICATORS                4
+
+#define NUM_DISCOVERERS              0.5          // Number of threads handling the discoverers per CPU
+#define MAX_DISCOVERERS                4
+
 
 #define FDS_RESERVED     50             // Is there a better approach?
 #define FDS_PER_CLIENT    2             // KQUEUE + IPv4
@@ -600,29 +627,29 @@ void parseOptions(int argc, char** argv) {
 		opts.gid = gid.getValue();
 		opts.dbpool_size = dbpool_size.getValue();
 #if XAPIAND_DATABASE_WAL
-		opts.num_async_wal_writers = num_async_wal_writers.getValue() || std::ceil(NUM_ASYNC_WAL_WRITERS * opts.processors);
+		opts.num_async_wal_writers = num_async_wal_writers.getValue() || std::min(MAX_ASYNC_WAL_WRITERS, std::ceil(NUM_ASYNC_WAL_WRITERS * opts.processors));
 #endif
 #ifdef XAPIAND_CLUSTERING
 		opts.num_replicas = opts.solo ? 0 : num_replicas.getValue();
 #endif
-		opts.num_doc_preparers = num_doc_preparers.getValue() || std::ceil(NUM_DOC_PREPARERS * opts.processors);
-		opts.num_doc_indexers = num_doc_indexers.getValue() || std::ceil(NUM_DOC_INDEXERS * opts.processors);
-		opts.num_committers = num_committers.getValue() || std::ceil(NUM_COMMITTERS * opts.processors);
-		opts.num_fsynchers = num_fsynchers.getValue() || std::ceil(NUM_FSYNCHERS * opts.processors);
-		opts.num_replicators = num_replicators.getValue() || std::ceil(NUM_REPLICATORS * opts.processors);
-		opts.num_discoverers = num_discoverers.getValue() || std::ceil(NUM_DISCOVERERS * opts.processors);
+		opts.num_doc_preparers = num_doc_preparers.getValue() || std::min(MAX_DOC_PREPARERS, std::ceil(NUM_DOC_PREPARERS * opts.processors));
+		opts.num_doc_indexers = num_doc_indexers.getValue() || std::min(MAX_DOC_INDEXERS, std::ceil(NUM_DOC_INDEXERS * opts.processors));
+		opts.num_committers = num_committers.getValue() || std::min(MAX_COMMITTERS, std::ceil(NUM_COMMITTERS * opts.processors));
+		opts.num_fsynchers = num_fsynchers.getValue() || std::min(MAX_FSYNCHERS, std::ceil(NUM_FSYNCHERS * opts.processors));
+		opts.num_replicators = num_replicators.getValue() || std::min(MAX_REPLICATORS, std::ceil(NUM_REPLICATORS * opts.processors));
+		opts.num_discoverers = num_discoverers.getValue() || std::min(MAX_DISCOVERERS, std::ceil(NUM_DISCOVERERS * opts.processors));
 
 		opts.max_clients = max_clients.getValue();
 		opts.max_databases = max_databases.getValue();
 		opts.max_files = max_files.getValue();
 		opts.flush_threshold = flush_threshold.getValue();
-		opts.num_http_clients = num_http_clients.getValue() || std::ceil(NUM_HTTP_CLIENTS * opts.processors);
-		opts.num_http_servers = num_http_servers.getValue() || std::ceil(NUM_HTTP_SERVERS * opts.processors);
+		opts.num_http_clients = num_http_clients.getValue() || std::min(MAX_HTTP_CLIENTS, std::ceil(NUM_HTTP_CLIENTS * opts.processors));
+		opts.num_http_servers = num_http_servers.getValue() || std::min(MAX_HTTP_SERVERS, std::ceil(NUM_HTTP_SERVERS * opts.processors));
 #ifdef XAPIAND_CLUSTERING
-		opts.num_remote_clients = num_remote_clients.getValue() || std::ceil(NUM_REMOTE_CLIENTS * opts.processors);
-		opts.num_remote_servers = num_remote_servers.getValue() || std::ceil(NUM_REMOTE_SERVERS * opts.processors);
-		opts.num_replication_clients = num_replication_clients.getValue() || std::ceil(NUM_REPLICATION_CLIENTS * opts.processors);
-		opts.num_replication_servers = num_replication_servers.getValue() || std::ceil(NUM_REPLICATION_SERVERS * opts.processors);
+		opts.num_remote_clients = num_remote_clients.getValue() || std::min(MAX_REMOTE_CLIENTS, std::ceil(NUM_REMOTE_CLIENTS * opts.processors));
+		opts.num_remote_servers = num_remote_servers.getValue() || std::min(MAX_REMOTE_SERVERS, std::ceil(NUM_REMOTE_SERVERS * opts.processors));
+		opts.num_replication_clients = num_replication_clients.getValue() || std::min(MAX_REPLICATION_CLIENTS, std::ceil(NUM_REPLICATION_CLIENTS * opts.processors));
+		opts.num_replication_servers = num_replication_servers.getValue() || std::min(MAX_REPLICATION_SERVERS, std::ceil(NUM_REPLICATION_SERVERS * opts.processors));
 #endif
 		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (opts.detach) {
