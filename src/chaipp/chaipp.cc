@@ -111,7 +111,7 @@ Engine::compile(const Script& script)
 
 Engine&
 Engine::engine() {
-	static Engine* engine = new Engine(SCRIPTS_CACHE_SIZE);
+	static Engine* engine = new Engine(opts.scripts_cache_size);
 	return *engine;
 }
 

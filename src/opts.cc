@@ -42,7 +42,10 @@
 #define ENDPOINT_LIST_SIZE       10               // Endpoints List's size
 #define NUM_REPLICAS             3                // Default number of database replicas per index
 
-#define DBPOOL_SIZE              300              // Maximum number of database endpoints in database pool
+#define SCRIPTS_CACHE_SIZE       100
+#define RESOLVER_CACHE_SIZE      1000
+#define DATABASE_POOL_SIZE       300              // Maximum number of database endpoints in database pool
+#define SCHEMA_POOL_SIZE         900              // Maximum number of schemas in schema pool
 #define MAX_DATABASES            400              // Maximum number of open databases
 #define MAX_CLIENTS              1000             // Maximum number of open client connections
 
@@ -238,7 +241,10 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
-		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
+		ValueArg<std::size_t> database_pool_size("", "database-pool-size", "Maximum number of databases in database pool.", false, DATABASE_POOL_SIZE, "size", cmd);
+		ValueArg<std::size_t> schema_pool_size("", "schema-pool-size", "Maximum number of schemas in schema pool.", false, SCHEMA_POOL_SIZE, "size", cmd);
+		ValueArg<std::size_t> scripts_cache_size("", "scripts-cache-size", "Cache size for scripts.", false, SCRIPTS_CACHE_SIZE, "size", cmd);
+		ValueArg<std::size_t> resolver_cache_size("", "resolver-cache-size", "Cache size for index resolver.", false, RESOLVER_CACHE_SIZE, "size", cmd);
 
 		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, 0, "fsynchers", cmd);
 #ifdef XAPIAND_CLUSTERING
@@ -408,7 +414,10 @@ parseOptions(int argc, char** argv)
 		o.logfile = logfile.getValue();
 		o.uid = uid.getValue();
 		o.gid = gid.getValue();
-		o.dbpool_size = dbpool_size.getValue();
+		o.database_pool_size = database_pool_size.getValue();
+		o.schema_pool_size = schema_pool_size.getValue();
+		o.scripts_cache_size = scripts_cache_size.getValue();
+		o.resolver_cache_size = resolver_cache_size.getValue();
 #if XAPIAND_DATABASE_WAL
 		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors))));
 #endif

@@ -1409,31 +1409,54 @@ HttpClient::home_view(Request& request)
 
 	auto obj = document.get_obj();
 
+	obj.update(MsgPack({
 #ifdef XAPIAND_CLUSTERING
-	obj[RESPONSE_CLUSTER_NAME] = opts.cluster_name;
+		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
+		{ RESPONSE_NODE_NAME, local_node->name() },
 #endif
-	obj[RESPONSE_SERVER] = Package::STRING;
-	obj[RESPONSE_URL] = Package::BUGREPORT;
-	obj[RESPONSE_VERSIONS] = {
-		{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
-		{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
+		{ RESPONSE_SERVER, Package::STRING },
+		{ RESPONSE_URL, Package::BUGREPORT },
+		{ RESPONSE_VERSIONS, {
+			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
+			{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
-		{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+			{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
-	};
-	obj["thread_pools"] = {
-		{ "num_http_servers", opts.num_http_servers },
-		{ "num_http_clients", opts.num_http_clients },
-		{ "num_remote_servers", opts.num_remote_servers },
-		{ "num_remote_clients", opts.num_remote_clients },
-		{ "num_replication_servers", opts.num_replication_servers },
-		{ "num_replication_clients", opts.num_replication_clients },
-		{ "num_async_wal_writers", opts.num_async_wal_writers },
-		{ "num_committers", opts.num_committers },
-		{ "num_fsynchers", opts.num_fsynchers },
-		{ "num_replicators", opts.num_replicators },
-		{ "num_discoverers", opts.num_discoverers },
-	};
+		} },
+		{ "options", {
+			{ "processors", opts.processors },
+			{ "limits", {
+				{ "max_databases", opts.max_databases },
+				{ "max_clients", opts.max_clients },
+			} },
+			{ "cache", {
+				{ "database_pool_size", opts.database_pool_size },
+				{ "schema_pool_size", opts.schema_pool_size },
+				{ "scripts_cache_size", opts.scripts_cache_size },
+				{ "resolver_cache_size", opts.resolver_cache_size },
+			} },
+			{ "thread_pools", {
+				{ "num_replicas", opts.num_replicas },
+				{ "num_http_servers", opts.num_http_servers },
+				{ "num_http_clients", opts.num_http_clients },
+#ifdef XAPIAND_CLUSTERING
+				{ "num_remote_servers", opts.num_remote_servers },
+				{ "num_remote_clients", opts.num_remote_clients },
+				{ "num_replication_servers", opts.num_replication_servers },
+				{ "num_replication_clients", opts.num_replication_clients },
+#endif
+				{ "num_async_wal_writers", opts.num_async_wal_writers },
+				{ "num_doc_preparers", opts.num_doc_preparers },
+				{ "num_doc_indexers", opts.num_doc_indexers },
+				{ "num_committers", opts.num_committers },
+				{ "num_fsynchers", opts.num_fsynchers },
+#ifdef XAPIAND_CLUSTERING
+				{ "num_replicators", opts.num_replicators },
+				{ "num_discoverers", opts.num_discoverers },
+#endif
+			} },
+		} },
+	}));
 
 	request.ready = std::chrono::system_clock::now();
 

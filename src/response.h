@@ -75,6 +75,7 @@ constexpr const char RESPONSE_OFFSET[]                      = "offset";
 constexpr const char RESPONSE_SIZE[]                        = "size";
 
 constexpr const char RESPONSE_CLUSTER_NAME[]                = "cluster_name";
+constexpr const char RESPONSE_NODE_NAME[]                   = "node_name";
 constexpr const char RESPONSE_NODES[]                       = "nodes";
 constexpr const char RESPONSE_SERVER[]                      = "server";
 constexpr const char RESPONSE_URL[]                         = "url";

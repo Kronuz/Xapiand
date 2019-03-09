@@ -490,8 +490,8 @@ DatabaseEndpoint::dump_databases(int level) const
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
 
-DatabasePool::DatabasePool(size_t dbpool_size, size_t max_databases) :
-	LRU(dbpool_size),
+DatabasePool::DatabasePool(size_t database_pool_size, size_t max_databases) :
+	LRU(database_pool_size),
 	locks(0),
 	max_databases(max_databases)
 {

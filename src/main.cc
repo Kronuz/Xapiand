@@ -274,7 +274,7 @@ void adjustOpenFilesLimit() {
 
 
 	// Try calculating minimum and recommended number of files:
-	ssize_t new_dbpool_size;
+	ssize_t new_database_pool_size;
 	ssize_t new_max_clients;
 	ssize_t files = 1;
 	ssize_t minimum_files = 1;
@@ -284,11 +284,11 @@ void adjustOpenFilesLimit() {
 		ssize_t used_files = FDS_RESERVED;
 
 		used_files += FDS_PER_DATABASE;
-		new_dbpool_size = (files - used_files) / FDS_PER_DATABASE;
-		if (new_dbpool_size > opts.dbpool_size) {
-			new_dbpool_size = opts.dbpool_size;
+		new_database_pool_size = (files - used_files) / FDS_PER_DATABASE;
+		if (new_database_pool_size > opts.database_pool_size) {
+			new_database_pool_size = opts.database_pool_size;
 		}
-		used_files += (new_dbpool_size + 1) * FDS_PER_DATABASE;
+		used_files += (new_database_pool_size + 1) * FDS_PER_DATABASE;
 
 		used_files += FDS_PER_CLIENT;
 		new_max_clients = (files - used_files) / FDS_PER_CLIENT;
@@ -297,9 +297,9 @@ void adjustOpenFilesLimit() {
 		}
 		used_files += (new_max_clients + 1) * FDS_PER_CLIENT;
 
-		if (new_dbpool_size < 1 || new_max_clients < 1) {
+		if (new_database_pool_size < 1 || new_max_clients < 1) {
 			files = minimum_files = used_files;
-		} else if (new_dbpool_size < opts.dbpool_size || new_max_clients < opts.max_clients) {
+		} else if (new_database_pool_size < opts.database_pool_size || new_max_clients < opts.max_clients) {
 			files = recommended_files = used_files;
 		} else {
 			break;
@@ -377,15 +377,15 @@ void adjustOpenFilesLimit() {
 	}
 
 
-	// Calculate dbpool_size and max_clients from current max_files:
+	// Calculate database_pool_size and max_clients from current max_files:
 	files = max_files;
 	ssize_t used_files = FDS_RESERVED;
 	used_files += FDS_PER_DATABASE;
-	new_dbpool_size = (files - used_files) / FDS_PER_DATABASE;
-	if (new_dbpool_size > opts.dbpool_size) {
-		new_dbpool_size = opts.dbpool_size;
+	new_database_pool_size = (files - used_files) / FDS_PER_DATABASE;
+	if (new_database_pool_size > opts.database_pool_size) {
+		new_database_pool_size = opts.database_pool_size;
 	}
-	used_files += (new_dbpool_size + 1) * FDS_PER_DATABASE;
+	used_files += (new_database_pool_size + 1) * FDS_PER_DATABASE;
 	used_files += FDS_PER_CLIENT;
 	new_max_clients = (files - used_files) / FDS_PER_CLIENT;
 	if (new_max_clients > opts.max_clients) {
@@ -393,10 +393,10 @@ void adjustOpenFilesLimit() {
 	}
 
 
-	// Warn about changes to the configured dbpool_size or max_clients:
-	if (new_dbpool_size > 0 && new_dbpool_size < opts.dbpool_size) {
-		L_WARNING_ONCE("You requested a dbpool_size of {} requiring at least {} max file descriptors", opts.dbpool_size, (opts.dbpool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
-		L_WARNING_ONCE("Current maximum open files is {} so dbpool_size has been reduced to {} to compensate for low limit.", max_files, new_dbpool_size);
+	// Warn about changes to the configured database_pool_size or max_clients:
+	if (new_database_pool_size > 0 && new_database_pool_size < opts.database_pool_size) {
+		L_WARNING_ONCE("You requested a database_pool_size of {} requiring at least {} max file descriptors", opts.database_pool_size, (opts.database_pool_size + 1) * FDS_PER_DATABASE  + FDS_RESERVED);
+		L_WARNING_ONCE("Current maximum open files is {} so database_pool_size has been reduced to {} to compensate for low limit.", max_files, new_database_pool_size);
 	}
 	if (new_max_clients > 0 && new_max_clients < opts.max_clients) {
 		L_WARNING_ONCE("You requested max_clients of {} requiring at least {} max file descriptors", opts.max_clients, (opts.max_clients + 1) * FDS_PER_CLIENT + FDS_RESERVED);
@@ -421,7 +421,7 @@ void adjustOpenFilesLimit() {
 
 	// Set new values:
 	opts.max_files = max_files;
-	opts.dbpool_size = new_dbpool_size;
+	opts.database_pool_size = new_database_pool_size;
 	opts.max_clients = new_max_clients;
 }
 

@@ -149,8 +149,8 @@ XapiandManager::XapiandManager()
 	  _http_clients(0),
 	  _remote_clients(0),
 	  _replication_clients(0),
-	  _schemas(std::make_unique<SchemasLRU>(opts.dbpool_size * 3)),
-	  _database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
+	  _schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
+	  _database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_databases)),
 	  _wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
@@ -179,8 +179,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _http_clients(0),
 	  _remote_clients(0),
 	  _replication_clients(0),
-	  _schemas(std::make_unique<SchemasLRU>(opts.dbpool_size * 3)),
-	  _database_pool(std::make_unique<DatabasePool>(opts.dbpool_size, opts.max_databases)),
+	  _schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
+	  _database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_databases)),
 	  _wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
 	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
@@ -1444,7 +1444,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 		std::vector<size_t> replicas;
 
 		static std::mutex resolve_index_lru_mtx;
-		static lru::LRU<std::string, std::vector<size_t>> resolve_index_lru(1000);
+		static lru::LRU<std::string, std::vector<size_t>> resolve_index_lru(opts.resolver_cache_size);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(normalized_path);

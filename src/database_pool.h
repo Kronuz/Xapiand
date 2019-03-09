@@ -150,7 +150,7 @@ class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 	bool notify_lockable(const Endpoints& endpoints);
 
 public:
-	DatabasePool(size_t dbpool_size, size_t max_databases);
+	DatabasePool(size_t database_pool_size, size_t max_databases);
 
 	DatabasePool(const DatabasePool&) = delete;
 	DatabasePool(DatabasePool&&) = delete;

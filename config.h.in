@@ -283,9 +283,6 @@
 /* Enable xxh static linking structures */
 #define XXH_STATIC_LINKING_ONLY 1
 
-/* Size of each script processor LRU. */
-#define SCRIPTS_CACHE_SIZE       100
-
 /* TCP listen backlog */
 #if !defined(_WIN32) && \
 	!defined(__linux__) && \
