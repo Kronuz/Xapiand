@@ -22,7 +22,7 @@ import logging
 from ..transport import Transport
 from ..exceptions import TransportError
 from ..compat import string_types, urlparse, unquote
-from ..helpers import bulk, streaming_bulk
+from ..helpers import bulk, streaming_bulk, parallel_bulk
 from .indices import IndicesClient
 from .utils import query_params, _make_path, SKIP_IN_PATH
 
@@ -459,7 +459,7 @@ class Xapiand(object):
             chunks to send) and the processing threads.
         :arg timeout: Explicit operation timeout
         """
-        return streaming_bulk(
+        return parallel_bulk(
             self._restore,
             body,
             self.transport.serializer,
