@@ -39,7 +39,6 @@
 #define XAPIAND_LOG_FILE         "xapiand.log"
 
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
-#define ENDPOINT_LIST_SIZE       10               // Endpoints List's size
 #define NUM_REPLICAS             3                // Default number of database replicas per index
 
 #define SCRIPTS_CACHE_SIZE       100
@@ -443,7 +442,6 @@ parseOptions(int argc, char** argv)
 		o.num_replication_clients = fallback(num_replication_clients.getValue(), std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors))));
 		o.num_replication_servers = fallback(num_replication_servers.getValue(), std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors))));
 #endif
-		o.endpoints_list_size = ENDPOINT_LIST_SIZE;
 		if (o.detach) {
 			if (o.logfile.empty()) {
 				o.logfile = XAPIAND_ROOT "/var/log/" XAPIAND_LOG_FILE;

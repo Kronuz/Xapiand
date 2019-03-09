@@ -69,7 +69,6 @@ extern struct opts_t {
 	ssize_t schema_pool_size = 30;
 	ssize_t scripts_cache_size = 10;
 	ssize_t resolver_cache_size = 100;
-	ssize_t endpoints_list_size = 10;
 	ssize_t max_clients = 10;
 	ssize_t max_databases = 10;
 	ssize_t max_files = 0;  // (0 = automatic)
