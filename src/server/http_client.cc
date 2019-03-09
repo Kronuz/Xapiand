@@ -1421,6 +1421,19 @@ HttpClient::home_view(Request& request)
 		{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 	};
+	obj["thread_pools"] = {
+		{ "num_http_servers", opts.num_http_servers },
+		{ "num_http_clients", opts.num_http_clients },
+		{ "num_remote_servers", opts.num_remote_servers },
+		{ "num_remote_clients", opts.num_remote_clients },
+		{ "num_replication_servers", opts.num_replication_servers },
+		{ "num_replication_clients", opts.num_replication_clients },
+		{ "num_async_wal_writers", opts.num_async_wal_writers },
+		{ "num_committers", opts.num_committers },
+		{ "num_fsynchers", opts.num_fsynchers },
+		{ "num_replicators", opts.num_replicators },
+		{ "num_discoverers", opts.num_discoverers },
+	};
 
 	request.ready = std::chrono::system_clock::now();
 

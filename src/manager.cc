@@ -170,14 +170,6 @@ XapiandManager::XapiandManager()
 	  _process_start(std::chrono::system_clock::now()),
 	  atom_sig(0)
 {
-	std::vector<std::string> values({
-		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http thread" : " http threads"),
-#ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol thread" : " remote protocol threads"),
-		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol thread" : " replication protocol threads"),
-#endif
-	});
-	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 }
 
 
@@ -856,24 +848,6 @@ XapiandManager::make_servers()
 	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
 	_database_cleanup->run();
 	_database_cleanup->start();
-
-	// Now print information about servers and workers.
-	std::vector<std::string> values({
-		std::to_string(opts.num_http_servers) + ((opts.num_http_servers == 1) ? " http server" : " http servers"),
-		std::to_string(opts.num_http_clients) +( (opts.num_http_clients == 1) ? " http thread" : " http threads"),
-#ifdef XAPIAND_CLUSTERING
-		std::to_string(opts.num_remote_servers) + ((opts.num_remote_servers == 1) ? " remote protocol server" : " remote protocol servers"),
-		std::to_string(opts.num_remote_clients) +( (opts.num_remote_clients == 1) ? " remote protocol thread" : " remote protocol threads"),
-		std::to_string(opts.num_replication_servers) + ((opts.num_replication_servers == 1) ? " replication protocol server" : " replication protocol servers"),
-		std::to_string(opts.num_replication_clients) +( (opts.num_replication_clients == 1) ? " replication protocol thread" : " replication protocol threads"),
-#endif
-#if XAPIAND_DATABASE_WAL
-		std::to_string(opts.num_async_wal_writers) + ((opts.num_async_wal_writers == 1) ? " async wal writer" : " async wal writers"),
-#endif
-		std::to_string(opts.num_committers) + ((opts.num_committers == 1) ? " autocommitter" : " autocommitters"),
-		std::to_string(opts.num_fsynchers) + ((opts.num_fsynchers == 1) ? " fsyncher" : " fsynchers"),
-	});
-	L_NOTICE("Started " + string::join(values, ", ", " and ", [](const auto& s) { return s.empty(); }));
 }
 
 
