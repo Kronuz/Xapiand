@@ -94,3 +94,10 @@ extern struct opts_t {
 	double random_errors_io = 0;
 	double random_errors_net = 0;
 } opts;
+
+
+const char* ev_backend(unsigned int backend);
+
+unsigned int ev_backend(const std::string& name);
+
+opts_t parseOptions(int argc, char** argv);

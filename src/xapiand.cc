@@ -20,33 +20,23 @@
  * THE SOFTWARE.
  */
 
-#include "xapiand.h"
+#include "config.h"                               // for XAPIAND_CHAISCRIPT, XAPIAND_UUID...
 
-#include "config.h"                 // for XAPIAND_CHAISCRIPT, XAPIAND_UUID...
-
-#include <algorithm>                // for min
-#include <chrono>                   // for system_clock, time_point
-#include <clocale>                  // for std::setlocale, LC_CTYPE
-#include <cmath>                    // for std::ceil
-#include <csignal>                  // for sigaction, sigemptyset
-#include <cstdio>                   // for std::fprintf, std::snprintf
-#include <cstdlib>                  // for std::size_t, std::atoi, std::getenv, std::exit, setenv
-#include <cstring>                  // for std::strchr, std::strlen, std::strrchr, std::strcmp
-#include <errno.h>                  // for errno
-#include <fcntl.h>                  // for O_RDWR, O_CREAT
-#include <grp.h>                    // for getgrgid, group, getgrnam, gid_t
-#include <iostream>                 // for operator<<, basic_ostream, ostream
-#include <list>                     // for __list_iterator, list, operator!=
-#include <memory>                   // for unique_ptr, allocator, make_unique
-#include <pwd.h>                    // for passwd, getpwnam, getpwuid
-#include <signal.h>                 // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
-#include <sstream>                  // for basic_stringbuf<>::int_type, bas...
-#include <strings.h>                // for strcasecmp
-#include <sys/resource.h>           // for rlimit
-#include <sysexits.h>               // for EX_NOUSER, EX_OK, EX_USAGE, EX_OSFILE
-#include <thread>                   // for thread
-#include <unistd.h>                 // for dup2, unlink, STDERR_FILENO, chdir
-#include <vector>                   // for vector
+#include <chrono>                                 // for std::chrono::
+#include <clocale>                                // for std::setlocale, LC_CTYPE
+#include <csignal>                                // for sigaction, sigemptyset
+#include <cstdlib>                                // for std::size_t, std::atoi, std::getenv, std::exit, std::setenv
+#include <cstring>                                // for std::strcmp
+#include <errno.h>                                // for errno
+#include <fcntl.h>                                // for O_RDWR, O_CREAT
+#include <grp.h>                                  // for getgrgid, group, getgrnam, gid_t
+#include <memory>                                 // for std::make_unique
+#include <pwd.h>                                  // for passwd, getpwnam, getpwuid
+#include <signal.h>                               // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
+#include <sys/resource.h>                         // for rlimit
+#include <sysexits.h>                             // for EX_NOUSER, EX_OK, EX_USAGE, EX_OSFILE
+#include <unistd.h>                               // for unlink, STDERR_FILENO, chdir
+#include <vector>                                 // for vector
 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -54,88 +44,39 @@
 #endif
 
 #ifdef XAPIAND_CHAISCRIPT
-#include "chaiscript/chaiscript_defines.hpp"  // for chaiscript::Build_Info
+#include "chaiscript/chaiscript_defines.hpp"      // for chaiscript::Build_Info
 #endif
 
-#include "check_size.h"             // for check_size
-#include "cmdoutput.h"              // for CmdOutput
-#include "database_handler.h"       // for DatabaseHandler
-#include "endpoint.h"               // for Endpoint, Endpoint::cwd
-#include "error.hh"                 // for error:name, error::description
-#include "ev/ev++.h"                // for ::DEVPOLL, ::EPOLL, ::KQUEUE
-#include "exception.h"              // for SystemExit
-#include "fs.hh"                    // for build_path
-#include "hashes.hh"                // for fnv1ah32
-#include "ignore_unused.h"          // for ignore_unused
-#include "io.hh"                    // for io::close, io::open, io::write
-#include "log.h"                    // for L_INFO, L_CRIT, L_NOTICE
-#include "logger.h"                 // for Logging
-#include "manager.h"                // for XapiandManager, XapiandM...
-#include "opts.h"                   // for opts_t
-#include "schema.h"                 // for default_spc
-#include "string.hh"                // for string::format, string::center
-#include "system.hh"                // for get_max_files_per_proc, get_open_files_system_wide
-#include "worker.h"                 // for Worker
-#include "xapian.h"                 // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
+#include "check_size.h"                           // for check_size
+#include "database_handler.h"                     // for DatabaseHandler
+#include "endpoint.h"                             // for Endpoint, Endpoint::cwd
+#include "error.hh"                               // for error::name, error::description
+#include "ev/ev++.h"                              // for ::DEVPOLL, ::EPOLL, ::KQUEUE
+#include "exception.h"                            // for SystemExit
+#include "fs.hh"                                  // for build_path
+#include "hashes.hh"                              // for fnv1ah32
+#include "io.hh"                                  // for io::dup2, io::open, io::close, io::write
+#include "log.h"                                  // for L_INFO, L_CRIT, L_NOTICE
+#include "logger.h"                               // for Logging
+#include "manager.h"                              // for XapiandManager
+#include "opts.h"                                 // for opts_t
+#include "package.h"                              // for Package::
+#include "schema.h"                               // for default_spc
+#include "string.hh"                              // for string::format, string::center
+#include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
+#include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
-#include <pthread.h>                // for pthread_attr_t, pthread_setattr_default_np
+#include <pthread.h>                              // for pthread_attr_t, pthread_setattr_default_np
 #endif
-
-#define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
-#define ENDPOINT_LIST_SIZE       10               // Endpoints List's size
-#define NUM_REPLICAS             3                // Default number of database replicas per index
-
-#define DBPOOL_SIZE              300              // Maximum number of database endpoints in database pool
-#define MAX_DATABASES            400              // Maximum number of open databases
-#define MAX_CLIENTS              1000             // Maximum number of open client connections
-
-#define NUM_HTTP_SERVERS             2.0          // Number of servers per CPU
-#define MAX_HTTP_SERVERS              16
-
-#define NUM_HTTP_CLIENTS            16.0          // Number of http client threads per CPU
-#define MAX_HTTP_CLIENTS             128
-
-#define NUM_REMOTE_SERVERS           2.0          // Number of remote protocol client threads per CPU
-#define MAX_REMOTE_SERVERS            16
-
-#define NUM_REMOTE_CLIENTS          16.0          // Number of remote protocol client threads per CPU
-#define MAX_REMOTE_CLIENTS           128
-
-#define NUM_REPLICATION_SERVERS      2.0          // Number of replication protocol client threads per CPU
-#define MAX_REPLICATION_SERVERS       16
-
-#define NUM_REPLICATION_CLIENTS     16.0          // Number of replication protocol client threads per CPU
-#define MAX_REPLICATION_CLIENTS      128
-
-#define NUM_ASYNC_WAL_WRITERS        1.0          // Number of database async WAL writers per CPU
-#define MAX_ASYNC_WAL_WRITERS          8
-
-#define NUM_DOC_PREPARERS            8.0          // Number of threads handling bulk documents preparing per CPU
-#define MAX_DOC_PREPARERS             64
-
-#define NUM_DOC_INDEXERS             2.0          // Number of threads handling bulk documents indexing per CPU
-#define MAX_DOC_INDEXERS              16
-
-#define NUM_COMMITTERS               0.5          // Number of threads handling the commits per CPU
-#define MAX_COMMITTERS                 8
-
-#define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
-#define MAX_FSYNCHERS                  8
-
-#define NUM_REPLICATORS              0.5          // Number of threads handling the replication per CPU
-#define MAX_REPLICATORS                4
-
-#define NUM_DISCOVERERS              0.5          // Number of threads handling the discoverers per CPU
-#define MAX_DISCOVERERS                4
 
 
 #define FDS_RESERVED     50             // Is there a better approach?
 #define FDS_PER_CLIENT    2             // KQUEUE + IPv4
 #define FDS_PER_DATABASE  7             // Writable~=7, Readable~=5
 
-opts_t opts;
 
+opts_t opts;
 
 static const bool is_tty = isatty(STDERR_FILENO) != 0;
 
@@ -311,433 +252,6 @@ void setup_signal_handlers() {
 #endif
 	sigaction(SIGUSR1, &sa, nullptr);
 	sigaction(SIGUSR2, &sa, nullptr);
-}
-
-
-#define EV_SELECT_NAME  "select"
-#define EV_POLL_NAME    "poll"
-#define EV_EPOLL_NAME   "epoll"
-#define EV_KQUEUE_NAME  "kqueue"
-#define EV_DEVPOLL_NAME "devpoll"
-#define EV_PORT_NAME    "port"
-
-
-unsigned int ev_backend(const std::string& name) {
-	auto ev_use = string::lower(name);
-	if (ev_use.empty() || ev_use.compare("auto") == 0) {
-		return ev::AUTO;
-	}
-	if (ev_use.compare(EV_SELECT_NAME) == 0) {
-		return ev::SELECT;
-	}
-	if (ev_use.compare(EV_POLL_NAME) == 0) {
-		return ev::POLL;
-	}
-	if (ev_use.compare(EV_EPOLL_NAME) == 0) {
-		return ev::EPOLL;
-	}
-	if (ev_use.compare(EV_KQUEUE_NAME) == 0) {
-		return ev::KQUEUE;
-	}
-	if (ev_use.compare(EV_DEVPOLL_NAME) == 0) {
-		return ev::DEVPOLL;
-	}
-	if (ev_use.compare(EV_PORT_NAME) == 0) {
-		return ev::PORT;
-	}
-	return -1;
-}
-
-
-const char* ev_backend(unsigned int backend) {
-	switch(backend) {
-		case ev::SELECT:
-			return EV_SELECT_NAME;
-		case ev::POLL:
-			return EV_POLL_NAME;
-		case ev::EPOLL:
-			return EV_EPOLL_NAME;
-		case ev::KQUEUE:
-			return EV_KQUEUE_NAME;
-		case ev::DEVPOLL:
-			return EV_DEVPOLL_NAME;
-		case ev::PORT:
-			return EV_PORT_NAME;
-	}
-	return "unknown";
-}
-
-
-std::vector<std::string> ev_supported() {
-	std::vector<std::string> backends;
-	unsigned int supported = ev::supported_backends();
-	if ((supported & ev::SELECT) != 0u) { backends.emplace_back(EV_SELECT_NAME); }
-	if ((supported & ev::POLL) != 0u) { backends.emplace_back(EV_POLL_NAME); }
-	if ((supported & ev::EPOLL) != 0u) { backends.emplace_back(EV_EPOLL_NAME); }
-	if ((supported & ev::KQUEUE) != 0u) { backends.emplace_back(EV_KQUEUE_NAME); }
-	if ((supported & ev::DEVPOLL) != 0u) { backends.emplace_back(EV_DEVPOLL_NAME); }
-	if ((supported & ev::PORT) != 0u) { backends.emplace_back(EV_PORT_NAME); }
-	if (backends.empty()) {
-		backends.emplace_back("auto");
-	}
-	return backends;
-}
-
-
-void parseOptions(int argc, char** argv) {
-	const double hardware_concurrency = std::thread::hardware_concurrency();
-
-	using namespace TCLAP;
-
-	try {
-		CmdLine cmd("", ' ', Package::VERSION);
-
-		CmdOutput output;
-		ZshCompletionOutput zshoutput;
-
-		if (std::getenv("ZSH_COMPLETE") != nullptr) {
-			cmd.setOutput(&zshoutput);
-		} else {
-			cmd.setOutput(&output);
-		}
-
-#ifdef XAPIAND_RANDOM_ERRORS
-		ValueArg<double> random_errors_net("", "random-errors-net", "Inject random network errors with this probability (0-1)", false, 0, "probability", cmd);
-		ValueArg<double> random_errors_io("", "random-errors-io", "Inject random IO errors with this probability (0-1)", false, 0, "probability", cmd);
-		ValueArg<double> random_errors_db("", "random-errors-db", "Inject random database errors with this probability (0-1)", false, 0, "probability", cmd);
-#endif
-
-		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
-		ValueArg<std::string> dump_metadata("", "dump-metadata", "Dump endpoint metadata to stdout.", false, "", "endpoint", cmd);
-		ValueArg<std::string> dump_schema("", "dump-schema", "Dump endpoint schema to stdout.", false, "", "endpoint", cmd);
-		ValueArg<std::string> dump_documents("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
-		ValueArg<std::string> in("i", "in", "Input filename for restore.", false, "", "file", cmd);
-		ValueArg<std::string> restore("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
-
-		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
-		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
-
-#ifdef XAPIAN_HAS_GLASS_BACKEND
-		SwitchArg chert("", "chert", "Prefer Chert databases.", cmd, false);
-#endif
-
-		std::vector<std::string> uuid_allowed({
-			"vanilla",
-#ifdef XAPIAND_UUID_GUID
-			"guid",
-#endif
-#ifdef XAPIAND_UUID_URN
-			"urn",
-#endif
-#ifdef XAPIAND_UUID_ENCODED
-			"compact",
-			"encoded",
-			"partition",
-#endif
-		});
-		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
-		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.", false, &uuid_constraint, cmd);
-
-#ifdef XAPIAND_CLUSTERING
-		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, 0, "port", cmd);
-		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
-		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
-		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
-#endif
-
-#if XAPIAND_DATABASE_WAL
-		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, 0, "writers", cmd);
-#endif
-#ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
-#endif
-		ValueArg<std::size_t> num_doc_preparers("", "bulk-preparers", "Number of threads handling bulk documents preparing.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
-		ValueArg<std::size_t> dbpool_size("", "dbpool-size", "Maximum number of databases in database pool.", false, DBPOOL_SIZE, "size", cmd);
-
-		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, 0, "fsynchers", cmd);
-#ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_replicators("", "replicators", "Number of replicators triggering database replication.", false, 0, "replicators", cmd);
-		ValueArg<std::size_t> num_discoverers("", "discoverers", "Number of discoverers doing cluster discovery.", false, 0, "discoverers", cmd);
-#endif
-
-		ValueArg<std::size_t> max_files("", "max-files", "Maximum number of files to open.", false, 0, "files", cmd);
-		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
-
-#ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_remote_clients("", "remote-clients", "Number of remote protocol client threads.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_remote_servers("", "remote-servers", "Number of remote protocol servers.", false, 0, "servers", cmd);
-		ValueArg<std::size_t> num_replication_clients("", "replication-clients", "Number of replication protocol client threads.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_replication_servers("", "replication-servers", "Number of replication protocol servers.", false, 0, "servers", cmd);
-#endif
-		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_http_servers("", "http-servers", "Number of http servers.", false, 0, "servers", cmd);
-		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
-
-		ValueArg<double> processors("", "processors", "Number of processors to use.", false, 1, "processors", cmd);
-
-		auto use_allowed = ev_supported();
-		ValuesConstraint<std::string> use_constraint(use_allowed);
-		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
-
-#ifdef XAPIAND_CLUSTERING
-		ValueArg<unsigned int> remote_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
-		ValueArg<unsigned int> replication_port("", "replica-port", "Xapiand replication protocol TCP port number to listen on.", false, 0, "port", cmd);
-#endif
-		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, 0, "port", cmd);
-
-		ValueArg<std::string> bind_address("", "bind-address", "Bind address to listen to.", false, "", "bind", cmd);
-
-		SwitchArg iterm2("", "iterm2", "Set marks, tabs, title, badges and growl.", cmd, false);
-
-		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
-		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);
-		SwitchArg log_timeless("", "log-timeless", "Logs without timestamp.", cmd, false);
-		SwitchArg log_plainseconds("", "log-seconds", "Log timestamps with plain seconds.", cmd, false);
-		SwitchArg log_milliseconds("", "log-milliseconds", "Log timestamps with milliseconds.", cmd, false);
-		SwitchArg log_microseconds("", "log-microseconds", "Log timestamps with microseconds.", cmd, false);
-		SwitchArg log_threads("", "log-threads", "Logs thread names.", cmd, false);
-#ifndef NDEBUG
-		SwitchArg log_location("", "log-location", "Logs log location.", cmd, false);
-#endif
-		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
-		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
-
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
-
-		SwitchArg admin_commands("", "admin-commands", "Enables administrative HTTP commands.", cmd, false);
-
-		SwitchArg no_colors("", "no-colors", "Disables colors on the console.", cmd, false);
-		SwitchArg colors("", "colors", "Enables colors on the console.", cmd, false);
-
-		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
-#ifdef XAPIAND_CLUSTERING
-		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
-#endif
-		SwitchArg foreign("", "foreign", "Force foreign (shared) schemas for all indexes.", cmd, false);
-		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
-		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
-		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_ROOT "/var/db/xapiand", "path", cmd);
-
-		std::vector<std::string> args;
-		for (int i = 0; i < argc; ++i) {
-			if (i == 0) {
-				const char* a = std::strrchr(argv[i], '/');
-				if (a != nullptr) {
-					++a;
-				} else {
-					a = argv[i];
-				}
-				args.emplace_back(a);
-			} else {
-				// Split arguments when possible (e.g. -Dnode, --verbosity=3)
-				const char* arg = argv[i];
-				if (arg[0] == '-') {
-					if (arg[1] != '-' && arg[1] != 'v') {  // skip long arguments (e.g. --verbosity) or multiswitch (e.g. -vvv)
-						std::string tmp(arg, 2);
-						args.push_back(tmp);
-						arg += 2;
-					}
-				}
-				const char* a = std::strchr(arg, '=');
-				if (a != nullptr) {
-					if ((a - arg) != 0) {
-						std::string tmp(arg, a - arg);
-						args.push_back(tmp);
-					}
-					arg = a + 1;
-				}
-				if (*arg != 0) {
-					args.emplace_back(arg);
-				}
-			}
-		}
-
-		cmd.parse(args);
-
-#ifdef XAPIAND_RANDOM_ERRORS
-		opts.random_errors_db = random_errors_db.getValue();
-		opts.random_errors_io = random_errors_io.getValue();
-		opts.random_errors_net = random_errors_net.getValue();
-#endif
-
-		opts.processors = std::max(1.0, std::min(processors.getValue(), hardware_concurrency));
-		opts.verbosity = verbosity.getValue() + verbose.getValue();
-		opts.detach = detach.getValue();
-#ifdef XAPIAN_HAS_GLASS_BACKEND
-		opts.chert = chert.getValue();
-#else
-		opts.chert = true;
-#endif
-
-#ifdef XAPIAND_CLUSTERING
-		opts.solo = solo.getValue();
-#else
-		opts.solo = true;
-#endif
-		opts.strict = strict.getValue();
-		opts.foreign = foreign.getValue();
-		opts.force = force.getValue();
-
-		opts.colors = colors.getValue();
-		opts.no_colors = no_colors.getValue();
-
-		opts.admin_commands = admin_commands.getValue();
-
-		opts.iterm2 = iterm2.getValue();
-
-		opts.log_epoch = log_epoch.getValue();
-		opts.log_iso8601 = log_iso8601.getValue();
-		opts.log_timeless = log_timeless.getValue();
-		opts.log_plainseconds = log_plainseconds.getValue();
-		opts.log_milliseconds = log_milliseconds.getValue();
-		opts.log_microseconds = log_microseconds.getValue();
-#ifndef NDEBUG
-		if (!opts.log_plainseconds && !opts.log_milliseconds && !opts.log_microseconds) {
-			opts.log_microseconds = true;
-		}
-#endif
-
-		opts.log_threads = log_threads.getValue();
-
-#ifndef NDEBUG
-		opts.log_location = log_location.getValue();
-#endif
-
-		opts.database = database.getValue();
-		if (opts.database.empty()) {
-			opts.database = ".";
-		}
-		opts.http_port = http_port.getValue();
-		opts.bind_address = bind_address.getValue();
-#ifdef XAPIAND_CLUSTERING
-		opts.cluster_name = cluster_name.getValue();
-		opts.node_name = node_name.getValue();
-		opts.remote_port = remote_port.getValue();
-		opts.replication_port = replication_port.getValue();
-		opts.discovery_port = discovery_port.getValue();
-		opts.discovery_group = discovery_group.getValue();
-#endif
-		opts.pidfile = pidfile.getValue();
-		opts.logfile = logfile.getValue();
-		opts.uid = uid.getValue();
-		opts.gid = gid.getValue();
-		opts.dbpool_size = dbpool_size.getValue();
-#if XAPIAND_DATABASE_WAL
-		opts.num_async_wal_writers = num_async_wal_writers.getValue() || std::min(MAX_ASYNC_WAL_WRITERS, std::ceil(NUM_ASYNC_WAL_WRITERS * opts.processors));
-#endif
-#ifdef XAPIAND_CLUSTERING
-		opts.num_replicas = opts.solo ? 0 : num_replicas.getValue();
-#endif
-		opts.num_doc_preparers = num_doc_preparers.getValue() || std::min(MAX_DOC_PREPARERS, std::ceil(NUM_DOC_PREPARERS * opts.processors));
-		opts.num_doc_indexers = num_doc_indexers.getValue() || std::min(MAX_DOC_INDEXERS, std::ceil(NUM_DOC_INDEXERS * opts.processors));
-		opts.num_committers = num_committers.getValue() || std::min(MAX_COMMITTERS, std::ceil(NUM_COMMITTERS * opts.processors));
-		opts.num_fsynchers = num_fsynchers.getValue() || std::min(MAX_FSYNCHERS, std::ceil(NUM_FSYNCHERS * opts.processors));
-		opts.num_replicators = num_replicators.getValue() || std::min(MAX_REPLICATORS, std::ceil(NUM_REPLICATORS * opts.processors));
-		opts.num_discoverers = num_discoverers.getValue() || std::min(MAX_DISCOVERERS, std::ceil(NUM_DISCOVERERS * opts.processors));
-
-		opts.max_clients = max_clients.getValue();
-		opts.max_databases = max_databases.getValue();
-		opts.max_files = max_files.getValue();
-		opts.flush_threshold = flush_threshold.getValue();
-		opts.num_http_clients = num_http_clients.getValue() || std::min(MAX_HTTP_CLIENTS, std::ceil(NUM_HTTP_CLIENTS * opts.processors));
-		opts.num_http_servers = num_http_servers.getValue() || std::min(MAX_HTTP_SERVERS, std::ceil(NUM_HTTP_SERVERS * opts.processors));
-#ifdef XAPIAND_CLUSTERING
-		opts.num_remote_clients = num_remote_clients.getValue() || std::min(MAX_REMOTE_CLIENTS, std::ceil(NUM_REMOTE_CLIENTS * opts.processors));
-		opts.num_remote_servers = num_remote_servers.getValue() || std::min(MAX_REMOTE_SERVERS, std::ceil(NUM_REMOTE_SERVERS * opts.processors));
-		opts.num_replication_clients = num_replication_clients.getValue() || std::min(MAX_REPLICATION_CLIENTS, std::ceil(NUM_REPLICATION_CLIENTS * opts.processors));
-		opts.num_replication_servers = num_replication_servers.getValue() || std::min(MAX_REPLICATION_SERVERS, std::ceil(NUM_REPLICATION_SERVERS * opts.processors));
-#endif
-		opts.endpoints_list_size = ENDPOINT_LIST_SIZE;
-		if (opts.detach) {
-			if (opts.logfile.empty()) {
-				opts.logfile = XAPIAND_ROOT "/var/log/" XAPIAND_LOG_FILE;
-			}
-			if (opts.pidfile.empty()) {
-				opts.pidfile = XAPIAND_ROOT "/var/run/" XAPIAND_PID_FILE;
-			}
-		}
-		opts.ev_flags = ev_backend(use.getValue());
-
-		bool uuid_configured = false;
-		for (const auto& u : uuid.getValue()) {
-			switch (fnv1ah32::hash(u)) {
-				case fnv1ah32::hash("vanilla"):
-					opts.uuid_repr = fnv1ah32::hash("vanilla");
-					uuid_configured = true;
-					break;
-#ifdef XAPIAND_UUID_GUID
-				case fnv1ah32::hash("guid"):
-					opts.uuid_repr = fnv1ah32::hash("guid");
-					uuid_configured = true;
-					break;
-#endif
-#ifdef XAPIAND_UUID_URN
-				case fnv1ah32::hash("urn"):
-					opts.uuid_repr = fnv1ah32::hash("urn");
-					uuid_configured = true;
-					break;
-#endif
-#ifdef XAPIAND_UUID_ENCODED
-				case fnv1ah32::hash("encoded"):
-					opts.uuid_repr = fnv1ah32::hash("encoded");
-					uuid_configured = true;
-					break;
-#endif
-				case fnv1ah32::hash("compact"):
-					opts.uuid_compact = true;
-					break;
-				case fnv1ah32::hash("partition"):
-					opts.uuid_partition = true;
-					break;
-			}
-		}
-		if (!uuid_configured) {
-#ifdef XAPIAND_UUID_ENCODED
-			opts.uuid_repr = fnv1ah32::hash("encoded");
-#else
-			opts.uuid_repr = fnv1ah32::hash("vanilla");
-#endif
-			opts.uuid_compact = true;
-		}
-
-		opts.dump_metadata = dump_metadata.getValue();
-		opts.dump_schema = dump_schema.getValue();
-		opts.dump_documents = dump_documents.getValue();
-		auto out_filename = out.getValue();
-		opts.restore = restore.getValue();
-		auto in_filename = in.getValue();
-		if ((!opts.dump_metadata.empty() || !opts.dump_schema.empty() || !opts.dump_documents.empty()) && !opts.restore.empty()) {
-			throw CmdLineParseException("Cannot dump and restore at the same time");
-		} else if (!opts.dump_metadata.empty() || !opts.dump_schema.empty() || !opts.dump_documents.empty() || !opts.restore.empty()) {
-			if (!opts.restore.empty()) {
-				if (!out_filename.empty()) {
-					throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
-				}
-				opts.filename = in_filename;
-			} else {
-				if (!in_filename.empty()) {
-					throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
-				}
-				opts.filename = out_filename;
-			}
-			opts.detach = false;
-		} else {
-			if (!in_filename.empty()) {
-				throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
-			}
-			if (!out_filename.empty()) {
-				throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
-			}
-		}
-
-	} catch (const ArgException& exc) { // catch any exceptions
-		std::fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
-		std::exit(EX_USAGE);
-	}
 }
 
 
@@ -1381,7 +895,7 @@ int main(int argc, char **argv) {
 
 	try {
 
-		parseOptions(argc, argv);
+		opts = parseOptions(argc, argv);
 
 		if (opts.detach) {
 			detach();
