@@ -7,7 +7,7 @@ To run this example make sure you have Xapiand running on port 8880, install
 additional dependencies (on top of xapiand-py):
 
 ```sh
-pip install python-dateutil GitPython
+pip install python-dateutil
 ``
 or
 

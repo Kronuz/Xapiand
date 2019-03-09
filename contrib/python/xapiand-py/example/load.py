@@ -20,12 +20,12 @@
 
 from __future__ import print_function
 
-from os.path import dirname, basename, abspath
+import os
 from datetime import datetime
 import logging
 import argparse
 
-import git
+import subprocess
 
 from xapiand import Xapiand
 from xapiand.exceptions import TransportError
@@ -82,30 +82,62 @@ def create_git_index(client, index):
             raise
 
 
-def parse_commits(head, name):
+def iter_commits():
+    proc = subprocess.Popen(['git', 'whatchanged', '-m', '--numstat', '--pretty=format:hexsha:%H%nauthor_name:%an%nauthor_email:%ae%nauthored_date:%at%ncommitter_name:%cn%ncommitter_email:%ce%ncommitted_date:%ct%nparents:%P%nsubject:%s%nbody:%b%n%x00'], stdout=subprocess.PIPE)
+    name = None
+    commit = {'files': [], 'stats': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}}
+    for line in proc.stdout:
+        line = line.rstrip('\n')
+        if name == 'body':
+            if line == '\x00':
+                name = None
+            else:
+                commit[name] += '\n' + line
+        else:
+            if line:
+                name, sep, content = line.partition(':')
+                if sep:
+                    commit[name] = content
+                else:
+                    insertions, deletions, file = line.split('\t')
+                    insertions = int(insertions) if insertions != '-' else 0
+                    deletions = int(deletions) if deletions != '-' else 0
+                    commit['stats']['insertions'] += insertions
+                    commit['stats']['deletions'] += deletions
+                    commit['stats']['lines'] += insertions + deletions
+                    commit['stats']['files'] += 1
+                    commit['files'].append(file)
+            else:
+                yield commit
+                commit = {'files': [], 'stats': {'insertions': 0, 'deletions': 0, 'lines': 0, 'files': 0}}
+    yield commit
+
+
+def parse_commits(name):
     """
     Go through the git repository log and generate a document per commit
     containing all the metadata.
     """
-    for commit in head.iter_commits():
+
+    for commit in iter_commits():
         yield {
-            '_id': commit.hexsha,
+            '_id': commit['hexsha'],
             'repository': name,
-            'committed_date': datetime.fromtimestamp(commit.committed_date),
+            'committed_date':  datetime.fromtimestamp(float(commit['committed_date'])),
             'committer': {
-                'name': commit.committer.name,
-                'email': commit.committer.email,
+                'name': commit['committer_name'],
+                'email': commit['committer_email'],
             },
-            'authored_date': datetime.fromtimestamp(commit.authored_date),
+            'authored_date': datetime.fromtimestamp(float(commit['authored_date'])),
             'author': {
-                'name': commit.author.name,
-                'email': commit.author.email,
+                'name': commit['author_name'],
+                'email': commit['author_email'],
             },
-            'description': commit.message,
-            'parent_shas': [p.hexsha for p in commit.parents],
+            'description': '\n\n'.join((commit['subject'], commit['body'])).strip(),
+            'parent_shas': commit['parents'].split(),
             # we only care about the filenames, not the per-file stats
-            'files': list(commit.stats.files),
-            'stats': commit.stats.total,
+            'files': list(commit['files']),
+            'stats': commit['stats'],
         }
 
 
@@ -114,10 +146,12 @@ def load_repo(client, path=None, index='git'):
     Parse a git repository with all it's commits and load it into xapiand
     using `client`. If the index doesn't exist it will be created.
     """
-    path = dirname(abspath(__file__)) if path is None else path
+    path = os.path.dirname(os.path.abspath(__file__)) if path is None else path
 
-    repo = git.Repo(path, search_parent_directories=True)
-    repo_name = basename(repo.git_dir)
+    while not os.path.exists(os.path.join(path, '.git')) and path != '/':
+        path = os.path.dirname(path)
+    os.chdir(path)
+    repo_name = os.path.basename(path)
 
     create_git_index(client, index)
 
@@ -126,7 +160,7 @@ def load_repo(client, path=None, index='git'):
     # loading all the commits into memory
     for status, result in client.streaming_restore(
         index,
-        parse_commits(repo, repo_name),
+        parse_commits(repo_name),
         chunk_size=50,  # keep the batch sizes small for appearances only
     ):
         doc_id = '/%s/%s' % (index, result['_id'])
