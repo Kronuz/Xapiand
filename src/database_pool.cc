@@ -187,7 +187,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 				}
 			}
 		}
-		if (readables.size() < database_pool.max_databases) {
+		if (readables.size() < database_pool.max_database_readers) {
 			auto new_database = std::make_shared<Database>(*this, flags);
 			auto& readable = *readables.insert(readables.end(), new_database);
 			++readables_available;
@@ -197,7 +197,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 			}
 		}
 		auto wait_pred = [&]() {
-			return is_finished() || ((readables_available > 0 || readables.size() < database_pool.max_databases) && !is_locked() && !database_pool.is_locked(*this));
+			return is_finished() || ((readables_available > 0 || readables.size() < database_pool.max_database_readers) && !is_locked() && !database_pool.is_locked(*this));
 		};
 		if (timeout) {
 			if (timeout > 0.0) {
@@ -490,10 +490,10 @@ DatabaseEndpoint::dump_databases(int level) const
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
 
-DatabasePool::DatabasePool(size_t database_pool_size, size_t max_databases) :
+DatabasePool::DatabasePool(size_t database_pool_size, size_t max_database_readers) :
 	LRU(database_pool_size),
 	locks(0),
-	max_databases(max_databases)
+	max_database_readers(max_database_readers)
 {
 }
 

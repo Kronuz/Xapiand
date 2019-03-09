@@ -136,7 +136,7 @@ class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 
 	std::unordered_map<Endpoint, std::set<Endpoints>> endpoints_map;
 
-	size_t max_databases;
+	size_t max_database_readers;
 
 	void _lot_endpoints(const Endpoints& endpoints);
 	void _drop_endpoints(const Endpoints& endpoints);
@@ -150,7 +150,7 @@ class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 	bool notify_lockable(const Endpoints& endpoints);
 
 public:
-	DatabasePool(size_t database_pool_size, size_t max_databases);
+	DatabasePool(size_t database_pool_size, size_t max_database_readers);
 
 	DatabasePool(const DatabasePool&) = delete;
 	DatabasePool(DatabasePool&&) = delete;

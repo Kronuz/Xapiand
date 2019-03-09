@@ -239,7 +239,7 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::size_t> num_doc_preparers("", "bulk-preparers", "Number of threads handling bulk documents preparing.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> max_databases("", "max-databases", "Max number of open databases.", false, MAX_DATABASES, "databases", cmd);
+		ValueArg<std::size_t> max_database_readers("", "max-database-readers", "Max number of open databases.", false, MAX_DATABASE_READERS, "databases", cmd);
 		ValueArg<std::size_t> database_pool_size("", "database-pool-size", "Maximum number of databases in database pool.", false, DATABASE_POOL_SIZE, "size", cmd);
 		ValueArg<std::size_t> schema_pool_size("", "schema-pool-size", "Maximum number of schemas in schema pool.", false, SCHEMA_POOL_SIZE, "size", cmd);
 		ValueArg<std::size_t> scripts_cache_size("", "scripts-cache-size", "Cache size for scripts.", false, SCRIPTS_CACHE_SIZE, "size", cmd);
@@ -431,7 +431,7 @@ parseOptions(int argc, char** argv)
 		o.num_discoverers = fallback(num_discoverers.getValue(), std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors))));
 
 		o.max_clients = max_clients.getValue();
-		o.max_databases = max_databases.getValue();
+		o.max_database_readers = max_database_readers.getValue();
 		o.max_files = max_files.getValue();
 		o.flush_threshold = flush_threshold.getValue();
 		o.num_http_clients = fallback(num_http_clients.getValue(), std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors))));

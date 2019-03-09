@@ -1426,14 +1426,16 @@ HttpClient::home_view(Request& request)
 		{ "options", {
 			{ "processors", opts.processors },
 			{ "limits", {
-				{ "max_databases", opts.max_databases },
-				{ "max_clients", opts.max_clients },
+				// { "max_clients", opts.max_clients },
+				{ "max_database_readers", opts.max_database_readers },
 			} },
 			{ "cache", {
 				{ "database_pool_size", opts.database_pool_size },
 				{ "schema_pool_size", opts.schema_pool_size },
 				{ "scripts_cache_size", opts.scripts_cache_size },
+#ifdef XAPIAND_CLUSTERING
 				{ "resolver_cache_size", opts.resolver_cache_size },
+#endif
 			} },
 			{ "thread_pools", {
 				{ "num_replicas", opts.num_replicas },

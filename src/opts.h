@@ -70,7 +70,7 @@ extern struct opts_t {
 	ssize_t scripts_cache_size = 10;
 	ssize_t resolver_cache_size = 100;
 	ssize_t max_clients = 10;
-	ssize_t max_databases = 10;
+	ssize_t max_database_readers = 3;
 	ssize_t max_files = 0;  // (0 = automatic)
 	size_t num_replicas = 3;
 	int flush_threshold = 100000;
