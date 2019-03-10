@@ -240,8 +240,10 @@ public:
 	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
 
 	bool begining;
-	std::atomic_bool ending;  // ending requests have received all body
-	std::atomic_bool ended;
+	bool ending;
+
+	std::atomic_bool atom_ending;  // ending requests have received all body
+	std::atomic_bool atom_ended;
 
 	LightweightSemaphore pending;
 

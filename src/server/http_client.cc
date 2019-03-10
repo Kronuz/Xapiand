@@ -389,14 +389,14 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			// There was an error, but request already had written stuff...
 			// disconnect client!
 			detach();
-			request.ending = true;
+			request.atom_ending = true;
 		} else {
 			MsgPack err_response = {
 				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
 				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
 			};
 			write_http_response(request, http_errors.error_code, err_response);
-			request.ending = true;
+			request.atom_ending = true;
 		}
 	}
 
@@ -896,8 +896,8 @@ HttpClient::on_message_complete(http_parser* parser)
 		log_request(*new_request);
 	}
 
-	if likely(!closed && !new_request->ending) {
-		new_request->ending = true;
+	if likely(!closed && !new_request->atom_ending) {
+		new_request->atom_ending = true;
 
 		std::shared_ptr<Request> request = std::make_shared<Request>(this);
 		std::swap(new_request, request);
@@ -1331,15 +1331,15 @@ HttpClient::operator()()
 
 	while (!requests.empty() && !closed) {
 		Request& request = *requests.front();
-		if (request.ended) {
+		if (request.atom_ended) {
 			requests.pop_front();
 			continue;
 		}
-
+		request.ending = request.atom_ending.load();
 		lk.unlock();
 
-		// !ait for the request to be ready
-		if (!request.wait()) {
+		// wait for the request to be ready
+		if (!request.ending && !request.wait()) {
 			lk.lock();
 			continue;
 		}
@@ -1347,6 +1347,7 @@ HttpClient::operator()()
 		try {
 			ASSERT(request.view);
 			process(request);
+			request.begining = false;
 		} catch (...) {
 			request.begining = false;
 			end_http_request(request);
@@ -1358,7 +1359,6 @@ HttpClient::operator()()
 			detach();
 			throw;
 		}
-		request.begining = false;
 		if (request.ending) {
 			end_http_request(request);
 			auto closing = request.closing;
@@ -2952,8 +2952,8 @@ HttpClient::end_http_request(Request& request)
 	L_CALL("HttpClient::end_http_request()");
 
 	request.ends = std::chrono::system_clock::now();
-	request.ending = true;
-	request.ended = true;
+	request.atom_ending = true;
+	request.atom_ended = true;
 	waiting = false;
 
 	if (request.indexer) {
@@ -2965,6 +2965,7 @@ HttpClient::end_http_request(Request& request)
 		request.log->clear();
 		request.log.reset();
 	}
+
 	if (request.parser.http_errno != 0u) {
 		L(LOG_ERR, LIGHT_RED, "HTTP parsing error ({}): {}", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
 	} else {
@@ -3334,7 +3335,8 @@ Request::Request(HttpClient* client)
 	  type_encoding{Encoding::none},
 	  begining{true},
 	  ending{false},
-	  ended{false},
+	  atom_ending{false},
+	  atom_ended{false},
 	  raw_peek{0},
 	  raw_offset{0},
 	  size{0},
