@@ -2956,6 +2956,11 @@ HttpClient::end_http_request(Request& request)
 	request.ended = true;
 	waiting = false;
 
+	if (request.indexer) {
+		request.indexer->finish();
+		request.indexer.reset();
+	}
+
 	if (request.log) {
 		request.log->clear();
 		request.log.reset();
@@ -3346,6 +3351,14 @@ Request::Request(HttpClient* client)
 
 Request::~Request() noexcept
 {
+	try {
+		if (indexer) {
+			indexer->finish();
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
+
 	try {
 		if (log) {
 			log->clear();
