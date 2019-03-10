@@ -273,8 +273,7 @@ Database::reopen_writable()
 
 	reset();
 
-	auto endpoints_size = endpoints.size();
-	ASSERT(endpoints_size == 1);
+	ASSERT(endpoints.size() == 1);
 
 	auto database = std::make_unique<Xapian::WritableDatabase>();
 
