@@ -27,6 +27,7 @@ try:
 except ImportError:
     from queue import PriorityQueue, Empty
 
+from .utils import jump_consistent_hash
 from .exceptions import ImproperlyConfigured
 
 logger = logging.getLogger('xapiand')
@@ -56,11 +57,11 @@ class ConnectionSelector(object):
         """
         self.connection_opts = opts
 
-    def select(self, connections):
+    def select(self, pool, **kwargs):
         """
         Select a connection from the given list.
 
-        :arg connections: list of live connections to choose from
+        :arg pool: connection pool to choose connections from
         """
         pass
 
@@ -69,8 +70,8 @@ class RandomSelector(ConnectionSelector):
     """
     Select a connection at random
     """
-    def select(self, connections):
-        return random.choice(connections)
+    def select(self, pool, **kwargs):
+        return random.choice(pool.connections)
 
 
 class RoundRobinSelector(ConnectionSelector):
@@ -81,10 +82,25 @@ class RoundRobinSelector(ConnectionSelector):
         super(RoundRobinSelector, self).__init__(opts)
         self.data = threading.local()
 
-    def select(self, connections):
+    def select(self, pool, **kwargs):
+        connections = pool.connections
         self.data.rr = getattr(self.data, 'rr', -1) + 1
         self.data.rr %= len(connections)
         return connections[self.data.rr]
+
+
+class RoutingSelector(ConnectionSelector):
+    """
+    Select a connection from hashing url or routing param
+    """
+    def select(self, pool, **kwargs):
+        routing = kwargs['params'].get('routing', kwargs['path'][0])
+        connections = pool.orig_connections
+        idx = jump_consistent_hash(routing, len(connections))
+        for i in range(len(connections)):
+            connection = connections[idx + i]
+            if connection not in pool.dead_count:
+                return connection
 
 
 class ConnectionPool(object):
@@ -110,8 +126,7 @@ class ConnectionPool(object):
     succeeds will be marked as live (its fail count will be deleted).
     """
     def __init__(self, connections, dead_timeout=60, timeout_cutoff=5,
-                 selector_class=RoundRobinSelector, randomize_hosts=True,
-                 **kwargs):
+                 selector_class=RoutingSelector, **kwargs):
         """
         :arg connections: list of tuples containing the
             :class:`~xapiand.Connection` instance and it's options
@@ -121,8 +136,6 @@ class ConnectionPool(object):
             timeout doesn't increase
         :arg selector_class: :class:`~xapiand.ConnectionSelector`
             subclass to use if more than one connection is live
-        :arg randomize_hosts: shuffle the list of connections upon arrival to
-            avoid dog piling effect across processes
         """
         if not connections:
             raise ImproperlyConfigured(
@@ -134,11 +147,6 @@ class ConnectionPool(object):
         # PriorityQueue for thread safety and ease of timeout management
         self.dead = PriorityQueue(len(self.connections))
         self.dead_count = {}
-
-        if randomize_hosts:
-            # randomize the connection list to avoid all clients hitting same node
-            # after startup/restart
-            random.shuffle(self.connections)
 
         # default timeout after which to try resurrecting a connection
         self.dead_timeout = dead_timeout
@@ -225,7 +233,7 @@ class ConnectionPool(object):
         logger.info("Resurrecting connection %r (force=%s).", connection, force)
         return connection
 
-    def get_connection(self):
+    def get_connection(self, **kwargs):
         """
         Return a connection from the pool using the `ConnectionSelector`
         instance.
@@ -245,7 +253,7 @@ class ConnectionPool(object):
 
         # only call selector if we have a selection
         if len(connections) > 1:
-            return self.selector.select(connections)
+            return self.selector.select(self, **kwargs)
 
         # only one connection, no need for a selector
         return connections[0]
@@ -268,7 +276,7 @@ class DummyConnectionPool(ConnectionPool):
         self.connection = connections[0][0]
         self.connections = (self.connection, )
 
-    def get_connection(self):
+    def get_connection(self, **kwargs):
         return self.connection
 
     def close(self):

@@ -23,6 +23,7 @@ from .connection import Urllib3HttpConnection
 from .connection_pool import ConnectionPool, DummyConnectionPool
 from .serializer import Deserializer, DEFAULT_SERIALIZERS, DEFAULT_SERIALIZER
 from .exceptions import ConnectionError, TransportError, SerializationError, ConnectionTimeout
+from .utils import make_path
 
 
 def get_node_info(node_info, host):
@@ -176,7 +177,7 @@ class Transport(object):
             # pass the hosts dicts to the connection pool to optionally extract parameters from
             self.connection_pool = self.connection_pool_class(connections, **self.kwargs)
 
-    def get_connection(self):
+    def get_connection(self, **kwargs):
         """
         Retreive a :class:`~xapiand.Connection` instance from the
         :class:`~xapiand.ConnectionPool` instance.
@@ -184,7 +185,7 @@ class Transport(object):
         if self.sniffer_timeout:
             if time.time() >= self.last_sniff + self.sniffer_timeout:
                 self.sniff_hosts()
-        return self.connection_pool.get_connection()
+        return self.connection_pool.get_connection(**kwargs)
 
     def _get_sniff_data(self, initial=False):
         """
@@ -225,12 +226,10 @@ class Transport(object):
         return node_info['nodes']
 
     def _get_node_info(self, node_info):
-        host = {}
-        if not node_info['active']:
-            return None
-        host['host'] = node_info['host']
-        host['port'] = node_info['http_port']
-        return self.node_info_callback(node_info, host)
+        return self.node_info_callback(node_info, {
+            'host': node_info['host'],
+            'port': node_info['http_port'],
+        })
 
     def sniff_hosts(self, initial=False):
         """
@@ -244,7 +243,7 @@ class Transport(object):
         """
         node_info = self._get_sniff_data(initial)
 
-        hosts = list(filter(None, (self._get_node_info(n) for n in node_info)))
+        hosts = [self._get_node_info(n) for n in sorted(node_info, key=lambda x: x['id'])]
 
         # we weren't able to get any nodes or node_info_callback blocked all -
         # raise error.
@@ -265,7 +264,7 @@ class Transport(object):
         if self.sniff_on_connection_fail:
             self.sniff_hosts()
 
-    def perform_request(self, method, url, headers=None, params=None, body=None):
+    def perform_request(self, method, *path, **kwargs):
         """
         Perform the actual request. Retrieve a connection from the connection
         pool, pass all the information to it's perform_request method and
@@ -278,7 +277,7 @@ class Transport(object):
         marked as dead, mark it as live, resetting it's failure count.
 
         :arg method: HTTP method to use
-        :arg url: absolute url (without host) to target
+        :arg path: path parts (without host) to target
         :arg headers: dictionary of headers, will be handed over to the
             underlying :class:`~xapiand.Connection` class
         :arg params: dictionary of query parameters, will be handed over to the
@@ -286,6 +285,9 @@ class Transport(object):
         :arg body: body of the request, will be serializes using serializer and
             passed to the connection
         """
+        headers = kwargs.get('headers')
+        params = kwargs.get('params')
+        body = kwargs.get('body')
         if body is not None:
             body = self.serializer.dumps(body)
 
@@ -310,12 +312,12 @@ class Transport(object):
                 ignore = (ignore, )
 
         for attempt in range(1, self.max_retries + 1):
-            connection = self.get_connection()
+            connection = self.get_connection(method=method, path=path, headers=headers, params=params)
 
             try:
                 status, headers_response, data = connection.perform_request(
                     method,
-                    url,
+                    make_path(path),
                     params,
                     body,
                     headers=headers,

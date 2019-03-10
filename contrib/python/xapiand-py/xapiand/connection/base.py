@@ -48,14 +48,13 @@ class Connection(object):
 
     Also responsible for logging.
     """
-    def __init__(self, host='localhost', port=8880, use_ssl=False, url_prefix='', timeout=10, **kwargs):
+    def __init__(self, host='localhost', port=8880, use_ssl=False, url_prefix='', timeout=10, scheme='http'):
         """
         :arg host: hostname of the node (default: localhost)
         :arg port: port to use (integer, default: 8880)
         :arg url_prefix: optional url prefix for Xapiand
         :arg timeout: default timeout in seconds (float, default: 10)
         """
-        scheme = kwargs.get('scheme', 'http')
         if use_ssl or scheme == 'https':
             scheme = 'https'
             use_ssl = True
@@ -142,5 +141,3 @@ class Connection(object):
             logger.warning("Undecodable raw error response from server: %s", err)
 
         raise HTTP_EXCEPTIONS.get(status_code, TransportError)(status_code, error_message, additional_info)
-
-

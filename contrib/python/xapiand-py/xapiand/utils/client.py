@@ -60,7 +60,7 @@ def _escape(value):
     return str(value)
 
 
-def _make_path(*parts):
+def make_path(parts):
     """
     Create a URL string from parts, omit all `None` values and empty strings.
     Convert lists nad tuples to comma separated values.

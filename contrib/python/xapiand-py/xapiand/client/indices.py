@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .utils import NamespacedClient, query_params, _make_path, SKIP_IN_PATH
+from .utils import NamespacedClient, query_params, SKIP_IN_PATH
 
 
 class IndicesClient(NamespacedClient):
@@ -29,8 +29,8 @@ class IndicesClient(NamespacedClient):
         :arg body: The configuration for the index (`_settings` and `_schema`)
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('POST', _make_path(index,
-            ':schema'), params=params, body=body)
+        return self.transport.perform_request('POST', index,
+            ':schema', params=params, body=body)
     create = schema
 
     @query_params('timeout')
@@ -43,8 +43,8 @@ class IndicesClient(NamespacedClient):
             string to perform the operation on all indices
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('POST', _make_path(index,
-            ':commit'), params=params)
+        return self.transport.perform_request('POST', index,
+            ':commit', params=params)
     refresh = commit
 
     @query_params('timeout')
@@ -57,8 +57,8 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('POST', _make_path(index,
-            ':open'), params=params)
+        return self.transport.perform_request('POST', index,
+            ':open', params=params)
 
     @query_params('timeout')
     def close(self, index, params=None):
@@ -71,8 +71,8 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('POST', _make_path(index,
-            ':close'), params=params)
+        return self.transport.perform_request('POST', index,
+            ':close', params=params)
 
     @query_params('timeout')
     def delete(self, index, params=None):
@@ -84,5 +84,5 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('POST', _make_path(index,
-            ':delete'), params=params)
+        return self.transport.perform_request('POST', index,
+            ':delete', params=params)

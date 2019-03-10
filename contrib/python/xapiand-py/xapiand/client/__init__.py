@@ -24,7 +24,7 @@ from ..exceptions import TransportError
 from ..compat import string_types, urlparse, unquote
 from ..helpers import bulk, streaming_bulk, parallel_bulk
 from .indices import IndicesClient
-from .utils import query_params, _make_path, SKIP_IN_PATH
+from ..utils import query_params, SKIP_IN_PATH
 
 logger = logging.getLogger('xapiand')
 
@@ -201,7 +201,7 @@ class Xapiand(object):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
         method = 'POST' if id in SKIP_IN_PATH else 'PUT'
-        return self.transport.perform_request(method, _make_path(index, id),
+        return self.transport.perform_request(method, index, id,
             params=params, body=body)
 
     @query_params('selector', 'timeout')
@@ -218,7 +218,7 @@ class Xapiand(object):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('UPDATE', _make_path(index, id),
+        return self.transport.perform_request('UPDATE', index, id,
             params=params, body=body)
 
     @query_params('timeout')
@@ -234,7 +234,7 @@ class Xapiand(object):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('STORE', _make_path(index, id),
+        return self.transport.perform_request('STORE', index, id,
             params=params, body=body,
             headers={'content-type': content_type})
 
@@ -252,7 +252,7 @@ class Xapiand(object):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('HEAD', _make_path(index, id),
+        return self.transport.perform_request('HEAD', index, id,
             params=params)
 
     @query_params('selector', 'refresh', 'timeout')
@@ -271,7 +271,7 @@ class Xapiand(object):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('GET', _make_path(index, id),
+        return self.transport.perform_request('GET', index, id,
             params=params)
 
     @query_params('timeout')
@@ -286,7 +286,7 @@ class Xapiand(object):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('DELETE', _make_path(index, id),
+        return self.transport.perform_request('DELETE', index, id,
             params=params)
 
     @query_params()
@@ -301,8 +301,8 @@ class Xapiand(object):
         for param in (index,):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('GET', _make_path(index,
-            ':info', id), params=params)
+        return self.transport.perform_request('GET', index,
+            ':info', id, params=params)
 
     @query_params('q', 'refresh', 'timeout')
     def count(self, index=None, body=None, params=None):
@@ -317,8 +317,8 @@ class Xapiand(object):
         """
         if not index:
             index = '*'
-        return self.transport.perform_request('GET', _make_path(index,
-            ':count'), params=params, body=body)
+        return self.transport.perform_request('GET', index,
+            ':count', params=params, body=body)
 
     @query_params('q', 'offset', 'limit', 'sort', 'selector', 'refresh', 'timeout')
     def search(self, index=None, body=None, params=None):
@@ -336,8 +336,8 @@ class Xapiand(object):
         """
         if not index:
             index = '*'
-        return self.transport.perform_request('GET', _make_path(index,
-            ':search'), params=params, body=body)
+        return self.transport.perform_request('GET', index,
+            ':search', params=params, body=body)
 
     def _restore(self, body, index, params=None):
         for param in (index, body):
@@ -345,8 +345,8 @@ class Xapiand(object):
                 raise ValueError("Empty value passed for a required argument.")
 
         content_type, body = self.transport.serializer.nddumps(body)
-        return self.transport.perform_request('POST', _make_path(index,
-            ':restore'), params=params, body=body, headers={'content-type': content_type})
+        return self.transport.perform_request('POST', index,
+            ':restore', params=params, body=body, headers={'content-type': content_type})
 
     @query_params('timeout')
     def streaming_restore(self, index, body,
