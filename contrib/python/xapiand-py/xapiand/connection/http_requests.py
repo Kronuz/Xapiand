@@ -83,6 +83,7 @@ class RequestsHttpConnection(Connection):
         if params:
             full_url = '%s?%s' % (full_url, urlencode(params or {}))
 
+        body_content_type = headers.get('content-type')
         start = time.time()
         request = requests.Request(method=method, headers=headers, url=full_url, data=body)
         prepared_request = self.session.prepare_request(request)
@@ -95,9 +96,10 @@ class RequestsHttpConnection(Connection):
             status = response.status_code
             headers = response.headers
             raw_data = response.text
-            data = deserializer.loads(raw_data, headers.get('content-type')) if raw_data and deserializer else raw_data
+            data_content_type = headers.get('content-type')
+            data = deserializer.loads(raw_data, data_content_type) if raw_data and deserializer else raw_data
         except Exception as e:
-            self.log_request_fail(method, full_url, prepared_request.path_url, body, time.time() - start, exception=e)
+            self.log_request_fail(method, full_url, prepared_request.path_url, body, body_content_type, time.time() - start, exception=e)
             if isinstance(e, requests.exceptions.SSLError):
                 raise SSLError("N/A", str(e), e)
             if isinstance(e, requests.Timeout):
@@ -106,10 +108,10 @@ class RequestsHttpConnection(Connection):
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (200 <= status < 300) and status not in ignore:
-            self.log_request_fail(method, full_url, response.request.path_url, body, duration, status, data)
+            self.log_request_fail(method, full_url, response.request.path_url, body, body_content_type, duration, status, raw_data, data_content_type)
             self._raise_error(status, data)
 
-        self.log_request_success(method, full_url, response.request.path_url, body, status, data, duration)
+        self.log_request_success(method, full_url, response.request.path_url, body, body_content_type, status, raw_data, data_content_type, duration)
 
         return status, headers, data
 

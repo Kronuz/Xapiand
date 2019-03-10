@@ -17,10 +17,16 @@
 # limitations under the License.
 
 import logging
+
 try:
     import simplejson as json
 except ImportError:
     import json
+
+try:
+    import msgpack
+except ImportError:
+    msgpack = None
 
 from ..exceptions import TransportError, HTTP_EXCEPTIONS
 
@@ -64,15 +70,22 @@ class Connection(object):
     def __repr__(self):
         return '<%s: %s>' % (self.__class__.__name__, self.host)
 
-    def _pretty_json(self, data):
+    def _pretty_json(self, data, content_type):
         # pretty JSON in tracer curl logs
         try:
-            return json.dumps(json.loads(data), sort_keys=True, indent=2, separators=(',', ': ')).replace("'", r'\u0027')
-        except (ValueError, TypeError):
-            # non-json data or a bulk request
-            return data
+            if 'application/json' in content_type:
+                data = json.loads(data)
+            if 'application/x-ndjson' in content_type:
+                data = [json.loads(d) for d in data.split('\n')]
+            elif 'application/x-msgpack' in content_type:
+                unpacker = msgpack.Unpacker(None)
+                unpacker.feed(data)
+                data = list(unpacker)
+        except Exception:
+            return repr(data)
+        return json.dumps(data, sort_keys=True, indent=2, separators=(',', ': ')).replace("'", r'\u0027')
 
-    def _log_trace(self, method, path, body, status_code, response, duration):
+    def _log_trace(self, method, path, body, body_content_type, status_code, response, response_content_type, duration):
         if not tracer.isEnabledFor(logging.INFO) or not tracer.handlers:
             return
 
@@ -80,33 +93,25 @@ class Connection(object):
         path = path.replace("?", "?pretty&", 1) if "?" in path else path + "?pretty"
         tracer.info("curl %s-X%s 'http://localhost:8880%s' -d '%s'",
                     "-H 'Content-Type: application/json' " if body else "",
-                    method, path, self._pretty_json(body) if body else "")
+                    method, path, self._pretty_json(body, body_content_type) if body else "")
 
         if tracer.isEnabledFor(logging.DEBUG):
-            tracer.debug("#[%s] (%.3fs)\n#%s", status_code, duration, self._pretty_json(response).replace('\n', '\n#') if response else '')
+            tracer.debug("#[%s] (%.3fs)\n#%s", status_code, duration, self._pretty_json(response, response_content_type).replace('\n', '\n#') if response else '')
 
-    def log_request_success(self, method, full_url, path, body, status_code, response, duration):
+    def log_request_success(self, method, full_url, path, body, body_content_type, status_code, response, response_content_type, duration):
         """ Log a successful API call.  """
         #  TODO: optionally pass in params instead of full_url and do urlencode only when needed
-
-        # body has already been serialized to utf-8, deserialize it for logging
-        # TODO: find a better way to avoid (de)encoding the body back and forth
-        if body:
-            try:
-                body = body.decode('utf-8', 'ignore')
-            except AttributeError:
-                pass
 
         logger.info(
             "%s %s [status:%s request:%.3fs]", method, full_url,
             status_code, duration
         )
-        logger.debug('> %s', body)
-        logger.debug('< %s', response)
+        logger.debug('> %r', body)
+        logger.debug('< %r', response)
 
-        self._log_trace(method, path, body, status_code, response, duration)
+        self._log_trace(method, path, body, body_content_type, status_code, response, response_content_type, duration)
 
-    def log_request_fail(self, method, full_url, path, body, duration, status_code=None, response=None, exception=None):
+    def log_request_fail(self, method, full_url, path, body, body_content_type, duration, status_code=None, response=None, response_content_type=None, exception=None):
         """ Log an unsuccessful API call.  """
         # do not log 404s on HEAD requests
         if method == 'HEAD' and status_code == 404:
@@ -116,17 +121,9 @@ class Connection(object):
             status_code or "N/A", duration, exc_info=exception is not None
         )
 
-        # body has already been serialized to utf-8, deserialize it for logging
-        # TODO: find a better way to avoid (de)encoding the body back and forth
-        if body:
-            try:
-                body = body.decode('utf-8', 'ignore')
-            except AttributeError:
-                pass
+        logger.debug('> %r', body)
 
-        logger.debug('> %s', body)
-
-        self._log_trace(method, path, body, status_code, response, duration)
+        self._log_trace(method, path, body, body_content_type, status_code, response, response_content_type, duration)
 
         if response is not None:
             logger.debug('< %s', response)

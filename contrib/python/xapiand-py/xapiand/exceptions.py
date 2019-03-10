@@ -124,6 +124,7 @@ class AuthenticationException(TransportError):
 class AuthorizationException(TransportError):
     """ Exception representing a 403 status code. """
 
+
 # more generic mappings from status_code to python exceptions
 HTTP_EXCEPTIONS = {
     400: RequestError,

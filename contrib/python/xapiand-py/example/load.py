@@ -181,8 +181,8 @@ UPDATES = [
     },
     {
         '_op_type': 'update',
-        '_id': '7921c233ffd948446cb73c0d86ef349495592b4a',
-        'release': '0.11.1'
+        '_id': '767b8d32a65e0fbf7cf4423b4085af4941e312aa',
+        'release': '0.12.0'
     },
 ]
 

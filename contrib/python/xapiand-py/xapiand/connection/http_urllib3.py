@@ -189,16 +189,20 @@ class Urllib3HttpConnection(Connection):
                     zlib.DEF_MEM_LEVEL,
                     zlib.Z_DEFAULT_STRATEGY
                 )
-                body = compress.compress(body) + compress.flush()
+                compressed_body = compress.compress(body) + compress.flush()
+            else:
+                compressed_body = body
 
-            response = self.pool.urlopen(method, url, body, retries=Retry(False), headers=request_headers, **kw)
+            body_content_type = request_headers.get('content-type')
+            response = self.pool.urlopen(method, url, compressed_body, retries=Retry(False), headers=request_headers, **kw)
             duration = time.time() - start
             status = response.status
             headers = response.getheaders()
             raw_data = response.data
-            data = deserializer.loads(raw_data, headers.get('content-type')) if raw_data and deserializer else raw_data
+            data_content_type = headers.get('content-type')
+            data = deserializer.loads(raw_data, data_content_type) if raw_data and deserializer else raw_data
         except Exception as e:
-            self.log_request_fail(method, full_url, url, body, time.time() - start, exception=e)
+            self.log_request_fail(method, full_url, url, body, body_content_type, time.time() - start, exception=e)
             if isinstance(e, UrllibSSLError):
                 raise SSLError("N/A", str(e), e)
             if isinstance(e, ReadTimeoutError):
@@ -207,10 +211,10 @@ class Urllib3HttpConnection(Connection):
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (200 <= status < 300) and status not in ignore:
-            self.log_request_fail(method, full_url, url, body, duration, status, data)
+            self.log_request_fail(method, full_url, url, body, body_content_type, duration, status, raw_data, data_content_type)
             self._raise_error(status, data)
 
-        self.log_request_success(method, full_url, url, body, status, data, duration)
+        self.log_request_success(method, full_url, url, body, body_content_type, status, raw_data, data_content_type, duration)
 
         return status, headers, data
 
