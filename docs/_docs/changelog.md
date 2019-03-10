@@ -13,9 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.12.0] - 2019-03-10
+{: #v0-12-0 }
+
 ### Fixed
 - Aggregations with `_aggs` in different order
 - JSON serialization of Infinite and NaN
+- Fixed race condition during bulk indexing
 
 ### Changed
 - **BREAKING**: Fields in responses renamed and nested differently:

@@ -28,7 +28,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set (PACKAGE_NAME "Xapiand")
-set (PACKAGE_VERSION "0.11.1")
+set (PACKAGE_VERSION "0.12.0")
 set (PACKAGE_URL "https://github.com/Kronuz/Xapiand")
 set (PACKAGE_BUGREPORT "https://github.com/Kronuz/Xapiand/issues")
 set (PACKAGE_TARNAME "${PROJECT_NAME}")
