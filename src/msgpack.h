@@ -28,7 +28,7 @@
 
 #include <memory>
 #include <sstream>
-#include "string_view.hh"        // for std::string_view
+#include <string_view>           // for std::string_view
 #include <unordered_map>         // for std::unordered_map
 
 #include "atomic_shared_ptr.h"

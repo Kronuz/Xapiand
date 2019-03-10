@@ -26,7 +26,7 @@
 
 #include <cstdint>
 #include <string>
-#include "string_view.hh"     // for std::string_view
+#include <string_view>        // for std::string_view
 
 #include "cassert.h"         // for ASSERT
 #include "chars.hh"          // for chars::tolower

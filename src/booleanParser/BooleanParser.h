@@ -24,7 +24,7 @@
 
 #include <list>
 #include <memory>
-#include "string_view.hh"   // for std::string_view
+#include <string_view>      // for std::string_view
 #include <vector>
 
 #include "ContentReader.h"

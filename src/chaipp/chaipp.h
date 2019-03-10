@@ -26,7 +26,7 @@
 
 #if XAPIAND_CHAISCRIPT
 
-#include "string_view.hh"
+#include <string_view>
 
 #include "chaiscript/chaiscript_basic.hpp"
 #include "script.h"

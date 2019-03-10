@@ -24,7 +24,7 @@
 
 #include <cstddef>            // for std::size_t
 #include <string>             // for std::string
-#include "string_view.hh"     // for std::string_view
+#include <string_view>        // for std::string_view
 
 
 std::string repr(const void* p, std::size_t size, bool friendly = true, char quote = '\'', std::size_t max_size = 0);

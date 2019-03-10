@@ -29,7 +29,7 @@ THE SOFTWARE.
 #include <algorithm>        // for std::find_if, std::reverse
 #include <stdexcept>        // for std::invalid_argument
 #include <string>           // for std::string
-#include "string_view.hh"   // for std::string_view
+#include <string_view>      // for std::string_view
 #include <type_traits>      // for std::enable_if_t
 
 #include "cassert.h"        // for ASSERT

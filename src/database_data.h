@@ -23,7 +23,7 @@
 #pragma once
 
 #include <string>
-#include "string_view.hh"
+#include <string_view>
 #include <vector>                  // for std::vector
 
 #include "length.h"                // for serialise_length()

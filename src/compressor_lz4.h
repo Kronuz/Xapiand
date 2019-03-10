@@ -32,7 +32,7 @@
 #include <stdlib.h>         // for malloc, free
 #include <string.h>
 #include <string>           // for string
-#include "string_view.hh"   // for std::string_view
+#include <string_view>      // for std::string_view
 #include <fcntl.h>          // for O_RDONLY
 #include <sys/stat.h>
 #include <sys/types.h>      // for off_t, uint16_t, ssize_t, uint32_t

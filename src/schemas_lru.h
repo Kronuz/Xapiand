@@ -23,7 +23,7 @@
 #pragma once
 
 #include <mutex>                 // for std::mutex
-#include "string_view.hh"        // for std::string_view
+#include <string_view>           // for std::string_view
 
 #include "atomic_shared_ptr.h"
 #include "endpoint.h"

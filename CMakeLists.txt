@@ -645,7 +645,7 @@ endif ()
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -fstack-protector-strong")
 
 # Add compiler flags.
-add_required_cxx_compiler_flag("-std=c++1z")
+add_required_cxx_compiler_flag("-std=c++17")
 
 add_cxx_compiler_flag("-fdiagnostics-color=always")
 add_cxx_compiler_flag("-fno-common")

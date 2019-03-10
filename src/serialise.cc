@@ -23,7 +23,7 @@
 #include "serialise.h"
 
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
-#include "string_view.hh"                             // for std::string_view
+#include <string_view>                                // for std::string_view
 
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast

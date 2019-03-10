@@ -26,7 +26,7 @@
 #include <cmath>                                  // for ceil
 #include <exception>                              // for exception
 #include <stdexcept>                              // for invalid_argument, out_of_range
-#include "string_view.hh"                         // for std::string_view
+#include <string_view>                            // for std::string_view
 
 #include "cassert.h"                              // for ASSERT
 #include "hashes.hh"                              // for fnv1ah32

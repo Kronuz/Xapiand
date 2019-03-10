@@ -23,7 +23,7 @@
 #pragma once
 
 #include <string>                  // for string
-#include "string_view.hh"          // for std::string_view
+#include <string_view>             // for std::string_view
 #include <vector>                  // for vector
 
 #include "msgpack.h"               // for object

@@ -23,7 +23,7 @@
 #pragma once
 
 #include <memory>              // for default_delete, unique_ptr
-#include "string_view.hh"      // for std::string_view
+#include <string_view>         // for std::string_view
 #include <unordered_map>       // for unordered_map
 
 #include "collection.h"

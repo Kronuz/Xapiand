@@ -25,7 +25,7 @@
 #if XAPIAND_CHAISCRIPT
 
 #include <functional>                             // for std::hash
-#include "string_view.hh"
+#include <string_view>
 
 #include "database_handler.h"                     // for DatabaseHandler
 #include "exception.h"                            // for chaipp::Error

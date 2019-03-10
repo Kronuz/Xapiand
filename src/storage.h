@@ -26,7 +26,7 @@
 #include <errno.h>               // for errno
 #include <limits>                // for std::numeric_limits
 #include <memory>
-#include "string_view.hh"        // for std::string_view
+#include <string_view>           // for std::string_view
 #include <unistd.h>
 
 #include "cassert.h"             // for ASSERT

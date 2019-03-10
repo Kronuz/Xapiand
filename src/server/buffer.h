@@ -24,7 +24,7 @@
 
 #include <cstddef>             // for std::size_t
 #include <string>              // for std::string
-#include "string_view.hh"      // for std::string_view
+#include <string_view>         // for std::string_view
 
 #include "cassert.h"           // for ASSERT
 #include "io.hh"               // for io::*

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "string_view.hh"                         // for std::string_view
+#include <string_view>                            // for std::string_view
 
 #include "msgpack.h"                              // for MsgPack
 #include "ewkt.h"

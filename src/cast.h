@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "string_view.hh"        // for std::string_view
+#include <string_view>           // for std::string_view
 
 #include "database_utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
