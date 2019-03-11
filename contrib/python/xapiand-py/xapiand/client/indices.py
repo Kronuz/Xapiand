@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .utils import NamespacedClient, query_params, SKIP_IN_PATH
+from ..utils import NamespacedClient, query_params, SKIP_IN_PATH
 
 
 class IndicesClient(NamespacedClient):

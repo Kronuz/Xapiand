@@ -48,13 +48,16 @@ class Connection(object):
 
     Also responsible for logging.
     """
-    def __init__(self, host='localhost', port=8880, use_ssl=False, url_prefix='', timeout=10, scheme='http'):
+    def __init__(self, host='localhost', port=8880, use_ssl=False, url_prefix='', timeout=10, scheme='http', idx=None, name=None, active=None):
         """
         :arg host: hostname of the node (default: localhost)
         :arg port: port to use (integer, default: 8880)
         :arg url_prefix: optional url prefix for Xapiand
         :arg timeout: default timeout in seconds (float, default: 10)
         """
+        self.idx = idx
+        self.name = name
+        self.active = active
         if use_ssl or scheme == 'https':
             scheme = 'https'
             use_ssl = True
@@ -67,6 +70,8 @@ class Connection(object):
         self.timeout = timeout
 
     def __repr__(self):
+        if self.name:
+            return '<%s: %s (%s:%s)>' % (self.__class__.__name__, self.host, self.idx, self.name)
         return '<%s: %s>' % (self.__class__.__name__, self.host)
 
     def _pretty_json(self, data, content_type):
