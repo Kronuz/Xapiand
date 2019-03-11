@@ -148,6 +148,9 @@ class ConnectionPool(object):
         self.timeout_cutoff = timeout_cutoff
 
         self.selector = selector_class()
+        for connection in self.orig_connections:
+            if connection.active is False:
+                self.mark_dead(connection)
 
     def mark_dead(self, connection, now=None):
         """
