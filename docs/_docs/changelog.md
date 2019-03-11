@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.12.1] - 2019-03-11
+{: #v0-12-1 }
+
+### Fixed
+- Fix requests resulting in Bad Gateway with stalled endpoints
+
+### Changed
+- Renamed options for logging from `--log-*` to `--log <setting>`
+
+
+---
 ## [0.12.0] - 2019-03-10
 {: #v0-12-0 }
 
