@@ -15,6 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.12.2] - 2019-03-11
+{: #v0-12-2 }
+
+### Fixed
+- Fix regression introduced in 0.12.1 during cluster bootstrapping
+
+
+---
 ## [0.12.1] - 2019-03-11
 {: #v0-12-1 }
 

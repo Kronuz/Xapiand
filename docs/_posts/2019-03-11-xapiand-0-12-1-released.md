@@ -11,3 +11,6 @@ Fix requests resulting in Bad Gateway with stalled endpoints.
 
 ### Fixed
 - Fix requests resulting in Bad Gateway with stalled endpoints
+
+### Changed
+- Renamed options for logging from `--log-*` to `--log <setting>`
