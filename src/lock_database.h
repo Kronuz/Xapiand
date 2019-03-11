@@ -30,7 +30,25 @@
 
 
 class Database;
-class LockableDatabase;
+
+
+class LockableDatabase {
+	friend class lock_database;
+
+	std::shared_ptr<Database> _locked_database;
+	int _database_locks;
+
+protected:
+	int flags;
+	Endpoints endpoints;
+
+public:
+	const std::shared_ptr<Database>& database() const noexcept;
+	Xapian::Database* db() const noexcept;
+
+	LockableDatabase();
+	LockableDatabase(const Endpoints& endpoints_, int flags_);
+};
 
 
 class lock_database {
@@ -48,25 +66,6 @@ public:
 
 	template <typename... Args>
 	void lock(Args&&... args);
-};
-
-
-class LockableDatabase {
-	friend lock_database;
-
-	std::shared_ptr<Database> _locked_database;
-	int _database_locks;
-
-protected:
-	int flags;
-	Endpoints endpoints;
-
-public:
-	const std::shared_ptr<Database>& database() const noexcept;
-	Xapian::Database* db() const noexcept;
-
-	LockableDatabase();
-	LockableDatabase(const Endpoints& endpoints_, int flags_);
 };
 
 
