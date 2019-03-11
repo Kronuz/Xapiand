@@ -1865,7 +1865,7 @@ HttpClient::nodes_view(Request& request)
 	for (auto& node : Node::nodes()) {
 		if (node->idx) {
 			auto obj = MsgPack::MAP();
-			obj["id"] = node->idx;
+			obj["idx"] = node->idx;
 			obj["name"] = node->name();
 			if (Node::is_active(node)) {
 				obj["host"] = node->host();
