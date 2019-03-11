@@ -90,9 +90,10 @@ class RoutingSelector(ConnectionSelector):
     def select(self, pool, **kwargs):
         routing = kwargs['params'].get('routing', kwargs['path'][0])
         connections = pool.orig_connections
-        idx = jump_consistent_hash(routing, len(connections))
-        for i in range(len(connections)):
-            connection = connections[idx + i]
+        size = len(connections)
+        idx = jump_consistent_hash(routing, size)
+        for i in range(size):
+            connection = connections[(idx + i) % size]
             if connection not in pool.dead_count:
                 return connection
 
