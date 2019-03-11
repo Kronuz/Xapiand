@@ -280,16 +280,19 @@ parseOptions(int argc, char** argv)
 
 		SwitchArg iterm2("", "iterm2", "Set marks, tabs, title, badges and growl.", cmd, false);
 
-		SwitchArg log_epoch("", "log-epoch", "Logs timestamp as epoch time.", cmd, false);
-		SwitchArg log_iso8601("", "log-iso8601", "Logs timestamp as iso8601.", cmd, false);
-		SwitchArg log_timeless("", "log-timeless", "Logs without timestamp.", cmd, false);
-		SwitchArg log_plainseconds("", "log-seconds", "Log timestamps with plain seconds.", cmd, false);
-		SwitchArg log_milliseconds("", "log-milliseconds", "Log timestamps with milliseconds.", cmd, false);
-		SwitchArg log_microseconds("", "log-microseconds", "Log timestamps with microseconds.", cmd, false);
-		SwitchArg log_threads("", "log-threads", "Logs thread names.", cmd, false);
-#ifndef NDEBUG
-		SwitchArg log_location("", "log-location", "Logs log location.", cmd, false);
-#endif
+		std::vector<std::string> log_allowed({
+			"epoch",
+			"iso8601",
+			"timeless",
+			"seconds",
+			"milliseconds",
+			"microseconds",
+			"thread-names",
+			"locations",
+		});
+		ValuesConstraint<std::string> log_constraint(log_allowed);
+		MultiArg<std::string> log("", "log", "Enable logging settings.", false, &log_constraint, cmd);
+
 		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
 		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
 
@@ -377,22 +380,40 @@ parseOptions(int argc, char** argv)
 
 		o.iterm2 = iterm2.getValue();
 
-		o.log_epoch = log_epoch.getValue();
-		o.log_iso8601 = log_iso8601.getValue();
-		o.log_timeless = log_timeless.getValue();
-		o.log_plainseconds = log_plainseconds.getValue();
-		o.log_milliseconds = log_milliseconds.getValue();
-		o.log_microseconds = log_microseconds.getValue();
+		for (const auto& u : log.getValue()) {
+			switch (fnv1ah32::hash(u)) {
+				case fnv1ah32::hash("epoch"):
+					o.log_epoch = true;
+					break;
+				case fnv1ah32::hash("iso8601"):
+					o.log_iso8601 = true;
+					break;
+				case fnv1ah32::hash("timeless"):
+					o.log_timeless = true;
+					break;
+				case fnv1ah32::hash("seconds"):
+					o.log_plainseconds = true;
+					break;
+				case fnv1ah32::hash("milliseconds"):
+					o.log_milliseconds = true;
+					break;
+				case fnv1ah32::hash("microseconds"):
+					o.log_microseconds = true;
+					break;
+				case fnv1ah32::hash("thread-names"):
+					o.log_threads = true;
+					break;
+#ifndef NDEBUG
+				case fnv1ah32::hash("locations"):
+					o.log_location = true;
+					break;
+#endif
+			}
+		}
 #ifndef NDEBUG
 		if (!o.log_plainseconds && !o.log_milliseconds && !o.log_microseconds) {
 			o.log_microseconds = true;
 		}
-#endif
-
-		o.log_threads = log_threads.getValue();
-
-#ifndef NDEBUG
-		o.log_location = log_location.getValue();
 #endif
 
 		o.database = database.getValue();
