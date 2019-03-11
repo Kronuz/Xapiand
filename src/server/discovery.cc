@@ -932,7 +932,7 @@ Discovery::db_updated(Message type, const std::string& message)
 			L_WARNING("Ignoring update for empty database path: {}!", repr(path));
 		} else {
 			// Replicate database from the other node
-			Endpoint remote_endpoint(path, node->idx);
+			Endpoint remote_endpoint(path, node);
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, local_endpoint.path, remote_endpoint, local_endpoint);
 		}
 	}

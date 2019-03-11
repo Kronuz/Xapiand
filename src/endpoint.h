@@ -60,16 +60,15 @@ class Endpoint {
 public:
 	static std::string cwd;
 
-	size_t node_idx;
-	std::string user, password, path, search;
+	std::string node_name, user, password, path, search;
 
 	Endpoint() = default;
 	Endpoint(const Endpoint& other);
 	Endpoint(Endpoint&& other);
-	Endpoint(const Endpoint& other, size_t node_idx_);
-	Endpoint(Endpoint&& other, size_t node_idx_);
+	Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node);
+	Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node);
 
-	Endpoint(std::string_view uri, size_t node_idx_ = 0);
+	Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node = nullptr);
 
 	Endpoint& operator=(const Endpoint& other);
 	Endpoint& operator=(Endpoint&& other);

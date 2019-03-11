@@ -623,26 +623,11 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	make_servers();
 
 	auto local_node = Node::local_node();
-	if (local_node->idx == 0) {
-		// During cluster bootstrap, local node index is zero,
-		// so we set both local and leader optimistically to 1.
-		Node node;
-		node = *local_node;
-		node.idx = 1;
-		auto put = Node::touch_node(node);
-		if (put.first == nullptr) {
-			local_node = Node::local_node();
-		} else {
-			local_node = put.first;
-			Node::leader_node(local_node);
-		}
-	}
-
 	auto leader_node = Node::leader_node();
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{".cluster", leader_node->idx};
+	Endpoint cluster_endpoint{".cluster", leader_node};
 	bool found = false;
 	try {
 		if (is_leader) {
@@ -725,7 +710,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			if (node->idx && !node->is_local()) {
 				auto index = string::format(".index/{}", node->idx);
 				Endpoint endpoint{index};
-				Endpoint remote_endpoint{index, node->idx};
+				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
 			}
 		}
@@ -1405,7 +1390,7 @@ index_calculate_replicas(const std::string& normalized_path)
 		ASSERT(!nodes.empty());
 		auto node = nodes.front();  // first node is master
 		if (node->is_active()) {
-			Endpoint endpoint{string::format(".index/{}", node->idx), node->idx};
+			Endpoint endpoint{string::format(".index/{}", node->idx), node};
 			DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			MsgPack obj = {
 				{ RESERVED_STORE, false },
@@ -1535,7 +1520,7 @@ XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, const quer
 	for (const auto& node : resolve_index_nodes_impl(endpoint.path, query_field)) {
 		if (Node::is_active(node)) {
 			L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-			return {endpoint, node->idx};
+			return {endpoint, node};
 		}
 		L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 		if (query_field.primary) {

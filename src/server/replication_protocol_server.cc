@@ -205,7 +205,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	auto node = args.src_endpoint.node();
 	if (!node) {
 		if (args.cluster_database) {
-			L_CRIT("Cannot replicate cluster database (nonexistent node: {})", args.src_endpoint.node_idx);
+			L_CRIT("Cannot replicate cluster database (nonexistent node: {})", args.src_endpoint.node_name);
 			sig_exit(-EX_SOFTWARE);
 		}
 		return;

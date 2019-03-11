@@ -1398,7 +1398,7 @@ HttpClient::home_view(Request& request)
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
-	endpoints.add(Endpoint{".cluster", leader_node->idx});
+	endpoints.add(Endpoint{".cluster", leader_node});
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2662,7 +2662,7 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 			THROW(ClientError, "Nonexistent node: {}", node_name);
 		}
 		for (const auto& path : index_paths) {
-			endpoints.add(Endpoint{path, node->idx});
+			endpoints.add(Endpoint{path, node});
 		}
 #else
 		for (const auto& path : index_paths) {

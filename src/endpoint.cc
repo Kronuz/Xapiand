@@ -190,9 +190,11 @@ normalizer(const void *p, size_t size)
 std::string Endpoint::cwd("/");
 
 
-Endpoint::Endpoint(std::string_view uri, size_t node_idx_)
+Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node)
 {
-	node_idx = node_idx_;
+	if (node) {
+		node_name = node->lower_name();
+	}
 
 	auto protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
@@ -205,8 +207,8 @@ Endpoint::Endpoint(std::string_view uri, size_t node_idx_)
 	auto _port = slice_after(uri, ":");
 
 	if (protocol == "file") {
-		if (!node_idx) {
-			node_idx = Node::local_node()->idx;
+		if (node_name.empty()) {
+			node_name = Node::local_node()->lower_name();
 		}
 		if (_path.empty()) {
 			_path = uri;
@@ -214,19 +216,19 @@ Endpoint::Endpoint(std::string_view uri, size_t node_idx_)
 			_path = path = std::string(uri) + "/" + std::string(_path);
 		}
 	} else {
-		if (!node_idx) {
+		if (node_name.empty()) {
 			if (_port.empty() && uri.empty()) {
-				node_idx = Node::local_node()->idx;
+				node_name = Node::local_node()->lower_name();
 			} else if (_port.empty()) {
-				auto node = Node::get_node(uri);
-				if (node) {
-					node_idx = node->idx;
+				auto uri_node = Node::get_node(uri);
+				if (uri_node) {
+					node_name = uri_node->lower_name();
 				}
 			} else {
 				auto remote_port = strict_stoi(nullptr, _port);
-				for (auto& node : Node::nodes()) {
-					if (node->host() == uri && node->remote_port == remote_port) {
-						node_idx = node->idx;
+				for (auto& uri_node : Node::nodes()) {
+					if (uri_node->host() == uri && uri_node->remote_port == remote_port) {
+						node_name = uri_node->lower_name();
 						break;
 					}
 				}
@@ -252,12 +254,12 @@ Endpoint::Endpoint(std::string_view uri, size_t node_idx_)
 		path = normalizer<normalize>(_path.data(), _path.size());
 	}
 
-	ASSERT(node_idx != 0);
+	ASSERT(!node_name.empty());
 }
 
 
 Endpoint::Endpoint(const Endpoint& other) :
-	node_idx{other.node_idx},
+	node_name{other.node_name},
 	user{other.user},
 	password{other.password},
 	path{other.path},
@@ -267,7 +269,7 @@ Endpoint::Endpoint(const Endpoint& other) :
 
 
 Endpoint::Endpoint(Endpoint&& other) :
-	node_idx{std::move(other.node_idx)},
+	node_name{std::move(other.node_name)},
 	user{std::move(other.user)},
 	password{std::move(other.password)},
 	path{std::move(other.path)},
@@ -276,8 +278,8 @@ Endpoint::Endpoint(Endpoint&& other) :
 }
 
 
-Endpoint::Endpoint(const Endpoint& other, size_t node_idx_) :
-	node_idx{node_idx_},
+Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node) :
+	node_name{node->lower_name()},
 	user{other.user},
 	password{other.password},
 	path{other.path},
@@ -286,8 +288,8 @@ Endpoint::Endpoint(const Endpoint& other, size_t node_idx_) :
 }
 
 
-Endpoint::Endpoint(Endpoint&& other, size_t node_idx_) :
-	node_idx{node_idx_},
+Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
+	node_name{node->lower_name()},
 	user{std::move(other.user)},
 	password{std::move(other.password)},
 	path{std::move(other.path)},
@@ -299,7 +301,7 @@ Endpoint::Endpoint(Endpoint&& other, size_t node_idx_) :
 Endpoint&
 Endpoint::operator=(const Endpoint& other)
 {
-	node_idx = other.node_idx;
+	node_name = other.node_name;
 	user = other.user;
 	password = other.password;
 	path = other.path;
@@ -311,7 +313,7 @@ Endpoint::operator=(const Endpoint& other)
 Endpoint&
 Endpoint::operator=(Endpoint&& other)
 {
-	node_idx = std::move(other.node_idx);
+	node_name = std::move(other.node_name);
 	user = std::move(other.user);
 	password = std::move(other.password);
 	path = std::move(other.path);
@@ -365,7 +367,7 @@ Endpoint::to_string() const
 		}
 		ret += "@";
 	}
-	auto node = Node::get_node(node_idx);
+	auto node = Node::get_node(node_name);
 	ret += node->host();
 	if (node->remote_port > 0) {
 		ret += ":";
@@ -387,7 +389,7 @@ Endpoint::empty()
 const noexcept
 {
 	return (
-		node_idx == 0 &&
+		node_name.empty() &&
 		user.empty() &&
 		password.empty() &&
 		path.empty() &&
@@ -406,7 +408,7 @@ Endpoint::operator<(const Endpoint& other) const
 std::shared_ptr<const Node>
 Endpoint::node() const
 {
-	return Node::get_node(node_idx);
+	return Node::get_node(node_name);
 }
 
 
@@ -414,7 +416,7 @@ bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::local_node();
-	return node_idx == local_node->idx;
+	return node_name == local_node->lower_name();
 }
 
 
@@ -422,9 +424,8 @@ size_t
 Endpoint::hash() const
 {
 	static const std::hash<std::string> hash_fn_string;
-	static const std::hash<size_t> hash_fn_idx;
 	return (
-		hash_fn_idx(node_idx) ^
+		hash_fn_string(node_name) ^
 		hash_fn_string(user) ^
 		hash_fn_string(password) ^
 		hash_fn_string(path) ^
