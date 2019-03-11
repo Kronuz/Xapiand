@@ -369,6 +369,20 @@ Endpoint::to_string() const
 
 
 bool
+Endpoint::empty()
+const noexcept
+{
+	return (
+		node_idx == 0 &&
+		user.empty() &&
+		password.empty() &&
+		path.empty() &&
+		search.empty()
+	);
+}
+
+
+bool
 Endpoint::operator<(const Endpoint& other) const
 {
 	return hash() < other.hash();
@@ -396,10 +410,10 @@ Endpoint::hash() const
 	static const std::hash<std::string> hash_fn_string;
 	static const std::hash<size_t> hash_fn_idx;
 	return (
-		hash_fn_string(path) ^
+		hash_fn_idx(node_idx) ^
 		hash_fn_string(user) ^
 		hash_fn_string(password) ^
-		hash_fn_idx(node_idx) ^
+		hash_fn_string(path) ^
 		hash_fn_string(search)
 	);
 }
@@ -430,6 +444,16 @@ Endpoints::hash() const
 		hash ^= hash_fn(*j);
 	}
 	return hash;
+}
+
+
+void
+Endpoints::add(const Endpoint& endpoint)
+{
+	if (std::find(begin(), end(), endpoint) == end()) {
+		push_back(endpoint);
+		std::sort(begin(), end());
+	}
 }
 
 

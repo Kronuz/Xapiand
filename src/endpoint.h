@@ -77,14 +77,7 @@ public:
 	size_t hash() const;
 	std::string to_string() const;
 
-	bool empty() const noexcept {
-		return path.empty() || (
-			node_idx == 0 &&
-			user.empty() &&
-			password.empty() &&
-			search.empty()
-		);
-	}
+	bool empty() const noexcept;
 
 	std::shared_ptr<const Node> node() const;
 
@@ -114,10 +107,5 @@ public:
 	size_t hash() const;
 	std::string to_string() const;
 
-	void add(const Endpoint& endpoint) {
-		if (std::find(begin(), end(), endpoint) == end()) {
-			push_back(endpoint);
-			std::sort(begin(), end());
-		}
-	}
+	void add(const Endpoint& endpoint);
 };
