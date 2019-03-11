@@ -202,9 +202,17 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		return;
 	}
 
-	auto& node = args.src_endpoint.node;
-	int port = (node.replication_port == XAPIAND_REPLICATION_SERVERPORT) ? XAPIAND_REPLICATION_SERVERPORT : node.replication_port;
-	auto& host = node.host();
+	auto node = args.src_endpoint.node();
+	if (!node) {
+		if (args.cluster_database) {
+			L_CRIT("Cannot replicate cluster database (nonexistent node: {})", args.src_endpoint.node_idx);
+			sig_exit(-EX_SOFTWARE);
+		}
+		return;
+	}
+
+	int port = (node->replication_port == XAPIAND_REPLICATION_SERVERPORT) ? XAPIAND_REPLICATION_SERVERPORT : node->replication_port;
+	auto& host = node->host();
 
 	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
 	if (client_sock == -1) {
@@ -224,7 +232,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	}
 
 	client->start();
-	L_DEBUG("Database {} being synchronized from {}{}" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), args.src_endpoint.node.col().ansi(), args.src_endpoint.node.name());
+	L_DEBUG("Database {} being synchronized from {}{}" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), node->col().ansi(), node->name());
 }
 
 

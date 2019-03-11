@@ -77,6 +77,7 @@ catch_http_errors(Func&& func)
 			error_string = msg.c_str();
 		}
 		constexpr static auto _ = phf::make_phf({
+			hhl("Endpoint node is invalid"),
 			hhl("Endpoint node is inactive"),
 			hhl("Endpoint node without a valid port"),
 			hhl("Endpoint node not available"),
@@ -86,6 +87,7 @@ catch_http_errors(Func&& func)
 			hhl("Connection closed unexpectedly"),
 		});
 		switch (_.fhhl(error_string)) {
+			case _.fhhl("Endpoint node is invalid"):
 			case _.fhhl("Endpoint node is inactive"):
 			case _.fhhl("Endpoint node without a valid port"):
 			case _.fhhl("Endpoint node not available"):

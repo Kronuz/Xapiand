@@ -1398,7 +1398,7 @@ HttpClient::home_view(Request& request)
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
-	endpoints.add(Endpoint{".cluster", leader_node.get()});
+	endpoints.add(Endpoint{".cluster", leader_node->idx});
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2658,17 +2658,11 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 #ifdef XAPIAND_CLUSTERING
 		auto node_name = request.path_parser.get_hst();
 		auto node = Node::get_node(node_name);
+		if (!node) {
+			THROW(ClientError, "Nonexistent node: {}", node_name);
+		}
 		for (const auto& path : index_paths) {
-			auto endpoint = node
-				? Endpoint{path, node.get()}
-				: Endpoint{string::format("xapian://{}/{}", node_name, path), node.get()};
-			if (endpoint.node.remote_port == 0) {
-				endpoint.node.remote_port = XAPIAND_REMOTE_SERVERPORT;
-			}
-			if (endpoint.node.replication_port == 0) {
-				endpoint.node.replication_port = XAPIAND_REPLICATION_SERVERPORT;
-			}
-			endpoints.add(endpoint);
+			endpoints.add(Endpoint{path, node->idx});
 		}
 #else
 		for (const auto& path : index_paths) {

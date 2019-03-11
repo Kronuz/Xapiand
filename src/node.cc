@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "endpoint.h"
+#include "node.h"
 
 #include <cstdlib>              // for atoi
 

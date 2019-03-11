@@ -23,11 +23,12 @@
 #pragma once
 
 #include <algorithm>            // for std::find, std::sort
+#include <string>               // for std::string
+#include <string_view>          // for std::string_view
 #include <vector>               // for std::vector
 
-#include "node.h"
 
-
+class Node;
 class Endpoint;
 class Endpoints;
 
@@ -59,14 +60,14 @@ class Endpoint {
 public:
 	static std::string cwd;
 
-	Node node;
+	size_t node_idx;
 	std::string user, password, path, search;
 
 	Endpoint() = default;
-	Endpoint(std::string_view uri, const Node* node_ = nullptr, std::string_view node_name_ = "");
+	Endpoint(std::string_view uri, size_t node_idx_ = 0);
 
-	Endpoint(const Endpoint& other, const Node* node_ = nullptr);
-	Endpoint(Endpoint&& other, const Node* node_ = nullptr);
+	Endpoint(const Endpoint& other, size_t node_idx_ = 0);
+	Endpoint(Endpoint&& other, size_t node_idx_ = 0);
 
 	Endpoint& operator=(const Endpoint& other);
 	Endpoint& operator=(Endpoint&& other);
@@ -78,14 +79,14 @@ public:
 
 	bool empty() const noexcept {
 		return path.empty() || (
-			node.remote_port == -1 &&
+			node_idx == 0 &&
 			user.empty() &&
 			password.empty() &&
-			node.host().empty() &&
-			search.empty() &&
-			node.name().empty()
+			search.empty()
 		);
 	}
+
+	std::shared_ptr<const Node> node() const;
 
 	bool operator<(const Endpoint& other) const;
 };

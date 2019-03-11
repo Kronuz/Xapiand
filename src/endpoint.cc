@@ -24,7 +24,9 @@
 
 #include "config.h"         // for XAPIAND_*
 
+#include "cassert.h"        // for ASSERT
 #include "fs.hh"            // for normalize_path
+#include "node.h"           // for Node::
 #include "opts.h"           // for opts
 #include "serialise.h"      // for UUIDRepr, Serialise
 #include "string.hh"        // for string::format
@@ -188,18 +190,9 @@ normalizer(const void *p, size_t size)
 std::string Endpoint::cwd("/");
 
 
-Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view node_name_)
+Endpoint::Endpoint(std::string_view uri, size_t node_idx_)
 {
-	if (node_ == nullptr) {
-		auto local_node = Node::local_node();
-		node = *local_node;
-	} else {
-		node = *node_;
-	}
-
-	if (!node_name_.empty()) {
-		node.name(node_name_);
-	}
+	node_idx = node_idx_;
 
 	auto protocol = slice_before(uri, "://");
 	if (protocol.empty()) {
@@ -212,14 +205,33 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 	auto _port = slice_after(uri, ":");
 
 	if (protocol == "file") {
+		if (!node_idx) {
+			node_idx = Node::local_node()->idx;
+		}
 		if (_path.empty()) {
 			_path = uri;
 		} else {
 			_path = path = std::string(uri) + "/" + std::string(_path);
 		}
 	} else {
-		node.host(uri);
-		node.remote_port = strict_stoi(nullptr, _port);
+		if (!node_idx) {
+			if (_port.empty() && uri.empty()) {
+				node_idx = Node::local_node()->idx;
+			} else if (_port.empty()) {
+				auto node = Node::get_node(uri);
+				if (node) {
+					node_idx = node->idx;
+				}
+			} else {
+				auto remote_port = strict_stoi(nullptr, _port);
+				for (auto& node : Node::nodes()) {
+					if (node->host() == uri && node->remote_port == remote_port) {
+						node_idx = node->idx;
+						break;
+					}
+				}
+			}
+		}
 		search = _search;
 		password = _password;
 		user = _user;
@@ -239,33 +251,41 @@ Endpoint::Endpoint(std::string_view uri, const Node* node_, std::string_view nod
 	} else {
 		path = normalizer<normalize>(_path.data(), _path.size());
 	}
+
+	ASSERT(node_idx != 0);
 }
 
 
-Endpoint::Endpoint(const Endpoint& other, const Node* node_) :
-	node{node_ ? *node_ : other.node},
+Endpoint::Endpoint(const Endpoint& other, size_t node_idx_) :
+	node_idx{other.node_idx},
 	user{other.user},
 	password{other.password},
 	path{other.path},
 	search{other.search}
 {
+	if (node_idx_) {
+		node_idx = node_idx_;
+	}
 }
 
 
-Endpoint::Endpoint(Endpoint&& other, const Node* node_) :
-	node{node_ ? *node_ : std::move(other.node)},
+Endpoint::Endpoint(Endpoint&& other, size_t node_idx_) :
+	node_idx{std::move(other.node_idx)},
 	user{std::move(other.user)},
 	password{std::move(other.password)},
 	path{std::move(other.path)},
 	search{std::move(other.search)}
 {
+	if (node_idx_) {
+		node_idx = node_idx_;
+	}
 }
 
 
 Endpoint&
 Endpoint::operator=(const Endpoint& other)
 {
-	node = other.node;
+	node_idx = other.node_idx;
 	user = other.user;
 	password = other.password;
 	path = other.path;
@@ -277,7 +297,7 @@ Endpoint::operator=(const Endpoint& other)
 Endpoint&
 Endpoint::operator=(Endpoint&& other)
 {
-	node = std::move(other.node);
+	node_idx = std::move(other.node_idx);
 	user = std::move(other.user);
 	password = std::move(other.password);
 	path = std::move(other.path);
@@ -331,12 +351,13 @@ Endpoint::to_string() const
 		}
 		ret += "@";
 	}
-	ret += node.host();
-	if (node.remote_port > 0) {
+	auto node = Node::get_node(node_idx);
+	ret += node->host();
+	if (node->remote_port > 0) {
 		ret += ":";
-		ret += string::format("{}", node.remote_port);
+		ret += string::format("{}", node->remote_port);
 	}
-	if (!node.host().empty() || node.remote_port > 0) {
+	if (!node->host().empty() || node->remote_port > 0) {
 		ret += "/";
 	}
 	ret += path;
@@ -354,12 +375,18 @@ Endpoint::operator<(const Endpoint& other) const
 }
 
 
+std::shared_ptr<const Node>
+Endpoint::node() const
+{
+	return Node::get_node(node_idx);
+}
+
+
 bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::local_node();
-	int remote_port = local_node->remote_port;
-	return (node.host() == local_node->host() || node.host() == "127.0.0.1" || node.host() == "localhost") && node.remote_port == remote_port;
+	return node_idx == local_node->idx;
 }
 
 
@@ -367,13 +394,12 @@ size_t
 Endpoint::hash() const
 {
 	static const std::hash<std::string> hash_fn_string;
-	static const std::hash<int> hash_fn_int;
+	static const std::hash<size_t> hash_fn_idx;
 	return (
 		hash_fn_string(path) ^
 		hash_fn_string(user) ^
 		hash_fn_string(password) ^
-		hash_fn_string(node.host()) ^
-		hash_fn_int(node.remote_port) ^
+		hash_fn_idx(node_idx) ^
 		hash_fn_string(search)
 	);
 }

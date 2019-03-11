@@ -282,10 +282,14 @@ Database::reopen_writable()
 	const auto& endpoint = endpoints[0];
 	ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-	if (endpoint.node.remote_port == 0) {
+	auto node = endpoint.node();
+	if (!node) {
+		throw Xapian::NetworkError("Endpoint node is invalid");
+	}
+	if (node->remote_port == 0) {
 		throw Xapian::NetworkError("Endpoint node without a valid port");
 	}
-	if (!endpoint.node.is_active()) {
+	if (!node->is_active()) {
 		throw Xapian::NetworkError("Endpoint node is inactive");
 	}
 #endif  // XAPIAND_CLUSTERING
@@ -298,7 +302,7 @@ Database::reopen_writable()
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-		wsdb = Xapian::Remote::open_writable(endpoint.node.host(), endpoint.node.remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
+		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -404,10 +408,14 @@ Database::reopen_readable()
 	for (const auto& endpoint : endpoints) {
 		ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-		if (endpoint.node.remote_port == 0) {
+		auto node = endpoint.node();
+		if (!node) {
+			throw Xapian::NetworkError("Endpoint node is invalid");
+		}
+		if (node->remote_port == 0) {
 			throw Xapian::NetworkError("Endpoint node without a valid port");
 		}
-		if (!endpoint.node.is_active()) {
+		if (!node->is_active()) {
 			throw Xapian::NetworkError("Endpoint node is inactive");
 		}
 #endif  // XAPIAND_CLUSTERING
@@ -420,7 +428,7 @@ Database::reopen_readable()
 			: Xapian::DB_OPEN;
 		if (!endpoint.is_local()) {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Remote::open(endpoint.node.host(), endpoint.node.remote_port, 10000, 10000, _flags, endpoint.path);
+			rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");

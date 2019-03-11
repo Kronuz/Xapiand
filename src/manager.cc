@@ -627,7 +627,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{".cluster", leader_node.get()};
+	Endpoint cluster_endpoint{".cluster", leader_node->idx};
 	bool found = false;
 	try {
 		if (is_leader) {
@@ -710,7 +710,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			if (node->idx && !node->is_local()) {
 				auto index = string::format(".index/{}", node->idx);
 				Endpoint endpoint{index};
-				Endpoint remote_endpoint{index, node.get()};
+				Endpoint remote_endpoint{index, node->idx};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
 			}
 		}
@@ -1390,7 +1390,7 @@ index_calculate_replicas(const std::string& normalized_path)
 		ASSERT(!nodes.empty());
 		auto node = nodes.front();  // first node is master
 		if (node->is_active()) {
-			Endpoint endpoint{string::format(".index/{}", node->idx), node.get()};
+			Endpoint endpoint{string::format(".index/{}", node->idx), node->idx};
 			DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			MsgPack obj = {
 				{ RESERVED_STORE, false },
@@ -1520,7 +1520,7 @@ XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, const quer
 	for (const auto& node : resolve_index_nodes_impl(endpoint.path, query_field)) {
 		if (Node::is_active(node)) {
 			L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-			return {endpoint, node.get()};
+			return {endpoint, node->idx};
 		}
 		L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 		if (query_field.primary) {
