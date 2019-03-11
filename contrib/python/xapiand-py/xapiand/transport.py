@@ -226,10 +226,15 @@ class Transport(object):
         return node_info['nodes']
 
     def _get_node_info(self, node_info):
-        return self.node_info_callback(node_info, {
-            'host': node_info['host'],
-            'port': node_info['http_port'],
-        })
+        node_info.pop('replication_port', None)
+        node_info.pop('remote_port', None)
+        port = node_info.pop('http_port', None)
+        if port is not None:
+            node_info['port'] = port
+        idx = node_info.pop('id', None)
+        if idx is not None:
+            node_info['idx'] = idx
+        return node_info
 
     def sniff_hosts(self, initial=False):
         """
@@ -243,7 +248,8 @@ class Transport(object):
         """
         node_info = self._get_sniff_data(initial)
 
-        hosts = [self._get_node_info(n) for n in sorted(node_info, key=lambda x: x['id'])]
+        hosts = [self._get_node_info(n) for n in node_info]
+        hosts.sort(key=lambda x: x['idx'])
 
         # we weren't able to get any nodes or node_info_callback blocked all -
         # raise error.
