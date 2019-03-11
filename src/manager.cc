@@ -622,8 +622,23 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	make_servers();
 
-	auto leader_node = Node::leader_node();
 	auto local_node = Node::local_node();
+	if (local_node->idx == 0) {
+		// During cluster bootstrap, local node index is zero,
+		// so we set both local and leader optimistically to 1.
+		Node node;
+		node = *local_node;
+		node.idx = 1;
+		auto put = Node::touch_node(node);
+		if (put.first == nullptr) {
+			local_node = Node::local_node();
+		} else {
+			local_node = put.first;
+			Node::leader_node(local_node);
+		}
+	}
+
+	auto leader_node = Node::leader_node();
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
