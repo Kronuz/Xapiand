@@ -51,12 +51,6 @@ class ConnectionSelector(object):
     only select connections from it's own zones and only fall back to other
     connections where there would be none in it's zones.
     """
-    def __init__(self, opts):
-        """
-        :arg opts: dictionary of connection instances and their options
-        """
-        self.connection_opts = opts
-
     def select(self, pool, **kwargs):
         """
         Select a connection from the given list.
@@ -152,7 +146,7 @@ class ConnectionPool(object):
         self.dead_timeout = dead_timeout
         self.timeout_cutoff = timeout_cutoff
 
-        self.selector = selector_class(dict(connections))
+        self.selector = selector_class()
 
     def mark_dead(self, connection, now=None):
         """
