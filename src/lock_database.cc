@@ -86,3 +86,46 @@ lock_database::unlock() noexcept
 		}
 	}
 }
+
+
+const std::shared_ptr<Database>&
+lock_endpoint::database() const noexcept
+{
+	ASSERT(_locked_database);
+	return _locked_database;
+}
+
+
+Xapian::Database*
+lock_endpoint::db() const noexcept
+{
+	ASSERT(_locked_database);
+	return _locked_database ? _locked_database->db() : nullptr;
+}
+
+
+lock_endpoint::lock_endpoint(const Endpoints& endpoints, int flags) :
+	_database_locks(0),
+	endpoints(endpoints),
+	flags(flags)
+{
+	lock();
+}
+
+
+lock_endpoint::~lock_endpoint() noexcept
+{
+	while (_database_locks) {
+		unlock();
+	}
+}
+
+
+void
+lock_endpoint::unlock() noexcept
+{
+	if (_database_locks > 0 && --_database_locks == 0) {
+		ASSERT(_locked_database);
+		XapiandManager::database_pool()->checkin(_locked_database);
+	}
+}

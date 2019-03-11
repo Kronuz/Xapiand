@@ -86,3 +86,43 @@ lock_database::lock(Args&&... args)
 		}
 	}
 }
+
+
+class lock_endpoint {
+	std::shared_ptr<Database> _locked_database;
+	int _database_locks;
+
+	lock_endpoint(const lock_endpoint&) = delete;
+	lock_endpoint& operator=(const lock_endpoint&) = delete;
+
+public:
+	const Endpoints endpoints;
+	const int flags;
+
+	lock_endpoint(const Endpoints& endpoints, int flags);
+	lock_endpoint(const Endpoint& endpoint, int flags) : lock_endpoint(Endpoints{endpoint}, flags) {}
+	~lock_endpoint() noexcept;
+
+	void unlock() noexcept;
+
+	template <typename... Args>
+	void lock(Args&&... args);
+
+	const std::shared_ptr<Database>& database() const noexcept;
+	Xapian::Database* db() const noexcept;
+};
+
+
+template <typename... Args>
+inline void
+lock_endpoint::lock(Args&&... args)
+{
+	if (endpoints.empty()) {
+		return;
+	}
+	if (!_locked_database) {
+		ASSERT(_database_locks == 0);
+		_locked_database = XapiandManager::database_pool()->checkout(endpoints, flags, std::forward<Args>(args)...);
+	}
+	++_database_locks;
+}
