@@ -1598,15 +1598,24 @@ DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
+	delete_document_term(term_id, commit);
+}
+
+
+void
+DatabaseHandler::delete_document_term(const std::string& term, bool commit)
+{
+	L_CALL("DatabaseHandler::delete_document_term({})", repr(document_id));
+
 	lock_database lk_db(this);
-	database()->delete_document_term(term_id, commit);
+	return database()->delete_document_term(term, commit);
 }
 
 
 Xapian::docid
 DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit)
 {
-	L_CALL("Database::replace_document({}, <doc>)", did);
+	L_CALL("DatabaseHandler::replace_document({}, <doc>)", did);
 
 	lock_database lk_db(this);
 	return database()->replace_document(did, std::move(doc), commit);
@@ -1616,7 +1625,7 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 Xapian::docid
 DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit)
 {
-	L_CALL("Database::replace_document({}, <doc>)", did);
+	L_CALL("DatabaseHandler::replace_document({}, <doc>)", did);
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
@@ -1625,15 +1634,14 @@ DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	lock_database lk_db(this);
-	return database()->replace_document_term(term_id, std::move(doc), commit);
+	return replace_document_term(term_id, std::move(doc), commit);
 }
 
 
 Xapian::docid
 DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit)
 {
-	L_CALL("Database::replace_document({}, <doc>)", did);
+	L_CALL("DatabaseHandler::replace_document_term({}, <doc>)", did);
 
 	lock_database lk_db(this);
 	return database()->replace_document_term(term, std::move(doc), commit);
