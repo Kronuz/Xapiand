@@ -72,8 +72,8 @@ class RoundRobinSelector(ConnectionSelector):
     """
     Selector using round-robin.
     """
-    def __init__(self, opts):
-        super(RoundRobinSelector, self).__init__(opts)
+    def __init__(self):
+        super(RoundRobinSelector, self).__init__()
         self.data = threading.local()
 
     def select(self, pool, **kwargs):
