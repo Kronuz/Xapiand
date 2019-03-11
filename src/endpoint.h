@@ -64,10 +64,12 @@ public:
 	std::string user, password, path, search;
 
 	Endpoint() = default;
-	Endpoint(std::string_view uri, size_t node_idx_ = 0);
+	Endpoint(const Endpoint& other);
+	Endpoint(Endpoint&& other);
+	Endpoint(const Endpoint& other, size_t node_idx_);
+	Endpoint(Endpoint&& other, size_t node_idx_);
 
-	Endpoint(const Endpoint& other, size_t node_idx_ = 0);
-	Endpoint(Endpoint&& other, size_t node_idx_ = 0);
+	Endpoint(std::string_view uri, size_t node_idx_ = 0);
 
 	Endpoint& operator=(const Endpoint& other);
 	Endpoint& operator=(Endpoint&& other);

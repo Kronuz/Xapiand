@@ -256,29 +256,43 @@ Endpoint::Endpoint(std::string_view uri, size_t node_idx_)
 }
 
 
-Endpoint::Endpoint(const Endpoint& other, size_t node_idx_) :
+Endpoint::Endpoint(const Endpoint& other) :
 	node_idx{other.node_idx},
 	user{other.user},
 	password{other.password},
 	path{other.path},
 	search{other.search}
 {
-	if (node_idx_) {
-		node_idx = node_idx_;
-	}
 }
 
 
-Endpoint::Endpoint(Endpoint&& other, size_t node_idx_) :
+Endpoint::Endpoint(Endpoint&& other) :
 	node_idx{std::move(other.node_idx)},
 	user{std::move(other.user)},
 	password{std::move(other.password)},
 	path{std::move(other.path)},
 	search{std::move(other.search)}
 {
-	if (node_idx_) {
-		node_idx = node_idx_;
-	}
+}
+
+
+Endpoint::Endpoint(const Endpoint& other, size_t node_idx_) :
+	node_idx{node_idx_},
+	user{other.user},
+	password{other.password},
+	path{other.path},
+	search{other.search}
+{
+}
+
+
+Endpoint::Endpoint(Endpoint&& other, size_t node_idx_) :
+	node_idx{node_idx_},
+	user{std::move(other.user)},
+	password{std::move(other.password)},
+	path{std::move(other.path)},
+	search{std::move(other.search)}
+{
 }
 
 
