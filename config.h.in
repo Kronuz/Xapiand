@@ -507,6 +507,9 @@
    semantics (if one exists) */
 #cmakedefine SNPRINTF_ISO @SNPRINTF_ISO@
 
+/* Define to use ICU for CJK segmentation */
+#cmakedefine USE_ICU @USE_ICU@
+
 /* Defined if system uses ieee format to store floating point numbers */
 #cmakedefine FOLLOWS_IEEE @FOLLOWS_IEEE@
 
