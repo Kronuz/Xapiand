@@ -1557,7 +1557,7 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 std::string
 Database::get_metadata(const std::string& key)
 {
-	L_CALL("Database::get_metadata({}, {})", repr(key));
+	L_CALL("Database::get_metadata({})", repr(key));
 
 	std::string value;
 
