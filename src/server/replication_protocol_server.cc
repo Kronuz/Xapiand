@@ -172,12 +172,8 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 
 	if (string::startswith(normalized_path, ".xapiand/")) {
-		int errno_save;
-		strict_stoll(&errno_save, &normalized_path[9]);
-		if (errno_save == 0) {
-			// Index databases are always replicated
-			replicated = true;
-		}
+		// Index databases are always replicated
+		replicated = true;
 	}
 
 	if (!replicated && exists(normalized_path + "/iamglass")) {
