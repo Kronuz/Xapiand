@@ -779,11 +779,11 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 ########################################################################
 
 # ICU's UTF-8 word boundary code was broken before 54.1.
-find_package(ICU 54.1)
+find_package(ICU 54.1 COMPONENTS uc)
 if (ICU_FOUND)
 	set (USE_ICU 1)
-	target_include_directories(${XAPIAN_OBJ} BEFORE PRIVATE "${ICU_INCLUDE_DIRS}")
-	target_link_libraries(${XAPIAN_OBJ} PRIVATE ${ICU_LIBRARIES})
+	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${ICU_INCLUDE_DIRS}")
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${ICU_LIBRARIES})
 else ()
 	set (USE_ICU 0)
 endif ()
