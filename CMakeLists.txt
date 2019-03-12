@@ -931,6 +931,24 @@ foreach (_snprintf "snprintf" "_snprintf")
 	endif ()
 endforeach ()
 
+# Check if IEEE-754 is followed for representing floating point numbers by the platform.
+check_cxx_source_runs("
+#include <cstdint>
+#include <cstring>
+using namespace std;
+int main() {
+	double a = 2353.3523423;
+	uint64_t bit_pattern =
+	0b0100000010100010011000101011010001100110001101011011111011111111;
+	if (memcmp(&bit_pattern, &a, sizeof(double)) == 0) return 0;
+	return 1;
+}" IEEE)
+if (IEEE)
+		if (NOT IEEE_EXITCODE)
+			set (FOLLOWS_IEEE 1)
+		endif ()
+endif ()
+
 foreach (_pread_prototype "" "extern \"C\" ssize_t pread(int, void *, size_t, off_t) throw ();" "extern \"C\" ssize_t pread(int, void *, size_t, off_t);")
 	check_cxx_source_compiles("
 		#include <sys/types.h>

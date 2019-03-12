@@ -507,6 +507,9 @@
    semantics (if one exists) */
 #cmakedefine SNPRINTF_ISO @SNPRINTF_ISO@
 
+/* Defined if system uses ieee format to store floating point numbers */
+#cmakedefine FOLLOWS_IEEE @FOLLOWS_IEEE@
+
 /* type to use for 5th parameter to getsockopt */
 #cmakedefine SOCKLEN_T @SOCKLEN_T@
 
