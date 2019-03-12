@@ -24,6 +24,7 @@
 
 #include "xapian/backends/honey/honey_cursor.h"
 
+#include <cerrno>
 #include <string>
 
 #ifdef DEBUGGING

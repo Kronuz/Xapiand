@@ -59,12 +59,7 @@ namespace Remote {
  *				Xapian::NetworkTimeoutError is thrown.  A
  *				timeout of 0 means don't timeout.  (Default is
  *				10000ms, which is 10 seconds).
- * @param flags		bitwise-or of Xapian::DB_* constants.
- * @param dir		database directory index to open.
  */
-XAPIAN_VISIBILITY_DEFAULT
-Database open(const std::string &host, unsigned int port, unsigned timeout, unsigned connect_timeout, int flags, const std::string &dir);
-
 XAPIAN_VISIBILITY_DEFAULT
 Database open(const std::string &host, unsigned int port, unsigned timeout = 10000, unsigned connect_timeout = 10000);
 
@@ -85,12 +80,8 @@ Database open(const std::string &host, unsigned int port, unsigned timeout = 100
  *				Xapian::NetworkTimeoutError is thrown.  A
  *				timeout of 0 means don't timeout.  (Default is
  *				10000ms, which is 10 seconds).
- * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
- * @param dir		database directory index to open.
+ * @param flags		Xapian::DB_RETRY_LOCK or 0.
  */
-XAPIAN_VISIBILITY_DEFAULT
-WritableDatabase open_writable(const std::string &host, unsigned int port, unsigned timeout, unsigned connect_timeout, int flags, const std::string &dir);
-
 XAPIAN_VISIBILITY_DEFAULT
 WritableDatabase open_writable(const std::string &host, unsigned int port, unsigned timeout = 0, unsigned connect_timeout = 10000, int flags = 0);
 
@@ -107,12 +98,7 @@ WritableDatabase open_writable(const std::string &host, unsigned int port, unsig
  *			then Xapian::NetworkTimeoutError is thrown.  A timeout
  *			of 0 means don't timeout.  (Default is 10000ms, which
  *			is 10 seconds).
- * @param flags		bitwise-or of Xapian::DB_* constants.
- * @param dir		database directory index to open.
  */
-XAPIAN_VISIBILITY_DEFAULT
-Database open(const std::string &program, const std::string &args, unsigned timeout, int flags, const std::string &dir);
-
 XAPIAN_VISIBILITY_DEFAULT
 Database open(const std::string &program, const std::string &args, unsigned timeout = 10000);
 
@@ -128,12 +114,8 @@ Database open(const std::string &program, const std::string &args, unsigned time
  *			for any individual operation on the remote database
  *			then Xapian::NetworkTimeoutError is thrown.  (Default
  *			is 0, which means don't timeout).
- * @param flags		Xapian::DB_RETRY_LOCK or bitwise-or of Xapian::DB_* constants.
- * @param dir		database directory index to open.
+ * @param flags		Xapian::DB_RETRY_LOCK or 0.
  */
-XAPIAN_VISIBILITY_DEFAULT
-WritableDatabase open_writable(const std::string &program, const std::string &args, unsigned timeout, int flags, const std::string &dir);
-
 XAPIAN_VISIBILITY_DEFAULT
 WritableDatabase open_writable(const std::string &program, const std::string &args, unsigned timeout = 0, int flags = 0);
 

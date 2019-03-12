@@ -21,6 +21,8 @@
 
 #include "config.h"
 
+#include <cerrno>
+
 #ifdef __CYGWIN__
 # include "xapian/common/posixy_wrapper.h"
 
@@ -57,7 +59,6 @@ posixy_unlink(const char * filename)
 
 #include <io.h>
 
-#include <cerrno>
 #include "xapian/common/safefcntl.h"
 #include "xapian/common/safewindows.h"
 

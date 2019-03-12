@@ -295,7 +295,26 @@ GlassVersion::write(glass_revision_number_t new_rev, int flags)
 	else
 	    tmpfile += "/v.tmp";
 
-	fd = posixy_open(tmpfile.c_str(), O_CREAT|O_TRUNC|O_WRONLY|O_BINARY, 0666);
+#ifdef __EMSCRIPTEN__
+	// Emscripten fails to create a file if O_TRUNC is specified and the
+	// filename is the previous name of a renamed file (which it will be
+	// the second time we write out the version file for a DB):
+	//
+	// https://github.com/emscripten-core/emscripten/issues/8187
+	//
+	// We avoid triggering this bug by not using O_TRUNC and instead
+	// truncating once the file is opened.
+	fd = posixy_open(tmpfile.c_str(),
+			 O_CREAT|O_WRONLY|O_BINARY,
+			 0666);
+	if (fd >= 0)
+	    ftruncate(fd, 0);
+#else
+	fd = posixy_open(tmpfile.c_str(),
+			 O_CREAT|O_TRUNC|O_WRONLY|O_BINARY,
+			 0666);
+#endif
+
 	if (rare(fd < 0))
 	    throw Xapian::DatabaseOpeningError("Couldn't write new rev file: " + tmpfile,
 					       errno);
@@ -381,7 +400,7 @@ const size_t COMPRESS_MIN = 4;
 
 static const uint4 compress_min_tab[] = {
     0, // POSTLIST
-    0, // DOCDATA
+    COMPRESS_MIN, // DOCDATA
     COMPRESS_MIN, // TERMLIST
     0, // POSITION
     COMPRESS_MIN, // SPELLING

@@ -29,6 +29,8 @@
 
 #include "xapian/unicode/description_append.h"
 
+#include <cerrno>
+
 #ifdef DEBUGGING
 # include <iostream>
 #endif

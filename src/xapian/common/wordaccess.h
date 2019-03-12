@@ -25,8 +25,13 @@
 #ifndef XAPIAN_INCLUDED_WORDACCESS_H
 #define XAPIAN_INCLUDED_WORDACCESS_H
 
+#ifndef PACKAGE
+# error config.h must be included first in each C++ source file
+#endif
+
 #include <cstdint>
 #include <type_traits>
+#include <cstring>
 
 #include "xapian/common/alignment_cast.h"
 #include "xapian/common/omassert.h"

@@ -1,7 +1,7 @@
 /** @file  mset.h
  *  @brief Class representing a list of search results
  */
-/* Copyright (C) 2015,2016,2017 Olly Betts
+/* Copyright (C) 2015,2016,2017,2019 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -66,7 +66,7 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
     /// Class representing the MSet internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, MSet> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Copying is allowed.
      *
@@ -251,7 +251,38 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 	 *  was found in text. If not enabled, snippet() returns a (sub)string
 	 *  of text without any highlighted terms.
 	 */
-	SNIPPET_EMPTY_WITHOUT_MATCH = 4
+	SNIPPET_EMPTY_WITHOUT_MATCH = 4,
+
+	/** Enable generation of n-grams from CJK text.
+	 *
+	 *  This option highlights CJK searches made using the QueryParser
+	 *  FLAG_CJK_NGRAM flag.  Non-CJK characters are split into words as
+	 *  normal.
+	 *
+	 *  The TermGenerator FLAG_CJK_NGRAM flag needs to have been used at
+	 *  index time.
+	 *
+	 *  This mode can also be enabled by setting environment variable
+	 *  XAPIAN_CJK_NGRAM to a non-empty value (but doing so was deprecated
+	 *  in 1.4.11).
+	 *
+	 *  @since Added in Xapian 1.4.11.
+	 */
+	SNIPPET_CJK_NGRAM = 2048,
+
+	/** Enable generation of words from CJK text.
+	 *
+	 *  This option highlights CJK searches made using the QueryParser
+	 *  FLAG_CJK_WORDS flag.  Spans of CJK characters are split into CJK
+	 *  words using text boundary heuristics.  Non-CJK characters are
+	 *  split into words as normal.
+	 *
+	 *  The TermGenerator FLAG_CJK_WORDS flag needs to have been used at
+	 *  index time.
+	 *
+	 *  @since Added in Xapian 1.5.0.
+	 */
+	SNIPPET_CJK_WORDS = 4096
     };
 
     /** Generate a snippet.
@@ -347,14 +378,6 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 
     /** Return iterator pointing to the last object in this MSet. */
     MSetIterator back() const;
-
-    /** Serialise MSet into a string.
-     */
-    std::string serialise() const;
-
-    /** Unserialise an MSet from a string produced by serialise().
-      */
-    static MSet unserialise(const std::string &s);
 
     /// Return a string describing this object.
     std::string get_description() const;

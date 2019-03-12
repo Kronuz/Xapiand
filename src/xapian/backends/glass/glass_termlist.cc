@@ -45,9 +45,11 @@ GlassTermList::GlassTermList(intrusive_ptr<const GlassDatabase> db_,
 
     if (!db->termlist_table.get_exact_entry(GlassTermListTable::make_key(did),
 					    data)) {
-	(void)throw_if_not_present;
-	pos = NULL;
-	return;
+	if (!throw_if_not_present) {
+	    pos = NULL;
+	    return;
+	}
+	throw Xapian::DocNotFoundError("No termlist for document " + str(did));
     }
 
     pos = data.data();

@@ -90,7 +90,7 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
     /// Class representing the Database internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, Database> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Add shards from another Database.
      *
