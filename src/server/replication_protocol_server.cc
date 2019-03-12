@@ -171,9 +171,9 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	}
 
 
-	if (string::startswith(normalized_path, ".index/")) {
+	if (string::startswith(normalized_path, ".cluster/.")) {
 		int errno_save;
-		strict_stoll(&errno_save, &normalized_path[7]);
+		strict_stoll(&errno_save, &normalized_path[10]);
 		if (errno_save == 0) {
 			// Index databases are always replicated
 			replicated = true;

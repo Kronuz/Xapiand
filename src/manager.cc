@@ -708,7 +708,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Request updates from indexes databases
 		for (auto& node : Node::nodes()) {
 			if (node->idx && !node->is_local()) {
-				auto index = string::format(".index/{}", node->idx);
+				auto index = string::format(".cluster/.{}", node->idx);
 				Endpoint endpoint{index};
 				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
@@ -1390,7 +1390,7 @@ index_calculate_replicas(const std::string& normalized_path)
 		ASSERT(!nodes.empty());
 		auto node = nodes.front();  // first node is master
 		if (node->is_active()) {
-			Endpoint endpoint{string::format(".index/{}", node->idx), node};
+			Endpoint endpoint{string::format(".cluster/{}", node->idx), node};
 			DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			MsgPack obj = {
 				{ RESERVED_STORE, false },
@@ -1429,10 +1429,10 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 		return nodes;
 	}
 
-	if (string::startswith(normalized_path, ".index/")) {
+	if (string::startswith(normalized_path, ".cluster/.")) {
 		// Index databases are always in their specified node
 		int errno_save;
-		size_t idx = strict_stoll(&errno_save, &normalized_path[7]);
+		size_t idx = strict_stoll(&errno_save, &normalized_path[10]);
 		if (errno_save == 0) {
 			nodes.push_back(Node::get_node(idx));
 			nodes.push_back(Node::local_node());
@@ -1462,7 +1462,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					index_endpoints.add(Endpoint{string::format(".index/{}", node->idx)});
+					index_endpoints.add(Endpoint{string::format(".cluster/.{}", node->idx)});
 				}
 			}
 			try {
