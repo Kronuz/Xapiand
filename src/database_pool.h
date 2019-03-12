@@ -134,12 +134,7 @@ class DatabasePool : lru::LRU<Endpoint, std::unique_ptr<DatabaseEndpoint>> {
 
 	std::condition_variable checkin_clears_cond;
 
-	std::unordered_map<Endpoint, std::set<Endpoint>> endpoints_map;
-
 	size_t max_database_readers;
-
-	void _lot_endpoints(const Endpoint& endpoint);
-	void _drop_endpoints(const Endpoint& endpoint);
 
 	ReferencedDatabaseEndpoint _spawn(const Endpoint& endpoint);
 	ReferencedDatabaseEndpoint spawn(const Endpoint& endpoint);
@@ -158,7 +153,6 @@ public:
 	DatabasePool& operator=(DatabasePool&&) = delete;
 
 	std::vector<ReferencedDatabaseEndpoint> endpoints() const;
-	std::vector<ReferencedDatabaseEndpoint> endpoints(const Endpoint& endpoint) const;
 
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);

@@ -506,26 +506,6 @@ DatabasePool::endpoints() const
 }
 
 
-std::vector<ReferencedDatabaseEndpoint>
-DatabasePool::endpoints(const Endpoint& endpoint) const
-{
-	std::vector<ReferencedDatabaseEndpoint> database_endpoints;
-
-	std::lock_guard<std::mutex> lk(mtx);
-	auto it = endpoints_map.find(endpoint);
-	if (it != endpoints_map.end()) {
-		database_endpoints.reserve(it->second.size());
-		for (auto& endpoints : it->second) {
-			auto referenced_database_endpoint = _get(endpoints);
-			if (referenced_database_endpoint) {
-				database_endpoints.push_back(std::move(referenced_database_endpoint));
-			}
-		}
-	}
-	return database_endpoints;
-}
-
-
 void
 DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 {
@@ -551,10 +531,9 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	auto is_ready_to_lock = [&] {
 		bool is_ready = true;
 		lk.unlock();
-		for (auto& referenced_database_endpoint : endpoints(database->endpoint)) {
-			if (referenced_database_endpoint->clear().second) {
-				is_ready = false;
-			}
+		auto referenced_database_endpoint = get(database->endpoint);
+		if (referenced_database_endpoint->clear().second) {
+			is_ready = false;
 		}
 		lk.lock();
 		return is_ready;
@@ -594,10 +573,9 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 	ASSERT(locks > 0);
 	--locks;
 
-	for (auto& referenced_database_endpoint : endpoints(database->endpoint)) {
-		referenced_database_endpoint->readables_cond.notify_all();
-		referenced_database_endpoint.reset();
-	}
+	auto referenced_database_endpoint = get(database->endpoint);
+	referenced_database_endpoint->readables_cond.notify_all();
+	referenced_database_endpoint.reset();
 }
 
 
@@ -645,29 +623,6 @@ DatabasePool::is_locked(const Endpoint& endpoint) const
 }
 
 
-void
-DatabasePool::_lot_endpoints(const Endpoint& endpoint)
-{
-	L_CALL("DatabasePool::_lot_endpoints({})", repr(endpoint.to_string()));
-
-	auto& endpoints_set = endpoints_map[endpoint];
-	endpoints_set.insert(endpoint);
-}
-
-
-void
-DatabasePool::_drop_endpoints(const Endpoint& endpoint)
-{
-	L_CALL("DatabasePool::_drop_endpoints({})", repr(endpoint.to_string()));
-
-	auto &endpoints_set = endpoints_map[endpoint];
-	endpoints_set.erase(endpoint);
-	if (endpoints_set.empty()) {
-		endpoints_map.erase(endpoint);
-	}
-}
-
-
 ReferencedDatabaseEndpoint
 DatabasePool::_spawn(const Endpoint& endpoint)
 {
@@ -686,7 +641,6 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 			return lru::DropAction::stop;
 		}, endpoint, std::make_unique<DatabaseEndpoint>(*this, endpoint));
 		database_endpoint = emplaced.first->second.get();
-		_lot_endpoints(*database_endpoint);
 	} else {
 		database_endpoint = it->second.get();
 	}
@@ -838,7 +792,6 @@ DatabasePool::cleanup(bool immediate)
 					L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
 					return lru::DropAction::leave;
 				}
-				_drop_endpoints(*database_endpoint);
 				L_DATABASE("Evict endpoint from full LRU: {}", repr(database_endpoint->to_string()));
 				return lru::DropAction::evict;
 			}
@@ -855,7 +808,6 @@ DatabasePool::cleanup(bool immediate)
 				L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
 				return lru::DropAction::leave;
 			}
-			_drop_endpoints(*database_endpoint);
 			L_DATABASE("Evict endpoint: {}", repr(database_endpoint->to_string()));
 			return lru::DropAction::evict;
 		}
