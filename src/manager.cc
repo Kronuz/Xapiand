@@ -245,7 +245,7 @@ XapiandManager::load_node_name()
 
 	ssize_t length = 0;
 	char buf[512];
-	int fd = io::open("node", O_RDONLY | O_CLOEXEC);
+	int fd = io::open(".xapiand/node", O_RDONLY | O_CLOEXEC);
 	if (fd != -1) {
 		length = io::read(fd, buf, sizeof(buf) - 1);
 		io::close(fd);
@@ -262,7 +262,7 @@ XapiandManager::save_node_name(std::string_view node_name)
 {
 	L_CALL("XapiandManager::save_node_name({})", node_name);
 
-	int fd = io::open("node", O_WRONLY | O_CREAT, 0644);
+	int fd = io::open(".xapiand/node", O_WRONLY | O_CREAT, 0644);
 	if (fd != -1) {
 		if (io::write(fd, node_name.data(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
 			THROW(Error, "Cannot write in node file");
@@ -627,7 +627,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{".cluster", leader_node};
+	Endpoint cluster_endpoint{".xapiand", leader_node};
 	bool found = false;
 	try {
 		if (is_leader) {
@@ -699,7 +699,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (!is_leader) {
 			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
-			_replication->trigger_replication({cluster_endpoint, Endpoint{".cluster"}, true});
+			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand"}, true});
 		} else {
 			load_nodes();
 			set_cluster_database_ready_impl();
@@ -708,7 +708,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Request updates from indexes databases
 		for (auto& node : Node::nodes()) {
 			if (node->idx && !node->is_local()) {
-				auto index = string::format(".cluster/.{}", node->idx);
+				auto index = string::format(".xapiand/{}", node->idx);
 				Endpoint endpoint{index};
 				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
@@ -1316,7 +1316,7 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	Endpoint cluster_endpoint{".cluster"};
+	Endpoint cluster_endpoint{".xapiand"};
 	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_all_mset();
 	const auto m_e = mset.end();
@@ -1390,7 +1390,7 @@ index_calculate_replicas(const std::string& normalized_path)
 		ASSERT(!nodes.empty());
 		auto node = nodes.front();  // first node is master
 		if (node->is_active()) {
-			Endpoint endpoint{string::format(".cluster/{}", node->idx), node};
+			Endpoint endpoint{string::format(".xapiand/{}", node->idx), node};
 			DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			MsgPack obj = {
 				{ RESERVED_STORE, false },
@@ -1422,17 +1422,17 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 	std::vector<std::shared_ptr<const Node>> nodes;
 
 #ifdef XAPIAND_CLUSTERING
-	if (normalized_path == ".cluster") {
+	if (normalized_path == ".xapiand") {
 		// Cluster database is always in the master
 		nodes.push_back(Node::leader_node());
 		nodes.push_back(Node::local_node());
 		return nodes;
 	}
 
-	if (string::startswith(normalized_path, ".cluster/.")) {
+	if (string::startswith(normalized_path, ".xapiand/")) {
 		// Index databases are always in their specified node
 		int errno_save;
-		size_t idx = strict_stoll(&errno_save, &normalized_path[10]);
+		size_t idx = strict_stoll(&errno_save, &normalized_path[9]);
 		if (errno_save == 0) {
 			nodes.push_back(Node::get_node(idx));
 			nodes.push_back(Node::local_node());
@@ -1462,7 +1462,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					index_endpoints.add(Endpoint{string::format(".cluster/.{}", node->idx)});
+					index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->idx)});
 				}
 			}
 			try {

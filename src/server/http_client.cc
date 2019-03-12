@@ -1398,7 +1398,7 @@ HttpClient::home_view(Request& request)
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
-	endpoints.add(Endpoint{".cluster", leader_node});
+	endpoints.add(Endpoint{".xapiand", leader_node});
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2628,7 +2628,7 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 		Endpoints index_endpoints;
 		for (auto& node : Node::nodes()) {
 			if (node->idx) {
-				index_endpoints.add(Endpoint{string::format(".cluster/.{}", node->idx)});
+				index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->idx)});
 			}
 		}
 		DatabaseHandler db_handler;

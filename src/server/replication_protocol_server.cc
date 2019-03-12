@@ -165,15 +165,15 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	const auto& normalized_path = args.src_endpoint.path;
 
-	if (normalized_path == ".cluster") {
+	if (normalized_path == ".xapiand") {
 		// Cluster database is always updated
 		replicated = true;
 	}
 
 
-	if (string::startswith(normalized_path, ".cluster/.")) {
+	if (string::startswith(normalized_path, ".xapiand/")) {
 		int errno_save;
-		strict_stoll(&errno_save, &normalized_path[10]);
+		strict_stoll(&errno_save, &normalized_path[9]);
 		if (errno_save == 0) {
 			// Index databases are always replicated
 			replicated = true;
