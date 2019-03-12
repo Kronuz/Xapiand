@@ -588,49 +588,51 @@ void usedir(std::string_view path, bool force) {
 		directory.resize(directory.size() - 9);
 	}
 	auto xapiand_directory = directory + "/.xapiand";
-	if (!force) {
-		DIR *dirp;
-		dirp = opendir(xapiand_directory.c_str(), true);
-		if (!dirp) {
-			L_CRIT("Cannot open working directory: {}", directory);
-			throw SystemExit(EX_OSFILE);
-		}
 
-		bool empty = true;
-		struct dirent *ent;
-		while ((ent = readdir(dirp)) != nullptr) {
-			const char *s = ent->d_name;
-			if (ent->d_type == DT_DIR) {
-				continue;
-			}
-			if (ent->d_type == DT_REG) {
-				if (
-					std::strcmp(s, "node") == 0 ||
-					std::strcmp(s, "iamchert") == 0 ||
-					std::strcmp(s, "iamglass") == 0 ||
-					std::strcmp(s, "iamhoney") == 0
-				) {
-					empty = true;
-					break;
-				}
-			}
-			empty = false;
-		}
-		closedir(dirp);
-
-		if (!empty) {
-			L_CRIT("Working directory must be empty or a valid Xapiand database: {}", directory);
-			throw SystemExit(EX_DATAERR);
-		}
-	}
-
-	if (mkdirs(xapiand_directory)) {
-		if (chdir(directory) == -1) {
-			L_CRIT("Cannot change current working directory to {}", directory);
+	if (force) {
+		if (!mkdirs(xapiand_directory)) {
+			L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(directory), error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSFILE);
 		}
 	} else {
-		L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(directory), error::name(errno), errno, error::description(errno));
+		if (!mkdir(directory) || !mkdir(xapiand_directory)) {
+			L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(directory), error::name(errno), errno, error::description(errno));
+			throw SystemExit(EX_OSFILE);
+		}
+
+		DIR *dirp = opendir(xapiand_directory.c_str(), true);
+		if (dirp) {
+			bool empty = true;
+			struct dirent *ent;
+			while ((ent = readdir(dirp)) != nullptr) {
+				const char *s = ent->d_name;
+				if (ent->d_type == DT_DIR) {
+					continue;
+				}
+				if (ent->d_type == DT_REG) {
+					if (
+						std::strcmp(s, "node") == 0 ||
+						std::strcmp(s, "iamchert") == 0 ||
+						std::strcmp(s, "iamglass") == 0 ||
+						std::strcmp(s, "iamhoney") == 0
+					) {
+						empty = true;
+						break;
+					}
+				}
+				empty = false;
+			}
+			closedir(dirp);
+			if (!empty) {
+				L_CRIT("Working directory must be empty or a valid Xapiand database: {}", directory);
+				throw SystemExit(EX_DATAERR);
+			}
+		}
+	}
+
+	if (chdir(directory.c_str()) == -1) {
+		L_CRIT("Cannot change current working directory to {}", directory);
+		throw SystemExit(EX_OSFILE);
 	}
 
 	char buffer[PATH_MAX];
