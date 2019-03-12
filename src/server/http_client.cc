@@ -2632,7 +2632,7 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 		Endpoints index_endpoints;
 		for (auto& node : Node::nodes()) {
 			if (node->idx) {
-				index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->name())});
+				index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
 			}
 		}
 		DatabaseHandler db_handler;

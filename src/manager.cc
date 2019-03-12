@@ -708,7 +708,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Request updates from indexes databases
 		for (auto& node : Node::nodes()) {
 			if (node->idx && !node->is_local()) {
-				auto index = string::format(".xapiand/{}", node->name());
+				auto index = string::format(".xapiand/{}", node->lower_name());
 				Endpoint endpoint{index};
 				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
@@ -1423,7 +1423,7 @@ index_calculate_shards(const std::string& normalized_path)
 			auto idx = shards.front().front();  // The very first node is master
 			auto node = Node::get_node(idx);
 			if (node && node->is_active()) {
-				Endpoint endpoint{string::format(".xapiand/{}", node->name()), node};
+				Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				MsgPack obj = {
 					{ RESERVED_STORE, false },
@@ -1522,7 +1522,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->name())});
+					index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
 				}
 			}
 			try {
