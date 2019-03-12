@@ -507,6 +507,7 @@ Database::reopen_readable()
 	return created;
 }
 
+
 bool
 Database::reopen()
 {
