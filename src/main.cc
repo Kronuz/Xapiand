@@ -600,7 +600,7 @@ void usedir(std::string_view path, bool force) {
 			throw SystemExit(EX_OSFILE);
 		}
 
-		DIR *dirp = opendir(xapiand_directory.c_str(), true);
+		DIR *dirp = opendir(xapiand_directory);
 		if (dirp) {
 			bool empty = true;
 			struct dirent *ent;

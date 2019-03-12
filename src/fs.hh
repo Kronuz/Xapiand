@@ -48,13 +48,13 @@ bool mkdirs(std::string_view path);
 
 bool build_path_index(std::string_view path_index);
 
-DIR* opendir(std::string_view path, bool create);
+DIR* opendir(std::string_view path, bool create = false);
 
 void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix);
 
 // Copy all directory if file_name and new_name are empty
-int copy_file(std::string_view src, std::string_view dst, bool create=true, std::string_view file_name = "", std::string_view new_name = "");
+int copy_file(std::string_view src, std::string_view dst, bool create = true, std::string_view file_name = "", std::string_view new_name = "");
 
-char* normalize_path(const char* src, const char* end, char* dst, bool slashed=false);
-char* normalize_path(std::string_view src, char* dst, bool slashed=false);
-std::string normalize_path(std::string_view src, bool slashed=false);
+char* normalize_path(const char* src, const char* end, char* dst, bool slashed = false);
+char* normalize_path(std::string_view src, char* dst, bool slashed = false);
+std::string normalize_path(std::string_view src, bool slashed = false);
