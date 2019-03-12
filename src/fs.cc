@@ -152,6 +152,14 @@ bool exists(std::string_view path) {
 }
 
 
+bool mkdir(std::string_view path) {
+	if (::mkdir(stringified(path).c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
+		return false;
+	}
+	return true;
+}
+
+
 bool mkdirs(std::string_view path) {
 	L_CALL("mkdirs({})", repr(path));
 
@@ -166,7 +174,7 @@ bool mkdirs(std::string_view path) {
 	}
 	for (const auto& _dir : directories) {
 		dir.append(_dir).push_back('/');
-		if (::mkdir(dir.c_str(),  S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1 && errno != EEXIST) {
+		if (!mkdir(dir)) {
 			return false;
 		}
 	}

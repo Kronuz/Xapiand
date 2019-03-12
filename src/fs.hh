@@ -42,6 +42,8 @@ void move_files(std::string_view src, std::string_view dst);
 
 bool exists(std::string_view path);
 
+bool mkdir(std::string_view path);
+
 bool mkdirs(std::string_view path);
 
 bool build_path_index(std::string_view path_index);
