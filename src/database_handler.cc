@@ -2227,7 +2227,7 @@ committer_commit(std::weak_ptr<Database> weak_database) {
 		std::string error;
 
 		try {
-			DatabaseHandler db_handler(database->endpoints, DB_WRITABLE);
+			DatabaseHandler db_handler(Endpoints{Endpoint{database->endpoint}}, DB_WRITABLE);
 			db_handler.commit();
 		} catch (const Exception& exc) {
 			error = exc.get_message();
@@ -2238,9 +2238,9 @@ committer_commit(std::weak_ptr<Database> weak_database) {
 		auto end = std::chrono::system_clock::now();
 
 		if (error.empty()) {
-			L_DEBUG("Autocommit of {} succeeded after {}", repr(database->endpoints.to_string()), string::from_delta(start, end));
+			L_DEBUG("Autocommit of {} succeeded after {}", repr(database->endpoint.to_string()), string::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit of {} falied after {}: {}", repr(database->endpoints.to_string()), string::from_delta(start, end), error);
+			L_WARNING("Autocommit of {} falied after {}: {}", repr(database->endpoint.to_string()), string::from_delta(start, end), error);
 		}
 	}
 }

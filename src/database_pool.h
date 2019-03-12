@@ -57,7 +57,7 @@ class ReferencedDatabaseEndpoint;
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___| | | | (_| | |_) | (_) | | | | | |_\__ \
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
 //                                                             |_|
-class DatabaseEndpoint : public Endpoints
+class DatabaseEndpoint : public Endpoint
 {
 	friend Database;
 	friend DatabasePool;
@@ -90,7 +90,7 @@ class DatabaseEndpoint : public Endpoints
 	std::shared_ptr<Database>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
 
 public:
-	DatabaseEndpoint(DatabasePool& database_pool, const Endpoints& endpoints);
+	DatabaseEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
 
 	~DatabaseEndpoint();
 
@@ -125,7 +125,7 @@ public:
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/  __/ (_) | (_) | |
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
-class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
+class DatabasePool : lru::LRU<Endpoint, std::unique_ptr<DatabaseEndpoint>> {
 	friend DatabaseEndpoint;
 
 	mutable std::mutex mtx;
@@ -134,20 +134,20 @@ class DatabasePool : lru::LRU<Endpoints, std::unique_ptr<DatabaseEndpoint>> {
 
 	std::condition_variable checkin_clears_cond;
 
-	std::unordered_map<Endpoint, std::set<Endpoints>> endpoints_map;
+	std::unordered_map<Endpoint, std::set<Endpoint>> endpoints_map;
 
 	size_t max_database_readers;
 
-	void _lot_endpoints(const Endpoints& endpoints);
-	void _drop_endpoints(const Endpoints& endpoints);
+	void _lot_endpoints(const Endpoint& endpoint);
+	void _drop_endpoints(const Endpoint& endpoint);
 
-	ReferencedDatabaseEndpoint _spawn(const Endpoints& endpoints);
-	ReferencedDatabaseEndpoint spawn(const Endpoints& endpoints);
+	ReferencedDatabaseEndpoint _spawn(const Endpoint& endpoint);
+	ReferencedDatabaseEndpoint spawn(const Endpoint& endpoint);
 
-	ReferencedDatabaseEndpoint _get(const Endpoints& endpoints) const;
-	ReferencedDatabaseEndpoint get(const Endpoints& endpoints) const;
+	ReferencedDatabaseEndpoint _get(const Endpoint& endpoint) const;
+	ReferencedDatabaseEndpoint get(const Endpoint& endpoint) const;
 
-	bool notify_lockable(const Endpoints& endpoints);
+	bool notify_lockable(const Endpoint& endpoint);
 
 public:
 	DatabasePool(size_t database_pool_size, size_t max_database_readers);
@@ -163,14 +163,20 @@ public:
 	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Database>& database);
 
-	bool is_locked(const Endpoints& endpoints) const;
+	bool is_locked(const Endpoint& endpoint) const;
+
+	template <typename Func>
+	std::shared_ptr<Database> checkout(const Endpoint& endpoint, int flags, double timeout, Func&& func) {
+		std::packaged_task<void()> callback(std::forward<Func>(func));
+		return checkout(endpoint, flags, timeout, &callback);
+	}
+	std::shared_ptr<Database> checkout(const Endpoint& endpoint, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
 
 	template <typename Func>
 	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout, Func&& func) {
 		std::packaged_task<void()> callback(std::forward<Func>(func));
 		return checkout(endpoints, flags, timeout, &callback);
 	}
-
 	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
 
 	void checkin(std::shared_ptr<Database>& database);

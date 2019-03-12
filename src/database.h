@@ -85,7 +85,7 @@ private:
 	bool reopen_readable();
 
 public:
-	DatabaseEndpoint& endpoints;
+	DatabaseEndpoint& endpoint;
 	int flags;
 
 	std::atomic_bool busy;
@@ -142,7 +142,7 @@ public:
 
 	Transaction transaction;
 
-	Database(DatabaseEndpoint& endpoints_, int flags);
+	Database(DatabaseEndpoint& endpoint_, int flags);
 	~Database() noexcept;
 
 	bool reopen();
