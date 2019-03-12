@@ -152,8 +152,8 @@ bool exists(std::string_view path) {
 }
 
 
-bool build_path(std::string_view path) {
-	L_CALL("build_path({})", repr(path));
+bool mkdirs(std::string_view path) {
+	L_CALL("mkdirs({})", repr(path));
 
 	if (exists(path)) {
 		return true;
@@ -179,9 +179,9 @@ bool build_path_index(std::string_view path_index) {
 
 	size_t found = path_index.find_last_of('/');
 	if (found == std::string_view::npos) {
-		return build_path(path_index);
+		return mkdirs(path_index);
 	}
-	return build_path(path_index.substr(0, found));
+	return mkdirs(path_index.substr(0, found));
 }
 
 

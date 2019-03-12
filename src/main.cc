@@ -53,7 +53,7 @@
 #include "error.hh"                               // for error::name, error::description
 #include "ev/ev++.h"                              // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"                            // for SystemExit
-#include "fs.hh"                                  // for build_path
+#include "fs.hh"                                  // for mkdirs
 #include "hashes.hh"                              // for fnv1ah32
 #include "io.hh"                                  // for io::dup2, io::open, io::close, io::write
 #include "log.h"                                  // for L_INFO, L_CRIT, L_NOTICE
@@ -624,7 +624,7 @@ void usedir(std::string_view path, bool force) {
 		}
 	}
 
-	if (build_path(xapiand_directory)) {
+	if (mkdirs(xapiand_directory)) {
 		if (chdir(directory) == -1) {
 			L_CRIT("Cannot change current working directory to {}", directory);
 			throw SystemExit(EX_OSFILE);
