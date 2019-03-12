@@ -89,7 +89,7 @@
 
 #define QUERY_FIELD_PRIMARY    (1 << 0)
 #define QUERY_FIELD_WRITABLE   (1 << 1)
-#define QUERY_FIELD_COMMIT     ((1 << 2) | QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE)
+#define QUERY_FIELD_COMMIT     (1 << 2)
 #define QUERY_FIELD_SEARCH     (1 << 3)
 #define QUERY_FIELD_ID         (1 << 4)
 #define QUERY_FIELD_TIME       (1 << 5)
@@ -1505,7 +1505,7 @@ HttpClient::delete_document_view(Request& request)
 {
 	L_CALL("HttpClient::delete_document_view()");
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
 
 	std::string doc_id(request.path_parser.get_id());
@@ -1536,7 +1536,7 @@ HttpClient::delete_schema_view(Request& request)
 {
 	L_CALL("HttpClient::delete_schema_view()");
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
@@ -1572,7 +1572,7 @@ HttpClient::index_document_view(Request& request)
 		doc_id = request.path_parser.get_id();
 	}
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
@@ -1607,7 +1607,7 @@ HttpClient::write_schema_view(Request& request)
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
@@ -1640,7 +1640,7 @@ HttpClient::update_document_view(Request& request)
 {
 	L_CALL("HttpClient::update_document_view()");
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_COMMIT);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
 
 	std::string doc_id(request.path_parser.get_id());
@@ -1893,7 +1893,7 @@ HttpClient::touch_view(Request& request)
 {
 	L_CALL("HttpClient::touch_view()");
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
 	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
@@ -1923,7 +1923,7 @@ HttpClient::commit_view(Request& request)
 {
 	L_CALL("HttpClient::commit_view()");
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
 	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
@@ -2019,7 +2019,7 @@ HttpClient::restore_view(Request& request)
 	L_CALL("HttpClient::restore_view()");
 
 	if (request.begining) {
-		auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_WRITABLE);
+		auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
 		endpoints_maker(request, query_field);
 
 		request.processing = std::chrono::system_clock::now();
