@@ -245,26 +245,20 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 				// Database is just too old, reopen
 				reopen = true;
 			} else {
-				for (size_t i = 0; i < database->_databases.size(); ++i) {
-					const auto& db_pair = database->_databases[i];
-					bool local = db_pair.second;
-					if (local) {
-						auto referenced_database_endpoint = database_pool.get(*this);
-						if (referenced_database_endpoint) {
-							auto revision = referenced_database_endpoint->local_revision.load();
-							referenced_database_endpoint.reset();
-							if (revision != db_pair.first.get_revision()) {
-								// Local writable database has changed revision.
-								reopen = true;
-								break;
-							}
-						}
-					} else {
-						if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
-							// Remote database is too old, reopen.
+				if (database->is_local()) {
+					auto referenced_database_endpoint = database_pool.get(*this);
+					if (referenced_database_endpoint) {
+						auto revision = referenced_database_endpoint->local_revision.load();
+						referenced_database_endpoint.reset();
+						if (revision != database->get_revision()) {
+							// Local writable database has changed revision.
 							reopen = true;
-							break;
 						}
+					}
+				} else {
+					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
+						// Remote database is too old, reopen.
+						reopen = true;
 					}
 				}
 			}

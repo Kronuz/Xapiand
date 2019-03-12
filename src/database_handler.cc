@@ -1727,12 +1727,12 @@ DatabaseHandler::get_database_info()
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
+DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid)
 {
 	L_CALL("DatabaseHandler::storage_get_stored()");
 
 	lock_database lk_db(this);
-	return database()->storage_get_stored(locator, did);
+	return database()->storage_get_stored(locator);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 

@@ -321,8 +321,6 @@ Database::reopen_writable()
 	}
 
 	database->add_database(wsdb);
-	_databases.emplace_back(wsdb, localdb);
-
 
 	if (localdb) {
 		reopen_revision = database->get_revision();
@@ -338,15 +336,15 @@ Database::reopen_writable()
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
 		if ((flags & DB_NOSTORAGE) != DB_NOSTORAGE) {
-			writable_storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE));
-			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
+			writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 		} else {
-			writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-			storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
+			writable_storage = std::unique_ptr<DataStorage>(nullptr);
+			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 		}
 	} else {
-		writable_storages.push_back(std::unique_ptr<DataStorage>(nullptr));
-		storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+		writable_storage = std::unique_ptr<DataStorage>(nullptr);
+		storage = std::unique_ptr<DataStorage>(nullptr);
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
@@ -471,18 +469,19 @@ Database::reopen_readable()
 	}
 
 	database->add_database(rsdb);
-	_databases.emplace_back(rsdb, localdb);
 
-	if (!localdb) {
+	if (localdb) {
+		reopen_revision = database->get_revision();
+	} else {
 		local.store(false, std::memory_order_relaxed);
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
 		// WAL required on a local database, open it.
-		storages.push_back(std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN));
+		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 	} else {
-		storages.push_back(std::unique_ptr<DataStorage>(nullptr));
+		storage = std::unique_ptr<DataStorage>(nullptr);
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
@@ -596,9 +595,6 @@ Database::reset() noexcept
 	L_CALL("Database::reset()");
 
 	try {
-		_databases.clear();
-	} catch(...) {}
-	try {
 		_database.reset();
 	} catch(...) {}
 	reopen_revision = 0;
@@ -608,10 +604,10 @@ Database::reset() noexcept
 	incomplete.store(false, std::memory_order_relaxed);
 #ifdef XAPIAND_DATA_STORAGE
 	try {
-		storages.clear();
+		storage.reset();
 	} catch(...) {}
 	try {
-		writable_storages.clear();
+		writable_storage.reset();
 	} catch(...) {}
 #endif  // XAPIAND_DATA_STORAGE
 }
@@ -970,18 +966,13 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-Database::storage_get_stored(const Locator& locator, Xapian::docid did)
+Database::storage_get_stored(const Locator& locator)
 {
 	L_CALL("Database::storage_get_stored()");
 
 	ASSERT(locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored);
 	ASSERT(locator.volume != -1);
 
-	ASSERT(did > 0);
-	ASSERT(_databases.size() > 0);
-	int subdatabase = (did - 1) % _databases.size();
-
-	const auto& storage = storages[subdatabase];
 	if (storage) {
 		storage->open(string::format(DATA_STORAGE_PATH "{}", locator.volume));
 		storage->seek(static_cast<uint32_t>(locator.offset));
@@ -992,7 +983,7 @@ Database::storage_get_stored(const Locator& locator, Xapian::docid did)
 	locator_key.push_back('\x00');
 	locator_key.append(serialise_length(locator.volume));
 	locator_key.append(serialise_length(locator.offset));
-	return get_metadata(locator_key, subdatabase);
+	return get_metadata(locator_key);
 }
 
 
@@ -1008,10 +999,7 @@ Database::storage_push_blobs(std::string&& doc_data)
 		return pushed;
 	}
 
-	// Writable databases have only one subdatabase,
-	// simply get the single storage:
-	const auto& storage = writable_storages[0];
-	if (storage) {
+	if (writable_storage) {
 		auto data = Data(std::move(doc_data));
 		for (auto& locator : data) {
 			if (locator.size == 0) {
@@ -1022,18 +1010,18 @@ Database::storage_push_blobs(std::string&& doc_data)
 					uint32_t offset;
 					while (true) {
 						try {
-							if (storage->closed()) {
-								storage->volume = storage->get_volumes_range(DATA_STORAGE_PATH).second;
-								storage->open(string::format(DATA_STORAGE_PATH "{}", storage->volume));
+							if (writable_storage->closed()) {
+								writable_storage->volume = writable_storage->get_volumes_range(DATA_STORAGE_PATH).second;
+								writable_storage->open(string::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 							}
-							offset = storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
+							offset = writable_storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
 							break;
 						} catch (StorageEOF) {
-							++storage->volume;
-							storage->open(string::format(DATA_STORAGE_PATH "{}", storage->volume));
+							++writable_storage->volume;
+							writable_storage->open(string::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 						}
 					}
-					data.update(locator.ct_type, storage->volume, offset, locator.size);
+					data.update(locator.ct_type, writable_storage->volume, offset, locator.size);
 				}
 			}
 		}
@@ -1050,10 +1038,8 @@ Database::storage_commit()
 {
 	L_CALL("Database::storage_commit()");
 
-	for (auto& storage : writable_storages) {
-		if (storage) {
-			storage->commit();
-		}
+	if (writable_storage) {
+		writable_storage->commit();
 	}
 }
 #endif  // XAPIAND_DATA_STORAGE
@@ -1569,9 +1555,9 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 
 
 std::string
-Database::get_metadata(const std::string& key, int subdatabase)
+Database::get_metadata(const std::string& key)
 {
-	L_CALL("Database::get_metadata({}, {})", repr(key), subdatabase);
+	L_CALL("Database::get_metadata({}, {})", repr(key));
 
 	std::string value;
 
@@ -1583,7 +1569,6 @@ Database::get_metadata(const std::string& key, int subdatabase)
 	const char *p = key.data();
 	const char *p_end = p + key.size();
 	if (*p == '\x00') {
-		const auto& storage = storages[subdatabase];
 		if (storage) {
 			++p;
 			ssize_t volume = unserialise_length(&p, p_end);
@@ -1595,7 +1580,7 @@ Database::get_metadata(const std::string& key, int subdatabase)
 	}
 
 	db();
-	auto *rdb = static_cast<Xapian::Database *>(&_databases[subdatabase].first);
+	auto *rdb = static_cast<Xapian::Database *>(db());
 
 	for (int t = DB_RETRIES; t; --t) {
 		try {
@@ -1618,8 +1603,7 @@ Database::get_metadata(const std::string& key, int subdatabase)
 			break;
 		}
 		reopen();
-		db();
-		rdb = static_cast<Xapian::Database *>(&_databases[subdatabase].first);
+		rdb = static_cast<Xapian::Database *>(db());
 		L_DATABASE_WRAP_END("Database::get_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
@@ -1823,7 +1807,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 						case Locator::Type::stored:
 						case Locator::Type::compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(locator, did);
+							auto stored = storage_get_stored(locator);
 							auto content_type = unserialise_string_at(STORED_CONTENT_TYPE, stored);
 							auto blob = unserialise_string_at(STORED_BLOB, stored);
 							char type = toUType(locator.type);
@@ -1910,7 +1894,7 @@ Database::dump_documents()
 						case Locator::Type::stored:
 						case Locator::Type::compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(locator, did);
+							auto stored = storage_get_stored(locator);
 							obj["_data"].push_back(MsgPack({
 								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
 								{ "_type", "stored" },

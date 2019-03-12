@@ -127,11 +127,10 @@ public:
 	}
 
 	std::unique_ptr<Xapian::Database> _database;
-	std::vector<std::pair<Xapian::Database, bool>> _databases;
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::vector<std::unique_ptr<DataStorage>> writable_storages;
-	std::vector<std::unique_ptr<DataStorage>> storages;
+	std::unique_ptr<DataStorage> writable_storage;
+	std::unique_ptr<DataStorage> storage;
 #endif /* XAPIAND_DATA_STORAGE */
 
 #ifdef XAPIAND_DATABASE_WAL
@@ -150,7 +149,7 @@ public:
 	Xapian::Database* db();
 
 #ifdef XAPIAND_DATA_STORAGE
-	std::string storage_get_stored(const Locator& locator, Xapian::docid did);
+	std::string storage_get_stored(const Locator& locator);
 #endif /* XAPIAND_DATA_STORAGE */
 
 	UUID get_uuid();
@@ -183,7 +182,7 @@ public:
 	Xapian::Document get_document(Xapian::docid did, bool assume_valid_ = false);
 
 	std::vector<std::string> get_metadata_keys();
-	std::string get_metadata(const std::string& key, int subdatabase = 0);
+	std::string get_metadata(const std::string& key);
 	void set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
 
 	void dump_metadata(int fd, XXH32_state_t* xxh_state);
