@@ -72,7 +72,8 @@ extern struct opts_t {
 	ssize_t max_clients = 10;
 	ssize_t max_database_readers = 3;
 	ssize_t max_files = 0;  // (0 = automatic)
-	size_t num_replicas = 3;
+	size_t num_shards = 1;
+	size_t num_replicas = 0;
 	int flush_threshold = 100000;
 	unsigned int ev_flags = 0;
 	bool uuid_compact = false;

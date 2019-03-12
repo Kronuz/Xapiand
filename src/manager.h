@@ -199,8 +199,8 @@ private:
 	void join_cluster_impl();
 #endif
 
-	std::vector<std::shared_ptr<const Node>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, const query_field_t& query_field);
-	Endpoint resolve_index_endpoint_impl(const Endpoint& endpoint, const query_field_t& query_field);
+	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, const query_field_t& query_field);
+	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, const query_field_t& query_field);
 
 	std::string server_metrics_impl();
 
@@ -240,14 +240,14 @@ public:
 		_manager.reset();
 	}
 
-	static std::vector<std::shared_ptr<const Node>> resolve_index_nodes(const std::string& normalized_path, const query_field_t& query_field) {
+	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, const query_field_t& query_field) {
 		ASSERT(_manager);
 		return _manager->resolve_index_nodes_impl(normalized_path, query_field);
 	}
 
-	static Endpoint resolve_index_endpoint(const Endpoint& endpoint, const query_field_t& query_field) {
+	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, const query_field_t& query_field) {
 		ASSERT(_manager);
-		return _manager->resolve_index_endpoint_impl(endpoint, query_field);
+		return _manager->resolve_index_endpoints_impl(endpoint, query_field);
 	}
 
 	static void setup_node() {

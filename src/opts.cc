@@ -39,7 +39,8 @@
 #define XAPIAND_LOG_FILE         "xapiand.log"
 
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
-#define NUM_REPLICAS             3                // Default number of database replicas per index
+#define NUM_SHARDS               1                // Default number of database shards per index
+#define NUM_REPLICAS             2                // Default number of database replicas per index
 
 #define SCRIPTS_CACHE_SIZE           100          // Scripts cache
 #define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache
@@ -235,6 +236,7 @@ parseOptions(int argc, char** argv)
 #endif
 #ifdef XAPIAND_CLUSTERING
 		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
+		ValueArg<std::size_t> num_shards("", "shards", "Default number of database shards per index.", false, NUM_SHARDS, "shards", cmd);
 #endif
 		ValueArg<std::size_t> num_doc_preparers("", "bulk-preparers", "Number of threads handling bulk documents preparing.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, 0, "threads", cmd);
@@ -442,7 +444,8 @@ parseOptions(int argc, char** argv)
 		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors))));
 #endif
 #ifdef XAPIAND_CLUSTERING
-		o.num_replicas = o.solo ? 0 : num_replicas.getValue();
+		o.num_shards = num_shards.getValue();
+		o.num_replicas = num_replicas.getValue();
 #endif
 		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors))));
 		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors))));

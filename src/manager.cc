@@ -1356,104 +1356,167 @@ XapiandManager::load_nodes()
 #endif
 
 #ifdef XAPIAND_CLUSTERING
-std::vector<size_t>
-calculate_replicas(const std::string& normalized_path)
+std::vector<std::vector<size_t>>
+calculate_shards(const std::string& normalized_path)
 {
-	L_CALL("calculate_replicas({})", repr(normalized_path));
+	L_CALL("calculate_shards({})", repr(normalized_path));
 
-	std::vector<size_t> replicas;
+	std::vector<std::vector<size_t>> shards;
 	auto indexed_nodes = Node::indexed_nodes();
 	if (indexed_nodes) {
-		auto consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
-		for (size_t i = std::min(opts.num_replicas + 1, indexed_nodes); i; --i, ++consistent_hash) {
-			replicas.push_back((consistent_hash % indexed_nodes) + 1);
+		auto num_replicas_1 = std::min(indexed_nodes, opts.num_replicas + 1);
+		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
+		for (size_t s = 0; s < opts.num_shards; ++s) {
+			std::vector<size_t> replicas;
+			for (size_t r = 0; r < num_replicas_1; ++r) {
+				replicas.push_back(((consistent_hash - s + r) % indexed_nodes) + 1);
+			}
+			shards.push_back(std::move(replicas));
 		}
 	}
-	return replicas;
+	return shards;
 }
 
 
 std::vector<size_t>
-index_calculate_replicas(const std::string& normalized_path)
+flatten_shards(const std::vector<std::vector<size_t>>& shards)
 {
-	L_CALL("index_calculate_replicas({})", repr(normalized_path));
-
-	auto replicas = calculate_replicas(normalized_path);
-	if (!replicas.empty()) {
-		std::vector<std::shared_ptr<const Node>> nodes;
+	std::vector<size_t> flatten;
+	for (auto& replicas : shards) {
 		for (auto idx : replicas) {
-			auto node = Node::get_node(idx);
-			if (node) {
-				nodes.push_back(std::move(node));
-			}
-		}
-		ASSERT(!nodes.empty());
-		auto node = nodes.front();  // first node is master
-		if (node->is_active()) {
-			Endpoint endpoint{string::format(".xapiand/{}", node->name()), node};
-			DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-			MsgPack obj = {
-				{ RESERVED_STORE, false },
-				{ ID_FIELD_NAME, {
-					{ RESERVED_TYPE,  KEYWORD_STR },
-				} },
-				{ "replicas", {
-					{ RESERVED_INDEX, "field_values" },
-					{ RESERVED_TYPE,  "array/positive" },
-					{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
-					{ RESERVED_VALUE, std::move(replicas) },
-				} },
-			};
-			// Add a local schema so it doesn't break forced foreign schemas
-			db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-			db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+			flatten.push_back(idx);
 		}
 	}
-	return replicas;
+	return flatten;
 }
+
+
+std::vector<std::vector<size_t>>
+unflatten_shards(const std::vector<size_t>& list, size_t num_shards, size_t num_replicas)
+{
+	if (list.size() != num_shards * (num_replicas + 1)) {
+		THROW(Error, "Wrong number of nodes in index, it must be equal to num_shards * (num_replicas + 1)");
+	}
+	size_t idx = 0;
+	std::vector<std::vector<size_t>> shards;
+	for (size_t s = 0; s < num_shards; ++s) {
+		std::vector<size_t> replicas;
+		for (size_t r = 0; r < num_replicas + 1; ++r) {
+			replicas.push_back(list[idx++]);
+		}
+		shards.push_back(std::move(replicas));
+	}
+	return shards;
+}
+
+
+std::vector<std::vector<size_t>>
+index_calculate_shards(const std::string& normalized_path)
+{
+	L_CALL("index_calculate_shards({})", repr(normalized_path));
+
+	auto shards = calculate_shards(normalized_path);
+	auto num_shards = shards.size();
+	if (num_shards) {
+		auto num_replicas_1 = shards.front().size();
+		if (num_replicas_1) {
+			auto idx = shards.front().front();  // The very first node is master
+			auto node = Node::get_node(idx);
+			if (node && node->is_active()) {
+				Endpoint endpoint{string::format(".xapiand/{}", node->name()), node};
+				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				MsgPack obj = {
+					{ RESERVED_STORE, false },
+					{ ID_FIELD_NAME, {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "shards", {
+						{ RESERVED_INDEX, "field_values" },
+						{ RESERVED_TYPE,  "positive" },
+						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
+						{ RESERVED_VALUE, num_shards },
+					} },
+					{ "replicas", {
+						{ RESERVED_INDEX, "field_values" },
+						{ RESERVED_TYPE,  "positive" },
+						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_2 },
+						{ RESERVED_VALUE, num_replicas_1 - 1 },
+					} },
+					{ "nodes", {
+						{ RESERVED_INDEX, "field_values" },
+						{ RESERVED_TYPE,  "array/positive" },
+						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_3 },
+						{ RESERVED_VALUE, flatten_shards(shards) },
+					} },
+				};
+				// Add a local schema so it doesn't break forced foreign schemas
+				db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
+				db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+			}
+		}
+	}
+	return shards;
+}
+
+
+std::vector<std::vector<std::shared_ptr<const Node>>>
+shards_to_nodes(const std::vector<std::vector<size_t>>& shards)
+{
+	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
+	for (auto& replicas : shards) {
+		std::vector<std::shared_ptr<const Node>> node_replicas;
+		for (auto idx : replicas) {
+			auto node = Node::get_node(idx);
+			node_replicas.push_back(std::move(node));
+		}
+		nodes.push_back(std::move(node_replicas));
+	}
+	return nodes;
+}
+
 #endif
 
 
-std::vector<std::shared_ptr<const Node>>
+
+std::vector<std::vector<std::shared_ptr<const Node>>>
 XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, const query_field_t& query_field)
 {
 	L_CALL("XapiandManager::resolve_index_nodes_impl({}, <query_field>)", repr(normalized_path));
 
-	std::vector<std::shared_ptr<const Node>> nodes;
+	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
 #ifdef XAPIAND_CLUSTERING
 	if (normalized_path == ".xapiand") {
 		// Cluster database is always in the master
-		nodes.push_back(Node::leader_node());
-		nodes.push_back(Node::local_node());
+		std::vector<std::shared_ptr<const Node>> node_replicas;
+		node_replicas.push_back(Node::leader_node());
+		node_replicas.push_back(Node::local_node());
+		nodes.push_back(std::move(node_replicas));
 		return nodes;
 	}
 
 	if (string::startswith(normalized_path, ".xapiand/")) {
 		// Index databases are always in their specified node
-		auto node_name = std::string_view(normalized_path);
-		node_name.remove_prefix(9);
-		nodes.push_back(Node::get_node(node_name));
-		nodes.push_back(Node::local_node());
+		std::vector<std::shared_ptr<const Node>> node_replicas;
+		auto node_name = normalized_path.substr(9);
+		node_replicas.push_back(Node::get_node(node_name));
+		node_replicas.push_back(Node::local_node());
+		nodes.push_back(std::move(node_replicas));
+		return nodes;
 	}
 
 	if (!opts.solo) {
-		std::vector<size_t> replicas;
+		std::vector<std::vector<size_t>> shards;
 
 		static std::mutex resolve_index_lru_mtx;
-		static lru::LRU<std::string, std::vector<size_t>> resolve_index_lru(opts.resolver_cache_size);
+		static lru::LRU<std::string, std::vector<std::vector<size_t>>> resolve_index_lru(opts.resolver_cache_size);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(normalized_path);
 		if (it != resolve_index_lru.end()) {
-			replicas = it->second;
+			shards = it->second;
 			lk.unlock();
-			for (auto idx : replicas) {
-				auto node = Node::get_node(idx);
-				if (node) {
-					nodes.push_back(std::move(node));
-				}
-			}
+			nodes = shards_to_nodes(shards);
 		} else {
 			lk.unlock();
 			Endpoints index_endpoints;
@@ -1465,16 +1528,17 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			try {
 				DatabaseHandler db_handler(index_endpoints);
 				auto document = db_handler.get_document(normalized_path);
-				for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_1))) {
-					size_t idx = unserialise_length(val);
-					replicas.push_back(idx);
-					auto node = Node::get_node(idx);
-					if (node) {
-						nodes.push_back(std::move(node));
-					}
+				auto num_shards = sortable_unserialise(document.get_value(DB_SLOT_USER_VALUE_1));
+				auto num_replicas = sortable_unserialise(document.get_value(DB_SLOT_USER_VALUE_2));
+				std::vector<size_t> list;
+				for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_3))) {
+					size_t idx = sortable_unserialise(val);
+					list.push_back(idx);
 				}
+				shards = unflatten_shards(list, num_shards, num_replicas);
+				nodes = shards_to_nodes(shards);
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_path, replicas));
+				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 				lk.unlock();
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
@@ -1482,18 +1546,13 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 
 		if (nodes.empty()) {
 			if (query_field.writable) {
-				replicas = index_calculate_replicas(query_field.routing.empty() ? normalized_path : query_field.routing);
+				shards = index_calculate_shards(query_field.routing.empty() ? normalized_path : query_field.routing);
 			} else {
-				replicas = calculate_replicas(query_field.routing.empty() ? normalized_path : query_field.routing);
+				shards = calculate_shards(query_field.routing.empty() ? normalized_path : query_field.routing);
 			}
-			for (auto idx : replicas) {
-				auto node = Node::get_node(idx);
-				if (node) {
-					nodes.push_back(std::move(node));
-				}
-			}
+			nodes = shards_to_nodes(shards);
 			lk.lock();
-			resolve_index_lru.insert(std::make_pair(normalized_path, replicas));
+			resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			lk.unlock();
 		}
 	}
@@ -1502,29 +1561,48 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 	ignore_unused(normalized_path);
 #endif
 	{
-		nodes.push_back(Node::local_node());
+		std::vector<std::shared_ptr<const Node>> node_replicas;
+		node_replicas.push_back(Node::local_node());
+		nodes.push_back(std::move(node_replicas));
 	}
 
 	return nodes;
 }
 
 
-Endpoint
-XapiandManager::resolve_index_endpoint_impl(const Endpoint& endpoint, const query_field_t& query_field)
+Endpoints
+XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const query_field_t& query_field)
 {
-	L_CALL("XapiandManager::resolve_index_endpoint_impl({}, <query_field>)", repr(endpoint.to_string()));
+	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, <query_field>)", repr(endpoint.to_string()));
 
-	for (const auto& node : resolve_index_nodes_impl(endpoint.path, query_field)) {
-		if (Node::is_active(node)) {
-			L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-			return {endpoint, node};
-		}
-		L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-		if (query_field.primary) {
-			break;
+	Endpoints endpoints;
+	auto nodes = resolve_index_nodes_impl(endpoint.path, query_field);
+	size_t shard = 1;
+	int shards = nodes.size();
+	for (const auto& shard_nodes : nodes) {
+		auto path = shards == 1 ? endpoint.path : string::format("{}/.{}", endpoint.path, shard++);
+		for (const auto& node : shard_nodes) {
+			if (query_field.writable) {
+				endpoints.add(Endpoint{path, node});
+				break;
+			} else {
+				if (Node::is_active(node)) {
+					L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+					endpoints.add(Endpoint{path, node});
+					break;
+				}
+				L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+				if (query_field.primary) {
+					break;
+				}
+			}
 		}
 	}
-	throw Xapian::NetworkError("Endpoint node not available");
+
+	if (endpoints.empty()) {
+		throw Xapian::NetworkError("Endpoint node not available");
+	}
+	return endpoints;
 }
 
 

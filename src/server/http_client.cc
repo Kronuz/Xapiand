@@ -1437,6 +1437,7 @@ HttpClient::home_view(Request& request)
 #endif
 			} },
 			{ "thread_pools", {
+				{ "num_shards", opts.num_shards },
 				{ "num_replicas", opts.num_replicas },
 				{ "num_http_servers", opts.num_http_servers },
 				{ "num_http_clients", opts.num_http_clients },
@@ -2583,6 +2584,9 @@ HttpClient::endpoints_maker(Request& request, const query_field_t& query_field)
 
 	PathParser::State state;
 	while ((state = request.path_parser.next()) < PathParser::State::END) {
+		if (query_field.writable && !endpoints.empty()) {
+			THROW(ClientError, "Writable endpoints can only use single indexes");
+		}
 		_endpoint_maker(request, query_field);
 	}
 }
@@ -2654,24 +2658,14 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 	}
 #endif
 
-	if (request.path_parser.off_hst != nullptr) {
-#ifdef XAPIAND_CLUSTERING
-		auto node_name = request.path_parser.get_hst();
-		auto node = Node::get_node(node_name);
-		if (!node) {
-			THROW(ClientError, "Nonexistent node: {}", node_name);
-		}
-		for (const auto& path : index_paths) {
-			endpoints.add(Endpoint{path, node});
-		}
-#else
-		for (const auto& path : index_paths) {
-			endpoints.add(Endpoint{path});
-		}
-#endif
-	} else {
-		for (const auto& path : index_paths) {
-			endpoints.add(XapiandManager::resolve_index_endpoint(Endpoint{path}, query_field));
+	if (query_field.writable && index_paths.size() != 1) {
+		THROW(ClientError, "Writable endpoints can only use single indexes");
+	}
+
+	for (const auto& path : index_paths) {
+		auto index_endpoints = XapiandManager::resolve_index_endpoints(Endpoint{path}, query_field);
+		for (auto& endpoint : index_endpoints) {
+			endpoints.add(endpoint);
 		}
 	}
 	L_HTTP("Endpoint: -> {}", endpoints.to_string());
