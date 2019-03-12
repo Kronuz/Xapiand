@@ -112,7 +112,7 @@ public:
 		return finished.load(std::memory_order_relaxed);
 	}
 
-	bool empty() const;
+	bool is_used() const;
 
 	std::string __repr__() const;
 	std::string dump_databases(int level) const;

@@ -431,17 +431,17 @@ DatabaseEndpoint::count()
 
 
 bool
-DatabaseEndpoint::empty() const
+DatabaseEndpoint::is_used() const
 {
-	L_CALL("DatabaseEndpoint::empty()");
+	L_CALL("DatabaseEndpoint::is_used()");
 
 	std::lock_guard<std::mutex> lk(mtx);
 
 	return (
-		refs == 0 &&
-		!is_locked() &&
-		!writable &&
-		readables.empty()
+		refs != 0 ||
+		is_locked() ||
+		writable ||
+		!readables.empty()
 	);
 }
 
@@ -840,7 +840,7 @@ DatabasePool::cleanup(bool immediate)
 				referenced_database_endpoint->clear();
 				lk.lock();
 				referenced_database_endpoint.reset();
-				if (!database_endpoint->empty()) {
+				if (database_endpoint->is_used()) {
 					L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
 					return lru::DropAction::leave;
 				}
@@ -857,7 +857,7 @@ DatabasePool::cleanup(bool immediate)
 			referenced_database_endpoint->clear();
 			lk.lock();
 			referenced_database_endpoint.reset();
-			if (!database_endpoint->empty()) {
+			if (database_endpoint->is_used()) {
 				L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
 				return lru::DropAction::leave;
 			}
