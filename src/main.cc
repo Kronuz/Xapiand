@@ -582,12 +582,17 @@ void writepid(const char* pidfile) {
 }
 
 
-void usedir(const char* path, bool force) {
+void usedir(std::string_view path, bool force) {
+	auto directory = normalize_path(path);
+	if (string::endswith(directory, "/.xapiand")) {
+		directory.resize(directory.size() - 9);
+	}
+	auto xapiand_directory = directory + "/.xapiand";
 	if (!force) {
 		DIR *dirp;
-		dirp = opendir(path, true);
+		dirp = opendir(xapiand_directory.c_str(), true);
 		if (!dirp) {
-			L_CRIT("Cannot open working directory: {}", path);
+			L_CRIT("Cannot open working directory: {}", directory);
 			throw SystemExit(EX_OSFILE);
 		}
 
@@ -602,7 +607,8 @@ void usedir(const char* path, bool force) {
 				if (
 					std::strcmp(s, "node") == 0 ||
 					std::strcmp(s, "iamchert") == 0 ||
-					std::strcmp(s, "iamglass") == 0
+					std::strcmp(s, "iamglass") == 0 ||
+					std::strcmp(s, "iamhoney") == 0
 				) {
 					empty = true;
 					break;
@@ -613,20 +619,18 @@ void usedir(const char* path, bool force) {
 		closedir(dirp);
 
 		if (!empty) {
-			L_CRIT("Working directory must be empty or a valid xapian database: {}", path);
+			L_CRIT("Working directory must be empty or a valid Xapiand database: {}", directory);
 			throw SystemExit(EX_DATAERR);
 		}
 	}
 
-	if (chdir(path) == -1) {
-		if (build_path(std::string(path))) {
-			if (chdir(path) == -1) {
-				L_CRIT("Cannot change current working directory to {}", path);
-				throw SystemExit(EX_OSFILE);
-			}
-		} else {
-			L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(path), error::name(errno), errno, error::description(errno));
+	if (build_path(xapiand_directory)) {
+		if (chdir(directory) == -1) {
+			L_CRIT("Cannot change current working directory to {}", directory);
+			throw SystemExit(EX_OSFILE);
 		}
+	} else {
+		L_ERR("Cannot create working directory: {}: {} ({}): {}", repr(directory), error::name(errno), errno, error::description(errno));
 	}
 
 	char buffer[PATH_MAX];
@@ -700,7 +704,7 @@ void setup() {
 
 	adjustOpenFilesLimit();
 
-	usedir(opts.database.c_str(), opts.force);
+	usedir(opts.database, opts.force);
 }
 
 
