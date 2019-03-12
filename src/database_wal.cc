@@ -121,7 +121,7 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 
 
 DatabaseWAL::DatabaseWAL(Database* database_)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(database_->endpoint.path, this),
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(database_->endpoint->path, this),
 	  validate_uuid(true),
 	  _revision(0),
 	  _database(database_)
@@ -1305,8 +1305,9 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 	L_CALL("DatabaseWALWriter::write_add_document()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1333,8 +1334,9 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 	L_CALL("DatabaseWALWriter::write_delete_document_term()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1361,8 +1363,9 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 	L_CALL("DatabaseWALWriter::write_remove_spelling()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1390,8 +1393,9 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 	L_CALL("DatabaseWALWriter::write_commit()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1418,8 +1422,9 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 	L_CALL("DatabaseWALWriter::write_replace_document()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1447,8 +1452,9 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 	L_CALL("DatabaseWALWriter::write_replace_document_term()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1476,8 +1482,9 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 	L_CALL("DatabaseWALWriter::write_delete_document()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1504,8 +1511,9 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 	L_CALL("DatabaseWALWriter::write_set_metadata()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);
@@ -1533,8 +1541,9 @@ DatabaseWALWriter::write_add_spelling(Database& database, const std::string& wor
 	L_CALL("DatabaseWALWriter::write_add_spelling()");
 
 	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint.is_local());
-	auto path = database.endpoint.path;
+	ASSERT(database.endpoint);
+	ASSERT(database.endpoint->is_local());
+	auto path = database.endpoint->path;
 	auto uuid = database.get_uuid();
 	auto revision = database.get_revision();
 	ASSERT(database.producer_token);

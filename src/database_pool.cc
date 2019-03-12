@@ -132,7 +132,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 			throw Xapian::DatabaseNotAvailableError("Database is not available");
 		}
 		if (!writable) {
-			writable = std::make_shared<Database>(*this, flags);
+			writable = std::make_shared<Database>(this, flags);
 		}
 		if (!is_locked() && !writable->busy.exchange(true)) {
 			return writable;
@@ -179,7 +179,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 		if (readables_available > 0) {
 			for (auto& readable : readables) {
 				if (!readable) {
-					readable = std::make_shared<Database>(*this, flags);
+					readable = std::make_shared<Database>(this, flags);
 				}
 				if (!is_locked() && !readable->busy.exchange(true)) {
 					--readables_available;
@@ -188,7 +188,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 			}
 		}
 		if (readables.size() < database_pool.max_database_readers) {
-			auto new_database = std::make_shared<Database>(*this, flags);
+			auto new_database = std::make_shared<Database>(this, flags);
 			auto& readable = *readables.insert(readables.end(), new_database);
 			++readables_available;
 			if (!is_locked() && !readable->busy.exchange(true)) {
@@ -242,7 +242,7 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 			bool reopen = false;
 			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->reopen_time).count();
 			if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
-				// Database is just too old, reopen
+				L_DATABASE("Database is just too old, reopen");
 				reopen = true;
 			} else {
 				if (database->is_local()) {
@@ -251,20 +251,20 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 						auto revision = referenced_database_endpoint->local_revision.load();
 						referenced_database_endpoint.reset();
 						if (revision != database->get_revision()) {
-							// Local writable database has changed revision.
+							L_DATABASE("Local writable database has changed revision");
 							reopen = true;
 						}
 					}
 				} else {
 					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
-						// Remote database is too old, reopen.
+						L_DATABASE("Remote database is too old, reopen");
 						reopen = true;
 					}
 				}
 			}
 			if (reopen) {
 				// Discard old database and create a new one
-				auto new_database = std::make_shared<Database>(*this, flags);
+				auto new_database = std::make_shared<Database>(this, flags);
 				new_database->busy = true;
 				lk.lock();
 				database = new_database;
@@ -282,7 +282,7 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database) noexcept
 
 	ASSERT(database);
 	ASSERT(database->is_busy());
-	ASSERT(&database->endpoint == this);
+	ASSERT(database->endpoint == this);
 
 	if (database->log) {
 		database->log->clear();
@@ -512,6 +512,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	L_CALL("DatabasePool::lock({}, {})", database ? database->__repr__() : "null", timeout);
 
 	ASSERT(database);
+	ASSERT(database->endpoint);
 
 	if (!database->is_writable() || !database->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
@@ -519,7 +520,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	}
 
 	++locks;  // This needs to be done before locking
-	if (database->endpoint.locked.exchange(true)) {
+	if (database->endpoint->locked.exchange(true)) {
 		ASSERT(locks > 0);
 		--locks;  // revert if failed.
 		L_DEBUG("ERROR: Exclusive lock can be granted only to non-locked databases");
@@ -531,7 +532,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	auto is_ready_to_lock = [&] {
 		bool is_ready = true;
 		lk.unlock();
-		auto referenced_database_endpoint = get(database->endpoint);
+		auto referenced_database_endpoint = get(*database->endpoint);
 		if (referenced_database_endpoint->clear().second) {
 			is_ready = false;
 		}
@@ -540,12 +541,12 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	};
 	if (timeout > 0.0) {
 		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-		if (!database->endpoint.lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
+		if (!database->endpoint->lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
 			throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock database");
 		}
 	} else {
-		while (!database->endpoint.lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
-			if (database->endpoint.is_finished()) {
+		while (!database->endpoint->lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
+			if (database->endpoint->is_finished()) {
 				throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock database");
 			}
 		}
@@ -559,13 +560,14 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 	L_CALL("DatabasePool::unlock({})", database ? database->__repr__() : "null");
 
 	ASSERT(database);
+	ASSERT(database->endpoint);
 
 	if (!database->is_writable() || !database->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
 		THROW(Error, "Cannot grant exclusive lock database");
 	}
 
-	if (!database->endpoint.locked.exchange(false)) {
+	if (!database->endpoint->locked.exchange(false)) {
 		L_DEBUG("ERROR: Exclusive lock can be released only from locked databases");
 		THROW(Error, "Cannot release exclusive lock database");
 	}
@@ -573,7 +575,7 @@ DatabasePool::unlock(const std::shared_ptr<Database>& database)
 	ASSERT(locks > 0);
 	--locks;
 
-	auto referenced_database_endpoint = get(database->endpoint);
+	auto referenced_database_endpoint = get(*database->endpoint);
 	referenced_database_endpoint->readables_cond.notify_all();
 	referenced_database_endpoint.reset();
 }
@@ -698,7 +700,7 @@ DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std:
 	L_TIMED_VAR(database->log, 200ms,
 		"Database checkout is taking too long: {} ({}){}{}{}",
 		"Database checked out for too long: {} ({}){}{}{}",
-		repr(database->endpoint.to_string()),
+		repr(database->to_string()),
 		readable_flags(database->flags),
 		database->is_writable() ? " (writable)" : "",
 		database->is_wal_active() ? " (active WAL)" : "",
@@ -718,11 +720,29 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 		throw Xapian::DatabaseOpeningError("Cannot checkout empty database");
 	}
 
-	if (endpoints.size() != 1) {
-		THROW(ClientError, "Implement multi-database checkout");
-	}
+	// if (endpoints.size() != 1) {
+	// 	THROW(ClientError, "Implement multi-database checkout");
+	// }
+	// return checkout(endpoints[0], flags, timeout, callback);  // TODO: Implement multi-database checkout
 
-	return checkout(endpoints[0], flags, timeout, callback);  // TODO: Implement multi-database checkout
+	std::vector<std::shared_ptr<Database>> shards;
+	shards.reserve(endpoints.size());
+	try {
+		for (auto& endpoint : endpoints) {
+			auto shard = checkout(endpoint, flags, timeout, callback);
+			ASSERT(shard);
+			shards.emplace_back(std::move(shard));
+		}
+		return std::make_shared<Database>(std::move(shards), endpoints, flags);
+	} catch (...) {
+		for (auto& shard : shards) {
+			if (shard) {
+				ASSERT(shard->endpoint);
+				shard->endpoint->checkin(shard);
+			}
+		}
+		throw;
+	}
 }
 
 
@@ -731,7 +751,17 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL("DatabasePool::checkin({})", database ? database->__repr__() : "null");
 
-	return database->endpoint.checkin(database);
+	if (database->endpoint) {
+		database->endpoint->checkin(database);
+	} else {
+		for (auto& shard : database->_shards) {
+			if (shard) {
+				ASSERT(shard->endpoint);
+				shard->endpoint->checkin(shard);
+			}
+		}
+		database.reset();
+	}
 }
 
 

@@ -32,6 +32,7 @@
 #include <utility>                // for std::pair
 #include <vector>                 // for std::vector
 
+#include "endpoint.h"             // for Endpoints
 #include "cuuid/uuid.h"           // for UUID, UUID_LENGTH
 #include "database_flags.h"       // for DB_OPEN
 #include "lz4/xxhash.h"           // for XXH32_state_t
@@ -75,6 +76,9 @@ public:
 		unflushed,
 	};
 
+	////////////////////////////////////////////////////////////////////////////
+	// Raw Database:
+	// TODO: Split Shard Database and Raw Database into two classes
 private:
 #ifdef XAPIAND_DATA_STORAGE
 	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
@@ -85,7 +89,7 @@ private:
 	bool reopen_readable();
 
 public:
-	DatabaseEndpoint& endpoint;
+	DatabaseEndpoint* endpoint;
 	int flags;
 
 	std::atomic_bool busy;
@@ -141,16 +145,29 @@ public:
 
 	Transaction transaction;
 
-	Database(DatabaseEndpoint& endpoint_, int flags);
+	Database(DatabaseEndpoint* endpoint_, int flags);
 	~Database() noexcept;
-
-	bool reopen();
-
-	Xapian::Database* db();
 
 #ifdef XAPIAND_DATA_STORAGE
 	std::string storage_get_stored(const Locator& locator);
 #endif /* XAPIAND_DATA_STORAGE */
+
+
+	////////////////////////////////////////////////////////////////////////////
+	// Shard Database:
+	// TODO: Split Shard Database and Raw Database into two classes
+public:
+	std::vector<std::shared_ptr<Database>> _shards;
+	Endpoints endpoints;
+
+	Database(std::vector<std::shared_ptr<Database>>&& shards, const Endpoints& endpoints_, int flags_);
+
+	////////////////////////////////////////////////////////////////////////////
+	// Common methods:
+
+	bool reopen();
+
+	Xapian::Database* db();
 
 	UUID get_uuid();
 	std::string get_uuid_string();

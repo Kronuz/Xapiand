@@ -216,7 +216,28 @@ DataStorage::open(std::string_view relative_path)
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 
-Database::Database(DatabaseEndpoint& endpoint_, int flags_)
+Database::Database(std::vector<std::shared_ptr<Database>>&& shards_, const Endpoints& endpoints_, int flags_)
+	: endpoint(nullptr),
+	  flags(flags_),
+	  busy(false),
+	  reopen_time(std::chrono::system_clock::now()),
+	  reopen_revision(0),
+	  local(false),
+	  closed(false),
+	  modified(false),
+	  incomplete(false),
+#ifdef XAPIAND_DATABASE_WAL
+	  producer_token(nullptr),
+#endif
+	  transaction(Transaction::none),
+	  _shards(std::move(shards_)),
+	  endpoints(endpoints_)
+{
+	reopen();
+}
+
+
+Database::Database(DatabaseEndpoint* endpoint_, int flags_)
 	: endpoint(endpoint_),
 	  flags(flags_),
 	  busy(false),
@@ -244,7 +265,8 @@ Database::~Database() noexcept
 		}
 #ifdef XAPIAND_DATABASE_WAL
 		if (producer_token) {
-			XapiandManager::wal_writer()->dec_producer_token(endpoint.path);
+			ASSERT(endpoint);
+			XapiandManager::wal_writer()->dec_producer_token(endpoint->path);
 		}
 #endif
 	} catch (...) {
@@ -277,9 +299,10 @@ Database::reopen_writable()
 
 	local.store(true, std::memory_order_relaxed);
 
-	ASSERT(!endpoint.empty());
+	ASSERT(endpoint);
+	ASSERT(!endpoint->empty());
 #ifdef XAPIAND_CLUSTERING
-	auto node = endpoint.node();
+	auto node = endpoint->node();
 	if (!node) {
 		throw Xapian::NetworkError("Endpoint node is invalid");
 	}
@@ -297,9 +320,9 @@ Database::reopen_writable()
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
-	if (!endpoint.is_local()) {
+	if (!endpoint->is_local()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
+		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint->path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -307,14 +330,14 @@ Database::reopen_writable()
 	{
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
+			wsdb = Xapian::WritableDatabase(endpoint->path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 				throw;
 			}
-			build_path_index(endpoint.path);
+			build_path_index(endpoint->path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
+			wsdb = Xapian::WritableDatabase(endpoint->path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
 			created = true;
 		}
 		localdb = true;
@@ -336,11 +359,11 @@ Database::reopen_writable()
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
 		if ((flags & DB_NOSTORAGE) != DB_NOSTORAGE) {
-			writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
-			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
+			writable_storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+			storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN);
 		} else {
 			writable_storage = std::unique_ptr<DataStorage>(nullptr);
-			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
+			storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN);
 		}
 	} else {
 		writable_storage = std::unique_ptr<DataStorage>(nullptr);
@@ -355,8 +378,8 @@ Database::reopen_writable()
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_wal_active()) {
 		// Create or get a producer token for this database
-		if (XapiandManager::wal_writer()->inc_producer_token(endpoint.path, &producer_token) == 1) {
-			// WAL wasn't already active for the requested endpoint.
+		if (XapiandManager::wal_writer()->inc_producer_token(endpoint->path, &producer_token) == 1) {
+			// WAL wasn't already active for the requested endpoint
 			DatabaseWAL wal(this);
 			if (wal.execute(true)) {
 				modified.store(true, std::memory_order_relaxed);
@@ -395,9 +418,10 @@ Database::reopen_readable()
 
 	local.store(true, std::memory_order_relaxed);
 
-	ASSERT(!endpoint.empty());
+	ASSERT(endpoint);
+	ASSERT(!endpoint->empty());
 #ifdef XAPIAND_CLUSTERING
-	auto node = endpoint.node();
+	auto node = endpoint->node();
 	if (!node) {
 		throw Xapian::NetworkError("Endpoint node is invalid");
 	}
@@ -415,24 +439,24 @@ Database::reopen_readable()
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
-	if (!endpoint.is_local()) {
-		L_DATABASE("Opening remote endpoint {}", repr(endpoint.to_string()));
+	if (!endpoint->is_local()) {
+		L_DATABASE("Opening remote endpoint {}", repr(endpoint->to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
+		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint->path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+			Xapian::Database tmp = Xapian::Database(endpoint->path, Xapian::DB_OPEN);
 			if (tmp.get_uuid() == rsdb.get_uuid()) {
-				L_DATABASE("Endpoint {} fallback to local database!", repr(endpoint.to_string()));
+				L_DATABASE("Endpoint {} fallback to local database!", repr(endpoint->to_string()));
 				// Handle remote endpoint and figure out if the endpoint is a local database
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				rsdb = Xapian::Database(endpoint.path, _flags);
+				rsdb = Xapian::Database(endpoint->path, _flags);
 				localdb = true;
 			} else {
 				try {
 					// If remote is master (it should be), try triggering replication
-					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
+					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint->path, Endpoint{*endpoint}, Endpoint{endpoint->path});
 					incomplete.store(true, std::memory_order_relaxed);
 				} catch (...) { }
 			}
@@ -440,7 +464,7 @@ Database::reopen_readable()
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			try {
 				// If remote is master (it should be), try triggering replication
-				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
+				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint->path, Endpoint{*endpoint}, Endpoint{endpoint->path});
 				incomplete.store(true, std::memory_order_relaxed);
 			} catch (...) { }
 		}
@@ -449,21 +473,21 @@ Database::reopen_readable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		L_DATABASE("Opening local endpoint {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening local endpoint {}", repr(endpoint->to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+			rsdb = Xapian::Database(endpoint->path, Xapian::DB_OPEN);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 				throw;
 			}
-			build_path_index(endpoint.path);
+			build_path_index(endpoint->path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE);
+			Xapian::WritableDatabase(endpoint->path, Xapian::DB_CREATE);
 			created = true;
 
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+			rsdb = Xapian::Database(endpoint->path, Xapian::DB_OPEN);
 		}
 		localdb = true;
 	}
@@ -479,7 +503,7 @@ Database::reopen_readable()
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
 		// WAL required on a local database, open it.
-		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
+		storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN);
 	} else {
 		storage = std::unique_ptr<DataStorage>(nullptr);
 	}
@@ -497,42 +521,49 @@ Database::reopen_readable()
 bool
 Database::reopen()
 {
-	L_CALL("Database::reopen() {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_CALL("Database::reopen() {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::reopen:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::reopen:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	if (_database) {
-		if (!is_incomplete()) {
-			// Try to reopen
-			for (int t = DB_RETRIES; t; --t) {
-				try {
-					bool ret = _database->reopen();
-					return ret;
-				} catch (const Xapian::DatabaseModifiedError& exc) {
-					if (t == 0) { throw; }
-				} catch (const Xapian::DatabaseOpeningError& exc) {
-				} catch (const Xapian::NetworkError& exc) {
-				} catch (const Xapian::DatabaseError& exc) {
-					if (exc.get_msg() != "Database has been closed") {
-						throw;
+	if (endpoint) {
+		if (_database) {
+			if (!is_incomplete()) {
+				// Try to reopen
+				for (int t = DB_RETRIES; t; --t) {
+					try {
+						bool ret = _database->reopen();
+						return ret;
+					} catch (const Xapian::DatabaseModifiedError& exc) {
+						if (t == 0) { throw; }
+					} catch (const Xapian::DatabaseOpeningError& exc) {
+					} catch (const Xapian::NetworkError& exc) {
+					} catch (const Xapian::DatabaseError& exc) {
+						if (exc.get_msg() != "Database has been closed") {
+							throw;
+						}
 					}
 				}
 			}
+
+			do_close(true, is_closed(), transaction, false);
 		}
 
-		do_close(true, is_closed(), transaction, false);
-	}
-
-	try {
-		if (is_writable()) {
-			reopen_writable();
-		} else {
-			reopen_readable();
+		try {
+			if (is_writable()) {
+				reopen_writable();
+			} else {
+				reopen_readable();
+			}
+		} catch (...) {
+			reset();
+			throw;
 		}
-	} catch (...) {
-		reset();
-		throw;
+	} else {
+		_database = std::make_unique<Xapian::Database>();
+		for (auto& shard : _shards) {
+			_database->add_database(*shard->db());
+		}
 	}
 
 	ASSERT(_database);
@@ -616,7 +647,7 @@ Database::reset() noexcept
 void
 Database::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)
 {
-	L_CALL("Database::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, repr(endpoint.to_string()), _database ? "<database>" : "null", is_modified(), is_closed(), transaction == Database::Transaction::none ? "<none>" : "<transaction>", throw_exceptions);
+	L_CALL("Database::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, repr(to_string()), _database ? "<database>" : "null", is_modified(), is_closed(), transaction == Database::Transaction::none ? "<none>" : "<transaction>", throw_exceptions);
 
 	if (
 		commit_ &&
@@ -679,6 +710,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 	L_CALL("Database::autocommit(<database>)");
 
 	if (
+		database->endpoint &&
 		database->_database &&
 		database->transaction == Database::Transaction::none &&
 		!database->is_closed() &&
@@ -687,7 +719,7 @@ Database::autocommit(const std::shared_ptr<Database>& database)
 		database->is_local()
 	) {
 		// Auto commit only on modified writable databases
-		committer()->debounce(database->endpoint, std::weak_ptr<Database>(database));
+		committer()->debounce(*database->endpoint, std::weak_ptr<Database>(database));
 	}
 }
 
@@ -706,8 +738,8 @@ Database::commit(bool wal_, bool send_update)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::commit:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::commit:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::commit:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::commit:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -729,7 +761,7 @@ Database::commit(bool wal_, bool send_update)
 			}
 			modified.store(false, std::memory_order_relaxed);
 			if (is_local()) {
-				endpoint.local_revision = wdb->get_revision();
+				endpoint->local_revision = wdb->get_revision();
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -746,7 +778,7 @@ Database::commit(bool wal_, bool send_update)
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::commit:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::commit:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -819,8 +851,8 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool versi
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::delete_document:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::delete_document:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::delete_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::delete_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -866,7 +898,7 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool versi
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::delete_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::delete_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -890,8 +922,8 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::delete_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::delete_document_term:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::delete_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::delete_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -949,7 +981,7 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::delete_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::delete_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1054,8 +1086,8 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::add_document:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::add_document:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::add_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::add_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1105,7 +1137,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::add_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::add_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1138,8 +1170,8 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::replace_document:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::replace_document:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::replace_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::replace_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1197,7 +1229,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::replace_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::replace_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1230,8 +1262,8 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::replace_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::replace_document_term:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::replace_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::replace_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1336,7 +1368,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::replace_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::replace_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1369,8 +1401,8 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::add_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::add_spelling:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::add_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::add_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1393,7 +1425,7 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::add_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::add_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1419,8 +1451,8 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::remove_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::remove_spelling:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::remove_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::remove_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1443,7 +1475,7 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::remove_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::remove_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1469,8 +1501,8 @@ Database::find_document(const std::string& term_id)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::find_document:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::find_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1500,7 +1532,7 @@ Database::find_document(const std::string& term_id)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 	return did;
@@ -1516,8 +1548,8 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::get_document:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::get_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1547,7 +1579,7 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 	return doc;
@@ -1563,8 +1595,8 @@ Database::get_metadata(const std::string& key)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::get_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::get_metadata:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::get_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::get_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	const char *p = key.data();
 	const char *p_end = p + key.size();
@@ -1604,7 +1636,7 @@ Database::get_metadata(const std::string& key)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::get_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::get_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 	return value;
@@ -1620,8 +1652,8 @@ Database::get_metadata_keys()
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::get_metadata_keys:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::get_metadata_keys:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::get_metadata_keys:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::get_metadata_keys:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1651,7 +1683,7 @@ Database::get_metadata_keys()
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::get_metadata_keys:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::get_metadata_keys:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 		values.clear();
 	}
@@ -1669,8 +1701,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::set_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::set_metadata:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::set_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::set_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1693,7 +1725,7 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 		}
 		reopen();
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
-		L_DATABASE_WRAP_END("Database::set_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::set_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 #if XAPIAND_DATABASE_WAL
@@ -1715,8 +1747,8 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::dump_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::dump_metadata:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::dump_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::dump_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1759,7 +1791,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::dump_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::dump_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 		initial = key;
 	}
@@ -1773,8 +1805,8 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::dump_documents:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::dump_documents:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1845,7 +1877,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 		initial = did;
 	}
@@ -1859,8 +1891,8 @@ Database::dump_documents()
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Database::dump_documents:BEGIN {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}}", repr(endpoint.to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Database::dump_documents:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1924,7 +1956,7 @@ Database::dump_documents()
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(endpoint.to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Database::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
 		initial = did;
 	}
@@ -1936,7 +1968,7 @@ Database::dump_documents()
 std::string
 Database::to_string() const
 {
-	return endpoint.to_string();
+	return endpoint ? endpoint->to_string() : endpoints.to_string();
 }
 
 
@@ -1944,7 +1976,7 @@ std::string
 Database::__repr__() const
 {
 	return string::format("<Database {} ({}){}{}{}{}{}{}{}>",
-		repr(endpoint.to_string()),
+		repr(to_string()),
 		readable_flags(flags),
 		is_writable() ? " (writable)" : "",
 		is_wal_active() ? " (active WAL)" : "",
