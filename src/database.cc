@@ -418,6 +418,7 @@ Database::reopen_readable()
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
 	if (!endpoint.is_local()) {
+		L_DATABASE("Opening remote endpoint {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
@@ -450,6 +451,7 @@ Database::reopen_readable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
+		L_DATABASE("Opening local endpoint {}", repr(endpoint.to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);

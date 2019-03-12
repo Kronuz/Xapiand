@@ -122,7 +122,7 @@ DatabaseEndpoint::~DatabaseEndpoint()
 std::shared_ptr<Database>&
 DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
-	L_CALL("DatabaseEndpoint::writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
+	L_CALL("DatabaseEndpoint::_writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
 	do {
 		if (is_finished()) {
@@ -167,7 +167,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 std::shared_ptr<Database>&
 DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
-	L_CALL("DatabaseEndpoint::readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
+	L_CALL("DatabaseEndpoint::_readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
 	do {
 		if (is_finished()) {
