@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.14.0] - 2019-03-12
+{: #v0-14-0 }
+
 ### Changed
 - **BREAKING**: Cluster directory renamed from `.cluster` to `.xapiand`;
 - **BREAKING**: Indexes directories renamed from `.index/<node_idx>` to `.xapiand/<node_name>`
