@@ -27,6 +27,7 @@ def main():
                                     'xapian/unicode/c_istab.h',
                                     'xapian/errordispatch.h',
                                     'xapian/error.h',
+                                    'xapian/version.h',
                                 ):
                                     # parents = ''
                                     # basepath = dirpath
