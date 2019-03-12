@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Changed
+- **BREAKING**: Cluster directory renamed from `.cluster` to `.xapiand`;
+- **BREAKING**: Indexes directories renamed from `.index/<node_idx>` to `.xapiand/<node_name>`
+- **BREAKING**: Upgraded xapian-core to latest 1.5 (master)
+
 
 ---
 ## [0.12.2] - 2019-03-11
