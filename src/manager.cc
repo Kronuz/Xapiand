@@ -1366,7 +1366,7 @@ calculate_shards(const std::string& normalized_path)
 	if (indexed_nodes) {
 		auto num_replicas_1 = std::min(indexed_nodes, opts.num_replicas + 1);
 		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
-		for (size_t s = 0; s < opts.num_shards; ++s) {
+		for (size_t s = 0; s < std::min(9999UL, opts.num_shards); ++s) {
 			std::vector<size_t> replicas;
 			for (size_t r = 0; r < num_replicas_1; ++r) {
 				replicas.push_back(((consistent_hash - s + r) % indexed_nodes) + 1);
@@ -1378,35 +1378,71 @@ calculate_shards(const std::string& normalized_path)
 }
 
 
-std::vector<size_t>
-flatten_shards(const std::vector<std::vector<size_t>>& shards)
+void
+index_replicas(const std::string& normalized_path, const std::vector<size_t>& replicas)
 {
-	std::vector<size_t> flatten;
-	for (auto& replicas : shards) {
-		for (auto idx : replicas) {
-			flatten.push_back(idx);
-		}
+	L_CALL("index_replicas(<replicas>)");
+
+	auto idx = replicas.front();  // The very first node is the shard master
+	auto node = Node::get_node(idx);
+	if (node && node->is_active()) {
+		Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
+		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		MsgPack obj = {
+			{ ID_FIELD_NAME, {
+				{ RESERVED_TYPE,  KEYWORD_STR },
+			} },
+			{ "replicas", {
+				{ RESERVED_INDEX, "field_values" },
+				{ RESERVED_TYPE,  "array/positive" },
+				{ RESERVED_SLOT, DB_SLOT_USER_VALUE_2 },
+				{ RESERVED_VALUE, replicas },
+			} },
+		};
+		// Add a local schema so it doesn't break forced foreign schemas
+		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
+		db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
 	}
-	return flatten;
 }
 
 
-std::vector<std::vector<size_t>>
-unflatten_shards(const std::vector<size_t>& list, size_t num_shards, size_t num_replicas)
+void
+index_shards(const std::string& normalized_path, const std::vector<std::vector<size_t>>& shards)
 {
-	if (list.size() != num_shards * (num_replicas + 1)) {
-		THROW(Error, "Wrong number of nodes in index, it must be equal to num_shards * (num_replicas + 1)");
-	}
-	size_t idx = 0;
-	std::vector<std::vector<size_t>> shards;
-	for (size_t s = 0; s < num_shards; ++s) {
-		std::vector<size_t> replicas;
-		for (size_t r = 0; r < num_replicas + 1; ++r) {
-			replicas.push_back(list[idx++]);
+	L_CALL("index_shards(<shards>)");
+
+	auto n_shards = shards.size();
+	if (n_shards) {
+		if (n_shards == 1) {
+			index_replicas(normalized_path, shards.front());
+		} else {
+			auto idx = shards.front().front();  // The very first node is the main master
+			auto node = Node::get_node(idx);
+			if (node && node->is_active()) {
+				Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
+				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				MsgPack obj = {
+					{ ID_FIELD_NAME, {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "shards", {
+						{ RESERVED_INDEX, "field_values" },
+						{ RESERVED_TYPE,  "positive" },
+						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
+						{ RESERVED_VALUE, n_shards },
+					} },
+				};
+				// Add a local schema so it doesn't break forced foreign schemas
+				db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
+				db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+			}
+			size_t shard_num = 0;
+			for (auto& replicas : shards) {
+				auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num++);
+				index_replicas(shard_normalized_path, replicas);
+			}
 		}
-		shards.push_back(std::move(replicas));
 	}
-	return shards;
 }
 
 
@@ -1416,47 +1452,66 @@ index_calculate_shards(const std::string& normalized_path)
 	L_CALL("index_calculate_shards({})", repr(normalized_path));
 
 	auto shards = calculate_shards(normalized_path);
-	auto num_shards = shards.size();
-	if (num_shards) {
-		auto num_replicas_1 = shards.front().size();
-		if (num_replicas_1) {
-			auto idx = shards.front().front();  // The very first node is master
-			auto node = Node::get_node(idx);
-			if (node && node->is_active()) {
-				Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
-				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				MsgPack obj = {
-					{ RESERVED_STORE, false },
-					{ ID_FIELD_NAME, {
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-					{ "shards", {
-						{ RESERVED_INDEX, "field_values" },
-						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
-						{ RESERVED_VALUE, num_shards },
-					} },
-					{ "replicas", {
-						{ RESERVED_INDEX, "field_values" },
-						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_2 },
-						{ RESERVED_VALUE, num_replicas_1 - 1 },
-					} },
-					{ "nodes", {
-						{ RESERVED_INDEX, "field_values" },
-						{ RESERVED_TYPE,  "array/positive" },
-						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_3 },
-						{ RESERVED_VALUE, flatten_shards(shards) },
-					} },
-				};
-				// Add a local schema so it doesn't break forced foreign schemas
-				db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-				db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
-			}
-		}
-	}
+	index_shards(normalized_path, shards);
 	return shards;
 }
+
+
+std::vector<size_t>
+load_replicas(const Endpoints& index_endpoints, const std::string& normalized_path)
+{
+	std::vector<size_t> replicas;
+
+	try {
+		DatabaseHandler db_handler(index_endpoints);
+		auto document = db_handler.get_document(normalized_path);
+		for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_2))) {
+			size_t idx = sortable_unserialise(val);
+			replicas.push_back(idx);
+		}
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+
+	return replicas;
+}
+
+
+std::vector<std::vector<size_t>>
+load_shards(const std::string& normalized_path)
+{
+	Endpoints index_endpoints;
+	for (auto& node : Node::nodes()) {
+		if (node->idx) {
+			index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
+		}
+	}
+
+	std::vector<std::vector<size_t>> shards;
+
+	try {
+		DatabaseHandler db_handler(index_endpoints);
+		auto document = db_handler.get_document(normalized_path);
+		auto num_shards_ser = document.get_value(DB_SLOT_USER_VALUE_1);
+		if (!num_shards_ser.empty()) {
+			size_t n_shards = sortable_unserialise(num_shards_ser);
+			for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
+				auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num);
+				shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
+			}
+		} else {
+			std::vector<size_t> replicas;
+			for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_2))) {
+				size_t idx = sortable_unserialise(val);
+				replicas.push_back(idx);
+			}
+			shards.push_back(std::move(replicas));
+		}
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+
+	return shards;
+}
+
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
@@ -1519,29 +1574,20 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			nodes = shards_to_nodes(shards);
 		} else {
 			lk.unlock();
-			Endpoints index_endpoints;
-			for (auto& node : Node::nodes()) {
-				if (node->idx) {
-					index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
-				}
-			}
-			try {
-				DatabaseHandler db_handler(index_endpoints);
-				auto document = db_handler.get_document(normalized_path);
-				auto num_shards = sortable_unserialise(document.get_value(DB_SLOT_USER_VALUE_1));
-				auto num_replicas = sortable_unserialise(document.get_value(DB_SLOT_USER_VALUE_2));
-				std::vector<size_t> list;
-				for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_3))) {
-					size_t idx = sortable_unserialise(val);
-					list.push_back(idx);
-				}
-				shards = unflatten_shards(list, num_shards, num_replicas);
+			shards = load_shards(normalized_path);
+			if (!shards.empty()) {
 				nodes = shards_to_nodes(shards);
 				lk.lock();
 				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
+				size_t shard_num = 0;
+				for (auto& replicas : shards) {
+					auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num++);
+					std::vector<std::vector<size_t>> shard_shards;
+					shard_shards.push_back(replicas);
+					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
+				}
 				lk.unlock();
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {}
+			}
 		}
 
 		if (nodes.empty()) {
@@ -1553,6 +1599,13 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			nodes = shards_to_nodes(shards);
 			lk.lock();
 			resolve_index_lru.insert(std::make_pair(normalized_path, shards));
+			size_t shard_num = 0;
+			for (auto& replicas : shards) {
+				auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num++);
+				std::vector<std::vector<size_t>> shard_shards;
+				shard_shards.push_back(replicas);
+				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
+			}
 			lk.unlock();
 		}
 	}
@@ -1577,10 +1630,10 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const que
 
 	Endpoints endpoints;
 	auto nodes = resolve_index_nodes_impl(endpoint.path, query_field);
-	size_t shard = 0;
+	size_t shard_num = 0;
 	int shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
-		auto path = shards == 1 ? endpoint.path : string::format("{}/.{:_8x}", endpoint.path, shard++);
+		auto path = shards == 1 ? endpoint.path : string::format("{}/.{:_>5x}", endpoint.path, shard_num++);
 		for (const auto& node : shard_nodes) {
 			if (query_field.writable) {
 				endpoints.add(Endpoint{path, node});
