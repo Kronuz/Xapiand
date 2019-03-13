@@ -1438,7 +1438,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			}
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
-				auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num++);
+				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
 				index_replicas(shard_normalized_path, replicas);
 			}
 		}
@@ -1495,7 +1495,7 @@ load_shards(const std::string& normalized_path)
 		if (!num_shards_ser.empty()) {
 			size_t n_shards = sortable_unserialise(num_shards_ser);
 			for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
-				auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num);
+				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num);
 				shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
 			}
 		} else {
@@ -1581,7 +1581,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 				size_t shard_num = 0;
 				for (auto& replicas : shards) {
-					auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num++);
+					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
 					std::vector<std::vector<size_t>> shard_shards;
 					shard_shards.push_back(replicas);
 					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
@@ -1601,7 +1601,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
-				auto shard_normalized_path = string::format("{}/.{:_>5x}", normalized_path, shard_num++);
+				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
 				std::vector<std::vector<size_t>> shard_shards;
 				shard_shards.push_back(replicas);
 				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
@@ -1633,7 +1633,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const que
 	size_t shard_num = 0;
 	int shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
-		auto path = shards == 1 ? endpoint.path : string::format("{}/.{:_>5x}", endpoint.path, shard_num++);
+		auto path = shards == 1 ? endpoint.path : string::format("{}/.__{}", endpoint.path, shard_num++);
 		for (const auto& node : shard_nodes) {
 			if (query_field.writable) {
 				endpoints.add(Endpoint{path, node});
