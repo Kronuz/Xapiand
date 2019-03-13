@@ -248,9 +248,9 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 				if (database->is_local()) {
 					auto referenced_database_endpoint = database_pool.get(*this);
 					if (referenced_database_endpoint) {
-						auto local_revision = referenced_database_endpoint->local_revision.load();
+						auto revision = referenced_database_endpoint->local_revision.load();
 						referenced_database_endpoint.reset();
-						if (local_revision && local_revision != database->get_revision()) {
+						if (revision && revision != database->get_revision()) {
 							L_DATABASE("Local writable database has changed revision");
 							reopen = true;
 						}
