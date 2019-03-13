@@ -288,9 +288,9 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 	if ((mode & HTTP_HEADER_RESPONSE) != 0) {
 		headers += "Server: " + Package::STRING + eol;
 
-		if (!endpoints.empty()) {
-			headers += "Database: " + endpoints.to_string() + eol;
-		}
+		// if (!endpoints.empty()) {
+		// 	headers += "Database: " + endpoints.to_string() + eol;
+		// }
 
 		request.ends = std::chrono::system_clock::now();
 
@@ -2256,7 +2256,7 @@ HttpClient::retrieve_view(Request& request)
 		size_t n_shards = endpoints.size();
 		size_t shard_num = (did - 1) % n_shards;
 		obj[RESPONSE_xSHARD] = shard_num;
-		obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+		// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 
 		if (!selector.empty()) {
 			obj = obj.select(selector);
@@ -2406,7 +2406,7 @@ HttpClient::search_view(Request& request)
 		size_t n_shards = endpoints.size();
 		size_t shard_num = (did - 1) % n_shards;
 		hit_obj[RESPONSE_xSHARD] = shard_num;
-		hit_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+		// hit_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 
 		hit_obj[RESPONSE_xRANK] = m.get_rank();
 		hit_obj[RESPONSE_xWEIGHT] = m.get_weight();
