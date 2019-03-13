@@ -30,6 +30,7 @@
 #include <unistd.h>
 
 #include "database.h"                         // for Database
+#include "database_flags.h"                   // for DB_*
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "ignore_unused.h"                    // for ignore_unused

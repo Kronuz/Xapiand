@@ -42,6 +42,7 @@
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
 #include "database.h"               // for Shard
 #include "database_pool.h"          // for DatabasePool
+#include "database_shard.h"         // for Shard
 #include "database_utils.h"         // for read_uuid
 #include "exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description

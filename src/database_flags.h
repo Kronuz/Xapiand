@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include "string.hh"          // for string::join
+
 constexpr int DB_OPEN              = 0x0000;  // Opens a database
 constexpr int DB_CREATE_OR_OPEN    = 0x0001;  // Automatically creates the database if it doesn't exist
 constexpr int DB_WRITABLE          = 0x0002;  // Opens as writable
@@ -30,3 +32,14 @@ constexpr int DB_SYNC_WAL          = 0x0020;  // Use sync wal
 constexpr int DB_NOSTORAGE         = 0x0040;  // Disable separate data storage file for the database
 
 constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document
+
+
+inline std::string readable_flags(int flags) {
+	std::vector<std::string> values;
+	if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
+	if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
+	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
+	if ((flags & DB_NO_WAL) == DB_NO_WAL) values.push_back("DB_NO_WAL");
+	if ((flags & DB_NOSTORAGE) == DB_NOSTORAGE) values.push_back("DB_NOSTORAGE");
+	return string::join(values, "|");
+}

@@ -31,8 +31,9 @@
 #include "cast.h"                           // for Cast
 #include "chaipp/exception.h"               // for chaipp::Error
 #include "database.h"                       // for Database
-#include "database_wal.h"                   // for DatabaseWAL
+#include "database_shard.h"                 // for Shard
 #include "database_utils.h"                 // for split_path_id
+#include "database_wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
 #include "length.h"                         // for serialise_string, unserialise_string
 #include "lock_database.h"                  // for lock_database
