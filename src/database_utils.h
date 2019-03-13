@@ -39,7 +39,8 @@ constexpr double DB_VERSION_SCHEMA = 2.0;
 
 constexpr Xapian::valueno DB_SLOT_RESERVED        = 20; // Reserved slots by special data
 constexpr Xapian::valueno DB_SLOT_ID              = 0;  // Slot for document ID
-constexpr Xapian::valueno DB_SLOT_VERSION         = 1;  // Temporary slot for version checks
+constexpr Xapian::valueno DB_SLOT_VERSION         = 1;  // Slot for version checks
+constexpr Xapian::valueno DB_SLOT_SHARDS          = 2;  // Temporary slot for number of shards
 constexpr Xapian::valueno DB_SLOT_USER_VALUE_1    = 5;  // Slot for user values
 constexpr Xapian::valueno DB_SLOT_USER_VALUE_2    = 6;  // Slot for user values
 constexpr Xapian::valueno DB_SLOT_USER_VALUE_3    = 7;  // Slot for user values

@@ -34,6 +34,7 @@
 #include "database_wal.h"         // for DatabaseWAL, DatabaseWALWriter
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for exists, build_path_index
+#include "hashes.hh"              // for fnv1ah64::hash
 #include "ignore_unused.h"        // for ignore_unused
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_OBJ, L_CALL
@@ -526,44 +527,46 @@ Database::reopen()
 	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Database::reopen:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	if (endpoint) {
-		if (_database) {
-			if (!is_incomplete()) {
-				// Try to reopen
-				for (int t = DB_RETRIES; t; --t) {
-					try {
-						bool ret = _database->reopen();
-						return ret;
-					} catch (const Xapian::DatabaseModifiedError& exc) {
-						if (t == 0) { throw; }
-					} catch (const Xapian::DatabaseOpeningError& exc) {
-					} catch (const Xapian::NetworkError& exc) {
-					} catch (const Xapian::DatabaseError& exc) {
-						if (exc.get_msg() != "Database has been closed") {
-							throw;
-						}
-					}
-				}
-			}
-
-			do_close(true, is_closed(), transaction, false);
-		}
-
-		try {
-			if (is_writable()) {
-				reopen_writable();
-			} else {
-				reopen_readable();
-			}
-		} catch (...) {
-			reset();
-			throw;
-		}
-	} else {
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
 		_database = std::make_unique<Xapian::Database>();
 		for (auto& shard : _shards) {
 			_database->add_database(*shard->db());
 		}
+		return true;
+	}
+
+	if (_database) {
+		if (!is_incomplete()) {
+			// Try to reopen
+			for (int t = DB_RETRIES; t; --t) {
+				try {
+					bool ret = _database->reopen();
+					return ret;
+				} catch (const Xapian::DatabaseModifiedError& exc) {
+					if (t == 0) { throw; }
+				} catch (const Xapian::DatabaseOpeningError& exc) {
+				} catch (const Xapian::NetworkError& exc) {
+				} catch (const Xapian::DatabaseError& exc) {
+					if (exc.get_msg() != "Database has been closed") {
+						throw;
+					}
+				}
+			}
+		}
+
+		do_close(true, is_closed(), transaction, false);
+	}
+
+	try {
+		if (is_writable()) {
+			reopen_writable();
+		} else {
+			reopen_readable();
+		}
+	} catch (...) {
+		reset();
+		throw;
 	}
 
 	ASSERT(_database);
@@ -729,6 +732,15 @@ Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit({})", wal_);
 
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		bool ret = true;
+		for (auto& shard : _shards) {
+			ret = shard->commit(wal_, send_update) || ret;
+		}
+		return ret;
+	}
+
 	ASSERT(is_writable());
 
 	if (!is_modified()) {
@@ -796,6 +808,14 @@ Database::begin_transaction(bool flushed)
 {
 	L_CALL("Database::begin_transaction({})", flushed);
 
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		for (auto& shard : _shards) {
+			shard->begin_transaction(flushed);
+		}
+		return;
+	}
+
 	ASSERT(is_writable());
 
 	if (transaction == Transaction::none) {
@@ -812,6 +832,14 @@ void
 Database::commit_transaction()
 {
 	L_CALL("Database::commit_transaction()");
+
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		for (auto& shard : _shards) {
+			shard->commit_transaction();
+		}
+		return;
+	}
 
 	ASSERT(is_writable());
 
@@ -830,6 +858,14 @@ Database::cancel_transaction()
 {
 	L_CALL("Database::cancel_transaction()");
 
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		for (auto& shard : _shards) {
+			shard->cancel_transaction();
+		}
+		return;
+	}
+
 	ASSERT(is_writable());
 
 	if (transaction != Transaction::none) {
@@ -846,6 +882,16 @@ void
 Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::delete_document({}, {}, {})", did, commit_, wal_);
+
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		size_t n_shards = _shards.size();
+		size_t shard_num = (did - 1) % n_shards;
+		Xapian::docid shard_did = (did - 1) / n_shards + 1;
+		auto& shard = _shards[shard_num];
+		shard->delete_document(shard_did, commit_, wal_, version_);
+		return;
+	}
 
 	ASSERT(is_writable());
 
@@ -917,6 +963,15 @@ void
 Database::delete_document_term(const std::string& term, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
+
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		size_t n_shards = _shards.size();
+		size_t shard_num = fnv1ah64::hash(term) % n_shards;
+		auto& shard = _shards[shard_num];
+		shard->delete_document_term(term, commit_, wal_, version_);
+		return;
+	}
 
 	ASSERT(is_writable());
 
@@ -1078,9 +1133,19 @@ Database::storage_commit()
 
 
 Xapian::docid
-Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
+Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Database::add_document(<doc>, {}, {})", commit_, wal_);
+
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		size_t n_shards = _shards.size();
+		size_t shard_num = random_int(0, n_shards);
+		auto& shard = _shards[shard_num];
+		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		auto did = shard->add_document(std::move(doc), commit_, wal_, version_);
+		return (did - 1) * n_shards + shard_num + 1;
+	}
 
 	ASSERT(is_writable());
 
@@ -1101,6 +1166,7 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 	Xapian::rev version = 0;
 	Xapian::docid did = 0;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
+	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Adding new document.  t: {}", t);
@@ -1109,12 +1175,18 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 
 		try {
 			if (is_local()) {
+				const char *p = n_shards_ser.data();
+				const char *p_end = p + n_shards_ser.size();
+				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
 				std::string ver_prefix;
 				did = wdb->get_lastdocid() + 1;
-				ver_prefix = "V" + serialise_length(did);
+				auto shard_did = (did - 1) * n_shards + shard_num + 1;
+				ver_prefix = "V" + serialise_length(shard_did);
 				ver = sortable_serialise(++version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
+				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
 			}
 			if (did) {
 				wdb->replace_document(did, doc);
@@ -1166,6 +1238,17 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 {
 	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_, wal_);
 
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		size_t n_shards = _shards.size();
+		size_t shard_num = (did - 1) % n_shards;
+		Xapian::docid shard_did = (did - 1) / n_shards + 1;
+		auto& shard = _shards[shard_num];
+		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		shard->replace_document(shard_did, std::move(doc), commit_, wal_, version_);
+		return did;
+	}
+
 	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -1184,6 +1267,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 
 	Xapian::rev version = 0;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
+	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Replacing: {}  t: {}", did, t);
@@ -1191,8 +1275,13 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 
 		try {
 			if (is_local()) {
+				const char *p = n_shards_ser.data();
+				const char *p_end = p + n_shards_ser.size();
+				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
 				std::string ver_prefix;
-				ver_prefix = "V" + serialise_length(did);
+				auto shard_did = (did - 1) * n_shards + shard_num + 1;
+				ver_prefix = "V" + serialise_length(shard_did);
 				auto ver_prefix_size = ver_prefix.size();
 				auto t_end = wdb->allterms_end(ver_prefix);
 				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1211,6 +1300,7 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 				ver = sortable_serialise(++version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
+				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
 			}
 			wdb->replace_document(did, doc);
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
@@ -1258,6 +1348,16 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 {
 	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
 
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		size_t n_shards = _shards.size();
+		size_t shard_num = fnv1ah64::hash(term) % n_shards;
+		auto& shard = _shards[shard_num];
+		doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		auto did = shard->replace_document_term(term, std::move(doc), commit_, wal_, version_);
+		return (did - 1) * n_shards + shard_num + 1;
+	}
+
 	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -1278,6 +1378,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 	Xapian::rev version = 0;
 	Xapian::docid did = 0;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
+	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
 	for (int t = DB_RETRIES; t; --t) {
 		// L_DATABASE("Replacing: '{}'  t: {}", term, t);
@@ -1286,12 +1387,17 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 		try {
 			if (is_local()) {
+				const char *p = n_shards_ser.data();
+				const char *p_end = p + n_shards_ser.size();
+				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
+				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
 				std::string ver_prefix;
 				if (term == "QN\x80") {
 					// Special term for autoincrement
 					did = wdb->get_lastdocid() + 1;
-					ver_prefix = "V" + serialise_length(did);
-					auto did_serialised = serialise_length(did);
+					auto shard_did = (did - 1) * n_shards + shard_num + 1;
+					ver_prefix = "V" + serialise_length(shard_did);
+					auto did_serialised = serialise_length(shard_did);
 					new_term = "QN" + did_serialised;
 					doc.add_boolean_term(new_term);
 					doc.add_value(DB_SLOT_ID, did_serialised);
@@ -1303,13 +1409,13 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 						auto& value = it.value();
 						switch (value.getType()) {
 							case MsgPack::Type::POSITIVE_INTEGER:
-								value = static_cast<uint64_t>(did);
+								value = static_cast<uint64_t>(shard_did);
 								break;
 							case MsgPack::Type::NEGATIVE_INTEGER:
-								value = static_cast<int64_t>(did);
+								value = static_cast<int64_t>(shard_did);
 								break;
 							case MsgPack::Type::FLOAT:
-								value = static_cast<double>(did);
+								value = static_cast<double>(shard_did);
 								break;
 							default:
 								break;
@@ -1322,10 +1428,12 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 					auto it = wdb->postlist_begin(term);
 					if (it == wdb->postlist_end(term)) {
 						did = wdb->get_lastdocid() + 1;
-						ver_prefix = "V" + serialise_length(did);
+						auto shard_did = (did - 1) * n_shards + shard_num + 1;
+						ver_prefix = "V" + serialise_length(shard_did);
 					} else {
 						did = *it;
-						ver_prefix = "V" + serialise_length(did);
+						auto shard_did = (did - 1) * n_shards + shard_num + 1;
+						ver_prefix = "V" + serialise_length(shard_did);
 						auto ver_prefix_size = ver_prefix.size();
 						auto t_end = wdb->allterms_end(ver_prefix);
 						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1346,6 +1454,7 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 				ver = sortable_serialise(++version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
+				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
 			}
 			if (did) {
 				wdb->replace_document(did, doc);
@@ -1397,6 +1506,14 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 {
 	L_CALL("Database::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		for (auto& shard : _shards) {
+			shard->add_spelling(word, freqinc, commit_, wal_);
+		}
+		return;
+	}
+
 	ASSERT(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -1446,6 +1563,14 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	L_CALL("Database::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
 
 	Xapian::termcount result = 0;
+
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		for (auto& shard : _shards) {
+			result = shard->remove_spelling(word, freqdec, commit_, wal_);
+		}
+		return result;
+	}
 
 	ASSERT(is_writable());
 
@@ -1696,6 +1821,14 @@ void
 Database::set_metadata(const std::string& key, const std::string& value, bool commit_, bool wal_)
 {
 	L_CALL("Database::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
+
+	if (!endpoint) {
+		ASSERT(!_shards.empty());
+		for (auto& shard : _shards) {
+			shard->set_metadata(key, value, commit_, wal_);
+		}
+		return;
+	}
 
 	ASSERT(is_writable());
 
