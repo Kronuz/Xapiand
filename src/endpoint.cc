@@ -448,11 +448,10 @@ Endpoints::to_string() const
 size_t
 Endpoints::hash() const
 {
+	static const std::hash<Endpoint> hash_fn;
 	size_t hash = 0;
-	std::hash<Endpoint> hash_fn;
-	auto j = cbegin();
-	for (int i = 0; j != cend(); ++j, ++i) {
-		hash ^= hash_fn(*j);
+	for (auto& e : *this) {
+		hash ^= hash_fn(e);
 	}
 	return hash;
 }
@@ -471,16 +470,22 @@ Endpoints::add(const Endpoint& endpoint)
 bool
 operator==(const Endpoint& le, const Endpoint& re)
 {
-	std::hash<Endpoint> hash_fn;
-	return hash_fn(le) == hash_fn(re);
+	return le.path == re.path && le.node_name == re.node_name;
 }
 
 
 bool
 operator==(const Endpoints& le, const Endpoints& re)
 {
-	std::hash<Endpoints> hash_fn;
-	return hash_fn(le) == hash_fn(re);
+	if (le.size() != re.size()) {
+		return false;
+	}
+	for (size_t i = 0; i < le.size(); ++i) {
+		if (le[i] != re[i]) {
+			return false;
+		}
+	}
+	return true;
 }
 
 
