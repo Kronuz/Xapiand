@@ -40,6 +40,7 @@
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database_handler.h"               // for DatabaseHandler
 #include "database_utils.h"                 // for query_field_t
+#include "database_pool.h"                  // for DatabasePool
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description

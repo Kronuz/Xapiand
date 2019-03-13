@@ -35,7 +35,7 @@
 #include "database_utils.h"                 // for split_path_id
 #include "exception.h"                      // for ClientError
 #include "length.h"                         // for serialise_string, unserialise_string
-#include "lock_database.h"                  // for lock_database
+#include "lock_database.h"                  // for lock_db
 #include "log.h"                            // for L_CALL
 #include "manager.h"                        // for XapiandManager
 #include "msgpack.h"                        // for MsgPack
@@ -202,12 +202,13 @@ public:
 //
 
 DatabaseHandler::DatabaseHandler()
-	: LockableDatabase(),
+	: flags(0),
 	  method(HTTP_GET) { }
 
 
 DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<std::string>> context_)
-	: LockableDatabase(endpoints_, flags_),
+	: flags(flags_),
+	  endpoints(endpoints_),
 	  method(method_),
 	  context(std::move(context_)) { }
 
@@ -288,8 +289,8 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 {
 	L_CALL("DatabaseHandler::get_document_term({})", repr(term_id));
 
-	lock_database lk_db(this);
-	auto did = database()->find_document(term_id);
+	lock_db lk_db(endpoints, flags);
+	auto did = lk_db->find_document(term_id);
 	return Document(did, this);
 }
 
@@ -686,7 +687,7 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 {
 	L_CALL("DatabaseHandler::get_rset(...)");
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
 	// Xapian::RSet only keeps a set of Xapian::docid internally,
 	// so it's thread safe across database checkouts.
@@ -695,7 +696,7 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			Xapian::Enquire enquire(*db());
+			Xapian::Enquire enquire(*lk_db->db());
 			enquire.set_query(query);
 			auto mset = enquire.get_mset(0, maxitems);
 			for (const auto& did : mset) {
@@ -709,7 +710,7 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 		} catch (const Xapian::Error& exc) {
 			THROW(Error, exc.get_description());
 		}
-		database()->reopen();
+		lk_db->reopen();
 	}
 
 	return rset;
@@ -744,7 +745,7 @@ DatabaseHandler::dump_metadata(int fd)
 {
 	L_CALL("DatabaseHandler::dump_metadata()");
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
 	XXH32_reset(xxh_state, 0);
@@ -756,7 +757,7 @@ DatabaseHandler::dump_metadata(int fd)
 	serialise_string(fd, db_endpoints);
 	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
-	database()->dump_metadata(fd, xxh_state);
+	lk_db->dump_metadata(fd, xxh_state);
 
 	uint32_t current_hash = XXH32_digest(xxh_state);
 	XXH32_freeState(xxh_state);
@@ -774,7 +775,7 @@ DatabaseHandler::dump_schema(int fd)
 	schema = get_schema();
 	auto saved_schema_ser = schema->get_full().serialise();
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
 	XXH32_reset(xxh_state, 0);
@@ -802,7 +803,7 @@ DatabaseHandler::dump_documents(int fd)
 {
 	L_CALL("DatabaseHandler::dump_documents()");
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
 	XXH32_reset(xxh_state, 0);
@@ -814,7 +815,7 @@ DatabaseHandler::dump_documents(int fd)
 	serialise_string(fd, db_endpoints);
 	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
 
-	database()->dump_documents(fd, xxh_state);
+	lk_db->dump_documents(fd, xxh_state);
 
 	uint32_t current_hash = XXH32_digest(xxh_state);
 	XXH32_freeState(xxh_state);
@@ -833,7 +834,7 @@ DatabaseHandler::restore(int fd)
 	std::size_t off = 0;
 	std::size_t acc = 0;
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
 	XXH32_reset(xxh_state, 0);
@@ -864,7 +865,7 @@ DatabaseHandler::restore(int fd)
 				continue;
 			}
 			L_INFO_HOOK("DatabaseHandler::restore", "Restoring metadata {} = {}", key, value);
-			database()->set_metadata(key, value, false, false);
+			lk_db->set_metadata(key, value, false, false);
 		}
 	}
 
@@ -901,9 +902,7 @@ DatabaseHandler::restore(int fd)
 
 		// Index documents.
 		auto indexer = thread_pool.async([&]{
-			DatabaseHandler db_handler(endpoints, flags, method);
-			lock_database lk_db(&db_handler);
-			lk_db.unlock();
+			lock_db lk_db(endpoints, flags, false);
 			bool ready_ = false;
 			while (true) {
 				if (XapiandManager::manager()->is_detaching()) {
@@ -921,9 +920,9 @@ DatabaseHandler::restore(int fd)
 				auto& doc = std::get<1>(prepared);
 
 				if (!term_id.empty()) {
-					lk_db.lock();
+					auto database = lk_db.lock();
 					try {
-						db_handler.database()->replace_document_term(term_id, std::move(doc), false, false);
+						database->replace_document_term(term_id, std::move(doc), false, false);
 					} catch (...) {
 						L_EXC("ERROR: Cannot replace document");
 					}
@@ -1052,7 +1051,7 @@ DatabaseHandler::restore(int fd)
 		lk_db.lock();
 	}
 
-	database()->commit(false);
+	lk_db->commit(false);
 
 	uint32_t saved_hash = unserialise_length(fd, buffer, off, acc);
 	uint32_t current_hash = XXH32_digest(xxh_state);
@@ -1069,9 +1068,9 @@ DatabaseHandler::dump_documents()
 {
 	L_CALL("DatabaseHandler::dump_documents()");
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
-	return database()->dump_documents();
+	return lk_db->dump_documents();
 }
 
 
@@ -1176,12 +1175,12 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 
 	auto term_string = std::string(term);
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto it = db()->postlist_begin(term_string);
-			auto it_e = db()->postlist_end(term_string);
+			auto it = lk_db->db()->postlist_begin(term_string);
+			auto it_e = lk_db->db()->postlist_end(term_string);
 			if (initial) {
 				it.skip_to(initial);
 			}
@@ -1207,7 +1206,7 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 		} catch (const std::exception& exc) {
 			THROW(ClientError, "The search was not performed: {}", exc.what());
 		}
-		database()->reopen();
+		lk_db->reopen();
 	}
 
 	return mset;
@@ -1338,11 +1337,11 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 	MSet mset;
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto final_query = query;
-			Xapian::Enquire enquire(*db());
+			Xapian::Enquire enquire(*lk_db->db());
 			if (collapse_key != Xapian::BAD_VALUENO) {
 				enquire.set_collapse_key(collapse_key, query_field.collapse_max);
 			}
@@ -1380,7 +1379,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		} catch (const std::exception& exc) {
 			THROW(ClientError, "The search was not performed: {}", exc.what());
 		}
-		database()->reopen();
+		lk_db->reopen();
 	}
 
 	return mset;
@@ -1394,11 +1393,11 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 
 	MSet mset;
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto final_query = query;
-			Xapian::Enquire enquire(*db());
+			Xapian::Enquire enquire(*lk_db->db());
 			if (spy) {
 				enquire.add_matchspy(spy);
 			}
@@ -1425,7 +1424,7 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 		} catch (const std::exception& exc) {
 			THROW(ClientError, "The search was not performed: {}", exc.what());
 		}
-		database()->reopen();
+		lk_db->reopen();
 	}
 
 	return mset;
@@ -1497,8 +1496,8 @@ DatabaseHandler::get_metadata_keys()
 {
 	L_CALL("DatabaseHandler::get_metadata_keys()");
 
-	lock_database lk_db(this);
-	return database()->get_metadata_keys();
+	lock_db lk_db(endpoints, flags);
+	return lk_db->get_metadata_keys();
 }
 
 
@@ -1507,8 +1506,8 @@ DatabaseHandler::get_metadata(const std::string& key)
 {
 	L_CALL("DatabaseHandler::get_metadata({})", repr(key));
 
-	lock_database lk_db(this);
-	return database()->get_metadata(key);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->get_metadata(key);
 }
 
 
@@ -1524,14 +1523,14 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 {
 	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, overwrite);
 
-	lock_database lk_db(this);
+	lock_db lk_db(endpoints, flags);
 	if (!overwrite) {
-		auto old_value = database()->get_metadata(key);
+		auto old_value = lk_db->get_metadata(key);
 		if (!old_value.empty()) {
 			return (old_value == value);
 		}
 	}
-	database()->set_metadata(key, value, commit);
+	lk_db->set_metadata(key, value, commit);
 	return true;
 }
 
@@ -1564,8 +1563,8 @@ DatabaseHandler::get_document(std::string_view document_id)
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	lock_database lk_db(this);
-	did = database()->find_document(term_id);
+	lock_db lk_db(endpoints, flags);
+	did = lk_db->find_document(term_id);
 	return Document(did, this);
 }
 
@@ -1582,8 +1581,8 @@ DatabaseHandler::get_docid(std::string_view document_id)
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	lock_database lk_db(this);
-	return database()->find_document(term_id);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->find_document(term_id);
 }
 
 
@@ -1594,7 +1593,8 @@ DatabaseHandler::delete_document(std::string_view document_id, bool commit)
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		database()->delete_document(did, commit);
+		lock_db lk_db(endpoints, flags);
+		lk_db->delete_document(did, commit);
 		return;
 	}
 
@@ -1609,8 +1609,8 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit)
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
-	lock_database lk_db(this);
-	return database()->delete_document_term(term, commit);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->delete_document_term(term, commit);
 }
 
 
@@ -1619,8 +1619,8 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>)", did);
 
-	lock_database lk_db(this);
-	return database()->replace_document(did, std::move(doc), commit);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->replace_document(did, std::move(doc), commit);
 }
 
 
@@ -1631,7 +1631,8 @@ DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		return database()->replace_document(did, std::move(doc), commit);
+		lock_db lk_db(endpoints, flags);
+		return lk_db->replace_document(did, std::move(doc), commit);
 	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
@@ -1645,8 +1646,8 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 {
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>)", repr(term));
 
-	lock_database lk_db(this);
-	return database()->replace_document_term(term, std::move(doc), commit);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->replace_document_term(term, std::move(doc), commit);
 }
 
 
@@ -1710,19 +1711,21 @@ DatabaseHandler::get_database_info()
 {
 	L_CALL("DatabaseHandler::get_database_info()");
 
-	lock_database lk_db(this);
-	auto doccount = db()->get_doccount();
-	auto lastdocid = db()->get_lastdocid();
+	lock_db lk_db(endpoints, flags);
+	auto db = lk_db.locked()->db();
+
+	auto doccount = db->get_doccount();
+	auto lastdocid = db->get_lastdocid();
 	MsgPack info;
-	info[RESPONSE_UUID] = db()->get_uuid();
-	info[RESPONSE_REVISION] = db()->get_revision();
+	info[RESPONSE_UUID] = db->get_uuid();
+	info[RESPONSE_REVISION] = db->get_revision();
 	info[RESPONSE_DOC_COUNT] = doccount;
 	info[RESPONSE_LAST_ID] = lastdocid;
 	info[RESPONSE_DOC_DEL] = lastdocid - doccount;
-	info[RESPONSE_AV_LENGTH] = db()->get_avlength();
-	info[RESPONSE_DOC_LEN_LOWER] =  db()->get_doclength_lower_bound();
-	info[RESPONSE_DOC_LEN_UPPER] = db()->get_doclength_upper_bound();
-	info[RESPONSE_HAS_POSITIONS] = db()->has_positions();
+	info[RESPONSE_AV_LENGTH] = db->get_avlength();
+	info[RESPONSE_DOC_LEN_LOWER] =  db->get_doclength_lower_bound();
+	info[RESPONSE_DOC_LEN_UPPER] = db->get_doclength_upper_bound();
+	info[RESPONSE_HAS_POSITIONS] = db->has_positions();
 	return info;
 }
 
@@ -1733,8 +1736,8 @@ DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::storage_get_stored()");
 
-	lock_database lk_db(this);
-	return database()->storage_get_stored(locator, did);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->storage_get_stored(locator, did);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -1744,8 +1747,8 @@ DatabaseHandler::commit(bool wal)
 {
 	L_CALL("DatabaseHandler::commit({})", wal);
 
-	lock_database lk_db(this);
-	return database()->commit(wal);
+	lock_db lk_db(endpoints, flags);
+	return lk_db->commit(wal);
 }
 
 
@@ -1754,8 +1757,8 @@ DatabaseHandler::reopen()
 {
 	L_CALL("DatabaseHandler::reopen()");
 
-	lock_database lk_db(this);
-	return database()->reopen();
+	lock_db lk_db(endpoints, flags);
+	return lk_db->reopen();
 }
 
 
@@ -2003,19 +2006,6 @@ Document::Document(Xapian::docid did_, DatabaseHandler* db_handler_)
 	  db_handler(db_handler_) { }
 
 
-Xapian::Document
-Document::_get_document()
-{
-	L_CALL("Document::_get_document()");
-
-	Xapian::Document doc;
-	if (db_handler != nullptr && db_handler->database()) {
-		doc = db_handler->database()->get_document(did, true);
-	}
-	return doc;
-}
-
-
 Xapian::docid
 Document::get_docid()
 {
@@ -2029,9 +2019,12 @@ Document::serialise(size_t retries)
 	L_CALL("Document::serialise({})", retries);
 
 	try {
-		lock_database lk_db(db_handler);
-		auto doc = _get_document();
-		return doc.serialise();
+		if (db_handler != nullptr) {
+			lock_db lk_db(db_handler->endpoints, db_handler->flags);
+			auto doc = lk_db->get_document(did, true);
+			return doc.serialise();
+		}
+		return Xapian::Document{}.serialise();
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries == 0) { throw; }
 		return serialise(--retries);
@@ -2045,9 +2038,12 @@ Document::get_value(Xapian::valueno slot, size_t retries)
 	L_CALL("Document::get_value({}, {})", slot, retries);
 
 	try {
-		lock_database lk_db(db_handler);
-		auto doc = _get_document();
-		return doc.get_value(slot);
+		if (db_handler != nullptr) {
+			lock_db lk_db(db_handler->endpoints, db_handler->flags);
+			auto doc = lk_db->get_document(did, true);
+			return doc.get_value(slot);
+		}
+		return "";
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries == 0) { throw; }
 		return get_value(slot, --retries);
@@ -2061,9 +2057,12 @@ Document::get_data(size_t retries)
 	L_CALL("Document::get_data({})", retries);
 
 	try {
-		lock_database lk_db(db_handler);
-		auto doc = _get_document();
-		return doc.get_data();
+		if (db_handler != nullptr) {
+			lock_db lk_db(db_handler->endpoints, db_handler->flags);
+			auto doc = lk_db->get_document(did, true);
+			return doc.get_data();
+		}
+		return "";
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries == 0) { throw; }
 		return get_data(--retries);
@@ -2078,26 +2077,24 @@ Document::get_terms(size_t retries)
 
 	try {
 		MsgPack terms;
-
-		lock_database lk_db(db_handler);
-		auto doc = _get_document();
-
-		// doc.termlist_count() disassociates the database in doc.
-
-		const auto it_e = doc.termlist_end();
-		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-			auto& term = terms[*it];
-			term[RESPONSE_WDF] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
-			try {
-				auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
-				term[RESPONSE_TERM_FREQ] = _term_freq;
-			} catch (const Xapian::InvalidOperationError&) { }  // Iterator has moved, and does not support random access or doc is not associated with a database.
-			if (it.positionlist_count() != 0u) {
-				auto& term_pos = term[RESPONSE_POS];
-				term_pos.reserve(it.positionlist_count());
-				const auto pit_e = it.positionlist_end();
-				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-					term_pos.push_back(*pit);
+		if (db_handler != nullptr) {
+			lock_db lk_db(db_handler->endpoints, db_handler->flags);
+			auto doc = lk_db->get_document(did, true);
+			const auto it_e = doc.termlist_end();
+			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+				auto& term = terms[*it];
+				term[RESPONSE_WDF] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
+				try {
+					auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
+					term[RESPONSE_TERM_FREQ] = _term_freq;
+				} catch (const Xapian::InvalidOperationError&) { }  // Iterator has moved, and does not support random access or doc is not associated with a database.
+				if (it.positionlist_count() != 0u) {
+					auto& term_pos = term[RESPONSE_POS];
+					term_pos.reserve(it.positionlist_count());
+					const auto pit_e = it.positionlist_end();
+					for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+						term_pos.push_back(*pit);
+					}
 				}
 			}
 		}
@@ -2116,14 +2113,14 @@ Document::get_values(size_t retries)
 
 	try {
 		MsgPack values;
-
-		lock_database lk_db(db_handler);
-		auto doc = _get_document();
-
-		values.reserve(doc.values_count());
-		const auto iv_e = doc.values_end();
-		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-			values[std::to_string(iv.get_valueno())] = *iv;
+		if (db_handler != nullptr) {
+			lock_db lk_db(db_handler->endpoints, db_handler->flags);
+			auto doc = lk_db->get_document(did, true);
+			values.reserve(doc.values_count());
+			const auto iv_e = doc.values_end();
+			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+				values[std::to_string(iv.get_valueno())] = *iv;
+			}
 		}
 		return values;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -2190,31 +2187,30 @@ uint64_t
 Document::hash(size_t retries)
 {
 	try {
-		lock_database lk_db(db_handler);
-
-		auto doc = _get_document();
-
 		uint64_t hash = 0;
+		if (db_handler != nullptr) {
+			lock_db lk_db(db_handler->endpoints, db_handler->flags);
+			auto doc = lk_db->get_document(did, true);
 
-		// Add hash of values
-		const auto iv_e = doc.values_end();
-		for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
-			hash ^= xxh64::hash(*iv) * iv.get_valueno();
-		}
-
-		// Add hash of terms
-		const auto it_e = doc.termlist_end();
-		for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-			hash ^= xxh64::hash(*it) * it.get_wdf();
-			const auto pit_e = it.positionlist_end();
-			for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
-				hash ^= *pit;
+			// Add hash of values
+			const auto iv_e = doc.values_end();
+			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
+				hash ^= xxh64::hash(*iv) * iv.get_valueno();
 			}
+
+			// Add hash of terms
+			const auto it_e = doc.termlist_end();
+			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
+				hash ^= xxh64::hash(*it) * it.get_wdf();
+				const auto pit_e = it.positionlist_end();
+				for (auto pit = it.positionlist_begin(); pit != pit_e; ++pit) {
+					hash ^= *pit;
+				}
+			}
+
+			// Add hash of data
+			hash ^= xxh64::hash(doc.get_data());
 		}
-
-		// Add hash of data
-		hash ^= xxh64::hash(doc.get_data());
-
 		return hash;
 	} catch (const Xapian::DatabaseModifiedError& exc) {
 		if (retries == 0) { throw; }
@@ -2231,8 +2227,8 @@ committer_commit(std::weak_ptr<Shard> weak_database) {
 		std::string error;
 
 		try {
-			DatabaseHandler db_handler(Endpoints{Endpoint{*shard->endpoint}}, DB_WRITABLE);
-			db_handler.commit();
+			lock_shard lk_shard(Endpoint{*shard->endpoint}, DB_WRITABLE);
+			lk_shard->commit();
 		} catch (const Exception& exc) {
 			error = exc.get_message();
 		} catch (const Xapian::Error& exc) {

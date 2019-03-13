@@ -39,7 +39,6 @@
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method
 #include "lightweight_semaphore.h"           // for LightweightSemaphore
-#include "lock_database.h"                   // for LockableDatabase
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
@@ -48,6 +47,7 @@
 
 class AggregationMatchSpy;
 class Data;
+class Shard;
 class Script;
 class Locator;
 class Database;
@@ -167,10 +167,13 @@ public:
 
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
-class DatabaseHandler : public LockableDatabase {
+class DatabaseHandler {
 	friend Document;
 	friend Schema;
 	friend SchemasLRU;
+
+	int flags;
+	Endpoints endpoints;
 
 	enum http_method method;
 	std::shared_ptr<Schema> schema;
@@ -303,6 +306,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	Endpoints endpoints;
 	int flags;
+
 	enum http_method method;
 
 	std::atomic_size_t _processed;
@@ -377,8 +381,6 @@ class Document {
 	Xapian::docid did;
 
 	DatabaseHandler* db_handler;
-
-	Xapian::Document _get_document();
 
 public:
 	Document();
