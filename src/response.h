@@ -23,6 +23,7 @@
 #pragma once
 
 constexpr const char RESPONSE_xDOCID[]                      = "#docid";
+constexpr const char RESPONSE_xSHARD[]                      = "#shard";
 constexpr const char RESPONSE_xRANK[]                       = "#rank";
 constexpr const char RESPONSE_xWEIGHT[]                     = "#weight";
 constexpr const char RESPONSE_xPERCENT[]                    = "#percent";

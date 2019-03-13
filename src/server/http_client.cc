@@ -2244,13 +2244,18 @@ HttpClient::retrieve_view(Request& request)
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
 			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
-		obj[RESPONSE_xDOCID] = did;
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			try {
 				obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 			} catch (const SerialisationError&) {}
 		}
+
+		obj[RESPONSE_xDOCID] = did;
+
+		size_t n_shards = endpoints.size();
+		size_t shard_num = (did - 1) % n_shards;
+		obj[RESPONSE_xSHARD] = shard_num + 1;
 
 		if (!selector.empty()) {
 			obj = obj.select(selector);
@@ -2388,19 +2393,22 @@ HttpClient::search_view(Request& request)
 		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
 			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
-		obj[RESPONSE_xDOCID] = did;
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			try {
 				hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 			} catch (const SerialisationError&) {}
 		}
+
+		hit_obj[RESPONSE_xDOCID] = did;
+
+		size_t n_shards = endpoints.size();
+		size_t shard_num = (did - 1) % n_shards;
+		hit_obj[RESPONSE_xSHARD] = shard_num + 1;
+
 		hit_obj[RESPONSE_xRANK] = m.get_rank();
 		hit_obj[RESPONSE_xWEIGHT] = m.get_weight();
 		hit_obj[RESPONSE_xPERCENT] = m.get_percent();
-		// int subdatabase = (document.get_docid() - 1) % endpoints.size();
-		// auto endpoint = endpoints[subdatabase];
-		// hit_obj[RESPONSE_xENDPOINT] = endpoint.to_string();
 
 		if (!selector.empty()) {
 			hit_obj = hit_obj.select(selector);

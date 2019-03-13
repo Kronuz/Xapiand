@@ -481,6 +481,10 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	data_obj[RESPONSE_xDOCID] = did;
 
+	size_t n_shards = endpoints.size();
+	size_t shard_num = (did - 1) % n_shards;
+	data_obj[RESPONSE_xSHARD] = shard_num + 1;
+
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
@@ -1861,6 +1865,10 @@ DocIndexer::operator()()
 					}
 
 					obj[RESPONSE_xDOCID] = did;
+
+					size_t n_shards = endpoints.size();
+					size_t shard_num = (did - 1) % n_shards;
+					obj[RESPONSE_xSHARD] = shard_num + 1;
 
 					++_indexed;
 					return 0;
