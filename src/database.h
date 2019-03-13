@@ -44,7 +44,7 @@ class Locator;
 class Logging;
 class MsgPack;
 class DataStorage;
-class DatabaseEndpoint;
+class ShardEndpoint;
 
 namespace moodycamel {
 	struct ProducerToken;
@@ -87,7 +87,7 @@ private:
 	bool reopen_readable();
 
 public:
-	DatabaseEndpoint* endpoint;
+	ShardEndpoint& endpoint;
 	int flags;
 
 	std::atomic_bool busy;
@@ -143,7 +143,7 @@ public:
 
 	Transaction transaction;
 
-	Shard(DatabaseEndpoint* endpoint_, int flags);
+	Shard(ShardEndpoint& endpoint_, int flags);
 	~Shard() noexcept;
 
 #ifdef XAPIAND_DATA_STORAGE

@@ -49,7 +49,7 @@ constexpr double DB_TIMEOUT = 60.0;
 class Shard;
 class Database;
 class DatabasePool;
-class ReferencedDatabaseEndpoint;
+class ReferencedShardEndpoint;
 
 
 //  ____        _        _                    _____           _             _       _
@@ -58,11 +58,11 @@ class ReferencedDatabaseEndpoint;
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/ |___| | | | (_| | |_) | (_) | | | | | |_\__ \
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_____|_| |_|\__,_| .__/ \___/|_|_| |_|\__|___/
 //                                                             |_|
-class DatabaseEndpoint : public Endpoint
+class ShardEndpoint : public Endpoint
 {
 	friend Shard;
 	friend DatabasePool;
-	friend ReferencedDatabaseEndpoint;
+	friend ReferencedShardEndpoint;
 
 	mutable std::mutex mtx;
 
@@ -91,9 +91,9 @@ class DatabaseEndpoint : public Endpoint
 	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
 
 public:
-	DatabaseEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
+	ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
 
-	~DatabaseEndpoint();
+	~ShardEndpoint();
 
 	std::shared_ptr<Shard> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
 
@@ -126,8 +126,8 @@ public:
 // | |_| | (_| | || (_| | |_) | (_| \__ \  __/  __/ (_) | (_) | |
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|_|   \___/ \___/|_|
 //
-class DatabasePool : lru::LRU<Endpoint, std::unique_ptr<DatabaseEndpoint>> {
-	friend DatabaseEndpoint;
+class DatabasePool : lru::LRU<Endpoint, std::unique_ptr<ShardEndpoint>> {
+	friend ShardEndpoint;
 
 	mutable std::mutex mtx;
 
@@ -137,11 +137,11 @@ class DatabasePool : lru::LRU<Endpoint, std::unique_ptr<DatabaseEndpoint>> {
 
 	size_t max_database_readers;
 
-	ReferencedDatabaseEndpoint _spawn(const Endpoint& endpoint);
-	ReferencedDatabaseEndpoint spawn(const Endpoint& endpoint);
+	ReferencedShardEndpoint _spawn(const Endpoint& endpoint);
+	ReferencedShardEndpoint spawn(const Endpoint& endpoint);
 
-	ReferencedDatabaseEndpoint _get(const Endpoint& endpoint) const;
-	ReferencedDatabaseEndpoint get(const Endpoint& endpoint) const;
+	ReferencedShardEndpoint _get(const Endpoint& endpoint) const;
+	ReferencedShardEndpoint get(const Endpoint& endpoint) const;
 
 	bool notify_lockable(const Endpoint& endpoint);
 
@@ -153,7 +153,7 @@ public:
 	DatabasePool& operator=(const DatabasePool&) = delete;
 	DatabasePool& operator=(DatabasePool&&) = delete;
 
-	std::vector<ReferencedDatabaseEndpoint> endpoints() const;
+	std::vector<ReferencedShardEndpoint> endpoints() const;
 
 	void lock(const std::shared_ptr<Shard>& shard, double timeout = DB_TIMEOUT);
 	void unlock(const std::shared_ptr<Shard>& shard);

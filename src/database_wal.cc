@@ -121,7 +121,7 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 
 
 DatabaseWAL::DatabaseWAL(Shard* shard)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(shard->endpoint->path, this),
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(shard->endpoint.path, this),
 	  validate_uuid(true),
 	  _revision(0),
 	  _shard(shard)
@@ -1305,9 +1305,8 @@ DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
 	L_CALL("DatabaseWALWriter::write_add_document()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1334,9 +1333,8 @@ DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& t
 	L_CALL("DatabaseWALWriter::write_delete_document_term()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1363,9 +1361,8 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 	L_CALL("DatabaseWALWriter::write_remove_spelling()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1393,9 +1390,8 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 	L_CALL("DatabaseWALWriter::write_commit()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1422,9 +1418,8 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 	L_CALL("DatabaseWALWriter::write_replace_document()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1452,9 +1447,8 @@ DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& 
 	L_CALL("DatabaseWALWriter::write_replace_document_term()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1482,9 +1476,8 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 	L_CALL("DatabaseWALWriter::write_delete_document()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1511,9 +1504,8 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 	L_CALL("DatabaseWALWriter::write_set_metadata()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);
@@ -1541,9 +1533,8 @@ DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xap
 	L_CALL("DatabaseWALWriter::write_add_spelling()");
 
 	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint);
-	ASSERT(shard.endpoint->is_local());
-	auto path = shard.endpoint->path;
+	ASSERT(shard.endpoint.is_local());
+	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
 	ASSERT(shard.producer_token);

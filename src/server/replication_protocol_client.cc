@@ -459,7 +459,7 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 
 	message.append(serialise_string(db->get_uuid()));
 	message.append(serialise_length(db->get_revision()));
-	message.append(serialise_string(shard->endpoint->path));
+	message.append(serialise_string(shard->endpoint.path));
 
 	send_message(static_cast<ReplicationReplyType>(ReplicationMessageType::MSG_GET_CHANGESETS), message);
 }
@@ -495,15 +495,15 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::database_pool()->lock(shard);
 
 		// Now we are sure no readers are using the database before moving the files
-		delete_files(shard->endpoint->path, {"*glass", "wal.*"});
-		move_files(switch_shard_path, shard->endpoint->path);
+		delete_files(shard->endpoint.path, {"*glass", "wal.*"});
+		move_files(switch_shard_path, shard->endpoint.path);
 
 		// release exclusive lock
 		XapiandManager::database_pool()->unlock(shard);
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: {} ({} a set of {} changesets){}", repr(shard->endpoint->path), switching ? "from a full copy and" : "from", changesets, switch_shard ? " (to switch database)" : "");
-	L_DEBUG("Replication of {} {{{}}} was completed at revision {} ({} a set of {} changesets)", repr(shard->endpoint->path), shard->db()->get_uuid(), shard->db()->get_revision(), switching ? "from a full copy and" : "from", changesets);
+	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: {} ({} a set of {} changesets){}", repr(shard->endpoint.path), switching ? "from a full copy and" : "from", changesets, switch_shard ? " (to switch database)" : "");
+	L_DEBUG("Replication of {} {{{}}} was completed at revision {} ({} a set of {} changesets)", repr(shard->endpoint.path), shard->db()->get_uuid(), shard->db()->get_revision(), switching ? "from a full copy and" : "from", changesets);
 
 	if (cluster_database) {
 		cluster_database = false;
@@ -557,11 +557,11 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 	}
 	switch_shard_path = path;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_header: {} in {}", repr(shard->endpoint->path), repr(switch_shard_path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_header: {} in {}", repr(shard->endpoint.path), repr(switch_shard_path));
 	L_TIMED_VAR(log, 1s,
 		"Replication of whole database taking too long: {}",
 		"Replication of whole database took too long: {}",
-		repr(shard->endpoint->path));
+		repr(shard->endpoint.path));
 }
 
 
@@ -646,13 +646,13 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 			"Replication of {}changesets taking too long: {}",
 			"Replication of {}changesets took too long: {}",
 			switching ? "whole database with " : "",
-			repr(shard->endpoint->path));
+			repr(shard->endpoint.path));
 	}
 
 	wal->execute_line(line, true, false, false);
 
 	++changesets;
-	L_REPLICATION("ReplicationProtocolClient::reply_changeset ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint->path));
+	L_REPLICATION("ReplicationProtocolClient::reply_changeset ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint.path));
 }
 
 

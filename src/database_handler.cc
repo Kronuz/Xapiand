@@ -2227,7 +2227,7 @@ committer_commit(std::weak_ptr<Shard> weak_database) {
 		std::string error;
 
 		try {
-			lock_shard lk_shard(Endpoint{*shard->endpoint}, DB_WRITABLE);
+			lock_shard lk_shard(Endpoint{shard->endpoint}, DB_WRITABLE);
 			lk_shard->commit();
 		} catch (const Exception& exc) {
 			error = exc.get_message();

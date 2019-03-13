@@ -28,7 +28,7 @@
 #include "cassert.h"              // for ASSERT
 #include "database_data.h"        // for Locator
 #include "database_flags.h"       // DB_*
-#include "database_pool.h"        // for DatabaseEndpoint
+#include "database_pool.h"        // for ShardEndpoint
 #include "database_handler.h"     // for committer
 #include "database_utils.h"       // for DB_SLOT_VERSION
 #include "database_wal.h"         // for DatabaseWAL, DatabaseWALWriter
@@ -217,7 +217,7 @@ DataStorage::open(std::string_view relative_path)
 //  |____/|_| |_|\__,_|_|  \__,_|
 //
 
-Shard::Shard(DatabaseEndpoint* endpoint_, int flags_)
+Shard::Shard(ShardEndpoint& endpoint_, int flags_)
 	: endpoint(endpoint_),
 	  flags(flags_),
 	  busy(false),
@@ -245,8 +245,7 @@ Shard::~Shard() noexcept
 		}
 #ifdef XAPIAND_DATABASE_WAL
 		if (producer_token) {
-			ASSERT(endpoint);
-			XapiandManager::wal_writer()->dec_producer_token(endpoint->path);
+			XapiandManager::wal_writer()->dec_producer_token(endpoint.path);
 		}
 #endif
 	} catch (...) {
@@ -278,10 +277,9 @@ Shard::reopen_writable()
 
 	local.store(true, std::memory_order_relaxed);
 
-	ASSERT(endpoint);
-	ASSERT(!endpoint->empty());
+	ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-	auto node = endpoint->node();
+	auto node = endpoint.node();
 	if (!node) {
 		throw Xapian::NetworkError("Endpoint node is invalid");
 	}
@@ -299,9 +297,9 @@ Shard::reopen_writable()
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
-	if (!endpoint->is_local()) {
+	if (!endpoint.is_local()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint->path);
+		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -309,14 +307,14 @@ Shard::reopen_writable()
 	{
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint->path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
+			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 				throw;
 			}
-			build_path_index(endpoint->path);
+			build_path_index(endpoint.path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint->path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
+			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
 			created = true;
 		}
 		localdb = true;
@@ -338,11 +336,11 @@ Shard::reopen_writable()
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
 		if ((flags & DB_NOSTORAGE) != DB_NOSTORAGE) {
-			writable_storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
-			storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN);
+			writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 		} else {
 			writable_storage = std::unique_ptr<DataStorage>(nullptr);
-			storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN);
+			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 		}
 	} else {
 		writable_storage = std::unique_ptr<DataStorage>(nullptr);
@@ -357,7 +355,7 @@ Shard::reopen_writable()
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_wal_active()) {
 		// Create or get a producer token for this database
-		if (XapiandManager::wal_writer()->inc_producer_token(endpoint->path, &producer_token) == 1) {
+		if (XapiandManager::wal_writer()->inc_producer_token(endpoint.path, &producer_token) == 1) {
 			// WAL wasn't already active for the requested endpoint
 			DatabaseWAL wal(this);
 			if (wal.execute(true)) {
@@ -397,10 +395,9 @@ Shard::reopen_readable()
 
 	local.store(true, std::memory_order_relaxed);
 
-	ASSERT(endpoint);
-	ASSERT(!endpoint->empty());
+	ASSERT(!endpoint.empty());
 #ifdef XAPIAND_CLUSTERING
-	auto node = endpoint->node();
+	auto node = endpoint.node();
 	if (!node) {
 		throw Xapian::NetworkError("Endpoint node is invalid");
 	}
@@ -418,24 +415,24 @@ Shard::reopen_readable()
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
-	if (!endpoint->is_local()) {
-		L_DATABASE("Opening remote endpoint {}", repr(endpoint->to_string()));
+	if (!endpoint.is_local()) {
+		L_DATABASE("Opening remote endpoint {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint->path);
+		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			Xapian::Database tmp = Xapian::Database(endpoint->path, Xapian::DB_OPEN);
+			Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 			if (tmp.get_uuid() == rsdb.get_uuid()) {
-				L_DATABASE("Endpoint {} fallback to local database!", repr(endpoint->to_string()));
+				L_DATABASE("Endpoint {} fallback to local database!", repr(endpoint.to_string()));
 				// Handle remote endpoint and figure out if the endpoint is a local database
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				rsdb = Xapian::Database(endpoint->path, _flags);
+				rsdb = Xapian::Database(endpoint.path, _flags);
 				localdb = true;
 			} else {
 				try {
 					// If remote is master (it should be), try triggering replication
-					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint->path, Endpoint{*endpoint}, Endpoint{endpoint->path});
+					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
 					incomplete.store(true, std::memory_order_relaxed);
 				} catch (...) { }
 			}
@@ -443,7 +440,7 @@ Shard::reopen_readable()
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			try {
 				// If remote is master (it should be), try triggering replication
-				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint->path, Endpoint{*endpoint}, Endpoint{endpoint->path});
+				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
 				incomplete.store(true, std::memory_order_relaxed);
 			} catch (...) { }
 		}
@@ -452,21 +449,21 @@ Shard::reopen_readable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		L_DATABASE("Opening local endpoint {}", repr(endpoint->to_string()));
+		L_DATABASE("Opening local endpoint {}", repr(endpoint.to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Database(endpoint->path, Xapian::DB_OPEN);
+			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 				throw;
 			}
-			build_path_index(endpoint->path);
+			build_path_index(endpoint.path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			Xapian::WritableDatabase(endpoint->path, Xapian::DB_CREATE);
+			Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE);
 			created = true;
 
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Database(endpoint->path, Xapian::DB_OPEN);
+			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 		}
 		localdb = true;
 	}
@@ -482,7 +479,7 @@ Shard::reopen_readable()
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
 		// WAL required on a local database, open it.
-		storage = std::make_unique<DataStorage>(endpoint->path, this, STORAGE_OPEN);
+		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 	} else {
 		storage = std::unique_ptr<DataStorage>(nullptr);
 	}
@@ -649,7 +646,6 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 	L_CALL("Shard::autocommit(<shard>)");
 
 	if (
-		shard->endpoint &&
 		shard->_database &&
 		shard->transaction == Shard::Transaction::none &&
 		!shard->is_closed() &&
@@ -658,7 +654,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 		shard->is_local()
 	) {
 		// Auto commit only on modified writable databases
-		committer()->debounce(*shard->endpoint, std::weak_ptr<Shard>(shard));
+		committer()->debounce(shard->endpoint, std::weak_ptr<Shard>(shard));
 	}
 }
 
@@ -700,7 +696,7 @@ Shard::commit(bool wal_, bool send_update)
 			}
 			modified.store(false, std::memory_order_relaxed);
 			if (is_local()) {
-				endpoint->local_revision = wdb->get_revision();
+				endpoint.local_revision = wdb->get_revision();
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -1608,7 +1604,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 std::string
 Shard::to_string() const
 {
-	return endpoint->to_string();
+	return endpoint.to_string();
 }
 
 

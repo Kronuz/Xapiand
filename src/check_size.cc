@@ -161,7 +161,7 @@ CHECK_MAX_SIZE(SMALL, (Document))
 CHECK_MAX_SIZE(SMALL, (MSet))
 
 // database_pool.h
-CHECK_MAX_SIZE(SMALL, (DatabaseEndpoint))
+CHECK_MAX_SIZE(SMALL, (ShardEndpoint))
 CHECK_MAX_SIZE(SMALL, (DatabasePool))
 
 // database_wal.h
