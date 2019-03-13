@@ -76,7 +76,6 @@
 
 ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: MetaBaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
-	  LockableDatabase(),
 	  state(ReplicaState::INIT_REPLICATION_CLIENT),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
@@ -86,7 +85,6 @@ ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worke
 	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
 	  cluster_database(cluster_database_),
-	  lk_db(this),
 	  changesets(0)
 {
 	++XapiandManager::replication_clients();
@@ -141,14 +139,14 @@ ReplicationProtocolClient::reset()
 {
 	wal.reset();
 
-	if (switch_database) {
-		switch_database->close();
-		XapiandManager::database_pool()->checkin(switch_database);
+	if (switch_shard) {
+		switch_shard->close();
+		XapiandManager::database_pool()->checkin(switch_shard);
 	}
 
-	if (!switch_database_path.empty()) {
-		delete_files(switch_database_path.c_str());
-		switch_database_path.clear();
+	if (!switch_shard_path.empty()) {
+		delete_files(switch_shard_path.c_str());
+		switch_shard_path.clear();
 	}
 
 	if (log) {
@@ -164,20 +162,17 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	try {
-		src_endpoints = Endpoints{src_endpoint};
-
-		flags = DB_WRITABLE | DB_CREATE_OR_OPEN;
-		endpoints = Endpoints{dst_endpoint};
-		lk_db.lock(0, [=] {
+		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		lk_shard_ptr->lock(0, [=] {
 			// If it cannot checkout because database is busy, retry when ready...
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
 		});
 
-		temp_directory_template = endpoints[0].path + "/.tmp.XXXXXX";
+		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
 
-		L_REPLICATION("init_replication_protocol initialized: {} -->  {}", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication_protocol initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	} catch (const Xapian::DatabaseNotAvailableError&) {
-		L_REPLICATION("init_replication_protocol deferred: {} -->  {}", repr(src_endpoints.to_string()), repr(endpoints.to_string()));
+		L_REPLICATION("init_replication_protocol deferred: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
 	} catch (...) {
 		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
@@ -270,23 +265,25 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	auto remote_revision = unserialise_length(&p, p_end);
 	auto endpoint_path = unserialise_string(&p, p_end);
 
-	flags = DB_WRITABLE;
-	endpoints = Endpoints{Endpoint{endpoint_path}};
-	if (endpoints.empty()) {
+	if (endpoint_path.empty()) {
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
 	}
 
-	lk_db.lock();
-	auto uuid = db()->get_uuid();
-	auto revision = db()->get_revision();
-	lk_db.unlock();
+	Xapian::Database* db;
+
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_WRITABLE);
+
+	db = lk_shard.lock()->db();
+	auto uuid = db->get_uuid();
+	auto revision = db->get_revision();
+	lk_shard.unlock();
 
 	auto from_revision = remote_revision;
 	if (from_revision && uuid != remote_uuid) {
 		from_revision = 0;
 	}
 
-	wal = std::make_unique<DatabaseWAL>(endpoints[0].path);
+	wal = std::make_unique<DatabaseWAL>(endpoint_path);
 	if (from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
 		from_revision = 0;
 	}
@@ -314,7 +311,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				};
 
 				for (const auto& filename : filenames) {
-					auto path = endpoints[0].path + "/" + filename;
+					auto path = string::format("{}/{}", endpoint_path, filename);
 					int fd = io::open(path.c_str());
 					if (fd != -1) {
 						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
@@ -323,8 +320,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				}
 
 				for (size_t volume = 0; true; ++volume) {
-					auto filename = "docdata." + std::to_string(volume);
-					auto path = endpoints[0].path + "/" + filename;
+					auto filename = string::format("docdata.{}", volume);
+					auto path = string::format("{}/{}", endpoint_path, filename);
 					int fd = io::open(path.c_str());
 					if (fd != -1) {
 						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
@@ -334,9 +331,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					break;
 				}
 
-				lk_db.lock();
-				auto final_revision = db()->get_revision();
-				lk_db.unlock();
+				db = lk_shard.lock()->db();
+				auto final_revision = db->get_revision();
+				lk_shard.unlock();
 
 				send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(final_revision));
 
@@ -353,17 +350,17 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
-					lk_db.lock();
-					uuid = db()->get_uuid();
-					revision = db()->get_revision();
+					db = lk_shard.lock()->db();
+					uuid = db->get_uuid();
+					revision = db->get_revision();
 				} else {
-					lk_db.lock();
-					uuid = db()->get_uuid();
-					revision = db()->get_revision();
-					lk_db.unlock();
+					db = lk_shard.lock()->db();
+					uuid = db->get_uuid();
+					revision = db->get_revision();
+					lk_shard.unlock();
 				}
 			}
-			lk_db.unlock();
+			lk_shard.unlock();
 		}
 
 		int wal_iterations = 5;
@@ -377,9 +374,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				}
 				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
 			}
-			lk_db.lock();
-			revision = db()->get_revision();
-			lk_db.unlock();
+			db = lk_shard.lock()->db();
+			revision = db->get_revision();
+			lk_shard.unlock();
 		} while (to_revision < revision && --wal_iterations != 0);
 	}
 
@@ -456,9 +453,13 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 {
 	std::string message;
 
-	message.append(serialise_string(db()->get_uuid()));
-	message.append(serialise_length(db()->get_revision()));
-	message.append(serialise_string(endpoints[0].path));
+	ASSERT(lk_shard_ptr);
+	auto shard = lk_shard_ptr->locked();
+	auto db = shard->db();
+
+	message.append(serialise_string(db->get_uuid()));
+	message.append(serialise_length(db->get_revision()));
+	message.append(serialise_string(shard->endpoint->path));
 
 	send_message(static_cast<ReplicationReplyType>(ReplicationMessageType::MSG_GET_CHANGESETS), message);
 }
@@ -476,30 +477,33 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 {
 	L_CALL("ReplicationProtocolClient::reply_end_of_changes(<message>)");
 
-	bool switching = !switch_database_path.empty();
+	ASSERT(lk_shard_ptr);
+	auto shard = lk_shard_ptr->locked();
+
+	bool switching = !switch_shard_path.empty();
 
 	if (switching) {
 		// Close internal databases
-		database()->do_close(false, false, database()->transaction);
+		shard->do_close(false, false, shard->transaction);
 
-		if (switch_database) {
-			switch_database->close();
-			XapiandManager::database_pool()->checkin(switch_database);
+		if (switch_shard) {
+			switch_shard->close();
+			XapiandManager::database_pool()->checkin(switch_shard);
 		}
 
 		// get exclusive lock
-		XapiandManager::database_pool()->lock(database());
+		XapiandManager::database_pool()->lock(shard);
 
 		// Now we are sure no readers are using the database before moving the files
-		delete_files(endpoints[0].path, {"*glass", "wal.*"});
-		move_files(switch_database_path, endpoints[0].path);
+		delete_files(shard->endpoint->path, {"*glass", "wal.*"});
+		move_files(switch_shard_path, shard->endpoint->path);
 
 		// release exclusive lock
-		XapiandManager::database_pool()->unlock(database());
+		XapiandManager::database_pool()->unlock(shard);
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: {} ({} a set of {} changesets){}", repr(endpoints[0].path), switching ? "from a full copy and" : "from", changesets, switch_database ? " (to switch database)" : "");
-	L_DEBUG("Replication of {} {{{}}} was completed at revision {} ({} a set of {} changesets)", repr(endpoints[0].path), database()->get_uuid(), database()->get_revision(), switching ? "from a full copy and" : "from", changesets);
+	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: {} ({} a set of {} changesets){}", repr(shard->endpoint->path), switching ? "from a full copy and" : "from", changesets, switch_shard ? " (to switch database)" : "");
+	L_DEBUG("Replication of {} {{{}}} was completed at revision {} ({} a set of {} changesets)", repr(shard->endpoint->path), shard->db()->get_uuid(), shard->db()->get_revision(), switching ? "from a full copy and" : "from", changesets);
 
 	if (cluster_database) {
 		cluster_database = false;
@@ -516,7 +520,8 @@ ReplicationProtocolClient::reply_fail(const std::string&)
 {
 	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
 
-	L_REPLICATION("ReplicationProtocolClient::reply_fail: {}", repr(endpoints[0].path));
+	ASSERT(lk_shard_ptr);
+	L_REPLICATION("ReplicationProtocolClient::reply_fail: {}", repr(lk_shard_ptr->locked()->endpoint->path));
 
 	reset();
 
@@ -530,6 +535,9 @@ void
 ReplicationProtocolClient::reply_db_header(const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_header(<message>)");
+
+	ASSERT(lk_shard_ptr);
+	auto shard = lk_shard_ptr->locked();
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
@@ -547,13 +555,13 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 		detach();
 		return;
 	}
-	switch_database_path = path;
+	switch_shard_path = path;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_header: {} in {}", repr(endpoints[0].path), repr(switch_database_path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_header: {} in {}", repr(shard->endpoint->path), repr(switch_shard_path));
 	L_TIMED_VAR(log, 1s,
 		"Replication of whole database taking too long: {}",
 		"Replication of whole database took too long: {}",
-		repr(endpoints[0].path));
+		repr(shard->endpoint->path));
 }
 
 
@@ -562,11 +570,13 @@ ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_filename(<filename>)");
 
-	ASSERT(!switch_database_path.empty());
+	ASSERT(lk_shard_ptr);
 
-	file_path = switch_database_path + "/" + filename;
+	ASSERT(!switch_shard_path.empty());
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filename({}): {}", repr(filename), repr(endpoints[0].path));
+	file_path = switch_shard_path + "/" + filename;
+
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filename({}): {}", repr(filename), repr(lk_shard_ptr->locked()->endpoint->path));
 }
 
 
@@ -575,7 +585,9 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_filedata(<tmp_file>)");
 
-	ASSERT(!switch_database_path.empty());
+	ASSERT(lk_shard_ptr);
+
+	ASSERT(!switch_shard_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file {} to {}: {} ({}): {}", tmp_file, file_path, error::name(errno), errno, error::description(errno));
@@ -583,7 +595,7 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 		return;
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata({} -> {}): {}", repr(tmp_file), repr(file_path), repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata({} -> {}): {}", repr(tmp_file), repr(file_path), repr(lk_shard_ptr->locked()->endpoint->path));
 }
 
 
@@ -592,18 +604,20 @@ ReplicationProtocolClient::reply_db_footer(const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_footer(<message>)");
 
+	ASSERT(lk_shard_ptr);
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t revision = unserialise_length(&p, p_end);
 
-	ASSERT(!switch_database_path.empty());
+	ASSERT(!switch_shard_path.empty());
 
 	if (revision != current_revision) {
-		delete_files(switch_database_path.c_str());
-		switch_database_path.clear();
+		delete_files(switch_shard_path.c_str());
+		switch_shard_path.clear();
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_footer{}: {}", revision != current_revision ? " (ignored files)" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_footer{}: {}", revision != current_revision ? " (ignored files)" : "", repr(lk_shard_ptr->locked()->endpoint->path));
 }
 
 
@@ -612,30 +626,33 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 {
 	L_CALL("ReplicationProtocolClient::reply_changeset(<line>)");
 
-	bool switching = !switch_database_path.empty();
+	ASSERT(lk_shard_ptr);
+	auto shard = lk_shard_ptr->locked();
+
+	bool switching = !switch_shard_path.empty();
 
 	if (!wal) {
 		if (switching) {
-			if (!switch_database) {
-				switch_database = XapiandManager::database_pool()->checkout(Endpoints{Endpoint{switch_database_path}}, DB_WRITABLE | DB_SYNC_WAL);
+			if (!switch_shard) {
+				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_WRITABLE | DB_SYNC_WAL);
 			}
-			switch_database->begin_transaction(false);
-			wal = std::make_unique<DatabaseWAL>(switch_database.get());
+			switch_shard->begin_transaction(false);
+			wal = std::make_unique<DatabaseWAL>(switch_shard.get());
 		} else {
-			database()->begin_transaction(false);
-			wal = std::make_unique<DatabaseWAL>(database().get());
+			shard->begin_transaction(false);
+			wal = std::make_unique<DatabaseWAL>(shard.get());
 		}
 		L_TIMED_VAR(log, 1s,
 			"Replication of {}changesets taking too long: {}",
 			"Replication of {}changesets took too long: {}",
 			switching ? "whole database with " : "",
-			repr(endpoints[0].path));
+			repr(shard->endpoint->path));
 	}
 
 	wal->execute_line(line, true, false, false);
 
 	++changesets;
-	L_REPLICATION("ReplicationProtocolClient::reply_changeset ({} changesets{}): {}", changesets, switch_database ? " to a new database" : "", repr(endpoints[0].path));
+	L_REPLICATION("ReplicationProtocolClient::reply_changeset ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint->path));
 }
 
 

@@ -478,6 +478,8 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 		L_EXC("Cannot retrieve document version for docid {}!", did);
 	}
 
+	data_obj[RESPONSE_xDOCID] = did;
+
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
@@ -1727,12 +1729,12 @@ DatabaseHandler::get_database_info()
 
 #ifdef XAPIAND_DATA_STORAGE
 std::string
-DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid)
+DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::storage_get_stored()");
 
 	lock_database lk_db(this);
-	return database()->storage_get_stored(locator);
+	return database()->storage_get_stored(locator, did);
 }
 #endif /* XAPIAND_DATA_STORAGE */
 
@@ -1854,6 +1856,8 @@ DocIndexer::operator()()
 					} catch(...) {
 						L_EXC("Cannot retrieve document version for docid {}!", did);
 					}
+
+					obj[RESPONSE_xDOCID] = did;
 
 					++_indexed;
 					return 0;
@@ -2220,14 +2224,14 @@ Document::hash(size_t retries)
 
 
 void
-committer_commit(std::weak_ptr<Database> weak_database) {
-	if (auto database = weak_database.lock()) {
+committer_commit(std::weak_ptr<Shard> weak_database) {
+	if (auto shard = weak_database.lock()) {
 		auto start = std::chrono::system_clock::now();
 
 		std::string error;
 
 		try {
-			DatabaseHandler db_handler(Endpoints{Endpoint{*database->endpoint}}, DB_WRITABLE);
+			DatabaseHandler db_handler(Endpoints{Endpoint{*shard->endpoint}}, DB_WRITABLE);
 			db_handler.commit();
 		} catch (const Exception& exc) {
 			error = exc.get_message();
@@ -2238,9 +2242,9 @@ committer_commit(std::weak_ptr<Database> weak_database) {
 		auto end = std::chrono::system_clock::now();
 
 		if (error.empty()) {
-			L_DEBUG("Autocommit of {} succeeded after {}", repr(database->endpoint ? database->endpoint->to_string() : database->endpoints.to_string()), string::from_delta(start, end));
+			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), string::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit of {} falied after {}: {}", repr(database->endpoint ? database->endpoint->to_string() : database->endpoints.to_string()), string::from_delta(start, end), error);
+			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), string::from_delta(start, end), error);
 		}
 	}
 }

@@ -2243,6 +2243,7 @@ HttpClient::retrieve_view(Request& request)
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
 			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
+		obj[RESPONSE_xDOCID] = did;
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			try {
@@ -2369,9 +2370,10 @@ HttpClient::search_view(Request& request)
 
 	const auto m_e = mset.end();
 	for (auto m = mset.begin(); m != m_e; ++m) {
+		auto did = *m;
 
 		// Retrive document data
-		auto document = db_handler.get_document(*m);
+		auto document = db_handler.get_document(did);
 		auto document_data = document.get_data();
 		const auto data = Data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 
@@ -2385,6 +2387,7 @@ HttpClient::search_view(Request& request)
 		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
 			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
+		obj[RESPONSE_xDOCID] = did;
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
 			try {

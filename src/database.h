@@ -62,13 +62,14 @@ inline std::string readable_flags(int flags) {
 	return string::join(values, "|");
 }
 
-//  ____        _        _
-// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___
-// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
-// | |_| | (_| | || (_| | |_) | (_| \__ \  __/
-// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
+
+//   ____  _                   _
+//  / ___|| |__   __ _ _ __ __| |
+//  \___ \| '_ \ / _` | '__/ _` |
+//   ___) | | | | (_| | | | (_| |
+//  |____/|_| |_|\__,_|_|  \__,_|
 //
-class Database {
+class Shard {
 public:
 	enum class Transaction : uint8_t {
 		none,
@@ -76,9 +77,6 @@ public:
 		unflushed,
 	};
 
-	////////////////////////////////////////////////////////////////////////////
-	// Raw Database:
-	// TODO: Split Shard Database and Raw Database into two classes
 private:
 #ifdef XAPIAND_DATA_STORAGE
 	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
@@ -145,25 +143,97 @@ public:
 
 	Transaction transaction;
 
-	Database(DatabaseEndpoint* endpoint_, int flags);
-	~Database() noexcept;
+	Shard(DatabaseEndpoint* endpoint_, int flags);
+	~Shard() noexcept;
 
 #ifdef XAPIAND_DATA_STORAGE
 	std::string storage_get_stored(const Locator& locator);
 #endif /* XAPIAND_DATA_STORAGE */
 
+	bool reopen();
 
-	////////////////////////////////////////////////////////////////////////////
-	// Shard Database:
-	// TODO: Split Shard Database and Raw Database into two classes
+	Xapian::Database* db();
+
+	// UUID get_uuid();
+	// std::string get_uuid_string();
+	// Xapian::rev get_revision();
+
+	void reset() noexcept;
+
+	void do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions = true);
+	void close();
+
+	static void autocommit(const std::shared_ptr<Shard>& shard);
+	bool commit(bool wal_ = true, bool send_update = true);
+
+	void begin_transaction(bool flushed = true);
+	void commit_transaction();
+	void cancel_transaction();
+
+	void delete_document(Xapian::docid did, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	void delete_document_term(const std::string& term, bool commit_ = false, bool wal_ = true, bool version_ = true);
+
+	Xapian::docid add_document(Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	Xapian::docid replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+	Xapian::docid replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_ = false, bool wal_ = true, bool version_ = true);
+
+	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_ = false, bool wal_ = true);
+	Xapian::termcount remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_ = false, bool wal_ = true);
+
+	// Xapian::docid find_document(const std::string& term);
+	// Xapian::Document get_document(Xapian::docid did, bool assume_valid_ = false);
+
+	std::vector<std::string> get_metadata_keys();
+	std::string get_metadata(const std::string& key);
+	void set_metadata(const std::string& key, const std::string& value, bool commit_ = false, bool wal_ = true);
+
+	// void dump_metadata(int fd, XXH32_state_t* xxh_state);
+	// void dump_documents(int fd, XXH32_state_t* xxh_state);
+	// MsgPack dump_documents();
+
+	std::string to_string() const;
+
+	std::string __repr__() const;
+};
+
+
+//  ____        _        _
+// |  _ \  __ _| |_ __ _| |__   __ _ ___  ___
+// | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
+// | |_| | (_| | || (_| | |_) | (_| \__ \  __/
+// |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
+//
+class Database {
+#ifdef XAPIAND_DATA_STORAGE
+	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
+	void storage_commit();
+#endif /* XAPIAND_DATA_STORAGE */
+
+	bool reopen_writable();
+	bool reopen_readable();
+
 public:
-	std::vector<std::shared_ptr<Database>> _shards;
+	int flags;
+	std::unique_ptr<Xapian::Database> _database;
+
+	std::atomic_bool closed;
+
+	bool is_closed() const {
+		return closed.load(std::memory_order_relaxed);
+	}
+
+	std::shared_ptr<Logging> log;
+
+	~Database() noexcept;
+
+#ifdef XAPIAND_DATA_STORAGE
+	std::string storage_get_stored(const Locator& locator, Xapian::docid did);
+#endif /* XAPIAND_DATA_STORAGE */
+
+	std::vector<std::shared_ptr<Shard>> _shards;
 	Endpoints endpoints;
 
-	Database(std::vector<std::shared_ptr<Database>>&& shards, const Endpoints& endpoints_, int flags_);
-
-	////////////////////////////////////////////////////////////////////////////
-	// Common methods:
+	Database(std::vector<std::shared_ptr<Shard>>&& shards, const Endpoints& endpoints_, int flags_);
 
 	bool reopen();
 
@@ -175,10 +245,9 @@ public:
 
 	void reset() noexcept;
 
-	void do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions = true);
+	void do_close(bool commit_, bool closed_, bool throw_exceptions = true);
 	void close();
 
-	static void autocommit(const std::shared_ptr<Database>& database);
 	bool commit(bool wal_ = true, bool send_update = true);
 
 	void begin_transaction(bool flushed = true);

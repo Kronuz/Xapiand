@@ -25,7 +25,7 @@
 #include <algorithm>              // for std::find, std::move
 
 #include "cassert.h"              // for ASSERT
-#include "database.h"             // for Database
+#include "database.h"             // for Database, Shard
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
@@ -119,7 +119,7 @@ DatabaseEndpoint::~DatabaseEndpoint()
 }
 
 
-std::shared_ptr<Database>&
+std::shared_ptr<Shard>&
 DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("DatabaseEndpoint::_writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
@@ -129,10 +129,10 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			throw Xapian::DatabaseNotAvailableError("Database is not available");
+			throw Xapian::DatabaseNotAvailableError("Shard is not available");
 		}
 		if (!writable) {
-			writable = std::make_shared<Database>(this, flags);
+			writable = std::make_shared<Shard>(this, flags);
 		}
 		if (!is_locked() && !writable->busy.exchange(true)) {
 			return writable;
@@ -147,7 +147,7 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					throw Xapian::DatabaseNotAvailableError("Database is not available");
+					throw Xapian::DatabaseNotAvailableError("Shard is not available");
 				}
 			} else {
 				while (!writable_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -157,14 +157,14 @@ DatabaseEndpoint::_writable_checkout(int flags, double timeout, std::packaged_ta
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				throw Xapian::DatabaseNotAvailableError("Database is not available");
+				throw Xapian::DatabaseNotAvailableError("Shard is not available");
 			}
 		}
 	} while (true);
 }
 
 
-std::shared_ptr<Database>&
+std::shared_ptr<Shard>&
 DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("DatabaseEndpoint::_readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
@@ -174,12 +174,12 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 			if (callback) {
 				callbacks.enqueue(std::move(*callback));
 			}
-			throw Xapian::DatabaseNotAvailableError("Database is not available");
+			throw Xapian::DatabaseNotAvailableError("Shard is not available");
 		}
 		if (readables_available > 0) {
 			for (auto& readable : readables) {
 				if (!readable) {
-					readable = std::make_shared<Database>(this, flags);
+					readable = std::make_shared<Shard>(this, flags);
 				}
 				if (!is_locked() && !readable->busy.exchange(true)) {
 					--readables_available;
@@ -188,7 +188,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 			}
 		}
 		if (readables.size() < database_pool.max_database_readers) {
-			auto new_database = std::make_shared<Database>(this, flags);
+			auto new_database = std::make_shared<Shard>(this, flags);
 			auto& readable = *readables.insert(readables.end(), new_database);
 			++readables_available;
 			if (!is_locked() && !readable->busy.exchange(true)) {
@@ -206,7 +206,7 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 					if (callback) {
 						callbacks.enqueue(std::move(*callback));
 					}
-					throw Xapian::DatabaseNotAvailableError("Database is not available");
+					throw Xapian::DatabaseNotAvailableError("Shard is not available");
 				}
 			} else {
 				while (!readables_cond.wait_for(lk, 1s, wait_pred)) {}
@@ -216,14 +216,14 @@ DatabaseEndpoint::_readable_checkout(int flags, double timeout, std::packaged_ta
 				if (callback) {
 					callbacks.enqueue(std::move(*callback));
 				}
-				throw Xapian::DatabaseNotAvailableError("Database is not available");
+				throw Xapian::DatabaseNotAvailableError("Shard is not available");
 			}
 		}
 	} while (true);
 }
 
 
-std::shared_ptr<Database>
+std::shared_ptr<Shard>
 DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* callback)
 {
 	L_CALL("DatabaseEndpoint::checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
@@ -235,58 +235,58 @@ DatabaseEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
 		return _writable_checkout(flags, timeout, callback, now, lk);
 	} else {
-		auto& database = _readable_checkout(flags, timeout, callback, now, lk);
+		auto& shard = _readable_checkout(flags, timeout, callback, now, lk);
 		lk.unlock();
 		try {
 			// Reopening of old/outdated (readable) databases:
 			bool reopen = false;
-			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - database->reopen_time).count();
+			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - shard->reopen_time).count();
 			if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
-				L_DATABASE("Database is just too old, reopen");
+				L_DATABASE("Shard is just too old, reopen");
 				reopen = true;
 			} else {
-				if (database->is_local()) {
+				if (shard->is_local()) {
 					auto referenced_database_endpoint = database_pool.get(*this);
 					if (referenced_database_endpoint) {
 						auto revision = referenced_database_endpoint->local_revision.load();
 						referenced_database_endpoint.reset();
-						if (revision && revision != database->get_revision()) {
-							L_DATABASE("Local writable database has changed revision");
+						if (revision && revision != shard->db()->get_revision()) {
+							L_DATABASE("Local writable shard has changed revision");
 							reopen = true;
 						}
 					}
 				} else {
 					if (reopen_age >= REMOTE_DATABASE_UPDATE_TIME) {
-						L_DATABASE("Remote database is too old, reopen");
+						L_DATABASE("Remote shard is too old, reopen");
 						reopen = true;
 					}
 				}
 			}
 			if (reopen) {
-				// Discard old database and create a new one
-				auto new_database = std::make_shared<Database>(this, flags);
+				// Discard old shard and create a new one
+				auto new_database = std::make_shared<Shard>(this, flags);
 				new_database->busy = true;
 				lk.lock();
-				database = new_database;
+				shard = new_database;
 			}
 		} catch (...) {}
-		return database;
+		return shard;
 	}
 }
 
 
 void
-DatabaseEndpoint::checkin(std::shared_ptr<Database>& database) noexcept
+DatabaseEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 {
-	L_CALL("DatabaseEndpoint::checkin({})", database ? database->__repr__() : "null");
+	L_CALL("DatabaseEndpoint::checkin({})", shard ? shard->__repr__() : "null");
 
-	ASSERT(database);
-	ASSERT(database->is_busy());
-	ASSERT(database->endpoint == this);
+	ASSERT(shard);
+	ASSERT(shard->is_busy());
+	ASSERT(shard->endpoint == this);
 
-	if (database->log) {
-		database->log->clear();
-		database->log.reset();
+	if (shard->log) {
+		shard->log->clear();
+		shard->log.reset();
 	}
 
 	TaskQueue<void()> pending_callbacks;
@@ -295,20 +295,20 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database) noexcept
 		std::swap(pending_callbacks, callbacks);
 	}
 
-	if (database->is_writable()) {
-		if (is_finished() || database_pool.notify_lockable(*this) || database->is_closed()) {
+	if (shard->is_writable()) {
+		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
 			std::lock_guard<std::mutex> lk(mtx);
 			writable = nullptr;
 			database_pool.checkin_clears_cond.notify_all();
 		} else {
-			Database::autocommit(database);
+			Shard::autocommit(shard);
 		}
-		database->busy = false;
+		shard->busy = false;
 		writable_cond.notify_one();
 	} else {
-		if (is_finished() || database_pool.notify_lockable(*this) || database->is_closed()) {
+		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
 			std::lock_guard<std::mutex> lk(mtx);
-			auto it = std::find(readables.begin(), readables.end(), database);
+			auto it = std::find(readables.begin(), readables.end(), shard);
 			if (it != readables.end()) {
 				readables.erase(it);
 				database_pool.checkin_clears_cond.notify_all();
@@ -316,11 +316,11 @@ DatabaseEndpoint::checkin(std::shared_ptr<Database>& database) noexcept
 		} else {
 			++readables_available;
 		}
-		database->busy = false;
+		shard->busy = false;
 		readables_cond.notify_one();
 	}
 
-	database.reset();
+	shard.reset();
 
 	while (pending_callbacks.call()) {};
 }
@@ -347,18 +347,18 @@ DatabaseEndpoint::clear()
 	if (writable) {
 		if (!writable->busy.exchange(true)) {
 			lk.unlock();
-			// First try closing internal database:
+			// First try closing internal shard:
 			writable->do_close(true, writable->is_closed(), writable->transaction, false);
 			lk.lock();
 			auto shared_writable = writable;
-			std::weak_ptr<Database> weak_writable = shared_writable;
+			std::weak_ptr<Shard> weak_writable = shared_writable;
 			writable.reset();
 			lk.unlock();
 			try {
-				// If it's the last one, reset() will delete the database object:
+				// If it's the last one, reset() will delete the shard object:
 				shared_writable.reset();
 			} catch (...) {
-				L_WARNING("WARNING: Writable database deletion failed!");
+				L_WARNING("WARNING: Writable shard deletion failed!");
 			}
 			lk.lock();
 			if ((shared_writable = weak_writable.lock())) {
@@ -378,18 +378,18 @@ DatabaseEndpoint::clear()
 				it = readables.erase(it);
 			} else if (!readable->busy.exchange(true)) {
 				lk.unlock();
-				// First try closing internal database:
+				// First try closing internal shard:
 				readable->do_close(true, readable->is_closed(), readable->transaction, false);
 				lk.lock();
 				auto shared_readable = readable;
-				std::weak_ptr<Database> weak_readable = shared_readable;
+				std::weak_ptr<Shard> weak_readable = shared_readable;
 				readable.reset();
 				lk.unlock();
 				try {
-					// If it's the last one, reset() will delete the database object:
+					// If it's the last one, reset() will delete the shard object:
 					shared_readable.reset();
 				} catch (...) {
-					L_WARNING("WARNING: Readable database deletion failed!");
+					L_WARNING("WARNING: Readable shard deletion failed!");
 				}
 				lk.lock();
 				if ((shared_readable = weak_readable.lock())) {
@@ -507,24 +507,24 @@ DatabasePool::endpoints() const
 
 
 void
-DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
+DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
 {
-	L_CALL("DatabasePool::lock({}, {})", database ? database->__repr__() : "null", timeout);
+	L_CALL("DatabasePool::lock({}, {})", shard ? shard->__repr__() : "null", timeout);
 
-	ASSERT(database);
-	ASSERT(database->endpoint);
+	ASSERT(shard);
+	ASSERT(shard->endpoint);
 
-	if (!database->is_writable() || !database->is_local()) {
+	if (!shard->is_writable() || !shard->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
-		THROW(Error, "Cannot grant exclusive lock database");
+		THROW(Error, "Cannot grant exclusive lock shard");
 	}
 
 	++locks;  // This needs to be done before locking
-	if (database->endpoint->locked.exchange(true)) {
+	if (shard->endpoint->locked.exchange(true)) {
 		ASSERT(locks > 0);
 		--locks;  // revert if failed.
 		L_DEBUG("ERROR: Exclusive lock can be granted only to non-locked databases");
-		THROW(Error, "Cannot grant exclusive lock database");
+		THROW(Error, "Cannot grant exclusive lock shard");
 	}
 
 	std::unique_lock<std::mutex> lk(mtx);
@@ -532,7 +532,7 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	auto is_ready_to_lock = [&] {
 		bool is_ready = true;
 		lk.unlock();
-		auto referenced_database_endpoint = get(*database->endpoint);
+		auto referenced_database_endpoint = get(*shard->endpoint);
 		if (referenced_database_endpoint->clear().second) {
 			is_ready = false;
 		}
@@ -541,13 +541,13 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 	};
 	if (timeout > 0.0) {
 		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
-		if (!database->endpoint->lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
-			throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock database");
+		if (!shard->endpoint->lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
+			throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock shard");
 		}
 	} else {
-		while (!database->endpoint->lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
-			if (database->endpoint->is_finished()) {
-				throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock database");
+		while (!shard->endpoint->lockable_cond.wait_for(lk, 1s, is_ready_to_lock)) {
+			if (shard->endpoint->is_finished()) {
+				throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock shard");
 			}
 		}
 	}
@@ -555,27 +555,27 @@ DatabasePool::lock(const std::shared_ptr<Database>& database, double timeout)
 
 
 void
-DatabasePool::unlock(const std::shared_ptr<Database>& database)
+DatabasePool::unlock(const std::shared_ptr<Shard>& shard)
 {
-	L_CALL("DatabasePool::unlock({})", database ? database->__repr__() : "null");
+	L_CALL("DatabasePool::unlock({})", shard ? shard->__repr__() : "null");
 
-	ASSERT(database);
-	ASSERT(database->endpoint);
+	ASSERT(shard);
+	ASSERT(shard->endpoint);
 
-	if (!database->is_writable() || !database->is_local()) {
+	if (!shard->is_writable() || !shard->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
-		THROW(Error, "Cannot grant exclusive lock database");
+		THROW(Error, "Cannot grant exclusive lock shard");
 	}
 
-	if (!database->endpoint->locked.exchange(false)) {
+	if (!shard->endpoint->locked.exchange(false)) {
 		L_DEBUG("ERROR: Exclusive lock can be released only from locked databases");
-		THROW(Error, "Cannot release exclusive lock database");
+		THROW(Error, "Cannot release exclusive lock shard");
 	}
 
 	ASSERT(locks > 0);
 	--locks;
 
-	auto referenced_database_endpoint = get(*database->endpoint);
+	auto referenced_database_endpoint = get(*shard->endpoint);
 	referenced_database_endpoint->readables_cond.notify_all();
 	referenced_database_endpoint.reset();
 }
@@ -632,7 +632,7 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 
 	DatabaseEndpoint* database_endpoint;
 
-	// Find or spawn the database endpoint
+	// Find or spawn the shard endpoint
 	auto it = find_and([&](const std::unique_ptr<DatabaseEndpoint>& database_endpoint) {
 		ASSERT(database_endpoint);
 		database_endpoint->renew_time = std::chrono::system_clock::now();
@@ -647,7 +647,7 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 		database_endpoint = it->second.get();
 	}
 
-	// Return a busy database endpoint so it cannot get deleted while the object exists
+	// Return a busy shard endpoint so it cannot get deleted while the object exists
 	return ReferencedDatabaseEndpoint(database_endpoint);
 }
 
@@ -674,7 +674,7 @@ DatabasePool::_get(const Endpoint& endpoint) const
 		database_endpoint = it->second.get();
 	}
 
-	// Return a busy database endpoint so it cannot get deleted while the object exists
+	// Return a busy shard endpoint so it cannot get deleted while the object exists
 	return ReferencedDatabaseEndpoint(database_endpoint);
 }
 
@@ -689,24 +689,33 @@ DatabasePool::get(const Endpoint& endpoint) const
 }
 
 
-std::shared_ptr<Database>
+std::shared_ptr<Shard>
 DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std::packaged_task<void()>* callback)
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoint.to_string()), readable_flags(flags), timeout);
 
-	auto database = spawn(endpoint)->checkout(flags, timeout, callback);
-	ASSERT(database);
+	auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
+	ASSERT(shard);
 
-	L_TIMED_VAR(database->log, 200ms,
-		"Database checkout is taking too long: {} ({}){}{}{}",
-		"Database checked out for too long: {} ({}){}{}{}",
-		repr(database->to_string()),
-		readable_flags(database->flags),
-		database->is_writable() ? " (writable)" : "",
-		database->is_wal_active() ? " (active WAL)" : "",
-		database->is_local() ? " (local)" : "");
+	L_TIMED_VAR(shard->log, 200ms,
+		"Shard checkout is taking too long: {} ({})",
+		"Shard checked out for too long: {} ({})",
+		repr(shard->to_string()),
+		readable_flags(shard->flags));
 
-	return database;
+	return shard;
+}
+
+
+void
+DatabasePool::checkin(std::shared_ptr<Shard>& shard)
+{
+	L_CALL("DatabasePool::checkin({})", shard ? shard->__repr__() : "null");
+
+	ASSERT(shard);
+	ASSERT(shard->endpoint);
+	shard->endpoint->checkin(shard);
+	shard.reset();
 }
 
 
@@ -720,20 +729,21 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 		throw Xapian::DatabaseOpeningError("Cannot checkout empty database");
 	}
 
-	// if (endpoints.size() != 1) {
-	// 	THROW(ClientError, "Implement multi-database checkout");
-	// }
-	// return checkout(endpoints[0], flags, timeout, callback);  // TODO: Implement multi-database checkout
-
-	std::vector<std::shared_ptr<Database>> shards;
+	std::vector<std::shared_ptr<Shard>> shards;
 	shards.reserve(endpoints.size());
 	try {
 		for (auto& endpoint : endpoints) {
-			auto shard = checkout(endpoint, flags, timeout, callback);
+			auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
 			ASSERT(shard);
 			shards.emplace_back(std::move(shard));
 		}
-		return std::make_shared<Database>(std::move(shards), endpoints, flags);
+		auto database = std::make_shared<Database>(std::move(shards), endpoints, flags);
+		L_TIMED_VAR(database->log, 200ms,
+			"Database checkout is taking too long: {} ({})",
+			"Database checked out for too long: {} ({})",
+			repr(database->to_string()),
+			readable_flags(database->flags));
+		return database;
 	} catch (...) {
 		for (auto& shard : shards) {
 			if (shard) {
@@ -751,17 +761,14 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 {
 	L_CALL("DatabasePool::checkin({})", database ? database->__repr__() : "null");
 
-	if (database->endpoint) {
-		database->endpoint->checkin(database);
-	} else {
-		for (auto& shard : database->_shards) {
-			if (shard) {
-				ASSERT(shard->endpoint);
-				shard->endpoint->checkin(shard);
-			}
+	ASSERT(database);
+	for (auto& shard : database->_shards) {
+		if (shard) {
+			ASSERT(shard->endpoint);
+			shard->endpoint->checkin(shard);
 		}
-		database.reset();
 	}
+	database.reset();
 }
 
 

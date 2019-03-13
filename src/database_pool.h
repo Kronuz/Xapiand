@@ -46,6 +46,7 @@ using namespace std::chrono_literals;
 
 constexpr double DB_TIMEOUT = 60.0;
 
+class Shard;
 class Database;
 class DatabasePool;
 class ReferencedDatabaseEndpoint;
@@ -59,7 +60,7 @@ class ReferencedDatabaseEndpoint;
 //                                                             |_|
 class DatabaseEndpoint : public Endpoint
 {
-	friend Database;
+	friend Shard;
 	friend DatabasePool;
 	friend ReferencedDatabaseEndpoint;
 
@@ -75,8 +76,8 @@ class DatabaseEndpoint : public Endpoint
 	std::atomic<Xapian::rev> local_revision;
 	std::chrono::time_point<std::chrono::system_clock> renew_time;
 
-	std::shared_ptr<Database> writable;
-	std::list<std::shared_ptr<Database>> readables;
+	std::shared_ptr<Shard> writable;
+	std::list<std::shared_ptr<Shard>> readables;
 
 	std::atomic_size_t readables_available;
 	std::condition_variable writable_cond;
@@ -86,17 +87,17 @@ class DatabaseEndpoint : public Endpoint
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
-	std::shared_ptr<Database>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
-	std::shared_ptr<Database>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
 
 public:
 	DatabaseEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
 
 	~DatabaseEndpoint();
 
-	std::shared_ptr<Database> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
+	std::shared_ptr<Shard> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
 
-	void checkin(std::shared_ptr<Database>& database) noexcept;
+	void checkin(std::shared_ptr<Shard>& database) noexcept;
 
 	void finish();
 
@@ -154,17 +155,18 @@ public:
 
 	std::vector<ReferencedDatabaseEndpoint> endpoints() const;
 
-	void lock(const std::shared_ptr<Database>& database, double timeout = DB_TIMEOUT);
-	void unlock(const std::shared_ptr<Database>& database);
+	void lock(const std::shared_ptr<Shard>& shard, double timeout = DB_TIMEOUT);
+	void unlock(const std::shared_ptr<Shard>& shard);
 
 	bool is_locked(const Endpoint& endpoint) const;
 
 	template <typename Func>
-	std::shared_ptr<Database> checkout(const Endpoint& endpoint, int flags, double timeout, Func&& func) {
+	std::shared_ptr<Shard> checkout(const Endpoint& endpoint, int flags, double timeout, Func&& func) {
 		std::packaged_task<void()> callback(std::forward<Func>(func));
 		return checkout(endpoint, flags, timeout, &callback);
 	}
-	std::shared_ptr<Database> checkout(const Endpoint& endpoint, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
+	std::shared_ptr<Shard> checkout(const Endpoint& endpoint, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
+	void checkin(std::shared_ptr<Shard>& shard);
 
 	template <typename Func>
 	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout, Func&& func) {
@@ -172,7 +174,6 @@ public:
 		return checkout(endpoints, flags, timeout, &callback);
 	}
 	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
-
 	void checkin(std::shared_ptr<Database>& database);
 
 	void finish();

@@ -40,7 +40,7 @@
 
 #include "cassert.h"                // for ASSERT
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
-#include "database.h"               // for Database
+#include "database.h"               // for Shard
 #include "database_pool.h"          // for DatabasePool
 #include "database_utils.h"         // for read_uuid
 #include "exception.h"              // for THROW, Error
@@ -109,7 +109,7 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
 	  validate_uuid(false),
 	  _revision(0),
-	  _database(nullptr)
+	  _shard(nullptr)
 {
 	std::array<unsigned char, 16> uuid_data;
 	if (read_uuid(base_path, uuid_data) != -1) {
@@ -120,17 +120,17 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 }
 
 
-DatabaseWAL::DatabaseWAL(Database* database_)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(database_->endpoint->path, this),
+DatabaseWAL::DatabaseWAL(Shard* shard)
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(shard->endpoint->path, this),
 	  validate_uuid(true),
 	  _revision(0),
-	  _database(database_)
+	  _shard(shard)
 {
-	if (!_database->is_wal_active()) {
+	if (!_shard->is_wal_active()) {
 		THROW(Error, "Database is not suitable");
 	}
 
-	_uuid = UUID(_database->get_uuid());
+	_uuid = UUID(_shard->db()->get_uuid());
 	_uuid_le = UUID(_uuid.get_bytes(), true);
 }
 
@@ -152,8 +152,8 @@ DatabaseWAL::get_uuid_le() const
 Xapian::rev
 DatabaseWAL::get_revision() const
 {
-	if (_database) {
-		return _database->get_revision();
+	if (_shard) {
+		return _shard->db()->get_revision();
 	} else {
 		return _revision;
 	}
@@ -165,11 +165,11 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 {
 	L_CALL("DatabaseWAL::execute({}, {})", only_committed, unsafe);
 
-	if (!_database) {
+	if (!_shard) {
 		THROW(Error, "Database is not defined");
 	}
 
-	Xapian::rev revision = _database->reopen_revision;
+	Xapian::rev revision = _shard->reopen_revision;
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision);
 
@@ -553,7 +553,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 {
 	L_CALL("DatabaseWAL::execute_line(<line>, {}, {}, {})", wal_, send_update, unsafe);
 
-	if (!_database) {
+	if (!_shard) {
 		THROW(Error, "Database is not defined");
 	}
 
@@ -561,7 +561,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 	const char *p_end = p + line.size();
 
 	auto revision = unserialise_length(&p, p_end);
-	auto db_revision = _database->get_revision();
+	auto db_revision = _shard->db()->get_revision();
 
 	if (revision != db_revision) {
 		if (!unsafe) {
@@ -588,32 +588,32 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 
 	switch (type) {
 		case Type::ADD_DOCUMENT:
-			_database->add_document(Xapian::Document::unserialise(data), false, wal_, false);
+			_shard->add_document(Xapian::Document::unserialise(data), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
-			_database->delete_document_term(term, false, wal_, false);
+			_shard->delete_document_term(term, false, wal_, false);
 			break;
 		case Type::COMMIT:
-			_database->commit(wal_, send_update);
+			_shard->commit(wal_, send_update);
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			document = std::string(p, p_end - p);
-			_database->replace_document(did, Xapian::Document::unserialise(document), false, wal_, false);
+			_shard->replace_document(did, Xapian::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::REPLACE_DOCUMENT_TERM:
 			size = unserialise_length(&p, p_end, true);
 			term = std::string(p, size);
 			document = std::string(p + size, p_end - p - size);
-			_database->replace_document_term(term, Xapian::Document::unserialise(document), false, wal_, false);
+			_shard->replace_document_term(term, Xapian::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
 			try {
 				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-				_database->delete_document(did, false, wal_, false);
+				_shard->delete_document(did, false, wal_, false);
 			} catch (const Xapian::DocNotFoundError& exc) {
 				if (!unsafe) {
 					throw;
@@ -628,15 +628,15 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length(&p, p_end, true);
-			_database->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
+			_shard->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
 			break;
 		case Type::ADD_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-			_database->add_spelling(std::string(p, p_end - p), freq, false, wal_);
+			_shard->add_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		case Type::REMOVE_SPELLING:
 			freq = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-			_database->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
+			_shard->remove_spelling(std::string(p, p_end - p), freq, false, wal_);
 			break;
 		default:
 			THROW(Error, "Invalid WAL message!");
@@ -651,7 +651,7 @@ DatabaseWAL::init_database()
 {
 	L_CALL("DatabaseWAL::init_database()");
 
-	if (!_database) {
+	if (!_shard) {
 		THROW(Error, "Database is not defined");
 	}
 
@@ -1300,17 +1300,17 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 
 
 void
-DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc)
+DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
 {
 	L_CALL("DatabaseWALWriter::write_add_document()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1319,27 +1319,27 @@ DatabaseWALWriter::write_add_document(Database& database, Xapian::Document&& doc
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_add_document;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_delete_document_term(Database& database, const std::string& term)
+DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& term)
 {
 	L_CALL("DatabaseWALWriter::write_delete_document_term()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1348,27 +1348,27 @@ DatabaseWALWriter::write_delete_document_term(Database& database, const std::str
 	task.term_word_val = term;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document_term;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& word, Xapian::termcount freqdec)
+DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec)
 {
 	L_CALL("DatabaseWALWriter::write_remove_spelling()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1378,27 +1378,27 @@ DatabaseWALWriter::write_remove_spelling(Database& database, const std::string& 
 	task.freq = freqdec;
 	task.dispatcher = &DatabaseWALWriterTask::write_remove_spelling;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_commit(Database& database, bool send_update)
+DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 {
 	L_CALL("DatabaseWALWriter::write_commit()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1407,27 +1407,27 @@ DatabaseWALWriter::write_commit(Database& database, bool send_update)
 	task.send_update = send_update;
 	task.dispatcher = &DatabaseWALWriterTask::write_commit;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did, Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapian::Document&& doc)
 {
 	L_CALL("DatabaseWALWriter::write_replace_document()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1437,27 +1437,27 @@ DatabaseWALWriter::write_replace_document(Database& database, Xapian::docid did,
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_replace_document_term(Database& database, const std::string& term, Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& term, Xapian::Document&& doc)
 {
 	L_CALL("DatabaseWALWriter::write_replace_document_term()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1467,27 +1467,27 @@ DatabaseWALWriter::write_replace_document_term(Database& database, const std::st
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document_term;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
+DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 {
 	L_CALL("DatabaseWALWriter::write_delete_document()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1496,27 +1496,27 @@ DatabaseWALWriter::write_delete_document(Database& database, Xapian::docid did)
 	task.did = did;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key, const std::string& val)
+DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, const std::string& val)
 {
 	L_CALL("DatabaseWALWriter::write_set_metadata()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1526,27 +1526,27 @@ DatabaseWALWriter::write_set_metadata(Database& database, const std::string& key
 	task.term_word_val = val;
 	task.dispatcher = &DatabaseWALWriterTask::write_set_metadata;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 
 
 void
-DatabaseWALWriter::write_add_spelling(Database& database, const std::string& word, Xapian::termcount freqinc)
+DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xapian::termcount freqinc)
 {
 	L_CALL("DatabaseWALWriter::write_add_spelling()");
 
-	ASSERT(database.is_wal_active());
-	ASSERT(database.endpoint);
-	ASSERT(database.endpoint->is_local());
-	auto path = database.endpoint->path;
-	auto uuid = database.get_uuid();
-	auto revision = database.get_revision();
-	ASSERT(database.producer_token);
+	ASSERT(shard.is_wal_active());
+	ASSERT(shard.endpoint);
+	ASSERT(shard.endpoint->is_local());
+	auto path = shard.endpoint->path;
+	auto uuid = UUID(shard.db()->get_uuid());
+	auto revision = shard.db()->get_revision();
+	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1556,11 +1556,11 @@ DatabaseWALWriter::write_add_spelling(Database& database, const std::string& wor
 	task.freq = freqinc;
 	task.dispatcher = &DatabaseWALWriterTask::write_add_spelling;
 
-	if ((database.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(database.producer_token);
-		enqueue(*database.producer_token, std::move(task));
+		ASSERT(shard.producer_token);
+		enqueue(*shard.producer_token, std::move(task));
 	}
 }
 

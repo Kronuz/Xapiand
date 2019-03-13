@@ -33,7 +33,7 @@
 #include <vector>                           // for std::vector
 
 #include "base_client.h"                    // for MetaBaseClient
-#include "lock_database.h"                  // for LockableDatabase
+#include "lock_database.h"                  // for lock_shard
 #include "threadpool.hh"                    // for Task
 #include "xapian.h"
 
@@ -127,7 +127,7 @@ class DatabaseWAL;
 
 
 // A single instance of a non-blocking Xapiand replication protocol handler
-class ReplicationProtocolClient : public MetaBaseClient<ReplicationProtocolClient>, public LockableDatabase {
+class ReplicationProtocolClient : public MetaBaseClient<ReplicationProtocolClient> {
 	friend MetaBaseClient<ReplicationProtocolClient>;
 
 	mutable std::mutex runner_mutex;
@@ -162,12 +162,10 @@ class ReplicationProtocolClient : public MetaBaseClient<ReplicationProtocolClien
 	friend Worker;
 
 public:
-	Endpoints src_endpoints;
+	std::unique_ptr<lock_shard> lk_shard_ptr;
 
-	lock_database lk_db;
-
-	std::string switch_database_path;
-	std::shared_ptr<Database> switch_database;
+	std::string switch_shard_path;
+	std::shared_ptr<Shard> switch_shard;
 
 	std::unique_ptr<DatabaseWAL> wal;
 

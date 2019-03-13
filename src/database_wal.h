@@ -45,7 +45,7 @@
 
 
 class MsgPack;
-class Database;
+class Shard;
 struct WalHeader;
 
 
@@ -159,9 +159,9 @@ public:
 	UUID _uuid;
 	UUID _uuid_le;
 	Xapian::rev _revision;
-	Database* _database;
+	Shard* _shard;
 
-	DatabaseWAL(Database* database_);
+	DatabaseWAL(Shard* shard);
 	DatabaseWAL(std::string_view base_path_);
 
 	iterator begin();
@@ -363,15 +363,15 @@ public:
 	size_t inc_producer_token(const std::string& path, ProducerToken** producer_token = nullptr);
 	size_t dec_producer_token(const std::string& path);
 
-	void write_add_document(Database& database, Xapian::Document&& doc);
-	void write_delete_document_term(Database& database, const std::string& term);
-	void write_remove_spelling(Database& database, const std::string& word, Xapian::termcount freqdec);
-	void write_commit(Database& database, bool send_update);
-	void write_replace_document(Database& database, Xapian::docid did, Xapian::Document&& doc);
-	void write_replace_document_term(Database& database, const std::string& term, Xapian::Document&& doc);
-	void write_delete_document(Database& database, Xapian::docid did);
-	void write_set_metadata(Database& database, const std::string& key, const std::string& val);
-	void write_add_spelling(Database& database, const std::string& word, Xapian::termcount freqinc);
+	void write_add_document(Shard& shard, Xapian::Document&& doc);
+	void write_delete_document_term(Shard& shard, const std::string& term);
+	void write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec);
+	void write_commit(Shard& shard, bool send_update);
+	void write_replace_document(Shard& shard, Xapian::docid did, Xapian::Document&& doc);
+	void write_replace_document_term(Shard& shard, const std::string& term, Xapian::Document&& doc);
+	void write_delete_document(Shard& shard, Xapian::docid did);
+	void write_set_metadata(Shard& shard, const std::string& key, const std::string& val);
+	void write_add_spelling(Shard& shard, const std::string& word, Xapian::termcount freqinc);
 };
 
 
