@@ -37,7 +37,7 @@
 
 #include "base_client.h"                    // for MetaBaseClient
 #include "compressor_deflate.h"             // for DeflateCompressData
-#include "database_data.h"                  // for ct_type_t, accept_set_t
+#include "database/data.h"                  // for ct_type_t, accept_set_t
 #include "endpoint.h"                       // for Endpoints
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings

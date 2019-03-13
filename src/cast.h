@@ -24,7 +24,7 @@
 
 #include <string_view>           // for std::string_view
 
-#include "database_utils.h"      // for get_hashed
+#include "database/utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
 #include "hashes.hh"             // for fnv1ah32
 #include "phf.hh"                // for phf

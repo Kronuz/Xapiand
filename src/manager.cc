@@ -51,11 +51,11 @@
 #include "allocator.h"                           // for allocator::total_allocated
 #include "cassert.h"                             // for ASSERT
 #include "color_tools.hh"                        // for color
-#include "database_cleanup.h"                    // for DatabaseCleanup
-#include "database_handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
-#include "database_pool.h"                       // for DatabasePool
-#include "database_utils.h"                      // for RESERVED_TYPE
-#include "database_wal.h"                        // for DatabaseWALWriter
+#include "database/cleanup.h"                    // for DatabaseCleanup
+#include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
+#include "database/pool.h"                       // for DatabasePool
+#include "database/utils.h"                      // for RESERVED_TYPE
+#include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
 #include "error.hh"                              // for error:name, error::description
 #include "ev/ev++.h"                             // for ev::async, ev::loop_ref

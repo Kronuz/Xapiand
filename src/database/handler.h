@@ -34,7 +34,7 @@
 #include <vector>                            // for std::vector
 
 #include "blocking_concurrent_queue.h"       // for BlockingConcurrentQueue
-#include "database_flags.h"                  // for DB_*
+#include "database/flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
 #include "http_parser.h"                     // for http_method

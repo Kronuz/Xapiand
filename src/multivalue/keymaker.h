@@ -30,7 +30,7 @@
 #include <string>                         // for string, operator==, stod
 #include <sys/types.h>                    // for int64_t, uint64_t
 
-#include "database_utils.h"               // for query_field_t
+#include "database/utils.h"               // for query_field_t
 #include "datetime.h"                     // for timestamp
 #include "hashes.hh"                      // for fnv1ah32
 #include "phf.hh"                         // for phf

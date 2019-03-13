@@ -28,7 +28,7 @@
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "cassert.h"                        // for ASSERT
-#include "database_utils.h"                 // for query_field_t
+#include "database/utils.h"                 // for query_field_t
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
 #include "ignore_unused.h"                  // for ignore_unused

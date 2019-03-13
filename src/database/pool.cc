@@ -20,14 +20,14 @@
  * THE SOFTWARE.
  */
 
-#include "database_pool.h"
+#include "database/pool.h"
 
 #include <algorithm>              // for std::find, std::move
 
 #include "cassert.h"              // for ASSERT
-#include "database.h"             // for Database
-#include "database_flags.h"       // for readable_flags
-#include "database_shard.h"       // for Shard
+#include "database/database.h"    // for Database
+#include "database/flags.h"       // for readable_flags
+#include "database/shard.h"       // for Shard
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)

@@ -27,7 +27,7 @@
 #include <functional>                             // for std::hash
 #include <string_view>
 
-#include "database_handler.h"                     // for DatabaseHandler
+#include "database/handler.h"                     // for DatabaseHandler
 #include "exception.h"                            // for chaipp::Error
 #include "log.h"                                  // for L_EXC
 #include "lru.h"                                  // for lru::LRU

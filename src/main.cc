@@ -48,7 +48,7 @@
 #endif
 
 #include "check_size.h"                           // for check_size
-#include "database_handler.h"                     // for DatabaseHandler
+#include "database/handler.h"                     // for DatabaseHandler
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
 #include "error.hh"                               // for error::name, error::description
 #include "ev/ev++.h"                              // for ::DEVPOLL, ::EPOLL, ::KQUEUE

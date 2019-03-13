@@ -32,7 +32,7 @@
 #include <vector>                 // for std::vector
 
 #include "cuuid/uuid.h"           // for UUID, UUID_LENGTH
-#include "database_flags.h"       // for DB_*
+#include "database/flags.h"       // for DB_*
 #include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 

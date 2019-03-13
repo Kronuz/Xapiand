@@ -20,15 +20,15 @@
  * THE SOFTWARE.
  */
 
-#include "database.h"
+#include "database/database.h"
 
 #include <algorithm>              // for std::move
 
 #include "cassert.h"              // for ASSERT
-#include "database_data.h"        // for Locator
-#include "database_flags.h"       // for readable_flags
-#include "database_shard.h"       // for Shard
-#include "database_utils.h"       // for DB_SLOT_SHARDS
+#include "database/data.h"        // for Locator
+#include "database/flags.h"       // for readable_flags
+#include "database/shard.h"       // for Shard
+#include "database/utils.h"       // for DB_SLOT_SHARDS
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "hashes.hh"              // for fnv1ah64::hash
 #include "length.h"               // for serialise_string

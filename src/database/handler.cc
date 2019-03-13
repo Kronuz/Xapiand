@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "database_handler.h"
+#include "database/handler.h"
 
 #include <algorithm>                        // for min, move
 #include <array>                            // for std::array
@@ -30,13 +30,13 @@
 
 #include "cast.h"                           // for Cast
 #include "chaipp/exception.h"               // for chaipp::Error
-#include "database.h"                       // for Database
-#include "database_shard.h"                 // for Shard
-#include "database_utils.h"                 // for split_path_id
-#include "database_wal.h"                   // for DatabaseWAL
+#include "database/database.h"              // for Database
+#include "database/lock.h"                  // for lock_database
+#include "database/shard.h"                 // for Shard
+#include "database/utils.h"                 // for split_path_id
+#include "database/wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
 #include "length.h"                         // for serialise_string, unserialise_string
-#include "lock_database.h"                  // for lock_database
 #include "log.h"                            // for L_CALL
 #include "manager.h"                        // for XapiandManager
 #include "msgpack.h"                        // for MsgPack

@@ -20,11 +20,11 @@
  * THE SOFTWARE.
  */
 
-#include "database_cleanup.h"
+#include "database/cleanup.h"
 
 #include "log.h"                              // for L_CALL
 #include "manager.h"                          // for XapiandManager
-#include "database_pool.h"                    // for DatabasePool (database_pool)
+#include "database/pool.h"                    // for DatabasePool (database_pool)
 
 
 DatabaseCleanup::DatabaseCleanup(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_) :

@@ -33,7 +33,7 @@
 #include <vector>                           // for std::vector
 
 #include "base_client.h"                    // for MetaBaseClient
-#include "lock_database.h"                  // for lock_shard
+#include "database/lock.h"                  // for lock_database
 #include "threadpool.hh"                    // for Task
 #include "xapian.h"
 

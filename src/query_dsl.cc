@@ -29,7 +29,7 @@
 #include "booleanParser/LexicalException.h"       // for LexicalException
 #include "booleanParser/SyntacticException.h"     // for SyntacticException
 #include "cast.h"                                 // for Cast
-#include "database_utils.h"                       // for prefixed
+#include "database/utils.h"                       // for prefixed
 #include "exception.h"                            // for THROW, QueryDslError
 #include "field_parser.h"                         // for FieldParser
 #include "geospatial/geospatial.h"                // for GeoSpatial

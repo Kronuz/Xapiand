@@ -36,10 +36,11 @@
 #include "bloom_filter.hh"
 #include "compressor_deflate.h"
 #include "compressor_lz4.h"
-#include "database.h"
-#include "database_handler.h"
-#include "database_pool.h"
-#include "database_wal.h"
+#include "database/database.h"
+#include "database/shard.h"
+#include "database/handler.h"
+#include "database/pool.h"
+#include "database/wal.h"
 #include "debouncer.h"
 #include "endpoint.h"
 #include "logger.h"
@@ -151,8 +152,11 @@ CHECK_MAX_SIZE(SMALL, (LZ4CompressFile))
 CHECK_MAX_SIZE(SMALL, (LZ4DecompressData))
 CHECK_MAX_SIZE(SMALL, (LZ4DecompressFile))
 
-// database.h
+// database_database.h
 CHECK_MAX_SIZE(SMALL, (Database))
+
+// database_shard.h
+CHECK_MAX_SIZE(SMALL, (Shard))
 
 // database_handler.h
 CHECK_MAX_SIZE(SMALL, (Data))

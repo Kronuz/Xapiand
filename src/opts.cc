@@ -40,7 +40,7 @@
 
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
 #define NUM_SHARDS               1                // Default number of database shards per index
-#define NUM_REPLICAS             2                // Default number of database replicas per index
+#define NUM_REPLICAS             1                // Default number of database replicas per index
 
 #define SCRIPTS_CACHE_SIZE           100          // Scripts cache
 #define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache

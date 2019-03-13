@@ -32,9 +32,9 @@
 #include <unistd.h>
 
 #include "cassert.h"                          // for ASSERT
-#include "database.h"                         // for Database
-#include "database_shard.h"                   // for Shard
-#include "database_wal.h"                     // for DatabaseWAL
+#include "database/database.h"                // for Database
+#include "database/shard.h"                   // for Shard
+#include "database/wal.h"                     // for DatabaseWAL
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*

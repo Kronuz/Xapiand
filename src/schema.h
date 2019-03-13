@@ -35,7 +35,7 @@
 #include <utility>                                // for std::pair
 #include <vector>                                 // for std::vector
 
-#include "database_utils.h"
+#include "database/utils.h"
 #include "geospatial/htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack

@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "database_utils.h"
+#include "database/utils.h"
 
 #include <algorithm>                                 // for count, replace
 #include <chrono>                                    // for seconds, duration_cast

@@ -20,18 +20,18 @@
  * THE SOFTWARE.
  */
 
-#include "database_shard.h"
+#include "database/shard.h"
 
 #include <algorithm>              // for std::move
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
 #include "cassert.h"              // for ASSERT
-#include "database_data.h"        // for Locator
-#include "database_flags.h"       // for readable_flags, DB_*
-#include "database_pool.h"        // for ShardEndpoint
-#include "database_handler.h"     // for committer
-#include "database_utils.h"       // for DB_SLOT_VERSION
-#include "database_wal.h"         // for DatabaseWAL
+#include "database/data.h"        // for Locator
+#include "database/flags.h"       // for readable_flags, DB_*
+#include "database/pool.h"        // for ShardEndpoint
+#include "database/handler.h"     // for committer
+#include "database/utils.h"       // for DB_SLOT_VERSION
+#include "database/wal.h"         // for DatabaseWAL
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for build_path_index
 #include "ignore_unused.h"        // for ignore_unused

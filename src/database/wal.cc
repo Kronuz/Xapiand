@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "database_wal.h"
+#include "database/wal.h"
 
 
 //  ____        _        _                  __        ___    _
@@ -40,10 +40,10 @@
 
 #include "cassert.h"                // for ASSERT
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
-#include "database.h"               // for Shard
-#include "database_pool.h"          // for DatabasePool
-#include "database_shard.h"         // for Shard
-#include "database_utils.h"         // for read_uuid
+#include "database/database.h"      // for Database
+#include "database/pool.h"          // for DatabasePool
+#include "database/shard.h"         // for Shard
+#include "database/utils.h"         // for read_uuid
 #include "exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description
 #include "fs.hh"                    // for exists
