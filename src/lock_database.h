@@ -88,41 +88,91 @@ lock_database::lock(Args&&... args)
 }
 
 
-class lock_endpoint {
-	std::shared_ptr<Database> _locked_database;
-	int _database_locks;
+class lock_shard {
+	std::shared_ptr<Shard> _locked;
+	int _locks;
 
-	lock_endpoint(const lock_endpoint&) = delete;
-	lock_endpoint& operator=(const lock_endpoint&) = delete;
+	lock_shard(const lock_shard&) = delete;
+	lock_shard& operator=(const lock_shard&) = delete;
 
 public:
-	const Endpoints endpoints;
+	const Endpoint endpoint;
 	const int flags;
 
-	lock_endpoint(const Endpoints& endpoints, int flags);
-	lock_endpoint(const Endpoint& endpoint, int flags) : lock_endpoint(Endpoints{endpoint}, flags) {}
-	~lock_endpoint() noexcept;
+	lock_shard(const Endpoint& endpoint, int flags);
+	~lock_shard() noexcept;
 
 	void unlock() noexcept;
 
 	template <typename... Args>
-	void lock(Args&&... args);
+	const std::shared_ptr<Shard> lock(Args&&... args);
 
-	const std::shared_ptr<Database>& database() const noexcept;
-	Xapian::Database* db() const noexcept;
+	Shard& operator*() const noexcept;
+	Shard* operator->() const noexcept;
+
+	const std::shared_ptr<Shard> locked();
 };
 
 
-template <typename... Args>
-inline void
-lock_endpoint::lock(Args&&... args)
+inline
+lock_shard::lock_shard(const Endpoint& endpoint, int flags) :
+	_locks(0),
+	endpoint(endpoint),
+	flags(flags)
 {
-	if (endpoints.empty()) {
-		return;
+	lock();
+}
+
+
+inline
+lock_shard::~lock_shard() noexcept
+{
+	while (_locks) {
+		unlock();
 	}
-	if (!_locked_database) {
-		ASSERT(_database_locks == 0);
-		_locked_database = XapiandManager::database_pool()->checkout(endpoints, flags, std::forward<Args>(args)...);
+}
+
+
+inline void
+lock_shard::unlock() noexcept
+{
+	if (_locks > 0 && --_locks == 0) {
+		ASSERT(_locked);
+		XapiandManager::database_pool()->checkin(_locked);
 	}
-	++_database_locks;
+}
+
+
+template <typename... Args>
+inline const std::shared_ptr<Shard>
+lock_shard::lock(Args&&... args)
+{
+	if (!_locked) {
+		ASSERT(_locks == 0);
+		_locked = XapiandManager::database_pool()->checkout(endpoint, flags, std::forward<Args>(args)...);
+	}
+	++_locks;
+	return _locked;
+}
+
+inline Shard&
+lock_shard::operator*() const noexcept
+{
+	ASSERT(_locked);
+	return *_locked;
+}
+
+
+inline Shard*
+lock_shard::operator->() const noexcept
+{
+	ASSERT(_locked);
+	return _locked.get();
+}
+
+
+inline const std::shared_ptr<Shard>
+lock_shard::locked()
+{
+	return _locked;
 }
