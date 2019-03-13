@@ -717,7 +717,7 @@ DatabasePool::checkin(std::shared_ptr<Shard>& shard)
 
 
 std::shared_ptr<Database>
-DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, std::packaged_task<void()>* callback)
+DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoints.to_string()), readable_flags(flags), timeout);
 
@@ -730,7 +730,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout, st
 	shards.reserve(endpoints.size());
 	try {
 		for (auto& endpoint : endpoints) {
-			auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
+			auto shard = spawn(endpoint)->checkout(flags, timeout);
 			ASSERT(shard);
 			shards.emplace_back(std::move(shard));
 		}

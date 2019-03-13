@@ -95,7 +95,7 @@ public:
 
 	~ShardEndpoint();
 
-	std::shared_ptr<Shard> checkout(int flags, double timeout, std::packaged_task<void()>* callback);
+	std::shared_ptr<Shard> checkout(int flags, double timeout, std::packaged_task<void()>* callback = nullptr);
 
 	void checkin(std::shared_ptr<Shard>& database) noexcept;
 
@@ -168,12 +168,7 @@ public:
 	std::shared_ptr<Shard> checkout(const Endpoint& endpoint, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
 	void checkin(std::shared_ptr<Shard>& shard);
 
-	template <typename Func>
-	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout, Func&& func) {
-		std::packaged_task<void()> callback(std::forward<Func>(func));
-		return checkout(endpoints, flags, timeout, &callback);
-	}
-	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
+	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
 	void checkin(std::shared_ptr<Database>& database);
 
 	void finish();
