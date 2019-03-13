@@ -672,7 +672,7 @@ Database::do_close(bool commit_, bool closed_, Transaction transaction_, bool th
 
 	if (_database) {
 		try {
-			_database->close();
+			_database.reset();
 		} catch (...) {
 			if (throw_exceptions) {
 				throw;
