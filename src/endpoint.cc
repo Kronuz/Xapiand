@@ -200,7 +200,7 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	if (protocol.empty()) {
 		protocol = "file";
 	}
-	auto _search = slice_after(uri, "?");
+	auto _query = slice_after(uri, "?");
 	auto _path = slice_after(uri, "/");
 	auto _user = slice_before(uri, "@");
 	auto _password = slice_after(_user, ":");
@@ -234,7 +234,7 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 				}
 			}
 		}
-		search = _search;
+		query = _query;
 		password = _password;
 		user = _user;
 	}
@@ -259,41 +259,41 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 
 
 Endpoint::Endpoint(const Endpoint& other) :
+	path{other.path},
 	node_name{other.node_name},
 	user{other.user},
 	password{other.password},
-	path{other.path},
-	search{other.search}
+	query{other.query}
 {
 }
 
 
 Endpoint::Endpoint(Endpoint&& other) :
+	path{std::move(other.path)},
 	node_name{std::move(other.node_name)},
 	user{std::move(other.user)},
 	password{std::move(other.password)},
-	path{std::move(other.path)},
-	search{std::move(other.search)}
+	query{std::move(other.query)}
 {
 }
 
 
 Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node) :
+	path{other.path},
 	node_name{node->lower_name()},
 	user{other.user},
 	password{other.password},
-	path{other.path},
-	search{other.search}
+	query{other.query}
 {
 }
 
 
 Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
+	path{std::move(other.path)},
 	node_name{node->lower_name()},
 	user{std::move(other.user)},
 	password{std::move(other.password)},
-	path{std::move(other.path)},
-	search{std::move(other.search)}
+	query{std::move(other.query)}
 {
 }
 
@@ -301,11 +301,11 @@ Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
 Endpoint&
 Endpoint::operator=(const Endpoint& other)
 {
+	path = other.path;
 	node_name = other.node_name;
 	user = other.user;
 	password = other.password;
-	path = other.path;
-	search = other.search;
+	query = other.query;
 	return *this;
 }
 
@@ -313,11 +313,11 @@ Endpoint::operator=(const Endpoint& other)
 Endpoint&
 Endpoint::operator=(Endpoint&& other)
 {
+	path = std::move(other.path);
 	node_name = std::move(other.node_name);
 	user = std::move(other.user);
 	password = std::move(other.password);
-	path = std::move(other.path);
-	search = std::move(other.search);
+	query = std::move(other.query);
 	return *this;
 }
 
@@ -377,8 +377,8 @@ Endpoint::to_string() const
 		ret += "/";
 	}
 	ret += path;
-	if (!search.empty()) {
-		ret += "?" + search;
+	if (!query.empty()) {
+		ret += "?" + query;
 	}
 	return ret;
 }
@@ -389,11 +389,11 @@ Endpoint::empty()
 const noexcept
 {
 	return (
+		path.empty() &&
 		node_name.empty() &&
 		user.empty() &&
 		password.empty() &&
-		path.empty() &&
-		search.empty()
+		query.empty()
 	);
 }
 
@@ -401,7 +401,7 @@ const noexcept
 bool
 Endpoint::operator<(const Endpoint& other) const
 {
-	return hash() < other.hash();
+	return path != other.path ? path < other.path : node_name < other.node_name;
 }
 
 
@@ -424,13 +424,7 @@ size_t
 Endpoint::hash() const
 {
 	static const std::hash<std::string> hash_fn_string;
-	return (
-		hash_fn_string(node_name) ^
-		hash_fn_string(user) ^
-		hash_fn_string(password) ^
-		hash_fn_string(path) ^
-		hash_fn_string(search)
-	);
+	return hash_fn_string(path) ^ hash_fn_string(node_name);
 }
 
 
