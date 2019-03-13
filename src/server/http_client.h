@@ -260,6 +260,7 @@ public:
 	size_t size;
 
 	bool human;
+	bool comments;
 	int indented;
 	bool expect_100;
 	bool closing;

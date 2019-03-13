@@ -433,9 +433,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments)
 {
-	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit);
+	L_CALL("DatabaseHandler::index({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), commit, comments);
 
 	auto prepared = prepare(document_id, document_ver, obj, data);
 	auto& term_id = std::get<0>(prepared);
@@ -480,21 +480,23 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 		L_EXC("Cannot retrieve document version for docid {}!", did);
 	}
 
-	data_obj[RESPONSE_xDOCID] = did;
+	if (comments) {
+		data_obj[RESPONSE_xDOCID] = did;
 
-	size_t n_shards = endpoints.size();
-	size_t shard_num = (did - 1) % n_shards;
-	data_obj[RESPONSE_xSHARD] = shard_num;
-	// data_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+		size_t n_shards = endpoints.size();
+		size_t shard_num = (did - 1) % n_shards;
+		data_obj[RESPONSE_xSHARD] = shard_num;
+		// data_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+	}
 
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, comments, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -515,14 +517,14 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments);
 				case MsgPack::Type::MAP:
 					inject_data(data, body);
-					return index(document_id, document_ver, body, data, commit);
+					return index(document_id, document_ver, body, data, commit, comments);
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
@@ -534,7 +536,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 
 
 DataType
-DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, const ct_type_t& /*ct_type*/)
+DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments, const ct_type_t& /*ct_type*/)
 {
 	L_CALL("DatabaseHandler::patch({}, <patches>, {})", repr(document_id.to_string()), commit);
 
@@ -565,7 +567,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 			apply_patch(patches, obj);
 
-			return index(document_id, document_ver, obj, data, commit);
+			return index(document_id, document_ver, obj, data, commit, comments);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -574,9 +576,9 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 
 DataType
-DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
+DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::update({}, {}, <body>, {}, {}/{})", repr(document_id.to_string()), stored, commit, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::update({}, {}, <body>, {}, {}, {}/{})", repr(document_id.to_string()), stored, commit, comments, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -610,28 +612,28 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, obj, data, commit);
+					return index(document_id, document_ver, obj, data, commit, comments);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, obj, data, commit);
+					return index(document_id, document_ver, obj, data, commit, comments);
 				case MsgPack::Type::MAP:
 					if (stored) {
 						THROW(ClientError, "Objects of this type cannot be put in storage");
 					}
 					if (obj.empty()) {
 						inject_data(data, body);
-						return index(document_id, document_ver, body, data, commit);
+						return index(document_id, document_ver, body, data, commit, comments);
 					} else {
 						obj.update(body);
 						inject_data(data, obj);
-						return index(document_id, document_ver, obj, data, commit);
+						return index(document_id, document_ver, obj, data, commit, comments);
 					}
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
 
-			return index(document_id, document_ver, obj, data, commit);
+			return index(document_id, document_ver, obj, data, commit, comments);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -1788,10 +1790,10 @@ DocPreparer::operator()()
 			return 0;
 		});
 		if (http_errors.error_code != HTTP_STATUS_OK) {
-			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{
+			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, indexer->comments ? MsgPack{
 				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
 				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
-			}, idx));
+			} : MsgPack::MAP(), idx));
 		}
 	}
 }
@@ -1866,19 +1868,23 @@ DocIndexer::operator()()
 						L_EXC("Cannot retrieve document version for docid {}!", did);
 					}
 
-					obj[RESPONSE_xDOCID] = did;
+					if (comments) {
+						obj[RESPONSE_xDOCID] = did;
 
-					size_t n_shards = endpoints.size();
-					size_t shard_num = (did - 1) % n_shards;
-					obj[RESPONSE_xSHARD] = shard_num;
-					// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+						size_t n_shards = endpoints.size();
+						size_t shard_num = (did - 1) % n_shards;
+						obj[RESPONSE_xSHARD] = shard_num;
+						// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+					}
 
 					++_indexed;
 					return 0;
 				});
 				if (http_errors.error_code != HTTP_STATUS_OK) {
-					obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
-					obj[RESPONSE_xMESSAGE] = string::split(http_errors.error, '\n');
+					if (comments) {
+						obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
+						obj[RESPONSE_xMESSAGE] = string::split(http_errors.error, '\n');
+					}
 				}
 			} else if (!data_obj.is_undefined()) {
 				obj = std::move(data_obj);

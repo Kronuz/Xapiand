@@ -189,7 +189,7 @@ class DatabaseHandler {
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);
 
-	DataType index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+	DataType index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -212,9 +212,9 @@ public:
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
-	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
-	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, const ct_type_t& ct_type);
-	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type);
+	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments, const ct_type_t& ct_type);
+	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 	void delete_schema();
@@ -308,6 +308,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	int flags;
 
 	enum http_method method;
+	bool comments;
 
 	std::atomic_size_t _processed;
 	std::atomic_size_t _indexed;
@@ -323,12 +324,13 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt;
 
-	DocIndexer(const Endpoints& endpoints, int flags, enum http_method method) :
+	DocIndexer(const Endpoints& endpoints, int flags, enum http_method method, bool comments) :
 		running{true},
 		ready{false},
 		endpoints{endpoints},
 		flags{flags},
 		method{method},
+		comments{comments},
 		_processed{0},
 		_indexed{0},
 		_total{0},

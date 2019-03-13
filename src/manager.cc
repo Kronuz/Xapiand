@@ -672,7 +672,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 				{ RESERVED_VALUE, local_node->name() },
 			} },
-		}, true, msgpack_type).first;
+		}, true, false, msgpack_type).first;
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
@@ -1401,7 +1401,7 @@ index_replicas(const std::string& normalized_path, const std::vector<size_t>& re
 		};
 		// Add a local schema so it doesn't break forced foreign schemas
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-		db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+		db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type);
 	}
 }
 
@@ -1434,7 +1434,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 				};
 				// Add a local schema so it doesn't break forced foreign schemas
 				db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-				db_handler.index(normalized_path, 0, false, obj, true, msgpack_type);
+				db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type);
 			}
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {

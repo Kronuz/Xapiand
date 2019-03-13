@@ -399,10 +399,10 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			detach();
 			request.atom_ending = true;
 		} else {
-			MsgPack err_response = {
+			MsgPack err_response = request.comments ? MsgPack({
 				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
 				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
-			};
+			}) : MsgPack::MAP();
 			write_http_response(request, http_errors.error_code, err_response);
 			request.atom_ending = true;
 		}
@@ -466,10 +466,10 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			std::string message(http_errno_description(err));
 			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 			if (new_request->response.status == static_cast<http_status>(0)) {
-				MsgPack err_response = {
+				MsgPack err_response = new_request->comments ? MsgPack({
 					{ RESPONSE_xSTATUS, (int)error_code },
 					{ RESPONSE_xMESSAGE, string::split(message, '\n') }
-				};
+				}) : MsgPack::MAP();
 				write_http_response(*new_request, error_code, err_response);
 				end_http_request(*new_request);
 			}
@@ -991,10 +991,10 @@ HttpClient::prepare()
 	new_request->type_encoding = resolve_encoding(*new_request);
 	if (new_request->type_encoding == Encoding::unknown) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = {
+		MsgPack err_response = new_request->comments ? MsgPack({
 			{ RESPONSE_xSTATUS, (int)error_code },
 			{ RESPONSE_xMESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
-		};
+		}) : MsgPack::MAP();
 		write_http_response(*new_request, error_code, err_response);
 		return 1;
 	}
@@ -1031,10 +1031,10 @@ HttpClient::prepare()
 			break;
 		default: {
 			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
-			MsgPack err_response = {
+			MsgPack err_response = new_request->comments ? MsgPack({
 				{ RESPONSE_xSTATUS, (int)error_code },
 				{ RESPONSE_xMESSAGE, { MsgPack({ "Method not implemented!" }) } }
-			};
+			}) : MsgPack::MAP();
 			write_http_response(*new_request, error_code, err_response);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
 			return 1;
@@ -1589,7 +1589,7 @@ HttpClient::index_document_view(Request& request)
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	auto& decoded_body = request.decoded_body();
-	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type).second;
+	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1661,11 +1661,11 @@ HttpClient::update_document_view(Request& request)
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	auto& decoded_body = request.decoded_body();
 	if (request.method == HTTP_PATCH) {
-		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 	} else if (request.method == HTTP_STORE) {
-		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 	} else {
-		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type).second;
+		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -1976,10 +1976,10 @@ HttpClient::dump_view(Request& request)
 		if (dump_ct_type.empty()) {
 			// No content type could be resolved, return NOT ACCEPTABLE.
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-			MsgPack err_response = {
+			MsgPack err_response = request.comments ? MsgPack({
 				{ RESPONSE_xSTATUS, (int)error_code },
 				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
-			};
+			}) : MsgPack::MAP();
 			write_http_response(request, error_code, err_response);
 			L_SEARCH("ABORTED SEARCH");
 			return;
@@ -2033,7 +2033,7 @@ HttpClient::restore_view(Request& request)
 
 		request.processing = std::chrono::system_clock::now();
 
-		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method, request.comments);
 	}
 
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
@@ -2233,10 +2233,10 @@ HttpClient::retrieve_view(Request& request)
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = {
+		MsgPack err_response = request.comments ? MsgPack({
 			{ RESPONSE_xSTATUS, (int)error_code },
 			{ RESPONSE_xMESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
-		};
+		}) : MsgPack::MAP();
 		write_http_response(request, error_code, err_response);
 		L_SEARCH("ABORTED RETRIEVE");
 		return;
@@ -2258,12 +2258,14 @@ HttpClient::retrieve_view(Request& request)
 			} catch (const SerialisationError&) {}
 		}
 
-		obj[RESPONSE_xDOCID] = did;
+		if (request.comments) {
+			obj[RESPONSE_xDOCID] = did;
 
-		size_t n_shards = endpoints.size();
-		size_t shard_num = (did - 1) % n_shards;
-		obj[RESPONSE_xSHARD] = shard_num;
-		// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+			size_t n_shards = endpoints.size();
+			size_t shard_num = (did - 1) % n_shards;
+			obj[RESPONSE_xSHARD] = shard_num;
+			// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+		}
 
 		if (!selector.empty()) {
 			obj = obj.select(selector);
@@ -2408,16 +2410,18 @@ HttpClient::search_view(Request& request)
 			} catch (const SerialisationError&) {}
 		}
 
-		hit_obj[RESPONSE_xDOCID] = did;
+		if (request.comments) {
+			hit_obj[RESPONSE_xDOCID] = did;
 
-		size_t n_shards = endpoints.size();
-		size_t shard_num = (did - 1) % n_shards;
-		hit_obj[RESPONSE_xSHARD] = shard_num;
-		// hit_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+			size_t n_shards = endpoints.size();
+			size_t shard_num = (did - 1) % n_shards;
+			hit_obj[RESPONSE_xSHARD] = shard_num;
+			// hit_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 
-		hit_obj[RESPONSE_xRANK] = m.get_rank();
-		hit_obj[RESPONSE_xWEIGHT] = m.get_weight();
-		hit_obj[RESPONSE_xPERCENT] = m.get_percent();
+			hit_obj[RESPONSE_xRANK] = m.get_rank();
+			hit_obj[RESPONSE_xWEIGHT] = m.get_weight();
+			hit_obj[RESPONSE_xPERCENT] = m.get_percent();
+		}
 
 		if (!selector.empty()) {
 			hit_obj = hit_obj.select(selector);
@@ -2507,10 +2511,10 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 {
 	L_CALL("HttpClient::write_status_response()");
 
-	write_http_response(request, status, {
+	write_http_response(request, status, request.comments ? MsgPack({
 		{ RESPONSE_xSTATUS, (int)status },
 		{ RESPONSE_xMESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
-	});
+	}) : MsgPack::MAP());
 }
 
 
@@ -2565,6 +2569,17 @@ HttpClient::url_resolve(Request& request)
 				} catch (const Exception&) { }
 			} else {
 				request.human = true;
+			}
+		}
+
+		request.query_parser.rewind();
+		if (request.query_parser.next("comments") != -1) {
+			if (request.query_parser.len != 0u) {
+				try {
+					request.comments = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+				} catch (const Exception&) { }
+			} else {
+				request.comments = true;
 			}
 		}
 
@@ -3208,10 +3223,10 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		}
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack response_err = {
+		MsgPack response_err = request.comments ? MsgPack({
 			{ RESPONSE_xSTATUS, (int)status },
 			{ RESPONSE_xMESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
-		};
+		}) : MsgPack::MAP();
 		auto response_str = response_err.to_string();
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, response_str, false, true, true);
@@ -3353,6 +3368,7 @@ Request::Request(HttpClient* client)
 	  raw_offset{0},
 	  size{0},
 	  human{true},
+	  comments{true},
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},

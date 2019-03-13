@@ -466,7 +466,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 					auto new_schema_copy = *new_schema;
 					// FIXME: Process the foreign_path's subfields instead of ignoring.
-					_db_handler.index(foreign_id.substr(0, needle), 0, true, new_schema_copy, false, msgpack_type);
+					_db_handler.index(foreign_id.substr(0, needle), 0, true, new_schema_copy, false, false, msgpack_type);
 				} catch(...) {
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
