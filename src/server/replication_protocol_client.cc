@@ -271,7 +271,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	Xapian::Database* db;
 
-	lock_shard lk_shard(Endpoint{endpoint_path}, DB_WRITABLE);
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_WRITABLE, false);
 
 	db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
