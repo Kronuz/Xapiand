@@ -294,9 +294,16 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 
 		request.ends = std::chrono::system_clock::now();
 
-		headers += string::format("Response-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9) + eol;
-		if (request.ready >= request.processing) {
-			headers += string::format("Operation-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9) + eol;
+		if (request.human) {
+			headers += string::format("Response-Time: {}", string::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count())) + eol;
+			if (request.ready >= request.processing) {
+				headers += string::format("Operation-Time: {}", string::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count())) + eol;
+			}
+		} else {
+			headers += string::format("Response-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9) + eol;
+			if (request.ready >= request.processing) {
+				headers += string::format("Operation-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9) + eol;
+			}
 		}
 
 		if ((mode & HTTP_OPTIONS_RESPONSE) != 0) {
