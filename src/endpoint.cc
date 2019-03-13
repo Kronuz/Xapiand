@@ -22,6 +22,8 @@
 
 #include "endpoint.h"
 
+#include <algorithm>        // for std::lower_bound
+
 #include "config.h"         // for XAPIAND_*
 
 #include "cassert.h"        // for ASSERT
@@ -459,9 +461,9 @@ Endpoints::hash() const
 void
 Endpoints::add(const Endpoint& endpoint)
 {
-	if (std::find(begin(), end(), endpoint) == end()) {
-		push_back(endpoint);
-		std::sort(begin(), end());
+	auto it = std::lower_bound(begin(), end(), endpoint); // find proper position in descending order
+	if (it == end() || *it != endpoint) {
+		insert(it, endpoint);  // insert before iterator it
 	}
 }
 
