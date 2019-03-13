@@ -1438,8 +1438,10 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			}
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
-				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
-				index_replicas(shard_normalized_path, replicas);
+				if (!replicas.empty()) {
+					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
+					index_replicas(shard_normalized_path, replicas);
+				}
 			}
 		}
 	}
@@ -1578,13 +1580,19 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			if (!shards.empty()) {
 				nodes = shards_to_nodes(shards);
 				lk.lock();
-				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 				size_t shard_num = 0;
 				for (auto& replicas : shards) {
+					if (replicas.empty()) {
+						nodes.clear();  // There were missing replicas, abort!
+						break;
+					}
 					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
 					std::vector<std::vector<size_t>> shard_shards;
 					shard_shards.push_back(replicas);
 					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
+				}
+				if (!nodes.empty()) {
+					resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 				}
 				lk.unlock();
 			}
@@ -1596,15 +1604,19 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			} else {
 				shards = calculate_shards(query_field.routing.empty() ? normalized_path : query_field.routing);
 			}
+			ASSERT(!shards.empty());
 			nodes = shards_to_nodes(shards);
 			lk.lock();
-			resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
+				ASSERT(!replicas.empty());
 				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
 				std::vector<std::vector<size_t>> shard_shards;
 				shard_shards.push_back(replicas);
 				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
+			}
+			if (!nodes.empty()) {
+				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			}
 			lk.unlock();
 		}
