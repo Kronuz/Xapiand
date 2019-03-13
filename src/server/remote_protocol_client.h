@@ -31,7 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_client.h"                      // for MetaBaseClient
-#include "lock_database.h"                    // for lock_db
+#include "lock_database.h"                    // for lock_database
 #include "threadpool.hh"                      // for Task
 #include "xapian.h"
 
@@ -240,7 +240,7 @@ class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
 	bool cluster_database;
 
 	// For msg_query and msg_mset:
-	std::unique_ptr<lock_db> _msg_query_database_lock;
+	std::unique_ptr<lock_database> _msg_query_database_lock;
 	Xapian::Registry _msg_query_reg;
 	std::unique_ptr<Xapian::Enquire> _msg_query_enquire;
 	std::vector<Xapian::MatchSpy*> _msg_query_matchspies;

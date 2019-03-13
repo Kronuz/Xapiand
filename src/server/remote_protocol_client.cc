@@ -306,7 +306,7 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 	const std::string& prefix = message;
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	const Xapian::TermIterator end = db->allterms_end(prefix);
@@ -337,7 +337,7 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	Xapian::TermIterator t = db->termlist_begin(did);
@@ -381,7 +381,7 @@ RemoteProtocolClient::msg_positionlist(const std::string &message)
 	std::string term(p, p_end - p);
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
@@ -405,7 +405,7 @@ RemoteProtocolClient::msg_positionlistcount(const std::string &message)
 	L_CALL("RemoteProtocolClient::msg_positionlistcount(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	const char *p = message.data();
@@ -435,7 +435,7 @@ RemoteProtocolClient::msg_postlist(const std::string &message)
 	const std::string & term = message;
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	Xapian::doccount termfreq = db->get_termfreq(term);
@@ -562,7 +562,7 @@ RemoteProtocolClient::msg_reopen(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_reopen(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 
 	if (!lk_db->reopen()) {
 		lk_db.unlock();
@@ -590,7 +590,7 @@ RemoteProtocolClient::msg_update(const std::string &)
 
 	if (!endpoints.empty()) {
 		reset();
-		lock_db lk_db(endpoints, flags);
+		lock_database lk_db(endpoints, flags);
 		auto db = lk_db->db();
 
 		Xapian::doccount num_docs = db->get_doccount();
@@ -615,7 +615,7 @@ void
 RemoteProtocolClient::init_msg_query()
 {
 	flags = DB_OPEN;
-	_msg_query_database_lock = std::make_unique<lock_db>(endpoints, flags);
+	_msg_query_database_lock = std::make_unique<lock_database>(endpoints, flags);
 	_msg_query_matchspies.clear();
 	_msg_query_reg = Xapian::Registry{};
 	_msg_query_enquire.reset();
@@ -832,7 +832,7 @@ RemoteProtocolClient::msg_document(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 
 	Xapian::Document doc = lk_db->get_document(did, false);
 
@@ -855,7 +855,7 @@ RemoteProtocolClient::msg_keepalive(const std::string &)
 	L_CALL("RemoteProtocolClient::msg_keepalive(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	// Ensure *our* database stays alive, as it may contain remote databases!
@@ -873,7 +873,7 @@ RemoteProtocolClient::msg_termexists(const std::string &term)
 	L_CALL("RemoteProtocolClient::msg_termexists(<term>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	auto reply_type = db->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST;
@@ -889,7 +889,7 @@ RemoteProtocolClient::msg_collfreq(const std::string &term)
 	L_CALL("RemoteProtocolClient::msg_collfreq(<term>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	auto collection_freq = db->get_collection_freq(term);
@@ -905,7 +905,7 @@ RemoteProtocolClient::msg_termfreq(const std::string &term)
 	L_CALL("RemoteProtocolClient::msg_termfreq(<term>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	auto termfreq = db->get_termfreq(term);
@@ -921,7 +921,7 @@ RemoteProtocolClient::msg_freqs(const std::string &term)
 	L_CALL("RemoteProtocolClient::msg_freqs(<term>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	auto termfreq = db->get_termfreq(term);
@@ -940,7 +940,7 @@ RemoteProtocolClient::msg_valuestats(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_valuestats(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	const char *p = message.data();
@@ -971,7 +971,7 @@ RemoteProtocolClient::msg_doclength(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	auto doclength = db->get_doclength(did);
@@ -991,7 +991,7 @@ RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	auto unique_terms = db->get_unique_terms(did);
@@ -1007,7 +1007,7 @@ RemoteProtocolClient::msg_commit(const std::string &)
 	L_CALL("RemoteProtocolClient::msg_commit(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	lk_db->commit();
 	lk_db.unlock();
 
@@ -1021,7 +1021,7 @@ RemoteProtocolClient::msg_cancel(const std::string &)
 	L_CALL("RemoteProtocolClient::msg_cancel(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	// We can't call cancel since that's an internal method, but this
 	// has the same effect with minimal additional overhead.
 	lk_db->begin_transaction(false);
@@ -1037,7 +1037,7 @@ RemoteProtocolClient::msg_adddocument(const std::string & message)
 	auto document = Xapian::Document::unserialise(message);
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto did = lk_db->add_document(std::move(document));
 	lk_db.unlock();
 
@@ -1055,7 +1055,7 @@ RemoteProtocolClient::msg_deletedocument(const std::string & message)
 	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	lk_db->delete_document(did);
 	lk_db.unlock();
 
@@ -1069,7 +1069,7 @@ RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_deletedocumentterm(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	lk_db->delete_document_term(message);
 }
 
@@ -1086,7 +1086,7 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	lk_db->replace_document(did, std::move(document));
 }
 
@@ -1105,7 +1105,7 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto did = lk_db->replace_document_term(unique_term, std::move(document));
 	lk_db.unlock();
 
@@ -1119,7 +1119,7 @@ RemoteProtocolClient::msg_getmetadata(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_getmetadata(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto value = lk_db->get_metadata(message);
 	lk_db.unlock();
 
@@ -1133,7 +1133,7 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_metadatakeylist(<message>)");
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto db = lk_db->db();
 
 	std::string reply;
@@ -1171,7 +1171,7 @@ RemoteProtocolClient::msg_setmetadata(const std::string & message)
 	std::string val(p, p_end - p);
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	lk_db->set_metadata(key, val);
 }
 
@@ -1186,7 +1186,7 @@ RemoteProtocolClient::msg_addspelling(const std::string & message)
 	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	lk_db->add_spelling(std::string(p, p_end - p), freqinc);
 }
 
@@ -1201,7 +1201,7 @@ RemoteProtocolClient::msg_removespelling(const std::string & message)
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
 	reset();
-	lock_db lk_db(endpoints, flags);
+	lock_database lk_db(endpoints, flags);
 	auto result = lk_db->remove_spelling(std::string(p, p_end - p), freqdec);
 	auto serialised = serialise_length(result);
 	lk_db.unlock();

@@ -29,77 +29,18 @@
 #include "xapian.h"             // for Xapian::Database
 
 
-class Database;
-
-
-class LockableDatabase {
-	friend class lock_database;
-
-	std::shared_ptr<Database> _locked_database;
-	int _database_locks;
-
-protected:
-	int flags;
-	Endpoints endpoints;
-
-public:
-	const std::shared_ptr<Database>& database() const noexcept;
-	Xapian::Database* db() const noexcept;
-
-	LockableDatabase();
-	LockableDatabase(const Endpoints& endpoints_, int flags_);
-};
-
-
 class lock_database {
-	LockableDatabase* lockable;
-	int locks;
+	std::shared_ptr<Database> _locked;
+	int _locks;
 
 	lock_database(const lock_database&) = delete;
 	lock_database& operator=(const lock_database&) = delete;
 
 public:
-	lock_database(LockableDatabase* lockable);
-	~lock_database() noexcept;
-
-	void unlock() noexcept;
-
-	template <typename... Args>
-	void lock(Args&&... args);
-};
-
-
-template <typename... Args>
-inline void
-lock_database::lock(Args&&... args)
-{
-	if (lockable != nullptr) {
-		if (lockable->endpoints.empty()) {
-			return;
-		}
-		if (!lockable->_locked_database) {
-			ASSERT(locks == 0 && lockable->_database_locks == 0);
-			lockable->_locked_database = XapiandManager::database_pool()->checkout(lockable->endpoints, lockable->flags, std::forward<Args>(args)...);
-		}
-		if (locks++ == 0) {
-			++lockable->_database_locks;
-		}
-	}
-}
-
-
-class lock_db {
-	std::shared_ptr<Database> _locked;
-	int _locks;
-
-	lock_db(const lock_db&) = delete;
-	lock_db& operator=(const lock_db&) = delete;
-
-public:
 	const int flags;
 	const Endpoints endpoints;
 
-	lock_db(const Endpoints& endpoints, int flags, bool do_lock = true) :
+	lock_database(const Endpoints& endpoints, int flags, bool do_lock = true) :
 		_locks(0),
 		flags(flags),
 		endpoints(endpoints)
@@ -109,7 +50,7 @@ public:
 		}
 	}
 
-	~lock_db() noexcept
+	~lock_database() noexcept
 	{
 		while (_locks) {
 			unlock();
