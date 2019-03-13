@@ -1643,25 +1643,28 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const que
 	Endpoints endpoints;
 	auto nodes = resolve_index_nodes_impl(endpoint.path, query_field);
 	size_t shard_num = 0;
-	int shards = nodes.size();
+	int n_shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
-		auto path = shards == 1 ? endpoint.path : string::format("{}/.__{}", endpoint.path, shard_num++);
+		auto path = n_shards == 1 ? endpoint.path : string::format("{}/.__{}", endpoint.path, shard_num++);
+		Endpoint node_endpoint;
 		for (const auto& node : shard_nodes) {
+			node_endpoint = Endpoint{path, node};
 			if (query_field.writable) {
-				endpoints.add(Endpoint{path, node});
+				L_MANAGER("Writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 				break;
 			} else {
 				if (Node::is_active(node)) {
 					L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-					endpoints.add(Endpoint{path, node});
+					break;
+				}
+				if (query_field.primary) {
+					L_MANAGER("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 					break;
 				}
 				L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-				if (query_field.primary) {
-					break;
-				}
 			}
 		}
+		endpoints.add(node_endpoint);
 	}
 
 	if (endpoints.empty()) {
