@@ -1577,10 +1577,10 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const que
 
 	Endpoints endpoints;
 	auto nodes = resolve_index_nodes_impl(endpoint.path, query_field);
-	size_t shard = 1;
+	size_t shard = 0;
 	int shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
-		auto path = shards == 1 ? endpoint.path : string::format("{}/.{}", endpoint.path, shard++);
+		auto path = shards == 1 ? endpoint.path : string::format("{}/.{:_8x}", endpoint.path, shard++);
 		for (const auto& node : shard_nodes) {
 			if (query_field.writable) {
 				endpoints.add(Endpoint{path, node});
