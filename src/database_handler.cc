@@ -1712,7 +1712,7 @@ DatabaseHandler::get_database_info()
 	L_CALL("DatabaseHandler::get_database_info()");
 
 	lock_db lk_db(endpoints, flags);
-	auto db = lk_db.locked()->db();
+	auto db = lk_db->db();
 
 	auto doccount = db->get_doccount();
 	auto lastdocid = db->get_lastdocid();

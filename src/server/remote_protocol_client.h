@@ -31,7 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_client.h"                      // for MetaBaseClient
-#include "lock_database.h"
+#include "lock_database.h"                    // for lock_db
 #include "threadpool.hh"                      // for Task
 #include "xapian.h"
 
@@ -212,10 +212,13 @@ inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
-class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient>, public LockableDatabase {
+class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
 	friend MetaBaseClient<RemoteProtocolClient>;
 
 	mutable std::mutex runner_mutex;
+
+	int flags;
+	Endpoints endpoints;
 
 	std::atomic<State> state;
 
@@ -237,7 +240,7 @@ class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient>, public
 	bool cluster_database;
 
 	// For msg_query and msg_mset:
-	lock_database _msg_query_database_lock;
+	std::unique_ptr<lock_db> _msg_query_database_lock;
 	Xapian::Registry _msg_query_reg;
 	std::unique_ptr<Xapian::Enquire> _msg_query_enquire;
 	std::vector<Xapian::MatchSpy*> _msg_query_matchspies;

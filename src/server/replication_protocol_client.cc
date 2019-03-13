@@ -521,7 +521,7 @@ ReplicationProtocolClient::reply_fail(const std::string&)
 	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
 
 	ASSERT(lk_shard_ptr);
-	L_REPLICATION("ReplicationProtocolClient::reply_fail: {}", repr(lk_shard_ptr->locked()->endpoint->path));
+	L_REPLICATION("ReplicationProtocolClient::reply_fail: {}", repr((*lk_shard_ptr)->endpoint->path));
 
 	reset();
 
@@ -576,7 +576,7 @@ ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 
 	file_path = switch_shard_path + "/" + filename;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filename({}): {}", repr(filename), repr(lk_shard_ptr->locked()->endpoint->path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filename({}): {}", repr(filename), repr((*lk_shard_ptr)->endpoint->path));
 }
 
 
@@ -595,7 +595,7 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 		return;
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata({} -> {}): {}", repr(tmp_file), repr(file_path), repr(lk_shard_ptr->locked()->endpoint->path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata({} -> {}): {}", repr(tmp_file), repr(file_path), repr((*lk_shard_ptr)->endpoint->path));
 }
 
 
@@ -617,7 +617,7 @@ ReplicationProtocolClient::reply_db_footer(const std::string& message)
 		switch_shard_path.clear();
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_footer{}: {}", revision != current_revision ? " (ignored files)" : "", repr(lk_shard_ptr->locked()->endpoint->path));
+	L_REPLICATION("ReplicationProtocolClient::reply_db_footer{}: {}", revision != current_revision ? " (ignored files)" : "", repr((*lk_shard_ptr)->endpoint->path));
 }
 
 
