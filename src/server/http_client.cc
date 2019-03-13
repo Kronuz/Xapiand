@@ -1718,9 +1718,6 @@ HttpClient::metadata_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		if (endpoints.size() != 1) {
-			THROW(ClientError, "Expecting exactly one index with volatile");
-		}
 		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
 		db_handler.reset(endpoints, DB_OPEN, request.method);
@@ -1816,9 +1813,6 @@ HttpClient::info_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		if (endpoints.size() != 1) {
-			THROW(ClientError, "Expecting exactly one index with volatile");
-		}
 		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
 		db_handler.reset(endpoints, DB_OPEN, request.method);
@@ -2100,9 +2094,6 @@ HttpClient::schema_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		if (endpoints.size() != 1) {
-			THROW(ClientError, "Expecting exactly one index with volatile");
-		}
 		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
 		db_handler.reset(endpoints, DB_OPEN, request.method);
@@ -2213,9 +2204,6 @@ HttpClient::retrieve_view(Request& request)
 	// Open database
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		if (endpoints.size() != 1) {
-			THROW(ClientError, "Expecting exactly one index with volatile");
-		}
 		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 	} else {
 		db_handler.reset(endpoints, DB_OPEN, request.method);
@@ -2341,9 +2329,6 @@ HttpClient::search_view(Request& request)
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.primary) {
-			if (endpoints.size() != 1) {
-				THROW(ClientError, "Expecting exactly one index with volatile");
-			}
 			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 		} else {
 			db_handler.reset(endpoints, DB_OPEN, request.method);
@@ -2478,9 +2463,6 @@ HttpClient::count_view(Request& request)
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.primary) {
-			if (endpoints.size() != 1) {
-				THROW(ClientError, "Expecting exactly one index with volatile");
-			}
 			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
 		} else {
 			db_handler.reset(endpoints, DB_OPEN, request.method);
