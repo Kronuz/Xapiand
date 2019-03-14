@@ -125,6 +125,7 @@ Database::reopen()
 				if (t == 0) { do_close(true, true, false); throw; }
 				do_close(false, is_closed(), false);
 			} else {
+				do_close(false, is_closed(), false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -428,6 +429,7 @@ Database::find_document(const std::string& term_id)
 				if (t == 0) { do_close(true, true, false); throw; }
 				do_close(false, is_closed(), false);
 			} else {
+				do_close(false, is_closed(), false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -475,6 +477,7 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 				if (t == 0) { do_close(true, true, false); throw; }
 				do_close(false, is_closed(), false);
 			} else {
+				do_close(false, is_closed(), false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -564,6 +567,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 				if (t == 0) { do_close(true, true, false); throw; }
 				do_close(false, is_closed(), false);
 			} else {
+				do_close(false, is_closed(), false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -652,6 +656,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 				if (t == 0) { do_close(true, true, false); throw; }
 				do_close(false, is_closed(), false);
 			} else {
+				do_close(false, is_closed(), false);
 				throw;
 			}
 		}
@@ -731,6 +736,7 @@ Database::dump_documents()
 				if (t == 0) { do_close(true, true, false); throw; }
 				do_close(false, is_closed(), false);
 			} else {
+				do_close(false, is_closed(), false);
 				throw;
 			}
 		}

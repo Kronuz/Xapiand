@@ -704,6 +704,7 @@ Shard::commit(bool wal_, bool send_update)
 				if (t == 0) { do_close(false, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -823,6 +824,7 @@ Shard::delete_document(Xapian::docid did, bool commit_, bool wal_, bool version_
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -906,6 +908,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1069,6 +1072,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1168,6 +1172,7 @@ Shard::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_,
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1316,6 +1321,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1373,6 +1379,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1423,6 +1430,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1486,6 +1494,7 @@ Shard::get_metadata(const std::string& key)
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -1533,6 +1542,7 @@ Shard::get_metadata_keys()
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -1577,6 +1587,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
 				do_close(false, is_closed(), transaction, false);
 			} else {
+				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
