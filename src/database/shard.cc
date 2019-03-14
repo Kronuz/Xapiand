@@ -212,11 +212,9 @@ DataStorage::open(std::string_view relative_path)
 //
 
 Shard::Shard(ShardEndpoint& endpoint_, int flags_)
-	: endpoint(endpoint_),
-	  flags(flags_),
-	  busy(false),
-	  reopen_time(std::chrono::system_clock::now()),
+	: reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
+	  busy(false),
 	  local(false),
 	  closed(false),
 	  modified(false),
@@ -224,7 +222,9 @@ Shard::Shard(ShardEndpoint& endpoint_, int flags_)
 #ifdef XAPIAND_DATABASE_WAL
 	  producer_token(nullptr),
 #endif
-	  transaction(Transaction::none)
+	  transaction(Transaction::none),
+	  endpoint(endpoint_),
+	  flags(flags_)
 {
 	reopen();
 }
@@ -267,7 +267,7 @@ Shard::reopen_writable()
 
 	reset();
 
-	auto database = std::make_unique<Xapian::WritableDatabase>();
+	auto new_database = std::make_unique<Xapian::WritableDatabase>();
 
 	local.store(true, std::memory_order_relaxed);
 
@@ -316,16 +316,16 @@ Shard::reopen_writable()
 		localdb = true;
 	}
 
-	database->add_database(wsdb);
+	new_database->add_database(wsdb);
 
 	if (localdb) {
-		reopen_revision = database->get_revision();
+		reopen_revision = new_database->get_revision();
 	} else {
 		local.store(false, std::memory_order_relaxed);
 	}
 
 	if (transaction != Transaction::none) {
-		auto *wdb = static_cast<Xapian::WritableDatabase *>(database.get());
+		auto *wdb = static_cast<Xapian::WritableDatabase *>(new_database.get());
 		wdb->begin_transaction(transaction == Transaction::flushed);
 	}
 
@@ -344,7 +344,7 @@ Shard::reopen_writable()
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	_database = std::move(database);
+	database = std::move(new_database);
 	reopen_time = std::chrono::system_clock::now();
 
 #ifdef XAPIAND_DATABASE_WAL
@@ -387,7 +387,7 @@ Shard::reopen_readable()
 
 	reset();
 
-	auto database = std::make_unique<Xapian::Database>();
+	auto new_database = std::make_unique<Xapian::Database>();
 
 	local.store(true, std::memory_order_relaxed);
 
@@ -464,10 +464,10 @@ Shard::reopen_readable()
 		localdb = true;
 	}
 
-	database->add_database(rsdb);
+	new_database->add_database(rsdb);
 
 	if (localdb) {
-		reopen_revision = database->get_revision();
+		reopen_revision = new_database->get_revision();
 	} else {
 		local.store(false, std::memory_order_relaxed);
 	}
@@ -481,7 +481,7 @@ Shard::reopen_readable()
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	_database = std::move(database);
+	database = std::move(new_database);
 	reopen_time = std::chrono::system_clock::now();
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
@@ -498,12 +498,12 @@ Shard::reopen()
 	L_DATABASE_WRAP_BEGIN("Shard::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::reopen:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	if (_database) {
+	if (database) {
 		if (!is_incomplete()) {
 			// Try to reopen
 			for (int t = DB_RETRIES; t >= 0; --t) {
 				try {
-					bool ret = _database->reopen();
+					bool ret = database->reopen();
 					return ret;
 				} catch (const Xapian::DatabaseModifiedError& exc) {
 					if (t == 0) { throw; }
@@ -531,7 +531,7 @@ Shard::reopen()
 		throw;
 	}
 
-	ASSERT(_database);
+	ASSERT(database);
 	L_DATABASE("Reopen: {}", __repr__());
 	return true;
 }
@@ -546,11 +546,11 @@ Shard::db()
 		throw Xapian::DatabaseClosedError("Database has been closed");
 	}
 
-	if (!_database) {
+	if (!database) {
 		reopen();
 	}
 
-	return _database.get();
+	return database.get();
 }
 
 void
@@ -559,7 +559,7 @@ Shard::reset() noexcept
 	L_CALL("Shard::reset()");
 
 	try {
-		_database.reset();
+		database.reset();
 	} catch(...) {}
 	reopen_revision = 0;
 	local.store(false, std::memory_order_relaxed);
@@ -579,11 +579,11 @@ Shard::reset() noexcept
 void
 Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)
 {
-	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, repr(to_string()), _database ? "<database>" : "null", is_modified(), is_closed(), transaction == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions);
+	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, repr(to_string()), database ? "<database>" : "null", is_modified(), is_closed(), transaction == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions);
 
 	if (
 		commit_ &&
-		_database &&
+		database &&
 		transaction == Shard::Transaction::none &&
 		!is_closed() &&
 		is_modified() &&
@@ -602,9 +602,9 @@ Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw
 		}
 	}
 
-	if (_database) {
+	if (database) {
 		try {
-			_database.reset();
+			database.reset();
 		} catch (...) {
 			if (throw_exceptions) {
 				throw;
@@ -642,7 +642,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 	L_CALL("Shard::autocommit(<shard>)");
 
 	if (
-		shard->_database &&
+		shard->database &&
 		shard->transaction == Shard::Transaction::none &&
 		!shard->is_closed() &&
 		shard->is_modified() &&

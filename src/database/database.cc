@@ -73,11 +73,11 @@
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 
-Database::Database(std::vector<std::shared_ptr<Shard>>&& shards_, const Endpoints& endpoints_, int flags_)
-	: flags(flags_),
-	  closed(false),
-	  _shards(std::move(shards_)),
-	  endpoints(endpoints_)
+Database::Database(const std::vector<std::shared_ptr<Shard>>& shards_, const Endpoints& endpoints_, int flags_)
+	: closed(false),
+	  shards(shards_),
+	  endpoints(endpoints_),
+	  flags(flags_)
 {
 	reopen();
 }
@@ -104,16 +104,16 @@ Database::reopen()
 	L_DATABASE_WRAP_BEGIN("Database::reopen:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Database::reopen:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
-	ASSERT(!_shards.empty());
+	ASSERT(!shards.empty());
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto database = std::make_unique<Xapian::Database>();
-			for (auto& shard : _shards) {
+			auto new_database = std::make_unique<Xapian::Database>();
+			for (auto& shard : shards) {
 				shard->reopen();
-				database->add_database(*shard->db());
+				new_database->add_database(*shard->db());
 			}
-			_database = std::move(database);
+			database = std::move(new_database);
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
 			if (t == 0) { throw; }
@@ -148,11 +148,11 @@ Database::db()
 		throw Xapian::DatabaseClosedError("Database has been closed");
 	}
 
-	if (!_database) {
+	if (!database) {
 		reopen();
 	}
 
-	return _database.get();
+	return database.get();
 }
 
 
@@ -193,7 +193,7 @@ Database::reset() noexcept
 	L_CALL("Database::reset()");
 
 	try {
-		_database.reset();
+		database.reset();
 	} catch(...) {}
 }
 
@@ -201,12 +201,12 @@ Database::reset() noexcept
 void
 Database::do_close(bool commit_, bool closed_, bool throw_exceptions)
 {
-	L_CALL("Database::do_close({}, {}, {}) {{endpoint:{}, database:{}, closed:{}}}", commit_, closed_, repr(to_string()), _database ? "<database>" : "null", is_closed(), throw_exceptions);
+	L_CALL("Database::do_close({}, {}, {}) {{endpoint:{}, database:{}, closed:{}}}", commit_, closed_, repr(to_string()), database ? "<database>" : "null", is_closed(), throw_exceptions);
 	ignore_unused(commit_);
 
-	if (_database) {
+	if (database) {
 		try {
-			_database.reset();
+			database.reset();
 		} catch (...) {
 			if (throw_exceptions) {
 				throw;
@@ -239,9 +239,9 @@ Database::commit(bool wal_, bool send_update)
 {
 	L_CALL("Database::commit({})", wal_);
 
-	ASSERT(!_shards.empty());
+	ASSERT(!shards.empty());
 	bool ret = true;
-	for (auto& shard : _shards) {
+	for (auto& shard : shards) {
 		ret = shard->commit(wal_, send_update) || ret;
 	}
 	return ret;
@@ -253,8 +253,8 @@ Database::begin_transaction(bool flushed)
 {
 	L_CALL("Database::begin_transaction({})", flushed);
 
-	ASSERT(!_shards.empty());
-	for (auto& shard : _shards) {
+	ASSERT(!shards.empty());
+	for (auto& shard : shards) {
 		shard->begin_transaction(flushed);
 	}
 }
@@ -265,8 +265,8 @@ Database::commit_transaction()
 {
 	L_CALL("Database::commit_transaction()");
 
-	ASSERT(!_shards.empty());
-	for (auto& shard : _shards) {
+	ASSERT(!shards.empty());
+	for (auto& shard : shards) {
 		shard->commit_transaction();
 	}
 }
@@ -277,8 +277,8 @@ Database::cancel_transaction()
 {
 	L_CALL("Database::cancel_transaction()");
 
-	ASSERT(!_shards.empty());
-	for (auto& shard : _shards) {
+	ASSERT(!shards.empty());
+	for (auto& shard : shards) {
 		shard->cancel_transaction();
 	}
 }
@@ -289,11 +289,11 @@ Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool versi
 {
 	L_CALL("Database::delete_document({}, {}, {})", did, commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	size_t n_shards = _shards.size();
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
 	size_t shard_num = (did - 1) % n_shards;
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;
-	auto& shard = _shards[shard_num];
+	auto& shard = shards[shard_num];
 	shard->delete_document(shard_did, commit_, wal_, version_);
 }
 
@@ -303,10 +303,10 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 {
 	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	size_t n_shards = _shards.size();
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
 	size_t shard_num = fnv1ah64::hash(term) % n_shards;
-	auto& shard = _shards[shard_num];
+	auto& shard = shards[shard_num];
 	shard->delete_document_term(term, commit_, wal_, version_);
 }
 
@@ -315,10 +315,10 @@ Database::delete_document_term(const std::string& term, bool commit_, bool wal_,
 std::string
 Database::storage_get_stored(const Locator& locator, Xapian::docid did)
 {
-	ASSERT(!_shards.empty());
-	size_t n_shards = _shards.size();
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
 	size_t shard_num = (did - 1) % n_shards;
-	auto& shard = _shards[shard_num];
+	auto& shard = shards[shard_num];
 	return shard->storage_get_stored(locator);
 }
 #endif /* XAPIAND_DATA_STORAGE */
@@ -329,10 +329,10 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool ver
 {
 	L_CALL("Database::add_document(<doc>, {}, {})", commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	size_t n_shards = _shards.size();
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
 	size_t shard_num = random_int(0, n_shards);
-	auto& shard = _shards[shard_num];
+	auto& shard = shards[shard_num];
 	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->add_document(std::move(doc), commit_, wal_, version_);
 	return (did - 1) * n_shards + shard_num + 1;
@@ -344,11 +344,11 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 {
 	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	size_t n_shards = _shards.size();
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
 	size_t shard_num = (did - 1) % n_shards;
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;
-	auto& shard = _shards[shard_num];
+	auto& shard = shards[shard_num];
 	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	shard->replace_document(shard_did, std::move(doc), commit_, wal_, version_);
 	return did;
@@ -360,10 +360,10 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 {
 	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	size_t n_shards = _shards.size();
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
 	size_t shard_num = fnv1ah64::hash(term) % n_shards;
-	auto& shard = _shards[shard_num];
+	auto& shard = shards[shard_num];
 	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->replace_document_term(term, std::move(doc), commit_, wal_, version_);
 	return (did - 1) * n_shards + shard_num + 1;
@@ -375,8 +375,8 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 {
 	L_CALL("Database::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	for (auto& shard : _shards) {
+	ASSERT(!shards.empty());
+	for (auto& shard : shards) {
 		shard->add_spelling(word, freqinc, commit_, wal_);
 	}
 }
@@ -389,8 +389,8 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 	Xapian::termcount result = 0;
 
-	ASSERT(!_shards.empty());
-	for (auto& shard : _shards) {
+	ASSERT(!shards.empty());
+	for (auto& shard : shards) {
 		result = shard->remove_spelling(word, freqdec, commit_, wal_);
 	}
 	return result;
@@ -498,8 +498,8 @@ Database::get_metadata(const std::string& key)
 {
 	L_CALL("Database::get_metadata({})", repr(key));
 
-	ASSERT(!_shards.empty());
-	return _shards[0]->get_metadata(key);
+	ASSERT(!shards.empty());
+	return shards[0]->get_metadata(key);
 }
 
 
@@ -507,8 +507,8 @@ std::vector<std::string>
 Database::get_metadata_keys()
 {
 	L_CALL("Database::get_metadata_keys()");
-	ASSERT(!_shards.empty());
-	return _shards[0]->get_metadata_keys();
+	ASSERT(!shards.empty());
+	return shards[0]->get_metadata_keys();
 }
 
 
@@ -517,8 +517,8 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 {
 	L_CALL("Database::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
-	ASSERT(!_shards.empty());
-	for (auto& shard : _shards) {
+	ASSERT(!shards.empty());
+	for (auto& shard : shards) {
 		shard->set_metadata(key, value, commit_, wal_);
 	}
 }

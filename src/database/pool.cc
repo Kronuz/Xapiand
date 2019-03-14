@@ -736,7 +736,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 			ASSERT(shard);
 			shards.emplace_back(std::move(shard));
 		}
-		auto database = std::make_shared<Database>(std::move(shards), endpoints, flags);
+		auto database = std::make_shared<Database>(shards, endpoints, flags);
 		L_TIMED_VAR(database->log, 200ms,
 			"Database checkout is taking too long: {} ({})",
 			"Database checked out for too long: {} ({})",
@@ -746,7 +746,11 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 	} catch (...) {
 		for (auto& shard : shards) {
 			if (shard) {
-				shard->endpoint.checkin(shard);
+				try {
+					shard->endpoint.checkin(shard);
+				} catch (...) {
+					L_EXC("Unable to checkin shard during error: {}", shard->endpoint.to_string());
+				}
 			}
 		}
 		throw;
@@ -760,7 +764,7 @@ DatabasePool::checkin(std::shared_ptr<Database>& database)
 	L_CALL("DatabasePool::checkin({})", database ? database->__repr__() : "null");
 
 	ASSERT(database);
-	for (auto& shard : database->_shards) {
+	for (auto& shard : database->shards) {
 		if (shard) {
 			shard->endpoint.checkin(shard);
 		}

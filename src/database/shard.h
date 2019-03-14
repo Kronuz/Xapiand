@@ -54,6 +54,10 @@ using namespace moodycamel;
 //  |____/|_| |_|\__,_|_|  \__,_|
 //
 class Shard {
+	friend class ShardEndpoint;
+	friend class DatabasePool;
+	friend class DatabaseWAL;
+
 public:
 	enum class Transaction : uint8_t {
 		none,
@@ -62,6 +66,24 @@ public:
 	};
 
 private:
+	std::chrono::system_clock::time_point reopen_time;
+	Xapian::rev reopen_revision;
+
+	std::atomic_bool busy;
+	std::atomic_bool local;
+	std::atomic_bool closed;
+	std::atomic_bool modified;
+	std::atomic_bool incomplete;
+
+	std::unique_ptr<Xapian::Database> database;
+
+#ifdef XAPIAND_DATA_STORAGE
+	std::unique_ptr<DataStorage> writable_storage;
+	std::unique_ptr<DataStorage> storage;
+#endif /* XAPIAND_DATA_STORAGE */
+
+	std::shared_ptr<Logging> log;
+
 #ifdef XAPIAND_DATA_STORAGE
 	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
 	void storage_commit();
@@ -71,18 +93,13 @@ private:
 	bool reopen_readable();
 
 public:
+#ifdef XAPIAND_DATABASE_WAL
+	ProducerToken* producer_token;
+#endif
+	Transaction transaction;
+
 	ShardEndpoint& endpoint;
 	int flags;
-
-	std::atomic_bool busy;
-
-	std::chrono::system_clock::time_point reopen_time;
-	Xapian::rev reopen_revision;
-
-	std::atomic_bool local;
-	std::atomic_bool closed;
-	std::atomic_bool modified;
-	std::atomic_bool incomplete;
 
 	bool is_local() const {
 		return local.load(std::memory_order_relaxed);
@@ -111,21 +128,6 @@ public:
 	bool is_busy() const {
 		return busy.load(std::memory_order_relaxed);
 	}
-
-	std::unique_ptr<Xapian::Database> _database;
-
-#ifdef XAPIAND_DATA_STORAGE
-	std::unique_ptr<DataStorage> writable_storage;
-	std::unique_ptr<DataStorage> storage;
-#endif /* XAPIAND_DATA_STORAGE */
-
-#ifdef XAPIAND_DATABASE_WAL
-	ProducerToken* producer_token;
-#endif
-
-	std::shared_ptr<Logging> log;
-
-	Transaction transaction;
 
 	Shard(ShardEndpoint& endpoint_, int flags);
 	~Shard() noexcept;

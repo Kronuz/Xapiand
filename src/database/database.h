@@ -49,6 +49,8 @@ class MsgPack;
 // |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
 //
 class Database {
+	friend class DatabasePool;
+
 #ifdef XAPIAND_DATA_STORAGE
 	std::pair<std::string, std::string> storage_push_blobs(std::string&& doc_data);
 	void storage_commit();
@@ -57,17 +59,17 @@ class Database {
 	bool reopen_writable();
 	bool reopen_readable();
 
-public:
-	int flags;
-	std::unique_ptr<Xapian::Database> _database;
-
 	std::atomic_bool closed;
 
+	std::vector<std::shared_ptr<Shard>> shards;
+	std::unique_ptr<Xapian::Database> database;
+
+	std::shared_ptr<Logging> log;
+
+public:
 	bool is_closed() const {
 		return closed.load(std::memory_order_relaxed);
 	}
-
-	std::shared_ptr<Logging> log;
 
 	~Database() noexcept;
 
@@ -75,10 +77,10 @@ public:
 	std::string storage_get_stored(const Locator& locator, Xapian::docid did);
 #endif /* XAPIAND_DATA_STORAGE */
 
-	std::vector<std::shared_ptr<Shard>> _shards;
 	Endpoints endpoints;
+	int flags;
 
-	Database(std::vector<std::shared_ptr<Shard>>&& shards, const Endpoints& endpoints_, int flags_);
+	Database(const std::vector<std::shared_ptr<Shard>>& shards, const Endpoints& endpoints_, int flags_);
 
 	bool reopen();
 
