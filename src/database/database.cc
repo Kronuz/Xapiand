@@ -105,7 +105,7 @@ Database::reopen()
 
 	ASSERT(!_shards.empty());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto database = std::make_unique<Xapian::Database>();
 			for (auto& shard : _shards) {
@@ -409,7 +409,7 @@ Database::find_document(const std::string& term_id)
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto it = rdb->postlist_begin(term_id);
 			if (it == rdb->postlist_end(term_id)) {
@@ -456,7 +456,7 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			if (assume_valid_) {
 				doc = rdb->get_document(did, Xapian::DOC_ASSUME_VALID);
@@ -533,7 +533,7 @@ Database::dump_metadata(int fd, XXH32_state_t* xxh_state)
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
 	std::string initial;
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		std::string key;
 		try {
 			auto it = rdb->metadata_keys_begin();
@@ -591,7 +591,7 @@ Database::dump_documents(int fd, XXH32_state_t* xxh_state)
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
 	Xapian::docid initial = 1;
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::docid did = initial;
 		try {
 			auto it = rdb->postlist_begin("");
@@ -678,7 +678,7 @@ Database::dump_documents()
 
 	auto docs = MsgPack::ARRAY();
 	Xapian::docid initial = 1;
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		Xapian::docid did = initial;
 		try {
 			auto it = rdb->postlist_begin("");

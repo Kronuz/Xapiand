@@ -501,7 +501,7 @@ Shard::reopen()
 	if (_database) {
 		if (!is_incomplete()) {
 			// Try to reopen
-			for (int t = DB_RETRIES; t; --t) {
+			for (int t = DB_RETRIES; t >= 0; --t) {
 				try {
 					bool ret = _database->reopen();
 					return ret;
@@ -674,7 +674,7 @@ Shard::commit(bool wal_, bool send_update)
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Commit: t: {}", t);
 		try {
 #ifdef XAPIAND_DATA_STORAGE
@@ -789,7 +789,7 @@ Shard::delete_document(Xapian::docid did, bool commit_, bool wal_, bool version_
 	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
 	auto ver = sortable_serialise(version);
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Deleting document: {}  t: {}", did, t);
 
 		try {
@@ -861,7 +861,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 	Xapian::docid did = 0;
 	auto ver = sortable_serialise(version);
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Deleting document: '{}'  t: {}", term, t);
 		did = 0;
 
@@ -1033,7 +1033,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 	auto ver = doc.get_value(DB_SLOT_VERSION);
 	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Adding new document.  t: {}", t);
 		version = 0;
 		did = 0;
@@ -1123,7 +1123,7 @@ Shard::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_,
 	auto ver = doc.get_value(DB_SLOT_VERSION);
 	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Replacing: {}  t: {}", did, t);
 		version = 0;
 
@@ -1224,7 +1224,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 	auto ver = doc.get_value(DB_SLOT_VERSION);
 	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Replacing: '{}'  t: {}", term, t);
 		version = 0;
 		did = 0;
@@ -1359,7 +1359,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			wdb->add_spelling(word, freqinc);
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
@@ -1409,7 +1409,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 
 	Xapian::termcount result = 0;
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			result = wdb->remove_spelling(word, freqdec);
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
@@ -1471,7 +1471,7 @@ Shard::get_metadata(const std::string& key)
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			value = rdb->get_metadata(key);
 			break;
@@ -1514,7 +1514,7 @@ Shard::get_metadata_keys()
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto it = rdb->metadata_keys_begin();
 			auto it_e = rdb->metadata_keys_end();
@@ -1563,7 +1563,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
-	for (int t = DB_RETRIES; t; --t) {
+	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			wdb->set_metadata(key, value);
 			modified.store(commit_ || is_local(), std::memory_order_relaxed);
