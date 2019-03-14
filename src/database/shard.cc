@@ -292,6 +292,7 @@ Shard::reopen_writable()
 		: Xapian::DB_OPEN;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
+		L_DATABASE("Opening remote writable shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
@@ -299,6 +300,7 @@ Shard::reopen_writable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
+		L_DATABASE("Opening local writable shard {}", repr(endpoint.to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
@@ -410,7 +412,7 @@ Shard::reopen_readable()
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
 	if (!endpoint.is_local()) {
-		L_DATABASE("Opening remote endpoint {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening remote shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
@@ -418,7 +420,7 @@ Shard::reopen_readable()
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 			if (tmp.get_uuid() == rsdb.get_uuid()) {
-				L_DATABASE("Endpoint {} fallback to local database!", repr(endpoint.to_string()));
+				L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
 				// Handle remote endpoint and figure out if the endpoint is a local database
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				rsdb = Xapian::Database(endpoint.path, _flags);
@@ -443,7 +445,7 @@ Shard::reopen_readable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		L_DATABASE("Opening local endpoint {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening local shard {}", repr(endpoint.to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
