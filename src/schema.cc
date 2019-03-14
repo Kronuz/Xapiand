@@ -2774,6 +2774,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		auto id_type = spc_id.get_type();
 
 		std::string unprefixed_term_id;
+		std::string term_id;
+
 		if (!document_id) {
 			switch (id_type) {
 				case FieldType::EMPTY:
@@ -2782,28 +2784,53 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					set_data_id(spc_id);
 					properties = &get_mutable_properties();
 				/* FALLTHROUGH */
-				case FieldType::UUID:
-					unprefixed_term_id = generator(opts.uuid_compact).serialise();
+				case FieldType::UUID: {
+					size_t n_shards = db_handler.endpoints.size();
+					for (int t = 10; t >= 0; --t) {
+						// Try getting a new ID which can currently be indexed (active node)
+						unprefixed_term_id = generator(opts.uuid_compact).serialise();
+						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+						size_t shard_num = fnv1ah64::hash(term_id) % n_shards;
+						auto node = db_handler.endpoints[shard_num].node();
+						if (node && node->is_active()) {
+							break;
+						}
+					}
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
+				}
 				case FieldType::INTEGER:
 					document_id = MsgPack(0).as_i64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
 				case FieldType::POSITIVE:
 					document_id = MsgPack(0).as_u64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
 				case FieldType::FLOAT:
 					document_id = MsgPack(0).as_f64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
 				case FieldType::TEXT:
 				case FieldType::STRING:
-				case FieldType::KEYWORD:
-					document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
-					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+				case FieldType::KEYWORD: {
+					size_t n_shards = db_handler.endpoints.size();
+					for (int t = 10; t >= 0; --t) {
+						// Try getting a new ID which can currently be indexed (active node)
+						document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
+						unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+						size_t shard_num = fnv1ah64::hash(term_id) % n_shards;
+						auto node = db_handler.endpoints[shard_num].node();
+						if (node && node->is_active()) {
+							break;
+						}
+					}
 					break;
+				}
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
 			}
@@ -2836,8 +2863,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				default:
 					THROW(ClientError, "Invalid datatype for '{}'", ID_FIELD_NAME);
 			}
+			term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 		}
-		auto term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 
 #ifdef XAPIAND_CHAISCRIPT
 		std::unique_ptr<MsgPack> mut_object;

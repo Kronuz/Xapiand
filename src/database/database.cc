@@ -36,6 +36,7 @@
 #include "logger.h"               // for Logging
 #include "lz4/xxhash.h"           // for XXH32_update, XXH32_state_t
 #include "msgpack.h"              // for MsgPack
+#include "node.h"                 // for Node
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "string.hh"              // for string::format
@@ -405,7 +406,15 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool ver
 
 	ASSERT(!shards.empty());
 	size_t n_shards = shards.size();
-	size_t shard_num = random_int(0, n_shards);
+	size_t shard_num;
+	for (int t = 10; t >= 0; --t) {
+		// Try getting a new ID which can currently be indexed (active node)
+		shard_num = random_int(0, n_shards - 1);
+		auto node = shards[shard_num]->node();
+		if (node && node->is_active()) {
+			break;
+		}
+	}
 	auto& shard = shards[shard_num];
 	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->add_document(std::move(doc), commit_, wal_, version_);
@@ -436,7 +445,19 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	ASSERT(!shards.empty());
 	size_t n_shards = shards.size();
-	size_t shard_num = fnv1ah64::hash(term) % n_shards;
+	size_t shard_num;
+	if (term == "QN\x80") {
+		for (int t = 10; t >= 0; --t) {
+			// Try getting a new ID which can currently be indexed (active node)
+			shard_num = random_int(0, n_shards - 1);
+			auto node = shards[shard_num]->node();
+			if (node && node->is_active()) {
+				break;
+			}
+		}
+	} else {
+		shard_num = fnv1ah64::hash(term) % n_shards;
+	}
 	auto& shard = shards[shard_num];
 	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->replace_document_term(term, std::move(doc), commit_, wal_, version_);
