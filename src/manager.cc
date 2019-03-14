@@ -665,6 +665,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		auto did = db_handler.index(local_node->lower_name(), 0, false, {
 			{ ID_FIELD_NAME, {
+				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "name", {
@@ -1337,6 +1338,7 @@ XapiandManager::load_nodes()
 				L_WARNING("Adding missing node: [{}] {}", node->idx, node->name());
 				auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
 					{ ID_FIELD_NAME, {
+						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
 					{ "name", {
@@ -1390,6 +1392,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		MsgPack obj = {
 			{ ID_FIELD_NAME, {
+				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "replicas", {
@@ -1422,6 +1425,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				MsgPack obj = {
 					{ ID_FIELD_NAME, {
+						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
 					{ "shards", {
