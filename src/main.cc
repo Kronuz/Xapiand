@@ -744,7 +744,7 @@ void dump_metadata() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_metadata));
 			L_NOTICE("Dumping metadata database: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
+			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_metadata(fd);
 			L_NOTICE("Dump finished!");
 			manager->join();
@@ -774,7 +774,7 @@ void dump_schema() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_schema));
 			L_NOTICE("Dumping schema database: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
+			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_schema(fd);
 			L_NOTICE("Dump finished!");
 			manager->join();
@@ -804,7 +804,7 @@ void dump_documents() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.dump_documents));
 			L_NOTICE("Dumping database: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_NO_WAL);
+			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_documents(fd);
 			L_NOTICE("Dump finished!");
 			manager->join();
@@ -834,7 +834,7 @@ void restore() {
 			DatabaseHandler db_handler;
 			Endpoints endpoints(Endpoint(opts.restore));
 			L_NOTICE("Restoring into: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_NO_WAL);
+			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL);
 			db_handler.restore(fd);
 			L_NOTICE("Restore finished!");
 			manager->join();

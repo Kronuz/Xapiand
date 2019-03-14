@@ -1961,7 +1961,7 @@ HttpClient::dump_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_NO_WAL);
+	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
 
 	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
 

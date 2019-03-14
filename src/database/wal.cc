@@ -1319,7 +1319,7 @@ DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_add_document;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1347,7 +1347,7 @@ DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& t
 	task.term_word_val = term;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document_term;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1376,7 +1376,7 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 	task.freq = freqdec;
 	task.dispatcher = &DatabaseWALWriterTask::write_remove_spelling;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1404,7 +1404,7 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 	task.send_update = send_update;
 	task.dispatcher = &DatabaseWALWriterTask::write_commit;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1433,7 +1433,7 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1462,7 +1462,7 @@ DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& 
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document_term;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1490,7 +1490,7 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 	task.did = did;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1519,7 +1519,7 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 	task.term_word_val = val;
 	task.dispatcher = &DatabaseWALWriterTask::write_set_metadata;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);
@@ -1548,7 +1548,7 @@ DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xap
 	task.freq = freqinc;
 	task.dispatcher = &DatabaseWALWriterTask::write_add_spelling;
 
-	if ((shard.flags & DB_SYNC_WAL) == DB_SYNC_WAL) {
+	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
 		ASSERT(shard.producer_token);

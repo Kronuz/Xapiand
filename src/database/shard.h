@@ -122,7 +122,7 @@ public:
 	}
 
 	bool is_wal_active() const {
-		return is_writable() && is_local() && (flags & DB_NO_WAL) != DB_NO_WAL;
+		return is_writable() && is_local() && (flags & DB_DISABLE_WAL) != DB_DISABLE_WAL;
 	}
 
 	bool is_busy() const {

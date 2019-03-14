@@ -330,13 +330,8 @@ Shard::reopen_writable()
 
 #ifdef XAPIAND_DATA_STORAGE
 	if (localdb) {
-		if ((flags & DB_NOSTORAGE) != DB_NOSTORAGE) {
-			writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
-			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
-		} else {
-			writable_storage = std::unique_ptr<DataStorage>(nullptr);
-			storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
-		}
+		writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
+		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 	} else {
 		writable_storage = std::unique_ptr<DataStorage>(nullptr);
 		storage = std::unique_ptr<DataStorage>(nullptr);

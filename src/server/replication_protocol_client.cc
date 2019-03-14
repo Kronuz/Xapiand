@@ -634,7 +634,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_shard) {
-				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_WRITABLE | DB_SYNC_WAL);
+				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_WRITABLE | DB_SYNCHRONOUS_WAL);
 			}
 			switch_shard->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_shard.get());

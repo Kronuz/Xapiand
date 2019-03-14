@@ -140,7 +140,7 @@ Processor::Processor(const Script& script) :
 		}
 		MsgPack foreign_data_script;
 		try {
-			DatabaseHandler db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_NO_WAL, HTTP_GET);
+			DatabaseHandler db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_DISABLE_WAL, HTTP_GET);
 			auto doc = db_handler.get_document(foreign_id);
 			foreign_data_script = doc.get_obj();
 		} catch (const Xapian::DocNotFoundError&) {
