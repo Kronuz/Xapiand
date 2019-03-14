@@ -1462,6 +1462,8 @@ index_calculate_shards(const std::string& normalized_path)
 std::vector<size_t>
 load_replicas(const Endpoints& index_endpoints, const std::string& normalized_path)
 {
+	L_CALL("load_replicas(<index_endpoints>, {})", repr(normalized_path));
+
 	std::vector<size_t> replicas;
 
 	try {
@@ -1481,6 +1483,8 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 std::vector<std::vector<size_t>>
 load_shards(const std::string& normalized_path)
 {
+	L_CALL("load_shards({})", repr(normalized_path));
+
 	Endpoints index_endpoints;
 	for (auto& node : Node::nodes()) {
 		if (node->idx) {
@@ -1515,10 +1519,30 @@ load_shards(const std::string& normalized_path)
 }
 
 
+MsgPack
+shards_to_obj(const std::vector<std::vector<size_t>>& shards)
+{
+	MsgPack nodes = MsgPack::ARRAY();
+	for (auto& replicas : shards) {
+		MsgPack node_replicas = MsgPack::ARRAY();
+		for (auto idx : replicas) {
+			auto node = Node::get_node(idx);
+			node_replicas.append(MsgPack({
+				{ "idx", idx },
+				{ "node", node ? MsgPack(node->name()) : MsgPack::NIL() },
+			}));
+		}
+		nodes.append(std::move(node_replicas));
+	}
+	return nodes;
+}
+
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
 shards_to_nodes(const std::vector<std::vector<size_t>>& shards)
 {
+	L_CALL("shards_to_nodes({})", shards_to_obj(shards).to_string());
+
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 	for (auto& replicas : shards) {
 		std::vector<std::shared_ptr<const Node>> node_replicas;
