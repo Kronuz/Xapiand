@@ -35,7 +35,6 @@
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging
 #include "lz4/xxhash.h"           // for XXH32_update, XXH32_state_t
-#include "manager.h"              // for XapiandManager, sig_exit, trigger_replication
 #include "msgpack.h"              // for MsgPack
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr

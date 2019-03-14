@@ -37,7 +37,7 @@
 #include "ignore_unused.h"        // for ignore_unused
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_CALL
-#include "manager.h"              // for XapiandManager, sig_exit, trigger_replication
+#include "manager.h"              // for XapiandManager, trigger_replication
 #include "msgpack.h"              // for MsgPack
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
