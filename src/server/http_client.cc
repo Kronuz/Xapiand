@@ -2686,7 +2686,7 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 	}
 
 	for (const auto& path : index_paths) {
-		auto index_endpoints = XapiandManager::resolve_index_endpoints(Endpoint{path}, query_field);
+		auto index_endpoints = XapiandManager::resolve_index_endpoints(Endpoint{path}, query_field.writable, query_field.routing, query_field.primary);
 		for (auto& endpoint : index_endpoints) {
 			endpoints.add(endpoint);
 		}

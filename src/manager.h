@@ -65,8 +65,6 @@ class DatabaseWALWriter;
 class DatabaseCleanup;
 class SchemasLRU;
 
-struct query_field_t;
-
 extern void sig_exit(int sig);
 
 
@@ -199,8 +197,8 @@ private:
 	void join_cluster_impl();
 #endif
 
-	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, const query_field_t& query_field);
-	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, const query_field_t& query_field);
+	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, const std::string& routing);
+	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary);
 
 	std::string server_metrics_impl();
 
@@ -240,14 +238,14 @@ public:
 		_manager.reset();
 	}
 
-	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, const query_field_t& query_field) {
+	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, const std::string& routing = "") {
 		ASSERT(_manager);
-		return _manager->resolve_index_nodes_impl(normalized_path, query_field);
+		return _manager->resolve_index_nodes_impl(normalized_path, writable, routing);
 	}
 
-	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, const query_field_t& query_field) {
+	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, const std::string& routing = "", bool primary = false) {
 		ASSERT(_manager);
-		return _manager->resolve_index_endpoints_impl(endpoint, query_field);
+		return _manager->resolve_index_endpoints_impl(endpoint, writable, routing, primary);
 	}
 
 	static void setup_node() {

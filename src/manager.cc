@@ -1589,9 +1589,9 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, const query_field_t& query_field)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const std::string& routing)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, <query_field>)", repr(normalized_path));
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {})", repr(normalized_path), writable, repr(routing));
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
@@ -1658,10 +1658,10 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 		}
 
 		if (nodes.empty()) {
-			if (query_field.writable) {
-				shards = index_calculate_shards(query_field.routing.empty() ? normalized_path : query_field.routing);
+			if (writable) {
+				shards = index_calculate_shards(routing.empty() ? normalized_path : routing);
 			} else {
-				shards = calculate_shards(query_field.routing.empty() ? normalized_path : query_field.routing);
+				shards = calculate_shards(routing.empty() ? normalized_path : routing);
 			}
 			ASSERT(!shards.empty());
 			nodes = shards_to_nodes(shards);
@@ -1695,12 +1695,12 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 
 
 Endpoints
-XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const query_field_t& query_field)
+XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary)
 {
-	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, <query_field>)", repr(endpoint.to_string()));
+	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, repr(routing), primary);
 
 	Endpoints endpoints;
-	auto nodes = resolve_index_nodes_impl(endpoint.path, query_field);
+	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, routing);
 	size_t shard_num = 0;
 	int n_shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
@@ -1708,7 +1708,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const que
 		Endpoint node_endpoint;
 		for (const auto& node : shard_nodes) {
 			node_endpoint = Endpoint{path, node};
-			if (query_field.writable) {
+			if (writable) {
 				L_MANAGER("Writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 				break;
 			} else {
@@ -1716,7 +1716,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, const que
 					L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 					break;
 				}
-				if (query_field.primary) {
+				if (primary) {
 					L_MANAGER("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 					break;
 				}
