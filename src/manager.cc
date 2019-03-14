@@ -664,7 +664,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Add a local schema so it doesn't break forced foreign schemas
 		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		auto did = db_handler.index(local_node->lower_name(), 0, false, {
-			{ RESERVED_INDEX, "field_all" },
 			{ ID_FIELD_NAME, {
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
@@ -1337,7 +1336,6 @@ XapiandManager::load_nodes()
 				// Node is not in our local database, add it now!
 				L_WARNING("Adding missing node: [{}] {}", node->idx, node->name());
 				auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
-					{ RESERVED_INDEX, "field_all" },
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
@@ -1393,9 +1391,8 @@ index_replicas(const std::string& normalized_path, const std::vector<size_t>& re
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "replicas", {
-				{ RESERVED_INDEX, "field_values" },
+				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "array/positive" },
-				{ RESERVED_SLOT, DB_SLOT_USER_VALUE_2 },
 				{ RESERVED_VALUE, replicas },
 			} },
 		};
@@ -1426,9 +1423,8 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
 					{ "shards", {
-						{ RESERVED_INDEX, "field_values" },
+						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_SLOT, DB_SLOT_USER_VALUE_1 },
 						{ RESERVED_VALUE, n_shards },
 					} },
 				};
@@ -1469,9 +1465,19 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 	try {
 		DatabaseHandler db_handler(index_endpoints);
 		auto document = db_handler.get_document(normalized_path);
-		for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_2))) {
-			size_t idx = sortable_unserialise(val);
-			replicas.push_back(idx);
+		auto obj = document.get_obj();
+		auto it = obj.find("replicas");
+		if (it != obj.end()) {
+			auto& replicas_val = it.value();
+			if (replicas_val.is_array()) {
+				for (auto& idx_val : replicas_val) {
+					if (!idx_val.is_number()) {
+						replicas.clear();
+						break;
+					}
+					replicas.push_back(idx_val.u64());
+				}
+			}
 		}
 	} catch (const Xapian::DocNotFoundError&) {
 	} catch (const Xapian::DatabaseNotFoundError&) {}
@@ -1497,18 +1503,31 @@ load_shards(const std::string& normalized_path)
 	try {
 		DatabaseHandler db_handler(index_endpoints);
 		auto document = db_handler.get_document(normalized_path);
-		auto num_shards_ser = document.get_value(DB_SLOT_USER_VALUE_1);
-		if (!num_shards_ser.empty()) {
-			size_t n_shards = sortable_unserialise(num_shards_ser);
-			for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
-				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num);
-				shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
+		auto obj = document.get_obj();
+		auto it = obj.find("shards");
+		if (it != obj.end()) {
+			auto& n_shards_val = it.value();
+			if (n_shards_val.is_number()) {
+				size_t n_shards = n_shards_val.u64();
+				for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
+					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num);
+					shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
+				}
 			}
 		} else {
 			std::vector<size_t> replicas;
-			for (auto& val : StringList(document.get_value(DB_SLOT_USER_VALUE_2))) {
-				size_t idx = sortable_unserialise(val);
-				replicas.push_back(idx);
+			it = obj.find("replicas");
+			if (it != obj.end()) {
+				auto& replicas_val = it.value();
+				if (replicas_val.is_array()) {
+					for (auto& idx_val : replicas_val) {
+						if (!idx_val.is_number()) {
+							replicas.clear();
+							break;
+						}
+						replicas.push_back(idx_val.u64());
+					}
+				}
 			}
 			shards.push_back(std::move(replicas));
 		}
