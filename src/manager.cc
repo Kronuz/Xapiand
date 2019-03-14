@@ -1354,20 +1354,22 @@ XapiandManager::load_nodes()
 #endif
 
 #ifdef XAPIAND_CLUSTERING
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::string>>
 calculate_shards(const std::string& normalized_path)
 {
 	L_CALL("calculate_shards({})", repr(normalized_path));
 
-	std::vector<std::vector<size_t>> shards;
+	std::vector<std::vector<std::string>> shards;
 	auto indexed_nodes = Node::indexed_nodes();
 	if (indexed_nodes) {
 		auto num_replicas_1 = std::min(indexed_nodes, opts.num_replicas + 1);
 		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
 		for (size_t s = 0; s < std::min(9999UL, opts.num_shards); ++s) {
-			std::vector<size_t> replicas;
+			std::vector<std::string> replicas;
 			for (size_t r = 0; r < num_replicas_1; ++r) {
-				replicas.push_back(((consistent_hash - s + r) % indexed_nodes) + 1);
+				size_t idx = ((consistent_hash - s + r) % indexed_nodes) + 1;
+				auto node = Node::get_node(idx);
+				replicas.push_back(node->name());
 			}
 			shards.push_back(std::move(replicas));
 		}
@@ -1377,7 +1379,7 @@ calculate_shards(const std::string& normalized_path)
 
 
 void
-index_replicas(const std::string& normalized_path, const std::vector<size_t>& replicas)
+index_replicas(const std::string& normalized_path, const std::vector<std::string>& replicas)
 {
 	L_CALL("index_replicas(<replicas>)");
 
@@ -1392,7 +1394,7 @@ index_replicas(const std::string& normalized_path, const std::vector<size_t>& re
 			} },
 			{ "replicas", {
 				{ RESERVED_INDEX, "none" },
-				{ RESERVED_TYPE,  "array/positive" },
+				{ RESERVED_TYPE,  "array/string" },
 				{ RESERVED_VALUE, replicas },
 			} },
 		};
@@ -1404,7 +1406,7 @@ index_replicas(const std::string& normalized_path, const std::vector<size_t>& re
 
 
 void
-index_shards(const std::string& normalized_path, const std::vector<std::vector<size_t>>& shards)
+index_shards(const std::string& normalized_path, const std::vector<std::vector<std::string>>& shards)
 {
 	L_CALL("index_shards(<shards>)");
 
@@ -1444,7 +1446,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 }
 
 
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::string>>
 index_calculate_shards(const std::string& normalized_path)
 {
 	L_CALL("index_calculate_shards({})", repr(normalized_path));
@@ -1455,12 +1457,12 @@ index_calculate_shards(const std::string& normalized_path)
 }
 
 
-std::vector<size_t>
+std::vector<std::string>
 load_replicas(const Endpoints& index_endpoints, const std::string& normalized_path)
 {
 	L_CALL("load_replicas(<index_endpoints>, {})", repr(normalized_path));
 
-	std::vector<size_t> replicas;
+	std::vector<std::string> replicas;
 
 	try {
 		DatabaseHandler db_handler(index_endpoints);
@@ -1470,12 +1472,12 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 		if (it != obj.end()) {
 			auto& replicas_val = it.value();
 			if (replicas_val.is_array()) {
-				for (auto& idx_val : replicas_val) {
-					if (!idx_val.is_number()) {
+				for (auto& node_name_val : replicas_val) {
+					if (!node_name_val.is_string()) {
 						replicas.clear();
 						break;
 					}
-					replicas.push_back(idx_val.u64());
+					replicas.push_back(node_name_val.str());
 				}
 			}
 		}
@@ -1486,7 +1488,7 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 }
 
 
-std::vector<std::vector<size_t>>
+std::vector<std::vector<std::string>>
 load_shards(const std::string& normalized_path)
 {
 	L_CALL("load_shards({})", repr(normalized_path));
@@ -1498,7 +1500,7 @@ load_shards(const std::string& normalized_path)
 		}
 	}
 
-	std::vector<std::vector<size_t>> shards;
+	std::vector<std::vector<std::string>> shards;
 
 	try {
 		DatabaseHandler db_handler(index_endpoints);
@@ -1515,17 +1517,17 @@ load_shards(const std::string& normalized_path)
 				}
 			}
 		} else {
-			std::vector<size_t> replicas;
+			std::vector<std::string> replicas;
 			it = obj.find("replicas");
 			if (it != obj.end()) {
 				auto& replicas_val = it.value();
 				if (replicas_val.is_array()) {
-					for (auto& idx_val : replicas_val) {
-						if (!idx_val.is_number()) {
+					for (auto& node_name_val : replicas_val) {
+						if (!node_name_val.is_string()) {
 							replicas.clear();
 							break;
 						}
-						replicas.push_back(idx_val.u64());
+						replicas.push_back(node_name_val.str());
 					}
 				}
 			}
@@ -1539,7 +1541,7 @@ load_shards(const std::string& normalized_path)
 
 
 MsgPack
-shards_to_obj(const std::vector<std::vector<size_t>>& shards)
+shards_to_obj(const std::vector<std::vector<std::string>>& shards)
 {
 	MsgPack nodes = MsgPack::ARRAY();
 	for (auto& replicas : shards) {
@@ -1558,7 +1560,7 @@ shards_to_obj(const std::vector<std::vector<size_t>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-shards_to_nodes(const std::vector<std::vector<size_t>>& shards)
+shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 {
 	L_CALL("shards_to_nodes({})", shards_to_obj(shards).to_string());
 
@@ -1606,10 +1608,10 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 	}
 
 	if (!opts.solo) {
-		std::vector<std::vector<size_t>> shards;
+		std::vector<std::vector<std::string>> shards;
 
 		static std::mutex resolve_index_lru_mtx;
-		static lru::LRU<std::string, std::vector<std::vector<size_t>>> resolve_index_lru(opts.resolver_cache_size);
+		static lru::LRU<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(normalized_path);
@@ -1630,7 +1632,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 						break;
 					}
 					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
-					std::vector<std::vector<size_t>> shard_shards;
+					std::vector<std::vector<std::string>> shard_shards;
 					shard_shards.push_back(replicas);
 					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
 				}
@@ -1654,7 +1656,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			for (auto& replicas : shards) {
 				ASSERT(!replicas.empty());
 				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
-				std::vector<std::vector<size_t>> shard_shards;
+				std::vector<std::vector<std::string>> shard_shards;
 				shard_shards.push_back(replicas);
 				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
 			}
