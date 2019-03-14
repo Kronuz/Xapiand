@@ -748,6 +748,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 						// increment lastApplied,
 						++raft_last_applied;
 						// apply raft_log[lastApplied] to state machine
+						ASSERT(raft_last_applied - 1 >= 0 && raft_last_applied - 1 < raft_log.size());
 						const auto& command = raft_log[raft_last_applied - 1].command;
 						_raft_apply(command);
 					}
@@ -1200,6 +1201,7 @@ Discovery::_raft_commit_log()
 					// increment lastApplied,
 					++raft_last_applied;
 					// apply raft_log[lastApplied] to state machine
+					ASSERT(raft_last_applied - 1 >= 0 && raft_last_applied - 1 < raft_log.size());
 					const auto& command = raft_log[raft_last_applied - 1].command;
 					_raft_apply(command);
 				}
