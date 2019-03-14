@@ -1456,7 +1456,11 @@ index_calculate_shards(const std::string& normalized_path)
 	L_CALL("index_calculate_shards({})", repr(normalized_path));
 
 	auto shards = calculate_shards(normalized_path);
-	index_shards(normalized_path, shards);
+	try {
+		index_shards(normalized_path, shards);
+	} catch (...) {
+		L_EXC("Cannot save database index settings: {}", normalized_path);
+	}
 	return shards;
 }
 
@@ -1625,7 +1629,13 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, con
 			nodes = shards_to_nodes(shards);
 		} else {
 			lk.unlock();
-			shards = load_shards(normalized_path);
+			try {
+				shards = load_shards(normalized_path);
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {
+			} catch (...) {
+				L_EXC("Cannot load database index settings: {}", normalized_path);
+			}
 			if (!shards.empty()) {
 				nodes = shards_to_nodes(shards);
 				lk.lock();
