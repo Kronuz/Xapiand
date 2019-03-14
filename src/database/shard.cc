@@ -226,7 +226,6 @@ Shard::Shard(ShardEndpoint& endpoint_, int flags_)
 	  endpoint(endpoint_),
 	  flags(flags_)
 {
-	reopen();
 }
 
 

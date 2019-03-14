@@ -79,7 +79,6 @@ Database::Database(const std::vector<std::shared_ptr<Shard>>& shards_, const End
 	  endpoints(endpoints_),
 	  flags(flags_)
 {
-	reopen();
 }
 
 
