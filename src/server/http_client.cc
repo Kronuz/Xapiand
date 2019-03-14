@@ -2543,6 +2543,19 @@ HttpClient::url_resolve(Request& request)
 			}
 		}
 
+		bool pretty = false;
+		request.query_parser.rewind();
+		if (request.query_parser.next("pretty") != -1) {
+			if (request.query_parser.len != 0u) {
+				try {
+					pretty = Serialise::boolean(request.query_parser.get()) == "t";
+					request.indented = pretty ? DEFAULT_INDENTATION : -1;
+				} catch (const Exception&) { }
+			} else if (request.indented == -1) {
+				request.indented = DEFAULT_INDENTATION;
+			}
+		}
+
 		request.query_parser.rewind();
 		if (request.query_parser.next("human") != -1) {
 			if (request.query_parser.len != 0u) {
@@ -2550,7 +2563,7 @@ HttpClient::url_resolve(Request& request)
 					request.human = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
 				} catch (const Exception&) { }
 			} else {
-				request.human = true;
+				request.human = pretty;
 			}
 		}
 
@@ -2562,17 +2575,6 @@ HttpClient::url_resolve(Request& request)
 				} catch (const Exception&) { }
 			} else {
 				request.comments = true;
-			}
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("pretty") != -1) {
-			if (request.query_parser.len != 0u) {
-				try {
-					request.indented = Serialise::boolean(request.query_parser.get()) == "t" ? DEFAULT_INDENTATION : -1;
-				} catch (const Exception&) { }
-			} else if (request.indented == -1) {
-				request.indented = DEFAULT_INDENTATION;
 			}
 		}
 
