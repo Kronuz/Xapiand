@@ -171,9 +171,9 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 
 		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
 
-		L_REPLICATION("init_replication_protocol initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+		L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	} catch (const Xapian::DatabaseNotAvailableError&) {
-		L_REPLICATION("init_replication_protocol deferred: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+		L_REPLICATION("Replication deferred: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
 	} catch (...) {
 		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
@@ -254,7 +254,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::msg_get_changesets(<message>)");
 
-	L_REPLICATION("ReplicationProtocolClient::msg_get_changesets");
+	L_REPLICATION("GET_CHANGESETS");
 
 	size_t _total_sent_bytes = total_sent_bytes;
 	auto begins = std::chrono::system_clock::now();
@@ -388,7 +388,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	if (from_revision == to_revision) {
 		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK EMPTY {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	} else {
-		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}) {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	}
 }
 
@@ -503,8 +503,7 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::database_pool()->unlock(shard);
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_end_of_changes: {} ({} a set of {} changesets){}", repr(shard->endpoint.path), switching ? "from a full copy and" : "from", changesets, switch_shard ? " (to switch database)" : "");
-	L_DEBUG("Replication of {} {{{}}} was completed at revision {} ({} a set of {} changesets)", repr(shard->endpoint.path), shard->db()->get_uuid(), shard->db()->get_revision(), switching ? "from a full copy and" : "from", changesets);
+	L_REPLICATION("END_OF_CHANGES: {} ({} a set of {} changesets){}", repr(shard->endpoint.path), switching ? "from a full copy and" : "from", changesets, switch_shard ? " (to switch database)" : "");
 
 	if (cluster_database) {
 		cluster_database = false;
@@ -522,7 +521,7 @@ ReplicationProtocolClient::reply_fail(const std::string&)
 	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
 
 	ASSERT(lk_shard_ptr);
-	L_REPLICATION("ReplicationProtocolClient::reply_fail: {}", repr((*lk_shard_ptr)->endpoint->path));
+	L_REPLICATION("FAIL: {}", repr((*lk_shard_ptr)->endpoint.path));
 
 	reset();
 
@@ -558,7 +557,7 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 	}
 	switch_shard_path = path;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_header: {} in {}", repr(shard->endpoint.path), repr(switch_shard_path));
+	L_REPLICATION("DB_HEADER: {} in {} ({}@{})", repr(shard->endpoint.path), repr(switch_shard_path), current_uuid, current_revision);
 	L_TIMED_VAR(log, 1s,
 		"Replication of whole database taking too long: {}",
 		"Replication of whole database took too long: {}",
@@ -577,7 +576,7 @@ ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 
 	file_path = switch_shard_path + "/" + filename;
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filename({}): {}", repr(filename), repr((*lk_shard_ptr)->endpoint->path));
+	L_REPLICATION("DB_FILENAME({}): {}", repr(filename), repr((*lk_shard_ptr)->endpoint.path));
 }
 
 
@@ -596,7 +595,7 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 		return;
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_filedata({} -> {}): {}", repr(tmp_file), repr(file_path), repr((*lk_shard_ptr)->endpoint->path));
+	L_REPLICATION("DB_FILEDATA({} -> {}): {}", repr(tmp_file), repr(file_path), repr((*lk_shard_ptr)->endpoint.path));
 }
 
 
@@ -618,7 +617,7 @@ ReplicationProtocolClient::reply_db_footer(const std::string& message)
 		switch_shard_path.clear();
 	}
 
-	L_REPLICATION("ReplicationProtocolClient::reply_db_footer{}: {}", revision != current_revision ? " (ignored files)" : "", repr((*lk_shard_ptr)->endpoint->path));
+	L_REPLICATION("DB_FOOTER{}: {}", revision != current_revision ? " (ignored files)" : "", repr((*lk_shard_ptr)->endpoint.path));
 }
 
 
@@ -653,7 +652,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	wal->execute_line(line, true, false, false);
 
 	++changesets;
-	L_REPLICATION("ReplicationProtocolClient::reply_changeset ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint.path));
+	L_REPLICATION("CHANGESET ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint.path));
 }
 
 
