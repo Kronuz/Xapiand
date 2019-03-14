@@ -105,34 +105,12 @@ Database::reopen()
 
 	ASSERT(!shards.empty());
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto new_database = std::make_unique<Xapian::Database>();
-			for (auto& shard : shards) {
-				shard->reopen();
-				new_database->add_database(*shard->db());
-			}
-			database = std::move(new_database);
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			if (t == 0) { do_close(true, true, false); throw; }
-		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { do_close(true, true, false); throw; }
-		} catch (const Xapian::DatabaseError& exc) {
-			if (exc.get_msg() == "Database has been closed") {
-				if (t == 0) { do_close(true, true, false); throw; }
-				do_close(false, is_closed(), false);
-			} else {
-				do_close(false, is_closed(), false);
-				throw;
-			}
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw Xapian::DocNotFoundError("Document not found");
-		}
-		L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+	auto new_database = std::make_unique<Xapian::Database>();
+	for (auto& shard : shards) {
+		shard->reopen();
+		new_database->add_database(*shard->db());
 	}
+	database = std::move(new_database);
 
 	return true;
 }
