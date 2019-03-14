@@ -547,6 +547,14 @@ Shard::db()
 	return database.get();
 }
 
+
+std::shared_ptr<const Node>
+Shard::node() const
+{
+	return endpoint.node();
+}
+
+
 void
 Shard::reset() noexcept
 {
@@ -569,6 +577,7 @@ Shard::reset() noexcept
 	} catch(...) {}
 #endif  // XAPIAND_DATA_STORAGE
 }
+
 
 void
 Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)

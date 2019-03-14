@@ -36,6 +36,7 @@
 #include "xapian.h"               // for Xapian::docid, Xapian::termcount, Xapian::Document
 
 
+class Node;
 class Locator;
 class Logging;
 class DataStorage;
@@ -139,6 +140,8 @@ public:
 	bool reopen();
 
 	Xapian::Database* db();
+
+	std::shared_ptr<const Node> node() const;
 
 	void reset() noexcept;
 
