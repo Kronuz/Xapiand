@@ -86,6 +86,7 @@ Database::Database(std::vector<std::shared_ptr<Shard>>&& shards_, const Endpoint
 Database::~Database() noexcept
 {
 	try {
+		do_close(true, true, false);
 		if (log) {
 			log->clear();
 		}
