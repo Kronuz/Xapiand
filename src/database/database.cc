@@ -449,46 +449,12 @@ Database::get_document(Xapian::docid did, bool assume_valid_)
 {
 	L_CALL("Database::get_document({})", did);
 
-	Xapian::Document doc;
-
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Database::get_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	auto *rdb = static_cast<Xapian::Database *>(db());
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			if (assume_valid_) {
-				doc = rdb->get_document(did, Xapian::DOC_ASSUME_VALID);
-			} else {
-				doc = rdb->get_document(did);
-			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			if (t == 0) { do_close(true, true, false); throw; }
-		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { do_close(true, true, false); throw; }
-		} catch (const Xapian::DatabaseError& exc) {
-			if (exc.get_msg() == "Database has been closed") {
-				if (t == 0) { do_close(true, true, false); throw; }
-				do_close(false, is_closed(), false);
-			} else {
-				do_close(false, is_closed(), false);
-				throw;
-			}
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw Xapian::DocNotFoundError("Document not found");
-		}
-		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
-	}
-
-	return doc;
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
+	size_t shard_num = (did - 1) % n_shards;
+	Xapian::docid shard_did = (did - 1) / n_shards + 1;
+	auto& shard = shards[shard_num];
+	return shard->get_document(shard_did, assume_valid_);
 }
 
 

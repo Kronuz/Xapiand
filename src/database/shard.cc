@@ -1451,6 +1451,55 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	return result;
 }
 
+
+Xapian::Document
+Shard::get_document(Xapian::docid did, bool assume_valid_)
+{
+	L_CALL("Shard::get_document({})", did);
+
+	Xapian::Document doc;
+
+	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
+
+	L_DATABASE_WRAP_BEGIN("Shard::get_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Shard::get_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	auto *rdb = static_cast<Xapian::Database *>(db());
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			if (assume_valid_) {
+				doc = rdb->get_document(did, Xapian::DOC_ASSUME_VALID);
+			} else {
+				doc = rdb->get_document(did);
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { do_close(true, true, transaction, false); throw; }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { do_close(true, true, transaction, false); throw; }
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() == "Database has been closed") {
+				if (t == 0) { do_close(true, true, transaction, false); throw; }
+				do_close(false, is_closed(), transaction, false);
+			} else {
+				do_close(false, is_closed(), transaction, false);
+				throw;
+			}
+		} catch (const Xapian::InvalidArgumentError&) {
+			throw Xapian::DocNotFoundError("Document not found");
+		}
+		reopen();
+		rdb = static_cast<Xapian::Database *>(db());
+		L_DATABASE_WRAP_END("Database::get_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+	}
+
+	return doc;
+}
+
+
 std::string
 Shard::get_metadata(const std::string& key)
 {
