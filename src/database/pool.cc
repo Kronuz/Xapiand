@@ -235,9 +235,12 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 	std::unique_lock<std::mutex> lk(mtx);
 
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
-		return _writable_checkout(flags, timeout, callback, now, lk);
+		auto& shard = _writable_checkout(flags, timeout, callback, now, lk);
+		shard->flags = flags;  // update shard flags
+		return shard;
 	} else {
 		auto& shard = _readable_checkout(flags, timeout, callback, now, lk);
+		shard->flags = flags;  // update shard flags
 		lk.unlock();
 		try {
 			// Reopening of old/outdated (readable) databases:
