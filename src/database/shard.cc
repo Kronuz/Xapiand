@@ -276,11 +276,11 @@ Shard::reopen_writable()
 	if (!node) {
 		throw Xapian::NetworkError("Endpoint node is invalid");
 	}
-	if (node->remote_port == 0) {
-		throw Xapian::NetworkError("Endpoint node without a valid port");
-	}
 	if (!node->is_active()) {
 		throw Xapian::NetworkError("Endpoint node is inactive");
+	}
+	if (node->remote_port == 0) {
+		throw Xapian::NetworkError("Endpoint node without a valid port");
 	}
 #endif  // XAPIAND_CLUSTERING
 
@@ -396,11 +396,11 @@ Shard::reopen_readable()
 	if (!node) {
 		throw Xapian::NetworkError("Endpoint node is invalid");
 	}
-	if (node->remote_port == 0) {
-		throw Xapian::NetworkError("Endpoint node without a valid port");
-	}
 	if (!node->is_active()) {
 		throw Xapian::NetworkError("Endpoint node is inactive");
+	}
+	if (node->remote_port == 0) {
+		throw Xapian::NetworkError("Endpoint node without a valid port");
 	}
 #endif  // XAPIAND_CLUSTERING
 
