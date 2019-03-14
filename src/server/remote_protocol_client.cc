@@ -615,7 +615,8 @@ RemoteProtocolClient::msg_update(const std::string &)
 void
 RemoteProtocolClient::init_msg_query()
 {
-	flags = DB_OPEN;
+	L_CALL("RemoteProtocolClient::init_msg_query()");
+
 	_msg_query_database_lock = std::make_unique<lock_database>(endpoints, flags);
 	_msg_query_matchspies.clear();
 	_msg_query_reg = Xapian::Registry{};
@@ -626,6 +627,8 @@ RemoteProtocolClient::init_msg_query()
 void
 RemoteProtocolClient::reset()
 {
+	L_CALL("RemoteProtocolClient::reset()");
+
 	_msg_query_matchspies.clear();
 	_msg_query_reg = Xapian::Registry{};
 	_msg_query_enquire.reset();
