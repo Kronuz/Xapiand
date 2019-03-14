@@ -106,20 +106,32 @@ Database::reopen()
 	ASSERT(!shards.empty());
 
 	auto new_database = std::make_unique<Xapian::Database>();
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
 		Xapian::Database db("", Xapian::DB_BACKEND_INMEMORY);
 		try {
 			shard->reopen();
 			db = *shard->db();
 		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
 		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
 		} catch (const Xapian::DatabaseError& exc) {
 			if (exc.get_msg() != "Database has been closed") {
 				throw;
 			}
+			eptr = std::current_exception();
+			--valid;
 		}
 		new_database->add_database(db);
 	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
+	}
+
 	database = std::move(new_database);
 
 	return true;
@@ -228,8 +240,27 @@ Database::commit(bool wal_, bool send_update)
 
 	ASSERT(!shards.empty());
 	bool ret = true;
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		ret = shard->commit(wal_, send_update) || ret;
+		try {
+			ret = shard->commit(wal_, send_update) || ret;
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 	return ret;
 }
@@ -241,8 +272,27 @@ Database::begin_transaction(bool flushed)
 	L_CALL("Database::begin_transaction({})", flushed);
 
 	ASSERT(!shards.empty());
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		shard->begin_transaction(flushed);
+		try {
+			shard->begin_transaction(flushed);
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 }
 
@@ -253,8 +303,27 @@ Database::commit_transaction()
 	L_CALL("Database::commit_transaction()");
 
 	ASSERT(!shards.empty());
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		shard->commit_transaction();
+		try {
+			shard->commit_transaction();
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 }
 
@@ -265,8 +334,27 @@ Database::cancel_transaction()
 	L_CALL("Database::cancel_transaction()");
 
 	ASSERT(!shards.empty());
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		shard->cancel_transaction();
+		try {
+			shard->cancel_transaction();
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 }
 
@@ -363,8 +451,27 @@ Database::add_spelling(const std::string& word, Xapian::termcount freqinc, bool 
 	L_CALL("Database::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
 	ASSERT(!shards.empty());
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		shard->add_spelling(word, freqinc, commit_, wal_);
+		try {
+			shard->add_spelling(word, freqinc, commit_, wal_);
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 }
 
@@ -377,8 +484,27 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 	Xapian::termcount result = 0;
 
 	ASSERT(!shards.empty());
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		result = shard->remove_spelling(word, freqdec, commit_, wal_);
+		try {
+			result = shard->remove_spelling(word, freqdec, commit_, wal_);
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 	return result;
 }
@@ -452,7 +578,33 @@ Database::get_metadata(const std::string& key)
 	L_CALL("Database::get_metadata({})", repr(key));
 
 	ASSERT(!shards.empty());
-	return shards[0]->get_metadata(key);
+	std::string value;
+	auto valid = shards.size();
+	std::exception_ptr eptr;
+	for (auto& shard : shards) {
+		try {
+			value = shard->get_metadata(key);
+			if (!value.empty()) {
+				break;
+			}
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
+	}
+	return value;
 }
 
 
@@ -460,8 +612,35 @@ std::vector<std::string>
 Database::get_metadata_keys()
 {
 	L_CALL("Database::get_metadata_keys()");
+
 	ASSERT(!shards.empty());
-	return shards[0]->get_metadata_keys();
+	std::vector<std::string> keys;
+	auto valid = shards.size();
+	std::exception_ptr eptr;
+	for (auto& shard : shards) {
+		try {
+			keys = shard->get_metadata_keys();
+			if (!keys.empty()) {
+				break;
+			}
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
+	}
+	return keys;
 }
 
 
@@ -471,8 +650,27 @@ Database::set_metadata(const std::string& key, const std::string& value, bool co
 	L_CALL("Database::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
 	ASSERT(!shards.empty());
+	auto valid = shards.size();
+	std::exception_ptr eptr;
 	for (auto& shard : shards) {
-		shard->set_metadata(key, value, commit_, wal_);
+		try {
+			shard->set_metadata(key, value, commit_, wal_);
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError& exc) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+			eptr = std::current_exception();
+			--valid;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
 	}
 }
 
