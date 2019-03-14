@@ -22,17 +22,17 @@
 
 #include "schema.h"
 
-#include <algorithm>                              // for move
-#include <cmath>                                  // for pow
+#include <algorithm>                              // for std::move
+#include <cmath>                                  // for std::pow
 #include <cstdint>                                // for uint64_t
 #include <cstring>                                // for size_t, strlen
 #include <cctype>                                 // for tolower
 #include <functional>                             // for ref, reference_wrapper
 #include <limits>                                 // for std::numeric_limits
-#include <mutex>                                  // for mutex
+#include <mutex>                                  // for std::mutex
 #include <ostream>                                // for operator<<, basic_ostream
-#include <set>                                    // for __tree_const_iterator, set
-#include <stdexcept>                              // for out_of_range
+#include <set>                                    // for std::set
+#include <stdexcept>                              // for std::out_of_range
 #include <type_traits>                            // for remove_reference<>::type
 #include <utility>
 
@@ -5305,7 +5305,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::FIELD_VALUES: {
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					pos++; /* do nothing else (don't index any terms) */
@@ -5316,7 +5316,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 			break;
 		}
 		case TypeIndex::FIELD_ALL: {
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					index_simple_term(doc, specification.prefix.field, specification, pos++);
@@ -5350,7 +5350,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					pos++; /* do nothing else (don't index any terms) */
@@ -5362,7 +5362,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					index_simple_term(doc, specification.prefix.field, specification, pos++);
@@ -5374,7 +5374,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
+			auto& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					pos++; /* do nothing else (don't index any terms) */
@@ -5386,7 +5386,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
+			auto& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					index_simple_term(doc, specification.prefix.field, specification, pos++);
@@ -5398,8 +5398,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_g = map_values[global_spc.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					pos++; /* do nothing else (don't index any terms) */
@@ -5411,8 +5411,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_g = map_values[global_spc.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					index_simple_term(doc, specification.prefix.field, specification, pos++);
@@ -5424,7 +5424,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
+			auto& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					pos++; /* do nothing else (don't index any terms) */
@@ -5436,7 +5436,7 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
+			auto& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					index_simple_term(doc, specification.prefix.field, specification, pos++);
@@ -5448,8 +5448,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_g = map_values[global_spc.slot];
-			std::set<std::string>& s_f = map_values[specification.slot];
+			auto& s_g = map_values[global_spc.slot];
+			auto& s_f = map_values[specification.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					pos++; /* do nothing else (don't index any terms) */
@@ -5461,8 +5461,8 @@ Schema::_index_item(Xapian::Document& doc, T&& values, size_t pos)
 		}
 		case TypeIndex::ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			std::set<std::string>& s_f = map_values[specification.slot];
-			std::set<std::string>& s_g = map_values[global_spc.slot];
+			auto& s_f = map_values[specification.slot];
+			auto& s_g = map_values[global_spc.slot];
 			for (const MsgPack& value : values) {
 				if (value.is_null() || value.is_undefined()) {
 					index_simple_term(doc, specification.prefix.field, specification, pos++);
