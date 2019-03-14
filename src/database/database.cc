@@ -107,8 +107,18 @@ Database::reopen()
 
 	auto new_database = std::make_unique<Xapian::Database>();
 	for (auto& shard : shards) {
-		shard->reopen();
-		new_database->add_database(*shard->db());
+		Xapian::Database db("", Xapian::DB_BACKEND_INMEMORY);
+		try {
+			shard->reopen();
+			db = *shard->db();
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() != "Database has been closed") {
+				throw;
+			}
+		}
+		new_database->add_database(db);
 	}
 	database = std::move(new_database);
 
