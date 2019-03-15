@@ -1366,8 +1366,7 @@ calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, si
 
 	std::vector<std::vector<std::string>> shards;
 	if (indexed_nodes) {
-		num_replicas_plus_master = std::min(indexed_nodes, num_replicas_plus_master);
-		for (size_t s = 0; s < std::min(9999UL, num_shards); ++s) {
+		for (size_t s = 0; s < num_shards; ++s) {
 			std::vector<std::string> replicas;
 			for (size_t r = 0; r < num_replicas_plus_master; ++r) {
 				size_t idx = ((routing_key - s + r) % indexed_nodes) + 1;
@@ -1590,30 +1589,30 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
 #ifdef XAPIAND_CLUSTERING
-	if (normalized_path == ".xapiand") {
-		// Cluster database is always in the master
-		std::vector<std::shared_ptr<const Node>> node_replicas;
-		node_replicas.push_back(Node::leader_node());
-		node_replicas.push_back(Node::local_node());
-		nodes.push_back(std::move(node_replicas));
-		return nodes;
-	}
-
-	if (string::startswith(normalized_path, ".xapiand/")) {
-		// Index databases are always in their specified node
-		std::vector<std::shared_ptr<const Node>> node_replicas;
-		auto node_name = normalized_path.substr(9);
-		node_replicas.push_back(Node::get_node(node_name));
-		node_replicas.push_back(Node::local_node());
-		nodes.push_back(std::move(node_replicas));
-		return nodes;
-	}
-
 	if (!opts.solo) {
-		std::vector<std::vector<std::string>> shards;
+		if (normalized_path == ".xapiand") {
+			// Cluster database is always in the master
+			std::vector<std::shared_ptr<const Node>> node_replicas;
+			node_replicas.push_back(Node::leader_node());
+			node_replicas.push_back(Node::local_node());
+			nodes.push_back(std::move(node_replicas));
+			return nodes;
+		}
+
+		if (string::startswith(normalized_path, ".xapiand/")) {
+			// Index databases are always in their specified node
+			std::vector<std::shared_ptr<const Node>> node_replicas;
+			auto node_name = normalized_path.substr(9);
+			node_replicas.push_back(Node::get_node(node_name));
+			node_replicas.push_back(Node::local_node());
+			nodes.push_back(std::move(node_replicas));
+			return nodes;
+		}
 
 		static std::mutex resolve_index_lru_mtx;
 		static lru::LRU<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
+
+		std::vector<std::vector<std::string>> shards;
 
 		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 		auto it = resolve_index_lru.find(normalized_path);
@@ -1664,8 +1663,6 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 				auto& num_shards_val = num_shards_it.value();
 				if (num_shards_val.is_number()) {
 					num_shards = num_shards_val.u64();
-				} else {
-					THROW(ClientError, "Settings field 'shards' must be a non-zero positive number");
 				}
 			}
 
@@ -1674,8 +1671,6 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 				auto& num_replicas_val = num_replicas_it.value();
 				if (num_replicas_val.is_number()) {
 					num_replicas_plus_master = num_replicas_val.u64() + 1;
-				} else {
-					THROW(ClientError, "Settings field 'replicas' must be a positive number");
 				}
 			}
 
@@ -1684,24 +1679,36 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 				auto& routing_val = routing_it.value();
 				if (routing_val.is_string()) {
 					routing = routing_val.str_view();
-				} else {
-					THROW(ClientError, "Settings field 'routing' must be a string");
 				}
 			}
 		}
 
 		auto indexed_nodes = Node::indexed_nodes();
+
+		// Some validations:
+		if (indexed_nodes < 1) {
+			indexed_nodes = 1;
+		}
+		if (num_shards > 9999UL) {
+			num_shards = 9999UL;
+		}
+		if (num_replicas_plus_master > indexed_nodes) {
+			num_replicas_plus_master = indexed_nodes;
+		}
+
 		size_t routing_key = jump_consistent_hash(routing, indexed_nodes);
 
 		auto n_shards = nodes.size();
 		if (n_shards) {
-			if (n_shards != num_shards) {
-				THROW(ClientError, "Established number of shards cannot be changed");
+			if (num_shards != n_shards) {
+				L_WARNING("Established shards of {} cannot be changed from {} to {}", repr(normalized_path), n_shards, num_shards);
+				num_shards = n_shards;
 			}
 			auto& main_master_replicas = nodes.front();
 			auto main_master_node = main_master_replicas.front();  // The very first node is the main master
-			if (main_master_node->idx != routing_key + 1) {
-				THROW(ClientError, "Established routing cannot be changed");
+			if (routing_key != main_master_node->idx - 1) {
+				L_WARNING("Established routing of {} cannot be changed from {} to {}", repr(normalized_path), repr(main_master_node->name()), repr(Node::get_node(routing_key + 1)->name()));
+				routing_key = main_master_node->idx - 1;
 			}
 			if (main_master_replicas.size() != num_replicas_plus_master) {
 				n_shards = 0;  // Force re-calculation of shards with new replicas size
