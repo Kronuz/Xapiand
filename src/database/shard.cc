@@ -1244,28 +1244,62 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 				size_t shard_num = p == p_end ? 0 : unserialise_length(&p, p_end);
 				size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
 				std::string ver_prefix;
-				auto it = wdb->postlist_begin(term);
-				if (it == wdb->postlist_end(term)) {
+				if (term == "QN\x80") {
+					// Special term for autoincrement
 					did = wdb->get_lastdocid() + 1;
 					auto shard_did = (did - 1) * n_shards + shard_num + 1;
 					ver_prefix = "V" + serialise_length(shard_did);
+					auto did_serialised = sortable_serialise(shard_did);
+					new_term = "QN" + did_serialised;
+					doc.add_boolean_term(new_term);
+					doc.add_value(DB_SLOT_ID, did_serialised);
+					// Set id inside serialized object:
+					Data data(doc.get_data());
+					auto data_obj = data.get_obj();
+					auto it = data_obj.find(ID_FIELD_NAME);
+					if (it != data_obj.end()) {
+						auto& value = it.value();
+						switch (value.getType()) {
+							case MsgPack::Type::POSITIVE_INTEGER:
+								value = static_cast<uint64_t>(shard_did);
+								break;
+							case MsgPack::Type::NEGATIVE_INTEGER:
+								value = static_cast<int64_t>(shard_did);
+								break;
+							case MsgPack::Type::FLOAT:
+								value = static_cast<double>(shard_did);
+								break;
+							default:
+								break;
+						}
+						data.set_obj(data_obj);
+						data.flush();
+						doc.set_data(data.serialise());
+					}
 				} else {
-					did = *it;
-					auto shard_did = (did - 1) * n_shards + shard_num + 1;
-					ver_prefix = "V" + serialise_length(shard_did);
-					auto ver_prefix_size = ver_prefix.size();
-					auto t_end = wdb->allterms_end(ver_prefix);
-					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-						std::string current_term = *tit;
-						std::string_view current_ver(current_term);
-						current_ver.remove_prefix(ver_prefix_size);
-						if (!current_ver.empty()) {
-							if (version_ && !ver.empty() && ver != current_ver) {
-								// Throw error about wrong version!
-								throw Xapian::DocVersionConflictError("Version mismatch!");
+					auto it = wdb->postlist_begin(term);
+					if (it == wdb->postlist_end(term)) {
+						did = wdb->get_lastdocid() + 1;
+						auto shard_did = (did - 1) * n_shards + shard_num + 1;
+						ver_prefix = "V" + serialise_length(shard_did);
+					} else {
+						did = *it;
+						auto shard_did = (did - 1) * n_shards + shard_num + 1;
+						ver_prefix = "V" + serialise_length(shard_did);
+						auto ver_prefix_size = ver_prefix.size();
+						auto t_end = wdb->allterms_end(ver_prefix);
+						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+							std::string current_term = *tit;
+							std::string_view current_ver(current_term);
+							current_ver.remove_prefix(ver_prefix_size);
+							if (!current_ver.empty()) {
+								if (version_ && !ver.empty() && ver != current_ver) {
+									// Throw error about wrong version!
+									throw Xapian::DocVersionConflictError("Version mismatch!");
+								}
+								version = sortable_unserialise(current_ver);
+								break;
 							}
-							version = sortable_unserialise(current_ver);
-							break;
 						}
 					}
 				}

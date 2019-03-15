@@ -445,7 +445,19 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	ASSERT(!shards.empty());
 	size_t n_shards = shards.size();
-	size_t shard_num = fnv1ah64::hash(term) % n_shards;
+	size_t shard_num;
+	if (term == "QN\x80") {
+		for (int t = 10; t >= 0; --t) {
+			// Try getting a new ID which can currently be indexed (active node)
+			shard_num = random_int(0, n_shards - 1);
+			auto node = shards[shard_num]->node();
+			if (node && node->is_active()) {
+				break;
+			}
+		}
+	} else {
+		shard_num = fnv1ah64::hash(term) % n_shards;
+	}
 	auto& shard = shards[shard_num];
 	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->replace_document_term(term, std::move(doc), commit_, wal_, version_);

@@ -2800,8 +2800,20 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					break;
 				}
 				case FieldType::INTEGER:
+					document_id = MsgPack(0).as_i64();
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					break;
 				case FieldType::POSITIVE:
+					document_id = MsgPack(0).as_u64();
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					break;
 				case FieldType::FLOAT:
+					document_id = MsgPack(0).as_f64();
+					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					break;
 				case FieldType::TEXT:
 				case FieldType::STRING:
 				case FieldType::KEYWORD: {
@@ -2828,13 +2840,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::EMPTY: {
 					const auto type_ser = Serialise::guess_serialise(document_id);
 					id_type = type_ser.first;
-					if (
-						id_type == FieldType::INTEGER ||
-						id_type == FieldType::POSITIVE ||
-						id_type == FieldType::FLOAT ||
-						id_type == FieldType::TEXT ||
-						id_type == FieldType::STRING
-					) {
+					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
 						id_type = FieldType::KEYWORD;
 					}
 					spc_id.set_type(id_type);
@@ -2914,6 +2920,10 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
 			doc.add_value(elem.first, val_ser);
 			L_INDEX("Slot: {}  Values: {}", elem.first, repr(val_ser));
+		}
+
+		if (term_id != "QN\x80") {
+			doc.add_boolean_term(term_id);  // make sure the ID term is ALWAYS added!
 		}
 
 		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
@@ -5281,6 +5291,11 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
 			THROW(ClientError, "Keyword too long");
 		}
+		return;
+	}
+
+	if (term == "QN\x80") {
+		// Term reserved for numeric (autoincremented) IDs
 		return;
 	}
 
