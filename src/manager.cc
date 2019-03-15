@@ -644,7 +644,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 					}
 					#ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
-						_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].as_str()));
+						_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].str()));
 					}
 					#endif
 				}
@@ -669,6 +669,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
 			{ "name", {
+				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 				{ RESERVED_VALUE, local_node->name() },
 			} },
@@ -1342,6 +1343,7 @@ XapiandManager::load_nodes()
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
 					{ "name", {
+						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  KEYWORD_STR },
 						{ RESERVED_VALUE, node->name() },
 					} },
@@ -1395,6 +1397,10 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
+			{ "shards", {
+				{ RESERVED_INDEX, "none" },
+				{ RESERVED_TYPE,  "positive" },
+			} },
 			{ "replicas", {
 				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "array/string" },
@@ -1432,6 +1438,10 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "positive" },
 						{ RESERVED_VALUE, n_shards },
+					} },
+					{ "replicas", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  "array/string" },
 					} },
 				};
 				// Add a local schema so it doesn't break forced foreign schemas
