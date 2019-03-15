@@ -197,8 +197,8 @@ private:
 	void join_cluster_impl();
 #endif
 
-	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, const std::string& routing);
-	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary);
+	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, const std::string& routing, size_t num_shards, size_t num_replicas_plus_master);
+	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary, size_t num_shards, size_t num_replicas_plus_master);
 
 	std::string server_metrics_impl();
 
@@ -238,14 +238,14 @@ public:
 		_manager.reset();
 	}
 
-	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, const std::string& routing = "") {
+	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, const std::string& routing = "", size_t num_shards = 0, size_t num_replicas_plus_master = 0) {
 		ASSERT(_manager);
-		return _manager->resolve_index_nodes_impl(normalized_path, writable, routing);
+		return _manager->resolve_index_nodes_impl(normalized_path, writable, routing, num_shards, num_replicas_plus_master);
 	}
 
-	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, const std::string& routing = "", bool primary = false) {
+	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, const std::string& routing = "", bool primary = false, size_t num_shards = 0, size_t num_replicas_plus_master = 0) {
 		ASSERT(_manager);
-		return _manager->resolve_index_endpoints_impl(endpoint, writable, routing, primary);
+		return _manager->resolve_index_endpoints_impl(endpoint, writable, routing, primary, num_shards, num_replicas_plus_master);
 	}
 
 	static void setup_node() {

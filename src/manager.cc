@@ -1360,18 +1360,26 @@ XapiandManager::load_nodes()
 
 #ifdef XAPIAND_CLUSTERING
 std::vector<std::vector<std::string>>
-calculate_shards(const std::string& normalized_path)
+calculate_shards(const std::string& normalized_path, size_t num_shards, size_t num_replicas_plus_master)
 {
 	L_CALL("calculate_shards({})", repr(normalized_path));
+
+	if (num_shards == 0) {
+		num_shards = opts.num_shards;
+	}
+
+	if (num_replicas_plus_master == 0) {
+		num_replicas_plus_master = opts.num_replicas + 1;
+	}
 
 	std::vector<std::vector<std::string>> shards;
 	auto indexed_nodes = Node::indexed_nodes();
 	if (indexed_nodes) {
-		auto num_replicas_1 = std::min(indexed_nodes, opts.num_replicas + 1);
+		num_replicas_plus_master = std::min(indexed_nodes, num_replicas_plus_master);
 		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
-		for (size_t s = 0; s < std::min(9999UL, opts.num_shards); ++s) {
+		for (size_t s = 0; s < std::min(9999UL, num_shards); ++s) {
 			std::vector<std::string> replicas;
-			for (size_t r = 0; r < num_replicas_1; ++r) {
+			for (size_t r = 0; r < num_replicas_plus_master; ++r) {
 				size_t idx = ((consistent_hash - s + r) % indexed_nodes) + 1;
 				auto node = Node::get_node(idx);
 				replicas.push_back(node->name());
@@ -1462,11 +1470,11 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 
 
 std::vector<std::vector<std::string>>
-index_calculate_shards(const std::string& normalized_path)
+index_calculate_shards(const std::string& normalized_path, size_t num_shards, size_t num_replicas_plus_master)
 {
 	L_CALL("index_calculate_shards({})", repr(normalized_path));
 
-	auto shards = calculate_shards(normalized_path);
+	auto shards = calculate_shards(normalized_path, num_shards, num_replicas_plus_master);
 	try {
 		index_shards(normalized_path, shards);
 	} catch (...) {
@@ -1600,9 +1608,9 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const std::string& routing)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const std::string& routing, size_t num_shards, size_t num_replicas_plus_master)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {})", repr(normalized_path), writable, repr(routing));
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {}, {})", repr(normalized_path), writable, repr(routing), num_shards, num_replicas_plus_master);
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
@@ -1670,9 +1678,9 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 		if (nodes.empty()) {
 			if (writable) {
-				shards = index_calculate_shards(routing.empty() ? normalized_path : routing);
+				shards = index_calculate_shards(routing.empty() ? normalized_path : routing, num_shards, num_replicas_plus_master);
 			} else {
-				shards = calculate_shards(routing.empty() ? normalized_path : routing);
+				shards = calculate_shards(routing.empty() ? normalized_path : routing, num_shards, num_replicas_plus_master);
 			}
 			ASSERT(!shards.empty());
 			nodes = shards_to_nodes(shards);
@@ -1706,12 +1714,12 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 
 Endpoints
-XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary)
+XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary, size_t num_shards, size_t num_replicas_plus_master)
 {
-	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, repr(routing), primary);
+	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {}, {}, {})", repr(endpoint.to_string()), writable, repr(routing), primary, num_shards, num_replicas_plus_master);
 
 	Endpoints endpoints;
-	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, routing);
+	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, routing, num_shards, num_replicas_plus_master);
 	size_t shard_num = 0;
 	int n_shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
