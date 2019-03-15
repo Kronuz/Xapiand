@@ -1249,7 +1249,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					did = wdb->get_lastdocid() + 1;
 					auto shard_did = (did - 1) * n_shards + shard_num + 1;
 					ver_prefix = "V" + serialise_length(shard_did);
-					auto did_serialised = serialise_length(shard_did);
+					auto did_serialised = sortable_serialise(shard_did);
 					new_term = "QN" + did_serialised;
 					doc.add_boolean_term(new_term);
 					doc.add_value(DB_SLOT_ID, did_serialised);
