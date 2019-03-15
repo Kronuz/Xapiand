@@ -26,6 +26,7 @@
 
 #include "cassert.h"         // for ASSERT
 #include "chars.hh"          // for chars::hexdec
+#include "repr.hh"
 #include "log.h"
 
 
@@ -249,7 +250,9 @@ PathParser::init(std::string_view p)
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(GREEN + "1 ->> {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
-				case State::SLC: return "ncm";
+				case State::SLC: return "slc";
+				case State::SLB: return "slb";
+				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
 				case State::CMD: return "cmd";
 				case State::ID: return "id";
@@ -287,7 +290,9 @@ PathParser::init(std::string_view p)
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(BLUE + "2 <<- {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
-				case State::SLC: return "ncm";
+				case State::SLC: return "slc";
+				case State::SLB: return "slb";
+				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
 				case State::CMD: return "cmd";
 				case State::ID: return "id";
@@ -492,7 +497,9 @@ PathParser::next()
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(CYAN + "3 ->> {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
-				case State::SLC: return "ncm";
+				case State::SLC: return "slc";
+				case State::SLB: return "slb";
+				case State::NCM: return "ncm";
 				case State::PMT: return "pmt";
 				case State::CMD: return "cmd";
 				case State::ID: return "id";
