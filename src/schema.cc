@@ -2536,11 +2536,10 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 		}
 	}
 
-	for (auto& field : object) {
-		auto name = field.str_view();
-		if (name != VERSION_FIELD_NAME && name != SCHEMA_FIELD_NAME && name != RESERVED_RECURSE) {
-			THROW(ErrorType, "{}Schema field {} is not valid", prefix, repr(name));
-		}
+	// Prevent schemas from having a '_schemas' field inside:
+	auto reserved_schema_it = object.find(RESERVED_SCHEMA);
+	if (reserved_schema_it != it_end) {
+		THROW(ErrorType, "{}Schema field '{}' is not valid", prefix, RESERVED_SCHEMA);
 	}
 
 	return std::make_pair(nullptr, &schema);
