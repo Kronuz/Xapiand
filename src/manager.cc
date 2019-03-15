@@ -1650,55 +1650,43 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			}
 		}
 
-		size_t num_shards = opts.num_shards;
-		size_t num_replicas_plus_master = opts.num_replicas + 1;
+		if (nodes.empty()) {
+			size_t num_shards = opts.num_shards;
+			size_t num_replicas_plus_master = opts.num_replicas + 1;
 
-		if (settings && settings->is_map()) {
-			auto num_shards_it = settings->find("shards");
-			if (num_shards_it != settings->end()) {
-				auto& num_shards_val = num_shards_it.value();
-				if (num_shards_val.is_number()) {
-					num_shards = num_shards_val.u64();
+			if (settings && settings->is_map()) {
+				auto num_shards_it = settings->find("shards");
+				if (num_shards_it != settings->end()) {
+					auto& num_shards_val = num_shards_it.value();
+					if (num_shards_val.is_number()) {
+						num_shards = num_shards_val.u64();
+					}
+				}
+
+				auto num_replicas_it = settings->find("replicas");
+				if (num_replicas_it != settings->end()) {
+					auto& num_replicas_val = num_replicas_it.value();
+					if (num_replicas_val.is_number()) {
+						num_replicas_plus_master = num_replicas_val.u64() + 1;
+					}
 				}
 			}
 
-			auto num_replicas_it = settings->find("replicas");
-			if (num_replicas_it != settings->end()) {
-				auto& num_replicas_val = num_replicas_it.value();
-				if (num_replicas_val.is_number()) {
-					num_replicas_plus_master = num_replicas_val.u64() + 1;
-				}
+			auto indexed_nodes = Node::indexed_nodes();
+
+			// Some validations:
+			if (indexed_nodes < 1) {
+				indexed_nodes = 1;
 			}
-		}
-
-		auto indexed_nodes = Node::indexed_nodes();
-
-		// Some validations:
-		if (indexed_nodes < 1) {
-			indexed_nodes = 1;
-		}
-		if (num_shards > 9999UL) {
-			num_shards = 9999UL;
-		}
-		if (num_replicas_plus_master > indexed_nodes) {
-			num_replicas_plus_master = indexed_nodes;
-		}
-
-		size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
-
-		auto n_shards = nodes.size();
-		if (n_shards) {
-			if (num_shards != n_shards) {
-				L_WARNING("Established shards of {} cannot be changed from {} to {}", repr(normalized_path), n_shards, num_shards);
-				num_shards = n_shards;
+			if (num_shards > 9999UL) {
+				num_shards = 9999UL;
 			}
-			auto& main_master_replicas = nodes.front();
-			if (main_master_replicas.size() != num_replicas_plus_master) {
-				n_shards = 0;  // Force re-calculation of shards with new replicas size
+			if (num_replicas_plus_master > indexed_nodes) {
+				num_replicas_plus_master = indexed_nodes;
 			}
-		}
 
-		if (!n_shards) {
+			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
+
 			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
 			ASSERT(!shards.empty());
 
