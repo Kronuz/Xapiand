@@ -1625,22 +1625,15 @@ HttpClient::write_schema_view(Request& request)
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_COMMIT);
+	endpoints_maker(request, query_field);
+
 	auto& decoded_body = request.decoded_body();
-
-	MsgPack* settings = nullptr;
-	if (decoded_body.is_map()) {
-		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
-		if (settings_it != decoded_body.end()) {
-			settings = &settings_it.value();
-		}
-	}
-
-	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field, settings);
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE, request.method);
 	db_handler.write_schema(decoded_body, request.method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
