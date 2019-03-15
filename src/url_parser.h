@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,13 +31,13 @@
 constexpr const char command__ = COMMAND__[0];
 
 
-std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=');
-inline std::string urldecode(std::string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
-	return urldecode(string.data(), string.size(), plus, amp, colon, eq);
+std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char slash = '/');
+inline std::string urldecode(std::string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char slash = '/') {
+	return urldecode(string.data(), string.size(), plus, amp, colon, eq, slash);
 }
 template<typename T, std::size_t N_PLUS_1>
-inline std::string urldecode(T (&s)[N_PLUS_1], char plus = ' ', char amp = '&', char colon = ';', char eq = '=') {
-	return urldecode(s, N_PLUS_1 - 1, plus, amp, colon, eq);
+inline std::string urldecode(T (&s)[N_PLUS_1], char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char slash = '/') {
+	return urldecode(s, N_PLUS_1 - 1, plus, amp, colon, eq, slash);
 }
 
 

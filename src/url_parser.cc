@@ -37,7 +37,7 @@
 
 
 std::string
-urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
+urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, char slash)
 {
 	std::string buf;
 	buf.reserve(size);
@@ -61,7 +61,10 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq)
 			case '%': {
 				auto dec = chars::hexdec(&q);
 				if (dec < 256) {
-					c = dec; /* Reset c, try the special characters again */
+					// Reset c, try the special characters again
+					c = dec == 0x2f
+						? slash  // encoded slash is special
+						: dec;
 				}
 			}
 			/* FALLTHROUGH */
@@ -113,7 +116,7 @@ int
 QueryParser::init(std::string_view q)
 {
 	clear();
-	query = urldecode(q, ' ', '\0', '\0', '\1');
+	query = urldecode(q, ' ', '\0', '\0', '\1', '/');
 	return 0;
 }
 
@@ -228,7 +231,7 @@ PathParser::State
 PathParser::init(std::string_view p)
 {
 	clear();
-	path = urldecode(p);
+	path = urldecode(p, ' ', '&', ';', '=', '\\');
 
 	L_URL_PARSER(repr(path));
 
@@ -450,8 +453,15 @@ PathParser::init(std::string_view p)
 		--n1;
 	}
 
-
 	off = ni;
+
+	char* n = path.data();
+	for (;n != nf; ++n) {
+		if (*n == '\\') {
+			*n = '/';
+		}
+	}
+
 	return state;
 }
 
