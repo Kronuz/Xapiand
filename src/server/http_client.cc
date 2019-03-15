@@ -453,7 +453,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	}
 
 	L_HTTP_WIRE("HttpClient::on_read: {} bytes", received);
-	ssize_t parsed = http_parser_execute(&new_request->parser, &settings, buf, received);
+	ssize_t parsed = http_parser_execute(&new_request->parser, &http_parser_settings, buf, received);
 	if (parsed != received) {
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
@@ -500,7 +500,7 @@ HttpClient::on_read_file_done()
 
 
 // HTTP parser callbacks.
-const http_parser_settings HttpClient::settings = {
+const http_parser_settings HttpClient::http_parser_settings = {
 	HttpClient::message_begin_cb,
 	HttpClient::url_cb,
 	HttpClient::status_cb,
@@ -2596,9 +2596,9 @@ HttpClient::url_resolve(Request& request)
 
 
 void
-HttpClient::endpoints_maker(Request& request, const query_field_t& query_field)
+HttpClient::endpoints_maker(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
-	L_CALL("HttpClient::endpoints_maker(<request>, <query_field>)");
+	L_CALL("HttpClient::endpoints_maker(<request>, <query_field>, <settings>)");
 
 	endpoints.clear();
 
@@ -2613,9 +2613,9 @@ HttpClient::endpoints_maker(Request& request, const query_field_t& query_field)
 
 
 void
-HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
+HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
-	L_CALL("HttpClient::_endpoint_maker(<request>, <query_field>)");
+	L_CALL("HttpClient::_endpoint_maker(<request>, <query_field>, <settings>)");
 
 	std::string index_path;
 
@@ -2689,10 +2689,9 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field)
 		auto index_endpoints = XapiandManager::resolve_index_endpoints(
 			Endpoint{path},
 			query_field.writable,
-			query_field.routing,
 			query_field.primary,
-			opts.num_shards,
-			opts.num_replicas + 1);
+			query_field.routing,
+			settings);
 		for (auto& endpoint : index_endpoints) {
 			endpoints.add(endpoint);
 		}

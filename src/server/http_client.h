@@ -326,7 +326,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void on_read_file(const char* buf, ssize_t received);
 	void on_read_file_done();
 
-	static const http_parser_settings settings;
+	static const http_parser_settings http_parser_settings;
 
 	mutable std::mutex runner_mutex;
 	std::shared_ptr<Request> new_request;
@@ -394,8 +394,8 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void nodes_view(Request& request);
 
 	Command url_resolve(Request& request);
-	void _endpoint_maker(Request& request, const query_field_t& query_field);
-	void endpoints_maker(Request& request, const query_field_t& query_field);
+	void _endpoint_maker(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
+	void endpoints_maker(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 	query_field_t query_field_maker(Request& request, int flags);
 
 	void log_request(Request& request);

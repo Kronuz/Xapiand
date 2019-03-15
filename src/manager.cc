@@ -1360,7 +1360,7 @@ XapiandManager::load_nodes()
 
 #ifdef XAPIAND_CLUSTERING
 std::vector<std::vector<std::string>>
-calculate_shards(const std::string& normalized_path, size_t num_shards, size_t num_replicas_plus_master)
+calculate_shards(const std::string& normalized_path, size_t num_shards = 0, size_t num_replicas_plus_master = 0)
 {
 	L_CALL("calculate_shards({})", repr(normalized_path));
 
@@ -1470,9 +1470,30 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 
 
 std::vector<std::vector<std::string>>
-index_calculate_shards(const std::string& normalized_path, size_t num_shards, size_t num_replicas_plus_master)
+index_calculate_shards(const std::string& normalized_path, const MsgPack* settings)
 {
-	L_CALL("index_calculate_shards({})", repr(normalized_path));
+	L_CALL("index_calculate_shards({}, {})", repr(normalized_path), settings ? settings->to_string() : "null");
+
+	size_t num_shards = 0;
+	size_t num_replicas_plus_master = 0;
+
+	if (settings && settings->is_map()) {
+		auto num_shards_it = settings->find("shards");
+		if (num_shards_it != settings->end()) {
+			auto& num_shards_val = num_shards_it.value();
+			if (num_shards_val.is_number()) {
+				num_shards = num_shards_val.u64();
+			}
+		}
+
+		auto num_replicas_it = settings->find("replicas");
+		if (num_replicas_it != settings->end()) {
+			auto& num_replicas_val = num_replicas_it.value();
+			if (num_replicas_val.is_number()) {
+				num_replicas_plus_master = num_replicas_val.u64() + 1;
+			}
+		}
+	}
 
 	auto shards = calculate_shards(normalized_path, num_shards, num_replicas_plus_master);
 	try {
@@ -1608,9 +1629,9 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const std::string& routing, size_t num_shards, size_t num_replicas_plus_master)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const std::string& routing_param, const MsgPack* settings)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {}, {})", repr(normalized_path), writable, repr(routing), num_shards, num_replicas_plus_master);
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {})", repr(normalized_path), writable, repr(routing_param), settings ? settings->to_string() : "null");
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
@@ -1677,10 +1698,21 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		}
 
 		if (nodes.empty()) {
+			std::string routing;
+			if (settings && settings->is_map()) {
+				auto routing_it = settings->find("routing");
+				if (routing_it != settings->end()) {
+					auto& routing_val = routing_it.value();
+					if (routing_val.is_string()) {
+						routing = routing_val.str();
+					}
+				}
+			}
+
 			if (writable) {
-				shards = index_calculate_shards(routing.empty() ? normalized_path : routing, num_shards, num_replicas_plus_master);
+				shards = index_calculate_shards(routing.empty() ? routing_param.empty() ? normalized_path : routing_param : routing, settings);
 			} else {
-				shards = calculate_shards(routing.empty() ? normalized_path : routing, num_shards, num_replicas_plus_master);
+				shards = calculate_shards(routing.empty() ? routing_param.empty() ? normalized_path : routing_param : routing);
 			}
 			ASSERT(!shards.empty());
 			nodes = shards_to_nodes(shards);
@@ -1714,12 +1746,12 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 
 Endpoints
-XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, const std::string& routing, bool primary, size_t num_shards, size_t num_replicas_plus_master)
+XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const std::string& routing_param, const MsgPack* settings)
 {
-	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {}, {}, {})", repr(endpoint.to_string()), writable, repr(routing), primary, num_shards, num_replicas_plus_master);
+	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, repr(routing_param), settings ? settings->to_string() : "null");
 
 	Endpoints endpoints;
-	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, routing, num_shards, num_replicas_plus_master);
+	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, routing_param, settings);
 	size_t shard_num = 0;
 	int n_shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
