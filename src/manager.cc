@@ -1582,9 +1582,9 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, std::string_view routing_param, const MsgPack* settings)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const MsgPack* settings)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {})", repr(normalized_path), writable, repr(routing_param), settings ? settings->to_string() : "null");
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {})", repr(normalized_path), writable, settings ? settings->to_string() : "null");
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
@@ -1652,10 +1652,6 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 		size_t num_shards = opts.num_shards;
 		size_t num_replicas_plus_master = opts.num_replicas + 1;
-		std::string_view routing = normalized_path;
-		if (!routing_param.empty()) {
-			routing = routing_param;
-		}
 
 		if (settings && settings->is_map()) {
 			auto num_shards_it = settings->find("shards");
@@ -1673,14 +1669,6 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 					num_replicas_plus_master = num_replicas_val.u64() + 1;
 				}
 			}
-
-			auto routing_it = settings->find("routing");
-			if (routing_it != settings->end()) {
-				auto& routing_val = routing_it.value();
-				if (routing_val.is_string()) {
-					routing = routing_val.str_view();
-				}
-			}
 		}
 
 		auto indexed_nodes = Node::indexed_nodes();
@@ -1696,7 +1684,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			num_replicas_plus_master = indexed_nodes;
 		}
 
-		size_t routing_key = jump_consistent_hash(routing, indexed_nodes);
+		size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
 
 		auto n_shards = nodes.size();
 		if (n_shards) {
@@ -1705,11 +1693,6 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 				num_shards = n_shards;
 			}
 			auto& main_master_replicas = nodes.front();
-			auto main_master_node = main_master_replicas.front();  // The very first node is the main master
-			if (routing_key != main_master_node->idx - 1) {
-				L_WARNING("Established routing of {} cannot be changed from {} to {}", repr(normalized_path), repr(main_master_node->name()), repr(Node::get_node(routing_key + 1)->name()));
-				routing_key = main_master_node->idx - 1;
-			}
 			if (main_master_replicas.size() != num_replicas_plus_master) {
 				n_shards = 0;  // Force re-calculation of shards with new replicas size
 			}
@@ -1759,12 +1742,12 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 
 Endpoints
-XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, std::string_view routing_param, const MsgPack* settings)
+XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings)
 {
-	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, repr(routing_param), settings ? settings->to_string() : "null");
+	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
 
 	Endpoints endpoints;
-	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, routing_param, settings);
+	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, settings);
 	size_t shard_num = 0;
 	int n_shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {

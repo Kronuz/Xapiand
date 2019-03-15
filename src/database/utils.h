@@ -100,7 +100,6 @@ struct query_field_t {
 	std::string time;
 	std::string period;
 	std::string selector;
-	std::string routing;
 
 	// Only used when the sort type is string.
 	std::string metric;

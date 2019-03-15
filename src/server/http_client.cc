@@ -2749,7 +2749,6 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, 
 			Endpoint{path},
 			query_field.writable,
 			query_field.primary,
-			query_field.routing,
 			settings);
 		for (auto& endpoint : index_endpoints) {
 			endpoints.add(endpoint);
@@ -2975,11 +2974,6 @@ HttpClient::query_field_maker(Request& request, int flags)
 	request.query_parser.rewind();
 	if (request.query_parser.next("selector") != -1) {
 		query_field.selector = request.query_parser.get();
-	}
-
-	request.query_parser.rewind();
-	if (request.query_parser.next("routing") != -1) {
-		query_field.routing = request.query_parser.get();
 	}
 
 	return query_field;

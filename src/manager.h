@@ -197,8 +197,8 @@ private:
 	void join_cluster_impl();
 #endif
 
-	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, std::string_view routing_param, const MsgPack* settings);
-	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, std::string_view routing_param, const MsgPack* settings);
+	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, const MsgPack* settings);
+	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings);
 
 	std::string server_metrics_impl();
 
@@ -238,14 +238,14 @@ public:
 		_manager.reset();
 	}
 
-	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, std::string_view routing_param = "", const MsgPack* settings = nullptr) {
+	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, const MsgPack* settings = nullptr) {
 		ASSERT(_manager);
-		return _manager->resolve_index_nodes_impl(normalized_path, writable, routing_param, settings);
+		return _manager->resolve_index_nodes_impl(normalized_path, writable, settings);
 	}
 
-	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, std::string_view routing_param = "", const MsgPack* settings = nullptr) {
+	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
 		ASSERT(_manager);
-		return _manager->resolve_index_endpoints_impl(endpoint, writable, primary, routing_param, settings);
+		return _manager->resolve_index_endpoints_impl(endpoint, writable, primary, settings);
 	}
 
 	static void setup_node() {
