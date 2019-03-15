@@ -1423,8 +1423,8 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 		if (n_shards == 1) {
 			index_replicas(normalized_path, shards.front());
 		} else {
-			auto idx = shards.front().front();  // The very first node is the main master
-			auto node = Node::get_node(idx);
+			auto main_master_name = shards.front().front();  // The very first node is the main master
+			auto node = Node::get_node(main_master_name);
 			if (node && node->is_active()) {
 				Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
@@ -1651,42 +1651,64 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			}
 		}
 
-		if (nodes.empty()) {
-			size_t num_shards = opts.num_shards;
-			size_t num_replicas_plus_master = opts.num_replicas + 1;
-			std::string_view routing = normalized_path;
-			if (!routing_param.empty()) {
-				routing = routing_param;
-			}
+		size_t num_shards = opts.num_shards;
+		size_t num_replicas_plus_master = opts.num_replicas + 1;
+		std::string_view routing = normalized_path;
+		if (!routing_param.empty()) {
+			routing = routing_param;
+		}
 
-			if (settings && settings->is_map()) {
-				auto num_shards_it = settings->find("shards");
-				if (num_shards_it != settings->end()) {
-					auto& num_shards_val = num_shards_it.value();
-					if (num_shards_val.is_number()) {
-						num_shards = num_shards_val.u64();
-					}
-				}
-
-				auto num_replicas_it = settings->find("replicas");
-				if (num_replicas_it != settings->end()) {
-					auto& num_replicas_val = num_replicas_it.value();
-					if (num_replicas_val.is_number()) {
-						num_replicas_plus_master = num_replicas_val.u64() + 1;
-					}
-				}
-
-				auto routing_it = settings->find("routing");
-				if (routing_it != settings->end()) {
-					auto& routing_val = routing_it.value();
-					if (routing_val.is_string()) {
-						routing = routing_val.str_view();
-					}
+		if (settings && settings->is_map()) {
+			auto num_shards_it = settings->find("shards");
+			if (num_shards_it != settings->end()) {
+				auto& num_shards_val = num_shards_it.value();
+				if (num_shards_val.is_number()) {
+					num_shards = num_shards_val.u64();
+				} else {
+					THROW(ClientError, "Settings field 'shards' must be a non-zero positive number");
 				}
 			}
 
-			auto indexed_nodes = Node::indexed_nodes();
-			size_t routing_key = jump_consistent_hash(routing, indexed_nodes);
+			auto num_replicas_it = settings->find("replicas");
+			if (num_replicas_it != settings->end()) {
+				auto& num_replicas_val = num_replicas_it.value();
+				if (num_replicas_val.is_number()) {
+					num_replicas_plus_master = num_replicas_val.u64() + 1;
+				} else {
+					THROW(ClientError, "Settings field 'replicas' must be a positive number");
+				}
+			}
+
+			auto routing_it = settings->find("routing");
+			if (routing_it != settings->end()) {
+				auto& routing_val = routing_it.value();
+				if (routing_val.is_string()) {
+					routing = routing_val.str_view();
+				} else {
+					THROW(ClientError, "Settings field 'routing' must be a string");
+				}
+			}
+		}
+
+		auto indexed_nodes = Node::indexed_nodes();
+		size_t routing_key = jump_consistent_hash(routing, indexed_nodes);
+
+		auto n_shards = nodes.size();
+		if (n_shards) {
+			if (n_shards != num_shards) {
+				THROW(ClientError, "Established number of shards cannot be changed");
+			}
+			auto& main_master_replicas = nodes.front();
+			auto main_master_node = main_master_replicas.front();  // The very first node is the main master
+			if (main_master_node->idx != routing_key + 1) {
+				THROW(ClientError, "Established routing cannot be changed");
+			}
+			if (main_master_replicas.size() != num_replicas_plus_master) {
+				n_shards = 0;  // Force re-calculation of shards with new replicas size
+			}
+		}
+
+		if (!n_shards) {
 			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
 			ASSERT(!shards.empty());
 
