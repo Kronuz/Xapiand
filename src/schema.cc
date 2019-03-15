@@ -2535,6 +2535,14 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			THROW(ErrorType, "{}'{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 		}
 	}
+
+	for (auto& field : object) {
+		auto name = field.str_view();
+		if (name != VERSION_FIELD_NAME && name != SCHEMA_FIELD_NAME && name != RESERVED_RECURSE) {
+			THROW(ErrorType, "{}Field name {} is not valid for scehmas", prefix, repr(name));
+		}
+	}
+
 	return std::make_pair(nullptr, &schema);
 }
 
