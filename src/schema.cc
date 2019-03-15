@@ -2539,7 +2539,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	for (auto& field : object) {
 		auto name = field.str_view();
 		if (name != VERSION_FIELD_NAME && name != SCHEMA_FIELD_NAME && name != RESERVED_RECURSE) {
-			THROW(ErrorType, "{}Field name {} is not valid for scehmas", prefix, repr(name));
+			THROW(ErrorType, "{}Field name {} is not valid for schema", prefix, repr(name));
 		}
 	}
 
@@ -3020,7 +3020,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 			if (!inserted.second && pos == 0) {
-				THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 			}
 			data = &inserted.first.value();
 		}
@@ -3028,7 +3028,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -3060,7 +3060,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3072,14 +3072,14 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -3090,7 +3090,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -3099,7 +3099,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -3112,7 +3112,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -3125,7 +3125,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -3165,7 +3165,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 			if (!inserted.second && pos == 0) {
-				THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 			}
 			data = &inserted.first.value();
 		}
@@ -3173,7 +3173,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -3205,7 +3205,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3217,14 +3217,14 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -3235,7 +3235,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -3243,7 +3243,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -3255,7 +3255,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
 						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+							THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
 					}
@@ -3268,7 +3268,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field name: {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is duplicated", repr_field(name, inserted.first->as_str()), repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
 			}
@@ -3737,7 +3737,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -3757,7 +3757,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3765,7 +3765,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
@@ -3776,7 +3776,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -3827,7 +3827,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(properties, field_name)) {
@@ -3847,7 +3847,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 					} else {
 						detect_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -3855,7 +3855,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
 					add_field(mut_properties);
@@ -3866,7 +3866,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
@@ -4180,7 +4180,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(mut_properties, field_name)) {
@@ -4199,7 +4199,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 					} else {
 						verify_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -4207,7 +4207,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 				} else {
 					verify_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
@@ -4218,7 +4218,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(mut_properties, field_name)) {
@@ -4268,7 +4268,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
 			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 			}
 			restart_specification();
 			if (feed_subproperties(mut_properties, field_name)) {
@@ -4287,7 +4287,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 				for (++it; !it.last(); ++it) {
 					const auto& n_field_name = *it;
 					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+						THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 					} else {
 						verify_dynamic(n_field_name);
 						add_field(mut_properties);
@@ -4295,7 +4295,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 				}
 				const auto& n_field_name = *it;
 				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, n_field_name), repr(specification.full_meta_name));
 				} else {
 					verify_dynamic(n_field_name);
 					add_field(mut_properties);
@@ -4306,7 +4306,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 
 		const auto& field_name = *it;
 		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field name: {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
+			THROW(ClientError, "Field name {} in {} is not valid", repr_field(name, field_name), repr(specification.full_meta_name));
 		}
 		restart_specification();
 		if (feed_subproperties(mut_properties, field_name)) {
@@ -9586,7 +9586,7 @@ Schema::get_slot_field(std::string_view field_name) const
 	res.flags.inside_namespace = spc.inside_namespace;
 
 	if (!spc.acc_field.empty()) {
-		THROW(ClientError, "Field name: {} is an accuracy, therefore does not have slot", repr(field_name));
+		THROW(ClientError, "Field name {} is an accuracy, therefore does not have slot", repr(field_name));
 	}
 
 	if (res.flags.inside_namespace) {
@@ -9696,7 +9696,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 				spc.acc_field_type = acc_data.second;
 				return spc;
 			} else {
-				THROW(ClientError, "Field name: {} in {} is not valid", repr_field(full_name, field_name), repr(specification.full_meta_name));
+				THROW(ClientError, "Field name {} in {} is not valid", repr_field(full_name, field_name), repr(specification.full_meta_name));
 			}
 		}
 
@@ -9752,7 +9752,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 					spc.acc_field_type = acc_data.second;
 					return spc;
 				} else {
-					THROW(ClientError, "Field name: {} in {} is not valid", repr_field(full_name, partial_field), repr(specification.full_meta_name));
+					THROW(ClientError, "Field name {} in {} is not valid", repr_field(full_name, partial_field), repr(specification.full_meta_name));
 				}
 			}
 			return spc;
