@@ -2459,35 +2459,35 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			return std::make_pair(&object, nullptr);
 		}
 		if (!object.is_map()) {
-			THROW(ErrorType, "{}schema must be a map", prefix);
+			THROW(ErrorType, "{}Schema must be a map", prefix);
 		}
 		auto it_end = object.end();
 		auto type_it = object.find(RESERVED_TYPE);
 		if (type_it != it_end) {
 			auto& type = type_it.value();
 			if (!type.is_string()) {
-				THROW(ErrorType, "{}'{}' field must be a string", prefix, RESERVED_TYPE);
+				THROW(ErrorType, "{}Schema field '{}' must be a string", prefix, RESERVED_TYPE);
 			}
 			auto type_name = type.str_view();
 			const auto& sep_types = required_spc_t::get_types(type_name);
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 				auto endpoint_it = object.find(RESERVED_ENDPOINT);
 				if (endpoint_it == it_end) {
-					THROW(ErrorType, "{}'{}' field does not exist", prefix, RESERVED_ENDPOINT);
+					THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, RESERVED_ENDPOINT);
 				}
 				auto& endpoint = endpoint_it.value();
 				if (!endpoint.is_string()) {
-					THROW(ErrorType, "{}'{}' field must be a string", prefix, RESERVED_ENDPOINT);
+					THROW(ErrorType, "{}Schema field '{}' must be a string", prefix, RESERVED_ENDPOINT);
 				}
 				return std::make_pair(&endpoint, &object);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "{}schema object has an unsupported type: {}", prefix, type_name);
+				THROW(ErrorType, "{}Schema object has an unsupported type: {}", prefix, type_name);
 			}
 		}
 	} else {
 		if (!object.is_map()) {
-			THROW(ErrorType, "{}schema must be a map", prefix);
+			THROW(ErrorType, "{}Schema must be a map", prefix);
 		}
 	}
 
@@ -2497,12 +2497,12 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	auto version_it = object.find(VERSION_FIELD_NAME);
 	if (version_it == it_end) {
 		if (!allow_versionless) {
-			THROW(ErrorType, "{}'{}' field does not exist", prefix, VERSION_FIELD_NAME);
+			THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, VERSION_FIELD_NAME);
 		}
 	} else {
 		auto& version = version_it.value();
 		if (!version.is_number()) {
-			THROW(ErrorType, "{}'{}' field must be a number", prefix, VERSION_FIELD_NAME);
+			THROW(ErrorType, "{}Schema field '{}' must be a number", prefix, VERSION_FIELD_NAME);
 		}
 		if (version.f64() != DB_VERSION_SCHEMA) {
 			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
@@ -2513,33 +2513,33 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	auto schema_it = object.find(SCHEMA_FIELD_NAME);
 	if (schema_it == it_end) {
 		if (!allow_root) {
-			THROW(ErrorType, "{}'{}' field does not exist", prefix, SCHEMA_FIELD_NAME);
+			THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, SCHEMA_FIELD_NAME);
 		}
 		return std::make_pair(nullptr, nullptr);
 	}
 
 	auto& schema = schema_it.value();
 	if (!schema.is_map()) {
-		THROW(ErrorType, "{}'{}' is not an object", prefix, SCHEMA_FIELD_NAME);
+		THROW(ErrorType, "{}Schema field '{}' is not an object", prefix, SCHEMA_FIELD_NAME);
 	}
 	auto schema_it_end = schema.end();
 	auto type_it = schema.find(RESERVED_TYPE);
 	if (type_it != schema_it_end) {
 		auto& type = type_it.value();
 		if (!type.is_string()) {
-			THROW(ErrorType, "{}'{}.{}' field must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
+			THROW(ErrorType, "{}Schema field '{}.{}' must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
 		}
 		auto type_name = type.str_view();
 		const auto& sep_types = required_spc_t::get_types(type_name);
 		if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-			THROW(ErrorType, "{}'{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
+			THROW(ErrorType, "{}Schema field '{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 		}
 	}
 
 	for (auto& field : object) {
 		auto name = field.str_view();
 		if (name != VERSION_FIELD_NAME && name != SCHEMA_FIELD_NAME && name != RESERVED_RECURSE) {
-			THROW(ErrorType, "{}Field name {} is not valid for schema", prefix, repr(name));
+			THROW(ErrorType, "{}Schema field {} is not valid", prefix, repr(name));
 		}
 	}
 
