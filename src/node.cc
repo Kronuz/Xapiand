@@ -23,6 +23,7 @@
 #include "node.h"
 
 #include <cstdlib>              // for atoi
+#include <algorithm>            // for std::lower_bound
 
 #include "hashes.hh"            // for fnv1ah32::hash
 #include "length.h"             // for serialise_length, unserialise_length, ser...
@@ -462,6 +463,13 @@ Node::reset()
 }
 
 
+bool
+operator<(const std::shared_ptr<const Node>& a, const std::shared_ptr<const Node>& b)
+{
+	return !a || (b && a->idx < b->idx);
+}
+
+
 std::vector<std::shared_ptr<const Node>>
 Node::nodes()
 {
@@ -471,7 +479,8 @@ Node::nodes()
 
 	std::vector<std::shared_ptr<const Node>> nodes;
 	for (const auto& node_pair : _nodes) {
-		nodes.push_back(node_pair.second);
+		auto it = std::lower_bound(nodes.begin(), nodes.end(), node_pair.second);
+		nodes.insert(it, node_pair.second);
 	}
 
 	return nodes;
