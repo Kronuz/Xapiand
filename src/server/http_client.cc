@@ -1581,14 +1581,23 @@ HttpClient::index_document_view(Request& request)
 		doc_id = request.path_parser.get_id();
 	}
 
+	auto& decoded_body = request.decoded_body();
+
+	MsgPack* settings = nullptr;
+	if (decoded_body.is_map()) {
+		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
+		if (settings_it != decoded_body.end()) {
+			settings = &settings_it.value();
+		}
+	}
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field);
+	endpoints_maker(request, query_field, settings);
 
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
-	auto& decoded_body = request.decoded_body();
 	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
@@ -1616,13 +1625,23 @@ HttpClient::write_schema_view(Request& request)
 
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
+	auto& decoded_body = request.decoded_body();
+
+	MsgPack* settings = nullptr;
+	if (decoded_body.is_map()) {
+		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
+		if (settings_it != decoded_body.end()) {
+			settings = &settings_it.value();
+		}
+	}
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field);
+	endpoints_maker(request, query_field, settings);
 
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
-	db_handler.write_schema(request.decoded_body(), request.method == HTTP_PUT);
+	db_handler.write_schema(decoded_body, request.method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1649,8 +1668,18 @@ HttpClient::update_document_view(Request& request)
 {
 	L_CALL("HttpClient::update_document_view()");
 
+	auto& decoded_body = request.decoded_body();
+
+	MsgPack* settings = nullptr;
+	if (decoded_body.is_map()) {
+		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
+		if (settings_it != decoded_body.end()) {
+			settings = &settings_it.value();
+		}
+	}
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field);
+	endpoints_maker(request, query_field, settings);
 
 	std::string doc_id(request.path_parser.get_id());
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
@@ -1659,7 +1688,6 @@ HttpClient::update_document_view(Request& request)
 
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
-	auto& decoded_body = request.decoded_body();
 	if (request.method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 	} else if (request.method == HTTP_STORE) {
@@ -1896,8 +1924,18 @@ HttpClient::touch_view(Request& request)
 {
 	L_CALL("HttpClient::touch_view()");
 
+	auto& decoded_body = request.decoded_body();
+
+	MsgPack* settings = nullptr;
+	if (decoded_body.is_map()) {
+		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
+		if (settings_it != decoded_body.end()) {
+			settings = &settings_it.value();
+		}
+	}
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-	endpoints_maker(request, query_field);
+	endpoints_maker(request, query_field, settings);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1926,7 +1964,7 @@ HttpClient::commit_view(Request& request)
 {
 	L_CALL("HttpClient::commit_view()");
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	endpoints_maker(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
@@ -2021,23 +2059,44 @@ HttpClient::restore_view(Request& request)
 {
 	L_CALL("HttpClient::restore_view()");
 
-	if (request.begining) {
-		auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-		endpoints_maker(request, query_field);
-
-		request.processing = std::chrono::system_clock::now();
-
-		request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method, request.comments);
-	}
-
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
 		MsgPack obj;
 		while (request.next_object(obj)) {
+			if (!request.indexer) {
+				MsgPack* settings = nullptr;
+				if (obj.is_map()) {
+					auto settings_it = obj.find(RESERVED_SETTINGS);
+					if (settings_it != obj.end()) {
+						settings = &settings_it.value();
+					}
+				}
+				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
+				endpoints_maker(request, query_field, settings);
+
+				request.processing = std::chrono::system_clock::now();
+
+				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method, request.comments);
+			}
 			request.indexer->prepare(std::move(obj));
 		}
 	} else {
 		auto& docs = request.decoded_body();
 		for (auto& obj : docs) {
+			if (!request.indexer) {
+				MsgPack* settings = nullptr;
+				if (obj.is_map()) {
+					auto settings_it = obj.find(RESERVED_SETTINGS);
+					if (settings_it != obj.end()) {
+						settings = &settings_it.value();
+					}
+				}
+				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
+				endpoints_maker(request, query_field, settings);
+
+				request.processing = std::chrono::system_clock::now();
+
+				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method, request.comments);
+			}
 			request.indexer->prepare(std::move(obj));
 		}
 	}
@@ -2607,7 +2666,7 @@ HttpClient::endpoints_maker(Request& request, const query_field_t& query_field, 
 		if (query_field.writable && !endpoints.empty()) {
 			THROW(ClientError, "Writable endpoints can only use single indexes");
 		}
-		_endpoint_maker(request, query_field);
+		_endpoint_maker(request, query_field, settings);
 	}
 }
 
