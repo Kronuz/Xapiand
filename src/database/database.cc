@@ -406,17 +406,18 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool ver
 
 	ASSERT(!shards.empty());
 	size_t n_shards = shards.size();
-	size_t shard_num;
-	for (int t = 10; t >= 0; --t) {
-		// Try getting a new ID which can currently be indexed (active node)
-		shard_num = random_int(0, n_shards - 1);
-		auto node = shards[shard_num]->node();
-		if (node && node->is_active()) {
-			break;
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		for (int t = 10; t >= 0; --t) {
+			// Try getting a new ID which can currently be indexed (active node)
+			shard_num = random_int(0, n_shards - 1);
+			auto node = shards[shard_num]->node();
+			if (node && node->is_active()) {
+				break;
+			}
 		}
 	}
 	auto& shard = shards[shard_num];
-	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->add_document(std::move(doc), commit_, wal_, version_);
 	return (did - 1) * n_shards + shard_num + 1;
 }
@@ -432,7 +433,6 @@ Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commi
 	size_t shard_num = (did - 1) % n_shards;
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;
 	auto& shard = shards[shard_num];
-	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	shard->replace_document(shard_did, std::move(doc), commit_, wal_, version_);
 	return did;
 }
@@ -445,21 +445,30 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 
 	ASSERT(!shards.empty());
 	size_t n_shards = shards.size();
-	size_t shard_num;
-	if (term == "QN\x80") {
-		for (int t = 10; t >= 0; --t) {
-			// Try getting a new ID which can currently be indexed (active node)
-			shard_num = random_int(0, n_shards - 1);
-			auto node = shards[shard_num]->node();
-			if (node && node->is_active()) {
-				break;
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		ASSERT(term.size() > 2);
+		if (term[0] == 'Q' && term[1] == 'N') {
+			auto did_serialised = term.substr(2);
+			Xapian::docid did = sortable_unserialise(did_serialised);
+			if (did == 0) {
+				for (int t = 10; t >= 0; --t) {
+					// Try getting a new ID which can currently be indexed (active node)
+					shard_num = random_int(0, n_shards - 1);
+					auto node = shards[shard_num]->node();
+					if (node && node->is_active()) {
+						break;
+					}
+				}
+				doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+			} else {
+				shard_num = (did - 1) % n_shards;
 			}
+		} else {
+			shard_num = fnv1ah64::hash(term) % n_shards;
 		}
-	} else {
-		shard_num = fnv1ah64::hash(term) % n_shards;
 	}
 	auto& shard = shards[shard_num];
-	doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
 	auto did = shard->replace_document_term(term, std::move(doc), commit_, wal_, version_);
 	return (did - 1) * n_shards + shard_num + 1;
 }
