@@ -6294,6 +6294,7 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		hh(RESERVED_PARTIAL_PATHS),
 		hh(RESERVED_INDEX_UUID_FIELD),
 		hh(RESERVED_SCHEMA),
+		hh(RESERVED_SETTINGS),
 	});
 
 	switch (_.find(key)) {
@@ -6365,6 +6366,9 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 			return true;
 		case _.fhh(RESERVED_SCHEMA):
 			write_schema(mut_properties, prop_name, value);
+			return true;
+		case _.fhh(RESERVED_SETTINGS):
+			write_settings(mut_properties, prop_name, value);
 			return true;
 		default:
 			return false;
@@ -6675,6 +6679,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_UUID_DETECTION),
 		hh(RESERVED_NAMESPACE),
 		hh(RESERVED_SCHEMA),
+		hh(RESERVED_SETTINGS),
 	});
 	return _.count(key) != 0u;
 }
@@ -6746,6 +6751,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_UUID_DETECTION),
 		hh(RESERVED_NAMESPACE),
 		hh(RESERVED_SCHEMA),
+		hh(RESERVED_SETTINGS),
 	});
 
 	switch (_.find(key)) {
@@ -6927,6 +6933,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 			return true;
 		case _.fhh(RESERVED_SCHEMA):
 			Schema::consistency_schema(prop_name, value);
+			return true;
+		case _.fhh(RESERVED_SETTINGS):
+			Schema::consistency_settings(prop_name, value);
 			return true;
 		default:
 			return false;
@@ -7943,6 +7952,15 @@ Schema::write_schema(MsgPack& /*unused*/, std::string_view prop_name, const MsgP
 	L_CALL("Schema::write_schema({})", repr(doc_schema.to_string()));
 
 	consistency_schema(prop_name, doc_schema);
+}
+
+
+void
+Schema::write_settings(MsgPack& /*unused*/, std::string_view prop_name, const MsgPack& doc_settings)
+{
+	L_CALL("Schema::write_settings({})", repr(doc_settings.to_string()));
+
+	consistency_settings(prop_name, doc_settings);
 }
 
 
@@ -8978,6 +8996,22 @@ Schema::consistency_schema(std::string_view prop_name, const MsgPack& doc_schema
 
 	if (specification.full_meta_name.empty()) {
 		if (!doc_schema.is_string() && !doc_schema.is_map()) {
+			THROW(ClientError, "{} must be string or map", repr(prop_name));
+		}
+	} else {
+		THROW(ClientError, "{} is only allowed in root object", repr(prop_name));
+	}
+}
+
+
+inline void
+Schema::consistency_settings(std::string_view prop_name, const MsgPack& doc_settings)
+{
+	// RESERVED_SETTINGS isn't heritable and is only allowed in root object.
+	L_CALL("Schema::consistency_settings({})", repr(doc_settings.to_string()));
+
+	if (specification.full_meta_name.empty()) {
+		if (!doc_settings.is_map()) {
 			THROW(ClientError, "{} must be string or map", repr(prop_name));
 		}
 	} else {

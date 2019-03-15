@@ -51,6 +51,7 @@ constexpr const char RESERVED_NAMESPACE[]                   = RESERVED__ "namesp
 constexpr const char RESERVED_PARTIAL_PATHS[]               = RESERVED__ "partial_paths";
 constexpr const char RESERVED_INDEX_UUID_FIELD[]            = RESERVED__ "index_uuid_field";
 constexpr const char RESERVED_SCHEMA[]                      = RESERVED__ "schema";
+constexpr const char RESERVED_SETTINGS[]                    = RESERVED__ "settings";
 constexpr const char RESERVED_ENDPOINT[]                    = RESERVED__ "endpoint";
 
 // Reserved for bulk operations

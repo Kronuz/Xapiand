@@ -841,6 +841,7 @@ class Schema {
 	void write_partial_paths(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_partial_paths);
 	void write_index_uuid_field(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_index_uuid_field);
 	void write_schema(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_schema);
+	void write_settings(MsgPack& properties, std::string_view prop_name, const MsgPack& doc_settings);
 	void write_endpoint(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_endpoint);
 
 
@@ -901,6 +902,7 @@ class Schema {
 	void consistency_ecma(std::string_view prop_name, const MsgPack& doc_ecma);
 	void consistency_script(std::string_view prop_name, const MsgPack& doc_script);
 	void consistency_schema(std::string_view prop_name, const MsgPack& doc_schema);
+	void consistency_settings(std::string_view prop_name, const MsgPack& doc_settings);
 
 
 #ifdef XAPIAND_CHAISCRIPT
