@@ -23,6 +23,7 @@
 #include "database/database.h"
 
 #include <algorithm>              // for std::move
+#include <limits>                 // for std::numeric_limits
 
 #include "cassert.h"              // for ASSERT
 #include "database/data.h"        // for Locator
@@ -37,7 +38,6 @@
 #include "lz4/xxhash.h"           // for XXH32_update, XXH32_state_t
 #include "msgpack.h"              // for MsgPack
 #include "node.h"                 // for Node
-#include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "string.hh"              // for string::format
 
@@ -408,12 +408,20 @@ Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool ver
 	size_t n_shards = shards.size();
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		for (int t = 10; t >= 0; --t) {
-			// Try getting a new ID which can currently be indexed (active node)
-			shard_num = random_int(0, n_shards - 1);
-			auto node = shards[shard_num]->node();
+		// Try getting a new ID which can currently be indexed (active node)
+		// Get the least used shard:
+		auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+		for (size_t n = 0; n < n_shards; ++n) {
+			auto& shard = shards[n];
+			auto node = shard->node();
 			if (node && node->is_active()) {
-				break;
+				try {
+					auto doccount = shard->db()->get_doccount();
+					if (min_doccount > doccount) {
+						min_doccount = doccount;
+						shard_num = n;
+					}
+				} catch (...) {}
 			}
 		}
 	}
@@ -453,12 +461,20 @@ Database::replace_document_term(const std::string& term, Xapian::Document&& doc,
 			auto did_serialised = term.substr(2);
 			Xapian::docid did = sortable_unserialise(did_serialised);
 			if (did == 0) {
-				for (int t = 10; t >= 0; --t) {
-					// Try getting a new ID which can currently be indexed (active node)
-					shard_num = random_int(0, n_shards - 1);
-					auto node = shards[shard_num]->node();
+				// Try getting a new ID which can currently be indexed (active node)
+				// Get the least used shard:
+				auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+				for (size_t n = 0; n < n_shards; ++n) {
+					auto& shard = shards[n];
+					auto node = shard->node();
 					if (node && node->is_active()) {
-						break;
+						try {
+							auto doccount = shard->db()->get_doccount();
+							if (min_doccount > doccount) {
+								min_doccount = doccount;
+								shard_num = n;
+							}
+						} catch (...) {}
 					}
 				}
 			} else {

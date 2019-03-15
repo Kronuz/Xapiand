@@ -40,6 +40,8 @@
 #include "cassert.h"                              // for ASSERT
 #include "cast.h"                                 // for Cast
 #include "cuuid/uuid.h"                           // for UUIDGenerator
+#include "database/database.h"                    // for Database
+#include "database/lock.h"                        // for lock_database
 #include "database/handler.h"                     // for DatabaseHandler
 #include "datetime.h"                             // for isDate, tm_t
 #include "exception.h"                            // for ClientError
@@ -2786,14 +2788,37 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				/* FALLTHROUGH */
 				case FieldType::UUID: {
 					size_t n_shards = db_handler.endpoints.size();
-					for (int t = 10; t >= 0; --t) {
-						// Try getting a new ID which can currently be indexed (active node)
-						unprefixed_term_id = generator(opts.uuid_compact).serialise();
-						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-						size_t shard_num = fnv1ah64::hash(term_id) % n_shards;
-						auto node = db_handler.endpoints[shard_num].node();
+					size_t shard_num = 0;
+					// Try getting a new ID which can currently be indexed (active node)
+					// Get the least used shard:
+					auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+					for (size_t n = 0; n < n_shards; ++n) {
+						auto& endpoint = db_handler.endpoints[n];
+						auto node = endpoint.node();
 						if (node && node->is_active()) {
-							break;
+							try {
+								lock_database lk_db(Endpoints{endpoint}, db_handler.flags);
+								auto doccount = lk_db->db()->get_doccount();
+								if (min_doccount > doccount) {
+									min_doccount = doccount;
+									shard_num = n;
+								}
+							} catch (...) {}
+						}
+					}
+					// Figure out a term which goes into the least used shard:
+					for (int t = 10; t >= 0; --t) {
+						auto tmp_unprefixed_term_id = generator(opts.uuid_compact).serialise();
+						auto tmp_term_id = prefixed(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
+						auto& endpoint = db_handler.endpoints[tmp_shard_num];
+						auto node = endpoint.node();
+						if (node && node->is_active()) {
+							unprefixed_term_id = std::move(tmp_unprefixed_term_id);
+							term_id = std::move(tmp_term_id);
+							if (shard_num == tmp_shard_num) {
+								break;
+							}
 						}
 					}
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
@@ -2818,15 +2843,39 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::STRING:
 				case FieldType::KEYWORD: {
 					size_t n_shards = db_handler.endpoints.size();
-					for (int t = 10; t >= 0; --t) {
-						// Try getting a new ID which can currently be indexed (active node)
-						document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
-						unprefixed_term_id = Serialise::serialise(spc_id, document_id);
-						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-						size_t shard_num = fnv1ah64::hash(term_id) % n_shards;
-						auto node = db_handler.endpoints[shard_num].node();
+					size_t shard_num = 0;
+					// Try getting a new ID which can currently be indexed (active node)
+					// Get the least used shard:
+					auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+					for (size_t n = 0; n < n_shards; ++n) {
+						auto& endpoint = db_handler.endpoints[n];
+						auto node = endpoint.node();
 						if (node && node->is_active()) {
-							break;
+							try {
+								lock_database lk_db(Endpoints{endpoint}, db_handler.flags);
+								auto doccount = lk_db->db()->get_doccount();
+								if (min_doccount > doccount) {
+									min_doccount = doccount;
+									shard_num = n;
+								}
+							} catch (...) {}
+						}
+					}
+					// Figure out a term which goes into the least used shard:
+					for (int t = 10; t >= 0; --t) {
+						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
+						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
+						auto tmp_term_id = prefixed(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
+						auto& endpoint = db_handler.endpoints[tmp_shard_num];
+						auto node = endpoint.node();
+						if (node && node->is_active()) {
+							document_id = std::move(tmp_document_id);
+							unprefixed_term_id = std::move(tmp_unprefixed_term_id);
+							term_id = std::move(tmp_term_id);
+							if (shard_num == tmp_shard_num) {
+								break;
+							}
 						}
 					}
 					break;

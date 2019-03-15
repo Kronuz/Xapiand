@@ -51,6 +51,7 @@
 #include "allocator.h"                           // for allocator::total_allocated
 #include "cassert.h"                             // for ASSERT
 #include "color_tools.hh"                        // for color
+#include "database/database.h"                   // for Database
 #include "database/cleanup.h"                    // for DatabaseCleanup
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
 #include "database/pool.h"                       // for DatabasePool
