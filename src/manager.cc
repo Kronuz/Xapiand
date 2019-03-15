@@ -1360,27 +1360,17 @@ XapiandManager::load_nodes()
 
 #ifdef XAPIAND_CLUSTERING
 std::vector<std::vector<std::string>>
-calculate_shards(const std::string& normalized_path, size_t num_shards = 0, size_t num_replicas_plus_master = 0)
+calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, size_t num_replicas_plus_master)
 {
-	L_CALL("calculate_shards({})", repr(normalized_path));
-
-	if (num_shards == 0) {
-		num_shards = opts.num_shards;
-	}
-
-	if (num_replicas_plus_master == 0) {
-		num_replicas_plus_master = opts.num_replicas + 1;
-	}
+	L_CALL("calculate_shards({}, {}, {}, {})", routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
 
 	std::vector<std::vector<std::string>> shards;
-	auto indexed_nodes = Node::indexed_nodes();
 	if (indexed_nodes) {
 		num_replicas_plus_master = std::min(indexed_nodes, num_replicas_plus_master);
-		size_t consistent_hash = jump_consistent_hash(normalized_path, indexed_nodes);
 		for (size_t s = 0; s < std::min(9999UL, num_shards); ++s) {
 			std::vector<std::string> replicas;
 			for (size_t r = 0; r < num_replicas_plus_master; ++r) {
-				size_t idx = ((consistent_hash - s + r) % indexed_nodes) + 1;
+				size_t idx = ((routing_key - s + r) % indexed_nodes) + 1;
 				auto node = Node::get_node(idx);
 				replicas.push_back(node->name());
 			}
@@ -1466,42 +1456,6 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			}
 		}
 	}
-}
-
-
-std::vector<std::vector<std::string>>
-index_calculate_shards(const std::string& normalized_path, const MsgPack* settings)
-{
-	L_CALL("index_calculate_shards({}, {})", repr(normalized_path), settings ? settings->to_string() : "null");
-
-	size_t num_shards = 0;
-	size_t num_replicas_plus_master = 0;
-
-	if (settings && settings->is_map()) {
-		auto num_shards_it = settings->find("shards");
-		if (num_shards_it != settings->end()) {
-			auto& num_shards_val = num_shards_it.value();
-			if (num_shards_val.is_number()) {
-				num_shards = num_shards_val.u64();
-			}
-		}
-
-		auto num_replicas_it = settings->find("replicas");
-		if (num_replicas_it != settings->end()) {
-			auto& num_replicas_val = num_replicas_it.value();
-			if (num_replicas_val.is_number()) {
-				num_replicas_plus_master = num_replicas_val.u64() + 1;
-			}
-		}
-	}
-
-	auto shards = calculate_shards(normalized_path, num_shards, num_replicas_plus_master);
-	try {
-		index_shards(normalized_path, shards);
-	} catch (...) {
-		L_EXC("Cannot save database index settings: {}", normalized_path);
-	}
-	return shards;
 }
 
 
@@ -1629,7 +1583,7 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const std::string& routing_param, const MsgPack* settings)
+XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, std::string_view routing_param, const MsgPack* settings)
 {
 	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {})", repr(normalized_path), writable, repr(routing_param), settings ? settings->to_string() : "null");
 
@@ -1698,24 +1652,54 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		}
 
 		if (nodes.empty()) {
-			std::string routing;
+			size_t num_shards = opts.num_shards;
+			size_t num_replicas_plus_master = opts.num_replicas + 1;
+			std::string_view routing = normalized_path;
+			if (!routing_param.empty()) {
+				routing = routing_param;
+			}
+
 			if (settings && settings->is_map()) {
+				auto num_shards_it = settings->find("shards");
+				if (num_shards_it != settings->end()) {
+					auto& num_shards_val = num_shards_it.value();
+					if (num_shards_val.is_number()) {
+						num_shards = num_shards_val.u64();
+					}
+				}
+
+				auto num_replicas_it = settings->find("replicas");
+				if (num_replicas_it != settings->end()) {
+					auto& num_replicas_val = num_replicas_it.value();
+					if (num_replicas_val.is_number()) {
+						num_replicas_plus_master = num_replicas_val.u64() + 1;
+					}
+				}
+
 				auto routing_it = settings->find("routing");
 				if (routing_it != settings->end()) {
 					auto& routing_val = routing_it.value();
 					if (routing_val.is_string()) {
-						routing = routing_val.str();
+						routing = routing_val.str_view();
 					}
 				}
 			}
 
-			if (writable) {
-				shards = index_calculate_shards(routing.empty() ? routing_param.empty() ? normalized_path : routing_param : routing, settings);
-			} else {
-				shards = calculate_shards(routing.empty() ? routing_param.empty() ? normalized_path : routing_param : routing);
-			}
+			auto indexed_nodes = Node::indexed_nodes();
+			size_t routing_key = jump_consistent_hash(routing, indexed_nodes);
+			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
 			ASSERT(!shards.empty());
+
+			if (writable) {
+				try {
+					index_shards(normalized_path, shards);
+				} catch (...) {
+					L_EXC("Cannot save database index settings: {}", normalized_path);
+				}
+			}
+
 			nodes = shards_to_nodes(shards);
+
 			lk.lock();
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
@@ -1746,7 +1730,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 
 
 Endpoints
-XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const std::string& routing_param, const MsgPack* settings)
+XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, std::string_view routing_param, const MsgPack* settings)
 {
 	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, repr(routing_param), settings ? settings->to_string() : "null");
 
