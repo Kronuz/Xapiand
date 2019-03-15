@@ -710,7 +710,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Request updates from indexes databases
 		for (auto& node : Node::nodes()) {
 			if (node->idx && !node->is_local()) {
-				auto index = string::format(".xapiand/{}", node->lower_name());
+				auto index = string::format(".xapiand/index/.__{}", node->idx);
 				Endpoint endpoint{index};
 				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
@@ -1388,7 +1388,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 	auto idx = replicas.front();  // The very first node is the shard master
 	auto node = Node::get_node(idx);
 	if (node && node->is_active()) {
-		Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
+		Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		MsgPack obj = {
 			{ ID_FIELD_NAME, {
@@ -1425,7 +1425,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			auto main_master_name = shards.front().front();  // The very first node is the main master
 			auto node = Node::get_node(main_master_name);
 			if (node && node->is_active()) {
-				Endpoint endpoint{string::format(".xapiand/{}", node->lower_name()), node};
+				Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				MsgPack obj = {
 					{ ID_FIELD_NAME, {
@@ -1449,7 +1449,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
 				if (!replicas.empty()) {
-					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
+					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
 					index_replicas(shard_normalized_path, replicas);
 				}
 			}
@@ -1497,7 +1497,7 @@ load_shards(const std::string& normalized_path)
 	Endpoints index_endpoints;
 	for (auto& node : Node::nodes()) {
 		if (node->idx) {
-			index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
+			index_endpoints.add(Endpoint{string::format(".xapiand/index/.__{}", node->idx)});
 		}
 	}
 
@@ -1512,7 +1512,7 @@ load_shards(const std::string& normalized_path)
 			auto& n_shards_val = it.value();
 			if (n_shards_val.is_number()) {
 				size_t n_shards = n_shards_val.u64();
-				for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
+				for (size_t shard_num = 1; shard_num <= n_shards; ++shard_num) {
 					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num);
 					shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
 				}
@@ -1599,14 +1599,29 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			return nodes;
 		}
 
-		if (string::startswith(normalized_path, ".xapiand/")) {
+		if (normalized_path == ".xapiand/index") {
+			for (auto& node : Node::nodes()) {
+				if (node->idx) {
+					std::vector<std::shared_ptr<const Node>> node_replicas;
+					node_replicas.push_back(node);
+					node_replicas.push_back(Node::local_node());
+					nodes.push_back(std::move(node_replicas));
+				}
+			}
+			return nodes;
+		}
+
+		if (string::startswith(normalized_path, ".xapiand/index/.__")) {
 			// Index databases are always in their specified node
 			std::vector<std::shared_ptr<const Node>> node_replicas;
-			auto node_name = normalized_path.substr(9);
-			node_replicas.push_back(Node::get_node(node_name));
-			node_replicas.push_back(Node::local_node());
-			nodes.push_back(std::move(node_replicas));
-			return nodes;
+			int errno_save;
+			size_t idx = strict_stoull(&errno_save, normalized_path.substr(18));
+			if (errno_save == 0) {
+				node_replicas.push_back(Node::get_node(idx));
+				node_replicas.push_back(Node::local_node());
+				nodes.push_back(std::move(node_replicas));
+				return nodes;
+			}
 		}
 
 		static std::mutex resolve_index_lru_mtx;
@@ -1638,7 +1653,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 						nodes.clear();  // There were missing replicas, abort!
 						break;
 					}
-					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
+					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
 					std::vector<std::vector<std::string>> shard_shards;
 					shard_shards.push_back(replicas);
 					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
@@ -1704,7 +1719,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
 				ASSERT(!replicas.empty());
-				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num++);
+				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
 				std::vector<std::vector<std::string>> shard_shards;
 				shard_shards.push_back(replicas);
 				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
@@ -1732,14 +1747,16 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 Endpoints
 XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings)
 {
-	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
+	L_ORANGE("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
 
 	Endpoints endpoints;
 	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, settings);
+	int n_shards = endpoint.path == ".xapiand/index"
+		? 0  // unknown number of shards for .xapiand/index, always use .__ notation
+		: nodes.size();
 	size_t shard_num = 0;
-	int n_shards = nodes.size();
 	for (const auto& shard_nodes : nodes) {
-		auto path = n_shards == 1 ? endpoint.path : string::format("{}/.__{}", endpoint.path, shard_num++);
+		auto path = n_shards == 1 ? endpoint.path : string::format("{}/.__{}", endpoint.path, ++shard_num);
 		Endpoint node_endpoint;
 		for (const auto& node : shard_nodes) {
 			node_endpoint = Endpoint{path, node};
