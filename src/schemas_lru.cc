@@ -88,7 +88,7 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 
 
 std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
-SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
+SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, bool require_foreign)
 {
 	L_CALL("SchemasLRU::get(<db_handler>, {})", obj ? repr(obj->to_string()) : "nullptr");
 
@@ -140,7 +140,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 
 			if (new_metadata && write) {
 				// New LOCAL schema:
-				if (opts.foreign) {
+				if (require_foreign) {
 					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
 				}
 				try {
@@ -281,7 +281,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write)
 
 
 bool
-SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
+SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema, bool require_foreign)
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
@@ -324,6 +324,10 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			old_schema = schema_ptr;  // renew old_schema since lru didn't already have it
 
 			if (new_metadata) {
+				// New LOCAL schema:
+				if (require_foreign) {
+					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
+				}
 				try {
 					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
 						str_schema = db_handler->get_metadata(reserved_schema);
@@ -460,13 +464,10 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			if (*foreign_schema_ptr != *new_schema) {
 				try {
 					DatabaseHandler _db_handler(Endpoints{Endpoint{foreign_path}}, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, HTTP_PUT, db_handler->context);
-					if (_db_handler.get_metadata(reserved_schema).empty()) {
-						_db_handler.set_metadata(reserved_schema, Schema::get_initial_schema()->serialise());
-					}
 					auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 					auto new_schema_copy = *new_schema;
 					// FIXME: Process the foreign_path's subfields instead of ignoring.
-					_db_handler.index(foreign_id.substr(0, needle), 0, true, new_schema_copy, false, false, msgpack_type);
+					_db_handler.index(foreign_id.substr(0, needle), 0, true, new_schema_copy, false, false, msgpack_type, false);
 				} catch(...) {
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);

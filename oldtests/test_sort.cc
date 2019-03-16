@@ -687,7 +687,7 @@ static int make_search(const std::vector<sort_t> _tests, const std::string& metr
 	query_field_t query;
 	query.metric = metric;
 
-	auto schema = db_sort.db_handler.get_schema();
+	auto schema = db_sort.db_handler.get_schema(false);
 	auto spc_id = schema->get_data_id();
 	auto id_type = spc_id.get_type();
 

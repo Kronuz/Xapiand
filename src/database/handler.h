@@ -187,22 +187,22 @@ class DatabaseHandler {
 	std::unique_ptr<MsgPack> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
 #endif
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool require_foreign);
 
-	DataType index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments);
+	DataType index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments, bool require_foreign);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
-	bool update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins);
+	bool update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins, bool require_foreign);
 
 public:
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<std::string>> context_=nullptr);
+	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<std::string>> context_ = nullptr);
 
 	std::shared_ptr<Database> get_database() const noexcept;
-	std::shared_ptr<Schema> get_schema(const MsgPack* obj=nullptr);
+	std::shared_ptr<Schema> get_schema(bool require_foreign, const MsgPack* obj = nullptr);
 
-	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<std::string>>& context_=nullptr);
+	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
 #if XAPIAND_DATABASE_WAL
 	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised);
@@ -210,13 +210,13 @@ public:
 
 	MsgPack check();
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type, bool require_foreign);
 
-	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type);
-	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments, const ct_type_t& ct_type);
-	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type);
+	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type, bool require_foreign);
+	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments, bool require_foreign);
+	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type, bool require_foreign);
 
-	void write_schema(const MsgPack& obj, bool replace);
+	void write_schema(const MsgPack& obj, bool replace, bool require_foreign);
 	void delete_schema();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
@@ -231,7 +231,7 @@ public:
 
 	MsgPack dump_documents();
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj, bool require_foreign);
 
 	std::string get_prefixed_term_id(const MsgPack& document_id);
 

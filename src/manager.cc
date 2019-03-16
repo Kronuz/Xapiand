@@ -662,8 +662,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (!found) {
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		// Add a local schema so it doesn't break forced foreign schemas
-		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
 		auto did = db_handler.index(local_node->lower_name(), 0, false, {
 			{ ID_FIELD_NAME, {
 				{ RESERVED_STORE, false },
@@ -674,7 +672,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 				{ RESERVED_VALUE, local_node->name() },
 			} },
-		}, true, false, msgpack_type).first;
+		}, true, false, msgpack_type, false).first;
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
@@ -1348,7 +1346,7 @@ XapiandManager::load_nodes()
 						{ RESERVED_TYPE,  KEYWORD_STR },
 						{ RESERVED_VALUE, node->name() },
 					} },
-				}, msgpack_type);
+				}, msgpack_type, false);
 				auto& doc = std::get<1>(prepared);
 				db_handler.replace_document(node->idx, std::move(doc), false);
 			}
@@ -1405,9 +1403,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_VALUE, replicas },
 			} },
 		};
-		// Add a local schema so it doesn't break forced foreign schemas
-		db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-		db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type);
+		db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type, false);
 	}
 }
 
@@ -1442,9 +1438,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_TYPE,  "array/string" },
 					} },
 				};
-				// Add a local schema so it doesn't break forced foreign schemas
-				db_handler.set_metadata(std::string_view(RESERVED_SCHEMA), Schema::get_initial_schema()->serialise());
-				db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type);
+				db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type, false);
 			}
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
@@ -1747,7 +1741,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 Endpoints
 XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings)
 {
-	L_ORANGE("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
+	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
 
 	Endpoints endpoints;
 	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, settings);

@@ -1598,7 +1598,7 @@ HttpClient::index_document_view(Request& request)
 
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
-	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type, opts.foreign).second;
 
 	request.ready = std::chrono::system_clock::now();
 
@@ -1634,13 +1634,13 @@ HttpClient::write_schema_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE, request.method);
-	db_handler.write_schema(decoded_body, request.method == HTTP_PUT);
+	db_handler.write_schema(decoded_body, request.method == HTTP_PUT, opts.foreign);
 
 	request.ready = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
 	status_code = HTTP_STATUS_OK;
-	response_obj = db_handler.get_schema()->get_full(true);
+	response_obj = db_handler.get_schema(opts.foreign)->get_full(true);
 
 	write_http_response(request, status_code, response_obj);
 
@@ -1682,11 +1682,11 @@ HttpClient::update_document_view(Request& request)
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	if (request.method == HTTP_PATCH) {
-		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments, opts.foreign).second;
 	} else if (request.method == HTTP_STORE) {
-		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type, opts.foreign).second;
 	} else {
-		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type, opts.foreign).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
@@ -2151,7 +2151,7 @@ HttpClient::schema_view(Request& request)
 		db_handler.reset(endpoints, DB_OPEN, request.method);
 	}
 
-	auto schema = db_handler.get_schema()->get_full(true);
+	auto schema = db_handler.get_schema(opts.foreign)->get_full(true);
 	if (!selector.empty()) {
 		schema = schema.select(selector);
 	}
@@ -2391,7 +2391,7 @@ HttpClient::search_view(Request& request)
 		} else {
 			auto& decoded_body = request.decoded_body();
 
-			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
+			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema(opts.foreign));
 
 			if (decoded_body.find(RESERVED_QUERYDSL_SELECTOR) != decoded_body.end()) {
 				auto selector_obj = decoded_body.at(RESERVED_QUERYDSL_SELECTOR);
