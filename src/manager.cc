@@ -662,7 +662,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (!found) {
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		auto did = db_handler.index(local_node->lower_name(), 0, false, {
+		auto did = db_handler.update(local_node->lower_name(), 0, false, {
 			{ ID_FIELD_NAME, {
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1403,7 +1403,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_VALUE, replicas },
 			} },
 		};
-		db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type, false);
+		db_handler.update(normalized_path, 0, false, obj, true, false, msgpack_type, false);
 	}
 }
 
@@ -1438,7 +1438,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_TYPE,  "array/string" },
 					} },
 				};
-				db_handler.index(normalized_path, 0, false, obj, true, false, msgpack_type, false);
+				db_handler.update(normalized_path, 0, false, obj, true, false, msgpack_type, false);
 			}
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
