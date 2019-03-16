@@ -110,7 +110,7 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 	DatabaseHandler _db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, HTTP_PUT, context);
 	auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 	// FIXME: Process the subfields instead of ignoring.
-	_db_handler.update(id.substr(0, needle), 0, true, schema, false, false, msgpack_type, false);
+	_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type, false);
 }
 
 
