@@ -37,6 +37,14 @@
 static const std::string reserved_schema(RESERVED_SCHEMA);
 
 
+std::string_view
+unsharded_path(std::string_view path)
+{
+	auto pos = path.find("/.__");
+	return pos == std::string::npos ? path : path.substr(0, pos);
+}
+
+
 template <typename ErrorType>
 inline std::pair<const MsgPack*, const MsgPack*>
 SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
@@ -104,7 +112,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 	bool exchanged;
 	const MsgPack* schema_obj = nullptr;
 
-	const auto& local_schema_path = db_handler->endpoints[0].path;
+	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -297,7 +305,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	std::shared_ptr<const MsgPack> schema_ptr;
 	bool new_metadata = false;
 
-	const auto& local_schema_path = db_handler->endpoints[0].path;
+	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
@@ -500,7 +508,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	std::string_view foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
-	const auto& local_schema_path = db_handler->endpoints[0].path;
+	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
