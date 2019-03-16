@@ -37,7 +37,7 @@
 static const std::string reserved_schema(RESERVED_SCHEMA);
 
 
-std::string_view
+static inline std::string_view
 unsharded_path(std::string_view path)
 {
 	auto pos = path.find("/.__");
@@ -46,10 +46,10 @@ unsharded_path(std::string_view path)
 
 
 template <typename ErrorType>
-inline std::pair<const MsgPack*, const MsgPack*>
-SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
+static inline std::pair<const MsgPack*, const MsgPack*>
+validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
 {
-	L_CALL("SchemasLRU::validate_schema({})", repr(object.to_string()));
+	L_CALL("validate_schema({})", repr(object.to_string()));
 
 	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
 	if (checked.first) {
@@ -63,10 +63,10 @@ SchemasLRU::validate_schema(const MsgPack& object, const char* prefix, std::stri
 }
 
 
-MsgPack
-SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<std::string>> context)
+static inline MsgPack
+get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("SchemasLRU::get_shared({}, {}, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
+	L_CALL("get_shared({}, {}, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
 	auto path = endpoint.path;
 	if (!context) {
@@ -98,6 +98,18 @@ SchemasLRU::get_shared(const Endpoint& endpoint, std::string_view id, std::share
 		context->erase(path);
 		throw;
 	}
+}
+
+
+static inline void
+save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::shared_ptr<std::unordered_set<std::string>> context)
+{
+	L_CALL("save_shared({}, {}, <schema>, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
+
+	DatabaseHandler _db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, HTTP_PUT, context);
+	auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
+	// FIXME: Process the subfields instead of ignoring.
+	_db_handler.update(id.substr(0, needle), 0, true, schema, false, false, msgpack_type, false);
 }
 
 
@@ -477,11 +489,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (exchanged) {
 			if (*foreign_schema_ptr != *new_schema) {
 				try {
-					DatabaseHandler _db_handler(Endpoints{Endpoint{foreign_path}}, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, HTTP_PUT, db_handler->context);
-					auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
-					auto new_schema_copy = *new_schema;
-					// FIXME: Process the foreign_path's subfields instead of ignoring.
-					_db_handler.update(foreign_id.substr(0, needle), 0, true, new_schema_copy, false, false, msgpack_type, false);
+					save_shared(Endpoint{foreign_path}, foreign_id, *new_schema, db_handler->context);
 				} catch(...) {
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
