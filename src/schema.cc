@@ -56,7 +56,7 @@
 #include "split.h"                                // for Split
 #include "static_string.hh"                       // for static_string
 #include "stopper.h"                              // for getStopper
-#include "string.hh"                              // for string::format, string::tolower
+#include "string.hh"                              // for string::format, string::inplace_lower
 
 
 // #undef L_DEBUG
@@ -5589,7 +5589,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 		case FieldType::KEYWORD:
 			if (!field_spc.flags.bool_term) {
-				string::tolower(serialise_val);
+				string::inplace_lower(serialise_val);
 			}
 			/* FALLTHROUGH */
 

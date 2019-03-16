@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@
 #include <unordered_map>         // for std::unordered_map
 #include <utility>               // for std::forward
 
-#include "string.hh"             // for string::toupper
+#include "string.hh"             // for string::inplace_upper
 
 
 static const std::unordered_map<std::string, std::string> german_accents({
@@ -65,7 +65,7 @@ class SoundexGerman : public Soundex<SoundexGerman> {
 		replace(str, 0, german_accents);
 
 		// 2. Pass to upper case.
-		string::toupper(str);
+		string::inplace_upper(str);
 
 		// 3. Remove all non alphabetic characters at the begin.
 		auto it = str.begin();

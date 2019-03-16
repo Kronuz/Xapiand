@@ -218,20 +218,6 @@ inline std::string right(std::string_view str, int width) {
 }
 
 
-inline std::string upper(std::string_view str) {
-	std::string result;
-	std::transform(str.begin(), str.end(), std::back_inserter(result), chars::toupper);
-	return result;
-}
-
-
-inline std::string lower(std::string_view str) {
-	std::string result;
-	std::transform(str.begin(), str.end(), std::back_inserter(result), chars::tolower);
-	return result;
-}
-
-
 inline bool startswith(std::string_view text, std::string_view token) {
 	return text.size() >= token.size() && text.compare(0, token.size(), token) == 0;
 }
@@ -263,13 +249,79 @@ inline bool endswith(std::string_view text, char ch) {
 }
 
 
-inline void toupper(std::string& str) {
+inline void
+inplace_upper(std::string& str)
+{
 	std::transform(str.begin(), str.end(), str.begin(), chars::toupper);
 }
 
 
-inline void tolower(std::string& str) {
+inline std::string
+upper(std::string&& str)
+{
+	inplace_upper(str);
+	return std::move(str);
+}
+
+
+inline std::string
+upper(std::string_view str)
+{
+	std::string result;
+	std::transform(str.begin(), str.end(), std::back_inserter(result), chars::toupper);
+	return result;
+}
+
+
+inline void
+inplace_lower(std::string& str)
+{
 	std::transform(str.begin(), str.end(), str.begin(), chars::tolower);
+}
+
+
+inline std::string
+lower(std::string&& str)
+{
+	inplace_lower(str);
+	return std::move(str);
+}
+
+
+inline std::string
+lower(std::string_view str)
+{
+	std::string result;
+	std::transform(str.begin(), str.end(), std::back_inserter(result), chars::tolower);
+	return result;
+}
+
+
+inline void
+inplace_replace(std::string& str, std::string_view search, std::string_view replacement)
+{
+	auto pos = str.find(search);
+	auto search_size = search.size();
+	auto replacement_size = replacement.size();
+	while (pos != std::string::npos) {
+		str.replace(pos, search_size, replacement);
+		pos = str.find(search, pos + replacement_size);
+	}
+}
+
+
+inline std::string
+replace(std::string&& str, std::string_view search, std::string_view replacement)
+{
+	inplace_replace(str, search, replacement);
+	return std::move(str);
+}
+
+
+inline std::string
+replace(std::string_view str, std::string_view search, std::string_view replacement)
+{
+	return replace(std::string(str), search, replacement);
 }
 
 

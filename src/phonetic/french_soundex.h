@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@
 #include <utility>               // for std::forward
 #include <vector>                // for std::vector
 
-#include "string.hh"             // for string::toupper
+#include "string.hh"             // for string::inplace_upper
 
 
 static const std::unordered_map<std::string, std::string> french_accents({
@@ -80,7 +80,7 @@ class SoundexFrench : public Soundex<SoundexFrench> {
 		replace(str, 0, french_accents);
 
 		// 2. Pass to upper case.
-		string::toupper(str);
+		string::inplace_upper(str);
 
 		// 3. Keep only alphabet characters.
 		for (auto it = str.begin(); it != str.end(); ) {
