@@ -26,6 +26,7 @@
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
 #include "log.h"
 #include "opts.h"
+#include "string.hh"
 
 
 // #undef L_DEBUG
@@ -138,6 +139,16 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			validate_schema<Error>(*schema_obj, "Schema metadata is corrupt: ", foreign, foreign_path, foreign_id);
 		}
 	}
+
+	// TODO: Implement foreign schemas in .xapiand/index by default
+	// std::string foreign_holder;
+	// if (require_foreign && foreign_path.empty()) {
+	// 	if (local_schema_path != ".xapiand" && !string::startswith(local_schema_path, ".xapiand/")) {
+	// 		foreign_holder = string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F"));
+	// 		foreign = foreign_holder;
+	// 		split_path_id(foreign, foreign_path, foreign_id);
+	// 	}
+	// }
 
 	if (foreign_path.empty()) {
 		// Foreign schema not passed by the user in '_schema', load schema instead.
