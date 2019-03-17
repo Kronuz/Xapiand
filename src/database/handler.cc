@@ -552,7 +552,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
+	const auto term_id = get_prefixed_term_id(document_id, require_foreign);
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -588,7 +588,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
+	const auto term_id = get_prefixed_term_id(document_id, require_foreign);
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -651,7 +651,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace, bool require_for
 	do {
 		schema = get_schema(require_foreign);
 		was_foreign_obj = schema->write(obj, replace);
-		if (!was_foreign_obj && opts.foreign) {
+		if (!was_foreign_obj && require_foreign) {
 			THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(endpoints.to_string()));
 		}
 		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
@@ -1131,7 +1131,7 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
-		const auto term_id = get_prefixed_term_id(document_id);
+		const auto term_id = get_prefixed_term_id(document_id, require_foreign);
 
 		Data data;
 		try {
@@ -1150,7 +1150,7 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
-		const auto term_id = get_prefixed_term_id(document_id);
+		const auto term_id = get_prefixed_term_id(document_id, require_foreign);
 
 		Data data;
 		try {
@@ -1480,11 +1480,11 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 
 
 std::string
-DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
+DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id, bool require_foreign)
 {
-	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
+	L_CALL("DatabaseHandler::get_prefixed_term_id({}, {})", repr(document_id.to_string()), require_foreign);
 
-	schema = get_schema(opts.foreign);
+	schema = get_schema(require_foreign);
 
 	std::string unprefixed_term_id;
 	auto spc_id = schema->get_data_id();
@@ -1502,6 +1502,15 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
 	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+}
+
+
+std::string
+DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
+{
+	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
+
+	return get_prefixed_term_id(document_id, opts.foreign);
 }
 
 

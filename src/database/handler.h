@@ -233,6 +233,7 @@ public:
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj, bool require_foreign);
 
+	std::string get_prefixed_term_id(const MsgPack& document_id, bool require_foreign);
 	std::string get_prefixed_term_id(const MsgPack& document_id);
 
 	std::vector<std::string> get_metadata_keys();
