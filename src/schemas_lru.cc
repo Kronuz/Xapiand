@@ -151,7 +151,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 	// Implement foreign schemas in .xapiand/index by default:
 	std::string foreign_holder;
 	if (require_foreign && foreign_path.empty()) {
-		if (local_schema_path != ".xapiand" && !string::startswith(local_schema_path, ".xapiand/")) {
+		if (local_schema_path != ".xapiand") {
 			foreign_holder = string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F"));
 			foreign = foreign_holder;
 			std::string_view foreign_path_view, foreign_id_view;
