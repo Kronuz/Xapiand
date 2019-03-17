@@ -1201,6 +1201,8 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseNotFoundError&) {
+			throw;
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1374,6 +1376,8 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseNotFoundError&) {
+			throw;
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
@@ -1419,6 +1423,8 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 			if (t == 0) { throw; }
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseNotFoundError&) {
+			throw;
 		} catch (const QueryParserError& exc) {
 			THROW(ClientError, exc.what());
 		} catch (const SerialisationError& exc) {
