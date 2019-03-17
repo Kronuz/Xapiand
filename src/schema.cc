@@ -2453,6 +2453,10 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 {
 	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{}, allow_versionless:{})", repr(object.to_string()), allow_foreign, allow_root, allow_versionless);
 
+	if (object.empty()) {
+		THROW(ErrorType, "{}Schema object is empty", prefix);
+	}
+
 	// Check foreign:
 	if (allow_foreign) {
 		if (object.is_string()) {
