@@ -95,6 +95,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (!selector.empty()) {
 			obj = obj.select(selector);
 		}
+		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false, false);
 		context->erase(path);
 		return obj;
 	} catch (...) {
@@ -259,14 +260,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 		} else {
 			try {
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(foreign_path, foreign_id, db_handler->context));
-				if (schema_ptr->empty()) {
-					schema_ptr = Schema::get_initial_schema();
-				} else {
-					schema_ptr->lock();
-				}
-				if (!schema_ptr->is_map()) {
-					THROW(Error, "Schema of {} must be map [{}]", repr(db_handler->endpoints.to_string()), repr(schema_ptr->to_string()));
-				}
+				schema_ptr->lock();
+			} catch (const Error&) {
+				schema_ptr = Schema::get_initial_schema();
 			} catch (const ForeignSchemaError&) {
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DocNotFoundError&) {
