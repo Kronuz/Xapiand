@@ -34,6 +34,7 @@
 #include "module.h"                               // for chaipp::Module
 #include "msgpack.h"                              // for MsgPack
 #include "repr.hh"                                // for repr
+#include "url_parser.h"                           // for urldecode
 
 namespace chaipp {
 
@@ -128,10 +129,12 @@ Processor::Processor(const Script& script) :
 	std::string script_body;
 
 	if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-		std::string_view foreign_path;
-		std::string_view foreign_id;
-		auto endpoint = script.get_endpoint();
-		split_path_id(endpoint, foreign_path, foreign_id);
+		std::string foreign_path, foreign_id;
+		auto foreign = script.get_endpoint();
+		std::string_view foreign_path_view, foreign_id_view;
+		split_path_id(foreign, foreign_path_view, foreign_id_view);
+		foreign_path = urldecode(foreign_path_view);
+		foreign_id = urldecode(foreign_id_view);
 		std::string_view selector;
 		auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		if (needle != std::string_view::npos) {

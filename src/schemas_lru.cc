@@ -28,6 +28,7 @@
 #include "opts.h"                                 // for opts.strict
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
 #include "string.hh"                              // for string::format, string::replace
+#include "url_parser.h"                           // for urldecode
 
 
 // #undef L_DEBUG
@@ -49,17 +50,20 @@ unsharded_path(std::string_view path)
 
 template <typename ErrorType>
 static inline std::pair<const MsgPack*, const MsgPack*>
-validate_schema(const MsgPack& object, const char* prefix, std::string& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
+validate_schema(const MsgPack& object, const char* prefix, std::string& foreign, std::string& foreign_path, std::string& foreign_id)
 {
 	L_CALL("validate_schema({})", repr(object.to_string()));
 
 	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
 	if (checked.first) {
 		foreign = checked.first->str();
-		split_path_id(foreign, foreign_path, foreign_id);
-		if (foreign_path.empty() || foreign_id.empty()) {
+		std::string_view foreign_path_view, foreign_id_view;
+		split_path_id(foreign, foreign_path_view, foreign_id_view);
+		if (foreign_path_view.empty() || foreign_id_view.empty()) {
 			THROW(ErrorType, "{}'{}' must contain index and docid [{}]", prefix, RESERVED_ENDPOINT, repr(foreign));
 		}
+		foreign_path = urldecode(foreign_path_view);
+		foreign_id = urldecode(foreign_id_view);
 	}
 	return checked;
 }
@@ -123,8 +127,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 {
 	L_CALL("SchemasLRU::get(<db_handler>, {})", obj ? repr(obj->to_string()) : "nullptr");
 
-	std::string foreign;
-	std::string_view foreign_path, foreign_id;
+	std::string foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	bool exchanged;
@@ -151,7 +154,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 		if (local_schema_path != ".xapiand" && !string::startswith(local_schema_path, ".xapiand/")) {
 			foreign_holder = string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F"));
 			foreign = foreign_holder;
-			split_path_id(foreign, foreign_path, foreign_id);
+			std::string_view foreign_path_view, foreign_id_view;
+			split_path_id(foreign, foreign_path_view, foreign_id_view);
+			foreign_path = urldecode(foreign_path_view);
+			foreign_id = urldecode(foreign_id_view);
 		}
 	}
 
@@ -259,7 +265,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			schema_ptr = foreign_schema_ptr;
 		} else {
 			try {
-				schema_ptr = std::make_shared<const MsgPack>(get_shared(foreign_path, foreign_id, db_handler->context));
+				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 				schema_ptr->lock();
 			} catch (const Error&) {
 				schema_ptr = Schema::get_initial_schema();
@@ -323,8 +329,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	bool exchanged;
 	bool failure = false;
-	std::string foreign;
-	std::string_view foreign_path, foreign_id;
+	std::string foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 	bool new_metadata = false;
 
@@ -522,8 +527,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
 
 	bool exchanged;
-	std::string foreign;
-	std::string_view foreign_path, foreign_id;
+	std::string foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
