@@ -54,7 +54,7 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign,
 {
 	L_CALL("validate_schema({})", repr(object.to_string()));
 
-	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
+	auto checked = Schema::check<ErrorType>(object, prefix, true, true);
 	if (checked.first) {
 		foreign = checked.first->str();
 		std::string_view foreign_path_view, foreign_id_view;
@@ -99,7 +99,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (!selector.empty()) {
 			obj = obj.select(selector);
 		}
-		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false, false);
+		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
 		return obj;
 	} catch (...) {
@@ -290,7 +290,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 
 	if ((schema_obj != nullptr) && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
-		// Initialize schema (non-foreign, non-recursive, ensure there's "version" and "schema"):
+		// Initialize schema (non-foreign, non-recursive, ensure there's "schema"):
 		o.erase(RESERVED_ENDPOINT);
 		auto it = o.find(RESERVED_TYPE);
 		if (it != o.end()) {
@@ -300,9 +300,6 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			type = required_spc_t::get_str_type(sep_types);
 		}
 		o[RESERVED_RECURSE] = false;
-		if (o.find(ID_FIELD_NAME) == o.end()) {
-			o[VERSION_FIELD_NAME] = DB_VERSION_SCHEMA;
-		}
 		if (opts.strict && o.find(ID_FIELD_NAME) == o.end()) {
 			THROW(MissingTypeError, "Type of field '{}' for the foreign schema is missing", ID_FIELD_NAME);
 		}

@@ -2449,9 +2449,9 @@ specification_t::to_string(int indent) const
 
 template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
-Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless)
+Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root)
 {
-	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{}, allow_versionless:{})", repr(object.to_string()), allow_foreign, allow_root, allow_versionless);
+	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{})", repr(object.to_string()), allow_foreign, allow_root);
 
 	if (object.empty()) {
 		THROW(ErrorType, "{}Schema object is empty", prefix);
@@ -2497,22 +2497,6 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 
 	auto it_end = object.end();
 
-	// Check version:
-	auto version_it = object.find(VERSION_FIELD_NAME);
-	if (version_it == it_end) {
-		if (!allow_versionless) {
-			THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, VERSION_FIELD_NAME);
-		}
-	} else {
-		auto& version = version_it.value();
-		if (!version.is_number()) {
-			THROW(ErrorType, "{}Schema field '{}' must be a number", prefix, VERSION_FIELD_NAME);
-		}
-		if (version.f64() != DB_VERSION_SCHEMA) {
-			THROW(ErrorType, "{}Different schema versions, the current version is {:1.1f}", prefix, DB_VERSION_SCHEMA);
-		}
-	}
-
 	// Check schema object:
 	auto schema_it = object.find(SCHEMA_FIELD_NAME);
 	if (schema_it == it_end) {
@@ -2555,7 +2539,7 @@ Schema::Schema(std::shared_ptr<const MsgPack> s, std::unique_ptr<MsgPack> m, std
 	  mut_schema(std::move(m)),
 	  origin(std::move(o))
 {
-	auto checked = check<Error>(*schema, "Schema is corrupt: ", true, false, false);
+	auto checked = check<Error>(*schema, "Schema is corrupt: ", true, false);
 	if (checked.first != nullptr) {
 		schema = get_initial_schema();
 	}
@@ -2569,7 +2553,6 @@ Schema::get_initial_schema()
 
 	static const MsgPack initial_schema_tpl({
 		{ RESERVED_RECURSE, false },
-		{ VERSION_FIELD_NAME, DB_VERSION_SCHEMA },
 		{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
 	});
 	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);
@@ -3663,7 +3646,7 @@ Schema::update(const MsgPack& object)
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		std::pair<const MsgPack*, const MsgPack*> checked;
-		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
+		checked = check<ClientError>(object, "Invalid schema: ", true, true);
 
 		if (checked.first != nullptr) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
@@ -4105,7 +4088,7 @@ Schema::write(const MsgPack& object, bool replace)
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		std::pair<const MsgPack*, const MsgPack*> checked;
-		checked = check<ClientError>(object, "Invalid schema: ", true, true, true);
+		checked = check<ClientError>(object, "Invalid schema: ", true, true);
 
 		if (checked.first != nullptr) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({

@@ -982,7 +982,7 @@ public:
 	}
 
 	template <typename ErrorType>
-	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root, bool allow_versionless);
+	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root);
 
 	/*
 	 * Transforms schema into json string.
