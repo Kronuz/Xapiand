@@ -49,13 +49,13 @@ unsharded_path(std::string_view path)
 
 template <typename ErrorType>
 static inline std::pair<const MsgPack*, const MsgPack*>
-validate_schema(const MsgPack& object, const char* prefix, std::string_view& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
+validate_schema(const MsgPack& object, const char* prefix, std::string& foreign, std::string_view& foreign_path, std::string_view& foreign_id)
 {
 	L_CALL("validate_schema({})", repr(object.to_string()));
 
 	auto checked = Schema::check<ErrorType>(object, prefix, true, true, true);
 	if (checked.first) {
-		foreign = checked.first->str_view();
+		foreign = checked.first->str();
 		split_path_id(foreign, foreign_path, foreign_id);
 		if (foreign_path.empty() || foreign_id.empty()) {
 			THROW(ErrorType, "{}'{}' must contain index and docid [{}]", prefix, RESERVED_ENDPOINT, repr(foreign));
@@ -123,7 +123,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 {
 	L_CALL("SchemasLRU::get(<db_handler>, {})", obj ? repr(obj->to_string()) : "nullptr");
 
-	std::string_view foreign, foreign_path, foreign_id;
+	std::string foreign;
+	std::string_view foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	bool exchanged;
@@ -248,11 +249,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 	if (!foreign_path.empty()) {
 		// FOREIGN Schema, get from the cache or use `get_shared()`
 		// to load from `foreign_path/foreign_id` endpoint:
-		const auto foreign_schema_path = std::string(foreign);
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
-			foreign_schema_ptr = (*this)[foreign_schema_path].load();
+			foreign_schema_ptr = (*this)[foreign].load();
 		}
 		if (foreign_schema_ptr) {
 			// found in cache
@@ -274,7 +274,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			}
 			{
 				std::lock_guard<std::mutex> lk(smtx);
-				exchanged = (*this)[foreign_schema_path].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
+				exchanged = (*this)[foreign].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 			}
 			if (!exchanged) {
 				schema_ptr = foreign_schema_ptr;
@@ -308,11 +308,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 		std::unique_ptr<MsgPack> mut_schema;
 		schema.swap(mut_schema);
 		if (mut_schema) {
-			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), std::string(foreign));
+			return std::make_tuple(std::move(schema_ptr), std::move(mut_schema), std::move(foreign));
 		}
 	}
 
-	return std::make_tuple(std::move(schema_ptr), nullptr, std::string(foreign));
+	return std::make_tuple(std::move(schema_ptr), nullptr, std::move(foreign));
 }
 
 
@@ -323,7 +323,8 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	bool exchanged;
 	bool failure = false;
-	std::string_view foreign, foreign_path, foreign_id;
+	std::string foreign;
+	std::string_view foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 	bool new_metadata = false;
 
@@ -435,11 +436,10 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	} else {
 		// FOREIGN new schema, write the foreign link to metadata:
 		if (old_schema != local_schema_ptr) {
-			const auto foreign_schema_path = std::string(foreign);
 			std::shared_ptr<const MsgPack> foreign_schema_ptr;
 			{
 				std::lock_guard<std::mutex> lk(smtx);
-				foreign_schema_ptr = (*this)[foreign_schema_path].load();
+				foreign_schema_ptr = (*this)[foreign].load();
 			}
 			if (old_schema != foreign_schema_ptr) {
 				old_schema = foreign_schema_ptr;
@@ -477,11 +477,10 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 	// FOREIGN Schema, get from the cache or use `get_shared()`
 	// to load from `foreign_path/foreign_id` endpoint:
-	const auto foreign_schema_path = std::string(foreign);
 	std::shared_ptr<const MsgPack> foreign_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
-		foreign_schema_ptr = (*this)[foreign_schema_path].load();
+		foreign_schema_ptr = (*this)[foreign].load();
 	}
 	if (old_schema != foreign_schema_ptr) {
 		old_schema = foreign_schema_ptr;
@@ -494,7 +493,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		}
 		{
 			std::lock_guard<std::mutex> lk(smtx);
-			exchanged = (*this)[foreign_schema_path].compare_exchange_strong(foreign_schema_ptr, new_schema);
+			exchanged = (*this)[foreign].compare_exchange_strong(foreign_schema_ptr, new_schema);
 		}
 		if (exchanged) {
 			if (*foreign_schema_ptr != *new_schema) {
@@ -504,7 +503,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
 					std::lock_guard<std::mutex> lk(smtx);
-					(*this)[foreign_schema_path].compare_exchange_strong(aux_new_schema, foreign_schema_ptr);
+					(*this)[foreign].compare_exchange_strong(aux_new_schema, foreign_schema_ptr);
 					throw;
 				}
 			}
@@ -523,7 +522,8 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
 
 	bool exchanged;
-	std::string_view foreign, foreign_path, foreign_id;
+	std::string foreign;
+	std::string_view foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
@@ -539,11 +539,10 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 			old_schema = local_schema_ptr;
 			return false;
 		}
-		const auto foreign_schema_path = std::string(foreign);
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
-			foreign_schema_ptr = (*this)[foreign_schema_path].load();
+			foreign_schema_ptr = (*this)[foreign].load();
 		}
 		if (old_schema != foreign_schema_ptr) {
 			old_schema = foreign_schema_ptr;
@@ -578,11 +577,10 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		return false;
 	}
 
-	const auto foreign_schema_path = std::string(foreign);
 	std::shared_ptr<const MsgPack> foreign_schema_ptr;
 	{
 		std::lock_guard<std::mutex> lk(smtx);
-		foreign_schema_ptr = (*this)[foreign_schema_path].load();
+		foreign_schema_ptr = (*this)[foreign].load();
 	}
 
 	old_schema = foreign_schema_ptr;
