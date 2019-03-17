@@ -22,11 +22,12 @@
 
 #include "schemas_lru.h"
 
-#include "database/handler.h"
+#include "database/handler.h"                     // for DatabaseHandler
+#include "log.h"                                  // for L_CALL
+#include "manager.h"                              // for XapiandManager::resolve_index_endpoints
+#include "opts.h"                                 // for opts.strict
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
-#include "log.h"
-#include "opts.h"
-#include "string.hh"
+#include "string.hh"                              // for string::format, string::replace
 
 
 // #undef L_DEBUG
@@ -81,7 +82,8 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (!context->insert(path).second) {
 			THROW(Error, "Cyclic schema reference detected: {}", endpoint.to_string());
 		}
-		DatabaseHandler _db_handler(Endpoints{endpoint}, DB_OPEN | DB_DISABLE_WAL, HTTP_GET, context);
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		DatabaseHandler _db_handler(endpoints, DB_OPEN, HTTP_GET, context);
 		std::string_view selector;
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		if (needle != std::string_view::npos) {
@@ -107,7 +109,8 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 {
 	L_CALL("save_shared({}, {}, <schema>, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
-	DatabaseHandler _db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, HTTP_PUT, context);
+	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+	DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, HTTP_PUT, context);
 	auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 	// FIXME: Process the subfields instead of ignoring.
 	_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type, false);
@@ -140,15 +143,15 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 		}
 	}
 
-	// TODO: Implement foreign schemas in .xapiand/index by default
-	// std::string foreign_holder;
-	// if (require_foreign && foreign_path.empty()) {
-	// 	if (local_schema_path != ".xapiand" && !string::startswith(local_schema_path, ".xapiand/")) {
-	// 		foreign_holder = string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F"));
-	// 		foreign = foreign_holder;
-	// 		split_path_id(foreign, foreign_path, foreign_id);
-	// 	}
-	// }
+	// Implement foreign schemas in .xapiand/index by default:
+	std::string foreign_holder;
+	if (require_foreign && foreign_path.empty()) {
+		if (local_schema_path != ".xapiand" && !string::startswith(local_schema_path, ".xapiand/")) {
+			foreign_holder = string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F"));
+			foreign = foreign_holder;
+			split_path_id(foreign, foreign_path, foreign_id);
+		}
+	}
 
 	if (foreign_path.empty()) {
 		// Foreign schema not passed by the user in '_schema', load schema instead.

@@ -71,7 +71,7 @@ constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version 
 
 constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
 
-const std::string dump_metadata_header ("xapiand-dump-meta");
+const std::string dump_metadata_header("xapiand-dump-meta");
 const std::string dump_schema_header("xapiand-dump-schm");
 const std::string dump_documents_header("xapiand-dump-docs");
 
