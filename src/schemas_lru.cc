@@ -86,10 +86,10 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 
 	try {
 		if (context->size() > MAX_SCHEMA_RECURSION) {
-			THROW(Error, "Maximum recursion reached: {}", endpoint.to_string());
+			THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
 		}
 		if (!context->insert(path).second) {
-			THROW(Error, "Cyclic schema reference detected: {}", endpoint.to_string());
+			THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 		}
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 		DatabaseHandler _db_handler(endpoints, DB_OPEN, HTTP_GET, context);
@@ -297,6 +297,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			try {
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 				schema_ptr->lock();
+			} catch (const ClientError&) {
+				throw;
+			} catch (const Error&) {
+				initial_schema = true;
+				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DocNotFoundError&) {
 				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
