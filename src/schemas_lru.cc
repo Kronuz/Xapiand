@@ -241,27 +241,31 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			{ RESERVED_TYPE, "foreign/object" },
 			{ RESERVED_ENDPOINT, foreign },
 		}));
-		schema_ptr->lock();
-		{
-			std::lock_guard<std::mutex> lk(smtx);
-			exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-		}
-		if (exchanged) {
-			L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(local_schema_path));
-			if (write) {
-				L_SCHEMA("GET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
-				try {
-					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
-						// It doesn't matter if new metadata cannot be set
-						// it should continue with newly created foreign
-						// schema, as requested by user.
+		if (local_schema_ptr && *schema_ptr == *local_schema_ptr) {
+			schema_ptr = local_schema_ptr;
+		} else {
+			schema_ptr->lock();
+			{
+				std::lock_guard<std::mutex> lk(smtx);
+				exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+			}
+			if (exchanged) {
+				L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(local_schema_path));
+				if (write) {
+					L_SCHEMA("GET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
+					try {
+						if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+							// It doesn't matter if new metadata cannot be set
+							// it should continue with newly created foreign
+							// schema, as requested by user.
+						}
+					} catch(...) {
+						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
+						// On error, try reverting
+						std::lock_guard<std::mutex> lk(smtx);
+						(*this)[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
+						throw;
 					}
-				} catch(...) {
-					L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
-					// On error, try reverting
-					std::lock_guard<std::mutex> lk(smtx);
-					(*this)[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
-					throw;
 				}
 			}
 		}
