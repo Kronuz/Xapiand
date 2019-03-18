@@ -31,7 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_client.h"                      // for MetaBaseClient
-#include "database/lock.h"                    // for lock_database
+#include "endpoint.h"                         // for Endpoints
 #include "threadpool.hh"                      // for Task
 #include "xapian.h"
 
@@ -78,6 +78,9 @@
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
 
 #define FILE_FOLLOWS '\xfd'
+
+
+class lock_database;
 
 
 enum class State {

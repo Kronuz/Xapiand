@@ -33,7 +33,7 @@
 #include <vector>                           // for std::vector
 
 #include "base_client.h"                    // for MetaBaseClient
-#include "database/lock.h"                  // for lock_database
+#include "endpoint.h"                       // for Endpoint
 #include "threadpool.hh"                    // for Task
 #include "xapian.h"
 
@@ -123,7 +123,9 @@ inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
 }
 
 
+class Shard;
 class DatabaseWAL;
+class lock_shard;
 
 
 // A single instance of a non-blocking Xapiand replication protocol handler
