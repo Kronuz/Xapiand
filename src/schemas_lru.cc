@@ -201,7 +201,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 				L_SCHEMA("GET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					// Try writing (only if there's no metadata there alrady)
-					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						schema_ptr->set_flags(1);
+					} else {
 						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
 						// or fallback to load from metadata (again).
 						local_schema_ptr = schema_ptr;
@@ -254,7 +256,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 				if (write) {
 					L_SCHEMA("GET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
 					try {
-						if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+							schema_ptr->set_flags(1);
+						} else {
 							// It doesn't matter if new metadata cannot be set
 							// it should continue with newly created foreign
 							// schema, as requested by user.
@@ -374,6 +378,42 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		if (local_schema_ptr) {
 			L_SCHEMA("SET: Schema {} found in cache", repr(local_schema_path));
 			schema_ptr = local_schema_ptr;
+			if (schema_ptr->get_flags() == 0) {
+				// We still need to save the metadata
+				L_SCHEMA("SET: Cached Local Schema {}, write schema metadata", repr(local_schema_path));
+				try {
+					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						schema_ptr->set_flags(1);
+					} else {
+						L_SCHEMA("SET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
+						auto str_schema = db_handler->get_metadata(reserved_schema);
+						if (str_schema.empty()) {
+							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
+						}
+						initial_schema = false;
+						local_schema_ptr = schema_ptr;
+						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+						schema_ptr->lock();
+						{
+							std::lock_guard<std::mutex> lk(smtx);
+							exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+						}
+						if (exchanged) {
+							L_SCHEMA("SET: Cached Schema {} re-added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+						} else {
+							schema_ptr = local_schema_ptr;
+						}
+					}
+				} catch(...) {
+					if (local_schema_ptr != schema_ptr) {
+						L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
+						// On error, try reverting
+						std::lock_guard<std::mutex> lk(smtx);
+						(*this)[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
+					}
+					throw;
+				}
+			}
 		} else {
 			L_SCHEMA("SET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
 			auto str_schema = db_handler->get_metadata(reserved_schema);
@@ -403,7 +443,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				}
 				L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
-					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						schema_ptr->set_flags(1);
+					} else {
 						L_SCHEMA("SET: Metadata for Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
 						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
@@ -455,7 +497,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				if (*schema_ptr != *new_schema) {
 					L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 					try {
-						db_handler->set_metadata(reserved_schema, new_schema->serialise());
+						if (db_handler->set_metadata(reserved_schema, new_schema->serialise())) {
+							new_schema->set_flags(1);
+						}
 					} catch(...) {
 						L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 						// On error, try reverting
@@ -499,7 +543,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			if (*local_schema_ptr != *new_schema) {
 				L_SCHEMA("SET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
 				try {
-					db_handler->set_metadata(reserved_schema, new_schema->serialise());
+					if (db_handler->set_metadata(reserved_schema, new_schema->serialise())) {
+						new_schema->set_flags(1);
+					}
 				} catch(...) {
 					L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 					// On error, try reverting
@@ -548,6 +594,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				L_SCHEMA("SET: Save Foreign Schema {}", repr(foreign_path));
 				try {
 					save_shared(Endpoint{foreign_path}, foreign_id, *new_schema, db_handler->context);
+					new_schema->set_flags(1);
 				} catch(...) {
 					L_SCHEMA("SET: Document for Foreign Schema {} wasn't saved, try reverting LRU", repr(foreign));
 					// On error, try reverting
