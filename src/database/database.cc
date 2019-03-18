@@ -558,49 +558,30 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 
 
 Xapian::docid
-Database::find_document(const std::string& term_id)
+Database::find_document(const std::string& term)
 {
-	L_CALL("Database::find_document({})", repr(term_id));
+	L_CALL("Database::find_document({})", repr(term));
 
-	Xapian::docid did = 0;
-
-	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
-
-	L_DATABASE_WRAP_BEGIN("Database::find_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-
-	auto *rdb = static_cast<Xapian::Database *>(db());
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto it = rdb->postlist_begin(term_id);
-			if (it == rdb->postlist_end(term_id)) {
-				throw Xapian::DocNotFoundError("Document not found");
-			}
-			did = *it;
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			if (t == 0) { do_close(true, true, false); throw; }
-		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { do_close(true, true, false); throw; }
-		} catch (const Xapian::DatabaseError& exc) {
-			if (exc.get_msg() == "Database has been closed") {
-				if (t == 0) { do_close(true, true, false); throw; }
-				do_close(false, is_closed(), false);
+	ASSERT(!shards.empty());
+	size_t n_shards = shards.size();
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		ASSERT(term.size() > 2);
+		if (term[0] == 'Q' && term[1] == 'N') {
+			auto did_serialised = term.substr(2);
+			Xapian::docid did = sortable_unserialise(did_serialised);
+			if (did == 0) {
+				throw Xapian::InvalidArgumentError("Numeric term is invalid");
 			} else {
-				do_close(false, is_closed(), false);
-				throw;
+				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 			}
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw Xapian::DocNotFoundError("Document not found");
+		} else {
+			shard_num = fnv1ah64::hash(term) % n_shards;
 		}
-		reopen();
-		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Database::find_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
+	auto& shard = shards[shard_num];
+	auto shard_did = shard->find_document(term);
+	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
 	return did;
 }
 
