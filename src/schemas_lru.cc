@@ -99,7 +99,8 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
-		auto doc = _db_handler.get_document(id);
+		auto term_id = path == ".xapiand/index" ? prefixed(id, "Q", 'K') : _db_handler.get_prefixed_term_id(id);
+		auto doc = _db_handler.get_document_term(term_id);
 		auto obj = doc.get_obj();
 		if (!selector.empty()) {
 			obj = obj.select(selector);
