@@ -456,6 +456,9 @@ public:
 	const std::shared_ptr<const Data> get_data() const;
 	void clear_data() const;
 
+	int get_flags() const;
+	int set_flags(int flags) const;
+
 	friend msgpack::adaptor::convert<MsgPack>;
 	friend msgpack::adaptor::pack<MsgPack>;
 	friend msgpack::adaptor::object<MsgPack>;
@@ -586,6 +589,7 @@ struct MsgPack::Body {
 	std::vector<MsgPack> array;
 
 	mutable atomic_shared_ptr<const Data> _data;
+	mutable std::atomic_int _flags;
 
 	std::atomic_bool _lock;
 	bool _initialized;
@@ -607,7 +611,8 @@ struct MsgPack::Body {
 		 size_t pos,
 		 const std::shared_ptr<Body>& key,
 		 msgpack::object* obj
-		) : _lock(false),
+		) : _flags(0),
+			_lock(false),
 			_initialized(false),
 			_const(false),
 			_zone(zone),
@@ -623,7 +628,8 @@ struct MsgPack::Body {
 		 const std::shared_ptr<msgpack::object>& base,
 		 const std::shared_ptr<Body>& parent,
 		 msgpack::object* obj
-		) : _lock(false),
+		) : _flags(0),
+			_lock(false),
 			_initialized(false),
 			_const(false),
 			_zone(zone),
@@ -637,7 +643,8 @@ struct MsgPack::Body {
 
 	template <typename T>
 	Body(T&& v, bool _const = false)
-		: _lock(false),
+		: _flags(0),
+		  _lock(false),
 		  _initialized(false),
 		  _const(_const),
 		  _zone(std::make_shared<msgpack::zone>()),
@@ -3249,6 +3256,16 @@ inline const std::shared_ptr<const MsgPack::Data> MsgPack::get_data() const {
 
 inline void MsgPack::clear_data() const {
 	set_data(nullptr);
+}
+
+
+inline int MsgPack::get_flags() const {
+	return _body->_flags.load();
+}
+
+
+inline int MsgPack::set_flags(int flags) const {
+	return _body->_flags.exchange(flags);
 }
 
 
