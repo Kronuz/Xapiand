@@ -40,7 +40,6 @@
 
 #include "cassert.h"                // for ASSERT
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
-#include "database/database.h"      // for Database
 #include "database/pool.h"          // for DatabasePool
 #include "database/shard.h"         // for Shard
 #include "database/utils.h"         // for read_uuid

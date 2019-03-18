@@ -32,7 +32,6 @@
 #include <unistd.h>
 
 #include "cassert.h"                          // for ASSERT
-#include "database/database.h"                // for Database
 #include "database/lock.h"                    // for lock_shard
 #include "database/shard.h"                   // for Shard
 #include "database/wal.h"                     // for DatabaseWAL
