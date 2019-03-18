@@ -38,14 +38,17 @@ constexpr size_t MAX_SCHEMA_RECURSION = 10;
 class DatabaseHandler;
 
 
-class SchemasLRU : lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> {
+class SchemasLRU {
+	lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> local_schemas;
+	lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> foreign_schemas;
 	std::mutex smtx;
 
 public:
-	SchemasLRU(ssize_t max_size=-1)
-		: LRU(max_size) { }
+	SchemasLRU(ssize_t max_size = -1);
 
 	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, bool require_foreign);
+
 	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema, bool require_foreign);
+
 	bool drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema);
 };
