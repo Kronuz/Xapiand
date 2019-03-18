@@ -40,8 +40,8 @@
 #include "cassert.h"                              // for ASSERT
 #include "cast.h"                                 // for Cast
 #include "cuuid/uuid.h"                           // for UUIDGenerator
-#include "database/database.h"                    // for Database
-#include "database/lock.h"                        // for lock_database
+#include "database/shard.h"                       // for Shard
+#include "database/lock.h"                        // for lock_shard
 #include "database/handler.h"                     // for DatabaseHandler
 #include "datetime.h"                             // for isDate, tm_t
 #include "exception.h"                            // for ClientError
@@ -2791,8 +2791,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto node = endpoint.node();
 						if (node && node->is_active()) {
 							try {
-								lock_database lk_db(Endpoints{endpoint}, db_handler.flags);
-								auto doccount = lk_db->db()->get_doccount();
+								lock_shard lk_shard(endpoint, db_handler.flags);
+								auto doccount = lk_shard->db()->get_doccount();
 								if (min_doccount > doccount) {
 									min_doccount = doccount;
 									shard_num = n;
@@ -2846,8 +2846,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto node = endpoint.node();
 						if (node && node->is_active()) {
 							try {
-								lock_database lk_db(Endpoints{endpoint}, db_handler.flags);
-								auto doccount = lk_db->db()->get_doccount();
+								lock_shard lk_shard(endpoint, db_handler.flags);
+								auto doccount = lk_shard->db()->get_doccount();
 								if (min_doccount > doccount) {
 									min_doccount = doccount;
 									shard_num = n;
