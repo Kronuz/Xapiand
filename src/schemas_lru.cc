@@ -172,10 +172,10 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			schema_ptr = local_schema_ptr;
 		} else {
 			L_SCHEMA("GET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
-			bool new_metadata = false;
+			bool initial_schema = false;
 			auto str_schema = db_handler->get_metadata(reserved_schema);
 			if (str_schema.empty()) {
-				new_metadata = true;
+				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			} else {
 				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
@@ -186,23 +186,28 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 				std::lock_guard<std::mutex> lk(smtx);
 				exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 			}
-			if (!exchanged) {
+			if (exchanged) {
+				L_SCHEMA("GET: Local Schema {} added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+			} else {
 				schema_ptr = local_schema_ptr;
 			}
 
-			if (new_metadata && write) {
+			if (initial_schema && write) {
+				initial_schema = false;
 				// New LOCAL schema:
 				if (require_foreign) {
 					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
 				}
-				L_SCHEMA("GET: New local schema {}, write schema metadata", repr(local_schema_path));
+				L_SCHEMA("GET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					// Try writing (only if there's no metadata there alrady)
 					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
 						// or fallback to load from metadata (again).
 						local_schema_ptr = schema_ptr;
 						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
+							initial_schema = true;
 							schema_ptr = Schema::get_initial_schema();
 						} else {
 							schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
@@ -212,12 +217,15 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 							std::lock_guard<std::mutex> lk(smtx);
 							exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 						}
-						if (!exchanged) {
+						if (exchanged) {
+							L_SCHEMA("GET: Local Schema {} re-added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+						} else {
 							schema_ptr = local_schema_ptr;
 						}
 					}
 				} catch(...) {
 					if (local_schema_ptr != schema_ptr) {
+						L_SCHEMA("GET: Metadata for Local Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 						// On error, try reverting
 						std::lock_guard<std::mutex> lk(smtx);
 						(*this)[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
@@ -239,6 +247,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 		}
 		if (exchanged) {
+			L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(local_schema_path));
 			if (write) {
 				L_SCHEMA("GET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
 				try {
@@ -248,6 +257,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 						// schema, as requested by user.
 					}
 				} catch(...) {
+					L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 					// On error, try reverting
 					std::lock_guard<std::mutex> lk(smtx);
 					(*this)[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
@@ -262,6 +272,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 	if (!foreign_path.empty()) {
 		// FOREIGN Schema, get from the cache or use `get_shared()`
 		// to load from `foreign_path/foreign_id` endpoint:
+		bool initial_schema = false;
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
@@ -277,21 +288,28 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 				schema_ptr->lock();
 			} catch (const Error&) {
+				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const ForeignSchemaError&) {
+				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DocNotFoundError&) {
+				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DatabaseNotFoundError&) {
+				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DatabaseOpeningError&) {
+				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			}
 			{
 				std::lock_guard<std::mutex> lk(smtx);
 				exchanged = (*this)[foreign].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 			}
-			if (!exchanged) {
+			if (exchanged) {
+				L_SCHEMA("GET: Foreign Schema {} added to LRU{}", repr(foreign_path), initial_schema ? " (initial schema)" : "");
+			} else {
 				schema_ptr = foreign_schema_ptr;
 			}
 		}
@@ -337,7 +355,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	bool failure = false;
 	std::string foreign, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
-	bool new_metadata = false;
+	bool initial_schema = false;
 
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	std::shared_ptr<const MsgPack> local_schema_ptr;
@@ -356,7 +374,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			L_SCHEMA("SET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
 			auto str_schema = db_handler->get_metadata(reserved_schema);
 			if (str_schema.empty()) {
-				new_metadata = true;
+				initial_schema = true;
 				schema_ptr = new_schema;
 			} else {
 				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
@@ -366,25 +384,28 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				std::lock_guard<std::mutex> lk(smtx);
 				exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 			}
-			if (!exchanged) {
+			if (exchanged) {
+				L_SCHEMA("SET: Schema {} added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+			} else {
 				schema_ptr = local_schema_ptr;
 			}
 
 			old_schema = schema_ptr;  // renew old_schema since lru didn't already have it
 
-			if (new_metadata) {
+			if (initial_schema) {
 				// New LOCAL schema:
 				if (require_foreign) {
 					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
 				}
-				L_SCHEMA("SET: New local schema {}, write schema metadata", repr(local_schema_path));
+				L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					if (!db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						L_SCHEMA("SET: Metadata for Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
 						str_schema = db_handler->get_metadata(reserved_schema);
 						if (str_schema.empty()) {
 							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
-						new_metadata = false;
+						initial_schema = false;
 						local_schema_ptr = schema_ptr;
 						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
 						schema_ptr->lock();
@@ -392,12 +413,15 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 							std::lock_guard<std::mutex> lk(smtx);
 							exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 						}
-						if (!exchanged) {
+						if (exchanged) {
+							L_SCHEMA("SET: Schema {} re-added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+						} else {
 							schema_ptr = local_schema_ptr;
 						}
 					}
 				} catch(...) {
 					if (local_schema_ptr != schema_ptr) {
+						L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 						// On error, try reverting
 						std::lock_guard<std::mutex> lk(smtx);
 						(*this)[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
@@ -423,11 +447,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				exchanged = (*this)[local_schema_path].compare_exchange_strong(schema_ptr, new_schema);
 			}
 			if (exchanged) {
+				L_SCHEMA("SET: Schema {} added to LRU", repr(local_schema_path));
 				if (*schema_ptr != *new_schema) {
-					L_SCHEMA("SET: New local schema {}, write schema metadata", repr(local_schema_path));
+					L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 					try {
 						db_handler->set_metadata(reserved_schema, new_schema->serialise());
 					} catch(...) {
+						L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 						// On error, try reverting
 						std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
 						std::lock_guard<std::mutex> lk(smtx);
@@ -465,11 +491,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			exchanged = (*this)[local_schema_path].compare_exchange_strong(local_schema_ptr, new_schema);
 		}
 		if (exchanged) {
+			L_SCHEMA("SET: Schema {} added to LRU", repr(local_schema_path));
 			if (*local_schema_ptr != *new_schema) {
 				L_SCHEMA("SET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					db_handler->set_metadata(reserved_schema, new_schema->serialise());
 				} catch(...) {
+					L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
 					std::lock_guard<std::mutex> lk(smtx);
@@ -511,11 +539,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			exchanged = (*this)[foreign].compare_exchange_strong(foreign_schema_ptr, new_schema);
 		}
 		if (exchanged) {
+			L_SCHEMA("SET: Foreign Schema {} added to LRU", repr(foreign));
 			if (*foreign_schema_ptr != *new_schema) {
 				L_SCHEMA("SET: Save Foreign Schema {}", repr(foreign_path));
 				try {
 					save_shared(Endpoint{foreign_path}, foreign_id, *new_schema, db_handler->context);
 				} catch(...) {
+					L_SCHEMA("SET: Document for Foreign Schema {} wasn't saved, try reverting LRU", repr(foreign));
 					// On error, try reverting
 					std::shared_ptr<const MsgPack> aux_new_schema(new_schema);
 					std::lock_guard<std::mutex> lk(smtx);
