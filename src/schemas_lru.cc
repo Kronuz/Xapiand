@@ -296,19 +296,14 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 			try {
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 				schema_ptr->lock();
-			} catch (const Error&) {
-				initial_schema = true;
-				schema_ptr = Schema::get_initial_schema();
-			} catch (const ForeignSchemaError&) {
-				initial_schema = true;
-				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DocNotFoundError&) {
 				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			} catch (const Xapian::DatabaseNotFoundError&) {
 				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
-			} catch (const Xapian::DatabaseOpeningError&) {
+			} catch (...) {
+				L_EXC("Exception");
 				initial_schema = true;
 				schema_ptr = Schema::get_initial_schema();
 			}
