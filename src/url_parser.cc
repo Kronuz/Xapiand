@@ -239,7 +239,7 @@ PathParser::init(std::string_view p)
 	size_t length;
 	const char *ni = path.data();
 	const char *nf = ni + path.size();
-	const char *n0, *n1 = nullptr;
+	const char *n0, *n1 , *ns= nullptr;
 	bool cmd_found = false;
 	State state;
 
@@ -286,7 +286,7 @@ PathParser::init(std::string_view p)
 
 	// Then go backwards, looking for pmt, cmd and id
 	// id is filled only if there's no pmt already:
-	n0 = n1 = nf - 1;
+	ns = n0 = n1 = nf - 1;
 
 	cn = '\xff';
 	while (cn != 0) {
@@ -364,6 +364,37 @@ PathParser::init(std::string_view p)
 						n0 = n1 - 1;
 						break;
 
+					case State::PMT_SLC:
+						ASSERT(n0 >= n1);
+						length = ns - n1 - 1; // Removing the dot of the last selector
+						if (length != 0u) {
+							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
+							if (cn1 == command__ && (cn2 == '_' || (cn2 >= 'A' && cn2 <= 'Z') || (cn2 >= 'a' && cn2 <= 'z'))) {
+								off_cmd = n1 + 1;
+								len_cmd = length;
+								state = State::ID;
+							} else {
+								off_ppmt = off_pmt;
+								if (len_ppmt != 0u) {
+									++len_ppmt;
+								}
+								len_ppmt += len_pmt;
+								off_pmt = n1 + 1;
+								len_pmt = length;
+							}
+						}
+
+						length = n0 - ns;
+						if (length != 0u) {
+							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
+							off_slc = ns + 1;
+							len_slc = length;
+						}
+						n0 = n1 - 1;
+						break;
+
 					case State::SLB:
 						length = n0 - n1;
 						if (length != 0u) {
@@ -373,6 +404,7 @@ PathParser::init(std::string_view p)
 						}
 						n0 = n1 - 1;
 						break;
+					case State::SLF:
 					case State::ID:
 						ASSERT(n0 >= n1);
 						length = n0 - n1;
@@ -380,6 +412,23 @@ PathParser::init(std::string_view p)
 							off_id = n1 + 1;
 							len_id = length;
 							cn = '\0';
+						}
+						n0 = n1 - 1;
+						break;
+					case State::ID_SLC:
+						ASSERT(n0 >= n1);
+						length = ns - n1 - 1; // Removing the dot of the last selector
+						if (length != 0u) {
+							off_id = n1 + 1;
+							len_id = length;
+							cn = '\0';
+						}
+						length = n0 - ns;
+						if (length != 0u) {
+							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
+							off_slc = ns + 1;
+							len_slc = length;
 						}
 						n0 = n1 - 1;
 						break;
@@ -393,15 +442,10 @@ PathParser::init(std::string_view p)
 				switch (state) {
 					case State::SLC:
 					case State::SLB:
-						length = n0 - n1;
-						if (length != 0u) {
-							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
-							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
-							off_slc = n1 + 1;
-							len_slc = length;
-							state = cmd_found ? State::PMT : State::ID;
-						}
-						n0 = n1 - 1;
+					case State::PMT_SLC:
+					case State::ID_SLC:
+						ns = n1;
+						state = State::SLF;
 					default:
 						break;
 				}
@@ -445,6 +489,8 @@ PathParser::init(std::string_view p)
 						state = state = cmd_found ? State::PMT : State::ID;
 						n0 = n1;
 						break;
+					case State::SLF:
+						state = cmd_found ? State::PMT_SLC : State::ID_SLC;
 					default:
 						break;
 				}

@@ -70,6 +70,9 @@ class PathParser {
 
 public:
 	enum class State : uint8_t {
+		PMT_SLC,  // parameter and selector
+		ID_SLC,   // Id and selector
+		SLF,      // Selector Finded
 		SLC,
 		SLB,
 		NCM,
