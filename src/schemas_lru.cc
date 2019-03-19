@@ -210,7 +210,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 				L_SCHEMA("GET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					// Try writing (only if there's no metadata there alrady)
-					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
@@ -265,7 +265,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool write, boo
 				if (write) {
 					L_SCHEMA("GET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
 					try {
-						if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+						if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 							schema_ptr->set_flags(1);
 						} else {
 							// It doesn't matter if new metadata cannot be set
@@ -391,7 +391,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				// We still need to save the metadata
 				L_SCHEMA("SET: Cached Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
-					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("SET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
@@ -452,7 +452,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				}
 				L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
-					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false, false)) {
+					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("SET: Metadata for Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));

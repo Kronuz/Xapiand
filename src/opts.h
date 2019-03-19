@@ -79,10 +79,8 @@ extern struct opts_t {
 	bool uuid_compact = false;
 	uint32_t uuid_repr = 0;
 	bool uuid_partition = false;
-	std::string dump_metadata = "";
-	std::string dump_schema = "";
 	std::string dump_documents = "";
-	std::string restore = "";
+	std::string restore_documents = "";
 	std::string filename = "";
 	bool iterm2 = false;
 	bool log_epoch = false;

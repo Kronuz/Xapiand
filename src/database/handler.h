@@ -168,9 +168,10 @@ public:
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
 class DatabaseHandler {
-	friend Document;
-	friend Schema;
-	friend SchemasLRU;
+	friend class Document;
+	friend class Schema;
+	friend class SchemasLRU;
+	friend class lock_database;
 
 	int flags;
 	Endpoints endpoints;
@@ -224,10 +225,8 @@ public:
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
 	MSet get_mset(const Xapian::Query& query, unsigned offset = 0, unsigned limit = 10, unsigned check_at_least = 0, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr);
 
-	void dump_metadata(int fd);
-	void dump_schema(int fd);
 	void dump_documents(int fd);
-	void restore(int fd);
+	void restore_documents(int fd);
 
 	MsgPack dump_documents();
 
@@ -239,8 +238,8 @@ public:
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
 	std::string get_metadata(std::string_view key);
-	bool set_metadata(const std::string& key, const std::string& value, bool commit = false, bool overwrite = true);
-	bool set_metadata(std::string_view key, std::string_view value, bool commit = false, bool overwrite = true);
+	bool set_metadata(const std::string& key, const std::string& value, bool overwrite = true, bool commit = false, bool wal = true);
+	bool set_metadata(std::string_view key, std::string_view value, bool overwrite = true, bool commit = false, bool wal = true);
 
 	Document get_document(Xapian::docid did);
 	Document get_document(std::string_view document_id);
@@ -398,18 +397,18 @@ public:
 
 	Xapian::docid get_docid();
 
-	std::string serialise(size_t retries=DB_RETRIES);
-	std::string get_value(Xapian::valueno slot, size_t retries=DB_RETRIES);
-	std::string get_data(size_t retries=DB_RETRIES);
-	MsgPack get_terms(size_t retries=DB_RETRIES);
-	MsgPack get_values(size_t retries=DB_RETRIES);
+	std::string serialise();
+	std::string get_value(Xapian::valueno slot);
+	std::string get_data();
+	MsgPack get_terms();
+	MsgPack get_values();
 
 	MsgPack get_value(std::string_view slot_name);
 	MsgPack get_obj();
 	MsgPack get_field(std::string_view slot_name);
 	static MsgPack get_field(std::string_view slot_name, const MsgPack& obj);
 
-	uint64_t hash(size_t retries=DB_RETRIES);
+	uint64_t hash();
 };
 
 

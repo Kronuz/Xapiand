@@ -25,7 +25,6 @@
 #include <algorithm>              // for std::find, std::move
 
 #include "cassert.h"              // for ASSERT
-#include "database/database.h"    // for Database
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -721,7 +720,7 @@ DatabasePool::checkin(std::shared_ptr<Shard>& shard)
 }
 
 
-std::shared_ptr<Database>
+std::vector<std::shared_ptr<Shard>>
 DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 {
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoints.to_string()), readable_flags(flags), timeout);
@@ -739,40 +738,29 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 			ASSERT(shard);
 			shards.emplace_back(std::move(shard));
 		}
-		auto database = std::make_shared<Database>(shards, endpoints, flags);
-		L_TIMED_VAR(database->log, 200ms,
-			"Database checkout is taking too long: {} ({})",
-			"Database checked out for too long: {} ({})",
-			repr(database->to_string()),
-			readable_flags(database->flags));
-		return database;
+		return shards;
 	} catch (...) {
-		for (auto& shard : shards) {
-			if (shard) {
-				try {
-					shard->endpoint.checkin(shard);
-				} catch (...) {
-					L_EXC("Unable to checkin shard during error: {}", shard->endpoint.to_string());
-				}
-			}
-		}
+		checkin(shards);
 		throw;
 	}
 }
 
 
 void
-DatabasePool::checkin(std::shared_ptr<Database>& database)
+DatabasePool::checkin(std::vector<std::shared_ptr<Shard>>& shards)
 {
-	L_CALL("DatabasePool::checkin({})", database ? database->__repr__() : "null");
+	L_CALL("DatabasePool::checkin(<shards>)");
 
-	ASSERT(database);
-	for (auto& shard : database->shards) {
+	for (auto& shard : shards) {
 		if (shard) {
-			shard->endpoint.checkin(shard);
+			try {
+				shard->endpoint.checkin(shard);
+			} catch (...) {
+				L_EXC("Unable to checkin shard: {}", shard->endpoint.to_string());
+			}
 		}
 	}
-	database.reset();
+	shards.clear();
 }
 
 

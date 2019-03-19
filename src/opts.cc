@@ -194,11 +194,9 @@ parseOptions(int argc, char** argv)
 #endif
 
 		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
-		ValueArg<std::string> dump_metadata("", "dump-metadata", "Dump endpoint metadata to stdout.", false, "", "endpoint", cmd);
-		ValueArg<std::string> dump_schema("", "dump-schema", "Dump endpoint schema to stdout.", false, "", "endpoint", cmd);
 		ValueArg<std::string> dump_documents("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
 		ValueArg<std::string> in("i", "in", "Input filename for restore.", false, "", "file", cmd);
-		ValueArg<std::string> restore("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
+		ValueArg<std::string> restore_documents("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
 
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
@@ -518,16 +516,14 @@ parseOptions(int argc, char** argv)
 			o.uuid_compact = true;
 		}
 
-		o.dump_metadata = dump_metadata.getValue();
-		o.dump_schema = dump_schema.getValue();
 		o.dump_documents = dump_documents.getValue();
 		auto out_filename = out.getValue();
-		o.restore = restore.getValue();
+		o.restore_documents = restore_documents.getValue();
 		auto in_filename = in.getValue();
-		if ((!o.dump_metadata.empty() || !o.dump_schema.empty() || !o.dump_documents.empty()) && !o.restore.empty()) {
+		if ((!o.dump_documents.empty()) && !o.restore_documents.empty()) {
 			throw CmdLineParseException("Cannot dump and restore at the same time");
-		} else if (!o.dump_metadata.empty() || !o.dump_schema.empty() || !o.dump_documents.empty() || !o.restore.empty()) {
-			if (!o.restore.empty()) {
+		} else if (!o.dump_documents.empty() || !o.restore_documents.empty()) {
+			if (!o.restore_documents.empty()) {
 				if (!out_filename.empty()) {
 					throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
 				}

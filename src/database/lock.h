@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,72 +27,6 @@
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager
 #include "xapian.h"             // for Xapian::Database
-
-
-class lock_database {
-	std::shared_ptr<Database> _locked;
-	int _locks;
-
-	lock_database(const lock_database&) = delete;
-	lock_database& operator=(const lock_database&) = delete;
-
-public:
-	const int flags;
-	const Endpoints endpoints;
-
-	lock_database(const Endpoints& endpoints, int flags, bool do_lock = true) :
-		_locks(0),
-		flags(flags),
-		endpoints(endpoints)
-	{
-		if (do_lock) {
-			lock();
-		}
-	}
-
-	~lock_database() noexcept
-	{
-		while (_locks) {
-			unlock();
-		}
-	}
-
-	template <typename... Args>
-	const std::shared_ptr<Database> lock(Args&&... args)
-	{
-		if (!_locked) {
-			ASSERT(_locks == 0);
-			_locked = XapiandManager::database_pool()->checkout(endpoints, flags, std::forward<Args>(args)...);
-		}
-		++_locks;
-		return _locked;
-	}
-
-	void unlock() noexcept
-	{
-		if (_locks > 0 && --_locks == 0) {
-			ASSERT(_locked);
-			XapiandManager::database_pool()->checkin(_locked);
-		}
-	}
-
-	Database& operator*() const noexcept
-	{
-		ASSERT(_locked);
-		return *_locked;
-	}
-
-	Database* operator->() const noexcept
-	{
-		ASSERT(_locked);
-		return _locked.get();
-	}
-
-	const std::shared_ptr<Database> locked()
-	{
-		return _locked;
-	}
-};
 
 
 class lock_shard {

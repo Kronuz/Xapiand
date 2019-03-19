@@ -40,9 +40,9 @@
 #include "cassert.h"                              // for ASSERT
 #include "cast.h"                                 // for Cast
 #include "cuuid/uuid.h"                           // for UUIDGenerator
-#include "database/shard.h"                       // for Shard
-#include "database/lock.h"                        // for lock_shard
 #include "database/handler.h"                     // for DatabaseHandler
+#include "database/lock.h"                        // for lock_shard
+#include "database/shard.h"                       // for Shard
 #include "datetime.h"                             // for isDate, tm_t
 #include "exception.h"                            // for ClientError
 #include "geospatial/geospatial.h"                // for GeoSpatial

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -168,8 +168,8 @@ public:
 	std::shared_ptr<Shard> checkout(const Endpoint& endpoint, int flags, double timeout = DB_TIMEOUT, std::packaged_task<void()>* callback = nullptr);
 	void checkin(std::shared_ptr<Shard>& shard);
 
-	std::shared_ptr<Database> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
-	void checkin(std::shared_ptr<Database>& database);
+	std::vector<std::shared_ptr<Shard>> checkout(const Endpoints& endpoints, int flags, double timeout = DB_TIMEOUT);
+	void checkin(std::vector<std::shared_ptr<Shard>>& database);
 
 	void finish();
 

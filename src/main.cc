@@ -735,66 +735,6 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 }
 
 
-void dump_metadata() {
-	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd != -1) {
-		try {
-			setup();
-			auto& manager = XapiandManager::make();
-			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.dump_metadata));
-			L_NOTICE("Dumping metadata database: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
-			db_handler.dump_metadata(fd);
-			L_NOTICE("Dump finished!");
-			manager->join();
-			manager.reset();
-		} catch (...) {
-			if (fd != STDOUT_FILENO) {
-				io::close(fd);
-			}
-			throw;
-		}
-		if (fd != STDOUT_FILENO) {
-			io::close(fd);
-		}
-	} else {
-		L_CRIT("Cannot open file: {}", opts.filename);
-		throw SystemExit(EX_OSFILE);
-	}
-}
-
-
-void dump_schema() {
-	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
-	if (fd != -1) {
-		try {
-			setup();
-			auto& manager = XapiandManager::make();
-			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.dump_schema));
-			L_NOTICE("Dumping schema database: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
-			db_handler.dump_schema(fd);
-			L_NOTICE("Dump finished!");
-			manager->join();
-			manager.reset();
-		} catch (...) {
-			if (fd != STDOUT_FILENO) {
-				io::close(fd);
-			}
-			throw;
-		}
-		if (fd != STDOUT_FILENO) {
-			io::close(fd);
-		}
-	} else {
-		L_CRIT("Cannot open file: {}", opts.filename);
-		throw SystemExit(EX_OSFILE);
-	}
-}
-
-
 void dump_documents() {
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd != -1) {
@@ -825,17 +765,17 @@ void dump_documents() {
 }
 
 
-void restore() {
+void restore_documents() {
 	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd != -1) {
 		try {
 			setup();
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.restore));
+			Endpoints endpoints(Endpoint(opts.restore_documents));
 			L_NOTICE("Restoring into: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL);
-			db_handler.restore(fd);
+			db_handler.restore_documents(fd);
 			L_NOTICE("Restore finished!");
 			manager->join();
 			manager.reset();
@@ -943,14 +883,10 @@ int main(int argc, char **argv) {
 		banner();
 
 		try {
-			if (!opts.dump_metadata.empty()) {
-				dump_metadata();
-			} else if (!opts.dump_schema.empty()) {
-				dump_schema();
-			} else if (!opts.dump_documents.empty()) {
+			if (!opts.dump_documents.empty()) {
 				dump_documents();
-			} else if (!opts.restore.empty()) {
-				restore();
+			} else if (!opts.restore_documents.empty()) {
+				restore_documents();
 			} else {
 				server(process_start);
 			}
