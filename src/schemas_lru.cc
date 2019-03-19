@@ -149,14 +149,16 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 	bool exchanged;
 	const MsgPack* schema_obj = nullptr;
 
-	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
+	// We first try to load schema from the LRU cache
 	std::shared_ptr<const MsgPack> local_schema_ptr;
+	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	{
 		std::lock_guard<std::mutex> lk(smtx);
 		local_schema_ptr = local_schemas[local_schema_path].load();
 	}
 
-	if ((obj != nullptr) && obj->is_map()) {
+	// Check if passed object specifies a foreign schema
+	if (obj && obj->is_map()) {
 		const auto it = obj->find(reserved_schema);
 		if (it != obj->end()) {
 			schema_obj = &it.value();
@@ -164,33 +166,31 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 		}
 	}
 
-	// Implement foreign schemas in .xapiand/index by default:
-	std::string foreign_uri_holder;
-	if (require_foreign && foreign_path.empty()) {
-		if (local_schema_path != ".xapiand") {
-			foreign_uri_holder = string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F"));
-			foreign_uri = foreign_uri_holder;
-			std::string_view foreign_path_view, foreign_id_view;
-			split_path_id(foreign_uri, foreign_path_view, foreign_id_view);
-			foreign_path = urldecode(foreign_path_view);
-			foreign_id = urldecode(foreign_id_view);
-		}
-	}
-
 	if (foreign_path.empty()) {
-		// Foreign schema not passed by the user in '_schema', load schema instead.
+		// Whatever was passed by the user doesn't specify a foreign schema
 		if (local_schema_ptr) {
+			// Schema was in the cache
 			L_SCHEMA("GET: Schema {} found in cache", repr(local_schema_path));
 			schema_ptr = local_schema_ptr;
 		} else {
+			// Schema needs to be read
 			L_SCHEMA("GET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
 			bool initial_schema = false;
-			auto str_schema = db_handler->get_metadata(reserved_schema);
-			if (str_schema.empty()) {
+			auto schema_ser = db_handler->get_metadata(reserved_schema);
+			if (schema_ser.empty()) {
 				initial_schema = true;
-				schema_ptr = Schema::get_initial_schema();
+				if (require_foreign && local_schema_path != ".xapiand") {
+					// Implement foreign schemas in .xapiand/index by default:
+					schema_ptr = std::make_shared<MsgPack>(MsgPack({
+						{ RESERVED_TYPE, "foreign/object" },
+						{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
+					}));
+					schema_ptr->lock();
+				} else {
+					schema_ptr = Schema::get_initial_schema();
+				}
 			} else {
-				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 				schema_ptr->lock();
 			}
 
@@ -201,30 +201,37 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 			if (exchanged) {
 				L_SCHEMA("GET: Local Schema {} added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
 			} else {
+				// Read object couldn't be stored in cache,
+				// so we use the schema now currently in cache
 				schema_ptr = local_schema_ptr;
 			}
-
 			if (initial_schema && writable) {
-				initial_schema = false;
 				// New LOCAL schema:
-				if (require_foreign) {
-					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
-				}
 				L_SCHEMA("GET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					// Try writing (only if there's no metadata there alrady)
 					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						schema_ptr->set_flags(1);
 					} else {
-						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
+						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't overwritten, try reloading from metadata", repr(local_schema_path));
 						// or fallback to load from metadata (again).
 						local_schema_ptr = schema_ptr;
-						str_schema = db_handler->get_metadata(reserved_schema);
-						if (str_schema.empty()) {
+						initial_schema = false;
+						schema_ser = db_handler->get_metadata(reserved_schema);
+						if (schema_ser.empty()) {
 							initial_schema = true;
-							schema_ptr = Schema::get_initial_schema();
+							if (require_foreign && local_schema_path != ".xapiand") {
+								// Implement foreign schemas in .xapiand/index by default:
+								schema_ptr = std::make_shared<MsgPack>(MsgPack({
+									{ RESERVED_TYPE, "foreign/object" },
+									{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
+								}));
+								schema_ptr->lock();
+							} else {
+								schema_ptr = Schema::get_initial_schema();
+							}
 						} else {
-							schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+							schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 							schema_ptr->lock();
 						}
 						{
@@ -249,7 +256,8 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 			}
 		}
 	} else {
-		// New FOREIGN schema, write the foreign link to metadata:
+		// The user explicitly specifies using a foreign schema,
+		// so we fabricate a new foreign schema object
 		L_SCHEMA("GET: Foreign Schema {}{}", repr(local_schema_path), writable ? " (writing)" : "");
 		schema_ptr = std::make_shared<MsgPack>(MsgPack({
 			{ RESERVED_TYPE, "foreign/object" },
@@ -283,15 +291,16 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 						throw;
 					}
 				}
+			} else {
+				// Fabricated schema couldn't be stored in cache,
+				// we simply ignore the fact we weren't able to store it in cache
 			}
 		}
 	}
 
-	// Try validating loaded/created schema as LOCAL or FOREIGN
+	// Now we check if the schema points to a foreign schema
 	validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
 	if (!foreign_path.empty()) {
-		// FOREIGN Schema, get from the cache or use `get_shared()`
-		// to load from `foreign_path/foreign_id` endpoint:
 		bool initial_schema = false;
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
@@ -299,10 +308,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 		}
 		if (foreign_schema_ptr) {
-			// found in cache
+			// Foreign Schema was in the cache
 			L_SCHEMA("GET: Foreign Schema {} found in cache", repr(foreign_uri));
 			schema_ptr = foreign_schema_ptr;
 		} else {
+			// Foreign Schema needs to be read
 			L_SCHEMA("GET: Foreign Schema {} not found in cache, try loading from {} {}", repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 			try {
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
@@ -398,13 +408,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("SET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
-						auto str_schema = db_handler->get_metadata(reserved_schema);
-						if (str_schema.empty()) {
+						auto schema_ser = db_handler->get_metadata(reserved_schema);
+						if (schema_ser.empty()) {
 							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
 						initial_schema = false;
 						local_schema_ptr = schema_ptr;
-						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 						schema_ptr->lock();
 						{
 							std::lock_guard<std::mutex> lk(smtx);
@@ -428,12 +438,12 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			}
 		} else {
 			L_SCHEMA("SET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
-			auto str_schema = db_handler->get_metadata(reserved_schema);
-			if (str_schema.empty()) {
+			auto schema_ser = db_handler->get_metadata(reserved_schema);
+			if (schema_ser.empty()) {
 				initial_schema = true;
 				schema_ptr = new_schema;
 			} else {
-				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 				schema_ptr->lock();
 			}
 			{
@@ -459,13 +469,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("SET: Metadata for Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
-						str_schema = db_handler->get_metadata(reserved_schema);
-						if (str_schema.empty()) {
+						schema_ser = db_handler->get_metadata(reserved_schema);
+						if (schema_ser.empty()) {
 							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
 						initial_schema = false;
 						local_schema_ptr = schema_ptr;
-						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(str_schema));
+						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 						schema_ptr->lock();
 						{
 							std::lock_guard<std::mutex> lk(smtx);
