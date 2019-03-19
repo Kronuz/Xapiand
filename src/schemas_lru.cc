@@ -105,7 +105,14 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (!selector.empty()) {
 			o = o.select(selector);
 		}
-		o[RESERVED_RECURSE] = false;
+		auto it = o.find(SCHEMA_FIELD_NAME);  // If there's a "schema" field inside, extract it
+		if (it != o.end()) {
+			o = it.value();
+		}
+		o = MsgPack({
+			{ RESERVED_RECURSE, false },
+			{ SCHEMA_FIELD_NAME, o },
+		});
 		Schema::check<Error>(o, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
 		return o;
