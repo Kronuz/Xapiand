@@ -13,7 +13,7 @@ The following snippet captures the structure of sum aggregations:
 ```json
 "<aggregation_name>": {
   "_sum": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -55,12 +55,11 @@ Resulting in:
 
 ```json
 {
-    "#aggregations": {
-        "_doc_count": 17,
-        "indiana_total_balance": {
-            "_sum": 2565033.04
-        }
-    },
-    ...
+  "aggregations": {
+    "_doc_count": 17,
+    "indiana_total_balance": {
+      "_sum": 2565033.04
+    }
+  }, ...
 }
 ```

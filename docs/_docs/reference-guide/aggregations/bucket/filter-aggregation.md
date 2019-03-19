@@ -13,9 +13,9 @@ The following snippet captures the structure of filter aggregations:
 ```json
 "<aggregation_name>": {
   "_filter": {
-      "_term": {
-        ( "<key>": <value>, )*
-      }
+    "_term": {
+      ( "<key>": <value>, )*
+    }
   },
   ...
 }
@@ -69,7 +69,7 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "strawberry_lovers": {
       "_doc_count": 345,
@@ -77,6 +77,6 @@ Response:
         "_avg": 2576.7695072463768
       }
     }
-  },
+  }, ...
 }
 ```

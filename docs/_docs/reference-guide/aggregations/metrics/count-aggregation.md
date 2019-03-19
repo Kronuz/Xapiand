@@ -17,7 +17,7 @@ The following snippet captures the structure of count aggregations:
 ```json
 "<aggregation_name>": {
   "_count": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -60,11 +60,10 @@ POST /bank/:search?pretty
 Response:
 
 ```json
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 17,
     "indiana_city_count": {
       "_count": 17
     }
-  },
-  ...
+  }, ...
 ```

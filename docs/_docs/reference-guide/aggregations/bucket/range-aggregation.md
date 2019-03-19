@@ -14,15 +14,15 @@ The following snippet captures the structure of range aggregations:
 ```json
 "<aggregation_name>": {
   "_range": {
-      "_field": "<field_name>",
-      ("_keyed": <keyed_boolean>, )?
-      "_ranges": [
-        ( {
-          ( "_key": <key_name>, )?
-          "_from": <from_value>,
-          "_to": <to_value>
-        }, )+
-      ]
+    "_field": "<field_name>",
+    ("_keyed": <keyed_boolean>, )?
+    "_ranges": [
+      ( {
+        ( "_key": <key_name>, )?
+        "_from": <from_value>,
+        "_to": <to_value>
+      }, )+
+    ]
   },
   ...
 }
@@ -82,7 +82,7 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balances_by_range": {
       "..2000.0": {
@@ -95,8 +95,7 @@ Response:
         "_doc_count": 36
       }
     }
-  },
-  ...
+  }, ...
 }
 ```
 
@@ -136,7 +135,7 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balances_by_range": {
       "poor": {
@@ -149,8 +148,7 @@ Response:
         "_doc_count": 36
       }
     }
-  },
-  ...
+  }, ...
 }
 ```
 

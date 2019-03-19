@@ -23,7 +23,7 @@ The following snippet captures the structure of extended statistics aggregations
 ```json
 "<aggregation_name>": {
   "_extended_stats": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -64,7 +64,7 @@ The above aggregation computes the balance statistics over all documents. The
 above will return the following:
 
 ```json
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balance_stats": {
       "_count": 1000,
@@ -80,8 +80,7 @@ above will return the following:
         "_lower": -446.50130192041049
       }
     }
-  },
-  ...
+  }, ...
 ```
 
 The name of the aggregation (`balance_stats` above) also serves as the key by

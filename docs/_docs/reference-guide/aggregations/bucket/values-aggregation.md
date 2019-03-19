@@ -14,7 +14,7 @@ The following snippet captures the structure of range aggregations:
 ```json
 "<aggregation_name>": {
   "_values": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -56,7 +56,7 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "favorite_ruits": [
       {
@@ -72,8 +72,7 @@ Response:
         "_key": "apple"
       }
     ]
-  },
-  ...
+  }, ...
 }
 ```
 

@@ -47,11 +47,11 @@ The following snippet captures the structure of aggregations types for buckets:
 ```json
 "<aggregation_name>": {
   "<bucket_aggregation_type>": {
-      ( "_sort": {  <sort_body> }, )?
-      ( "_limit": <limit_count>, )?
-      ( "_min_doc_count": <min_doc_count>, )?
-      ( "_keyed": <keyed_boolean>, )?
-      ...
+    ( "_sort": {  <sort_body> }, )?
+    ( "_limit": <limit_count>, )?
+    ( "_min_doc_count": <min_doc_count>, )?
+    ( "_keyed": <keyed_boolean>, )?
+    ...
   },
   ...
 }
@@ -274,7 +274,7 @@ POST /bank/:search?pretty
 Response:
 
 ```json
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balances": {
       "0.0": {
@@ -308,8 +308,7 @@ Response:
         "_doc_count": 1
       }
     }
-  },
-  ...
+  }, ...
 ```
 
 
@@ -458,7 +457,7 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balances_by_range": {
       "poor": {
@@ -492,8 +491,7 @@ Response:
         }
       }
     }
-  },
-  ...
+  }, ...
 }
 ```
 

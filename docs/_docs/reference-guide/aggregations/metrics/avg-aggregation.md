@@ -13,7 +13,7 @@ The following snippet captures the structure of average aggregations:
 ```json
 "<aggregation_name>": {
   "_avg": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -55,13 +55,12 @@ will return the following:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "avg_age": {
       "_avg": 30.034
     }
-  },
-  ...
+  }, ...
 }
 ```
 

@@ -26,6 +26,7 @@ The response contains:
 * `cluster_name`   - Name of the cluster.
 * `server`         - Server version string.
 * `versions`       - Versions of the internal libraries.
+* `options`        - Currently active options.
 
 
 ### Database Information
@@ -43,7 +44,7 @@ GET /bank/:info?pretty
 Response will include the following information about the database:
 
 * `uuid`          - UUID of the xapian database.
-* `revision`      - Internal document ID.
+* `revision`      - Internal document ID (shown only for shard databases).
 * `doc_count`     - Documents count.
 * `last_id`       - Last used ID.
 * `doc_del`       - Documents deleted.
@@ -51,6 +52,7 @@ Response will include the following information about the database:
 * `doc_len_lower` - Statistics about documents length.
 * `doc_len_upper` - Statistics about documents length.
 * `has_positions` - Boolean indicating if the database has positions stored.
+* `shards`        - List of shard databases.
 
 
 ### Document Information
@@ -66,8 +68,8 @@ GET /bank/:info/1?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-In addition to the database information, the response will also include a set
-of valuable information about the required document:
+The response will include a set of valuable information about the required
+document:
 
 * `docid`      - Internal document ID.
 * `data`       - Content types stored in the document data.

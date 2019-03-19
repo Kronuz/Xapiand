@@ -89,16 +89,23 @@ Response should be something like:
 
 ```json
 {
-  "#database_info": {
-    "#uuid": "06c3fdba-2490-49ff-9dc3-8f5f91bc2035",
-    "#revision": 1,
-    "#doc_count": 1000,
-    "#last_id": 1000,
-    "#doc_del": 0,
-    "#av_length": 159.109,
-    "#doc_len_lower": 140,
-    "#doc_len_upper": 179,
-    "#has_positions": true
+  "database_info": {
+    "endpoint": "bank",
+    "uuid": "18ed47d5-0b42-42e9-913f-f8f819a33aef:72343e50-af36-4f7f-9fe5-62c10194b7af:40a9d364-30f8-46d5-b5d8-b96ed2929d1d:b5bb86ba-4ecb-4fe9-ad4b-a19c256700c9:96e61484-0e63-4cab-8a8b-eaf3f12f107c",
+    "doc_count": 1000,
+    "last_id": 1000,
+    "doc_del": 0,
+    "av_length": 200.023,
+    "doc_len_lower": 176,
+    "doc_len_upper": 238,
+    "has_positions": true,
+    "shards": [
+      "bank/.__1",
+      "bank/.__2",
+      "bank/.__3",
+      "bank/.__4",
+      "bank/.__5"
+    ]
   }
 }
 ```
@@ -130,65 +137,72 @@ GET /bank/:search?q=*&sort=accountNumber&pretty
 
 Let's first dissect the search call. We are searching (`:search` endpoint) in
 the `bank` index, and the `q=*` parameter instructs Xapiand to _match all_
-documents in the index. The `sort=accountNumber` parameter indicates to
-sort the results using the `accountNumber` field of each document in an
-ascending order. The `pretty` parameter just tells Xapiand to return
-pretty-printed JSON results, the same effect can be achieved by using the
-`Accept` header as in: `Accept: application/json; indent: 4`.
+documents in the index (the default if not specified). The `sort=accountNumber`
+parameter indicates to sort the results using the `accountNumber` field of each
+document in an ascending order. The `pretty` parameter just tells Xapiand to
+return pretty-printed JSON results, the same effect can be achieved by using the
+`Accept` header as in: `Accept: application/json; indent: 2`.
 
 And the response (partially shown):
 
 ```json
 {
-  "#query": {
-    "#total_count": 10,
-    "#matches_estimated": 1000,
-    "#hits": [
-      {
-        "style": {
-          "hairstyle": "spiky",
-          "clothing": {
-            "footwear": "sneakers",
-            "shirt": "tunic",
-            "pants": "leggings"
-          }
-        },
-        "_id": 28,
-        "name": {
-          "lastName": "Thomas",
-          "firstName": "Georgia"
-        },
-        "accountNumber": 657011,
-        "age": 25,
-        "employer": "Orbalix",
-        "eyeColor": "green",
-        "contact": {
-          "city": "Greenbush",
-          "state": "Oregon",
-          "email": "georgia.thomas@orbalix.ca",
-          "phone": "+1 (965) 541-3560",
-          "address": "505 Howard Alley"
-        },
-        "favoriteFruit": "lemon",
-        "balance": 6691.46,
-        "personality": "It's hard to describe...",
-        "#docid": 1,
-        "#rank": 0,
-        "#weight": 0.0,
-        "#percent": 100
-      }, ...
-    ]
-  },
-  "#took": 7.898
+  "total": 1000,
+  "count": 10,
+  "hits": [
+    {
+      "accountNumber": 100123,
+      "balance": 10073.05,
+      "employer": "Affluex",
+      "name": {
+        "firstName": "Margaret",
+        "lastName": "Anderson"
+      },
+      "age": 24,
+      "gender": "female",
+      "contact": {
+        "address": "756 Strauss Street",
+        "city": "Fairview",
+        "state": "Virgin Islands",
+        "postcode": "06099",
+        "phone": "+1 (919) 400-3616",
+        "email": "margaret.anderson@affluex.net"
+      },
+      "checkin": {
+        "_point": {
+          "_longitude": -122.39168,
+          "_latitude": 40.58654
+        }
+      },
+      "favoriteFruit": "lemon",
+      "eyeColor": "brown",
+      "style": {
+        "clothing": {
+          "pants": "mini-skirt",
+          "shirt": "jersey",
+          "footwear": "sneakers"
+        }
+      },
+      "personality": "There's a lot to say about Margaret...",
+      "_id": 233,
+      "_version": 1,
+      "#docid": 233,
+      "#shard": 2,
+      "#rank": 0,
+      "#weight": 0.0,
+      "#percent": 100
+    }, ...
+  ],
+  "took": "39.889ms"
 }
 ```
 
 As for the response, we see the following parts:
 
-* `#query ➛ #total_count` - Total number of returned hits.
-* `#query ➛ #matches_estimated` - Number of estimated documents that match the query.
-* `#query ➛ #hits` - search results.
-* `#took` - time in milliseconds for Xapiand to execute the search.
+* `total` - Number of estimated documents that match the query.
+* `count` - Total number of returned hits.
+* `hits`  - Search results.
+* `took`  - Time it took to execute the query.
 
 ## Introducing the Query Language
 
@@ -408,7 +422,9 @@ And the response (partially shown):
 
 ```json
 {
-  "#aggregations": {
+  "total": 1000,
+  "count": 0,
+  "aggregations": {
     "_doc_count": 1000,
     "group_by_state": {
       "Texas": {
@@ -426,13 +442,8 @@ And the response (partially shown):
       }
     }
   },
-  "#query": {
-      "#total_count": 0,
-      "#matches_estimated": 1000,
-      "#hits": [
-      ]
-  },
-  "#took": 2.573
+  "hits": [],
+  "took": "14.83ms"
 }
 ```
 

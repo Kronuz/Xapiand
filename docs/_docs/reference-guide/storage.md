@@ -93,25 +93,39 @@ GET /twitter/images/:info/Kronuz?pretty
 {% include curl.html req=req %}
 
 The result (partially shown) has the available content types listed inside
- `#document_info ➛ #blobs`
+ `document_info ➛ data`
 
 ```json
 {
-  "#document_info": {
-    "#blobs": {
-      "image/png": {
-        "#type": "stored",
-        "#volume": 0,
-        "#offset": 512,
-        "#size": 572272
+  "document_info": {
+    "docid": 1,
+    "data": [
+      {
+        "content_type": "application/msgpack",
+        "type": "inplace"
       },
-      "image/jpeg": {
-        "#type": "stored",
-        "#volume": 0,
-        "#offset": 72411,
-        "#size": 484591
+      {
+        "content_type": "image/png",
+        "type": "stored",
+        "volume": 0,
+        "offset": 512,
+        "size": 572272
+      },
+      {
+        "content_type": "application/pdf",
+        "type": "stored",
+        "volume": 0,
+        "offset": 72411,
+        "size": 765713
+      },
+      {
+        "content_type": "image/jpeg",
+        "type": "stored",
+        "volume": 0,
+        "offset": 162578,
+        "size": 484576
       }
-    }, ...
+    ], ...
   }
 }
 ```

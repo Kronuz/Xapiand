@@ -27,9 +27,9 @@ The following snippet captures the structure of histogram aggregations:
 ```json
 "<aggregation_name>": {
   "_histogram": {
-      "_field": "<field_name>",
-      "_interval": "<interval>",
-      ( "_shift": <shift> )?
+    "_field": "<field_name>",
+    "_interval": "<interval>",
+    ( "_shift": <shift> )?
   },
   ...
 }
@@ -78,7 +78,7 @@ POST /bank/:search?pretty
 And the following may be the response:
 
 ```json
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balances": [
       {
@@ -130,8 +130,7 @@ And the following may be the response:
         "_key": "12000.0"
       }
     ]
-  },
-  ...
+  }, ...
 ```
 
 ### Shift
@@ -174,7 +173,7 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "ages": [
       {
@@ -190,8 +189,7 @@ Response:
         "_key": "35"
       }
     ]
-  },
-  ...
+  }, ...
 }
 ```
 

@@ -50,8 +50,8 @@ The following snippet captures the structure of aggregations types for metrics:
 ```json
 "<aggregation_name>": {
   "<metrics_aggregation_type>": {
-      "_field": "<field_name>",
-      ...
+    "_field": "<field_name>",
+    ...
   },
   ...
 }

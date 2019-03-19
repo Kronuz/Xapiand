@@ -23,7 +23,7 @@ The following snippet captures the structure of statistics aggregations:
 ```json
 "<aggregation_name>": {
   "_stats": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -65,7 +65,7 @@ above will return the following:
 
 
 ```json
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balance_stats": {
       "_count": 1000,
@@ -74,6 +74,5 @@ above will return the following:
       "_avg": 2565.03304,
       "_sum": 2565033.04
     }
-  },
-  ...
+  }, ...
 ```

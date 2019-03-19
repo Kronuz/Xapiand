@@ -15,7 +15,7 @@ The following snippet captures the structure of max aggregations:
 ```json
 "<aggregation_name>": {
   "_max": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -56,13 +56,12 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "max_balance": {
       "_max": 12699.46
     }
-  },
-  ...
+  }, ...
 }
 ```
 

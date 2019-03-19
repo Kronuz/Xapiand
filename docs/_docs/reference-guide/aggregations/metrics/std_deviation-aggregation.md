@@ -13,8 +13,8 @@ The following snippet captures the structure of standard deviation aggregations:
 ```json
 "<aggregation_name>": {
   "_std_deviation": {
-      "_field": "<field_name>",
-      ( "_sigma": <sigma_value> )?
+    "_field": "<field_name>",
+    ( "_sigma": <sigma_value> )?
   },
   ...
 }
@@ -56,7 +56,7 @@ documents. The above will return the following:
 
 
 ```json
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "balance_std_deviation": {
       "_std_deviation": 1505.7671709602053,
@@ -65,8 +65,7 @@ documents. The above will return the following:
         "_lower": -446.50130192041049
       }
     }
-  },
-  ...
+  }, ...
 ```
 
 The name of the aggregation (`balance_std_deviation` above) also serves as the

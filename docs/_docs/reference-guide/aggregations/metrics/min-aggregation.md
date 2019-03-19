@@ -15,7 +15,7 @@ The following snippet captures the structure of min aggregations:
 ```json
 "<aggregation_name>": {
   "_min": {
-      "_field": "<field_name>"
+    "_field": "<field_name>"
   },
   ...
 }
@@ -56,13 +56,12 @@ Response:
 
 ```json
 {
-  "#aggregations": {
+  "aggregations": {
     "_doc_count": 1000,
     "min_balance": {
       "_min": 7.99
     }
-  },
-  ...
+  }, ...
 }
 ```
 

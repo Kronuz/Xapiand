@@ -75,17 +75,15 @@ Sure enough, Xapiand returns a list of cities in the Bay Area, nearest first:
 
 ```json
 {
-  "#query": {
-    "#matches_estimated": 5,
-    "#total_count": 5,
-    "#hits": [
-      "Richmond",
-      "Berkeley",
-      "Oakland",
-      "San Francisco",
-      "Vallejo"
-    ]
-  }
+  "total": 5,
+  "count": 5,
+  "hits": [
+    "Richmond",
+    "Berkeley",
+    "Oakland",
+    "San Francisco",
+    "Vallejo"
+  ]
 }
 ```
 
@@ -143,16 +141,14 @@ Now Xapiand returns the same cities, but now nearest to _San Francisco_ first.
 
 ```json
 {
-  "#query": {
-    "#matches_estimated": 5,
-    "#total_count": 5,
-    "#hits": [
-      "San Francisco",
-      "Oakland",
-      "Richmond",
-      "Berkeley",
-      "Vallejo"
-    ]
-  }
+  "total": 5,
+  "count": 5,
+  "hits": [
+    "San Francisco",
+    "Oakland",
+    "Richmond",
+    "Berkeley",
+    "Vallejo"
+  ]
 }
 ```

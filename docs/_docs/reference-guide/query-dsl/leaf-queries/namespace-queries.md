@@ -20,8 +20,7 @@ The `_namespace` keyword must be specified during Schema creation:
       "footwear": "casual shoes"
     },
     "hairstyle": "afro"
-  },
-  ...
+  }, ...
 }
 ```
 
