@@ -2042,23 +2042,47 @@ DatabaseHandler::get_database_info()
 {
 	L_CALL("DatabaseHandler::get_database_info()");
 
+	ASSERT(!endpoints.empty());
+	MsgPack shards = MsgPack::ARRAY();
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+		auto doccount = db->get_doccount();
+		auto lastdocid = db->get_lastdocid();
+		MsgPack shard = {
+			{ RESPONSE_ENDPOINT, endpoint.path },
+			{ RESPONSE_UUID, db->get_uuid() },
+			{ RESPONSE_REVISION, db->get_revision() },
+			{ RESPONSE_DOC_COUNT, doccount },
+			{ RESPONSE_LAST_ID, lastdocid },
+			{ RESPONSE_DOC_DEL, lastdocid - doccount },
+			{ RESPONSE_AV_LENGTH, db->get_avlength() },
+			{ RESPONSE_DOC_LEN_LOWER,  db->get_doclength_lower_bound() },
+			{ RESPONSE_DOC_LEN_UPPER, db->get_doclength_upper_bound() },
+			{ RESPONSE_HAS_POSITIONS, db->has_positions() },
+		};
+		if (endpoints.size() == 1) {
+			return shard;
+		}
+		shards.append(std::move(shard));
+	}
+
 	lock_database lk_db(*this);
-
 	auto db = lk_db.locked();
-
 	auto doccount = db->get_doccount();
 	auto lastdocid = db->get_lastdocid();
-	MsgPack info;
-	info[RESPONSE_UUID] = db->get_uuid();
-	info[RESPONSE_REVISION] = db->get_revision();
-	info[RESPONSE_DOC_COUNT] = doccount;
-	info[RESPONSE_LAST_ID] = lastdocid;
-	info[RESPONSE_DOC_DEL] = lastdocid - doccount;
-	info[RESPONSE_AV_LENGTH] = db->get_avlength();
-	info[RESPONSE_DOC_LEN_LOWER] =  db->get_doclength_lower_bound();
-	info[RESPONSE_DOC_LEN_UPPER] = db->get_doclength_upper_bound();
-	info[RESPONSE_HAS_POSITIONS] = db->has_positions();
-	return info;
+	return {
+		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path) },
+		// { RESPONSE_UUID, db->get_uuid() },
+		{ RESPONSE_DOC_COUNT, doccount },
+		{ RESPONSE_LAST_ID, lastdocid },
+		{ RESPONSE_DOC_DEL, lastdocid - doccount },
+		{ RESPONSE_AV_LENGTH, db->get_avlength() },
+		{ RESPONSE_DOC_LEN_LOWER,  db->get_doclength_lower_bound() },
+		{ RESPONSE_DOC_LEN_UPPER, db->get_doclength_upper_bound() },
+		{ RESPONSE_HAS_POSITIONS, db->has_positions() },
+		{ "shards", shards },
+	};
 }
 
 
