@@ -751,7 +751,7 @@ void
 DatabaseHandler::dump_metadata(int fd)
 {
 	L_CALL("DatabaseHandler::dump_metadata()");
-
+/*
 	lock_database lk_db(endpoints, flags);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
@@ -771,6 +771,7 @@ DatabaseHandler::dump_metadata(int fd)
 
 	serialise_length(fd, current_hash);
 	L_INFO("Dump hash is {:#010x}", current_hash);
+*/
 }
 
 
@@ -778,7 +779,7 @@ void
 DatabaseHandler::dump_schema(int fd)
 {
 	L_CALL("DatabaseHandler::dump_schema()");
-
+/*
 	schema = get_schema(opts.foreign);
 	auto saved_schema_ser = schema->get_full().serialise();
 
@@ -802,6 +803,7 @@ DatabaseHandler::dump_schema(int fd)
 
 	serialise_length(fd, current_hash);
 	L_INFO("Dump hash is {:#010x}", current_hash);
+*/
 }
 
 
@@ -809,7 +811,7 @@ void
 DatabaseHandler::dump_documents(int fd)
 {
 	L_CALL("DatabaseHandler::dump_documents()");
-
+/*
 	lock_database lk_db(endpoints, flags);
 
 	XXH32_state_t* xxh_state = XXH32_createState();
@@ -829,6 +831,7 @@ DatabaseHandler::dump_documents(int fd)
 
 	serialise_length(fd, current_hash);
 	L_INFO("Dump hash is {:#010x}", current_hash);
+*/
 }
 
 
@@ -836,7 +839,7 @@ void
 DatabaseHandler::restore(int fd)
 {
 	L_CALL("DatabaseHandler::restore()");
-
+/*
 	std::string buffer;
 	std::size_t off = 0;
 	std::size_t acc = 0;
@@ -1067,6 +1070,7 @@ DatabaseHandler::restore(int fd)
 	if (saved_hash != current_hash) {
 		L_WARNING("Invalid dump hash. Should be {:#010x}, but instead is {:#010x}", saved_hash, current_hash);
 	}
+*/
 }
 
 
@@ -1186,8 +1190,9 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto it = lk_db->db()->postlist_begin(term_string);
-			auto it_e = lk_db->db()->postlist_end(term_string);
+			auto db = lk_db->db();
+			auto it = db->postlist_begin(term_string);
+			auto it_e = db->postlist_end(term_string);
 			if (initial) {
 				it.skip_to(initial);
 			}
@@ -1350,7 +1355,8 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto final_query = query;
-			Xapian::Enquire enquire(*lk_db->db());
+			auto db = lk_db->db();
+			Xapian::Enquire enquire(*db);
 			if (collapse_key != Xapian::BAD_VALUENO) {
 				enquire.set_collapse_key(collapse_key, query_field.collapse_max);
 			}
@@ -1408,7 +1414,8 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
 			auto final_query = query;
-			Xapian::Enquire enquire(*lk_db->db());
+			auto db = lk_db->db();
+			Xapian::Enquire enquire(*db);
 			if (spy) {
 				enquire.add_matchspy(spy);
 			}
@@ -1637,67 +1644,160 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 
 void
-DatabaseHandler::delete_document(std::string_view document_id, bool commit)
+DatabaseHandler::delete_document(Xapian::docid did, bool commit, bool wal, bool version)
 {
-	L_CALL("DatabaseHandler::delete_document({})", repr(document_id));
+	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, commit, wal, version);
+
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
+	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	auto& endpoint = endpoints[shard_num];
+	lock_shard lk_shard(endpoint, flags);
+	lk_shard->delete_document(shard_did, commit, wal, version);
+}
+
+
+void
+DatabaseHandler::delete_document(std::string_view document_id, bool commit, bool wal, bool version)
+{
+	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", repr(document_id), commit, wal, version);
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		lock_database lk_db(endpoints, flags);
-		lk_db->delete_document(did, commit);
+		delete_document(did, commit, wal, version);
 		return;
 	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
-
 	delete_document_term(term_id, commit);
 }
 
 
 void
-DatabaseHandler::delete_document_term(const std::string& term, bool commit)
+DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
-	lock_database lk_db(endpoints, flags);
-	return lk_db->delete_document_term(term, commit);
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = fnv1ah64::hash(term) % n_shards;
+	auto& endpoint = endpoints[shard_num];
+	lock_shard lk_shard(endpoint, flags);
+	lk_shard->delete_document_term(term, commit, wal, version);
 }
 
 
 Xapian::docid
-DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit)
+DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, bool version)
 {
-	L_CALL("DatabaseHandler::replace_document({}, <doc>)", did);
+	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
 
-	lock_database lk_db(endpoints, flags);
-	return lk_db->replace_document(did, std::move(doc), commit);
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		// Try getting a new ID which can currently be indexed (active node)
+		// Get the least used shard:
+		auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+		for (size_t n = 0; n < n_shards; ++n) {
+			auto& endpoint = endpoints[n];
+			lock_shard lk_shard(endpoint, flags);
+			auto node = lk_shard->node();
+			if (node && node->is_active()) {
+				try {
+					auto doccount = lk_shard->db()->get_doccount();
+					if (min_doccount > doccount) {
+						min_doccount = doccount;
+						shard_num = n;
+					}
+				} catch (...) {}
+			}
+		}
+	}
+	auto& endpoint = endpoints[shard_num];
+	lock_shard lk_shard(endpoint, flags);
+	auto shard_did = lk_shard->add_document(std::move(doc), commit, wal, version);
+	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+	return did;
 }
 
 
 Xapian::docid
-DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit)
+DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit, bool wal, bool version)
+{
+	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
+
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
+	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	auto& endpoint = endpoints[shard_num];
+	lock_shard lk_shard(endpoint, flags);
+	lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	return did;
+}
+
+
+Xapian::docid
+DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit, bool wal, bool version)
+{
+	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
+
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		ASSERT(term.size() > 2);
+		if (term[0] == 'Q' && term[1] == 'N') {
+			auto did_serialised = term.substr(2);
+			Xapian::docid did = sortable_unserialise(did_serialised);
+			if (did == 0) {
+				// Try getting a new ID which can currently be indexed (active node)
+				// Get the least used shard:
+				auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+				for (size_t n = 0; n < n_shards; ++n) {
+					auto& endpoint = endpoints[n];
+					lock_shard lk_shard(endpoint, flags);
+					auto node = lk_shard->node();
+					if (node && node->is_active()) {
+						try {
+							auto doccount = lk_shard->db()->get_doccount();
+							if (min_doccount > doccount) {
+								min_doccount = doccount;
+								shard_num = n;
+							}
+						} catch (...) {}
+					}
+				}
+			} else {
+				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
+			}
+			doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
+		} else {
+			shard_num = fnv1ah64::hash(term) % n_shards;
+		}
+	}
+	auto& endpoint = endpoints[shard_num];
+	lock_shard lk_shard(endpoint, flags);
+	auto shard_did = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
+	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+	return did;
+}
+
+
+Xapian::docid
+DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>)", repr(document_id));
 
 	auto did = to_docid(document_id);
 	if (did != 0u) {
-		lock_database lk_db(endpoints, flags);
-		return lk_db->replace_document(did, std::move(doc), commit);
+		return replace_document(did, std::move(doc), commit, wal, version);
 	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
-
-	return replace_document_term(term_id, std::move(doc), commit);
-}
-
-
-Xapian::docid
-DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit)
-{
-	L_CALL("DatabaseHandler::replace_document_term({}, <doc>)", repr(term));
-
-	lock_database lk_db(endpoints, flags);
-	return lk_db->replace_document_term(term, std::move(doc), commit);
+	return replace_document_term(term_id, std::move(doc), commit, wal, version);
 }
 
 

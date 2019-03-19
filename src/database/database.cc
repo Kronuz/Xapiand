@@ -359,33 +359,6 @@ Database::cancel_transaction()
 }
 
 
-void
-Database::delete_document(Xapian::docid did, bool commit_, bool wal_, bool version_)
-{
-	L_CALL("Database::delete_document({}, {}, {})", did, commit_, wal_);
-
-	ASSERT(!shards.empty());
-	size_t n_shards = shards.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-	auto& shard = shards[shard_num];
-	shard->delete_document(shard_did, commit_, wal_, version_);
-}
-
-
-void
-Database::delete_document_term(const std::string& term, bool commit_, bool wal_, bool version_)
-{
-	L_CALL("Database::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
-
-	ASSERT(!shards.empty());
-	size_t n_shards = shards.size();
-	size_t shard_num = fnv1ah64::hash(term) % n_shards;
-	auto& shard = shards[shard_num];
-	shard->delete_document_term(term, commit_, wal_, version_);
-}
-
-
 #ifdef XAPIAND_DATA_STORAGE
 std::string
 Database::storage_get_stored(const Locator& locator, Xapian::docid did)
@@ -397,99 +370,6 @@ Database::storage_get_stored(const Locator& locator, Xapian::docid did)
 	return shard->storage_get_stored(locator);
 }
 #endif /* XAPIAND_DATA_STORAGE */
-
-
-Xapian::docid
-Database::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
-{
-	L_CALL("Database::add_document(<doc>, {}, {})", commit_, wal_);
-
-	ASSERT(!shards.empty());
-	size_t n_shards = shards.size();
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		// Try getting a new ID which can currently be indexed (active node)
-		// Get the least used shard:
-		auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
-		for (size_t n = 0; n < n_shards; ++n) {
-			auto& shard = shards[n];
-			auto node = shard->node();
-			if (node && node->is_active()) {
-				try {
-					auto doccount = shard->db()->get_doccount();
-					if (min_doccount > doccount) {
-						min_doccount = doccount;
-						shard_num = n;
-					}
-				} catch (...) {}
-			}
-		}
-	}
-	auto& shard = shards[shard_num];
-	auto shard_did = shard->add_document(std::move(doc), commit_, wal_, version_);
-	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
-	return did;
-}
-
-
-Xapian::docid
-Database::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
-{
-	L_CALL("Database::replace_document({}, <doc>, {}, {})", did, commit_, wal_);
-
-	ASSERT(!shards.empty());
-	size_t n_shards = shards.size();
-	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-	auto& shard = shards[shard_num];
-	shard->replace_document(shard_did, std::move(doc), commit_, wal_, version_);
-	return did;
-}
-
-
-Xapian::docid
-Database::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
-{
-	L_CALL("Database::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
-
-	ASSERT(!shards.empty());
-	size_t n_shards = shards.size();
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		ASSERT(term.size() > 2);
-		if (term[0] == 'Q' && term[1] == 'N') {
-			auto did_serialised = term.substr(2);
-			Xapian::docid did = sortable_unserialise(did_serialised);
-			if (did == 0) {
-				// Try getting a new ID which can currently be indexed (active node)
-				// Get the least used shard:
-				auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
-				for (size_t n = 0; n < n_shards; ++n) {
-					auto& shard = shards[n];
-					auto node = shard->node();
-					if (node && node->is_active()) {
-						try {
-							auto doccount = shard->db()->get_doccount();
-							if (min_doccount > doccount) {
-								min_doccount = doccount;
-								shard_num = n;
-							}
-						} catch (...) {}
-					}
-				}
-			} else {
-				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-			}
-			doc.add_value(DB_SLOT_SHARDS, serialise_length(shard_num) + serialise_length(n_shards));
-		} else {
-			shard_num = fnv1ah64::hash(term) % n_shards;
-		}
-	}
-	auto& shard = shards[shard_num];
-	auto shard_did = shard->replace_document_term(term, std::move(doc), commit_, wal_, version_);
-	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
-	return did;
-}
 
 
 void
