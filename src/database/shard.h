@@ -165,7 +165,7 @@ public:
 	void add_spelling(const std::string& word, Xapian::termcount freqinc, bool commit_ = false, bool wal_ = true);
 	Xapian::termcount remove_spelling(const std::string& word, Xapian::termcount freqdec, bool commit_ = false, bool wal_ = true);
 
-	Xapian::docid find_document(const std::string& term);
+	Xapian::docid get_docid_term(const std::string& term);
 
 	Xapian::Document get_document(Xapian::docid shard_did, bool assume_valid_);
 

@@ -1448,16 +1448,16 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 
 
 Xapian::docid
-Shard::find_document(const std::string& term)
+Shard::get_docid_term(const std::string& term)
 {
-	L_CALL("Shard::find_document({})", repr(term));
+	L_CALL("Shard::get_docid_term({})", repr(term));
 
 	Xapian::docid did = 0;
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
-	L_DATABASE_WRAP_BEGIN("Shard::find_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
-	L_DATABASE_WRAP_END("Shard::find_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_BEGIN("Shard::get_docid_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto *rdb = static_cast<Xapian::Database *>(db());
 
@@ -1488,7 +1488,7 @@ Shard::find_document(const std::string& term)
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
-		L_DATABASE_WRAP_END("Shard::find_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+		L_DATABASE_WRAP_END("Shard::get_docid_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
 
 	return did;

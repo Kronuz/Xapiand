@@ -290,8 +290,7 @@ DatabaseHandler::get_document_term(const std::string& term_id)
 {
 	L_CALL("DatabaseHandler::get_document_term({})", repr(term_id));
 
-	lock_database lk_db(endpoints, flags);
-	auto did = lk_db->find_document(term_id);
+	auto did = get_docid_term(term_id);
 	return Document(did, this);
 }
 
@@ -1586,8 +1585,7 @@ DatabaseHandler::get_document(std::string_view document_id)
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	lock_database lk_db(endpoints, flags);
-	did = lk_db->find_document(term_id);
+	did = get_docid_term(term_id);
 	return Document(did, this);
 }
 
@@ -1604,8 +1602,37 @@ DatabaseHandler::get_docid(std::string_view document_id)
 
 	const auto term_id = get_prefixed_term_id(document_id);
 
-	lock_database lk_db(endpoints, flags);
-	return lk_db->find_document(term_id);
+	return get_docid_term(term_id);
+}
+
+
+Xapian::docid
+DatabaseHandler::get_docid_term(const std::string& term)
+{
+	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
+
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
+	if (n_shards > 1) {
+		ASSERT(term.size() > 2);
+		if (term[0] == 'Q' && term[1] == 'N') {
+			auto did_serialised = term.substr(2);
+			Xapian::docid did = sortable_unserialise(did_serialised);
+			if (did == 0) {
+				throw Xapian::InvalidArgumentError("Numeric term is invalid");
+			} else {
+				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
+			}
+		} else {
+			shard_num = fnv1ah64::hash(term) % n_shards;
+		}
+	}
+	auto& endpoint = endpoints[shard_num];
+	lock_shard lk_shard(endpoint, flags);
+	auto shard_did = lk_shard->get_docid_term(term);
+	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+	return did;
 }
 
 

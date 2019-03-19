@@ -557,35 +557,6 @@ Database::remove_spelling(const std::string& word, Xapian::termcount freqdec, bo
 }
 
 
-Xapian::docid
-Database::find_document(const std::string& term)
-{
-	L_CALL("Database::find_document({})", repr(term));
-
-	ASSERT(!shards.empty());
-	size_t n_shards = shards.size();
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		ASSERT(term.size() > 2);
-		if (term[0] == 'Q' && term[1] == 'N') {
-			auto did_serialised = term.substr(2);
-			Xapian::docid did = sortable_unserialise(did_serialised);
-			if (did == 0) {
-				throw Xapian::InvalidArgumentError("Numeric term is invalid");
-			} else {
-				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-			}
-		} else {
-			shard_num = fnv1ah64::hash(term) % n_shards;
-		}
-	}
-	auto& shard = shards[shard_num];
-	auto shard_did = shard->find_document(term);
-	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
-	return did;
-}
-
-
 Xapian::Document
 Database::get_document(Xapian::docid did, bool assume_valid_)
 {
