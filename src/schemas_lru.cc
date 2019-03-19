@@ -176,7 +176,14 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool require_fo
 			// Schema needs to be read
 			L_SCHEMA("GET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
 			bool initial_schema = false;
-			auto schema_ser = db_handler->get_metadata(reserved_schema);
+			std::string schema_ser;
+			try {
+				schema_ser = db_handler->get_metadata(reserved_schema);
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {
+			} catch (...) {
+				L_EXC("Exception");
+			}
 			if (schema_ser.empty()) {
 				initial_schema = true;
 				if (require_foreign && local_schema_path != ".xapiand") {
@@ -346,7 +353,14 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("SET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
-						auto schema_ser = db_handler->get_metadata(reserved_schema);
+						std::string schema_ser;
+						try {
+							schema_ser = db_handler->get_metadata(reserved_schema);
+						} catch (const Xapian::DocNotFoundError&) {
+						} catch (const Xapian::DatabaseNotFoundError&) {
+						} catch (...) {
+							L_EXC("Exception");
+						}
 						if (schema_ser.empty()) {
 							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
@@ -377,7 +391,14 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 			// Schema needs to be read
 			L_SCHEMA("SET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
 			bool initial_schema = false;
-			auto schema_ser = db_handler->get_metadata(reserved_schema);
+			std::string schema_ser;
+			try {
+				schema_ser = db_handler->get_metadata(reserved_schema);
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {
+			} catch (...) {
+				L_EXC("Exception");
+			}
 			if (schema_ser.empty()) {
 				initial_schema = true;
 				schema_ptr = new_schema;
@@ -412,7 +433,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 						schema_ptr->set_flags(1);
 					} else {
 						L_SCHEMA("SET: Metadata for Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
-						schema_ser = db_handler->get_metadata(reserved_schema);
+						try {
+							schema_ser = db_handler->get_metadata(reserved_schema);
+						} catch (const Xapian::DocNotFoundError&) {
+						} catch (const Xapian::DatabaseNotFoundError&) {
+						} catch (...) {
+							L_EXC("Exception");
+						}
 						if (schema_ser.empty()) {
 							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
