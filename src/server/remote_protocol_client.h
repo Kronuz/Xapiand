@@ -80,7 +80,7 @@
 #define FILE_FOLLOWS '\xfd'
 
 
-class lock_database;
+class lock_shard;
 
 
 enum class State {
@@ -221,7 +221,7 @@ class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
 	mutable std::mutex runner_mutex;
 
 	int flags;
-	Endpoints endpoints;
+	Endpoint endpoint;
 
 	std::atomic<State> state;
 
@@ -243,7 +243,7 @@ class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
 	bool cluster_database;
 
 	// For msg_query and msg_mset:
-	std::unique_ptr<lock_database> _msg_query_database_lock;
+	std::unique_ptr<lock_shard> _msg_query_lk_shard;
 	Xapian::Registry _msg_query_reg;
 	std::unique_ptr<Xapian::Enquire> _msg_query_enquire;
 	std::vector<Xapian::MatchSpy*> _msg_query_matchspies;
