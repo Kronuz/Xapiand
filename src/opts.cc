@@ -39,7 +39,7 @@
 #define XAPIAND_LOG_FILE         "xapiand.log"
 
 #define FLUSH_THRESHOLD          100000           // Database flush threshold (default for xapian is 10000)
-#define NUM_SHARDS               1                // Default number of database shards per index
+#define NUM_SHARDS               5                // Default number of database shards per index
 #define NUM_REPLICAS             1                // Default number of database replicas per index
 
 #define SCRIPTS_CACHE_SIZE           100          // Scripts cache
