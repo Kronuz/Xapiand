@@ -1839,12 +1839,12 @@ HttpClient::info_view(Request& request)
 		db_handler.reset(endpoints, DB_OPEN, request.method);
 	}
 
-	response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
-
 	// Info about a specific document was requested
 	if (request.path_parser.off_pmt != nullptr) {
 		auto id = request.path_parser.get_pmt();
 		response_obj[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(id, false);
+	} else {
+		response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
 	}
 
 	request.ready = std::chrono::system_clock::now();
