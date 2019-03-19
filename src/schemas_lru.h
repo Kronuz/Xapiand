@@ -46,7 +46,7 @@ class SchemasLRU {
 public:
 	SchemasLRU(ssize_t max_size = -1);
 
-	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, bool require_foreign);
+	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj, bool require_foreign);
 
 	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema, bool require_foreign);
 

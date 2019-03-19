@@ -136,7 +136,7 @@ SchemasLRU::SchemasLRU(ssize_t max_size) :
 
 
 std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
-SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, bool require_foreign)
+SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool require_foreign)
 {
 	/**
 	 * Returns schema, mut_schema and foreign_uri
@@ -205,60 +205,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 				// so we use the schema now currently in cache
 				schema_ptr = local_schema_ptr;
 			}
-			if (initial_schema && writable) {
-				// New LOCAL schema:
-				L_SCHEMA("GET: New Local Schema {}, write schema metadata", repr(local_schema_path));
-				try {
-					// Try writing (only if there's no metadata there alrady)
-					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
-						schema_ptr->set_flags(1);
-					} else {
-						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't overwritten, try reloading from metadata", repr(local_schema_path));
-						// or fallback to load from metadata (again).
-						local_schema_ptr = schema_ptr;
-						initial_schema = false;
-						schema_ser = db_handler->get_metadata(reserved_schema);
-						if (schema_ser.empty()) {
-							initial_schema = true;
-							if (require_foreign && local_schema_path != ".xapiand") {
-								// Implement foreign schemas in .xapiand/index by default:
-								schema_ptr = std::make_shared<MsgPack>(MsgPack({
-									{ RESERVED_TYPE, "foreign/object" },
-									{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
-								}));
-								schema_ptr->lock();
-							} else {
-								schema_ptr = Schema::get_initial_schema();
-							}
-						} else {
-							schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
-							schema_ptr->lock();
-						}
-						{
-							std::lock_guard<std::mutex> lk(smtx);
-							exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-						}
-						if (exchanged) {
-							L_SCHEMA("GET: Local Schema {} re-added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
-						} else {
-							schema_ptr = local_schema_ptr;
-						}
-					}
-				} catch(...) {
-					if (local_schema_ptr != schema_ptr) {
-						L_SCHEMA("GET: Metadata for Local Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
-						// On error, try reverting
-						std::lock_guard<std::mutex> lk(smtx);
-						local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
-					}
-					throw;
-				}
-			}
 		}
 	} else {
 		// The user explicitly specifies using a foreign schema,
 		// so we fabricate a new foreign schema object
-		L_SCHEMA("GET: Foreign Schema {}{}", repr(local_schema_path), writable ? " (writing)" : "");
+		L_SCHEMA("GET: Foreign Schema {}", repr(local_schema_path));
 		schema_ptr = std::make_shared<MsgPack>(MsgPack({
 			{ RESERVED_TYPE, "foreign/object" },
 			{ RESERVED_ENDPOINT, foreign_uri },
@@ -273,24 +224,6 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool writable, 
 			}
 			if (exchanged) {
 				L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(local_schema_path));
-				if (writable) {
-					L_SCHEMA("GET: New Foreign Schema {}, write schema metadata", repr(local_schema_path));
-					try {
-						if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
-							schema_ptr->set_flags(1);
-						} else {
-							// It doesn't matter if new metadata cannot be set
-							// it should continue with newly created foreign
-							// schema, as requested by user.
-						}
-					} catch(...) {
-						L_SCHEMA("GET: Metadata for Foreign Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
-						// On error, try reverting
-						std::lock_guard<std::mutex> lk(smtx);
-						local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
-						throw;
-					}
-				}
 			} else {
 				// Fabricated schema couldn't be stored in cache,
 				// we simply ignore the fact we weren't able to store it in cache
