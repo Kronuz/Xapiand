@@ -241,6 +241,7 @@ PathParser::init(std::string_view p)
 	const char *nf = ni + path.size();
 	const char *n0, *n1 , *ns= nullptr;
 	bool cmd_found = false;
+	size_t takeoff = 0, addin=0, slc_level = 0;
 	State state;
 
 	state = State::SLC;
@@ -366,7 +367,7 @@ PathParser::init(std::string_view p)
 
 					case State::PMT_SLC:
 						ASSERT(n0 >= n1);
-						length = ns - n1 - 1; // Removing the dot of the last selector
+						length = ns - n1 - 1;
 						if (length != 0u) {
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
@@ -385,27 +386,20 @@ PathParser::init(std::string_view p)
 							}
 						}
 
-						length = n0 - ns;
+						length = n0 - ns + addin;
 						if (length != 0u) {
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
-							off_slc = ns + 1;
+							off_slc = ns + takeoff;
 							len_slc = length;
 						}
 						n0 = n1 - 1;
 						break;
 
-					case State::SLB:
-						length = n0 - n1;
-						if (length != 0u) {
-							off_slc = n1 + 1;
-							len_slc = length;
-							state = state = cmd_found ? State::PMT : State::ID;
-						}
-						n0 = n1 - 1;
-						break;
-					case State::SLF:
 					case State::ID:
+					case State::SLF:
+					case State::SLB:
+					case State::SLB_SPACE_OR_COMMA:
 						ASSERT(n0 >= n1);
 						length = n0 - n1;
 						if (length != 0u) {
@@ -417,17 +411,17 @@ PathParser::init(std::string_view p)
 						break;
 					case State::ID_SLC:
 						ASSERT(n0 >= n1);
-						length = ns - n1 - 1; // Removing the dot of the last selector
+						length = ns - n1 - 1;
 						if (length != 0u) {
 							off_id = n1 + 1;
 							len_id = length;
 							cn = '\0';
 						}
-						length = n0 - ns;
+						length = n0 - ns + addin;
 						if (length != 0u) {
 							cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
 							cn2 = ((n1 + 2) >= nf || (n1 + 2) < ni) ? '\0' : *(n1 + 2);
-							off_slc = ns + 1;
+							off_slc = ns + takeoff;
 							len_slc = length;
 						}
 						n0 = n1 - 1;
@@ -445,21 +439,79 @@ PathParser::init(std::string_view p)
 					case State::PMT_SLC:
 					case State::ID_SLC:
 						ns = n1;
+						takeoff = 1; // Removing the dot
+						addin = 0;   // Adding nothing to length
 						state = State::SLF;
 					default:
 						break;
 				}
 				break;
 
-			case '{':  // Field Selector
+			case '}':  // Field Selector
+				++slc_level;
 				switch (state) {
 					case State::SLC:
 						state = State::SLB;
+						break;
+					case State::SLB:
+						state = State::SLB_SUB;
+					default:
+						break;
+				}
+				break;
+
+			case '{':  // Field Selector
+				--slc_level;
+				switch (state) {
+					case State::SLB:
+						if (slc_level == 0) {
+							ns = n1;
+							takeoff = 0; // Take off nothing
+							addin = 1;   // Adding last bracket to length
+							state = State::SLF;
+						} else {
+							state = cmd_found ? State::PMT : State::ID;
+						}
+						break;
+					case State::SLB_SUB:
+						state = State::SLB_SPACE_OR_COMMA;
+					default:
+						break;
+				}
+				break;
+			case ' ':
+				switch (state) {
+					case State::SLB_SPACE_OR_COMMA:
+						if (slc_level - 1 == 0) {
+							state = State::SLB;
+						}
 					default:
 						break;
 				}
 				break;
 			case ',':
+				switch (state) {
+					case State::SLC:
+						state = State::ID;
+						n0 = n1;
+						break;
+					case State::ID:
+						cp1 = ((n1 - 1) >= nf || (n1 - 1) < ni) ? '\0' : *(n1 - 1);
+						cn1 = ((n1 + 1) >= nf || (n1 + 1) < ni) ? '\0' : *(n1 + 1);
+						if (cn == ':' && (cn1 == ':' || cp1 == ':' || cp1 == '/')) {
+							break;
+						}
+						cn = '\0';
+						break;
+					case State::SLB_SPACE_OR_COMMA:
+						if (slc_level - 1 == 0) {
+							state = State::SLB;
+						}
+						break;
+					default:
+						break;
+				}
+				break;
 			case '@':
 				switch (state) {
 					case State::SLC:
@@ -480,17 +532,9 @@ PathParser::init(std::string_view p)
 
 			default:
 				switch (state) {
-					case State::SLB:
-						length = n0 - n1;
-						if (length != 0u) {
-							off_slc = n1 + 1;
-							len_slc = length;
-						}
-						state = state = cmd_found ? State::PMT : State::ID;
-						n0 = n1;
-						break;
 					case State::SLF:
 						state = cmd_found ? State::PMT_SLC : State::ID_SLC;
+						break;
 					default:
 						break;
 				}
