@@ -101,13 +101,14 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		}
 		auto term_id = path == ".xapiand/index" ? prefixed(id, "Q", 'K') : _db_handler.get_prefixed_term_id(id);
 		auto doc = _db_handler.get_document_term(term_id);
-		auto obj = doc.get_obj();
+		auto o = doc.get_obj();
 		if (!selector.empty()) {
-			obj = obj.select(selector);
+			o = o.select(selector);
 		}
-		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false);
+		o[RESERVED_RECURSE] = false;
+		Schema::check<Error>(o, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
-		return obj;
+		return o;
 	} catch (...) {
 		context->erase(path);
 		throw;
@@ -285,7 +286,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	if ((schema_obj != nullptr) && schema_obj->is_map()) {
+	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
 		// Initialize schema (non-foreign, non-recursive, ensure there's "schema"):
 		o.erase(RESERVED_ENDPOINT);
