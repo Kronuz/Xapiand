@@ -13,6 +13,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Added
+- Sharding support added
+  + By default there are now five shards per index
+  + Shards are put inside subdirectories with the shard number prefixed with `.__`
+
+### Changed
+- **BREAKING**: All schemas are now foreign by default, and get put inside the databases indexes
+- **BREAKING**: Databases indexes directories work like shards and thus were renamed
+                from `.xapiand/<node_name>` to `.xapiand/index/.__<node_idx>`
+
 
 ---
 ## [0.14.0] - 2019-03-12
