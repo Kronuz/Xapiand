@@ -35,7 +35,6 @@ extern struct opts_t {
 	bool solo = false;
 	bool strict = false;
 	bool force = false;
-	bool foreign = false;
 	bool colors = false;
 	bool no_colors = false;
 	bool admin_commands = false;

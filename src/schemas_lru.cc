@@ -124,7 +124,7 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 	DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, HTTP_PUT, context);
 	auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 	// FIXME: Process the subfields instead of ignoring.
-	_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type, false);
+	_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type);
 }
 
 
@@ -136,7 +136,7 @@ SchemasLRU::SchemasLRU(ssize_t max_size) :
 
 
 std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string>
-SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool require_foreign)
+SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 {
 	/**
 	 * Returns schema, mut_schema and foreign_uri
@@ -186,7 +186,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool require_fo
 			}
 			if (schema_ser.empty()) {
 				initial_schema = true;
-				if (require_foreign && local_schema_path != ".xapiand") {
+				if (local_schema_path != ".xapiand") {
 					// Implement foreign schemas in .xapiand/index by default:
 					schema_ptr = std::make_shared<MsgPack>(MsgPack({
 						{ RESERVED_TYPE, "foreign/object" },
@@ -317,7 +317,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj, bool require_fo
 
 
 bool
-SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema, bool require_foreign)
+SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
@@ -423,9 +423,6 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 			if (initial_schema) {
 				// New LOCAL schema:
-				if (require_foreign) {
-					THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(db_handler->endpoints.to_string()));
-				}
 				L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					// Try writing (only if there's no metadata there alrady)

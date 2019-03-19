@@ -197,13 +197,6 @@ public:
 };
 
 
-class ForeignSchemaError : public MissingTypeError {
-public:
-	template<typename... Args>
-	ForeignSchemaError(Args&&... args) : MissingTypeError(std::forward<Args>(args)...) { }
-};
-
-
 class QueryDslError : public ClientError {
 public:
 	template<typename... Args>

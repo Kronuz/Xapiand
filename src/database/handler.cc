@@ -310,10 +310,10 @@ DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum h
 
 
 std::shared_ptr<Schema>
-DatabaseHandler::get_schema(bool require_foreign, const MsgPack* obj)
+DatabaseHandler::get_schema(const MsgPack* obj)
 {
-	L_CALL("DatabaseHandler::get_schema(<require_foreign>, <obj>)");
-	auto s = XapiandManager::schemas()->get(this, obj, require_foreign);
+	L_CALL("DatabaseHandler::get_schema(<obj>)");
+	auto s = XapiandManager::schemas()->get(this, obj);
 	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
@@ -448,9 +448,9 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool require_foreign)
+DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data)
 {
-	L_CALL("DatabaseHandler::prepare({}, {}, <data>, {})", repr(document_id.to_string()), repr(obj.to_string()), require_foreign);
+	L_CALL("DatabaseHandler::prepare({}, {}, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
@@ -462,10 +462,10 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 	auto schema_begins = std::chrono::system_clock::now();
 	do {
-		schema = get_schema(require_foreign, &obj);
+		schema = get_schema(&obj);
 		L_INDEX("Schema: {}", repr(schema->to_string()));
 		prepared = schema->index(obj, document_id, *this, data);
-	} while (!update_schema(schema_begins, require_foreign));
+	} while (!update_schema(schema_begins));
 
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -492,9 +492,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type, bool require_foreign)
+DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{}, {})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second, require_foreign);
+	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -512,14 +512,14 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 				}
 				data.update(ct_type, blob);
 			}
-			return prepare(document_id, document_ver, MsgPack::MAP(), data, require_foreign);
+			return prepare(document_id, document_ver, MsgPack::MAP(), data);
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			data.erase(ct_type);
-			return prepare(document_id, document_ver, MsgPack::MAP(), data, require_foreign);
+			return prepare(document_id, document_ver, MsgPack::MAP(), data);
 		case MsgPack::Type::MAP:
 			inject_data(data, body);
-			return prepare(document_id, document_ver, body, data, require_foreign);
+			return prepare(document_id, document_ver, body, data);
 		default:
 			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 	}
@@ -527,11 +527,11 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments, bool require_foreign)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments)
 {
-	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit, comments, require_foreign);
+	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {}, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit, comments);
 
-	auto prepared = prepare(document_id, document_ver, obj, data, require_foreign);
+	auto prepared = prepare(document_id, document_ver, obj, data);
 	auto& term_id = std::get<0>(prepared);
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -588,9 +588,9 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type, bool require_foreign)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}, {}/{}, {})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, comments, ct_type.first, ct_type.second, require_foreign);
+	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, comments, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -611,14 +611,14 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments, require_foreign);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments, require_foreign);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments);
 				case MsgPack::Type::MAP:
 					inject_data(data, body);
-					return index(document_id, document_ver, body, data, commit, comments, require_foreign);
+					return index(document_id, document_ver, body, data, commit, comments);
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
@@ -630,9 +630,9 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 
 
 DataType
-DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments, bool require_foreign)
+DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments)
 {
-	L_CALL("DatabaseHandler::patch({}, {}, {}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit, comments, require_foreign);
+	L_CALL("DatabaseHandler::patch({}, {}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit, comments);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -646,7 +646,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id, require_foreign);
+	const auto term_id = get_prefixed_term_id(document_id);
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -661,7 +661,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 			apply_patch(patches, obj);
 
-			return index(document_id, document_ver, obj, data, commit, comments, require_foreign);
+			return index(document_id, document_ver, obj, data, commit, comments);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -670,9 +670,9 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 
 DataType
-DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type, bool require_foreign)
+DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::update({}, {}, <body>, {}, {}, {}/{}, {})", repr(document_id.to_string()), stored, commit, comments, ct_type.first, ct_type.second, require_foreign);
+	L_CALL("DatabaseHandler::update({}, {}, <body>, {}, {}, {}/{})", repr(document_id.to_string()), stored, commit, comments, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -682,7 +682,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 		THROW(ClientError, "Document must have an 'id'");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id, require_foreign);
+	const auto term_id = get_prefixed_term_id(document_id);
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -706,28 +706,28 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, obj, data, commit, comments, require_foreign);
+					return index(document_id, document_ver, obj, data, commit, comments);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, obj, data, commit, comments, require_foreign);
+					return index(document_id, document_ver, obj, data, commit, comments);
 				case MsgPack::Type::MAP:
 					if (stored) {
 						THROW(ClientError, "Objects of this type cannot be put in storage");
 					}
 					if (obj.empty()) {
 						inject_data(data, body);
-						return index(document_id, document_ver, body, data, commit, comments, require_foreign);
+						return index(document_id, document_ver, body, data, commit, comments);
 					} else {
 						obj.update(body);
 						inject_data(data, obj);
-						return index(document_id, document_ver, obj, data, commit, comments, require_foreign);
+						return index(document_id, document_ver, obj, data, commit, comments);
 					}
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
 
-			return index(document_id, document_ver, obj, data, commit, comments, require_foreign);
+			return index(document_id, document_ver, obj, data, commit, comments);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -736,30 +736,27 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 
 
 void
-DatabaseHandler::write_schema(const MsgPack& obj, bool replace, bool require_foreign)
+DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 {
-	L_CALL("DatabaseHandler::write_schema({}, require_foreign)", repr(obj.to_string()), require_foreign);
+	L_CALL("DatabaseHandler::write_schema({}, {})", repr(obj.to_string()), replace);
 
 	auto schema_begins = std::chrono::system_clock::now();
 	bool was_foreign_obj;
 	do {
-		schema = get_schema(require_foreign);
+		schema = get_schema();
 		was_foreign_obj = schema->write(obj, replace);
-		if (!was_foreign_obj && require_foreign) {
-			THROW(ForeignSchemaError, "Schema of {} must use a foreign schema", repr(endpoints.to_string()));
-		}
 		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
-	} while (!update_schema(schema_begins, require_foreign));
+	} while (!update_schema(schema_begins));
 
 	if (was_foreign_obj) {
 		MsgPack o = obj;
 		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_ENDPOINT);
 		do {
-			schema = get_schema(require_foreign);
+			schema = get_schema();
 			was_foreign_obj = schema->write(o, replace);
 			L_INDEX("Schema to write: {} (local)", repr(schema->to_string()));
-		} while (!update_schema(schema_begins, require_foreign));
+		} while (!update_schema(schema_begins));
 	}
 }
 
@@ -772,7 +769,7 @@ DatabaseHandler::delete_schema()
 	auto schema_begins = std::chrono::system_clock::now();
 	bool done;
 	do {
-		schema = get_schema(opts.foreign);
+		schema = get_schema();
 		auto old_schema = schema->get_const_schema();
 		done = XapiandManager::schemas()->drop(this, old_schema);
 		L_INDEX("Schema to delete: {}", repr(schema->to_string()));
@@ -930,16 +927,16 @@ DatabaseHandler::restore_documents(int/* fd*/)
 		if (!saved_schema_ser.empty()) {
 			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
 			L_INFO_HOOK("DatabaseHandler::restore", "Restoring schema: {}", saved_schema.to_string(4));
-			write_schema(saved_schema, true, opts.foreign);
+			write_schema(saved_schema, true);
 		}
-		schema = get_schema(opts.foreign);
+		schema = get_schema();
 		lk_db.lock();
 	}
 
 	// restore documents (document_id, object, blob)
 	if (header == dump_documents_header) {
 		lk_db.unlock();
-		schema = get_schema(opts.foreign);
+		schema = get_schema();
 
 		constexpr size_t limit_max = 16;
 		constexpr size_t limit_signal = 8;
@@ -1073,7 +1070,7 @@ DatabaseHandler::restore_documents(int/* fd*/)
 			]() mutable {
 				try {
 					DatabaseHandler db_handler(endpoints, flags, method);
-					queue.enqueue(db_handler.prepare(document_id, 0, obj, data, opts.foreign));
+					queue.enqueue(db_handler.prepare(document_id, 0, obj, data));
 				} catch (...) {
 					L_EXC("ERROR: Cannot prepare document");
 					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
@@ -1197,7 +1194,7 @@ DatabaseHandler::dump_documents()
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
+DatabaseHandler::prepare_document(MsgPack& body)
 {
 	L_CALL("DatabaseHandler::prepare_document(<body>)");
 
@@ -1236,7 +1233,7 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 		Data data;
 		inject_data(data, body);
 
-		return prepare(document_id, 0, body, data, require_foreign);
+		return prepare(document_id, 0, body, data);
 	}
 
 	if (op_type == "patch") {
@@ -1244,7 +1241,7 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
-		const auto term_id = get_prefixed_term_id(document_id, require_foreign);
+		const auto term_id = get_prefixed_term_id(document_id);
 
 		Data data;
 		try {
@@ -1255,7 +1252,7 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 		auto obj = data.get_obj();
 		apply_patch(body, obj);
 
-		return prepare(document_id, 0, body, data, require_foreign);
+		return prepare(document_id, 0, body, data);
 	}
 
 	if (op_type == "update" || op_type == "merge") {
@@ -1263,7 +1260,7 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 			THROW(ClientError, "Document must have an 'id'");
 		}
 
-		const auto term_id = get_prefixed_term_id(document_id, require_foreign);
+		const auto term_id = get_prefixed_term_id(document_id);
 
 		Data data;
 		try {
@@ -1275,11 +1272,11 @@ DatabaseHandler::prepare_document(MsgPack& body, bool require_foreign)
 
 		if (obj.empty()) {
 			inject_data(data, body);
-			return prepare(document_id, 0, body, data, require_foreign);
+			return prepare(document_id, 0, body, data);
 		} else {
 			obj.update(body);
 			inject_data(data, obj);
-			return prepare(document_id, 0, obj, data, require_foreign);
+			return prepare(document_id, 0, obj, data);
 		}
 	}
 
@@ -1344,7 +1341,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(string::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
-	schema = get_schema(opts.foreign);
+	schema = get_schema();
 
 	auto limit = query_field.limit;
 	auto check_at_least = query_field.check_at_least;
@@ -1570,9 +1567,9 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 
 
 bool
-DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins, bool require_foreign)
+DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins)
 {
-	L_CALL("DatabaseHandler::update_schema(<schema_begins>, <require_foreign>)");
+	L_CALL("DatabaseHandler::update_schema(<schema_begins>)");
 	bool done = true;
 	bool updated = false;
 	bool created = false;
@@ -1581,7 +1578,7 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 	if (mod_schema) {
 		updated = true;
 		auto old_schema = schema->get_const_schema();
-		done = XapiandManager::schemas()->set(this, old_schema, mod_schema, require_foreign);
+		done = XapiandManager::schemas()->set(this, old_schema, mod_schema);
 		if (done) {
 			created = old_schema->at("schema").empty();
 		}
@@ -1604,11 +1601,11 @@ DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock
 
 
 std::string
-DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id, bool require_foreign)
+DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
-	L_CALL("DatabaseHandler::get_prefixed_term_id({}, {})", repr(document_id.to_string()), require_foreign);
+	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
 
-	schema = get_schema(require_foreign);
+	schema = get_schema();
 
 	std::string unprefixed_term_id;
 	auto spc_id = schema->get_data_id();
@@ -1626,15 +1623,6 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id, bool require_f
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));
 	}
 	return prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
-}
-
-
-std::string
-DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
-{
-	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
-
-	return get_prefixed_term_id(document_id, opts.foreign);
 }
 
 
@@ -2149,7 +2137,7 @@ DocPreparer::operator()()
 	if (indexer->running) {
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
-			auto prepared = db_handler.prepare_document(obj, opts.foreign);
+			auto prepared = db_handler.prepare_document(obj);
 			indexer->ready_queue.enqueue(std::make_tuple(std::move(std::get<0>(prepared)), std::move(std::get<1>(prepared)), std::move(std::get<2>(prepared)), idx));
 			return 0;
 		});
@@ -2650,7 +2638,7 @@ Document::get_value(std::string_view slot_name)
 	L_CALL("Document::get_value({})", repr(slot_name));
 
 	if (db_handler != nullptr) {
-		auto slot_field = db_handler->get_schema(opts.foreign)->get_slot_field(slot_name);
+		auto slot_field = db_handler->get_schema()->get_slot_field(slot_name);
 		return Unserialise::MsgPack(slot_field.get_type(), get_value(slot_field.slot));
 	}
 	return MsgPack::NIL();

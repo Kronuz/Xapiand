@@ -308,7 +308,6 @@ parseOptions(int argc, char** argv)
 #ifdef XAPIAND_CLUSTERING
 		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
 #endif
-		SwitchArg foreign("", "foreign", "Force foreign (shared) schemas for all indexes.", cmd, false);
 		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
 		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
 		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_ROOT "/var/db/xapiand", "path", cmd);
@@ -370,7 +369,6 @@ parseOptions(int argc, char** argv)
 		o.solo = true;
 #endif
 		o.strict = strict.getValue();
-		o.foreign = foreign.getValue();
 		o.force = force.getValue();
 
 		o.colors = colors.getValue();
