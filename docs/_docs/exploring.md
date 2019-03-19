@@ -14,8 +14,8 @@ customer bank account information. Each document has the following schema:
     "balance": 221.46,
     "employer": "Globoil",
     "name": {
-      "firstName": "Juan",
-      "lastName": "Ash"
+      "firstName": "Michael",
+      "lastName": "Lee"
     },
     "age": 24,
     "gender": "male",
@@ -23,23 +23,36 @@ customer bank account information. Each document has the following schema:
       "address": "630 Victor Road",
       "city": "Leyner",
       "state": "Indiana",
+      "postcode": "61952",
       "phone": "+1 (924) 594-3216",
-      "email": "juan.ash@globoil.co.uk"
+      "email": "michael.lee@globoil.co.uk"
     },
-    "favoriteFruit": "raspberry",
+    "checkin": {
+      "_point": {
+        "_longitude": -95.63079,
+        "_latitude": 31.76212
+      }
+    },
+    "favoriteFruit": "lemon",
     "eyeColor": "blue",
     "style": {
+      "_namespace": true,
+      "_partial_paths": true,
       "clothing": {
         "pants": "khakis",
-        "footwear": "casual shoes"
+        "shirt": "t-shirt"
       },
-      "hairstyle": "afro"
+      "hairstyle": "slick back"
     },
-    "personality": "It's hard to describe..."
+    "personality": {
+      "_language": "en",
+      "_value": "A lot can be assumed..."
+    }
 }
 ```
 
-For the curious, this data was generated using [JSON Generator](www.json-generator.com),
+For the curious, this data was generated using [Faker](https://faker.readthedocs.io){:target="_blank"},
+with this script: [generator.py]({{ '/assets/generator.py' | absolute_url }}){:target="_blank"}
 so please ignore the actual values and semantics of the data as these are all
 randomly generated.
 
