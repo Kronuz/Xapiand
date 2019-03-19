@@ -381,12 +381,13 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
-	bool exchanged;
-	bool failure = false;
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
-	bool initial_schema = false;
 
+	bool exchanged;
+	bool failure = false;
+
+	// We first try to load schema from the LRU cache
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
@@ -394,14 +395,18 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		local_schema_ptr = local_schemas[local_schema_path].load();
 	}
 
+	// Check if passed object specifies a foreign schema
 	validate_schema<Error>(*new_schema, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
+
 	if (foreign_path.empty()) {
-		// LOCAL new schema.
+		// Whatever was passed by the user doesn't specify a foreign schema
 		if (local_schema_ptr) {
+			// Schema was in the cache
 			L_SCHEMA("SET: Schema {} found in cache", repr(local_schema_path));
 			schema_ptr = local_schema_ptr;
+
 			if (schema_ptr->get_flags() == 0) {
-				// We still need to save the metadata
+				// But we still need to save the metadata
 				L_SCHEMA("SET: Cached Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
 					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
@@ -412,7 +417,6 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 						if (schema_ser.empty()) {
 							THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
 						}
-						initial_schema = false;
 						local_schema_ptr = schema_ptr;
 						schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 						schema_ptr->lock();
@@ -421,7 +425,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 							exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 						}
 						if (exchanged) {
-							L_SCHEMA("SET: Cached Schema {} re-added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+							L_SCHEMA("SET: Cached Schema {} re-added to LRU", repr(local_schema_path));
 						} else {
 							schema_ptr = local_schema_ptr;
 						}
@@ -437,7 +441,9 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				}
 			}
 		} else {
+			// Schema needs to be read
 			L_SCHEMA("SET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
+			bool initial_schema = false;
 			auto schema_ser = db_handler->get_metadata(reserved_schema);
 			if (schema_ser.empty()) {
 				initial_schema = true;
@@ -446,13 +452,16 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 				schema_ptr->lock();
 			}
+
 			{
 				std::lock_guard<std::mutex> lk(smtx);
 				exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 			}
 			if (exchanged) {
-				L_SCHEMA("SET: Schema {} added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
+				L_SCHEMA("SET: Local Schema {} added to LRU{}", repr(local_schema_path), initial_schema ? " (initial schema)" : "");
 			} else {
+				// Read object couldn't be stored in cache,
+				// so we use the schema now currently in cache
 				schema_ptr = local_schema_ptr;
 			}
 
@@ -465,6 +474,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				}
 				L_SCHEMA("SET: New Local Schema {}, write schema metadata", repr(local_schema_path));
 				try {
+					// Try writing (only if there's no metadata there alrady)
 					if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
 						schema_ptr->set_flags(1);
 					} else {
