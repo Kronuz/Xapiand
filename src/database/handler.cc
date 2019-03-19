@@ -2043,13 +2043,13 @@ DatabaseHandler::get_database_info()
 	L_CALL("DatabaseHandler::get_database_info()");
 
 	ASSERT(!endpoints.empty());
-	MsgPack shards = MsgPack::ARRAY();
-	for (auto& endpoint : endpoints) {
+	if (endpoints.size() == 1) {
+		auto& endpoint = endpoints[0];
 		lock_shard lk_shard(endpoint, flags);
 		auto db = lk_shard->db();
 		auto doccount = db->get_doccount();
 		auto lastdocid = db->get_lastdocid();
-		MsgPack shard = {
+		return {
 			{ RESPONSE_ENDPOINT, endpoint.path },
 			{ RESPONSE_UUID, db->get_uuid() },
 			{ RESPONSE_REVISION, db->get_revision() },
@@ -2061,10 +2061,11 @@ DatabaseHandler::get_database_info()
 			{ RESPONSE_DOC_LEN_UPPER, db->get_doclength_upper_bound() },
 			{ RESPONSE_HAS_POSITIONS, db->has_positions() },
 		};
-		if (endpoints.size() == 1) {
-			return shard;
-		}
-		shards.append(std::move(shard));
+	}
+
+	MsgPack shards = MsgPack::ARRAY();
+	for (auto& endpoint : endpoints) {
+		shards.append(endpoint.path);
 	}
 
 	lock_database lk_db(*this);
@@ -2073,7 +2074,7 @@ DatabaseHandler::get_database_info()
 	auto lastdocid = db->get_lastdocid();
 	return {
 		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path) },
-		// { RESPONSE_UUID, db->get_uuid() },
+		{ RESPONSE_UUID, db->get_uuid() },
 		{ RESPONSE_DOC_COUNT, doccount },
 		{ RESPONSE_LAST_ID, lastdocid },
 		{ RESPONSE_DOC_DEL, lastdocid - doccount },
