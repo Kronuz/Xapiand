@@ -124,6 +124,12 @@ inline std::string get_hashed(std::string_view name) {
 }
 
 
+inline std::string_view unsharded_path(std::string_view path) {
+	auto pos = path.find("/.__");
+	return pos == std::string::npos ? path : path.substr(0, pos);
+}
+
+
 std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type);
 Xapian::valueno get_slot(std::string_view field_prefix, char field_type);
 std::string get_prefix(unsigned long long field_number);

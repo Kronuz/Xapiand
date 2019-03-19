@@ -23,6 +23,7 @@
 #include "schemas_lru.h"
 
 #include "database/handler.h"                     // for DatabaseHandler
+#include "database/utils.h"                       // for unsharded_path
 #include "log.h"                                  // for L_CALL
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
 #include "opts.h"                                 // for opts.strict
@@ -43,14 +44,6 @@
 #endif
 
 static const std::string reserved_schema(RESERVED_SCHEMA);
-
-
-static inline std::string_view
-unsharded_path(std::string_view path)
-{
-	auto pos = path.find("/.__");
-	return pos == std::string::npos ? path : path.substr(0, pos);
-}
 
 
 template <typename ErrorType>
