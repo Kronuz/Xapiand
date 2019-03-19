@@ -2756,8 +2756,8 @@ Document::hash()
 
 
 void
-committer_commit(std::weak_ptr<Shard> weak_database) {
-	if (auto shard = weak_database.lock()) {
+committer_commit(std::weak_ptr<Shard> weak_shard) {
+	if (auto shard = weak_shard.lock()) {
 		auto start = std::chrono::system_clock::now();
 
 		std::string error;

@@ -412,7 +412,7 @@ public:
 };
 
 
-void committer_commit(std::weak_ptr<Shard> weak_database);
+void committer_commit(std::weak_ptr<Shard> weak_shard);
 
 
 inline auto& committer(bool create = true) {
