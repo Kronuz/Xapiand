@@ -742,7 +742,8 @@ void dump_documents() {
 			setup();
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.dump_documents));
+			Endpoint endpoint(opts.dump_documents);
+			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
 			L_NOTICE("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_documents(fd);
@@ -772,7 +773,8 @@ void restore_documents() {
 			setup();
 			auto& manager = XapiandManager::make();
 			DatabaseHandler db_handler;
-			Endpoints endpoints(Endpoint(opts.restore_documents));
+			Endpoint endpoint(opts.restore_documents);
+			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
 			L_NOTICE("Restoring into: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL);
 			db_handler.restore_documents(fd);
