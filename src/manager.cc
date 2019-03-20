@@ -644,7 +644,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 					}
 					#ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
-						_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].str()));
+						_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].str_view()));
 					}
 					#endif
 				}
