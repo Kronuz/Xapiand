@@ -271,19 +271,6 @@ Shard::reopen_writable()
 	local.store(true, std::memory_order_relaxed);
 
 	ASSERT(!endpoint.empty());
-#ifdef XAPIAND_CLUSTERING
-	auto node = endpoint.node();
-	if (!node) {
-		throw Xapian::NetworkError("Endpoint node is invalid");
-	}
-	if (!node->is_active()) {
-		throw Xapian::NetworkError("Endpoint node is inactive");
-	}
-	if (node->remote_port == 0) {
-		throw Xapian::NetworkError("Endpoint node without a valid port");
-	}
-#endif  // XAPIAND_CLUSTERING
-
 	Xapian::WritableDatabase wsdb;
 	bool localdb = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
@@ -293,6 +280,16 @@ Shard::reopen_writable()
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote writable shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		auto node = endpoint.node();
+		if (!node) {
+			throw Xapian::NetworkError("Endpoint node is invalid");
+		}
+		if (!node->is_active()) {
+			throw Xapian::NetworkError("Endpoint node is inactive");
+		}
+		if (node->remote_port == 0) {
+			throw Xapian::NetworkError("Endpoint node without a valid port");
+		}
 		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
@@ -386,19 +383,6 @@ Shard::reopen_readable()
 	local.store(true, std::memory_order_relaxed);
 
 	ASSERT(!endpoint.empty());
-#ifdef XAPIAND_CLUSTERING
-	auto node = endpoint.node();
-	if (!node) {
-		throw Xapian::NetworkError("Endpoint node is invalid");
-	}
-	if (!node->is_active()) {
-		throw Xapian::NetworkError("Endpoint node is inactive");
-	}
-	if (node->remote_port == 0) {
-		throw Xapian::NetworkError("Endpoint node without a valid port");
-	}
-#endif  // XAPIAND_CLUSTERING
-
 	Xapian::Database rsdb;
 	bool localdb = false;
 #ifdef XAPIAND_CLUSTERING
@@ -408,6 +392,16 @@ Shard::reopen_readable()
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		auto node = endpoint.node();
+		if (!node) {
+			throw Xapian::NetworkError("Endpoint node is invalid");
+		}
+		if (!node->is_active()) {
+			throw Xapian::NetworkError("Endpoint node is inactive");
+		}
+		if (node->remote_port == 0) {
+			throw Xapian::NetworkError("Endpoint node without a valid port");
+		}
 		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 		try {
