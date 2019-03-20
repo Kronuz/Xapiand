@@ -444,13 +444,10 @@ public:
 
 	template <typename B=msgpack::sbuffer>
 	std::string serialise() const;
-	void serialise(int fd) const;
 	static MsgPack unserialise(const char* data, std::size_t len, std::size_t& off);
 	static MsgPack unserialise(const char* data, std::size_t len);
 	static MsgPack unserialise(std::string_view s, std::size_t& off);
 	static MsgPack unserialise(std::string_view s);
-
-	static MsgPack unserialise(int fd, std::string& buffer, std::size_t& off);
 
 	void set_data(const std::shared_ptr<const Data>& new_data) const;
 	const std::shared_ptr<const Data> get_data() const;
@@ -3209,38 +3206,6 @@ inline MsgPack MsgPack::unserialise(std::string_view s) {
 	std::size_t off = 0;
 	return unserialise(s, off);
 }
-
-
-#ifdef IO_UTILS_H
-
-inline void MsgPack::serialise(int fd) const {
-	std::string serialised = serialise();
-	ssize_t w = io::write(fd, serialised.data(), serialised.size());
-	if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
-}
-
-
-inline MsgPack MsgPack::unserialise(int fd, std::string& buffer, std::size_t& off) {
-	do {
-		ssize_t r;
-		try {
-			auto obj = unserialise(buffer, off);
-			if (off > 10 * 1024) {
-				buffer.erase(0, off);
-				off = 0;
-			}
-			return obj;
-		} catch (const msgpack::insufficient_bytes&) {
-			if (!r) throw;
-		}
-		char buf[1024];
-		r = io::read(fd, buf, sizeof(buf));
-		if (r < 0) THROW(Error, "Cannot read from file [{}]", fd);
-		buffer.append(buf, r);
-	} while (true);
-}
-
-#endif
 
 
 inline void MsgPack::set_data(const std::shared_ptr<const MsgPack::Data>& new_data) const {
