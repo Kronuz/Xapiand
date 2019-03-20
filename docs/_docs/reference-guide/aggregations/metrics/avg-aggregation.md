@@ -58,7 +58,7 @@ will return the following:
   "aggregations": {
     "_doc_count": 1000,
     "avg_age": {
-      "_avg": 30.034
+      "_avg": 30.042
     }
   }, ...
 }

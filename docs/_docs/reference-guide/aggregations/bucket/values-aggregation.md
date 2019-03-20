@@ -60,15 +60,15 @@ Response:
     "_doc_count": 1000,
     "favorite_ruits": [
       {
-        "_doc_count": 345,
+        "_doc_count": 76,
         "_key": "strawberry"
       },
       {
-        "_doc_count": 331,
+        "_doc_count": 64,
         "_key": "banana"
       },
       {
-        "_doc_count": 324,
+        "_doc_count": 89,
         "_key": "apple"
       }
     ]

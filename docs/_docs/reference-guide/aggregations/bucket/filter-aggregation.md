@@ -72,9 +72,9 @@ Response:
   "aggregations": {
     "_doc_count": 1000,
     "strawberry_lovers": {
-      "_doc_count": 345,
+      "_doc_count": 76,
       "avg_balance": {
-        "_avg": 2576.7695072463768
+        "_avg": 2581.8072368421055
       }
     }
   }, ...
