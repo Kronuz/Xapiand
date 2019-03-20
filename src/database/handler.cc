@@ -461,12 +461,11 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 		}
 	}
 
-	auto schema_begins = std::chrono::system_clock::now();
 	do {
 		schema = get_schema(&obj);
 		L_INDEX("Schema: {}", repr(schema->to_string()));
 		prepared = schema->index(obj, document_id, *this, data);
-	} while (!update_schema(schema_begins));
+	} while (!update_schema());
 
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -741,13 +740,12 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 {
 	L_CALL("DatabaseHandler::write_schema({}, {})", repr(obj.to_string()), replace);
 
-	auto schema_begins = std::chrono::system_clock::now();
 	bool was_foreign_obj;
 	do {
 		schema = get_schema();
 		was_foreign_obj = schema->write(obj, replace);
 		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
-	} while (!update_schema(schema_begins));
+	} while (!update_schema());
 
 	if (was_foreign_obj) {
 		MsgPack o = obj;
@@ -757,7 +755,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 			schema = get_schema();
 			was_foreign_obj = schema->write(o, replace);
 			L_INDEX("Schema to write: {} (local)", repr(schema->to_string()));
-		} while (!update_schema(schema_begins));
+		} while (!update_schema());
 	}
 }
 
@@ -767,7 +765,6 @@ DatabaseHandler::delete_schema()
 {
 	L_CALL("DatabaseHandler::delete_schema()");
 
-	auto schema_begins = std::chrono::system_clock::now();
 	bool done;
 	do {
 		schema = get_schema();
@@ -775,10 +772,6 @@ DatabaseHandler::delete_schema()
 		done = XapiandManager::schemas()->drop(this, old_schema);
 		L_INDEX("Schema to delete: {}", repr(schema->to_string()));
 	} while (!done);
-	auto schema_ends = std::chrono::system_clock::now();
-	(void)schema_begins;
-	(void)schema_ends;
-	// Stats::add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
 }
 
 
@@ -1424,36 +1417,16 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 
 
 bool
-DatabaseHandler::update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins)
+DatabaseHandler::update_schema()
 {
-	L_CALL("DatabaseHandler::update_schema(<schema_begins>)");
-	bool done = true;
-	bool updated = false;
-	bool created = false;
+	L_CALL("DatabaseHandler::update_schema()");
 
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
-		updated = true;
 		auto old_schema = schema->get_const_schema();
-		done = XapiandManager::schemas()->set(this, old_schema, mod_schema);
-		if (done) {
-			created = old_schema->at("schema").empty();
-		}
+		return XapiandManager::schemas()->set(this, old_schema, mod_schema);
 	}
-
-	if (done) {
-		auto schema_ends = std::chrono::system_clock::now();
-		(void)schema_begins;
-		(void)schema_ends;
-		if (updated) {
-			L_DEBUG("Schema for {} {}", repr(endpoints.to_string()), created ? "created" : "updated");
-			// Stats::add("schema_updates", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
-		} else {
-			// Stats::add("schema_reads", std::chrono::duration_cast<std::chrono::nanoseconds>(schema_ends - schema_begins).count());
-		}
-	}
-
-	return done;
+	return true;
 }
 
 

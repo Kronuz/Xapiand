@@ -194,7 +194,7 @@ class DatabaseHandler {
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
-	bool update_schema(std::chrono::time_point<std::chrono::system_clock> schema_begins);
+	bool update_schema();
 
 public:
 	DatabaseHandler();
