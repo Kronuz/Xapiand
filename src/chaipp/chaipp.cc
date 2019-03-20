@@ -31,6 +31,7 @@
 #include "exception.h"                            // for chaipp::Error
 #include "log.h"                                  // for L_EXC
 #include "lru.h"                                  // for lru::LRU
+#include "manager.h"                              // for XapiandManager::*
 #include "module.h"                               // for chaipp::Module
 #include "msgpack.h"                              // for MsgPack
 #include "repr.hh"                                // for repr
@@ -130,9 +131,9 @@ Processor::Processor(const Script& script) :
 
 	if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 		std::string foreign_path, foreign_id;
-		auto foreign = script.get_endpoint();
+		auto foreign_uri = script.get_endpoint();
 		std::string_view foreign_path_view, foreign_id_view;
-		split_path_id(foreign, foreign_path_view, foreign_id_view);
+		split_path_id(foreign_uri, foreign_path_view, foreign_id_view);
 		foreign_path = urldecode(foreign_path_view);
 		foreign_id = urldecode(foreign_id_view);
 		std::string_view selector;
@@ -143,8 +144,13 @@ Processor::Processor(const Script& script) :
 		}
 		MsgPack foreign_data_script;
 		try {
-			DatabaseHandler db_handler(Endpoints{Endpoint{foreign_path}}, DB_OPEN | DB_DISABLE_WAL, HTTP_GET);
-			auto doc = db_handler.get_document(foreign_id);
+			Endpoint endpoint{foreign_path};
+			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+			if (endpoints.empty()) {
+				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+			}
+			DatabaseHandler _db_handler(endpoints, DB_OPEN, HTTP_GET);
+			auto doc = _db_handler.get_document(foreign_id);
 			foreign_data_script = doc.get_obj();
 		} catch (const Xapian::DocNotFoundError&) {
 			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, foreign_id);
