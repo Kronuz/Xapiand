@@ -779,10 +779,9 @@ void dump_documents() {
 			DatabaseHandler db_handler;
 			Endpoint endpoint(opts.dump_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
-			L_NOTICE("Dumping database: {}", repr(endpoints.to_string()));
+			L_INFO("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_documents(fd);
-			L_NOTICE("Dump finished!");
 			manager->join();
 			manager.reset();
 		} catch (...) {
@@ -815,10 +814,9 @@ void restore_documents() {
 			DatabaseHandler db_handler;
 			Endpoint endpoint(opts.restore_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
-			L_NOTICE("Restoring into: {}", repr(endpoints.to_string()));
+			L_INFO("Restoring into: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL);
 			db_handler.restore_documents(fd);
-			L_NOTICE("Restore finished!");
 			manager->join();
 			manager.reset();
 		} catch (...) {

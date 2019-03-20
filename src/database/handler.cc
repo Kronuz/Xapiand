@@ -1003,7 +1003,8 @@ DatabaseHandler::dump_documents(int fd)
 		initial = did;
 	}
 
-	L_INFO("Dump sha256 hash is {}", sha256.getHash());
+	L(-LOG_NOTICE, NOTICE_COL, "Dump sha256 hash is {}", sha256.getHash());
+	L_INFO("Dump completed!");
 }
 
 
@@ -1038,9 +1039,10 @@ DatabaseHandler::restore_documents(int fd)
 			}
 		}
 
-		L_INFO("Restore sha256 hash is {}", sha256.getHash());
+		L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 hash is {}", sha256.getHash());
 
 		indexer->wait();
+		L_INFO("Restore completed!");
 	} catch (...) {
 		L_EXC("Error while restoring documents");
 		indexer->finish();
