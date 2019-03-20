@@ -4080,7 +4080,7 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 bool
 Schema::write(const MsgPack& object, bool replace)
 {
-	L_CALL("Schema::write({}, {}, {})", repr(object.to_string()), replace);
+	L_CALL("Schema::write({}, {})", repr(object.to_string()), replace);
 
 	try {
 		map_values.clear();
