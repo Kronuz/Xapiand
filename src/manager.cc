@@ -40,7 +40,7 @@
 #include <string>                                // for std::string, std::to_string
 #include <sys/socket.h>                          // for AF_INET, sockaddr
 #include <sysexits.h>                            // for EX_IOERR, EX_NOINPUT, EX_SOFTWARE
-#include <unistd.h>                              // for ssize_t, getpid
+#include <unistd.h>                              // for ssize_t
 #include <utility>                               // for std::move
 #include <vector>                                // for std::vector
 
@@ -493,8 +493,6 @@ XapiandManager::init()
 		!opts.dump_documents.empty() ||
 		!opts.restore_documents.empty()
 	);
-
-	L(-LOG_NOTICE, NOTICE_COL, "Xapiand rnning with pid:{}", getpid());
 
 	// Set the id in local node.
 	auto local_node = Node::local_node();

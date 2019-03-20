@@ -698,16 +698,16 @@ void banner() {
 			outer + "| " +       top + "`-_   _-´" + outer + " | "                         + rgb(192, 192, 192) + "  \\   // _` | '_ \\| |/ _` | '_ \\ / _` |\n" +
 			outer + "| " +     inner + "`-_" + top + "`-´" + inner + "_-´" + outer + " | " + rgb(160, 160, 160) + "  /   \\ (_| | |_) | | (_| | | | | (_| |\n" +
 			outer + "| " +     inner + "`-_`-´_-´" + outer + " | "                         + rgb(128, 128, 128) + " / /\\__\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
-			outer + " `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + " {}" + rgb(96, 96, 96) + "|_|" + rgb(144, 238, 144) + "{}" + "\n" +
-			outer + "    ``-´´   " + rgb(0, 128, 0) + "{}" + "\n" +
-					"            " + rgb(0, 96, 0)  + "{}" + "\n\n",
-			string::center(Package::HASH, 8, true),
-			string::center(Package::VERSION_STRING, 25, true),
-			string::center("Using " + string::join(values, ", ", " and "), 42),
-			string::center("[" + Package::BUGREPORT + "]", 42));
-	} else {
-		L(-LOG_NOTICE, NOTICE_COL, "{} started.", Package::STRING);
+			outer + " `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + "{:^9}" + rgb(96, 96, 96) + "|_|" + rgb(144, 238, 144) + "{:^24}" + "\n" +
+			outer + "    ``-´´   " + rgb(0, 128, 0) + "{:^42}" + "\n" +
+					"            " + rgb(0, 96, 0)  + "{:^42}" + "\n\n",
+			"v" + Package::VERSION,
+			"rev:" + Package::REVISION,
+			"Using " + string::join(values, ", ", " and "),
+			"[" + Package::BUGREPORT + "]");
 	}
+
+	L(-LOG_NOTICE, NOTICE_COL, "{} (pid:{})", Package::STRING, getpid());
 }
 
 
