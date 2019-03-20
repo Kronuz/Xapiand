@@ -40,7 +40,7 @@ GET /bank/:search?pretty
     "_elite_set": [
       { "personality": "biggest" },
       { "personality": "things" },
-      { "personality": "lovable" }
+      { "personality": "lovable" },
       { "personality": "cooperative" },
       { "personality": "course" },
       { "personality": "also" },
