@@ -59,8 +59,8 @@ randomly generated.
 
 ## Loading the Sample Dataset
 
-You can download the [sample dataset]({{ '/assets/accounts.ndjson' | absolute_url }}){:target="_blank"}. Extract it to
-our current directory and let's load it into our cluster as follows:
+After downloading the [sample dataset]({{ '/assets/accounts.ndjson' | absolute_url }}){:target="_blank"},
+let's load it into our cluster as follows:
 
 {% capture req %}
 
@@ -73,9 +73,14 @@ Content-Type: application/x-ndjson
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .note .warning }
+When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
 
-And then you can use [Info API](../reference-guide/info) to get information
-about the new index:
+More information is there in the [Backups]({{ '/reference-guide/backups' | relative_url }})
+section.
+
+After having loaded the dataset, you can then use the [Info API]({{ '/reference-guide/info' | relative_url }})
+to get information about the new index:
 
 {% capture req %}
 

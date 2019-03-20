@@ -2,53 +2,45 @@
 title: Backups
 ---
 
-Here we'll learn about how to backup your data by making full dumps and restores
-using specific commands from the command line, how to dump and restore documents
-(in bulk) using the _dump_ and _restore_ endpoints, and we'll see an example
-of updating and reindexing documents using different a schema.
+Here we'll learn about how to backup your data by using Dump and Restore.
+You can do this from the command line or using the online API.
 
 ---
 
-## Full Dump and Restore
+## Command Line Dump and Restore
+
+It's also possible to dump and restore documents from the command line.
 
 ### Dump
 
-A dump of the "twitter" index can be done in three steps:
+A dump of all documents in the "twitter" database can be saved by running the
+following command:
 
 ```sh
-# 1. Dump index metadata.
-~ $ xapiand --dump-metadata="twitter" --out="twitter.meta"
-# 2. Dump index schema.
-~ $ xapiand --dump-schema="twitter" --out="twitter.schm"
-# 3. Dump index documents.
-~ $ xapiand --dump="twitter" --out="twitter.docs"
+~ $ xapiand --dump="twitter" --out="twitter.msgpack"
 ```
+
 
 ### Restore
 
-The restore for the above dump can also be done in three steps:
+To restore for the dump in the file `twitter.msgpack`:
 
 ```sh
-# 1. Restore index metadata.
-~ $ xapiand --restore="twitter" --in="twitter.meta"
-# 2. Restore index schema.
-~ $ xapiand --restore="twitter" --in="twitter.schm"
-# 3. Restore index documents.
-~ $ xapiand --restore="twitter" --in="twitter.docs"
+~ $ xapiand --restore="twitter" --in="twitter.msgpack"
 ```
 
 {: .note .warning }
-**_Use the same parameters used when running the server_**<br>
-For all the above commands you _should_ use the same parameters you use while
-running the server. For example, if the server runs in "optimal" mode by using
-the `--optimal` flag, also add the same flag to the dump/restore command above.
+**_Warning!_**<br>
+For all the above commands you _must_ additionally use the
+**exact same parameters** you use while running the server.
+
 
 ---
 
 ## Online Dump and Restore
 
-It's also possible (for rather small databases) to dump and restore all
-documents to and from JSON (or MessagePack) over HTTP.
+It's also possible (for rather small databases) to dump and restore documents
+to and from JSON, NDJSON or MessagePack over HTTP, using the online API.
 
 ### Dump
 
@@ -83,15 +75,56 @@ POST /twitter/:restore?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
+
+---
+
+## MessagePack (or NDJSON)
+
+Instead of using plain JSON dumps, it's more efficient to use MessagePack. By
+setting the `Accept` header to either `application/x-msgpack` or
+`application/x-ndjson`, you can dump data to any of those formats:
+
+{% capture req %}
+```json
+POST /twitter/:dump?pretty
+Accept: application/x-msgpack
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+To restore those, you should specify the `Content-Type` header accordingly:
+
+{% capture req %}
+
+```json
+POST /new_twitter/:restore?pretty
+Content-Type: application/x-msgpack
+
+@twitter.msgpack
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+When using curl, make sure to use `--data-binary` and not simply `-d` or `--data`:
+
+```sh
+curl 'localhost:8880/new_twitter/:restore?pretty' \
+     -H 'Content-Type: application/x-msgpack' \
+     --data-binary '@twitter.msgpack'
+```
+
+
 ---
 
 ## Restore using different schema
 
-If you need a different or definitive schema for the dumped documents, instead
-of restoring the metadata and the schema you may want to put a different schema
-for the index to be restored; and then restore the documents to that index:
+If you need a different schema for the dumped documents, before restoring, it's
+also possible to set a new schema for the new index and then restore the
+documents to that index:
 
-#### Create a new schema ([foreign]({{ '/docs/reference-guide/schema#foreign' | relative_url }}) in this example) for a new index
+Create a new schema for the new database; in this example we'll create a
+[foreign schema]({{ '/docs/reference-guide/schema#foreign' | relative_url }})
+to reindex the dumped documents:
 
 {% capture req %}
 ```json
@@ -124,11 +157,11 @@ PUT /new_twitter/:schema
 {% endcapture %}
 {% include curl.html req=req %}
 
-#### Restore the index documents to the new index
+Restore the index documents to the new index:
 
 {% capture req %}
 ```json
-POST /twitter/:restore?pretty
+POST /new_twitter/:restore?pretty
 
 [
   {
