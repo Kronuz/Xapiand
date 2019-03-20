@@ -1368,6 +1368,7 @@ calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, si
 			for (size_t r = 0; r < num_replicas_plus_master; ++r) {
 				size_t idx = ((routing_key - s + r) % indexed_nodes) + 1;
 				auto node = Node::get_node(idx);
+				ASSERT(node);
 				replicas.push_back(node->name());
 			}
 			shards.push_back(std::move(replicas));
