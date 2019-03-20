@@ -924,7 +924,7 @@ DatabaseHandler::dump_documents()
 }
 
 
-void
+std::string
 DatabaseHandler::dump_documents(int fd)
 {
 	L_CALL("DatabaseHandler::dump_documents(<fd>)");
@@ -1003,12 +1003,11 @@ DatabaseHandler::dump_documents(int fd)
 		initial = did;
 	}
 
-	L(-LOG_NOTICE, NOTICE_COL, "sha256 = {}", sha256.getHash());
-	L_INFO("Dump completed!");
+	return sha256.getHash();
 }
 
 
-void
+std::string
 DatabaseHandler::restore_documents(int fd)
 {
 	L_CALL("DatabaseHandler::restore_documents()");
@@ -1039,13 +1038,12 @@ DatabaseHandler::restore_documents(int fd)
 			}
 		}
 
-		L(-LOG_NOTICE, NOTICE_COL, "sha256 = {}", sha256.getHash());
-
 		indexer->wait();
-		L_INFO("Restore completed!");
+
+		return sha256.getHash();
 	} catch (...) {
-		L_EXC("Error while restoring documents");
 		indexer->finish();
+		throw;
 	}
 }
 

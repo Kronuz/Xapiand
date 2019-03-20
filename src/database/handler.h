@@ -226,8 +226,8 @@ public:
 	MSet get_mset(const Xapian::Query& query, unsigned offset = 0, unsigned limit = 10, unsigned check_at_least = 0, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr);
 
 	MsgPack dump_documents();
-	void dump_documents(int fd);
-	void restore_documents(int fd);
+	std::string dump_documents(int fd);
+	std::string restore_documents(int fd);
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj);
 
