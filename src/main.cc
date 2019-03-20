@@ -744,6 +744,9 @@ void dump_documents() {
 			DatabaseHandler db_handler;
 			Endpoint endpoint(opts.dump_documents);
 			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
+			if (endpoints.empty()) {
+				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+			}
 			L_NOTICE("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_documents(fd);

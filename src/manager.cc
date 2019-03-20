@@ -1770,10 +1770,6 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 		}
 		endpoints.add(node_endpoint);
 	}
-
-	if (endpoints.empty()) {
-		throw Xapian::NetworkError("Endpoint node not available");
-	}
 	return endpoints;
 }
 

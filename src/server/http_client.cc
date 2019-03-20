@@ -2743,6 +2743,9 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, 
 			query_field.writable,
 			query_field.primary,
 			settings);
+		if (index_endpoints.empty()) {
+			throw Xapian::NetworkError("Endpoint node not available");
+		}
 		for (auto& endpoint : index_endpoints) {
 			endpoints.add(endpoint);
 		}

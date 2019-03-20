@@ -86,6 +86,9 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 			THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 		}
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		if (endpoints.empty()) {
+			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+		}
 		DatabaseHandler _db_handler(endpoints, DB_OPEN, HTTP_GET, context);
 		std::string_view selector;
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
@@ -123,6 +126,9 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 	L_CALL("save_shared({}, {}, <schema>, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
 	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+	if (endpoints.empty()) {
+		THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+	}
 	DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, HTTP_PUT, context);
 	auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 	// FIXME: Process the subfields instead of ignoring.
