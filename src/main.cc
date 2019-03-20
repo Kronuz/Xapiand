@@ -642,6 +642,40 @@ void usedir(std::string_view path, bool force) {
 }
 
 
+Endpoints
+resolve_index_endpoints(const Endpoint& endpoint) {
+	// This function tries to resolve endpoints the "right" way (using XapiandManager)
+	// but if it fails, it tries to get all available shard directories directly,
+	// otherwise it uses the passed endpoint as single endpoint.
+	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
+	if (endpoints.empty()) {
+		auto base_path = endpoint.path + "/";
+		DIR *dirp = ::opendir(base_path.c_str());
+		if (dirp != nullptr) {
+			struct dirent *ent;
+			while ((ent = ::readdir(dirp)) != nullptr) {
+				const char *n = ent->d_name;
+				if (ent->d_type == DT_DIR) {
+					if (n[0] == '.' && (n[1] == '\0' || (n[1] == '.' && n[2] == '\0'))) {
+						continue;
+					}
+					// This is a valid directory
+					if (n[0] == '.' && n[1] == '_' && n[2] == '_') {
+						endpoints.add(Endpoint{base_path + n});
+					}
+				}
+			}
+			::closedir(dirp);
+		}
+
+		if (endpoints.empty()) {
+			endpoints.add(endpoint);
+		}
+	}
+	return endpoints;
+}
+
+
 void banner() {
 	set_thread_name("MAIN");
 
@@ -736,17 +770,15 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 
 
 void dump_documents() {
+	std::shared_ptr<XapiandManager> manager;
 	int fd = opts.filename.empty() ? STDOUT_FILENO : io::open(opts.filename.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC, 0600);
 	if (fd != -1) {
 		try {
 			setup();
-			auto& manager = XapiandManager::make();
+			manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoint endpoint(opts.dump_documents);
-			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
-			if (endpoints.empty()) {
-				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
-			}
+			auto endpoints = resolve_index_endpoints(endpoint);
 			L_NOTICE("Dumping database: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
 			db_handler.dump_documents(fd);
@@ -756,6 +788,10 @@ void dump_documents() {
 		} catch (...) {
 			if (fd != STDOUT_FILENO) {
 				io::close(fd);
+			}
+			if (manager) {
+				manager->join();
+				manager.reset();
 			}
 			throw;
 		}
@@ -770,14 +806,15 @@ void dump_documents() {
 
 
 void restore_documents() {
+	std::shared_ptr<XapiandManager> manager;
 	int fd = (opts.filename.empty() || opts.filename == "-") ? STDIN_FILENO : io::open(opts.filename.c_str(), O_RDONLY);
 	if (fd != -1) {
 		try {
 			setup();
-			auto& manager = XapiandManager::make();
+			manager = XapiandManager::make();
 			DatabaseHandler db_handler;
 			Endpoint endpoint(opts.restore_documents);
-			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
+			auto endpoints = resolve_index_endpoints(endpoint);
 			L_NOTICE("Restoring into: {}", repr(endpoints.to_string()));
 			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL);
 			db_handler.restore_documents(fd);
@@ -787,6 +824,10 @@ void restore_documents() {
 		} catch (...) {
 			if (fd != STDIN_FILENO) {
 				io::close(fd);
+			}
+			if (manager) {
+				manager->join();
+				manager.reset();
 			}
 			throw;
 		}
