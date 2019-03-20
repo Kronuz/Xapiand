@@ -64,7 +64,7 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_INDEX
-// #define L_INDEX L_YELLOW_GREEN
+// #define L_INDEX L_CHOCOLATE
 
 
 #ifndef L_SCHEMA
