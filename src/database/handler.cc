@@ -66,6 +66,8 @@
 // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_INDEX
+// #define L_INDEX L_CHOCOLATE
 
 
 constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
