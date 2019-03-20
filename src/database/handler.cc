@@ -36,9 +36,10 @@
 #include "database/utils.h"                 // for split_path_id
 #include "database/wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
+#include "hash/sha256.h"                    // for SHA256
+#include "io.hh"                            // for io::write (for MsgPack::serialise)
 #include "length.h"                         // for serialise_string, unserialise_string
 #include "log.h"                            // for L_CALL
-#include "manager.h"                        // for XapiandManager
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
@@ -71,8 +72,6 @@ constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version 
 
 constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
 
-const std::string dump_metadata_header("xapiand-dump-meta");
-const std::string dump_schema_header("xapiand-dump-schm");
 const std::string dump_documents_header("xapiand-dump-docs");
 
 
@@ -846,273 +845,6 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 }
 
 
-void
-DatabaseHandler::dump_documents(int/* fd*/)
-{
-	L_CALL("DatabaseHandler::dump_documents()");
-/*
-	lock_database lk_db(*this);
-
-	XXH32_state_t* xxh_state = XXH32_createState();
-	XXH32_reset(xxh_state, 0);
-
-	auto db_endpoints = endpoints.to_string();
-	serialise_string(fd, dump_documents_header);
-	XXH32_update(xxh_state, dump_documents_header.data(), dump_documents_header.size());
-
-	serialise_string(fd, db_endpoints);
-	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
-
-	lk_db->dump_documents(fd, xxh_state);
-
-	uint32_t current_hash = XXH32_digest(xxh_state);
-	XXH32_freeState(xxh_state);
-
-	serialise_length(fd, current_hash);
-	L_INFO("Dump hash is {:#010x}", current_hash);
-*/
-}
-
-
-void
-DatabaseHandler::restore_documents(int/* fd*/)
-{
-	L_CALL("DatabaseHandler::restore_documents()");
-/*
-	std::string buffer;
-	std::size_t off = 0;
-	std::size_t acc = 0;
-
-	lock_database lk_db(*this);
-
-	XXH32_state_t* xxh_state = XXH32_createState();
-	XXH32_reset(xxh_state, 0);
-
-	auto header = unserialise_string(fd, buffer, off, acc);
-	XXH32_update(xxh_state, header.data(), header.size());
-	if (header != dump_documents_header && header != dump_schema_header && header != dump_metadata_header) {
-		THROW(ClientError, "Invalid dump", RESERVED_TYPE);
-	}
-
-	auto db_endpoints = unserialise_string(fd, buffer, off, acc);
-	XXH32_update(xxh_state, db_endpoints.data(), db_endpoints.size());
-
-	// restore metadata (key, value)
-	if (header == dump_metadata_header) {
-		size_t i = 0;
-		while (true) {
-			++i;
-			auto key = unserialise_string(fd, buffer, off, acc);
-			XXH32_update(xxh_state, key.data(), key.size());
-			auto value = unserialise_string(fd, buffer, off, acc);
-			XXH32_update(xxh_state, value.data(), value.size());
-			if (key.empty() && value.empty()) {
-				break;
-			}
-			if (key.empty()) {
-				L_WARNING("Metadata with no key ignored [{}]", ID_FIELD_NAME, i);
-				continue;
-			}
-			L_INFO_HOOK("DatabaseHandler::restore", "Restoring metadata {} = {}", key, value);
-			lk_db->set_metadata(key, value, false, false);
-		}
-	}
-
-	// restore schema
-	if (header == dump_schema_header) {
-		auto saved_schema_ser = unserialise_string(fd, buffer, off, acc);
-		XXH32_update(xxh_state, saved_schema_ser.data(), saved_schema_ser.size());
-
-		lk_db.unlock();
-		if (!saved_schema_ser.empty()) {
-			auto saved_schema = MsgPack::unserialise(saved_schema_ser);
-			L_INFO_HOOK("DatabaseHandler::restore", "Restoring schema: {}", saved_schema.to_string(4));
-			write_schema(saved_schema, true);
-		}
-		schema = get_schema();
-		lk_db.lock();
-	}
-
-	// restore documents (document_id, object, blob)
-	if (header == dump_documents_header) {
-		lk_db.unlock();
-		schema = get_schema();
-
-		constexpr size_t limit_max = 16;
-		constexpr size_t limit_signal = 8;
-		LightweightSemaphore limit(limit_max);
-		BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack>> queue;
-		std::atomic_bool ready = false;
-		std::atomic_size_t accumulated = 0;
-		std::atomic_size_t processed = 0;
-		std::size_t total = 0;
-
-		ThreadPool<> thread_pool("TP{:02}", 4 * std::thread::hardware_concurrency());
-
-		// Index documents.
-		auto indexer = thread_pool.async([&]{
-			lock_database lk_db(endpoints, flags, false);
-			bool ready_ = false;
-			while (true) {
-				if (XapiandManager::manager()->is_detaching()) {
-					thread_pool.finish();
-					break;
-				}
-				std::tuple<std::string, Xapian::Document, MsgPack> prepared;
-				queue.wait_dequeue(prepared);
-				if (!ready_) {
-					ready_ = ready.load(std::memory_order_relaxed);
-				}
-				auto processed_ = processed.fetch_add(1, std::memory_order_acquire) + 1;
-
-				auto& term_id = std::get<0>(prepared);
-				auto& doc = std::get<1>(prepared);
-
-				if (!term_id.empty()) {
-					auto database = lk_db.lock();
-					try {
-						database->replace_document_term(term_id, std::move(doc), false, false);
-					} catch (...) {
-						L_EXC("ERROR: Cannot replace document");
-					}
-					lk_db.unlock();
-				}
-
-				if (ready_) {
-					if (processed_ >= total) {
-						queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-						break;
-					}
-					if (processed_ % (1024 * 16) == 0) {
-						L_INFO("{} of {} documents processed ({})", processed_, total, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
-					}
-				} else {
-					if (processed_ % (limit_signal * 32) == 0) {
-						limit.signal(limit_signal);
-					}
-					if (processed_ % (1024 * 16) == 0) {
-						L_INFO("{} documents processed ({})", processed_, string::from_bytes(accumulated.load(std::memory_order_relaxed)));
-					}
-				}
-			}
-		});
-
-		std::array<std::function<void()>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
-		size_t bulk_cnt = 0;
-		while (true) {
-			if (XapiandManager::manager()->is_detaching()) {
-				thread_pool.finish();
-				break;
-			}
-			auto obj = MsgPack::MAP();
-			Data data;
-			try {
-				bool eof = true;
-				while (true) {
-					auto blob = unserialise_string(fd, buffer, off, acc);
-					XXH32_update(xxh_state, blob.data(), blob.size());
-					if (blob.empty()) { break; }
-					auto content_type = unserialise_string(fd, buffer, off, acc);
-					XXH32_update(xxh_state, content_type.data(), content_type.size());
-					auto type_ser = unserialise_char(fd, buffer, off, acc);
-					XXH32_update(xxh_state, &type_ser, 1);
-					if (content_type.empty()) {
-						obj = MsgPack::unserialise(blob);
-					} else {
-						switch (static_cast<Locator::Type>(type_ser)) {
-							case Locator::Type::inplace:
-							case Locator::Type::compressed_inplace:
-								data.update(content_type, blob);
-								break;
-							case Locator::Type::stored:
-							case Locator::Type::compressed_stored:
-								data.update(content_type, -1, 0, 0, blob);
-								break;
-						}
-					}
-					eof = false;
-				}
-				if (eof) { break; }
-				accumulated.store(acc, std::memory_order_relaxed);
-			} catch (...) {
-				L_EXC("ERROR: Cannot replace document");
-				break;
-			}
-
-			MsgPack document_id;
-
-			auto f_it = obj.find(ID_FIELD_NAME);
-			if (f_it != obj.end()) {
-				const auto& field = f_it.value();
-				if (field.is_map()) {
-					auto f_it_end = field.end();
-					auto fv_it = field.find(RESERVED_VALUE);
-					if (fv_it != f_it_end) {
-						document_id = fv_it.value();
-					}
-				} else {
-					document_id = field;
-				}
-			}
-
-			if (!document_id) {
-				L_WARNING("Skipping document with no valid '{}'", ID_FIELD_NAME);
-				continue;
-			}
-
-			++total;
-
-			bulk[bulk_cnt++] = [
-				&,
-				document_id = std::move(document_id),
-				obj = std::move(obj),
-				data = std::move(data)
-			]() mutable {
-				try {
-					DatabaseHandler db_handler(endpoints, flags, method);
-					queue.enqueue(db_handler.prepare(document_id, 0, obj, data));
-				} catch (...) {
-					L_EXC("ERROR: Cannot prepare document");
-					queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}));
-				}
-			};
-			if (bulk_cnt == bulk.size()) {
-				if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
-					L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-				}
-				bulk_cnt = 0;
-				limit.wait();
-			}
-		}
-
-		if (bulk_cnt != 0) {
-			if (!thread_pool.enqueue_bulk(bulk.begin(), bulk_cnt)) {
-				L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-			}
-		}
-
-		ready.store(true, std::memory_order_release);
-
-		indexer.wait();
-
-		L_INFO("{} of {} documents processed ({})", processed.load(std::memory_order_relaxed), total, string::from_bytes(acc));
-
-		lk_db.lock();
-	}
-
-	lk_db->commit(false);
-
-	uint32_t saved_hash = unserialise_length(fd, buffer, off, acc);
-	uint32_t current_hash = XXH32_digest(xxh_state);
-	XXH32_freeState(xxh_state);
-
-	if (saved_hash != current_hash) {
-		L_WARNING("Invalid dump hash. Should be {:#010x}, but instead is {:#010x}", saved_hash, current_hash);
-	}
-*/
-}
-
-
 MsgPack
 DatabaseHandler::dump_documents()
 {
@@ -1138,7 +870,7 @@ DatabaseHandler::dump_documents()
 				auto doc = db->get_document(did);
 				auto data = Data(doc.get_data());
 				auto main_locator = data.get("");
-				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack();
+				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
 				for (auto& locator : data) {
 					switch (locator.type) {
 						case Locator::Type::inplace:
@@ -1191,6 +923,129 @@ DatabaseHandler::dump_documents()
 	return docs;
 }
 
+
+void
+DatabaseHandler::dump_documents(int fd)
+{
+	L_CALL("DatabaseHandler::dump_documents(<fd>)");
+
+	L_DATABASE_WRAP_BEGIN("DatabaseHandler::dump_documents:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+	L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	SHA256 sha256;
+
+	Xapian::docid initial = 1;
+
+	lock_database lk_db(*this);
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		Xapian::docid did = initial;
+		try {
+			auto db = lk_db.locked();
+			auto it = db->postlist_begin("");
+			auto it_e = db->postlist_end("");
+			it.skip_to(initial);
+			for (; it != it_e; ++it) {
+				did = *it;
+				auto doc = db->get_document(did);
+				auto data = Data(doc.get_data());
+				auto main_locator = data.get("");
+				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
+				for (auto& locator : data) {
+					switch (locator.type) {
+						case Locator::Type::inplace:
+						case Locator::Type::compressed_inplace: {
+							if (!locator.ct_type.empty()) {
+								obj["_data"].push_back(MsgPack({
+									{ "_content_type", locator.ct_type.to_string() },
+									{ "_type", "inplace" },
+									{ "_blob", locator.data() },
+								}));
+							}
+							break;
+						}
+						case Locator::Type::stored:
+						case Locator::Type::compressed_stored: {
+#ifdef XAPIAND_DATA_STORAGE
+							auto stored = storage_get_stored(locator, did);
+							obj["_data"].push_back(MsgPack({
+								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
+								{ "_type", "stored" },
+								{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
+							}));
+#endif
+							break;
+						}
+					}
+				}
+				std::string obj_ser = obj.serialise();
+				ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
+				if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
+				sha256.add(obj_ser.data(), obj_ser.size());
+			}
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() == "Database has been closed") {
+				if (t == 0) { throw; }
+			} else {
+				throw;
+			}
+		}
+		lk_db->reopen();
+		L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+
+		initial = did;
+	}
+
+	L_INFO("Dump sha256 hash is {}", sha256.getHash());
+}
+
+
+void
+DatabaseHandler::restore_documents(int fd)
+{
+	L_CALL("DatabaseHandler::restore_documents()");
+
+	SHA256 sha256;
+	msgpack::unpacker unpacker;
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method, false);
+	try {
+		while (true) {
+			if (XapiandManager::manager()->is_detaching()) {
+				indexer->finish();
+				break;
+			}
+
+			unpacker.reserve_buffer(1024);
+			auto bytes = io::read(fd, unpacker.buffer(), unpacker.buffer_capacity());
+			if (bytes < 0) THROW(Error, "Cannot read from file [{}]", fd);
+			sha256.add(unpacker.buffer(), bytes);
+			unpacker.buffer_consumed(bytes);
+
+			msgpack::object_handle result;
+			while (unpacker.next(result)) {
+				indexer->prepare(result.get());
+			}
+
+			if (!bytes) {
+				break;
+			}
+		}
+
+		L_INFO("Restore sha256 hash is {}", sha256.getHash());
+
+		indexer->wait();
+	} catch (...) {
+		L_EXC("Error while restoring documents");
+		indexer->finish();
+	}
+}
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
