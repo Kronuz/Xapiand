@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Dubalu LLC
+ * Copyright (c) 2018,2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 #include "prometheus/text_serializer.h"       // for text_serializer
 #include "prometheus/handler.h"               // for SerializeGet
 
-#include "package.h"                          // for Package::FULLVERSION Package::HASH
+#include "package.h"                          // for Package::REVISION_STRING Package::HASH
 #include "system.hh"                          // for check_compiler, check_OS
 
 
@@ -74,9 +74,8 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			{"name", Package::NAME},
 			{"url", Package::URL},
 			{"url", Package::URL},
-			{"version", Package::VERSION},
-			{"full_version", Package::FULLVERSION},
-			{"revision", Package::REVISION},
+			{"version", Package::VERSION_STRING},
+			{"revision", Package::REVISION_STRING},
 			{"hash", Package::HASH},
 			{"compiler", check_compiler()},
 			{"os", check_OS()},

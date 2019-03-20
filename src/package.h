@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,8 @@ struct Package {
 	static std::string NAME;
 	static std::string VERSION;
 	static std::string REVISION;
-	static std::string FULLVERSION;
+	static std::string VERSION_STRING;
+	static std::string REVISION_STRING;
 	static std::string HASH;
 	static std::string URL;
 	static std::string BUGREPORT;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,8 @@ std::string Package::STRING = PACKAGE_STRING;
 std::string Package::NAME = PACKAGE_NAME;
 std::string Package::VERSION = PACKAGE_VERSION;
 std::string Package::REVISION = PACKAGE_REVISION;
-std::string Package::FULLVERSION = PACKAGE_FULLVERSION;
+std::string Package::VERSION_STRING = PACKAGE_VERSION_STRING;
+std::string Package::REVISION_STRING = PACKAGE_REVISION_STRING;
 std::string Package::HASH = PACKAGE_HASH;
 std::string Package::URL = PACKAGE_URL;
 std::string Package::BUGREPORT = PACKAGE_BUGREPORT;

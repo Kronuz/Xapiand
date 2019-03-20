@@ -702,7 +702,7 @@ void banner() {
 			outer + "    ``-´´   " + rgb(0, 128, 0) + "{}" + "\n" +
 					"            " + rgb(0, 96, 0)  + "{}" + "\n\n",
 			string::center(Package::HASH, 8, true),
-			string::center(Package::FULLVERSION, 25, true),
+			string::center(Package::VERSION_STRING, 25, true),
 			string::center("Using " + string::join(values, ", ", " and "), 42),
 			string::center("[" + Package::BUGREPORT + "]", 42));
 	} else {
