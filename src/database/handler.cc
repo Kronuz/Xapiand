@@ -1003,7 +1003,7 @@ DatabaseHandler::dump_documents(int fd)
 		initial = did;
 	}
 
-	L(-LOG_NOTICE, NOTICE_COL, "Dump sha256 hash is {}", sha256.getHash());
+	L(-LOG_NOTICE, NOTICE_COL, "sha256 = {}", sha256.getHash());
 	L_INFO("Dump completed!");
 }
 
@@ -1039,7 +1039,7 @@ DatabaseHandler::restore_documents(int fd)
 			}
 		}
 
-		L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 hash is {}", sha256.getHash());
+		L(-LOG_NOTICE, NOTICE_COL, "sha256 = {}", sha256.getHash());
 
 		indexer->wait();
 		L_INFO("Restore completed!");
