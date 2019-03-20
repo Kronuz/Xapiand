@@ -255,8 +255,6 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	} else {
 		path = normalizer<normalize>(_path.data(), _path.size());
 	}
-
-	ASSERT(!node_name.empty());
 }
 
 
@@ -370,13 +368,15 @@ Endpoint::to_string() const
 		ret += "@";
 	}
 	auto node = Node::get_node(node_name);
-	ret += node->host();
-	if (node->remote_port > 0) {
-		ret += ":";
-		ret += string::format("{}", node->remote_port);
-	}
-	if (!node->host().empty() || node->remote_port > 0) {
-		ret += "/";
+	if (node) {
+		ret += node->host();
+		if (node->remote_port > 0) {
+			ret += ":";
+			ret += string::format("{}", node->remote_port);
+		}
+		if (!node->host().empty() || node->remote_port > 0) {
+			ret += "/";
+		}
 	}
 	ret += path;
 	if (!query.empty()) {
@@ -418,7 +418,7 @@ bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::local_node();
-	return node_name == local_node->lower_name();
+	return !local_node || node_name == local_node->lower_name();
 }
 
 
