@@ -846,7 +846,7 @@ HttpClient::on_headers_complete(http_parser* parser)
 		return err;
 	}
 
-	if likely(!closed && !new_request->ending) {
+	if likely(!closed && !new_request->atom_ending) {
 		if likely(new_request->view) {
 			if (new_request->mode != Request::Mode::FULL) {
 				std::lock_guard<std::mutex> lk(runner_mutex);
@@ -874,7 +874,7 @@ HttpClient::on_body(http_parser* parser, const char* at, size_t length)
 
 	new_request->size += length;
 
-	if likely(!closed && !new_request->ending && new_request->view) {
+	if likely(!closed && !new_request->atom_ending && new_request->view) {
 		if (new_request->append(at, length)) {
 			new_request->pending.signal();
 
