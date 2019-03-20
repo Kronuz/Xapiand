@@ -1488,14 +1488,19 @@ load_shards(const std::string& normalized_path)
 {
 	L_CALL("load_shards({})", repr(normalized_path));
 
+	std::vector<std::vector<std::string>> shards;
+
+	auto nodes = Node::nodes();
+	if (nodes.empty()) {
+		return shards;
+	}
+
 	Endpoints index_endpoints;
-	for (auto& node : Node::nodes()) {
+	for (auto& node : nodes) {
 		if (node->idx) {
 			index_endpoints.add(Endpoint{string::format(".xapiand/index/.__{}", node->idx)});
 		}
 	}
-
-	std::vector<std::vector<std::string>> shards;
 
 	try {
 		DatabaseHandler db_handler(index_endpoints);
@@ -1660,6 +1665,11 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		}
 
 		if (nodes.empty()) {
+			auto indexed_nodes = Node::indexed_nodes();
+			if (!indexed_nodes) {
+				return nodes;
+			}
+
 			size_t num_shards = opts.num_shards;
 			size_t num_replicas_plus_master = opts.num_replicas + 1;
 
@@ -1681,12 +1691,7 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 				}
 			}
 
-			auto indexed_nodes = Node::indexed_nodes();
-
 			// Some validations:
-			if (indexed_nodes < 1) {
-				indexed_nodes = 1;
-			}
 			if (num_shards > 9999UL) {
 				num_shards = 9999UL;
 			}
