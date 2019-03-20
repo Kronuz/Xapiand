@@ -128,8 +128,14 @@ int test_url_path() {
 		{ "/1,/2", true, "_|_|pth=/1|_|pth=/2|(end)" },
 		{ "/twitter/tweet/:metadata/_schema", true, "_|cmd=:metadata|pmt=_schema|_|pth=/twitter/tweet|(end)" },
 		{ "/twitter/tweet/:metadata/_schema|version", true, "_|slc=version|cmd=:metadata|pmt=_schema|_|pth=/twitter/tweet|(end)" },
-		{ "/twitter/tweet/1/|user.name", false, "_|slc=user.name|id=1|_|pth=/twitter/tweet|(end)" },
-		{ "/twitter/tweet/1/|{user.name}", false, "_|slc={user.name}|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1{A {B { C }}}", false, "_|slc={A {B { C }}}|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1A,{B,{ C }}}", false, "_|slc=|id=1A,{B,{ C }}}|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1{A,{B,{ C }}", false, "_|slc={B,{ C }}|id=1{A,|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1{A, {B, { C }}}", false, "_|slc={A, {B, { C }}}|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1{A, {B}}", false, "_|slc={A, {B}}|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1{B}", false, "_|slc={B}|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/1.A.B", false, "_|slc=A.B|id=1|_|pth=/twitter/tweet|(end)" },
+		{ "/twitter/tweet/.1", false, "_|slc=|id=.1|_|pth=/twitter/tweet|(end)" },
 	};
 
 	int count = 0;
