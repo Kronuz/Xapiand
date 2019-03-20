@@ -686,7 +686,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				serialised_term_holder = string::lower(serialised_term);
 				serialised_term = serialised_term_holder;
 			}
-			if (string::endswith(serialised_term, '*')) {
+			if (string::endswith(serialised_term, '*') || (flags & Xapian::QueryParser::FLAG_PARTIAL)) {
 				serialised_term.remove_suffix(1);
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
 			}
