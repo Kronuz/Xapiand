@@ -22,6 +22,7 @@
 
 #include "schemas_lru.h"
 
+#include "cassert.h"                              // for ASSERT
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/utils.h"                       // for unsharded_path
 #include "log.h"                                  // for L_CALL
@@ -143,6 +144,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	 * Returns schema, mut_schema and foreign_uri
 	 */
 	L_CALL("SchemasLRU::get(<db_handler>, {})", obj ? repr(obj->to_string()) : "nullptr");
+
+	ASSERT(db_handler);
+	ASSERT(!db_handler->endpoints.empty());
 
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -321,6 +325,9 @@ bool
 SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
+
+	ASSERT(db_handler);
+	ASSERT(!db_handler->endpoints.empty());
 
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -607,6 +614,9 @@ bool
 SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema)
 {
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
+
+	ASSERT(db_handler);
+	ASSERT(!db_handler->endpoints.empty());
 
 	bool exchanged;
 	std::string foreign_uri, foreign_path, foreign_id;
