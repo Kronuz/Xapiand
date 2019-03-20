@@ -520,6 +520,35 @@ XapiandManager::init()
 	if (opts.solo) {
 		Node::leader_node(local_node);
 	}
+
+	// If restoring documents, fill all the nodes from the cluster database:
+	bool snooping = (
+		!opts.dump_documents.empty() ||
+		!opts.restore_documents.empty()
+	);
+	if (snooping) {
+		try {
+			DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand"}});
+			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
+				auto mset = db_handler.get_all_mset();
+				const auto m_e = mset.end();
+				for (auto m = mset.begin(); m != m_e; ++m) {
+					auto did = *m;
+					auto document = db_handler.get_document(did);
+					auto obj = document.get_obj();
+					#ifdef XAPIAND_CLUSTERING
+					if (!opts.solo) {
+						Node node;
+						node.idx = did;
+						node.name(obj["name"].str_view());
+						Node::touch_node(node, false);
+					}
+					#endif
+				}
+			}
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {}
+	}
 }
 
 
