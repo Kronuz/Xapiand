@@ -489,6 +489,13 @@ XapiandManager::init()
 {
 	L_CALL("XapiandManager::init()");
 
+	bool snooping = (
+		!opts.dump_documents.empty() ||
+		!opts.restore_documents.empty()
+	);
+
+	L(-LOG_NOTICE, NOTICE_COL, "Xapiand rnning with pid:{}", getpid());
+
 	// Set the id in local node.
 	auto local_node = Node::local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);
@@ -509,10 +516,12 @@ XapiandManager::init()
 	}
 	node_copy->name(_node_name);
 
-	// Set addr in local node
-	auto address = host_address();
-	L(-LOG_NOTICE, NOTICE_COL, "Node IP address is {} on interface {}, running with pid:{}", inet_ntop(address.first), address.second, getpid());
-	node_copy->addr(address.first);
+	if (!snooping) {
+		// Set addr in local node
+		auto address = host_address();
+		node_copy->addr(address.first);
+		L(-LOG_NOTICE, NOTICE_COL, "Node IP address is {} on interface {}", inet_ntop(address.first), address.second);
+	}
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 	local_node = Node::local_node(local_node);
@@ -522,10 +531,6 @@ XapiandManager::init()
 	}
 
 	// If restoring documents, fill all the nodes from the cluster database:
-	bool snooping = (
-		!opts.dump_documents.empty() ||
-		!opts.restore_documents.empty()
-	);
 	if (snooping) {
 		try {
 			DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand"}});
