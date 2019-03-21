@@ -41,7 +41,7 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_SCHEMA
-// #define L_SCHEMA L_YELLOW_GREEN
+// #define L_SCHEMA L_STACKED_YELLOW_GREEN
 
 
 static const std::string reserved_schema(RESERVED_SCHEMA);
@@ -190,6 +190,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 	// We first try to load schema from the LRU cache
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
+	L_SCHEMA("{}{}", prefix, repr(local_schema_path));
 	{
 		std::lock_guard<std::mutex> lk(smtx);
 		local_schema_ptr = local_schemas[local_schema_path].load();
@@ -207,29 +208,37 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 	// or there it wasn't passed anything.
 	if (local_schema_ptr) {
 		// Schema was in the cache
-		L_SCHEMA("{}Schema {} found in cache", prefix, repr(local_schema_path));
+		L_SCHEMA("{}" + DARK_GREEN + "Schema [{}] found in cache -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), local_schema_ptr->to_string());
 		schema_ptr = local_schema_ptr;
 		if (!foreign_uri.empty()) {
 			auto tmp_schema_ptr = std::make_shared<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, foreign_uri },
 			}));
-			if (*tmp_schema_ptr != *schema_ptr) {
+			if (*schema_ptr != *tmp_schema_ptr) {
 				tmp_schema_ptr->lock();
 				{
 					std::lock_guard<std::mutex> lk(smtx);
 					exchanged = local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, tmp_schema_ptr);
 				}
 				if (exchanged) {
-					L_SCHEMA("{}Foreign Schema Link {} added to LRU", prefix, repr(local_schema_path));
+					schema_ptr = tmp_schema_ptr;
+					L_SCHEMA("{}" + GREEN + "Local Schema [{}] added foreign link to the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else {
-					failure = true;
+					if (*schema_ptr != *tmp_schema_ptr) {
+						failure = true;
+						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] couldn't add foreign link to the LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					} else {
+						L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					}
 				}
+			} else {
+				L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			}
 		}
 	} else {
 		// Schema needs to be read
-		L_SCHEMA("{}Schema {} not found in cache, try loading from metadata", prefix, repr(local_schema_path));
+		L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
 		std::string schema_ser;
 		try {
 			schema_ser = db_handler->get_metadata(reserved_schema);
@@ -245,6 +254,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					{ RESERVED_ENDPOINT, foreign_uri },
 				}));
 				schema_ptr->lock();
+				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			} else if (local_schema_path != ".xapiand") {
 				// Implement foreign schemas in .xapiand/index by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
@@ -252,39 +262,43 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
 				}));
 				schema_ptr->lock();
+				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			} else if (new_schema) {
 				schema_ptr = new_schema;
+				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new schema ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			} else {
 				schema_ptr = Schema::get_initial_schema();
+				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			}
 		} else {
 			schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 			schema_ptr->lock();
 			schema_ptr->set_flags(1);
+			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 		}
 		{
 			std::lock_guard<std::mutex> lk(smtx);
 			exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 		}
 		if (exchanged) {
-			L_SCHEMA("{}Local Schema {} added to LRU", prefix, repr(local_schema_path));
+			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was added to LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 		} else {
 			// Read object couldn't be stored in cache,
 			// so we use the schema now currently in cache
 			schema_ptr = local_schema_ptr;
 			failure = true;
+			L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 		}
 	}
 
 	// If we still need to save the metadata, we save it:
 	if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
-		L_SCHEMA("{}Cached Local Schema {}, write schema metadata", prefix, repr(local_schema_path));
 		try {
 			// Try writing (only if there's no metadata there alrady)
 			if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+				L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				schema_ptr->set_flags(1);
 			} else {
-				L_SCHEMA("{}Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", prefix, repr(local_schema_path));
 				std::string schema_ser;
 				try {
 					schema_ser = db_handler->get_metadata(reserved_schema);
@@ -294,8 +308,10 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					L_EXC("Exception");
 				}
 				if (schema_ser.empty()) {
-					THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
+					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata wasn't overwritten, and couldn't be reloaded", prefix, repr(local_schema_path));
+					THROW(Error, "Cannot get metadata: {}", repr(reserved_schema));
 				}
+				local_schema_ptr = schema_ptr;
 				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 				schema_ptr->lock();
 				schema_ptr->set_flags(1);
@@ -304,18 +320,27 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 				}
 				if (exchanged) {
-					L_SCHEMA("{}Cached Schema {} re-added to LRU", prefix, repr(local_schema_path));
+					L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded and added to LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else {
 					schema_ptr = local_schema_ptr;
+					L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded but couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				}
 				failure = true;
 			}
 		} catch (...) {
 			if (local_schema_ptr != schema_ptr) {
-				L_SCHEMA("{}Metadata for Schema {} wasn't set, try reverting LRU", prefix, repr(local_schema_path));
 				// On error, try reverting
-				std::lock_guard<std::mutex> lk(smtx);
-				local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
+				{
+					std::lock_guard<std::mutex> lk(smtx);
+					exchanged = local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
+				}
+				if (exchanged) {
+					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata couldn't be set, and was reverted ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), local_schema_ptr->to_string());
+				} else {
+					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata couldn't be set, and couldn't be reverted ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+				}
+			} else {
+				L_SCHEMA("{}" + RED + "Local Schema [{}] metadata couldn't be set -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			}
 			throw;
 		}
@@ -336,37 +361,45 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 		}
 		if (foreign_schema_ptr && (!new_schema || *foreign_schema_ptr == *new_schema)) {
 			// Same Foreign Schema was in the cache
-			L_SCHEMA("{}Foreign Schema {} found in cache", prefix, repr(foreign_uri));
 			schema_ptr = foreign_schema_ptr;
+			L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] found in cache -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 		} else if (new_schema) {
+			L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try using new schema", prefix, repr(foreign_uri));
 			schema_ptr = new_schema;
 			{
 				std::lock_guard<std::mutex> lk(smtx);
 				exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 			}
 			if (exchanged) {
-				L_SCHEMA("{}New Foreign Schema {} added to LRU", prefix, repr(foreign_uri));
+				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} else {
 				schema_ptr = foreign_schema_ptr;
 				failure = true;
+				L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] new schema couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			}
 		} else {
 			// Foreign Schema needs to be read
-			L_SCHEMA("{}Foreign Schema {} not found in cache, try loading from {} {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
+			L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try loading from {}/{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 			try {
 				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 				schema_ptr->lock();
 				schema_ptr->set_flags(1);
+				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was loaded -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} catch (const ClientError&) {
+				L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be loaded (client error)", prefix, repr(foreign_uri));
 				throw;
 			} catch (const Error&) {
 				schema_ptr = Schema::get_initial_schema();
+				L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (error), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} catch (const Xapian::DocNotFoundError&) {
 				schema_ptr = Schema::get_initial_schema();
+				L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (document was not found), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} catch (const Xapian::DatabaseNotFoundError&) {
 				schema_ptr = Schema::get_initial_schema();
+				L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (database was not there), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} catch (...) {
 				L_EXC("Exception");
+				L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (exception), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 				schema_ptr = Schema::get_initial_schema();
 			}
 			{
@@ -374,53 +407,68 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 				exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 			}
 			if (exchanged) {
-				L_SCHEMA("{}Foreign Schema {} added to LRU", prefix, repr(foreign_uri));
+				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} else {
 				schema_ptr = foreign_schema_ptr;
 				failure = true;
+				L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			}
 		}
 		// If we still need to save the schema document, we save it:
 		if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
-			L_SCHEMA("{}Cached Foreign Schema {}, write schema", prefix, repr(foreign_uri));
 			try {
 				save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
 				schema_ptr->set_flags(1);
+				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was saved to {}/{} -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 			} catch (const Xapian::DocVersionConflictError&) {
 				// Foreign Schema needs to be read
-				L_SCHEMA("{}Foreign Schema {} not found in cache, try loading from {} {}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 				try {
 					schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 					schema_ptr->lock();
 					schema_ptr->set_flags(1);
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {}/{}, it was reloaded ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				} catch (const ClientError&) {
+					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {}/{} and couldn't be reloaded (client error)", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 					throw;
 				} catch (const Error&) {
 					schema_ptr = Schema::get_initial_schema();
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {}/{} and couldn't be reloaded (error), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				} catch (const Xapian::DocNotFoundError&) {
 					schema_ptr = Schema::get_initial_schema();
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {}/{} and couldn't be reloaded (document was not found), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				} catch (const Xapian::DatabaseNotFoundError&) {
 					schema_ptr = Schema::get_initial_schema();
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {}/{} and couldn't be reloaded (database was not there), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				} catch (...) {
 					L_EXC("Exception");
 					schema_ptr = Schema::get_initial_schema();
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {}/{} and couldn't be reloaded (exception), create a new initial schema ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				}
 				{
 					std::lock_guard<std::mutex> lk(smtx);
 					exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 				}
 				if (exchanged) {
-					L_SCHEMA("{}Foreign Schema {} added to LRU", prefix, repr(foreign_uri));
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 				} else {
 					schema_ptr = foreign_schema_ptr;
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 				}
 				failure = true;
 			} catch (...) {
 				if (foreign_schema_ptr != schema_ptr) {
-					L_SCHEMA("{}Foreign Schema {} wasn't saved, try reverting LRU", prefix, repr(foreign_uri));
 					// On error, try reverting
-					std::lock_guard<std::mutex> lk(smtx);
-					foreign_schemas[foreign_uri].compare_exchange_strong(schema_ptr, foreign_schema_ptr);
+					{
+						std::lock_guard<std::mutex> lk(smtx);
+						exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(schema_ptr, foreign_schema_ptr);
+					}
+					if (exchanged) {
+						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and was reverted ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), foreign_schema_ptr->to_string());
+					} else {
+						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and couldn't be reverted ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+					}
+				} else {
+					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 				}
 				throw;
 			}
