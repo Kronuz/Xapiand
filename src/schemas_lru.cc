@@ -303,10 +303,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 	if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
 		try {
 			// Try writing (only if there's no metadata there alrady)
-			if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
-				L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
-				schema_ptr->set_flags(1);
-			} else {
+			if (!local_schema_ptr || *local_schema_ptr != *schema_ptr) {
 				std::string schema_ser;
 				try {
 					schema_ser = db_handler->get_metadata(reserved_schema);
@@ -316,24 +313,34 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					L_EXC("Exception");
 				}
 				if (schema_ser.empty()) {
-					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata wasn't overwritten, and couldn't be reloaded", prefix, repr(local_schema_path));
-					THROW(Error, "Cannot get metadata: {}", repr(reserved_schema));
-				}
-				local_schema_ptr = schema_ptr;
-				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
-				schema_ptr->lock();
-				schema_ptr->set_flags(1);
-				{
-					std::lock_guard<std::mutex> lk(smtx);
-					exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-				}
-				if (exchanged) {
-					L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded and added to LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
+					schema_ptr->set_flags(1);
+				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
+					L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was overwritten -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
+					schema_ptr->set_flags(1);
 				} else {
-					schema_ptr = local_schema_ptr;
-					L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded but couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					local_schema_ptr = schema_ptr;
+					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+					schema_ptr->lock();
+					schema_ptr->set_flags(1);
+					{
+						std::lock_guard<std::mutex> lk(smtx);
+						exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+					}
+					if (exchanged) {
+						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded and added to LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					} else {
+						schema_ptr = local_schema_ptr;
+						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded but couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					}
+					failure = true;
 				}
-				failure = true;
+			} else {
+				L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+				db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
+				schema_ptr->set_flags(1);
 			}
 		} catch (...) {
 			if (local_schema_ptr != schema_ptr) {
