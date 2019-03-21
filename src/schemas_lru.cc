@@ -192,7 +192,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " (writable)" : "");
 	{
-		std::lock_guard<std::mutex> lk(smtx);
+		std::lock_guard<std::mutex> lk(local_mtx);
 		local_schema_ptr = local_schemas[local_schema_path].load();
 	}
 
@@ -220,7 +220,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			} else {
 				schema_ptr->lock();
 				{
-					std::lock_guard<std::mutex> lk(smtx);
+					std::lock_guard<std::mutex> lk(local_mtx);
 					exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 				}
 				if (exchanged) {
@@ -281,7 +281,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 		}
 		{
-			std::lock_guard<std::mutex> lk(smtx);
+			std::lock_guard<std::mutex> lk(local_mtx);
 			exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 		}
 		if (exchanged) {
@@ -328,7 +328,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					schema_ptr->lock();
 					schema_ptr->set_flags(1);
 					{
-						std::lock_guard<std::mutex> lk(smtx);
+						std::lock_guard<std::mutex> lk(local_mtx);
 						exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 					}
 					if (exchanged) {
@@ -354,7 +354,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			if (local_schema_ptr && (schema_ptr != local_schema_ptr && *schema_ptr != *local_schema_ptr)) {
 				// On error, try reverting
 				{
-					std::lock_guard<std::mutex> lk(smtx);
+					std::lock_guard<std::mutex> lk(local_mtx);
 					exchanged = local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
 				}
 				if (exchanged) {
@@ -379,7 +379,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 		// FOREIGN Schema, get from the cache or load from `foreign_path/foreign_id` endpoint:
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
-			std::lock_guard<std::mutex> lk(smtx);
+			std::lock_guard<std::mutex> lk(foreign_mtx);
 			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 		}
 		if (foreign_schema_ptr && (!new_schema || *new_schema == *foreign_schema_ptr)) {
@@ -390,7 +390,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try using new schema", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,");
 			schema_ptr = new_schema;
 			{
-				std::lock_guard<std::mutex> lk(smtx);
+				std::lock_guard<std::mutex> lk(foreign_mtx);
 				exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 			}
 			if (exchanged) {
@@ -456,7 +456,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 				}
 			}
 			{
-				std::lock_guard<std::mutex> lk(smtx);
+				std::lock_guard<std::mutex> lk(foreign_mtx);
 				exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 			}
 			if (exchanged) {
@@ -528,7 +528,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					}
 				}
 				{
-					std::lock_guard<std::mutex> lk(smtx);
+					std::lock_guard<std::mutex> lk(foreign_mtx);
 					exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 				}
 				if (exchanged) {
@@ -548,7 +548,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 				if (foreign_schema_ptr != schema_ptr) {
 					// On error, try reverting
 					{
-						std::lock_guard<std::mutex> lk(smtx);
+						std::lock_guard<std::mutex> lk(foreign_mtx);
 						exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(schema_ptr, foreign_schema_ptr);
 					}
 					if (exchanged) {
@@ -651,7 +651,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	{
-		std::lock_guard<std::mutex> lk(smtx);
+		std::lock_guard<std::mutex> lk(local_mtx);
 		local_schema_ptr = local_schemas[local_schema_path].load();
 	}
 	if (old_schema != local_schema_ptr) {
@@ -663,7 +663,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		}
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
-			std::lock_guard<std::mutex> lk(smtx);
+			std::lock_guard<std::mutex> lk(foreign_mtx);
 			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 		}
 		if (old_schema != foreign_schema_ptr) {
@@ -677,7 +677,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 		return true;
 	}
 	{
-		std::lock_guard<std::mutex> lk(smtx);
+		std::lock_guard<std::mutex> lk(local_mtx);
 		exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, new_schema);
 	}
 	if (exchanged) {
@@ -685,7 +685,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 			db_handler->set_metadata(reserved_schema, "");
 		} catch (...) {
 			// On error, try reverting
-			std::lock_guard<std::mutex> lk(smtx);
+			std::lock_guard<std::mutex> lk(local_mtx);
 			local_schemas[local_schema_path].compare_exchange_strong(new_schema, local_schema_ptr);
 			throw;
 		}
@@ -701,7 +701,7 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 
 	std::shared_ptr<const MsgPack> foreign_schema_ptr;
 	{
-		std::lock_guard<std::mutex> lk(smtx);
+		std::lock_guard<std::mutex> lk(foreign_mtx);
 		foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 	}
 
