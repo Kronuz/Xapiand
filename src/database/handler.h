@@ -236,8 +236,8 @@ public:
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
 	std::string get_metadata(std::string_view key);
-	bool set_metadata(const std::string& key, const std::string& value, bool overwrite = true, bool commit = false, bool wal = true);
-	bool set_metadata(std::string_view key, std::string_view value, bool overwrite = true, bool commit = false, bool wal = true);
+	void set_metadata(const std::string& key, const std::string& value, bool commit = false, bool wal = true);
+	void set_metadata(std::string_view key, std::string_view value, bool commit = false, bool wal = true);
 
 	Document get_document(Xapian::docid did);
 	Document get_document(std::string_view document_id);

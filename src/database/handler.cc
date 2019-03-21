@@ -1537,17 +1537,10 @@ DatabaseHandler::get_metadata(std::string_view key)
 }
 
 
-bool
-DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool overwrite, bool commit, bool wal)
+void
+DatabaseHandler::set_metadata(const std::string& key, const std::string& value, bool commit, bool wal)
 {
-	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {}, {})", repr(key), repr(value), overwrite, commit, wal);
-
-	if (!overwrite) {
-		auto old_value = get_metadata(key);
-		if (!old_value.empty()) {
-			return (old_value == value);
-		}
-	}
+	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, wal);
 
 	ASSERT(!endpoints.empty());
 	auto valid = endpoints.size();
@@ -1573,14 +1566,13 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 	if (eptr && !valid) {
 		std::rethrow_exception(eptr);
 	}
-	return true;
 }
 
 
-bool
-DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool overwrite, bool commit, bool wal)
+void
+DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit, bool wal)
 {
-	return set_metadata(std::string(key), std::string(value), overwrite, commit, wal);
+	set_metadata(std::string(key), std::string(value), commit, wal);
 }
 
 
