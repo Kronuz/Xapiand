@@ -154,10 +154,12 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	ASSERT(db_handler);
 	ASSERT(!db_handler->endpoints.empty());
 
+	std::shared_ptr<const MsgPack> new_schema;
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
 	bool exchanged;
+	bool failure = false;
 	const MsgPack* schema_obj = nullptr;
 
 	// We first try to load schema from the LRU cache
@@ -177,88 +179,147 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	if (foreign_uri.empty()) {
-		// Whatever was passed by the user doesn't specify a foreign schema
-		if (local_schema_ptr) {
-			// Schema was in the cache
-			L_SCHEMA("GET: Schema {} found in cache", repr(local_schema_path));
-			schema_ptr = local_schema_ptr;
-		} else {
-			// Schema needs to be read
-			L_SCHEMA("GET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
-			std::string schema_ser;
-			try {
-				schema_ser = db_handler->get_metadata(reserved_schema);
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {
-			} catch (...) {
-				L_EXC("Exception");
-			}
-			if (schema_ser.empty()) {
-				if (local_schema_path != ".xapiand") {
-					// Implement foreign schemas in .xapiand/index by default:
-					schema_ptr = std::make_shared<MsgPack>(MsgPack({
-						{ RESERVED_TYPE, "foreign/object" },
-						{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
-					}));
-					schema_ptr->lock();
-				} else {
-					schema_ptr = Schema::get_initial_schema();
+	// Whatever was passed by the user doesn't specify a foreign schema,
+	// or there it wasn't passed anything.
+	if (local_schema_ptr) {
+		// Schema was in the cache
+		L_SCHEMA("GET: Schema {} found in cache", repr(local_schema_path));
+		schema_ptr = local_schema_ptr;
+		if (!foreign_uri.empty()) {
+			auto tmp_schema_ptr = std::make_shared<MsgPack>(MsgPack({
+				{ RESERVED_TYPE, "foreign/object" },
+				{ RESERVED_ENDPOINT, foreign_uri },
+			}));
+			if (*tmp_schema_ptr != *schema_ptr) {
+				tmp_schema_ptr->lock();
+				{
+					std::lock_guard<std::mutex> lk(smtx);
+					exchanged = local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, tmp_schema_ptr);
 				}
-			} else {
-				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
-				schema_ptr->lock();
-				schema_ptr->set_flags(1);
-			}
-			{
-				std::lock_guard<std::mutex> lk(smtx);
-				exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-			}
-			if (exchanged) {
-				L_SCHEMA("GET: Local Schema {} added to LRU", repr(local_schema_path));
-			} else {
-				// Read object couldn't be stored in cache,
-				// so we use the schema now currently in cache
-				schema_ptr = local_schema_ptr;
+				if (exchanged) {
+					L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(local_schema_path));
+				} else {
+					failure = true;
+				}
 			}
 		}
 	} else {
-		// The user explicitly specified using a foreign schema,
-		// so we fabricate a new foreign schema object
-		L_SCHEMA("GET: Foreign Schema {}", repr(local_schema_path));
-		schema_ptr = std::make_shared<MsgPack>(MsgPack({
-			{ RESERVED_TYPE, "foreign/object" },
-			{ RESERVED_ENDPOINT, foreign_uri },
-		}));
-		schema_ptr->lock();
-		if (local_schema_ptr && *local_schema_ptr == *schema_ptr) {
-			schema_ptr = local_schema_ptr;
-		} else {
-			{
-				std::lock_guard<std::mutex> lk(smtx);
-				exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-			}
-			if (exchanged) {
-				L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(local_schema_path));
+		// Schema needs to be read
+		L_SCHEMA("GET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
+		std::string schema_ser;
+		try {
+			schema_ser = db_handler->get_metadata(reserved_schema);
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {
+		} catch (...) {
+			L_EXC("Exception");
+		}
+		if (schema_ser.empty()) {
+			if (!foreign_uri.empty()) {
+				schema_ptr = std::make_shared<MsgPack>(MsgPack({
+					{ RESERVED_TYPE, "foreign/object" },
+					{ RESERVED_ENDPOINT, foreign_uri },
+				}));
+				schema_ptr->lock();
+			} else if (local_schema_path != ".xapiand") {
+				// Implement foreign schemas in .xapiand/index by default:
+				schema_ptr = std::make_shared<MsgPack>(MsgPack({
+					{ RESERVED_TYPE, "foreign/object" },
+					{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
+				}));
+				schema_ptr->lock();
 			} else {
-				// Fabricated schema couldn't be stored in cache,
-				// we simply ignore the fact we weren't able to store it in cache
+				schema_ptr = Schema::get_initial_schema();
 			}
+		} else {
+			schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+			schema_ptr->lock();
+			schema_ptr->set_flags(1);
+		}
+		{
+			std::lock_guard<std::mutex> lk(smtx);
+			exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+		}
+		if (exchanged) {
+			L_SCHEMA("GET: Local Schema {} added to LRU", repr(local_schema_path));
+		} else {
+			// Read object couldn't be stored in cache,
+			// so we use the schema now currently in cache
+			schema_ptr = local_schema_ptr;
+			failure = true;
+		}
+	}
+
+	// If we still need to save the metadata, we save it:
+	if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
+		L_SCHEMA("GET: Cached Local Schema {}, write schema metadata", repr(local_schema_path));
+		try {
+			// Try writing (only if there's no metadata there alrady)
+			if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+				schema_ptr->set_flags(1);
+			} else {
+				L_SCHEMA("GET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
+				std::string schema_ser;
+				try {
+					schema_ser = db_handler->get_metadata(reserved_schema);
+				} catch (const Xapian::DocNotFoundError&) {
+				} catch (const Xapian::DatabaseNotFoundError&) {
+				} catch (...) {
+					L_EXC("Exception");
+				}
+				if (schema_ser.empty()) {
+					THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
+				}
+				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+				schema_ptr->lock();
+				schema_ptr->set_flags(1);
+				{
+					std::lock_guard<std::mutex> lk(smtx);
+					exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+				}
+				if (exchanged) {
+					L_SCHEMA("GET: Cached Schema {} re-added to LRU", repr(local_schema_path));
+				} else {
+					schema_ptr = local_schema_ptr;
+				}
+				failure = true;
+			}
+		} catch (...) {
+			if (local_schema_ptr != schema_ptr) {
+				L_SCHEMA("GET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
+				// On error, try reverting
+				std::lock_guard<std::mutex> lk(smtx);
+				local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
+			}
+			throw;
 		}
 	}
 
 	// Now we check if the schema points to a foreign schema
 	validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
 	if (!foreign_uri.empty()) {
+		// FOREIGN Schema, get from the cache or load from `foreign_path/foreign_id` endpoint:
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
 			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 		}
-		if (foreign_schema_ptr) {
+		if (foreign_schema_ptr && (!new_schema || *foreign_schema_ptr == *new_schema)) {
 			// Foreign Schema was in the cache
 			L_SCHEMA("GET: Foreign Schema {} found in cache", repr(foreign_uri));
 			schema_ptr = foreign_schema_ptr;
+		} else if (new_schema) {
+			schema_ptr = new_schema;
+			{
+				std::lock_guard<std::mutex> lk(smtx);
+				exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
+			}
+			if (exchanged) {
+				L_SCHEMA("GET: New Foreign Schema {} added to LRU", repr(foreign_uri));
+			} else {
+				schema_ptr = foreign_schema_ptr;
+				failure = true;
+			}
 		} else {
 			// Foreign Schema needs to be read
 			L_SCHEMA("GET: Foreign Schema {} not found in cache, try loading from {} {}", repr(foreign_uri), repr(foreign_path), repr(foreign_id));
@@ -286,6 +347,52 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 				L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(foreign_uri));
 			} else {
 				schema_ptr = foreign_schema_ptr;
+				failure = true;
+			}
+		}
+		// If we still need to save the schema document, we save it:
+		if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
+			L_SCHEMA("GET: Cached Foreign Schema {}, write schema", repr(foreign_uri));
+			try {
+				save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
+				schema_ptr->set_flags(1);
+			} catch (const Xapian::DocVersionConflictError&) {
+				// Foreign Schema needs to be read
+				L_SCHEMA("GET: Foreign Schema {} not found in cache, try loading from {} {}", repr(foreign_uri), repr(foreign_path), repr(foreign_id));
+				try {
+					schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
+					schema_ptr->lock();
+					schema_ptr->set_flags(1);
+				} catch (const ClientError&) {
+					throw;
+				} catch (const Error&) {
+					schema_ptr = Schema::get_initial_schema();
+				} catch (const Xapian::DocNotFoundError&) {
+					schema_ptr = Schema::get_initial_schema();
+				} catch (const Xapian::DatabaseNotFoundError&) {
+					schema_ptr = Schema::get_initial_schema();
+				} catch (...) {
+					L_EXC("Exception");
+					schema_ptr = Schema::get_initial_schema();
+				}
+				{
+					std::lock_guard<std::mutex> lk(smtx);
+					exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
+				}
+				if (exchanged) {
+					L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(foreign_uri));
+				} else {
+					schema_ptr = foreign_schema_ptr;
+				}
+				failure = true;
+			} catch (...) {
+				if (foreign_schema_ptr != schema_ptr) {
+					L_SCHEMA("GET: Foreign Schema {} wasn't saved, try reverting LRU", repr(foreign_uri));
+					// On error, try reverting
+					std::lock_guard<std::mutex> lk(smtx);
+					foreign_schemas[foreign_uri].compare_exchange_strong(schema_ptr, foreign_schema_ptr);
+				}
+				throw;
 			}
 		}
 	}
@@ -324,7 +431,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 bool
 SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema)
 {
-	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
+	L_STACKED_DIM_GREY("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
 	ASSERT(db_handler);
 	ASSERT(!db_handler->endpoints.empty());
@@ -343,81 +450,147 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 		local_schema_ptr = local_schemas[local_schema_path].load();
 	}
 
-	if (foreign_uri.empty()) {
-		// Whatever was passed by the user doesn't specify a foreign schema
-		if (local_schema_ptr && *local_schema_ptr == *new_schema) {
-			// Same Schema was in the cache
-			L_SCHEMA("SET: Schema {} found in cache", repr(local_schema_path));
-			schema_ptr = local_schema_ptr;
-		} else {
-			schema_ptr = new_schema;
-			{
-				std::lock_guard<std::mutex> lk(smtx);
-				exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-			}
-			if (exchanged) {
-				L_SCHEMA("SET: Cached Schema {} re-added to LRU", repr(local_schema_path));
-			} else {
-				schema_ptr = local_schema_ptr;
-				failure = true;
-			}
-		}
-		// If we still need to save the metadata, we save it:
-		if (schema_ptr->get_flags() == 0) {
-			L_SCHEMA("SET: Cached Local Schema {}, write schema metadata", repr(local_schema_path));
-			try {
-				// Try writing (only if there's no metadata there alrady)
-				if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
-					schema_ptr->set_flags(1);
+	// Now we check if the schema points to a foreign schema
+	validate_schema<Error>(*new_schema, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
+
+	// Whatever was passed by the user doesn't specify a foreign schema,
+	// or there it wasn't passed anything.
+	if (local_schema_ptr) {
+		// Schema was in the cache
+		L_SCHEMA("SET: Schema {} found in cache", repr(local_schema_path));
+		schema_ptr = local_schema_ptr;
+		if (!foreign_uri.empty()) {
+			auto tmp_schema_ptr = std::make_shared<MsgPack>(MsgPack({
+				{ RESERVED_TYPE, "foreign/object" },
+				{ RESERVED_ENDPOINT, foreign_uri },
+			}));
+			if (*tmp_schema_ptr != *schema_ptr) {
+				tmp_schema_ptr->lock();
+				{
+					std::lock_guard<std::mutex> lk(smtx);
+					exchanged = local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, tmp_schema_ptr);
+				}
+				if (exchanged) {
+					L_SCHEMA("SET: Foreign Schema {} added to LRU", repr(local_schema_path));
 				} else {
-					L_SCHEMA("SET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
-					std::string schema_ser;
-					try {
-						schema_ser = db_handler->get_metadata(reserved_schema);
-					} catch (const Xapian::DocNotFoundError&) {
-					} catch (const Xapian::DatabaseNotFoundError&) {
-					} catch (...) {
-						L_EXC("Exception");
-					}
-					if (schema_ser.empty()) {
-						THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
-					}
-					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
-					schema_ptr->lock();
-					schema_ptr->set_flags(1);
-					{
-						std::lock_guard<std::mutex> lk(smtx);
-						exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
-					}
-					if (exchanged) {
-						L_SCHEMA("SET: Cached Schema {} re-added to LRU", repr(local_schema_path));
-					} else {
-						schema_ptr = local_schema_ptr;
-					}
 					failure = true;
 				}
-			} catch (...) {
-				if (local_schema_ptr != schema_ptr) {
-					L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
-					// On error, try reverting
-					std::lock_guard<std::mutex> lk(smtx);
-					local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
-				}
-				throw;
 			}
 		}
 	} else {
+		// Schema needs to be read
+		L_SCHEMA("SET: Schema {} not found in cache, try loading from metadata", repr(local_schema_path));
+		std::string schema_ser;
+		try {
+			schema_ser = db_handler->get_metadata(reserved_schema);
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {
+		} catch (...) {
+			L_EXC("Exception");
+		}
+		if (schema_ser.empty()) {
+			if (!foreign_uri.empty()) {
+				schema_ptr = std::make_shared<MsgPack>(MsgPack({
+					{ RESERVED_TYPE, "foreign/object" },
+					{ RESERVED_ENDPOINT, foreign_uri },
+				}));
+				schema_ptr->lock();
+			} else if (local_schema_path != ".xapiand") {
+				// Implement foreign schemas in .xapiand/index by default:
+				schema_ptr = std::make_shared<MsgPack>(MsgPack({
+					{ RESERVED_TYPE, "foreign/object" },
+					{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
+				}));
+				schema_ptr->lock();
+			} else {
+				schema_ptr = new_schema;
+			}
+		} else {
+			schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+			schema_ptr->lock();
+			schema_ptr->set_flags(1);
+		}
+		{
+			std::lock_guard<std::mutex> lk(smtx);
+			exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+		}
+		if (exchanged) {
+			L_SCHEMA("SET: Local Schema {} added to LRU", repr(local_schema_path));
+		} else {
+			// Read object couldn't be stored in cache,
+			// so we use the schema now currently in cache
+			schema_ptr = local_schema_ptr;
+			failure = true;
+		}
+	}
+
+	// If we still need to save the metadata, we save it:
+	if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
+		L_SCHEMA("SET: Cached Local Schema {}, write schema metadata", repr(local_schema_path));
+		try {
+			// Try writing (only if there's no metadata there alrady)
+			if (db_handler->set_metadata(reserved_schema, schema_ptr->serialise(), false)) {
+				schema_ptr->set_flags(1);
+			} else {
+				L_SCHEMA("SET: Metadata for Cached Schema {} wasn't overwriten, try reloading from metadata", repr(local_schema_path));
+				std::string schema_ser;
+				try {
+					schema_ser = db_handler->get_metadata(reserved_schema);
+				} catch (const Xapian::DocNotFoundError&) {
+				} catch (const Xapian::DatabaseNotFoundError&) {
+				} catch (...) {
+					L_EXC("Exception");
+				}
+				if (schema_ser.empty()) {
+					THROW(Error, "Cannot set metadata: {}", repr(reserved_schema));
+				}
+				schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
+				schema_ptr->lock();
+				schema_ptr->set_flags(1);
+				{
+					std::lock_guard<std::mutex> lk(smtx);
+					exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
+				}
+				if (exchanged) {
+					L_SCHEMA("SET: Cached Schema {} re-added to LRU", repr(local_schema_path));
+				} else {
+					schema_ptr = local_schema_ptr;
+				}
+				failure = true;
+			}
+		} catch (...) {
+			if (local_schema_ptr != schema_ptr) {
+				L_SCHEMA("SET: Metadata for Schema {} wasn't set, try reverting LRU", repr(local_schema_path));
+				// On error, try reverting
+				std::lock_guard<std::mutex> lk(smtx);
+				local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, local_schema_ptr);
+			}
+			throw;
+		}
+	}
+
+	if (!foreign_uri.empty()) {
+		if (failure) {
+			old_schema = schema_ptr;
+			return false;
+		}
+		return true;
+	}
+
+	// Now we check if the schema points to a foreign schema
+	validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
+	if (!foreign_uri.empty()) {
 		// FOREIGN Schema, get from the cache or load from `foreign_path/foreign_id` endpoint:
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
 			std::lock_guard<std::mutex> lk(smtx);
 			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 		}
-		if (foreign_schema_ptr && *foreign_schema_ptr == *new_schema) {
+		if (foreign_schema_ptr && (!new_schema || *foreign_schema_ptr == *new_schema)) {
 			// Same Foreign Schema was in the cache
 			L_SCHEMA("SET: Foreign Schema {} found in cache", repr(foreign_uri));
 			schema_ptr = foreign_schema_ptr;
-		} else {
+		} else if (new_schema) {
 			schema_ptr = new_schema;
 			{
 				std::lock_guard<std::mutex> lk(smtx);
@@ -429,16 +602,45 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 				schema_ptr = foreign_schema_ptr;
 				failure = true;
 			}
+		} else {
+			// Foreign Schema needs to be read
+			L_SCHEMA("SET: Foreign Schema {} not found in cache, try loading from {} {}", repr(foreign_uri), repr(foreign_path), repr(foreign_id));
+			try {
+				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
+				schema_ptr->lock();
+				schema_ptr->set_flags(1);
+			} catch (const ClientError&) {
+				throw;
+			} catch (const Error&) {
+				schema_ptr = Schema::get_initial_schema();
+			} catch (const Xapian::DocNotFoundError&) {
+				schema_ptr = Schema::get_initial_schema();
+			} catch (const Xapian::DatabaseNotFoundError&) {
+				schema_ptr = Schema::get_initial_schema();
+			} catch (...) {
+				L_EXC("Exception");
+				schema_ptr = Schema::get_initial_schema();
+			}
+			{
+				std::lock_guard<std::mutex> lk(smtx);
+				exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
+			}
+			if (exchanged) {
+				L_SCHEMA("SET: Foreign Schema {} added to LRU", repr(foreign_uri));
+			} else {
+				schema_ptr = foreign_schema_ptr;
+				failure = true;
+			}
 		}
-		// If we still need to save the metadata, we save it:
-		if (schema_ptr->get_flags() == 0) {
+		// If we still need to save the schema document, we save it:
+		if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
 			L_SCHEMA("SET: Cached Foreign Schema {}, write schema", repr(foreign_uri));
 			try {
-				save_shared(Endpoint{foreign_path}, foreign_id, *new_schema, db_handler->context);
-				new_schema->set_flags(1);
+				save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
+				schema_ptr->set_flags(1);
 			} catch (const Xapian::DocVersionConflictError&) {
 				// Foreign Schema needs to be read
-				L_SCHEMA("GET: Foreign Schema {} not found in cache, try loading from {} {}", repr(foreign_uri), repr(foreign_path), repr(foreign_id));
+				L_SCHEMA("SET: Foreign Schema {} not found in cache, try loading from {} {}", repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 				try {
 					schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
 					schema_ptr->lock();
@@ -460,7 +662,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 					exchanged = foreign_schemas[foreign_uri].compare_exchange_strong(foreign_schema_ptr, schema_ptr);
 				}
 				if (exchanged) {
-					L_SCHEMA("GET: Foreign Schema {} added to LRU", repr(foreign_uri));
+					L_SCHEMA("SET: Foreign Schema {} added to LRU", repr(foreign_uri));
 				} else {
 					schema_ptr = foreign_schema_ptr;
 				}
