@@ -43,6 +43,8 @@ class SchemasLRU {
 	lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> foreign_schemas;
 	std::mutex smtx;
 
+	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string> _update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj);
+
 public:
 	SchemasLRU(ssize_t max_size = -1);
 
