@@ -29,6 +29,7 @@
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
 #include "opts.h"                                 // for opts.strict
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
+#include "serialise.h"                            // for KEYWORD_STR
 #include "string.hh"                              // for string::format, string::replace
 #include "url_parser.h"                           // for urldecode
 
