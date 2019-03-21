@@ -31,7 +31,7 @@
 #include "cast.h"                                 // for Cast
 #include "datetime.h"                             // for timestamp
 #include "exception.h"                            // for MSG_QueryParserError, Quer...
-#include "generate_terms.h"                       // for date, geo, numeric
+#include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange
 #include "length.h"                               // for serialise_length
 #include "utils/math.hh"                          // for max, min
@@ -147,8 +147,8 @@ getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgP
 Xapian::Query
 getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	double timestamp_s = start ? Datetime::timestamp(Datetime::DateParser(*start)) : min<double>(field_spc.accuracy);
-	double timestamp_e = end ? Datetime::timestamp(Datetime::DateParser(*end)) : max<double>(field_spc.accuracy);
+	double timestamp_s = start ? Datetime::timestamp(Datetime::DatetimeParser(*start)) : min<double>(field_spc.accuracy);
+	double timestamp_e = end ? Datetime::timestamp(Datetime::DatetimeParser(*end)) : max<double>(field_spc.accuracy);
 
 	if (timestamp_s > timestamp_e) {
 		return Xapian::Query();
@@ -157,7 +157,7 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 	auto ser_start = Serialise::timestamp(timestamp_s);
 	auto ser_end = Serialise::timestamp(timestamp_e);
 
-	auto query = GenerateTerms::date(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+	auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
 
 	if (!start) {
 		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
@@ -293,7 +293,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			case FieldType::TEXT:
 			case FieldType::STRING:
 				return getStringQuery(field_spc, start, end);
-			case FieldType::DATE:
+			case FieldType::DATETIME:
 				return getDateQuery(field_spc, start, end);
 			case FieldType::TIME:
 				return getTimeQuery(field_spc, start, end);

@@ -224,17 +224,17 @@ error_out_of_range:
 
 
 /*
- * Returns struct tm according to the date specified by date.
+ * Returns struct tm according to the datetime specified by datetime.
  */
 Datetime::tm_t
-Datetime::DateParser(std::string_view date)
+Datetime::DatetimeParser(std::string_view datetime)
 {
 	std::cmatch m;
 	tm_t tm;
-	// Check if date is ISO 8601.
-	auto pos = date.find("||");
+	// Check if datetime is ISO 8601.
+	auto pos = datetime.find("||");
 	if (pos == std::string_view::npos) {
-		auto format = Iso8601Parser(date, tm);
+		auto format = Iso8601Parser(datetime, tm);
 		switch (format) {
 			case Format::VALID:
 				return tm;
@@ -246,10 +246,10 @@ Datetime::DateParser(std::string_view date)
 				goto error;
 		}
 	} else {
-		auto format = Iso8601Parser(date.substr(0, pos), tm);
+		auto format = Iso8601Parser(datetime.substr(0, pos), tm);
 		switch (format) {
 			case Format::VALID:
-				processDateMath(date.substr(pos + 2), tm);
+				processDateMath(datetime.substr(pos + 2), tm);
 				return tm;
 			case Format::INVALID:
 				break;
@@ -261,7 +261,7 @@ Datetime::DateParser(std::string_view date)
 	}
 
 	int errno_save;
-	if (std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size()) {
+	if (std::regex_match(datetime.begin(), datetime.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == datetime.size()) {
 		tm.year = strict_stoi(&errno_save, m.str(1));
 		if (errno_save != 0) { goto error; }
 		tm.mon = strict_stoi(&errno_save, m.str(3));
@@ -298,11 +298,11 @@ Datetime::DateParser(std::string_view date)
 				}
 			}
 			if (m.length(12) != 0) {
-				computeTimeZone(tm, date[m.position(13) - 1], m.str(13), m.str(14));
+				computeTimeZone(tm, datetime[m.position(13) - 1], m.str(13), m.str(14));
 			}
 		}
 
-		// Process Date Math
+		// Process Datetime Math
 		if (m.length(16) != 0) {
 			processDateMath(m.str(16), tm);
 		}
@@ -311,18 +311,18 @@ Datetime::DateParser(std::string_view date)
 	}
 
 error:
-	THROW(DatetimeError, "In DatetimeParser, format {} is incorrect", date);
+	THROW(DatetimeError, "In DatetimeParser, format {} is incorrect", datetime);
 
 error_out_of_range:
-	THROW(DatetimeError, "Date: {} is out of range", date);
+	THROW(DatetimeError, "Datetime: {} is out of range", datetime);
 }
 
 
 /*
- * Returnd struct tm according to the date specified by value.
+ * Returnd struct tm according to the datetime specified by value.
  */
 Datetime::tm_t
-Datetime::DateParser(const MsgPack& value)
+Datetime::DatetimeParser(const MsgPack& value)
 {
 	double _timestamp;
 	switch (value.getType()) {
@@ -336,7 +336,7 @@ Datetime::DateParser(const MsgPack& value)
 			_timestamp = value.f64();
 			return Datetime::to_tm_t(_timestamp);
 		case MsgPack::Type::STR:
-			return Datetime::DateParser(value.str_view());
+			return Datetime::DatetimeParser(value.str_view());
 		case MsgPack::Type::MAP: {
 			Datetime::tm_t tm;
 			std::string_view str_time;
@@ -368,7 +368,7 @@ Datetime::DateParser(const MsgPack& value)
 						}
 						break;
 					default:
-						THROW(DatetimeError, "Unsupported Key: {} in date", repr(str_key));
+						THROW(DatetimeError, "Unsupported Key: {} in datetime", repr(str_key));
 				}
 			}
 			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
@@ -377,30 +377,30 @@ Datetime::DateParser(const MsgPack& value)
 				}
 				return tm;
 			}
-			THROW(DatetimeError, "Date is out of range");
+			THROW(DatetimeError, "Datetime is out of range");
 		}
 		default:
-			THROW(DatetimeError, "Date value must be numeric or string");
+			THROW(DatetimeError, "Datetime value must be numeric or string");
 	}
 }
 
 
 /*
- * Full struct tm according to the date in ISO 8601 format.
+ * Full struct tm according to the datetime in ISO 8601 format.
  */
 Datetime::Format
-Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
+Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 {
 	int errno_save;
-	auto size = date.size();
+	auto size = datetime.size();
 	switch (size) {
 		case 10: // 0000-00-00
-			if (date[4] == '-' && date[7] == '-') {
-				tm.year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (datetime[4] == '-' && datetime[7] == '-') {
+				tm.year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				tm.mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.day   = strict_stoul(&errno_save, date.substr(8, 2));
+				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = 0;
@@ -413,21 +413,21 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 			}
 			return Format::INVALID;
 		case 19: // 0000-00-00[T ]00:00:00
-			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-				tm.year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') && datetime[13] == ':' && datetime[16] == ':') {
+				tm.year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				tm.mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.day   = strict_stoul(&errno_save, date.substr(8, 2));
+				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict_stoul(&errno_save, date.substr(11, 2));
+					tm.hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
-						tm.min = strict_stoul(&errno_save, date.substr(14, 2));
+						tm.min = strict_stoul(&errno_save, datetime.substr(14, 2));
 						if (errno_save != 0) { return Format::ERROR; }
 						if (tm.min < 60) {
-							tm.sec = strict_stoul(&errno_save, date.substr(17, 2));
+							tm.sec = strict_stoul(&errno_save, datetime.substr(17, 2));
 							if (errno_save != 0) { return Format::ERROR; }
 							if (tm.sec < 60) {
 								tm.fsec = 0.0;
@@ -440,22 +440,22 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 			}
 			return Format::INVALID;
 		case 20: // 0000-00-00[T ]00:00:00Z
-			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
-				date[16] == ':' && date[19] == 'Z') {
-				tm.year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') && datetime[13] == ':' &&
+				datetime[16] == ':' && datetime[19] == 'Z') {
+				tm.year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				tm.mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.day   = strict_stoul(&errno_save, date.substr(8, 2));
+				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict_stoul(&errno_save, date.substr(11, 2));
+					tm.hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
-						tm.min = strict_stoul(&errno_save, date.substr(14, 2));
+						tm.min = strict_stoul(&errno_save, datetime.substr(14, 2));
 						if (errno_save != 0) { return Format::ERROR; }
 						if (tm.min < 60) {
-							tm.sec = strict_stoul(&errno_save, date.substr(17, 2));
+							tm.sec = strict_stoul(&errno_save, datetime.substr(17, 2));
 							if (errno_save != 0) { return Format::ERROR; }
 							if (tm.sec < 60) {
 								tm.fsec = 0.0;
@@ -468,38 +468,38 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 			}
 			return Format::INVALID;
 		default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
-			if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
-				date[13] == ':' && date[16] == ':') {
-				tm.year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (size > 20 && datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') &&
+				datetime[13] == ':' && datetime[16] == ':') {
+				tm.year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				tm.mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				tm.day   = strict_stoul(&errno_save, date.substr(8, 2));
+				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(tm.year, tm.mon, tm.day)) {
-					tm.hour = strict_stoul(&errno_save, date.substr(11, 2));
+					tm.hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
-						tm.min = strict_stoul(&errno_save, date.substr(14, 2));
+						tm.min = strict_stoul(&errno_save, datetime.substr(14, 2));
 						if (errno_save != 0) { return Format::ERROR; }
 						if (tm.min < 60) {
-							tm.sec = strict_stoul(&errno_save, date.substr(17, 2));
+							tm.sec = strict_stoul(&errno_save, datetime.substr(17, 2));
 							if (errno_save != 0) { return Format::ERROR; }
 							if (tm.sec < 60) {
-								switch (date[19]) {
+								switch (datetime[19]) {
 									case '+':
 									case '-':
-										if (size == 25 && date[22] == ':') {
+										if (size == 25 && datetime[22] == ':') {
 											tm.fsec = 0.0;
-											auto tz_h = date.substr(20, 2);
+											auto tz_h = datetime.substr(20, 2);
 											auto h = strict_stoul(&errno_save, tz_h);
 											if (errno_save != 0) { return Format::ERROR; }
 											if (h < 24) {
-												auto tz_m = date.substr(23, 2);
+												auto tz_m = datetime.substr(23, 2);
 												auto m = strict_stoul(&errno_save, tz_m);
 												if (errno_save != 0) { return Format::ERROR; }
 												if (m < 60) {
-													computeTimeZone(tm, date[19], tz_h, tz_m);
+													computeTimeZone(tm, datetime[19], tz_h, tz_m);
 													return Format::VALID;
 												}
 											}
@@ -507,8 +507,8 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 										}
 										return Format::INVALID;
 									case '.': {
-										auto it = date.begin() + 19;
-										const auto it_e = date.end();
+										auto it = datetime.begin() + 19;
+										const auto it_e = datetime.end();
 										for (auto aux = it + 1; aux != it_e; ++aux) {
 											const auto& c = *aux;
 											if (c < '0' || c > '9') {
@@ -570,18 +570,18 @@ Datetime::Iso8601Parser(std::string_view date, tm_t& tm)
 
 
 Datetime::Format
-Datetime::Iso8601Parser(std::string_view date)
+Datetime::Iso8601Parser(std::string_view datetime)
 {
 	int errno_save;
-	auto size = date.size();
+	auto size = datetime.size();
 	switch (size) {
 		case 10: // 0000-00-00
-			if (date[4] == '-' && date[7] == '-') {
-				auto year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (datetime[4] == '-' && datetime[7] == '-') {
+				auto year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				auto mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto day   = strict_stoul(&errno_save, date.substr(8, 2));
+				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
 					return Format::VALID;
@@ -590,21 +590,21 @@ Datetime::Iso8601Parser(std::string_view date)
 			}
 			return Format::INVALID;
 		case 19: // 0000-00-00[T ]00:00:00
-			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' && date[16] == ':') {
-				auto year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') && datetime[13] == ':' && datetime[16] == ':') {
+				auto year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				auto mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto day   = strict_stoul(&errno_save, date.substr(8, 2));
+				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
-					auto hour = strict_stoul(&errno_save, date.substr(11, 2));
+					auto hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
-						auto min = strict_stoul(&errno_save, date.substr(14, 2));
+						auto min = strict_stoul(&errno_save, datetime.substr(14, 2));
 						if (errno_save != 0) { return Format::ERROR; }
 						if (min < 60) {
-							auto sec = strict_stoul(&errno_save, date.substr(17, 2));
+							auto sec = strict_stoul(&errno_save, datetime.substr(17, 2));
 							if (errno_save != 0) { return Format::ERROR; }
 							if (sec < 60) {
 								return Format::VALID;
@@ -616,22 +616,22 @@ Datetime::Iso8601Parser(std::string_view date)
 			}
 			return Format::INVALID;
 		case 20: // 0000-00-00[T ]00:00:00Z
-			if (date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') && date[13] == ':' &&
-				date[16] == ':' && date[19] == 'Z') {
-				auto year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') && datetime[13] == ':' &&
+				datetime[16] == ':' && datetime[19] == 'Z') {
+				auto year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				auto mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto day   = strict_stoul(&errno_save, date.substr(8, 2));
+				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
-					auto hour = strict_stoul(&errno_save, date.substr(11, 2));
+					auto hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
-						auto min = strict_stoul(&errno_save, date.substr(14, 2));
+						auto min = strict_stoul(&errno_save, datetime.substr(14, 2));
 						if (errno_save != 0) { return Format::ERROR; }
 						if (min < 60) {
-							auto sec = strict_stoul(&errno_save, date.substr(17, 2));
+							auto sec = strict_stoul(&errno_save, datetime.substr(17, 2));
 							if (errno_save != 0) { return Format::ERROR; }
 							if (sec < 60) {
 								return Format::VALID;
@@ -643,33 +643,33 @@ Datetime::Iso8601Parser(std::string_view date)
 			}
 			return Format::INVALID;
 		default: // 0000-00-00[T ]00:00:00[+-]00:00  0000-00-00[T ]00:00:00.0...  0000-00-00[T ]00:00:00.0...[+-]00:00
-			if (size > 20 && date[4] == '-' && date[7] == '-' && (date[10] == 'T' || date[10] == ' ') &&
-				date[13] == ':' && date[16] == ':') {
-				auto year  = strict_stoul(&errno_save, date.substr(0, 4));
+			if (size > 20 && datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') &&
+				datetime[13] == ':' && datetime[16] == ':') {
+				auto year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				auto mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				auto day   = strict_stoul(&errno_save, date.substr(8, 2));
+				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
 				if (isvalidDate(year, mon, day)) {
-					auto hour = strict_stoul(&errno_save, date.substr(11, 2));
+					auto hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
-						auto min = strict_stoul(&errno_save, date.substr(14, 2));
+						auto min = strict_stoul(&errno_save, datetime.substr(14, 2));
 						if (errno_save != 0) { return Format::ERROR; }
 						if (min < 60) {
-							auto sec = strict_stoul(&errno_save, date.substr(17, 2));
+							auto sec = strict_stoul(&errno_save, datetime.substr(17, 2));
 							if (errno_save != 0) { return Format::ERROR; }
 							if (sec < 60) {
-								switch (date[19]) {
+								switch (datetime[19]) {
 									case '+':
 									case '-':
-										if (size == 25 && date[22] == ':') {
-											auto tz_h = date.substr(20, 2);
+										if (size == 25 && datetime[22] == ':') {
+											auto tz_h = datetime.substr(20, 2);
 											auto h = strict_stoul(&errno_save, tz_h);
 											if (errno_save != 0) { return Format::ERROR; }
 											if (h < 24) {
-												auto tz_m = date.substr(23, 2);
+												auto tz_m = datetime.substr(23, 2);
 												auto m = strict_stoul(&errno_save, tz_m);
 												if (errno_save != 0) { return Format::ERROR; }
 												if (m < 60) {
@@ -680,8 +680,8 @@ Datetime::Iso8601Parser(std::string_view date)
 										}
 										return Format::INVALID;
 									case '.': {
-										auto it = date.begin() + 19;
-										const auto it_e = date.end();
+										auto it = datetime.begin() + 19;
+										const auto it_e = datetime.end();
 										for (auto aux = it + 1; aux != it_e; ++aux) {
 											const auto& c = *aux;
 											if (c < '0' || c > '9') {
@@ -746,7 +746,7 @@ Datetime::processDateMath(std::string_view date_math, tm_t& tm)
 	}
 
 	if (date_math.size() != size_match) {
-		THROW(DatetimeError, "Date Math ({}) is used incorrectly", date_math);
+		THROW(DatetimeError, "Datetime Math ({}) is used incorrectly", date_math);
 	}
 }
 
@@ -774,7 +774,7 @@ Datetime::computeTimeZone(tm_t& tm, char op, std::string_view hour, std::string_
 
 
 /*
- * Compute a Date Math former by op + units.
+ * Compute a Datetime Math former by op + units.
  * op can be +#, -#, /, //
  * unit can be y, M, w, d, h, m, s
  */
@@ -786,7 +786,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 		case '+': {
 			auto num = strict_stoi(&errno_save, op.substr(1));
 			if (errno_save != 0) {
-				THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. {} must be numeric", repr(op.substr(1)));
+				THROW(DatetimeError, "Invalid format in Datetime Math unit: '{}'. {} must be numeric", repr(op.substr(1)));
 			}
 			switch (unit) {
 				case 'y':
@@ -809,14 +809,14 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 				case 's':
 					tm.sec += num; break;
 				default:
-					THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. Unit must be in {{ y, M, w, d, h, m, s }}", unit);
+					THROW(DatetimeError, "Invalid format in Datetime Math unit: '{}'. Unit must be in {{ y, M, w, d, h, m, s }}", unit);
 			}
 			break;
 		}
 		case '-': {
 			auto num = strict_stoi(&errno_save, op.substr(1));
 			if (errno_save != 0) {
-				THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. {} must be numeric", repr(op.substr(1)));
+				THROW(DatetimeError, "Invalid format in Datetime Math unit: '{}'. {} must be numeric", repr(op.substr(1)));
 			}
 			switch (unit) {
 				case 'y':
@@ -840,7 +840,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 				case 's':
 					tm.sec -= num; break;
 				default:
-					THROW(DatetimeError, "Invalid format in Date Math unit: '{}'. Unit must be in {{ y, M, w, d, h, m, s }}", unit);
+					THROW(DatetimeError, "Invalid format in Datetime Math unit: '{}'. Unit must be in {{ y, M, w, d, h, m, s }}", unit);
 			}
 			break;
 		}
@@ -858,7 +858,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'M':
@@ -872,7 +872,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'w': {
@@ -889,7 +889,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				}
@@ -902,7 +902,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.hour = tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'h':
@@ -913,7 +913,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.min = tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 'm':
@@ -924,7 +924,7 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 						tm.sec = 0;
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 					break;
 				case 's':
@@ -933,16 +933,16 @@ Datetime::computeDateMath(tm_t& tm, std::string_view op, char unit)
 					} else if (op.size() == 2 && op[1] == '/') {
 						tm.fsec = 0.0;
 					} else {
-						THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+						THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 					}
 				break;
 			}
 			break;
 		default:
-			THROW(DatetimeError, "Invalid format in Date Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
+			THROW(DatetimeError, "Invalid format in Datetime Math operator: {}. Operator must be in {{ +#, -#, /, // }}", op);
 	}
 
-	// Update date.
+	// Update datetime.
 	auto dateGMT = timegm(tm);
 	struct tm timeinfo;
 	gmtime_r(&dateGMT, &timeinfo);
@@ -1016,8 +1016,8 @@ Datetime::normalizeMonths(int& year, int& mon)
 
 
 /*
- * Returns the proleptic Gregorian ordinal of the date,
- * where January 1 of year 1 has ordinal 1 (reference date).
+ * Returns the proleptic Gregorian ordinal of the datetime,
+ * where January 1 of year 1 has ordinal 1 (reference datetime).
  * year -> Any positive number except zero.
  * month -> Between 1 and 12 inclusive.
  * day -> Between 1 and the number of days in the given month of the given year.
@@ -1129,7 +1129,7 @@ Datetime::timestamp(const tm_t& tm)
 
 
 /*
- * Validate Date.
+ * Validate Datetime.
  */
 bool
 Datetime::isvalidDate(int year, int month, int day)
@@ -1151,7 +1151,7 @@ Datetime::isvalidDate(int year, int month, int day)
 
 
 /*
- * Return a string with the date in ISO 8601 Format.
+ * Return a string with the datetime in ISO 8601 Format.
  */
 std::string
 Datetime::iso8601(const std::tm& tm, bool trim, char sep)
@@ -1169,7 +1169,7 @@ Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 
 
 /*
- * Return a string with the date in ISO 8601 Format.
+ * Return a string with the datetime in ISO 8601 Format.
  */
 std::string
 Datetime::iso8601(const tm_t& tm, bool trim, char sep)
@@ -1227,15 +1227,15 @@ Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, 
 
 
 bool
-Datetime::isDate(std::string_view date)
+Datetime::isDatetime(std::string_view datetime)
 {
-	auto format = Iso8601Parser(date);
+	auto format = Iso8601Parser(datetime);
 	switch (format) {
 		case Format::VALID:
 			return true;
 		case Format::INVALID: {
 			std::cmatch m;
-			return std::regex_match(date.begin(), date.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == date.size();
+			return std::regex_match(datetime.begin(), datetime.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == datetime.size();
 		}
 		default:
 			return false;

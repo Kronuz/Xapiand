@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 
 
 struct test_date_t {
-	std::string date;
+	std::string datetime;
 	std::string serialised;
 };
 
@@ -50,9 +50,9 @@ struct test_uuid_t {
 };
 
 
-// Testing the transformation between date string and timestamp.
+// Testing the transformation between datetime string and timestamp.
 int test_datetotimestamp();
-// Testing unserialise date.
+// Testing unserialise datetime.
 int test_unserialise_date();
 // Testing serialise Cartesian.
 int test_serialise_cartesian();

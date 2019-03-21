@@ -59,7 +59,7 @@ namespace GenerateTerms {
 
 	void integer(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, int64_t value);
 	void positive(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, uint64_t value);
-	void date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm);
+	void datetime(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm);
 	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const std::vector<range_t>& ranges);
 
 
@@ -71,7 +71,7 @@ namespace GenerateTerms {
 		const std::vector<std::string>& acc_global_prefix, int64_t value);
 	void positive(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, uint64_t value);
-	void date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
+	void datetime(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, const Datetime::tm_t& tm);
 	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, const std::vector<range_t>& ranges);
@@ -85,12 +85,12 @@ namespace GenerateTerms {
 	Xapian::Query numeric(uint64_t start, uint64_t end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
 
 	/*
-	 * Generate terms for date ranges.
+	 * Generate terms for datetime ranges.
 	 */
-	Xapian::Query date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
+	Xapian::Query datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf=1);
 
 	/*
-	 * Auxiliar functions for date ranges.
+	 * Auxiliar functions for datetime ranges.
 	 */
 
 	Xapian::Query millennium(Datetime::tm_t& tm_s, Datetime::tm_t& tm_e, const std::string& prefix, Xapian::termcount wqf=1);

@@ -43,12 +43,12 @@
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
-#include "datetime.h"                             // for isDate, tm_t
+#include "datetime.h"                             // for isDatetime, tm_t
 #include "exception.h"                            // for ClientError
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "ignore_unused.h"                        // for ignore_unused
 #include "manager.h"                              // for XapiandManager, XapiandMan...
-#include "multivalue/generate_terms.h"            // for integer, geo, date, positive
+#include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
 #include "opts.h"                                 // for opts::*
 #include "reserved/schema.h"                      // for RESERVED_
 #include "script.h"                               // for Script
@@ -77,7 +77,7 @@ constexpr static auto STRING     = static_string::string(STRING_CHAR);
 constexpr static auto TIMEDELTA  = static_string::string(TIMEDELTA_CHAR);
 constexpr static auto ARRAY      = static_string::string(ARRAY_CHAR);
 constexpr static auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
-constexpr static auto DATE       = static_string::string(DATE_CHAR);
+constexpr static auto DATETIME   = static_string::string(DATETIME_CHAR);
 constexpr static auto FOREIGN    = static_string::string(FOREIGN_CHAR);
 constexpr static auto FLOAT      = static_string::string(FLOAT_CHAR);
 constexpr static auto GEO        = static_string::string(GEO_CHAR);
@@ -799,6 +799,7 @@ _get_type(std::string_view str_type)
 	constexpr static auto _ = phf::make_phf({
 		hhl("boolean"),
 		hhl("date"),
+		hhl("datetime"),
 		hhl("float"),
 		hhl("geospatial"),
 		hhl("integer"),
@@ -814,6 +815,7 @@ _get_type(std::string_view str_type)
 		hhl("array"),
 		hhl("array/boolean"),
 		hhl("array/date"),
+		hhl("array/datetime"),
 		hhl("array/float"),
 		hhl("array/geospatial"),
 		hhl("array/integer"),
@@ -827,6 +829,7 @@ _get_type(std::string_view str_type)
 		hhl("array/uuid"),
 		hhl("boolean/array"),
 		hhl("date/array"),
+		hhl("datetime/array"),
 		hhl("float/array"),
 		hhl("geospatial/array"),
 		hhl("integer/array"),
@@ -841,6 +844,7 @@ _get_type(std::string_view str_type)
 		hhl("object"),
 		hhl("object/boolean"),
 		hhl("object/date"),
+		hhl("object/datetime"),
 		hhl("object/float"),
 		hhl("object/geospatial"),
 		hhl("object/integer"),
@@ -854,6 +858,7 @@ _get_type(std::string_view str_type)
 		hhl("object/uuid"),
 		hhl("boolean/object"),
 		hhl("date/object"),
+		hhl("datetime/object"),
 		hhl("float/object"),
 		hhl("geospatial/object"),
 		hhl("integer/object"),
@@ -868,6 +873,7 @@ _get_type(std::string_view str_type)
 		hhl("array/object"),
 		hhl("array/boolean/object"),
 		hhl("array/date/object"),
+		hhl("array/datetime/object"),
 		hhl("array/float/object"),
 		hhl("array/geospatial/object"),
 		hhl("array/integer/object"),
@@ -881,6 +887,7 @@ _get_type(std::string_view str_type)
 		hhl("array/uuid/object"),
 		hhl("array/object/boolean"),
 		hhl("array/object/date"),
+		hhl("array/object/datetime"),
 		hhl("array/object/float"),
 		hhl("array/object/geospatial"),
 		hhl("array/object/integer"),
@@ -895,6 +902,7 @@ _get_type(std::string_view str_type)
 		hhl("object/array"),
 		hhl("object/array/boolean"),
 		hhl("object/array/date"),
+		hhl("object/array/datetime"),
 		hhl("object/array/float"),
 		hhl("object/array/geospatial"),
 		hhl("object/array/integer"),
@@ -908,6 +916,7 @@ _get_type(std::string_view str_type)
 		hhl("object/array/uuid"),
 		hhl("boolean/array/object"),
 		hhl("date/array/object"),
+		hhl("datetime/array/object"),
 		hhl("float/array/object"),
 		hhl("geospatial/array/object"),
 		hhl("integer/array/object"),
@@ -921,6 +930,7 @@ _get_type(std::string_view str_type)
 		hhl("uuid/array/object"),
 		hhl("boolean/object/array"),
 		hhl("date/object/array"),
+		hhl("datetime/object/array"),
 		hhl("float/object/array"),
 		hhl("geospatial/object/array"),
 		hhl("integer/object/array"),
@@ -934,6 +944,7 @@ _get_type(std::string_view str_type)
 		hhl("uuid/object/array"),
 		hhl("object/boolean/array"),
 		hhl("object/date/array"),
+		hhl("object/datetime/array"),
 		hhl("object/float/array"),
 		hhl("object/geospatial/array"),
 		hhl("object/integer/array"),
@@ -956,8 +967,9 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case _.fhhl("date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }};
+		case _.fhhl("date"):
+		case _.fhhl("datetime"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATETIME          }};
 			return _;
 		}
 		case _.fhhl("float"): {
@@ -1011,8 +1023,10 @@ _get_type(std::string_view str_type)
 			return _;
 		}
 		case _.fhhl("date/array"):
-		case _.fhhl("array/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
+		case _.fhhl("array/date"):
+		case _.fhhl("datetime/array"):
+		case _.fhhl("array/datetime"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATETIME          }};
 			return _;
 		}
 		case _.fhhl("float/array"):
@@ -1090,8 +1104,14 @@ _get_type(std::string_view str_type)
 		case _.fhhl("object/array/date"):
 		case _.fhhl("date/array/object"):
 		case _.fhhl("date/object/array"):
-		case _.fhhl("object/date/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
+		case _.fhhl("object/date/array"):
+		case _.fhhl("array/datetime/object"):
+		case _.fhhl("array/object/datetime"):
+		case _.fhhl("object/array/datetime"):
+		case _.fhhl("datetime/array/object"):
+		case _.fhhl("datetime/object/array"):
+		case _.fhhl("object/datetime/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATETIME          }};
 			return _;
 		}
 		case _.fhhl("array/float/object"):
@@ -1196,8 +1216,10 @@ _get_type(std::string_view str_type)
 			return _;
 		}
 		case _.fhhl("date/object"):
-		case _.fhhl("object/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
+		case _.fhhl("object/date"):
+		case _.fhhl("datetime/object"):
+		case _.fhhl("object/datetime"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATETIME          }};
 			return _;
 		}
 		case _.fhhl("float/object"):
@@ -1305,7 +1327,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + EMPTY  + EMPTY),
 		hh(EMPTY   + EMPTY   + ARRAY  + EMPTY),
 		hh(EMPTY   + EMPTY   + ARRAY  + BOOLEAN),
-		hh(EMPTY   + EMPTY   + ARRAY  + DATE),
+		hh(EMPTY   + EMPTY   + ARRAY  + DATETIME),
 		hh(EMPTY   + EMPTY   + ARRAY  + FLOAT),
 		hh(EMPTY   + EMPTY   + ARRAY  + GEO),
 		hh(EMPTY   + EMPTY   + ARRAY  + INTEGER),
@@ -1317,7 +1339,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + ARRAY  + TIMEDELTA),
 		hh(EMPTY   + EMPTY   + ARRAY  + UUID),
 		hh(EMPTY   + EMPTY   + EMPTY  + BOOLEAN),
-		hh(EMPTY   + EMPTY   + EMPTY  + DATE),
+		hh(EMPTY   + EMPTY   + EMPTY  + DATETIME),
 		hh(EMPTY   + EMPTY   + EMPTY  + FLOAT),
 		hh(FOREIGN + EMPTY   + EMPTY  + EMPTY),
 		hh(FOREIGN + OBJECT  + EMPTY  + EMPTY),
@@ -1327,7 +1349,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + EMPTY  + EMPTY),
 		hh(EMPTY   + OBJECT  + ARRAY  + EMPTY),
 		hh(EMPTY   + OBJECT  + ARRAY  + BOOLEAN),
-		hh(EMPTY   + OBJECT  + ARRAY  + DATE),
+		hh(EMPTY   + OBJECT  + ARRAY  + DATETIME),
 		hh(EMPTY   + OBJECT  + ARRAY  + FLOAT),
 		hh(EMPTY   + OBJECT  + ARRAY  + GEO),
 		hh(EMPTY   + OBJECT  + ARRAY  + INTEGER),
@@ -1339,7 +1361,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + ARRAY  + TIMEDELTA),
 		hh(EMPTY   + OBJECT  + ARRAY  + UUID),
 		hh(EMPTY   + OBJECT  + EMPTY  + BOOLEAN),
-		hh(EMPTY   + OBJECT  + EMPTY  + DATE),
+		hh(EMPTY   + OBJECT  + EMPTY  + DATETIME),
 		hh(EMPTY   + OBJECT  + EMPTY  + FLOAT),
 		hh(EMPTY   + OBJECT  + EMPTY  + GEO),
 		hh(EMPTY   + OBJECT  + EMPTY  + INTEGER),
@@ -1373,8 +1395,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("array/boolean");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + ARRAY  + DATE): {
-			static const std::string str_type("array/date");
+		case _.fhh(EMPTY   + EMPTY   + ARRAY  + DATETIME): {
+			static const std::string str_type("array/datetime");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + EMPTY   + ARRAY  + FLOAT): {
@@ -1421,8 +1443,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("boolean");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + EMPTY  + DATE): {
-			static const std::string str_type("date");
+		case _.fhh(EMPTY   + EMPTY   + EMPTY  + DATETIME): {
+			static const std::string str_type("datetime");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + EMPTY   + EMPTY  + FLOAT): {
@@ -1461,8 +1483,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("object/array/boolean");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + OBJECT  + ARRAY  + DATE): {
-			static const std::string str_type("object/array/date");
+		case _.fhh(EMPTY   + OBJECT  + ARRAY  + DATETIME): {
+			static const std::string str_type("object/array/datetime");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + OBJECT  + ARRAY  + FLOAT): {
@@ -1509,8 +1531,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("object/boolean");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + OBJECT  + EMPTY  + DATE): {
-			static const std::string str_type("object/date");
+		case _.fhh(EMPTY   + OBJECT  + EMPTY  + DATETIME): {
+			static const std::string str_type("object/datetime");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + OBJECT  + EMPTY  + FLOAT): {
@@ -1617,7 +1639,7 @@ _get_acc_data(std::string_view field_acc)
 {
 	auto accuracy_date = _get_accuracy_date(field_acc.substr(1));
 	if (accuracy_date != UnitTime::INVALID) {
-		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::DATE);
+		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::DATETIME);
 	}
 	try {
 		switch (field_acc[1]) {
@@ -2048,7 +2070,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'datetime', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
@@ -2280,7 +2302,7 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
 		case FieldType::BOOLEAN:
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
 		case FieldType::GEO:
@@ -2318,8 +2340,8 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::DATE: {
-			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
+		case FieldType::DATETIME: {
+			static const specification_t spc(DB_SLOT_DATE, FieldType::DATETIME, def_accuracy_date, global_acc_prefix_date);
 			return spc;
 		}
 		case FieldType::TIME: {
@@ -4877,7 +4899,7 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
 		case FieldType::INTEGER:
@@ -4933,7 +4955,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::DATE: {
+		case FieldType::DATETIME: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					try {
@@ -5094,7 +5116,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					}
 					specification.accuracy.assign(set_acc.begin(), set_acc.end());
 					switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-						case FieldType::DATE:
+						case FieldType::DATETIME:
 						case FieldType::TIME:
 						case FieldType::TIMEDELTA:
 							mut_properties[RESERVED_ACCURACY] = MsgPack::ARRAY();
@@ -5155,8 +5177,8 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::UUID;
 				return;
 			}
-			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATE;
+			if (specification.flags.date_detection && Datetime::isDatetime(str_value)) {
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATETIME;
 				return;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
@@ -5685,9 +5707,9 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
-		case FieldType::DATE: {
+		case FieldType::DATETIME: {
 			Datetime::tm_t tm;
-			auto ser_value = Serialise::date(value, tm);
+			auto ser_value = Serialise::datetime(value, tm);
 			if (field_spc != nullptr) {
 				index_term(doc, ser_value, *field_spc, pos);
 			}
@@ -5695,7 +5717,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				index_term(doc, ser_value, *global_spc, pos);
 			}
 			s.insert(std::move(ser_value));
-			GenerateTerms::date(doc, spc.accuracy, spc.acc_prefix, tm);
+			GenerateTerms::datetime(doc, spc.accuracy, spc.acc_prefix, tm);
 			return;
 		}
 		case FieldType::TIME: {
@@ -5899,9 +5921,9 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
-		case FieldType::DATE: {
+		case FieldType::DATETIME: {
 			Datetime::tm_t tm;
-			auto ser_value = Serialise::date(value, tm);
+			auto ser_value = Serialise::datetime(value, tm);
 			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 				index_term(doc, ser_value, field_spc, pos);
 			}
@@ -5911,10 +5933,10 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			s_f.insert(ser_value);
 			s_g.insert(std::move(ser_value));
 			if (field_spc.accuracy == global_spc.accuracy) {
-				GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, tm);
+				GenerateTerms::datetime(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, tm);
 			} else {
-				GenerateTerms::date(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
-				GenerateTerms::date(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
+				GenerateTerms::datetime(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
+				GenerateTerms::datetime(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
 			}
 			return;
 		}
@@ -6633,7 +6655,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
-		hh(RESERVED_DATE),
+		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
 		hh(RESERVED_POINT),
@@ -6705,7 +6727,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_KEYWORD),
 		hh(RESERVED_TEXT),
 		hh(RESERVED_STRING),
-		hh(RESERVED_DATE),
+		hh(RESERVED_DATETIME),
 		hh(RESERVED_UUID),
 		hh(RESERVED_EWKT),
 		hh(RESERVED_POINT),
@@ -6810,7 +6832,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_STRING):
 			Schema::process_cast_object(prop_name, value);
 			return true;
-		case _.fhh(RESERVED_DATE):
+		case _.fhh(RESERVED_DATETIME):
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_UUID):
@@ -8624,7 +8646,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				}
 				return;
 			}
-			case FieldType::DATE: {
+			case FieldType::DATETIME: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						uint64_t accuracy;
@@ -9440,7 +9462,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				case FieldType::FLOAT:
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
-				case FieldType::DATE:
+				case FieldType::DATETIME:
 				case FieldType::TIME:
 				case FieldType::TIMEDELTA: {
 					auto accuracy_it = properties.find(RESERVED_ACCURACY);

@@ -40,7 +40,7 @@ get_func_value_handle(FieldType type, std::string_view field_name)
 			return &HandledSubAggregation<Handler>::_aggregate_integer;
 		case FieldType::POSITIVE:
 			return &HandledSubAggregation<Handler>::_aggregate_positive;
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 			return &HandledSubAggregation<Handler>::_aggregate_date;
 		case FieldType::TIME:
 			return &HandledSubAggregation<Handler>::_aggregate_time;

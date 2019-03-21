@@ -220,7 +220,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 						hh(RESERVED_KEYWORD),
 						hh(RESERVED_STRING),  // FIXME: remove legacy string
 						hh(RESERVED_TEXT),
-						hh(RESERVED_DATE),
+						hh(RESERVED_DATETIME),
 						hh(RESERVED_UUID),
 						hh(RESERVED_EWKT),
 						hh(RESERVED_POINT),
@@ -327,7 +327,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 							case _.fhh(RESERVED_KEYWORD):
 							case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
 							case _.fhh(RESERVED_TEXT):
-							case _.fhh(RESERVED_DATE):
+							case _.fhh(RESERVED_DATETIME):
 							case _.fhh(RESERVED_UUID):
 							case _.fhh(RESERVED_EWKT):
 							case _.fhh(RESERVED_POINT):
@@ -453,43 +453,43 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 {
 	L_CALL("QueryDSL::get_acc_date_query(<required_spc_t>, {}, {}, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
-	Datetime::tm_t tm = Datetime::DateParser(obj);
+	Datetime::tm_t tm = Datetime::DatetimeParser(obj);
 	switch (get_accuracy_date(field_accuracy.substr(1))) {
 		case UnitTime::SECOND: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::MINUTE: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::HOUR: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::DAY: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::MONTH: {
 			Datetime::tm_t _tm(tm.year, tm.mon);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::YEAR: {
 			Datetime::tm_t _tm(tm.year);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::DECADE: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::CENTURY: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::MILLENNIUM: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATE)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
 		}
 		case UnitTime::INVALID:
 			THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
@@ -570,7 +570,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 	switch (field_spc.get_type()) {
 		case FieldType::INTEGER:
 			return get_acc_num_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 			return get_acc_date_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
 		case FieldType::TIME:
 			return get_acc_time_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
@@ -1120,7 +1120,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 						hh(RESERVED_KEYWORD),
 						hh(RESERVED_STRING),
 						hh(RESERVED_TEXT),
-						hh(RESERVED_DATE),
+						hh(RESERVED_DATETIME),
 						hh(RESERVED_UUID),
 						hh(RESERVED_EWKT),
 						hh(RESERVED_POINT),
@@ -1165,7 +1165,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 						case _.fhh(RESERVED_KEYWORD):
 						case _.fhh(RESERVED_STRING):  // FIXME: remove legacy string
 						case _.fhh(RESERVED_TEXT):
-						case _.fhh(RESERVED_DATE):
+						case _.fhh(RESERVED_DATETIME):
 						case _.fhh(RESERVED_UUID):
 						case _.fhh(RESERVED_EWKT):
 						case _.fhh(RESERVED_POINT):
@@ -1199,8 +1199,8 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 						case FieldType::POSITIVE:
 							sorter->add_positive(field_spc.slot, descending, Cast::cast(FieldType::POSITIVE, *value).u64());
 							break;
-						case FieldType::DATE:
-							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DateParser(Cast::cast(FieldType::DATE, *value))));
+						case FieldType::DATETIME:
+							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DatetimeParser(Cast::cast(FieldType::DATETIME, *value))));
 							break;
 						case FieldType::BOOLEAN:
 							sorter->add_date(field_spc.slot, descending, Cast::cast(FieldType::BOOLEAN, *value).boolean());

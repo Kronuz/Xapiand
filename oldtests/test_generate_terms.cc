@@ -483,9 +483,9 @@ int date_test() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : date_tests) {
-		auto val_s = Datetime::timestamp(Datetime::DateParser(test.start));
-		auto val_e = Datetime::timestamp(Datetime::DateParser(test.end));
-		auto result_query_terms = GenerateTerms::date(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
+		auto val_s = Datetime::timestamp(Datetime::DatetimeParser(test.start));
+		auto val_e = Datetime::timestamp(Datetime::DatetimeParser(test.end));
+		auto result_query_terms = GenerateTerms::datetime(val_s, val_e, test.accuracy, test.acc_prefix).get_description();
 		if (result_query_terms != test.expected_query_terms) {
 			L_ERR("ERROR: Different numeric filter query.\n\t  Result: {}\n\tExpected: {}", result_query_terms, test.expected_query_terms);
 			++cont;

@@ -733,7 +733,7 @@ public:
 				configure_i64();
 				break;
 			case FieldType::FLOAT:
-			case FieldType::DATE:
+			case FieldType::DATETIME:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:
 				configure_f64();
@@ -991,7 +991,7 @@ public:
 				configure_i64();
 				break;
 			case FieldType::FLOAT:
-			case FieldType::DATE:
+			case FieldType::DATETIME:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:
 				configure_f64();

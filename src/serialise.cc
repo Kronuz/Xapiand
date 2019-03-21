@@ -184,8 +184,8 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 				return string(field_spc, Cast::string(o.at(str_key)));
 			case Cast::Hash::UUID:
 				return string(field_spc, Cast::uuid(o.at(str_key)));
-			case Cast::Hash::DATE:
-				return date(field_spc, Cast::date(o.at(str_key)));
+			case Cast::Hash::DATETIME:
+				return datetime(field_spc, Cast::datetime(o.at(str_key)));
 			case Cast::Hash::TIME:
 				return time(field_spc, Cast::time(o.at(str_key)));
 			case Cast::Hash::TIMEDELTA:
@@ -225,8 +225,8 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 			return positive(field_value.u64());
 		case FieldType::FLOAT:
 			return floating(field_value.f64());
-		case FieldType::DATE:
-			return date(field_value);
+		case FieldType::DATETIME:
+			return datetime(field_value);
 		case FieldType::TIME:
 			return time(field_value);
 		case FieldType::TIMEDELTA:
@@ -259,8 +259,8 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 			return positive(field_value);
 		case FieldType::FLOAT:
 			return floating(field_value);
-		case FieldType::DATE:
-			return date(field_value);
+		case FieldType::DATETIME:
+			return datetime(field_value);
 		case FieldType::TIME:
 			return time(field_value);
 		case FieldType::TIMEDELTA:
@@ -285,8 +285,8 @@ std::string
 Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 {
 	switch (field_spc.get_type()) {
-		case FieldType::DATE:
-			return date(field_value);
+		case FieldType::DATETIME:
+			return datetime(field_value);
 		case FieldType::TIME:
 			return time(field_value);
 		case FieldType::TIMEDELTA:
@@ -308,7 +308,7 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 
 
 std::string
-Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_value)
+Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
 	switch (field_value.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
@@ -322,20 +322,20 @@ Serialise::date(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::MAP:
 			switch (field_spc.get_type()) {
 				case FieldType::FLOAT:
-					return floating(Datetime::timestamp(Datetime::DateParser(field_value)));
-				case FieldType::DATE:
-					return date(field_value);
+					return floating(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
+				case FieldType::DATETIME:
+					return datetime(field_value);
 				case FieldType::TIME:
-					return time(Datetime::timestamp(Datetime::DateParser(field_value)));
+					return time(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
 				case FieldType::TIMEDELTA:
-					return timedelta(Datetime::timestamp(Datetime::DateParser(field_value)));
+					return timedelta(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
 				case FieldType::STRING:
-					return Datetime::iso8601(Datetime::DateParser(field_value));
+					return Datetime::iso8601(Datetime::DatetimeParser(field_value));
 				default:
-					THROW(SerialisationError, "Type: {} is not a date", field_value.getStrType());
+					THROW(SerialisationError, "Type: {} is not a datetime", field_value.getStrType());
 			}
 		default:
-			THROW(SerialisationError, "Type: {} is not a date", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a datetime", field_value.getStrType());
 	}
 }
 
@@ -380,7 +380,7 @@ std::string
 Serialise::floating(FieldType field_type, long double field_value)
 {
 	switch (field_type) {
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 			return timestamp(field_value);
 		case FieldType::TIME:
 			return time(field_value);
@@ -403,7 +403,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 				THROW(SerialisationError, "Type: {} must be a positive number [{}]", type(field_type), field_value);
 			}
 			return positive(field_value);
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 			return timestamp(field_value);
 		case FieldType::TIME:
 			return time(field_value);
@@ -423,7 +423,7 @@ std::string
 Serialise::positive(FieldType field_type, uint64_t field_value)
 {
 	switch (field_type) {
-		case FieldType::DATE:
+		case FieldType::DATETIME:
 			return timestamp(field_value);
 		case FieldType::FLOAT:
 			return floating(field_value);
@@ -464,24 +464,24 @@ Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
 
 
 std::string
-Serialise::date(std::string_view field_value)
+Serialise::datetime(std::string_view field_value)
 {
-	return date(Datetime::DateParser(field_value));
+	return datetime(Datetime::DatetimeParser(field_value));
 }
 
 
 std::string
-Serialise::date(const class MsgPack& field_value)
+Serialise::datetime(const class MsgPack& field_value)
 {
-	return date(Datetime::DateParser(field_value));
+	return datetime(Datetime::DatetimeParser(field_value));
 }
 
 
 std::string
-Serialise::date(const class MsgPack& value, Datetime::tm_t& tm)
+Serialise::datetime(const class MsgPack& value, Datetime::tm_t& tm)
 {
-	tm = Datetime::DateParser(value);
-	return date(tm);
+	tm = Datetime::DatetimeParser(value);
+	return datetime(tm);
 }
 
 
@@ -818,7 +818,7 @@ Serialise::type(FieldType field_type)
 			static const std::string geo_str(GEO_STR);
 			return geo_str;
 		}
-		case FieldType::DATE: {
+		case FieldType::DATETIME: {
 			static const std::string date_str(DATE_STR);
 			return date_str;
 		}
@@ -885,8 +885,8 @@ Serialise::guess_type(const class MsgPack& field_value)
 				return FieldType::UUID;
 			}
 
-			if (Datetime::isDate(str_value)) {
-				return FieldType::DATE;
+			if (Datetime::isDatetime(str_value)) {
+				return FieldType::DATETIME;
 			}
 
 			if (Datetime::isTime(str_value)) {
@@ -959,8 +959,8 @@ Serialise::guess_type(const class MsgPack& field_value)
 						return FieldType::STRING;
 					case Cast::Hash::UUID:
 						return FieldType::UUID;
-					case Cast::Hash::DATE:
-						return FieldType::DATE;
+					case Cast::Hash::DATETIME:
+						return FieldType::DATETIME;
 					case Cast::Hash::TIME:
 						return FieldType::TIME;
 					case Cast::Hash::TIMEDELTA:
@@ -1016,9 +1016,9 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 				return std::make_pair(FieldType::UUID, uuid(str_value));
 			} catch (const SerialisationError&) { }
 
-			// Try like DATE
+			// Try like DATETIME
 			try {
-				return std::make_pair(FieldType::DATE, date(str_value));
+				return std::make_pair(FieldType::DATETIME, datetime(str_value));
 			} catch (const DatetimeError&) { }
 
 			// Try like TIME
@@ -1084,12 +1084,12 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 						return std::make_pair(FieldType::STRING, Cast::string(it.value()));
 					case Cast::Hash::UUID:
 						return std::make_pair(FieldType::UUID, uuid(Cast::uuid(it.value())));
-					case Cast::Hash::DATE:
-						return std::make_pair(FieldType::DATE, date(Cast::date(it.value())));
+					case Cast::Hash::DATETIME:
+						return std::make_pair(FieldType::DATETIME, datetime(Cast::datetime(it.value())));
 					case Cast::Hash::TIME:
-						return std::make_pair(FieldType::TIME, date(Cast::time(it.value())));
+						return std::make_pair(FieldType::TIME, datetime(Cast::time(it.value())));
 					case Cast::Hash::TIMEDELTA:
-						return std::make_pair(FieldType::TIMEDELTA, date(Cast::timedelta(it.value())));
+						return std::make_pair(FieldType::TIMEDELTA, datetime(Cast::timedelta(it.value())));
 					case Cast::Hash::EWKT:
 					case Cast::Hash::POINT:
 					case Cast::Hash::CIRCLE:
@@ -1131,8 +1131,8 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 		case FieldType::POSITIVE:
 			result = positive(serialised_val);
 			break;
-		case FieldType::DATE:
-			result = date(serialised_val);
+		case FieldType::DATETIME:
+			result = datetime(serialised_val);
 			break;
 		case FieldType::TIME:
 			result = time(serialised_val);
@@ -1174,7 +1174,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 
 
 std::string
-Unserialise::date(std::string_view serialised_date)
+Unserialise::datetime(std::string_view serialised_date)
 {
 	return Datetime::iso8601(timestamp(serialised_date));
 }
@@ -1385,7 +1385,7 @@ Unserialise::type(std::string_view str_type)
 		hhl("k"),
 		hhl("u"),
 		hhl("x"),
-		hhl("date"),
+		hhl("datetime"),
 		hhl("term"),  // FIXME: remove legacy term
 		hhl("text"),
 		hhl("time"),
@@ -1416,8 +1416,8 @@ Unserialise::type(std::string_view str_type)
 			return FieldType::BOOLEAN;
 		case _.fhhl("boolean"):
 		case _.fhhl("d"):
-		case _.fhhl("date"):
-			return FieldType::DATE;
+		case _.fhhl("datetime"):
+			return FieldType::DATETIME;
 		case _.fhhl("f"):
 		case _.fhhl("float"):
 			return FieldType::FLOAT;

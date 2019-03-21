@@ -45,6 +45,7 @@ constexpr const char KEYWORD_STR[]   = "keyword";
 constexpr const char STRING_STR[]    = "string";
 constexpr const char TEXT_STR[]      = "text";
 constexpr const char DATE_STR[]      = "date";
+constexpr const char DATETIME_STR[]  = "datetime";
 constexpr const char TIME_STR[]      = "time";
 constexpr const char TIMEDELTA_STR[] = "timedelta";
 constexpr const char GEO_STR[]       = "geospatial";
@@ -111,7 +112,7 @@ namespace Serialise {
 
 	std::string string(const required_spc_t& field_spc, std::string_view field_value);
 
-	std::string date(const required_spc_t& field_spc, const class MsgPack& field_value);
+	std::string datetime(const required_spc_t& field_spc, const class MsgPack& field_value);
 
 	std::string time(const required_spc_t& field_spc, const class MsgPack& field_value);
 
@@ -128,21 +129,21 @@ namespace Serialise {
 	std::string boolean(FieldType field_type, bool field_value);
 	std::string geospatial(FieldType field_type, const class MsgPack& field_value);
 
-	// Serialise field_value like date.
-	std::string date(std::string_view field_value);
-	inline std::string date(const std::string& field_value) {
-		return date(std::string_view(field_value));
+	// Serialise field_value like datetime.
+	std::string datetime(std::string_view field_value);
+	inline std::string datetime(const std::string& field_value) {
+		return datetime(std::string_view(field_value));
 	}
-	std::string date(const class MsgPack& field_value);
+	std::string datetime(const class MsgPack& field_value);
 
 	inline std::string timestamp(double field_value) {
 		return sortable_serialise(std::round(field_value * DATETIME_MICROSECONDS) / DATETIME_MICROSECONDS);
 	}
 
-	// Serialise value like date and fill tm.
-	std::string date(const class MsgPack& value, Datetime::tm_t& tm);
+	// Serialise value like datetime and fill tm.
+	std::string datetime(const class MsgPack& value, Datetime::tm_t& tm);
 
-	inline std::string date(const Datetime::tm_t& tm) {
+	inline std::string datetime(const Datetime::tm_t& tm) {
 		return timestamp(Datetime::timestamp(tm));
 	}
 
@@ -253,7 +254,7 @@ namespace Serialise {
 	}
 
 	inline std::string serialise(Datetime::tm_t& tm) {
-		return date(tm);
+		return datetime(tm);
 	}
 
 	inline std::string serialise(const std::vector<range_t>& val) {
@@ -266,10 +267,10 @@ namespace Unserialise {
 	// Unserialise serialised_val according to field_type and returns a MsgPack.
 	MsgPack MsgPack(FieldType field_type, std::string_view serialised_val);
 
-	// Unserialise a serialised date.
-	std::string date(std::string_view serialised_date);
+	// Unserialise a serialised datetime.
+	std::string datetime(std::string_view serialised_date);
 
-	// Unserialise a serialised date returns the timestamp.
+	// Unserialise a serialised datetime returns the timestamp.
 	inline double timestamp(std::string_view serialised_timestamp) {
 		return sortable_unserialise(serialised_timestamp);
 	}

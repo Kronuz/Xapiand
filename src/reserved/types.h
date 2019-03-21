@@ -33,6 +33,7 @@ constexpr const char RESERVED_KEYWORD[]                     = RESERVED__ "keywor
 constexpr const char RESERVED_TEXT[]                        = RESERVED__ "text";
 constexpr const char RESERVED_STRING[]                      = RESERVED__ "string";  // FIXME: remove legacy string
 constexpr const char RESERVED_DATE[]                        = RESERVED__ "date";
+constexpr const char RESERVED_DATETIME[]                    = RESERVED__ "datetime";
 constexpr const char RESERVED_TIME[]                        = RESERVED__ "time";
 constexpr const char RESERVED_TIMEDELTA[]                   = RESERVED__ "timedelta";
 constexpr const char RESERVED_UUID[]                        = RESERVED__ "uuid";

@@ -103,7 +103,7 @@ const std::vector<test_date_t> test_timestamp_date({
 
 
 const std::vector<test_date_t> test_unserialisedate({
-	// Date to be serialised.				 Expected date after unserialise.
+	// Date to be serialised.				 Expected datetime after unserialise.
 	{ "2010-10-10T23:05:24.800",             "2010-10-10T23:05:24.8"      },
 	{ "2010101023:05:24",                    "2010-10-10T23:05:24"        },
 	{ "2010/10/10",                          "2010-10-10T00:00:00"        },
@@ -219,22 +219,22 @@ int test_datetotimestamp() {
 	for (const auto& test : test_timestamp_date) {
 		std::string timestamp;
 		try {
-			auto tm = Datetime::DateParser(test.date);
+			auto tm = Datetime::DatetimeParser(test.datetime);
 			timestamp = std::to_string(Datetime::timestamp(tm));
 		} catch (const std::exception &exc) {
 			timestamp = "";
 		}
 		if (timestamp != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Serialise::date is not working.\n\t  Result: {}\n\tExpected: {}", timestamp, test.serialised);
+			L_ERR("ERROR: Serialise::datetime is not working.\n\t  Result: {}\n\tExpected: {}", timestamp, test.serialised);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing the transformation between date string and timestamp is correct!");
+		L_DEBUG("Testing the transformation between datetime string and timestamp is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing the transformation between date string and timestamp has mistakes.");
+		L_ERR("ERROR: Testing the transformation between datetime string and timestamp has mistakes.");
 		RETURN(1);
 	}
 }
@@ -244,19 +244,19 @@ int test_unserialise_date() {
 	INIT_LOG
 	int cont = 0;
 	for (const auto& test : test_unserialisedate) {
-		const auto serialised = Serialise::date(test.date);
-		const auto date = Unserialise::date(serialised);
-		if (date != test.serialised) {
+		const auto serialised = Serialise::datetime(test.datetime);
+		const auto datetime = Unserialise::datetime(serialised);
+		if (datetime != test.serialised) {
 			++cont;
-			L_ERR("ERROR: Unserialise::date is not working.\n\t  Result: {}\n\tExpected: {}", date, test.serialised);
+			L_ERR("ERROR: Unserialise::datetime is not working.\n\t  Result: {}\n\tExpected: {}", datetime, test.serialised);
 		}
 	}
 
 	if (cont == 0) {
-		L_DEBUG("Testing unserialise date is correct!");
+		L_DEBUG("Testing unserialise datetime is correct!");
 		RETURN(0);
 	} else {
-		L_ERR("ERROR: Testing unserialise date has mistakes.");
+		L_ERR("ERROR: Testing unserialise datetime has mistakes.");
 		RETURN(1);
 	}
 }

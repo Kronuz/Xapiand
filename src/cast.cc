@@ -47,7 +47,8 @@ Cast::cast(const MsgPack& obj)
 			case Hash::UUID:
 				return uuid(obj.at(str_key));
 			case Hash::DATE:
-				return date(obj.at(str_key));
+			case Hash::DATETIME:
+				return datetime(obj.at(str_key));
 			case Hash::TIME:
 				return time(obj.at(str_key));
 			case Hash::TIMEDELTA:
@@ -93,8 +94,8 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			return string(obj);
 		case FieldType::UUID:
 			return uuid(obj);
-		case FieldType::DATE:
-			return date(obj);
+		case FieldType::DATETIME:
+			return datetime(obj);
 		case FieldType::TIME:
 			return time(obj);
 		case FieldType::TIMEDELTA:
@@ -313,7 +314,7 @@ Cast::uuid(const MsgPack& obj)
 
 
 MsgPack
-Cast::date(const MsgPack& obj)
+Cast::datetime(const MsgPack& obj)
 {
 	switch (obj.getType()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
@@ -323,7 +324,7 @@ Cast::date(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to date", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to datetime", obj.getStrType());
 	}
 }
 
@@ -392,7 +393,7 @@ Cast::getType(std::string_view cast_word)
 		case Hash::TEXT:              return FieldType::TEXT;
 		case Hash::STRING:            return FieldType::STRING;
 		case Hash::UUID:              return FieldType::UUID;
-		case Hash::DATE:              return FieldType::DATE;
+		case Hash::DATETIME:              return FieldType::DATETIME;
 		case Hash::TIME:              return FieldType::TIME;
 		case Hash::TIMEDELTA:         return FieldType::TIMEDELTA;
 		case Hash::EWKT:              return FieldType::GEO;

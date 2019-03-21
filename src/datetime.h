@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -108,13 +108,13 @@ namespace Datetime {
 	extern const std::regex date_re;
 	extern const std::regex date_math_re;
 
-	tm_t DateParser(std::string_view date);
-	inline tm_t DateParser(const std::string& date) {
-		return DateParser(std::string_view(date));
+	tm_t DatetimeParser(std::string_view datetime);
+	inline tm_t DatetimeParser(const std::string& datetime) {
+		return DatetimeParser(std::string_view(datetime));
 	}
-	tm_t DateParser(const MsgPack& value);
-	Format Iso8601Parser(std::string_view date, tm_t& tm);
-	Format Iso8601Parser(std::string_view date);
+	tm_t DatetimeParser(const MsgPack& value);
+	Format Iso8601Parser(std::string_view datetime, tm_t& tm);
+	Format Iso8601Parser(std::string_view datetime);
 	void processDateMath(std::string_view date_math, tm_t& tm);
 	void computeTimeZone(tm_t& tm, char op, std::string_view hour, std::string_view min);
 	void computeDateMath(tm_t& tm, std::string_view op, char unit);
@@ -136,7 +136,7 @@ namespace Datetime {
 	std::string iso8601(const tm_t& tm, bool trim=true, char sep='T');
 	std::string iso8601(double timestamp, bool trim=true, char sep='T');
 	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true, char sep='T');
-	bool isDate(std::string_view date);
+	bool isDatetime(std::string_view datetime);
 
 
 	/*

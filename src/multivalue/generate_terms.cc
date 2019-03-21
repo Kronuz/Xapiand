@@ -46,7 +46,7 @@
 #define L_GENERATE_TERMS L_NOTHING
 #endif
 
-const char ctype_date    = required_spc_t::get_ctype(FieldType::DATE);
+const char ctype_date    = required_spc_t::get_ctype(FieldType::DATETIME);
 const char ctype_geo     = required_spc_t::get_ctype(FieldType::GEO);
 const char ctype_integer = required_spc_t::get_ctype(FieldType::INTEGER);
 
@@ -231,7 +231,7 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 
 
 void
-GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm)
+GenerateTerms::datetime(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, const Datetime::tm_t& tm)
 {
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
@@ -364,7 +364,7 @@ GenerateTerms::positive(Xapian::Document& doc, const std::vector<uint64_t>& accu
 
 
 void
-GenerateTerms::date(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
+GenerateTerms::datetime(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 	const std::vector<std::string>& acc_global_prefix, const Datetime::tm_t& tm)
 {
 	auto it = acc_prefix.begin();
@@ -488,7 +488,7 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 
 
 Xapian::Query
-GenerateTerms::date(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
+GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
 {
 	if (accuracy.empty() || end_ < start_) {
 		return Xapian::Query();

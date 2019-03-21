@@ -174,7 +174,7 @@ constexpr uint8_t STRING_CHAR        = 's';
 constexpr uint8_t TIMEDELTA_CHAR     = 'z';
 constexpr uint8_t ARRAY_CHAR         = 'A';
 constexpr uint8_t BOOLEAN_CHAR       = 'B';
-constexpr uint8_t DATE_CHAR          = 'D';
+constexpr uint8_t DATETIME_CHAR      = 'D';
 constexpr uint8_t FOREIGN_CHAR       = 'E';
 constexpr uint8_t FLOAT_CHAR         = 'F';
 constexpr uint8_t GEO_CHAR           = 'G';
@@ -194,7 +194,7 @@ enum class FieldType : uint8_t {
 	OBJECT        = OBJECT_CHAR,
 
 	BOOLEAN       = BOOLEAN_CHAR,
-	DATE          = DATE_CHAR,
+	DATETIME      = DATETIME_CHAR,
 	FLOAT         = FLOAT_CHAR,
 	GEO           = GEO_CHAR,
 	INTEGER       = INTEGER_CHAR,
@@ -362,7 +362,7 @@ struct required_spc_t {
 	Xapian::valueno slot;
 	flags_t flags;
 
-	// For GEO, DATE, TIME, TIMEDELTA and Numeric types.
+	// For GEO, DATETIME, TIME, TIMEDELTA and Numeric types.
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 
@@ -423,7 +423,7 @@ struct required_spc_t {
 			case FieldType::BOOLEAN:
 				return 'B';
 
-			case FieldType::DATE:
+			case FieldType::DATETIME:
 				return 'D';
 
 			case FieldType::TIMEDELTA:
@@ -1047,7 +1047,7 @@ public:
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
-			case FieldType::DATE:
+			case FieldType::DATETIME:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:
 			case FieldType::GEO:
