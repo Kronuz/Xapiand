@@ -54,6 +54,7 @@
 #include "schema.h"                         // for Schema, required_spc_t
 #include "schemas_lru.h"                    // for SchemasLRU
 #include "script.h"                         // for Script
+#include "string.hh"                        // for string::from_bytes
 #include "serialise.h"                      // for cast, serialise, type
 #include "server/http_utils.h"              // for catch_http_errors
 
@@ -1805,9 +1806,9 @@ DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document
 
 
 MsgPack
-DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
+DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, bool human)
 {
-	L_CALL("DatabaseHandler::get_document_info({}, {})", repr(document_id), raw_data);
+	L_CALL("DatabaseHandler::get_document_info({}, {}, {})", repr(document_id), raw_data, human);
 
 	auto document = get_document(document_id);
 	const auto data = Data(document.get_data());
@@ -1840,13 +1841,18 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data)
 					break;
 				case Locator::Type::stored:
 				case Locator::Type::compressed_stored:
-					info_data.push_back(MsgPack({
+					MsgPack locator_info = {
 						{ RESPONSE_CONTENT_TYPE, locator.ct_type.to_string() },
 						{ RESPONSE_TYPE, "stored" },
 						{ RESPONSE_VOLUME, locator.volume },
 						{ RESPONSE_OFFSET, locator.offset },
-						{ RESPONSE_SIZE, locator.size },
-					}));
+					};
+					if (human) {
+						locator_info[RESPONSE_SIZE] = string::from_bytes(locator.size);
+					} else {
+						locator_info[RESPONSE_SIZE] = locator.size;
+					}
+					info_data.push_back(std::move(locator_info));
 					break;
 			}
 		}

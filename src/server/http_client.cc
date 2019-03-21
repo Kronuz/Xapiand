@@ -1842,7 +1842,11 @@ HttpClient::info_view(Request& request)
 	// Info about a specific document was requested
 	if (request.path_parser.off_pmt != nullptr) {
 		auto id = request.path_parser.get_pmt();
-		response_obj[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(id, false);
+
+		request.query_parser.rewind();
+		bool raw = request.query_parser.next("raw") != -1;
+
+		response_obj[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(id, raw, request.human);
 	} else {
 		response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
 	}

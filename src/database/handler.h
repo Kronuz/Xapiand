@@ -254,7 +254,7 @@ public:
 	Xapian::docid replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 	Xapian::docid replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit = false, bool wal = true, bool version = true);
 
-	MsgPack get_document_info(std::string_view document_id, bool raw_data);
+	MsgPack get_document_info(std::string_view document_id, bool raw_data, bool human);
 	MsgPack get_database_info();
 
 #ifdef XAPIAND_DATA_STORAGE
