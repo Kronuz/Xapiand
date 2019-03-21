@@ -77,14 +77,25 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 	if (!context) {
 		context = std::make_shared<std::unordered_set<std::string>>();
 	}
-
+	if (context->size() > MAX_SCHEMA_RECURSION) {
+		THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
+	}
+	if (!context->insert(path).second) {
+		if (path == ".xapiand/index") {
+			// Return default .xapiand/index (chicken and egg problem)
+			return {
+				{ RESERVED_RECURSE, false },
+				{ SCHEMA_FIELD_NAME, {
+					{ ID_FIELD_NAME, {
+						{ RESERVED_STORE, false },
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+				} },
+			};
+		}
+		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
+	}
 	try {
-		if (context->size() > MAX_SCHEMA_RECURSION) {
-			THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
-		}
-		if (!context->insert(path).second) {
-			THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
-		}
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
@@ -130,14 +141,17 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 	if (!context) {
 		context = std::make_shared<std::unordered_set<std::string>>();
 	}
-
+	if (context->size() > MAX_SCHEMA_RECURSION) {
+		THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
+	}
+	if (!context->insert(path).second) {
+		if (path == ".xapiand/index") {
+			// Ignore .xapiand/index (chicken and egg problem)
+			return;
+		}
+		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
+	}
 	try {
-		if (context->size() > MAX_SCHEMA_RECURSION) {
-			THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
-		}
-		if (!context->insert(path).second) {
-			THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
-		}
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
