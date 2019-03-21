@@ -174,7 +174,7 @@ SchemasLRU::SchemasLRU(ssize_t max_size) :
 
 
 std::tuple<bool, std::shared_ptr<const MsgPack>, std::string>
-SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj)
+SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable)
 {
 	L_CALL("SchemasLRU::_update(<db_handler>, {}, {})", new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr");
 
@@ -300,7 +300,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 	}
 
 	// If we still need to save the metadata, we save it:
-	if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
+	if (writable && schema_ptr->get_flags() == 0) {
 		try {
 			// Try writing (only if there's no metadata there alrady)
 			if (!local_schema_ptr || *local_schema_ptr != *schema_ptr) {
@@ -460,7 +460,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			}
 		}
 		// If we still need to save the schema document, we save it:
-		if (schema_ptr->get_flags() == 0 && (db_handler->flags & DB_WRITABLE) == DB_WRITABLE) {
+		if (writable && schema_ptr->get_flags() == 0) {
 			try {
 				save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
 				schema_ptr->set_flags(1);
@@ -560,7 +560,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	auto up = _update("GET: ", db_handler, nullptr, schema_obj);
+	auto up = _update("GET: ", db_handler, nullptr, schema_obj, false);
 	auto schema_ptr = std::get<1>(up);
 	auto foreign_uri = std::get<2>(up);
 
@@ -600,7 +600,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
-	auto up = _update("SET: ", db_handler, new_schema, nullptr);
+	auto up = _update("SET: ", db_handler, new_schema, nullptr, (db_handler->flags & DB_WRITABLE) == DB_WRITABLE);
 	auto failure = std::get<0>(up);
 	auto schema_ptr = std::get<1>(up);
 
