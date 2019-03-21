@@ -76,6 +76,7 @@
 #include <stack>          // for stack
 #include <stddef.h>       // for size_t
 #include <string>         // for string
+#include <strings.h>      // for strcasecmp
 #include <unordered_map>  // for unordered_map
 #include <vector>         // for vector
 
@@ -270,5 +271,9 @@ std::string tostring(const std::wstring& s);
 // Custom name_generator()
 inline std::string name_generator() {
 	static NameGen::Generator generator("!<b<||v|V><||s|S|b>>");
-	return generator.toString();
+	std::string nm;
+	do {
+		nm = generator.toString();
+	} while(strcasecmp(nm.c_str(), "nan") == 0 || strcasecmp(nm.c_str(), "inf") == 0);
+	return nm;
 }
