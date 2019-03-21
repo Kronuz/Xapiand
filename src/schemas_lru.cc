@@ -32,17 +32,16 @@
 #include "string.hh"                              // for string::format, string::replace
 #include "url_parser.h"                           // for urldecode
 
+#define L_SCHEMA L_NOTHING
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_SCHEMA
 // #define L_SCHEMA L_YELLOW_GREEN
 
-
-#ifndef L_SCHEMA
-#define L_SCHEMA L_NOTHING
-#endif
 
 static const std::string reserved_schema(RESERVED_SCHEMA);
 

@@ -94,8 +94,8 @@
 #include "server/discovery.h"                    // for Discovery
 #endif
 
-
 #define L_MANAGER L_NOTHING
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY

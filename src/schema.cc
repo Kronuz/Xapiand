@@ -58,6 +58,8 @@
 #include "stopper.h"                              // for getStopper
 #include "string.hh"                              // for string::format, string::inplace_lower
 
+#define L_SCHEMA L_NOTHING
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -66,11 +68,6 @@
 // #undef L_INDEX
 // #define L_INDEX L_CHOCOLATE
 
-
-#ifndef L_SCHEMA
-#define L_SCHEMA_DEFINED
-#define L_SCHEMA L_NOTHING
-#endif
 
 constexpr static auto EMPTY      = static_string::string(EMPTY_CHAR);
 constexpr static auto STRING     = static_string::string(STRING_CHAR);
@@ -9769,9 +9766,3 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 
 	return spc;
 }
-
-
-#ifdef L_SCHEMA_DEFINED
-#undef L_SCHEMA_DEFINED
-#undef L_SCHEMA
-#endif
