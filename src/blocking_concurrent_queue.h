@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Dubalu LLC
+ * Copyright (c) 2018,2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,19 +22,11 @@
 
 #pragma once
 
-// #define MOODYCAMEL
-
-#ifdef MOODYCAMEL
-#include "moodycamel/blockingconcurrentqueue.h"
-#else
-
 #include <chrono>
 #include <condition_variable>
 
 #include "concurrent_queue.h"
 #include "likely.h"
-
-namespace moodycamel {
 
 using namespace std::chrono_literals;
 
@@ -63,10 +55,6 @@ public:
 			return true;
 		}
 		return false;
-	}
-
-	bool enqueue(const ProducerToken&, T&& item) {
-		return enqueue(std::forward<T>(item));
 	}
 
 	template<typename It>
@@ -113,9 +101,3 @@ public:
 		return true;
 	}
 };
-
-}
-
-#endif
-
-using namespace moodycamel;

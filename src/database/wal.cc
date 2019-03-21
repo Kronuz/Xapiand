@@ -910,42 +910,6 @@ DatabaseWALWriterThread::operator=(DatabaseWALWriterThread&& other)
 }
 
 
-size_t
-DatabaseWALWriterThread::inc_producer_token(const std::string& path, ProducerToken** producer_token)
-{
-	L_CALL("DatabaseWALWriterThread::inc_producer_token()");
-
-	std::lock_guard<std::mutex> lk(producers_mtx);
-	auto it = producers.find(path);
-	if (it == producers.end()) {
-		it = producers.emplace(path, std::make_pair(ProducerToken{_queue}, 0)).first;
-	}
-	if (producer_token) {
-		*producer_token = &it->second.first;
-	}
-	return ++it->second.second;
-}
-
-
-size_t
-DatabaseWALWriterThread::dec_producer_token(const std::string& path)
-{
-	L_CALL("DatabaseWALWriterThread::dec_producer_token()");
-
-	std::lock_guard<std::mutex> lk(producers_mtx);
-	auto it = producers.find(path);
-	if (it == producers.end()) {
-		return 0;
-	}
-	ASSERT(it->second.second > 0);
-	auto cnt = --it->second.second;
-	if (cnt == 0) {
-		producers.erase(it);
-	}
-	return cnt;
-}
-
-
 const std::string&
 DatabaseWALWriterThread::name() const noexcept
 {
@@ -970,7 +934,6 @@ DatabaseWALWriterThread::operator()()
 			} catch (...) {
 				L_EXC("ERROR: Task died with an unhandled exception");
 			}
-			dec_producer_token(task.path);
 		} else if (_wal_writer->_ending.load(std::memory_order_acquire)) {
 			break;
 		}
@@ -1022,21 +985,19 @@ DatabaseWALWriter::execute(DatabaseWALWriterTask&& task)
 	L_CALL("DatabaseWALWriter::execute()");
 
 	static thread_local DatabaseWALWriterThread thread(0, this);
-	inc_producer_token(task.path);
 	task(thread);
 }
 
 
 bool
-DatabaseWALWriter::enqueue(const ProducerToken& token, DatabaseWALWriterTask&& task)
+DatabaseWALWriter::enqueue(DatabaseWALWriterTask&& task)
 {
 	L_CALL("DatabaseWALWriter::enqueue()");
 
 	static const std::hash<std::string> hasher;
 	auto hash = hasher(task.path);
 	auto& thread = _threads[hash % _threads.size()];
-	inc_producer_token(task.path);
-	return thread._queue.enqueue(token, std::move(task));
+	return thread._queue.enqueue(std::move(task));
 }
 
 
@@ -1106,30 +1067,6 @@ DatabaseWALWriter::running_size()
 	L_CALL("DatabaseWALWriter::running_size()");
 
 	return _threads.size();
-}
-
-
-size_t
-DatabaseWALWriter::inc_producer_token(const std::string& path, ProducerToken** producer_token)
-{
-	L_CALL("DatabaseWALWriter::inc_producer_token()");
-
-	static const std::hash<std::string> hasher;
-	auto hash = hasher(path);
-	auto& thread = _threads[hash % _threads.size()];
-	return thread.inc_producer_token(path, producer_token);
-}
-
-
-size_t
-DatabaseWALWriter::dec_producer_token(const std::string& path)
-{
-	L_CALL("DatabaseWALWriter::dec_producer_token()");
-
-	static const std::hash<std::string> hasher;
-	auto hash = hasher(path);
-	auto& thread = _threads[hash % _threads.size()];
-	return thread.dec_producer_token(path);
 }
 
 
@@ -1309,7 +1246,6 @@ DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1321,8 +1257,7 @@ DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1337,7 +1272,6 @@ DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& t
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1349,8 +1283,7 @@ DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& t
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1365,7 +1298,6 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1378,8 +1310,7 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1394,7 +1325,6 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1406,8 +1336,7 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1422,7 +1351,6 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1435,8 +1363,7 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1451,7 +1378,6 @@ DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& 
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1464,8 +1390,7 @@ DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& 
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1480,7 +1405,6 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1492,8 +1416,7 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1508,7 +1431,6 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1521,8 +1443,7 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 
@@ -1537,7 +1458,6 @@ DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xap
 	auto path = shard.endpoint.path;
 	auto uuid = UUID(shard.db()->get_uuid());
 	auto revision = shard.db()->get_revision();
-	ASSERT(shard.producer_token);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1550,8 +1470,7 @@ DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xap
 	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
 		execute(std::move(task));
 	} else {
-		ASSERT(shard.producer_token);
-		enqueue(*shard.producer_token, std::move(task));
+		enqueue(std::move(task));
 	}
 }
 

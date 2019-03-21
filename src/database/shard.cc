@@ -219,9 +219,6 @@ Shard::Shard(ShardEndpoint& endpoint_, int flags_)
 	  closed(false),
 	  modified(false),
 	  incomplete(false),
-#ifdef XAPIAND_DATABASE_WAL
-	  producer_token(nullptr),
-#endif
 	  transaction(Transaction::none),
 	  endpoint(endpoint_),
 	  flags(flags_)
@@ -236,11 +233,6 @@ Shard::~Shard() noexcept
 		if (log) {
 			log->clear();
 		}
-#ifdef XAPIAND_DATABASE_WAL
-		if (producer_token) {
-			XapiandManager::wal_writer()->dec_producer_token(endpoint.path);
-		}
-#endif
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
@@ -341,13 +333,10 @@ Shard::reopen_writable()
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
 	if (is_wal_active()) {
-		// Create or get a producer token for this database
-		if (XapiandManager::wal_writer()->inc_producer_token(endpoint.path, &producer_token) == 1) {
-			// WAL wasn't already active for the requested endpoint
-			DatabaseWAL wal(this);
-			if (wal.execute(true)) {
-				modified.store(true, std::memory_order_relaxed);
-			}
+		// WAL wasn't already active for the requested endpoint
+		DatabaseWAL wal(this);
+		if (wal.execute(true)) {
+			modified.store(true, std::memory_order_relaxed);
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL

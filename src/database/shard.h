@@ -42,11 +42,6 @@ class Logging;
 class DataStorage;
 class ShardEndpoint;
 
-namespace moodycamel {
-	struct ProducerToken;
-}
-using namespace moodycamel;
-
 
 //   ____  _                   _
 //  / ___|| |__   __ _ _ __ __| |
@@ -94,9 +89,6 @@ private:
 	bool reopen_readable();
 
 public:
-#ifdef XAPIAND_DATABASE_WAL
-	ProducerToken* producer_token;
-#endif
 	Transaction transaction;
 
 	ShardEndpoint& endpoint;

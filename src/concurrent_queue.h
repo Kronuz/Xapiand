@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 Dubalu LLC
+ * Copyright (c) 2018,2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,27 +22,12 @@
 
 #pragma once
 
-// #define MOODYCAMEL
-
-#ifdef MOODYCAMEL
-#include "moodycamel/concurrentqueue.h"
-#else
-
 #include <deque>
 #include <memory>
 #include <mutex>
 
-namespace moodycamel {
-
 struct ConcurrentQueueDefaultTraits {
 	static const size_t BLOCK_SIZE = 32;
-};
-
-
-struct ProducerToken {
-public:
-	template <typename Q>
-	ProducerToken(Q&) {}
 };
 
 
@@ -69,14 +54,6 @@ public:
 		std::lock_guard<std::mutex> lk(*mtx);
 		queue.emplace_back(std::move(item));
 		return true;
-	}
-
-	bool enqueue(const ProducerToken&, const T& item) {
-		return enqueue(item);
-	}
-
-	bool enqueue(const ProducerToken&, T&& item) {
-		return enqueue(std::move(item));
 	}
 
 	template<typename It>
@@ -110,9 +87,3 @@ public:
 		return dequeued;
 	}
 };
-
-}
-
-#endif
-
-using namespace moodycamel;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@
 #include <utility>                          // for pair, make_pair
 
 #include "cassert.h"                        // for ASSERT
-#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue, ProducerToken
+#include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
 #include "lru.h"                            // for lru::LRU
@@ -313,12 +313,6 @@ class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPol
 
 	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
 
-	std::mutex producers_mtx;
-	std::unordered_map<std::string, std::pair<ProducerToken, size_t>> producers;
-
-	size_t inc_producer_token(const std::string& path, ProducerToken** producer_token = nullptr);
-	size_t dec_producer_token(const std::string& path);
-
 public:
 	DatabaseWALWriterThread() noexcept;
 	DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* wal_writer) noexcept;
@@ -343,7 +337,7 @@ class DatabaseWALWriter {
 	std::atomic_size_t _workers;
 
 	void execute(DatabaseWALWriterTask&& task);
-	bool enqueue(const ProducerToken& token, DatabaseWALWriterTask&& task);
+	bool enqueue(DatabaseWALWriterTask&& task);
 
 public:
 	DatabaseWALWriter(const char* format, std::size_t size);
@@ -359,9 +353,6 @@ public:
 	void finish();
 
 	std::size_t running_size();
-
-	size_t inc_producer_token(const std::string& path, ProducerToken** producer_token = nullptr);
-	size_t dec_producer_token(const std::string& path);
 
 	void write_add_document(Shard& shard, Xapian::Document&& doc);
 	void write_delete_document_term(Shard& shard, const std::string& term);
