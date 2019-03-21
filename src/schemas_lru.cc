@@ -96,8 +96,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
-		auto term_id = path == ".xapiand/index" ? prefixed(id, "Q", 'K') : _db_handler.get_prefixed_term_id(id);
-		auto doc = _db_handler.get_document_term(term_id);
+		auto doc = _db_handler.get_document(id);
 		auto o = doc.get_obj();
 		if (!selector.empty()) {
 			o = o.select(selector);
@@ -125,14 +124,33 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 {
 	L_CALL("save_shared({}, {}, <schema>, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
-	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
-	if (endpoints.empty()) {
-		THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+	L_RED("save_shared: path:{} id:{}\n{}", endpoint.to_string(), id, schema.to_string(2));
+
+	auto path = endpoint.path;
+	if (!context) {
+		context = std::make_shared<std::unordered_set<std::string>>();
 	}
-	DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, HTTP_PUT, context);
-	auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
-	// FIXME: Process the subfields instead of ignoring.
-	_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type);
+
+	try {
+		if (context->size() > MAX_SCHEMA_RECURSION) {
+			THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
+		}
+		if (!context->insert(path).second) {
+			THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
+		}
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		if (endpoints.empty()) {
+			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
+		}
+		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, HTTP_PUT, context);
+		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
+		// FIXME: Process the subfields instead of ignoring.
+		_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type);
+		context->erase(path);
+	} catch (...) {
+		context->erase(path);
+		throw;
+	}
 }
 
 
