@@ -41,7 +41,7 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_SCHEMA
-// #define L_SCHEMA L_STACKED_YELLOW_GREEN
+// #define L_SCHEMA L_STACKED_GREY
 
 
 static const std::string reserved_schema(RESERVED_SCHEMA);
@@ -216,7 +216,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			}));
 			if (*schema_ptr == *local_schema_ptr) {
 				schema_ptr = local_schema_ptr;
-				L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+				L_SCHEMA("{}" + GREEN + "Local Schema [{}] already had the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			} else {
 				schema_ptr->lock();
 				{
@@ -228,7 +228,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 				} else {
 					if (*schema_ptr == *local_schema_ptr) {
 						schema_ptr = local_schema_ptr;
-						L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+						L_SCHEMA("{}" + GREEN + "Local Schema [{}] couldn't add foreign link but it already was the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 					} else {
 						schema_ptr = local_schema_ptr;
 						failure = true;
@@ -313,13 +313,13 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					L_EXC("Exception");
 				}
 				if (schema_ser.empty()) {
-					L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 					db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
+					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
-					L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was overwritten -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 					db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
+					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else {
 					local_schema_ptr = schema_ptr;
 					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
@@ -338,9 +338,9 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 					failure = true;
 				}
 			} else {
-				L_SCHEMA("{}" + GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
 				schema_ptr->set_flags(1);
+				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			}
 		} catch (...) {
 			if (local_schema_ptr != schema_ptr) {
@@ -390,7 +390,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			} else {
 				if (*schema_ptr == *foreign_schema_ptr) {
 					schema_ptr = foreign_schema_ptr;
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] had already the same object in LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] already had the same object in LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 				} else {
 					schema_ptr = foreign_schema_ptr;
 					failure = true;
@@ -451,7 +451,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			} else {
 				if (*schema_ptr == *foreign_schema_ptr) {
 					schema_ptr = foreign_schema_ptr;
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] had already the same object in LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] couldn't be added but already was the same object in LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 				} else {
 					schema_ptr = foreign_schema_ptr;
 					failure = true;
@@ -464,7 +464,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			try {
 				save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
 				schema_ptr->set_flags(1);
-				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was saved to {} id={} -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
+				L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={} -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 			} catch (const Xapian::DocVersionConflictError&) {
 				// Foreign Schema needs to be read
 				try {
