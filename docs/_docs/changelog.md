@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+
+---
+## [0.15.0] - 2019-03-21
+{: #v0-15-0 }
+
 ### Added
 - Sharding support added
   + By default there are now five shards per index
@@ -476,9 +482,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.11.1...HEAD
-[0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.11.0...v0.11.1
-[0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.2...v0.11.0
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/Kronuz/Xapiand/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/Kronuz/Xapiand/compare/v0.12.2...v0.14.0
+[0.12.2]: https://github.com/Kronuz/Xapiand/compare/v0.12.1...v0.12.2
+[0.12.1]: https://github.com/Kronuz/Xapiand/compare/v0.12.0...v0.12.1
+[0.12.0]: https://github.com/Kronuz/Xapiand/compare/v0.11.1...v0.12.0
+[0.11.1]: https://github.com/Kronuz/Xapiand/compare/v0.11.0...v0.11.1
+[0.11.0]: https://github.com/Kronuz/Xapiand/compare/v0.10.2...v0.11.0
 [0.10.2]: https://github.com/Kronuz/Xapiand/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/Kronuz/Xapiand/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/Kronuz/Xapiand/compare/v0.9.0...v0.10.0
