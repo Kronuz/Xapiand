@@ -1449,6 +1449,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 			id_type = FieldType::KEYWORD;
 		}
 		spc_id.set_type(id_type);
+		spc_id.flags.bool_term = true;
 		unprefixed_term_id = type_ser.second;
 	} else {
 		unprefixed_term_id = Serialise::serialise(spc_id, Cast::cast(id_type, document_id));

@@ -2906,6 +2906,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						id_type = FieldType::KEYWORD;
 					}
 					spc_id.set_type(id_type);
+					spc_id.flags.bool_term = true;
 					set_data_id(spc_id);
 					properties = &get_mutable_properties();
 					unprefixed_term_id = type_ser.second;
