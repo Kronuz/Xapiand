@@ -1633,7 +1633,7 @@ HttpClient::write_schema_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
 	db_handler.write_schema(decoded_body, request.method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
