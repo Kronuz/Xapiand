@@ -209,32 +209,35 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 	if (local_schema_ptr) {
 		// Schema was in the cache
 		L_SCHEMA("{}" + DARK_GREEN + "Schema [{}] found in cache -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), local_schema_ptr->to_string());
-		schema_ptr = local_schema_ptr;
 		if (!foreign_uri.empty()) {
-			auto tmp_schema_ptr = std::make_shared<MsgPack>(MsgPack({
+			schema_ptr = std::make_shared<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, foreign_uri },
 			}));
-			if (*schema_ptr != *tmp_schema_ptr) {
-				tmp_schema_ptr->lock();
+			if (*schema_ptr == *local_schema_ptr) {
+				schema_ptr = local_schema_ptr;
+				L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+			} else {
+				schema_ptr->lock();
 				{
 					std::lock_guard<std::mutex> lk(smtx);
-					exchanged = local_schemas[local_schema_path].compare_exchange_strong(schema_ptr, tmp_schema_ptr);
+					exchanged = local_schemas[local_schema_path].compare_exchange_strong(local_schema_ptr, schema_ptr);
 				}
 				if (exchanged) {
-					schema_ptr = tmp_schema_ptr;
 					L_SCHEMA("{}" + GREEN + "Local Schema [{}] added foreign link to the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else {
-					if (*schema_ptr != *tmp_schema_ptr) {
+					if (*schema_ptr == *local_schema_ptr) {
+						schema_ptr = local_schema_ptr;
+						L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+					} else {
+						schema_ptr = local_schema_ptr;
 						failure = true;
 						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] couldn't add foreign link to the LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
-					} else {
-						L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 					}
 				}
-			} else {
-				L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same foreign link in the LRU -> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			}
+		} else {
+			schema_ptr = local_schema_ptr;
 		}
 	} else {
 		// Schema needs to be read
@@ -285,9 +288,14 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 		} else {
 			// Read object couldn't be stored in cache,
 			// so we use the schema now currently in cache
-			schema_ptr = local_schema_ptr;
-			failure = true;
-			L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+			if (*schema_ptr == *local_schema_ptr) {
+				schema_ptr = local_schema_ptr;
+				L_SCHEMA("{}" + GREEN + "Local Schema [{}] had already the same object in the LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+			} else {
+				schema_ptr = local_schema_ptr;
+				failure = true;
+				L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
+			}
 		}
 	}
 
@@ -359,7 +367,7 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			std::lock_guard<std::mutex> lk(smtx);
 			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
 		}
-		if (foreign_schema_ptr && (!new_schema || *foreign_schema_ptr == *new_schema)) {
+		if (foreign_schema_ptr && (!new_schema || *new_schema == *foreign_schema_ptr)) {
 			// Same Foreign Schema was in the cache
 			schema_ptr = foreign_schema_ptr;
 			L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] found in cache -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
@@ -373,9 +381,14 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			if (exchanged) {
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} else {
-				schema_ptr = foreign_schema_ptr;
-				failure = true;
-				L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] new schema couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+				if (*schema_ptr == *foreign_schema_ptr) {
+					schema_ptr = foreign_schema_ptr;
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] had already the same object in LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+				} else {
+					schema_ptr = foreign_schema_ptr;
+					failure = true;
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] new schema couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+				}
 			}
 		} else {
 			// Foreign Schema needs to be read
@@ -409,9 +422,14 @@ SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::
 			if (exchanged) {
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU -> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} else {
-				schema_ptr = foreign_schema_ptr;
-				failure = true;
-				L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+				if (*schema_ptr == *foreign_schema_ptr) {
+					schema_ptr = foreign_schema_ptr;
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] had already the same object in LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+				} else {
+					schema_ptr = foreign_schema_ptr;
+					failure = true;
+					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be added to LRU ==> " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+				}
 			}
 		}
 		// If we still need to save the schema document, we save it:
