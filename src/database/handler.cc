@@ -71,6 +71,7 @@
 // #define L_INDEX L_CHOCOLATE
 
 
+constexpr int SCHEMA_RETRIES   = 10;   // Number of tries for schema operations
 constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
 
 constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
@@ -462,11 +463,17 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 		}
 	}
 
-	do {
+	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 		schema = get_schema(&obj);
 		L_INDEX("Schema: {}", repr(schema->to_string()));
 		prepared = schema->index(obj, document_id, *this, data);
-	} while (!update_schema());
+		if (update_schema()) {
+			break;
+		}
+		if (t == 0) {
+			THROW(Error, "Cannot update schema, too many retries");
+		}
+	}
 
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
@@ -742,21 +749,33 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 	L_CALL("DatabaseHandler::write_schema({}, {})", repr(obj.to_string()), replace);
 
 	bool was_foreign_obj;
-	do {
+	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 		schema = get_schema();
 		was_foreign_obj = schema->write(obj, replace);
 		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
-	} while (!update_schema());
+		if (update_schema()) {
+			break;
+		}
+		if (t == 0) {
+			THROW(Error, "Cannot write schema, too many retries");
+		}
+	}
 
 	if (was_foreign_obj) {
 		MsgPack o = obj;
 		o[RESERVED_TYPE] = "object";
 		o.erase(RESERVED_ENDPOINT);
-		do {
+		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 			schema = get_schema();
 			was_foreign_obj = schema->write(o, replace);
 			L_INDEX("Schema to write: {} (local)", repr(schema->to_string()));
-		} while (!update_schema());
+			if (update_schema()) {
+				break;
+			}
+			if (t == 0) {
+				THROW(Error, "Cannot write foreign schema, too many retries");
+			}
+		}
 	}
 }
 
@@ -766,13 +785,17 @@ DatabaseHandler::delete_schema()
 {
 	L_CALL("DatabaseHandler::delete_schema()");
 
-	bool done;
-	do {
+	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 		schema = get_schema();
 		auto old_schema = schema->get_const_schema();
-		done = XapiandManager::schemas()->drop(this, old_schema);
 		L_INDEX("Schema to delete: {}", repr(schema->to_string()));
-	} while (!done);
+		if (XapiandManager::schemas()->drop(this, old_schema)) {
+			break;
+		}
+		if (t == 0) {
+			THROW(Error, "Cannot delete schema, too many retries");
+		}
+	}
 }
 
 
