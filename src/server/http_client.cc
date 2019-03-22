@@ -1431,6 +1431,7 @@ HttpClient::home_view(Request& request)
 #endif
 		} },
 		{ "options", {
+			{ "verbosity", opts.verbosity },
 			{ "processors", opts.processors },
 			{ "limits", {
 				// { "max_clients", opts.max_clients },
@@ -2599,7 +2600,10 @@ HttpClient::url_resolve(Request& request)
 			}
 		}
 
-		bool pretty = false;
+		bool pretty = opts.pretty && !opts.no_pretty;
+		if (pretty) {
+			request.indented = DEFAULT_INDENTATION;
+		}
 		request.query_parser.rewind();
 		if (request.query_parser.next("pretty") != -1) {
 			if (request.query_parser.len != 0u) {
