@@ -2,9 +2,9 @@
 title: Scripting
 ---
 
-The scripting module enables you to use scripts to evaluate custom expressions.
-For example, you could use a script to return "script fields" as part of a
-search request or evaluate a custom score for a query.
+The scripting functionality enables you to use scripts to evaluate custom
+expressions. For example, you could use a script to return "script fields" as
+part of a search request or evaluate a custom score for a query.
 
 The scripting language currently supported is
 [ChaiScript](http://chaiscript.com){:target="_blank"}.

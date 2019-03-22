@@ -1,5 +1,5 @@
 ---
-title: Storage
+title: Storage API
 ---
 
 The Xapiand _Storage_ is designed to put files in volumes much in the way

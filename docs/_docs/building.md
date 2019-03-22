@@ -12,7 +12,7 @@ from [GitHub]. Once you have a local copy, procede with the
 
 ### Requirements
 
-Xapiand is written in C++14 and it has the following build requirements:
+Xapiand is written in C++17 and it has the following build requirements:
 
 * pkg-config
 * Ninja (optional)

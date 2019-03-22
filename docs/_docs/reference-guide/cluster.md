@@ -1,5 +1,5 @@
 ---
-title: Cluster
+title: Cluster API
 ---
 
 {: .note .construction }

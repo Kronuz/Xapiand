@@ -71,25 +71,3 @@ community around the {{ site.name }} ecosystem thrive.*
 * [Germán Méndez Bravo (Kronuz)](https://kronuz.io)
 * [José Madrigal Cárdenas (YosefMac)](https://github.com/YosefMac){:target="_blank"}
 * [José María Valencia Ramírez (JoseMariaVR)](https://github.com/JoseMariaVR){:target="_blank"}
-
-
----
-
-Xapiand<br>
-Copyright &copy; 2015-2019 Dubalu LLC
-
-Source code in this repository is _variously licensed_ under the MIT license,
-BSD-style licenses, the Apache License Version 2.0, and GNU General Public
-License Version 2.
-
-Source code in a given file is licensed under **the MIT license** and the copyright
-belongs to Dubalu LLC unless a LICENSE file present in the directory subtree
-declares a separate license or otherwise noted at the beginning of the file.
-
-The current distribution of Xapian contains many files which are only licensed
-under the GPL, but work is in the progress towards being able to distribute
-Xapian under a more permissive license, once this process is complete, there
-will not be any more GNU GPL licensed code in this repository.
-
-Xapiand clients and documentation are based upon the work from the Elasticsearch
-project, licensed under the Apache License.

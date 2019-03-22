@@ -1,9 +1,6 @@
 ---
-title: Schemas
+title: Schemas API
 ---
-
-{: .note .construction }
-_This section is a **work in progress**..._
 
 A schema is the definition of how a document, and the fields it contains, are
 stored and indexed. For instance, use schemas to define:

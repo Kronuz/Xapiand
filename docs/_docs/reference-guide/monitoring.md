@@ -1,10 +1,9 @@
 ---
-title: Monitoring Xapiand
-short_title: Monitoring
+title: Monitoring API
 ---
 
-You can retrieve information about the server usage by using the `:metrics`
-endpoint.
+You can retrieve information about the Xapiand server usage by using the
+`:metrics` endpoint.
 
 This returns a [Prometheus](https://prometheus.io){:target="_blank"}
 compatible response with a bunch of useful metrics.
@@ -18,4 +17,4 @@ GET /:metrics
 {% include curl.html req=req %}
 
 
-<div style="min-height: 800px"></div>
+<div style="min-height: 400px"></div>
