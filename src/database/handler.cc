@@ -587,7 +587,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 		size_t n_shards = endpoints.size();
 		size_t shard_num = (did - 1) % n_shards;
-		data_obj[RESPONSE_xSHARD] = shard_num;
+		data_obj[RESPONSE_xSHARD] = shard_num + 1;
 		// data_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 	}
 
@@ -1845,7 +1845,8 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 	size_t n_shards = endpoints.size();
 	if (n_shards != 1) {
 		size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-		info[RESPONSE_SHARD] = shard_num;
+		info[RESPONSE_SHARD] = shard_num + 1;
+		info[RESPONSE_ENDPOINT] = endpoints[shard_num].to_string();
 	}
 
 	if (raw_data) {
@@ -2108,7 +2109,7 @@ DocIndexer::operator()()
 
 						size_t n_shards = endpoints.size();
 						size_t shard_num = (did - 1) % n_shards;
-						obj[RESPONSE_xSHARD] = shard_num;
+						obj[RESPONSE_xSHARD] = shard_num + 1;
 						// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 					}
 

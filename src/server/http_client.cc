@@ -2307,7 +2307,7 @@ HttpClient::retrieve_view(Request& request)
 
 			size_t n_shards = endpoints.size();
 			size_t shard_num = (did - 1) % n_shards;
-			obj[RESPONSE_xSHARD] = shard_num;
+			obj[RESPONSE_xSHARD] = shard_num + 1;
 			// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 		}
 
@@ -2456,7 +2456,7 @@ HttpClient::search_view(Request& request)
 
 			size_t n_shards = endpoints.size();
 			size_t shard_num = (did - 1) % n_shards;
-			hit_obj[RESPONSE_xSHARD] = shard_num;
+			hit_obj[RESPONSE_xSHARD] = shard_num + 1;
 			// hit_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 
 			hit_obj[RESPONSE_xRANK] = m.get_rank();
