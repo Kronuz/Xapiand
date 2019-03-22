@@ -1,8 +1,15 @@
 ---
-title: Search API
+title: Search
 ---
 
-{: .note .construction }
-_This section is a **work in progress**..._
+You can search for documents by using the `:search` endpoint.
 
-<div style="min-height: 800px"></div>
+{% capture req %}
+
+```json
+GET /bank/:search?pretty
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+<div style="min-height: 400px"></div>

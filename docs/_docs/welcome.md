@@ -32,7 +32,7 @@ Many examples of API calls that look something like this:
 {% capture req %}
 
 ```json
-PUT /twitter/user/Kronuz
+PUT /twitter/user/Kronuz?pretty
 
 {
   "name" : "German M. Bravo"

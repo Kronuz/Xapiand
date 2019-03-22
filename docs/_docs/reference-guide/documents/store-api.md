@@ -1,8 +1,11 @@
 ---
-title: Storage API
+title: Store API
 ---
 
-The Xapiand _Storage_ is designed to put files in volumes much in the way
+The _Store API_ allows adding additional content to documents and store such
+content in the _Index Storage_.
+
+The _Index Storage_ is designed to put files in volumes much in the way
 Facebook's _Haystack_ <sup>[1](#footnote-1)</sup> works; once there a file
 enters the storage it can't really be deleted/modified from the volume, but
 instead, if a change is needed, a new file blob will be written to the volume.
@@ -156,6 +159,7 @@ Content-Length: 0
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .note .caution }
 Note removing content doesn't actually remove the blob from the volume, it
 just removes the "link" to it from the document.
 

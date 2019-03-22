@@ -25,6 +25,14 @@
         - link: '#multiple-indices'
           title: Multiple Indices
     - url: indices
+      docs:
+        - url: create-api
+        - url: delete-api
+        - url: get-api
+        - url: exists-api
+        - url: close-api
+        - url: info-api
+        - url: backups
     - url: schemas
       docs:
         - url: field-types
@@ -44,89 +52,93 @@
             - url: geospatial-type
         - url: dynamic-typing
     - url: documents
+      docs:
+        - url: index-api
+        - url: get-api
+        - url: delete-api
+        - url: update-api
+        - url: store-api
+        - url: info-api
+        - url: scripting
+        - url: versioning
     - url: search
-    - url: query-dsl
       docs:
-        - url: leaf-queries
-          title: Leaf Queries
+        - url: query-dsl
           docs:
-            - url: match-all-query
-            - url: simple-queries
-            - url: text-queries
+            - url: leaf-queries
+              title: Leaf Queries
               docs:
-                - url: simple
-                - url: phrase
-                - url: partial
-                - url: near
-                - url: love-and-hate
-                - url: default-operator
-                - url: stop-words
-            - url: casting-values
-            - url: namespace-queries
-        - url: compound-queries
-          title: Compound Queries
-          docs:
-            - url: logical-operators
-            - url: maybe-operator
-            - url: filter-operator
-            - url: elite-set-operator
-            - url: range-searches
-            - url: geospatial-searches
+                - url: match-all-query
+                - url: simple-queries
+                - url: text-queries
+                  docs:
+                    - url: simple
+                    - url: phrase
+                    - url: partial
+                    - url: near
+                    - url: love-and-hate
+                    - url: default-operator
+                    - url: stop-words
+                - url: casting-values
+                - url: namespace-queries
+            - url: compound-queries
+              title: Compound Queries
               docs:
-                - link: '#point'
-                  title: Point
-                - link: '#circle'
-                  title: Circle
-                - link: '#polygon'
-                  title: Polygon
-                - link: '#convex'
-                  title: Convex
-                - link: '#chull'
-                  title: Chull
-                - link: '#multipoint'
-                  title: Multipoint
-                - link: '#multicircle'
-                  title: Multicircle
-                - link: '#multiconvex'
-                  title: Multiconvex
-                - link: '#multipolygon'
-                  title: Multipolygon
-                - link: '#multichull'
-                  title: Multichull
-                - link: '#extended_well_known_text'
-                  title: EWKT
-    - url: aggregations
-      docs:
-        - url: metrics
-          title: Metrics
+                - url: logical-operators
+                - url: maybe-operator
+                - url: filter-operator
+                - url: elite-set-operator
+                - url: range-searches
+                - url: geospatial-searches
+                  docs:
+                    - link: '#point'
+                      title: Point
+                    - link: '#circle'
+                      title: Circle
+                    - link: '#polygon'
+                      title: Polygon
+                    - link: '#convex'
+                      title: Convex
+                    - link: '#chull'
+                      title: Chull
+                    - link: '#multipoint'
+                      title: Multipoint
+                    - link: '#multicircle'
+                      title: Multicircle
+                    - link: '#multiconvex'
+                      title: Multiconvex
+                    - link: '#multipolygon'
+                      title: Multipolygon
+                    - link: '#multichull'
+                      title: Multichull
+                    - link: '#extended_well_known_text'
+                      title: EWKT
+        - url: aggregations
           docs:
-            - url: count-aggregation
-            - url: sum-aggregation
-            - url: avg-aggregation
-            - url: max-aggregation
-            - url: min-aggregation
-            - url: variance-aggregation
-            - url: std_deviation-aggregation
-            - url: median-aggregation
-            - url: mode-aggregation
-            - url: stats-aggregation
-            - url: extended_stats-aggregation
-        - url: bucket
-          title: Bucket
-          docs:
-            - url: filter-aggregation
-            - url: values-aggregation
-            - url: terms-aggregation
-            - url: histogram-aggregation
-            - url: range-aggregation
-    - url: scripting
-    - url: storage
+            - url: metrics
+              title: Metrics
+              docs:
+                - url: count-aggregation
+                - url: sum-aggregation
+                - url: avg-aggregation
+                - url: max-aggregation
+                - url: min-aggregation
+                - url: variance-aggregation
+                - url: std_deviation-aggregation
+                - url: median-aggregation
+                - url: mode-aggregation
+                - url: stats-aggregation
+                - url: extended_stats-aggregation
+            - url: bucket
+              title: Bucket
+              docs:
+                - url: filter-aggregation
+                - url: values-aggregation
+                - url: terms-aggregation
+                - url: histogram-aggregation
+                - url: range-aggregation
     - url: cluster
-    - url: info
-    - url: monitoring
-    # - url: stats
     # - url: wal
-    - url: backups
     # - url: kubernetes
 
 - title: Set up

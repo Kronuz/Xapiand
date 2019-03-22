@@ -1,5 +1,5 @@
 ---
-title: Schemas API
+title: Schemas
 ---
 
 A schema is the definition of how a document, and the fields it contains, are

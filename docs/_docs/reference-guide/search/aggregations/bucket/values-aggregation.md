@@ -28,7 +28,7 @@ The `<field_name>` in the `_field` parameter defines the field on which the
 aggregation will act upon.
 
 Assuming the data consists of documents representing bank accounts, as shown in
-the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
+the sample dataset of [Exploring Your Data]({{ '/docs/exploring' | relative_url }}#sample-dataset)
 section, listing all favorite fruits of all account holders:
 
 {% capture req %}

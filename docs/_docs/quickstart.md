@@ -29,7 +29,7 @@ docker run -p 8880:8880 --rm dubalu/xapiand:{{ site.version }} -vvvv
 ```
 
 
-You can also check the [Installation]({{ '/docs/installation/' | relative_url }})
+You can also check the [Installation]({{ '/docs/installation' | relative_url }})
 section for more details.
 
 ---
@@ -82,7 +82,7 @@ PUT /twitter/tweet/2?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying/' | relative_url }}) section.
+You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying' | relative_url }}) section.
 
 ---
 
@@ -124,4 +124,4 @@ GET /twitter/tweet/:search?q=user:Kronuz&pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-You can find out more in the [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}) section.
+You can find out more in the [Exploring Your Data]({{ '/docs/exploring' | relative_url }}) section.

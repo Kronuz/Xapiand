@@ -1,5 +1,5 @@
 ---
-title: Aggregations API
+title: Aggregations
 ---
 
 The aggregations framework helps provide aggregated data based on a search query.

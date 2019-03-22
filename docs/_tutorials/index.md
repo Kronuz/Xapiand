@@ -4,7 +4,7 @@ permalink: /tutorials/home/
 redirect_from: /tutorials/index.html
 ---
 
-In contrast to [Docs]({{ '/docs/' | relative_url }}), Tutorials provide more detailed, narrative
+In contrast to [Docs]({{ '/docs' | relative_url }}), Tutorials provide more detailed, narrative
 instruction that cover a variety of Xapiand topics and scenarios. Tutorials
 might contain the following:
 

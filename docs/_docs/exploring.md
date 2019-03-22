@@ -74,10 +74,10 @@ Content-Type: application/x-ndjson
 {: .note .caution }
 When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
 
-More information about `:restore` can be found in the [Backups]({{ '/reference-guide/backups' | relative_url }})
+More information about `:restore` can be found in the [Backups]({{ '/docs/reference-guide/backups' | relative_url }})
 section.
 
-After having loaded the dataset, you can then use the [Info API]({{ '/reference-guide/info' | relative_url }})
+After having loaded the dataset, you can then use the [Info API]({{ '/docs/reference-guide/info' | relative_url }})
 to get information about the new index:
 
 {% capture req %}
@@ -451,5 +451,5 @@ And the response (partially shown):
 ```
 
 There are many other aggregations capabilities that we won't go into detail here.
-The [Aggregations Reference Guide]({{ '/docs/reference-guide/aggregations/' | relative_url }})
+The [Aggregations Reference Guide]({{ '/docs/reference-guide/aggregations' | relative_url }})
 is a great starting point if you want to do further experimentation.

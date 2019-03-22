@@ -36,7 +36,7 @@ which the numeric values in the documents are extracted and used to compute the
 returned extended statistics.
 
 Assuming the data consists of documents representing bank accounts, as shown in
-the sample dataset of [Exploring Your Data]({{ '/docs/exploring/' | relative_url }}#sample-dataset)
+the sample dataset of [Exploring Your Data]({{ '/docs/exploring' | relative_url }}#sample-dataset)
 section:
 
 {% capture req %}

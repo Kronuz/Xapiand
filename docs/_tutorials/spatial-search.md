@@ -38,7 +38,7 @@ neighboring Berkeley in the San Francisco Bay Area.
 The red circle in the map has a radius of **20 km** and is at the latitude/longitude
 of _El Cerrito_ **(37.9180233, -122.3198401)**. The map also shows all
 **trixels** that will be searched for (to speed the query up).
-See [Hierarchical Triangular Mesh]({{ '/docs/reference-guide/htm' | relative_url }})
+See [Hierarchical Triangular Mesh]({{ '/docs/reference-guide/schemas/field-types/geospatial-type/htm' | relative_url }})
 to find how _HTM **trixels**_ work.
 
 {% capture req %}

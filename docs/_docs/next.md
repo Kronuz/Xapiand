@@ -12,5 +12,5 @@ the REST APIs. Hopefully this guide has given you a better understanding of
 what Xapiand is and more importantly, inspired you to further experiment with
 the rest of its great features!
 
-Tutorials can be found in the [Tutorials]({{ '/tutorials/' | relative_url }})
+Tutorials can be found in the [Tutorials]({{ '/tutorials' | relative_url }})
 section.
