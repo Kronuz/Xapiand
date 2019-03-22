@@ -1,16 +1,17 @@
 ---
-title: Storage API
+title: Storage
 ---
 
-The storage is designed to put files in volumes much in the way Facebook's
-Haystack <sup>[1](#footnote-1)</sup> works; once there a file enters the
-storage it can't really be deleted/modified from the volume, but instead, if
-a change is needed, a new file blob will be written to the volume. Storage is
-envisioned to be used when there are files you need to store which you know
-won't be changing often or at all.
+The Xapiand _Storage_ is designed to put files in volumes much in the way
+Facebook's _Haystack_ <sup>[1](#footnote-1)</sup> works; once there a file
+enters the storage it can't really be deleted/modified from the volume, but
+instead, if a change is needed, a new file blob will be written to the volume.
+Storage is envisioned to be used when there are files you need to store which
+you know won't be changing often or at all.
 
-Assuming there is a [PNG]({{ '/assets/Lenna.png' | absolute_url }}){:target="_blank"} file called `Lenna.png`
-in the working directory, lets add those to the storage using `STORE`:
+Assuming there is a [PNG]({{ '/assets/Lenna.png' | absolute_url }}){:target="_blank"}
+file called `Lenna.png` in the working directory, lets add those to the storage
+using `STORE`:
 
 {% capture req %}
 

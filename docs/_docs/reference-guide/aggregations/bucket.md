@@ -24,19 +24,19 @@ Available bucket aggregations:
   * [Filter](filter-aggregation)
   * [Values](values-aggregation)
   * [Terms](terms-aggregation)
-  * Date Histogram <sup>*</sup>
-  * Date Range <sup>*</sup>
-  * Geo-spatial Distance <sup>*</sup>
-  * Geo-spatial Trixels <sup>*</sup>
+  * Date Histogram <small>🔧</small>
+  * Date Range <small>🔧</small>
+  * Geo-spatial Distance <small>🔧</small>
+  * Geo-spatial Trixels <small>🔧</small>
   * [Histogram](histogram-aggregation)
-  * Missing value <sup>*</sup>
+  * Missing value <small>🔧</small>
   * [Range](range-aggregation)
-  * IP range <sup>*</sup>
-  * Geo-spatial IP <sup>*</sup>
+  * IP range <small>🔧</small>
+  * Geo-spatial IP <small>🔧</small>
 
 {: .note .unimplemented }
 **_Unimplemented Features!_**<br>
-Features with asterisk haven't yet been implemented...
+Some features haven't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
 
 

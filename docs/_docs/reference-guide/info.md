@@ -1,6 +1,5 @@
 ---
-title: Information API
-short_title: Info API
+title: Information
 ---
 
 You can retrieve information about the server, about a database, about a

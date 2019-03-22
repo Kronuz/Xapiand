@@ -20,7 +20,7 @@ metrics in each bucket).
 Available metrics aggregations:
 
   * [Count](count-aggregation)
-  * Cardinality <sup>*</sup>
+  * Cardinality <small>🔧</small>
   * [Sum](sum-aggregation)
   * [Average](avg-aggregation)
   * [Min](min-aggregation)
@@ -30,16 +30,16 @@ Available metrics aggregations:
   * [Median](median-aggregation)
   * [Mode](mode-aggregation)
   * [Statistics](stats-aggregation)
-  * Geo-spatial (bounds) <sup>*</sup>
-  * Geo-spatial (centroid) <sup>*</sup>
-  * Percentiles <sup>*</sup>
-  * Percentiles Rank <sup>*</sup>
-  * Scripted <sup>*</sup>
+  * Geo-spatial (bounds) <small>🔧</small>
+  * Geo-spatial (centroid) <small>🔧</small>
+  * Percentiles <small>🔧</small>
+  * Percentiles Rank <small>🔧</small>
+  * Scripted <small>🔧</small>
   * [Extended Statistics](extended_stats-aggregation)
 
 {: .note .unimplemented }
 **_Unimplemented Features!_**<br>
-Features with asterisk haven't yet been implemented...
+Some features haven't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
 
 
