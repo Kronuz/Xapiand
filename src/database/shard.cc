@@ -1177,7 +1177,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 Xapian::docid
 Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
-	L_CALL("Shard::replace_document_term({}, <doc>, {}, {})", repr(term), commit_, wal_);
+	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
 
 	ASSERT(is_writable());
 
@@ -1251,6 +1251,21 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					} else {
 						shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 						ver_prefix = "V" + serialise_length(shard_did);
+						auto ver_prefix_size = ver_prefix.size();
+						auto t_end = wdb->allterms_end(ver_prefix);
+						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
+							std::string current_term = *tit;
+							std::string_view current_ver(current_term);
+							current_ver.remove_prefix(ver_prefix_size);
+							if (!current_ver.empty()) {
+								if (version_ && !ver.empty() && ver != current_ver) {
+									// Throw error about wrong version!
+									throw Xapian::DocVersionConflictError("Version mismatch!");
+								}
+								version = sortable_unserialise(current_ver);
+								break;
+							}
+						}
 					}
 				} else {
 					auto it = wdb->postlist_begin(term);
