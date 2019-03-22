@@ -18,7 +18,7 @@ stored and indexed. For instance, use schemas to define:
 
 Each field has a data type which can be:
 
-* a simple type like `text`, `string`, `keyword`, `date`, `float` or `boolean`.
+* a simple type like `text`, `string`, `keyword`, `datetime`, `float` or `boolean`.
 * a sub-type which supports the hierarchical nature of JSON such as `object` or `array`.
 * or a specialised type like `geospatial`.
 

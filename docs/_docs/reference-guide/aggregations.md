@@ -123,7 +123,7 @@ how to run the aggregation and format the response. However there are two cases
 in which {{ site.name }} cannot figure out this information. For those cases,
 it is possible to give {{ site.name }} a hint using the `_value_type` option,
 which accepts the same values as the index schema (e.g. `string`, `positive`,
-`integer`, `date`, `boolean`, etc.)
+`integer`, `datetime`, `boolean`, etc.)
 
 ### Query DSL
 

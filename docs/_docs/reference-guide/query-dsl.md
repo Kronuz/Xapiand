@@ -12,37 +12,14 @@ based on the values assigned to documents, which can be combined using a number
 of different methods to produce more complex queries.
 
 
-## Leaf Query Clauses
+## [Leaf Query Clauses](leaf-queries)
 
 Leaf query clauses look for a particular value in a particular field, such as
 the match, term or range queries. These queries can be used by themselves.
 
-* [**_Match All Query_**](leaf-queries/match-all-query)
-* [**_Simple Queries_**](leaf-queries/simple-queries)
-* [**_Text Queries_**](leaf-queries/text-queries)
-* [**_Namespace Queries_**](leaf-queries/namespace-queries)
-* [**_Casting Values_**](leaf-queries/casting-values)
 
-## Compound Query Clauses
+## [Compound Query Clauses](compound-queries)
 
 Compound query clauses wrap other leaf or compound queries and are used to
 combine multiple queries in a logical fashion (such as boolean query), or to
 alter their behaviour.
-
-* [**_Logical Operators_**](compound-queries/logical-operators)
-* [**_Maybe Operator_**](compound-queries/maybe-operator)
-* [**_Filter Operator_**](compound-queries/filter-operator)
-* [**_Elite Set Operator_**](compound-queries/elite-set-operator)
-* [**_Range Searches_**](compound-queries/range-searches)
-* [**_Geospatial Searches_**](compound-queries/geospatial-searches)
-
-
-<!--
-* `_max`          - Pick the maximum weight of any subquery. This matches the
-                    same documents as a `_or`, but the weight contributed is
-                    the maximum weight from any matching subquery (for `_or`,
-                    it's the sum of the weights from the matching subqueries).
-* `_wildcard`     - Wildcard expansion.
-* `_scale_weight` -
-* `_synonym`      -
- -->

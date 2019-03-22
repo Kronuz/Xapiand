@@ -2,59 +2,57 @@
 title: Exploring Your Data
 ---
 
-## Sample dataset
-
 Now that we've gotten a glimpse of the basics, let's try to work on a more
 realistic dataset. I've prepared a sample of fictitious JSON documents of
-customer bank account information. Each document has the following schema:
+customer bank account information. Each document has the following form:
 
 ```json
-  {
-    "accountNumber": 121931,
-    "balance": 221.46,
-    "employer": "Globoil",
-    "name": {
-      "firstName": "Michael",
-      "lastName": "Lee"
-    },
-    "age": 24,
-    "gender": "male",
-    "contact": {
-      "address": "630 Victor Road",
-      "city": "Leyner",
-      "state": "Indiana",
-      "postcode": "61952",
-      "phone": "+1 (924) 594-3216",
-      "email": "michael.lee@globoil.co.uk"
-    },
-    "checkin": {
-      "_point": {
-        "_longitude": -95.63079,
-        "_latitude": 31.76212
-      }
-    },
-    "favoriteFruit": "lemon",
-    "eyeColor": "blue",
-    "style": {
-      "_namespace": true,
-      "_partial_paths": true,
-      "clothing": {
-        "pants": "khakis",
-        "shirt": "t-shirt"
-      },
-      "hairstyle": "slick back"
-    },
-    "personality": {
-      "_language": "en",
-      "_value": "A lot can be assumed..."
+{
+  "accountNumber": 121931,
+  "balance": 221.46,
+  "employer": "Globoil",
+  "name": {
+    "firstName": "Michael",
+    "lastName": "Lee"
+  },
+  "age": 24,
+  "gender": "male",
+  "contact": {
+    "address": "630 Victor Road",
+    "city": "Leyner",
+    "state": "Indiana",
+    "postcode": "61952",
+    "phone": "+1 (924) 594-3216",
+    "email": "michael.lee@globoil.co.uk"
+  },
+  "checkin": {
+    "_point": {
+      "_longitude": -95.63079,
+      "_latitude": 31.76212
     }
+  },
+  "favoriteFruit": "lemon",
+  "eyeColor": "blue",
+  "style": {
+    "_namespace": true,
+    "_partial_paths": true,
+    "clothing": {
+      "pants": "khakis",
+      "shirt": "t-shirt"
+    },
+    "hairstyle": "slick back"
+  },
+  "personality": {
+    "_language": "en",
+    "_value": "A lot can be assumed..."
+  }
 }
 ```
 
 For the curious, this data was generated using [Faker](https://faker.readthedocs.io){:target="_blank"},
-with this script: [generator.py]({{ '/assets/generator.py' | absolute_url }}){:target="_blank"}
-so please ignore the actual values and semantics of the data as these are all
-randomly generated.
+using the [generator.py]({{ '/assets/generator.py' | absolute_url }}){:target="_blank"}
+script, so please ignore the actual values and semantics of the data as these
+are all randomly generated.
 
 
 ## Loading the Sample Dataset
@@ -73,10 +71,10 @@ Content-Type: application/x-ndjson
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .note .warning }
+{: .note .caution }
 When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
 
-More information is there in the [Backups]({{ '/reference-guide/backups' | relative_url }})
+More information about `:restore` can be found in the [Backups]({{ '/reference-guide/backups' | relative_url }})
 section.
 
 After having loaded the dataset, you can then use the [Info API]({{ '/reference-guide/info' | relative_url }})
@@ -96,7 +94,6 @@ Response should be something like:
 {
   "database_info": {
     "endpoint": "bank",
-    "uuid": "18ed47d5-0b42-42e9-913f-f8f819a33aef:72343e50-af36-4f7f-9fe5-62c10194b7af:40a9d364-30f8-46d5-b5d8-b96ed2929d1d:b5bb86ba-4ecb-4fe9-ad4b-a19c256700c9:96e61484-0e63-4cab-8a8b-eaf3f12f107c",
     "doc_count": 1000,
     "last_id": 1000,
     "doc_del": 0,

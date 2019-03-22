@@ -3,7 +3,7 @@ title: Date Datatype
 short_title: Date / Time
 ---
 
-JSON doesn't have a date datatype, so dates in Xapiand can either be:
+JSON doesn't have a date or datetime datatype, so dates in Xapiand can either be:
 
 * Strings containing formatted dates, e.g. `"2001-11-15T13:12:00"`,
   `"2001-11-15"`, `"2001/11/15 13:12:00"` or ISO-8601.
