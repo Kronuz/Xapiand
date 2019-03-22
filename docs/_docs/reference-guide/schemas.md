@@ -37,7 +37,7 @@ typing can be useful to get started, at some point you will want to specify
 your own explicit types.
 
 You can create field types when you create an index, and you can add fields to
-an existing index with the PUT schema API.
+an existing index with the `PUT` schema API.
 
 
 ## [Casting Types](casting-types)

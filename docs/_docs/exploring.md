@@ -209,12 +209,13 @@ As for the response, we see the following parts:
 ## Introducing the Query Language
 
 Xapiand provides a JSON-style _domain-specific language_ that you can use to
-execute queries. This is referred to as the Query DSL. The query language is
-quite comprehensive and can be intimidating at first glance but the best way to
-actually learn it is to start with a few basic examples.
+execute queries. This is referred to as the [Query DSL](reference-guide/query-dsl).
+The query language is quite comprehensive and can be intimidating at first
+glance but the best way to actually learn it is to start with a few basic
+examples.
 
 {: .note .tip }
-The Query DSL method for searching is much more efficient.
+The **Query DSL** method for searching is much more efficient.
 
 Going back to our last example, we executed a query to retrieve all documents
 using `q=*`. Here is the same exact search using the alternative request body
@@ -233,7 +234,7 @@ POST /bank/:search?pretty
 {% endcapture %}
 {% include curl.html req=req %}
 
-The difference here is that instead of passing `q=*` in the URI, we POST a
+The difference here is that instead of passing `q=*` in the URI, we `POST` a
 JSON-style query request body to the `:search` API.
 
 Dissecting the above, the query part tells us what our query definition is and

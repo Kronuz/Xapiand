@@ -9,7 +9,7 @@ categories: [release]
 This release fixes a problem where restore command blew memory usage. Documents
 are now spoon-fed to the index, preventing that atrocity.
 
-Commands MERGE and PATCH now check document exists or return 404.
+Commands `MERGE` and `PATCH` now check document exists or return 404.
 
 The HTTP server failed with 500 when receiving spaces or malformed messages,
 this is no longer the case, it now properly returns the HTTP error code and

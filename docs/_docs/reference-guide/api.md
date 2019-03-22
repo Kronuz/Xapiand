@@ -16,23 +16,24 @@ otherwise specified.
 
 You may see these standard HTTP methods referred to as CRUD, or _Create_, _Read_,
 _Update_, _Delete_. Although CRUD has roots in database operations, you can also
-map those operations to the standard HTTP methods. For example, use a _POST_
-request to create a new resource, a _GET_ request to read or retrieve a resource,
-a _PATCH_ request to edit a resource, and a _DELETE_ request to delete a resource.
+map those operations to the standard HTTP methods. For example, use a `POST`
+request to create a new resource, a `GET` request to read or retrieve a resource,
+a `PATCH` or `UPDATE` request to edit a resource, and a `DELETE` request to
+delete a resource.
 
 ### Deviations from REST
 
 We do our best to use standard HTTP methods with accurate and well-known status
 codes in the Xapiand API, but here are some additions and deviations.
 
-Additionally to the standard HTTP methods, we also use _UPDATE_ and _STORE_
+Additionally to the standard HTTP methods, we also use `UPDATE` and `STORE`
 methods for certain operations.
 
 ### HTTP methods and response codes
 
-- **GET**, **OPTIONS** and **HEAD** requests are safe and idempotent, and won't alter a resource.
-- **DELETE**, **PUT**, **UPDATE** and **STORE** methods are idempotent.
-- **POST** and **PATCH** aren't safe or idempotent.
+- `GET`, `OPTIONS` and `HEAD` requests are safe and idempotent, and won't alter a resource.
+- `DELETE`, `PUT`, `UPDATE` and `STORE` methods are idempotent.
+- `POST` and `PATCH` aren't safe or idempotent.
 
 {: .note .info }
 **_Idempotent Methods_**<br>
@@ -41,11 +42,12 @@ without different outcomes. It would not matter if the method is called only
 once, twice or a hundred times over, the result should be the same. This only
 applies to the result, not the resource itself.
 
-If your firewall rules don't support HTTP methods like _PATCH_, _UPDATE_, _STORE_
-or _DELETE_, use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"} (or _HTTP-Method-Override_) header. Pass the method you want to use in the
-`X-HTTP-Method-Override` header and use the **_POST_** method. The
+If your firewall rules don't support HTTP methods like `PATCH`, `UPDATE`, `STORE`
+or `DELETE`, use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"}
+(or _HTTP-Method-Override_) header. Pass the method you want to use in the
+`X-HTTP-Method-Override` header and use the `POST` method. The
 override won't work with any other method, so if you try and use the override
-header with a _GET_, _PATCH_, _UPDATE_, _STORE_, _PUT_, or _DELETE_ method,
+header with a `GET`, `PATCH`, `UPDATE`, `STORE`, `PUT`, or `DELETE` method,
 you'll receive an error.
 
 

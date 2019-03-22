@@ -58,7 +58,7 @@ Response will include the following information about the database:
 ### Document Information
 
 To also retrive information about a given document, pass the document ID as
-part of the GET query:
+part of the `GET` query:
 
 {% capture req %}
 
