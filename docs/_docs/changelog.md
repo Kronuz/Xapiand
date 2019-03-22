@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Added
+- Added --pretty (and --no-pretty) options (for default ?pretty)
+- Verbosity also toggles "prettiness"
 
 
 ---
