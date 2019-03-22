@@ -65,6 +65,7 @@ constexpr const char RESPONSE_TERM_FREQ[]                   = "term_freq";
 constexpr const char RESPONSE_POS[]                         = "pos";
 
 constexpr const char RESPONSE_DOCID[]                       = "docid";
+constexpr const char RESPONSE_SHARD[]                       = "shard";
 constexpr const char RESPONSE_DATA[]                        = "data";
 constexpr const char RESPONSE_RAW_DATA[]                    = "raw_data";
 constexpr const char RESPONSE_TERMS[]                       = "terms";

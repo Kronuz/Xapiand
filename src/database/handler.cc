@@ -1839,7 +1839,14 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 
 	MsgPack info;
 
-	info[RESPONSE_DOCID] = document.get_docid();
+	auto did = document.get_docid();
+	info[RESPONSE_DOCID] = did;
+
+	size_t n_shards = endpoints.size();
+	if (n_shards != 1) {
+		size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
+		info[RESPONSE_SHARD] = shard_num;
+	}
 
 	if (raw_data) {
 		info[RESPONSE_RAW_DATA] = data.serialise();
@@ -1926,7 +1933,6 @@ DatabaseHandler::get_database_info()
 	auto lastdocid = db->get_lastdocid();
 	return {
 		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path) },
-		{ RESPONSE_UUID, db->get_uuid() },
 		{ RESPONSE_DOC_COUNT, doccount },
 		{ RESPONSE_LAST_ID, lastdocid },
 		{ RESPONSE_DOC_DEL, lastdocid - doccount },
