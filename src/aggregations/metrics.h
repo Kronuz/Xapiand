@@ -610,6 +610,7 @@ public:
 					if (_sigma >= 0.0) {
 						break;
 					}
+					/* FALLTHROUGH */
 				default:
 					THROW(AggregationError, "'{}' must be a positive number", RESERVED_AGGS_SIGMA);
 			}
