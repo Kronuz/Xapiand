@@ -1,19 +1,20 @@
 sudo: required
+language: cpp
+dist: trusty
 
-language: c++
-
-before_install:
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  - sudo apt-get update
-  - sudo apt-get install gcc-8 g++-8
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 60
-  - sudo update-alternatives --set gcc /usr/bin/gcc-8
-  - sudo update-alternatives --set g++ /usr/bin/g++-8
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-6.0
+      - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main'
+        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+    packages:
+      - clang-6.0
+      - libstdc++6
 
 script:
-  - echo `lsb_release -a`
   - mkdir -p builddir
   - cd builddir
-  - cmake ..
+  - CC=clang-6.0 && CXX=clang-6.0 cmake ..
   - make
