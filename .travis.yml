@@ -5,16 +5,15 @@ language: c++
 before_install:
   - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
   - sudo apt-get update
-  - sudo apt-get install gcc-7 g++-7
-  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 60
-  - sudo update-alternatives --set gcc /usr/bin/gcc-7
-  - sudo update-alternatives --set g++ /usr/bin/g++-7
+  - sudo apt-get install gcc-8 g++-8
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60
+  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 60
+  - sudo update-alternatives --set gcc /usr/bin/gcc-8
+  - sudo update-alternatives --set g++ /usr/bin/g++-8
 
 script:
-  - gcc-7 --version
+  - echo `lsb_release -a`
   - mkdir -p builddir
   - cd builddir
   - cmake ..
   - make
-
