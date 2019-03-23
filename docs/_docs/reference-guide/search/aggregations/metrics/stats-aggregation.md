@@ -42,7 +42,7 @@ section:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",

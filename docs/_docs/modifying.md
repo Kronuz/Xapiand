@@ -16,7 +16,7 @@ command again:
 {% capture req %}
 
 ```json
-PUT /customer/1?pretty
+PUT /customer/1
 
 {
   "name": "John Doe"
@@ -33,7 +33,7 @@ existing one with the ID of `1`:
 {% capture req %}
 
 ```json
-PUT /customer/1?pretty
+PUT /customer/1
 
 {
   "name": "Johnny Doe"
@@ -51,7 +51,7 @@ and the existing document(s) already in the index remains untouched.
 {% capture req %}
 
 ```json
-PUT /customer/2?pretty
+PUT /customer/2
 
 {
   "name": "Jane Doe",
@@ -73,7 +73,7 @@ This example shows how to index a document without an explicit ID:
 {% capture req %}
 
 ```json
-POST /customer?pretty
+POST /customer
 
 {
   "name": "Richard Roe"
@@ -97,7 +97,7 @@ the name field from _"Johnny Doe"_ to _"John Doe"_:
 {% capture req %}
 
 ```json
-PUT /customer/1?pretty
+PUT /customer/1
 
 {
   "name": "Johnny Doe",
@@ -113,7 +113,7 @@ the name field to _"John Doe"_ and at the same time add a _"gender"_ field to it
 {% capture req %}
 
 ```json
-UPDATE /customer/1?pretty
+UPDATE /customer/1
 
 {
   "name": "John Doe",
@@ -131,7 +131,7 @@ script to increment the age by 5:
 {% capture req %}
 
 ```json
-UPDATE /customer/1?pretty
+UPDATE /customer/1
 
 {
   "_script": "_doc.age = _old_doc.age + 5"
@@ -160,7 +160,7 @@ query condition (like an SQL UPDATE-WHERE statement):
 {% capture req %}
 
 ```json
-UPDATE /customer/:search?q=*&pretty
+UPDATE /customer/:search?q=*
 
 {
   "_script": "_doc.age = _old_doc.age + 5"
@@ -180,7 +180,7 @@ our previous customer with the ID of `2`:
 {% capture req %}
 
 ```json
-DELETE /customer/2?pretty
+DELETE /customer/2
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -200,7 +200,7 @@ query condition.
 {% capture req %}
 
 ```json
-DELETE /customer/:search?q=gender:male&pretty
+DELETE /customer/:search?q=gender:male
 ```
 {% endcapture %}
 {% include curl.html req=req %}

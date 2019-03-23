@@ -25,7 +25,7 @@ who like _bananas_ first:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

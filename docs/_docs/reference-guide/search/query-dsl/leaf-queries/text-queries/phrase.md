@@ -27,7 +27,7 @@ including the stop words `these`, `are`, `few`, `and` `far` and `between`.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -41,7 +41,7 @@ GET /bank/:search?pretty
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

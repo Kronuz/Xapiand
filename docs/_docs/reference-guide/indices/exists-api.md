@@ -15,7 +15,7 @@ For example:
 {% capture req %}
 
 ```json
-HEAD /twitter/?pretty
+HEAD /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}

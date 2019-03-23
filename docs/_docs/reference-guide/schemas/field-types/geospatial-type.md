@@ -15,7 +15,7 @@ Fields of type geo_point accept latitude-longitude pairs, which can be used:
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "checkin": {
@@ -68,7 +68,7 @@ to find how _HTM_ levels work.
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "neighborhood": {
@@ -98,7 +98,7 @@ UPDATE /bank/1?pretty
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 {
   "neighborhood": {
     "_circle": {
@@ -123,7 +123,7 @@ Calculate the convex hull for the coordinates using the
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 {
   "neighborhood": {
     "_chull": {

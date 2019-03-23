@@ -15,7 +15,7 @@ using the keyword `_limit`, which by default is set to `10`:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

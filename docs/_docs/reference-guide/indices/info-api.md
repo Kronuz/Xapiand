@@ -8,7 +8,7 @@ The simplest form of `:info` gets information about an index:
 {% capture req %}
 
 ```json
-GET /bank/:info?pretty
+GET /bank/:info
 ```
 {% endcapture %}
 {% include curl.html req=req %}

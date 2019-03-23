@@ -13,7 +13,7 @@ The _Delete Index API_ allows to delete an existing index.
 {% capture req %}
 
 ```json
-DELETE /twitter/?pretty
+DELETE /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}

@@ -19,7 +19,7 @@ Extract it to our current directory and let's load it into our cluster as follow
 {% capture req %}
 
 ```json
-POST /cities/:restore?pretty
+POST /cities/:restore
 Content-Type: application/x-ndjson
 
 @cities.ndjson
@@ -44,7 +44,7 @@ to find how _HTM **trixels**_ work.
 {% capture req %}
 
 ```json
-GET /cities/:search?pretty
+GET /cities/:search
 
 {
   "_query": {
@@ -99,7 +99,7 @@ The latitude/longitude of _San Francisco_ is **(37.7576171, -122.5776844)**.
 {% capture req %}
 
 ```json
-GET /cities/:search?pretty
+GET /cities/:search
 
 {
   "_query": {

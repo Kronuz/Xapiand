@@ -12,7 +12,7 @@ in the active stop words list will not be searched for.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -37,7 +37,7 @@ in the `_stopwords` keyword:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -58,7 +58,7 @@ This feature hasn't yet been implemented...
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

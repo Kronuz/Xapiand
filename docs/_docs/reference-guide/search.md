@@ -7,7 +7,7 @@ You can search for documents by using the `:search` endpoint.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 ```
 {% endcapture %}
 {% include curl.html req=req %}

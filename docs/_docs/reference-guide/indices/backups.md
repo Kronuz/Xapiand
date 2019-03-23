@@ -46,7 +46,7 @@ to and from JSON, NDJSON or MessagePack over HTTP, using the online API.
 
 {% capture req %}
 ```json
-POST /twitter/:dump?pretty
+POST /twitter/:dump
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -55,7 +55,7 @@ POST /twitter/:dump?pretty
 
 {% capture req %}
 ```json
-POST /twitter/:restore?pretty
+POST /twitter/:restore
 
 [
   {
@@ -86,7 +86,7 @@ setting the `Accept` header to either `application/x-msgpack` or
 
 {% capture req %}
 ```json
-POST /twitter/:dump?pretty
+POST /twitter/:dump
 Accept: application/x-msgpack
 ```
 {% endcapture %}
@@ -97,7 +97,7 @@ To restore those, you should specify the `Content-Type` header accordingly:
 {% capture req %}
 
 ```json
-POST /new_twitter/:restore?pretty
+POST /new_twitter/:restore
 Content-Type: application/x-msgpack
 
 @twitter.msgpack
@@ -161,7 +161,7 @@ Restore the index documents to the new index:
 
 {% capture req %}
 ```json
-POST /new_twitter/:restore?pretty
+POST /new_twitter/:restore
 
 [
   {

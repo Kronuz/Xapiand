@@ -7,7 +7,7 @@ The most basic kind of information you can get is the cluster information:
 {% capture req %}
 
 ```json
-GET /?pretty
+GET /
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -28,7 +28,7 @@ You can list all nodes in the cluster by using the `:nodes` endpoint.
 {% capture req %}
 
 ```json
-GET /:nodes?pretty
+GET /:nodes
 ```
 {% endcapture %}
 {% include curl.html req=req %}

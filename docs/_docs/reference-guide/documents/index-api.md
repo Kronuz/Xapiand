@@ -9,7 +9,7 @@ _"twitter"_ index with an ID of `1`:
 {% capture req %}
 
 ```json
-PUT /twitter/1?pretty
+PUT /twitter/1
 
 {
     "user" : "Kronuz",
@@ -55,7 +55,7 @@ instead of `PUT`):
 {% capture req %}
 
 ```json
-POST /twitter?pretty
+POST /twitter
 
 {
     "user" : "Yosef",

@@ -9,7 +9,7 @@ valued `1`:
 {% capture req %}
 
 ```json
-GET /twitter/1?pretty
+GET /twitter/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -43,7 +43,7 @@ example:
 {% capture req %}
 
 ```json
-HEAD /twitter/1?pretty
+HEAD /twitter/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}

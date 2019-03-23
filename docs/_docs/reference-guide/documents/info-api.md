@@ -9,7 +9,7 @@ and passing the document ID as part of the `GET` query:
 {% capture req %}
 
 ```json
-GET /bank/:info/1?pretty
+GET /bank/:info/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}

@@ -9,7 +9,7 @@ with ID `1`:
 {% capture req %}
 
 ```json
-DELETE /twitter/1?pretty
+DELETE /twitter/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}

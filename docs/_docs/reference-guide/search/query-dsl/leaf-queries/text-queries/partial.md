@@ -19,7 +19,7 @@ _**wildc**arded_, _**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -38,7 +38,7 @@ as part of the query text:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

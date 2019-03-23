@@ -21,7 +21,7 @@ _Text Datatype_:
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "resume": {

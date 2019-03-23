@@ -69,7 +69,7 @@ Ordering the buckets by their document count in an ascending manner:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -94,7 +94,7 @@ Ordering the buckets alphabetically by their keys in an ascending manner:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -122,7 +122,7 @@ the aggregation name):
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -155,7 +155,7 @@ the aggregation name):
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -202,7 +202,7 @@ value).
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -251,7 +251,7 @@ to request the response as an object keyed by the buckets keys by using the
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -320,7 +320,7 @@ hits using the `_min_doc_count` option:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -387,7 +387,7 @@ them as if they had a value.
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -422,7 +422,7 @@ range:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",

@@ -34,7 +34,7 @@ section, listing all favorite fruits of all account holders:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": "*",

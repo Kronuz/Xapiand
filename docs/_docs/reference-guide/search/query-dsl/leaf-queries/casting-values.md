@@ -8,7 +8,7 @@ are compatible.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -29,7 +29,7 @@ The following example will convert the integer `84535` to text `"84535"`:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

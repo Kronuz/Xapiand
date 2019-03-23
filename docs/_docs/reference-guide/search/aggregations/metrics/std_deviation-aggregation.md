@@ -33,7 +33,7 @@ section:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -82,7 +82,7 @@ you can set `_sigma` in the request:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",

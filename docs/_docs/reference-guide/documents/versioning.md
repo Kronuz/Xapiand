@@ -21,7 +21,7 @@ a version to it:
 {% capture req %}
 
 ```json
-PUT /twitter/user/Kronuz?pretty
+PUT /twitter/user/Kronuz
 
 {
   "name" : "Germán Méndez Bravo"
@@ -59,7 +59,7 @@ Let’s create a new blog post:
 {% capture req %}
 
 ```json
-PUT /blog/1?pretty
+PUT /blog/1
 
 {
   "title": "My first blog entry",
@@ -78,7 +78,7 @@ First we retrieve the document:
 {% capture req %}
 
 ```json
-GET /blog/1?pretty
+GET /blog/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -102,7 +102,7 @@ we pass `version=1` as a query param (or `_version` as part of the document body
 {% capture req %}
 
 ```json
-PUT /blog/1?pretty&version=1
+PUT /blog/1?version=1
 
 {
   "title": "My first blog entry",

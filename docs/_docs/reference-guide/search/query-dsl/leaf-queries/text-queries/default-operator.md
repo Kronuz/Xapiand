@@ -22,7 +22,7 @@ To make **AND** the default operator and thus forcing a query to search for
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -45,7 +45,7 @@ _Elite Set_ uses the `_elite_set` modifier.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

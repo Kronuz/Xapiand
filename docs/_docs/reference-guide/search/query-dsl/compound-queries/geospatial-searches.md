@@ -13,7 +13,7 @@ Use `_point` to directly match an specific point:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -39,7 +39,7 @@ documents within the given circle. For that, the `_in` keyword is needed:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -73,7 +73,7 @@ Use `_polygon`.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {
@@ -187,7 +187,7 @@ _longitude_ of **-74.01042**.
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": {

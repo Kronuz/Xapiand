@@ -102,7 +102,7 @@ You can get the information about the document as usual:
 {% capture req %}
 
 ```json
-GET /assets/:info/Lenna?pretty
+GET /assets/:info/Lenna
 ```
 {% endcapture %}
 {% include curl.html req=req %}

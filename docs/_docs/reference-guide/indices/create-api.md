@@ -9,7 +9,7 @@ documents in Xapiand are stored inside of one index or another.
 {% capture req %}
 
 ```json
-POST /twitter/:touch?pretty
+POST /twitter/:touch
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -39,7 +39,7 @@ defined in the body:
 {% capture req %}
 
 ```json
-POST /twitter/:touch?pretty
+POST /twitter/:touch
 
 {
   "_settings": {
@@ -60,7 +60,7 @@ body:
 {% capture req %}
 
 ```json
-POST /twitter/:touch?pretty
+POST /twitter/:touch
 
 {
   "_schema": {
@@ -95,7 +95,7 @@ This feature hasn't yet been implemented...
 {% capture req %}
 
 ```json
-UPDATE /twitter/?pretty
+UPDATE /twitter/
 
 {
   "_settings": {
@@ -120,7 +120,7 @@ UPDATE /twitter/?pretty
 {% capture req %}
 
 ```json
-UPDATE /twitter/?pretty
+UPDATE /twitter/
 
 {
   "_settings": {

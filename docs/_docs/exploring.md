@@ -63,7 +63,7 @@ let's load it into our cluster as follows:
 {% capture req %}
 
 ```json
-POST /bank/:restore?pretty
+POST /bank/:restore
 Content-Type: application/x-ndjson
 
 @accounts.ndjson
@@ -83,7 +83,7 @@ to get information about the new index:
 {% capture req %}
 
 ```json
-GET /bank/:info?pretty
+GET /bank/:info
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -132,7 +132,7 @@ returns all documents in the bank index:
 {% capture req %}
 
 ```json
-GET /bank/:search?q=*&sort=accountNumber&pretty
+GET /bank/:search?q=*&sort=accountNumber
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -224,7 +224,7 @@ method:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -248,7 +248,7 @@ sort, here we pass in `limit`:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -265,7 +265,7 @@ This example does a _match all_ and returns documents 10 through 19:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -287,7 +287,7 @@ descending order and returns the top 10 (default for `limit`) documents.
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -323,7 +323,7 @@ This example shows how to return two fields using the _Field Selector_,
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -344,7 +344,7 @@ from the search:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -360,7 +360,7 @@ POST /bank/:search?pretty
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": {
@@ -396,7 +396,7 @@ the count of accounts by state:
 {% capture req %}
 
 ```json
-GET /bank/:search?pretty
+GET /bank/:search
 
 {
   "_query": "*",

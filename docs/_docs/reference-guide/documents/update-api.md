@@ -18,7 +18,7 @@ For example, let’s index a simple doc:
 {% capture req %}
 
 ```json
-PUT /test/1?pretty
+PUT /test/1
 
 {
   "counter" : 1,
@@ -38,7 +38,7 @@ passed fields (simple recursive merge, inner merging of objects, replacing core
 {% capture req %}
 
 ```json
-UPDATE /test/1?pretty
+UPDATE /test/1
 
 {
   "name" : "new_name"
@@ -59,7 +59,7 @@ Now, we can execute a script that would increment the counter:
 {% capture req %}
 
 ```json
-UPDATE /test/1?pretty
+UPDATE /test/1
 
 {
   "_script": "_doc.counter = _old_doc.counter + 1"
@@ -73,7 +73,7 @@ We can add a tag to the list of tags (if the tag exists, it still gets added, si
 {% capture req %}
 
 ```json
-UPDATE /test/1?pretty
+UPDATE /test/1
 
 {
   "_script": {
@@ -97,7 +97,7 @@ This feature hasn't yet been implemented...
 {% capture req %}
 
 ```json
-UPDATE /test/1?pretty
+UPDATE /test/1
 
 {
   "_script": {
@@ -116,7 +116,7 @@ We can also programmatically add a new field to the document:
 {% capture req %}
 
 ```json
-UPDATE /test/1?pretty
+UPDATE /test/1
 
 {
   "_script": {

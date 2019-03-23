@@ -32,7 +32,7 @@ section, computing the average age of all account holders:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",

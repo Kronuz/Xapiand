@@ -34,7 +34,7 @@ section, computing the max balance value across all accounts:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",

@@ -43,7 +43,7 @@ automatically):
 {% capture req %}
 
 ```json
-PUT /twitter/user/Kronuz?pretty
+PUT /twitter/user/Kronuz
 
 {
   "name" : "German M. Bravo"
@@ -56,7 +56,7 @@ PUT /twitter/user/Kronuz?pretty
 {% capture req %}
 
 ```json
-PUT /twitter/tweet/1?pretty
+PUT /twitter/tweet/1
 
 {
   "user": "Kronuz",
@@ -71,7 +71,7 @@ PUT /twitter/tweet/1?pretty
 {% capture req %}
 
 ```json
-PUT /twitter/tweet/2?pretty
+PUT /twitter/tweet/2
 
 {
   "user": "Kronuz",
@@ -93,7 +93,7 @@ Now, let's see if the information that was added by GETting it:
 {% capture req %}
 
 ```json
-GET /twitter/user/Kronuz?pretty
+GET /twitter/user/Kronuz
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -101,7 +101,7 @@ GET /twitter/user/Kronuz?pretty
 {% capture req %}
 
 ```json
-GET /twitter/tweet/1?pretty
+GET /twitter/tweet/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -109,7 +109,7 @@ GET /twitter/tweet/1?pretty
 {% capture req %}
 
 ```json
-GET /twitter/tweet/2?pretty
+GET /twitter/tweet/2
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -119,7 +119,7 @@ Let's find all the tweets that Kronuz posted:
 {% capture req %}
 
 ```json
-GET /twitter/tweet/:search?q=user:Kronuz&pretty
+GET /twitter/tweet/:search?q=user:Kronuz
 ```
 {% endcapture %}
 {% include curl.html req=req %}

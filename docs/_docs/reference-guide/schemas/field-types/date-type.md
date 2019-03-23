@@ -20,7 +20,7 @@ back to a string depending on the date format that is associated with the field.
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "birthday": "2001-11-15T13:12:00"
@@ -33,7 +33,7 @@ UPDATE /bank/1?pretty
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "birthday": {
@@ -93,7 +93,7 @@ The supported units are:
 {% capture req %}
 
 ```json
-UPDATE /bank/2?pretty
+UPDATE /bank/2
 
 {
     "birthday": {
@@ -129,7 +129,7 @@ For example:
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "wakeupTime": {
@@ -149,7 +149,7 @@ For example:
 {% capture req %}
 
 ```json
-UPDATE /bank/1?pretty
+UPDATE /bank/1
 
 {
   "delay": {

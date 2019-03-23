@@ -54,7 +54,7 @@ relative to their `balance`:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
@@ -107,7 +107,7 @@ It is possible to customize the key associated with each bucket in each range:
 {% capture req %}
 
 ```json
-POST /bank/:search?pretty
+POST /bank/:search
 
 {
   "_query": "*",
