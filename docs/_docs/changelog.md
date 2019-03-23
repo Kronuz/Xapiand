@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added --pretty (and --no-pretty) options (for default ?pretty)
 - Verbosity also toggles "prettiness"
 
+### Fixed
+- Fixed `_version` checks
+
 
 ---
 ## [0.15.0] - 2019-03-21
