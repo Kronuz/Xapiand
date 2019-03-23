@@ -20,32 +20,6 @@
 #ifndef XAPIAN_INCLUDED_VERSION_H
 #define XAPIAN_INCLUDED_VERSION_H
 
-#ifdef __GNUC__
-#if __GNUC__ < 3 || (__GNUC__ == 3 && __GNUC_MINOR__ == 0)
-#error Xapian no longer supports GCC < 3.1
-#else
-#if !defined(__GXX_ABI_VERSION) || __GXX_ABI_VERSION != 1002
-#if defined __GXX_ABI_VERSION && __GXX_ABI_VERSION >= 1002
-#warning The C++ ABI version of compiler you are using does not exactly match
-#warning that of the compiler used to build the library. If linking fails
-#warning due to missing symbols, this is probably the reason why.
-#warning The Xapian library was built with g++ 4.2.1
-#else
-#error The C++ ABI version of compiler you are using does not match
-#error that of the compiler used to build the library. The versions
-#error must match or your program will not work correctly.
-#error The Xapian library was built with g++ 4.2.1
-#endif
-#endif
-
-#ifdef _GLIBCXX_DEBUG
-#error You are compiling with _GLIBCXX_DEBUG defined, but the library
-#error was not compiled with this flag. The settings must match or your
-#error program will not work correctly.
-#endif
-#endif
-#endif
-
 /// The library was compiled with GCC's -fvisibility=hidden option.
 #define XAPIAN_ENABLE_VISIBILITY
 
