@@ -10,8 +10,8 @@ addons:
       - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main'
         key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
-      - gcc-6
-      - g++-6
+      - gcc-8
+      - g++-8
       - clang-7
       - libc++-7-dev
       - libc++abi-7-dev
