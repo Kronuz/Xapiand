@@ -579,6 +579,20 @@ endif ()
 
 
 ########################################################################
+# Dynamic Linking Library (for dladdr)
+########################################################################
+
+find_library(DL_LIBRARIES dl)
+if (DL_LIBRARIES)
+	set (HAVE_DL 1)
+	target_link_libraries(${PROJECT_NAME} PRIVATE ${DL_LIBRARIES})
+else ()
+	set (HAVE_DL 0)
+	set (DL_LIBRARIES "")
+endif ()
+
+
+########################################################################
 # Threads Library
 ########################################################################
 
@@ -1153,6 +1167,7 @@ if (BUILD_TESTS)
 				${CMAKE_THREAD_LIBS_INIT}
 				${UUID_LIBRARIES}
 				${M_LIBRARIES}
+				${DL_LIBRARIES}
 				${ZLIB_LIBRARIES}
 			)
 			add_test(NAME "test_${VAR_TEST}" COMMAND ${PROJECT_TEST})
