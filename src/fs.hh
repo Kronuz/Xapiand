@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ struct File_ptr {
 };
 
 
-void delete_files(std::string_view path, const std::vector<const std::string>& patterns = {"*"});
+void delete_files(std::string_view path, const std::vector<std::string>& patterns = {"*"});
 
 void move_files(std::string_view src, std::string_view dst);
 

@@ -49,7 +49,7 @@
 // #define L_FS L_WHITE
 
 
-void delete_files(std::string_view path, const std::vector<const std::string>& patterns) {
+void delete_files(std::string_view path, const std::vector<std::string>& patterns) {
 	L_CALL("delete_files({}, <patterns>)", repr(path));
 
 	stringified path_string(path);
