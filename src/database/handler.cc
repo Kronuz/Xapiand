@@ -1654,8 +1654,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 		if (term[0] == 'Q' && term[1] == 'N') {
 			auto did_serialised = term.substr(2);
 			Xapian::docid did = sortable_unserialise(did_serialised);
-			if (did == 0) {
-				throw Xapian::InvalidArgumentError("Numeric term is invalid");
+			if (did == 0u) {
+				return did;
 			} else {
 				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 			}
@@ -1780,7 +1780,7 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 		if (term[0] == 'Q' && term[1] == 'N') {
 			auto did_serialised = term.substr(2);
 			Xapian::docid did = sortable_unserialise(did_serialised);
-			if (did == 0) {
+			if (did == 0u) {
 				// Try getting a new ID which can currently be indexed (active node)
 				// Get the least used shard:
 				auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
@@ -2277,6 +2277,10 @@ Document::serialise()
 		return serialised;
 	}
 
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
+	}
+
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
 	ASSERT(!endpoints.empty());
@@ -2321,6 +2325,10 @@ Document::get_value(Xapian::valueno slot)
 
 	if (db_handler == nullptr) {
 		return value;
+	}
+
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
 	}
 
 	int flags = db_handler->flags;
@@ -2369,6 +2377,10 @@ Document::get_data()
 		return data;
 	}
 
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
+	}
+
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
 	ASSERT(!endpoints.empty());
@@ -2413,6 +2425,10 @@ Document::get_terms()
 
 	if (db_handler == nullptr) {
 		return terms;
+	}
+
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
 	}
 
 	int flags = db_handler->flags;
@@ -2475,6 +2491,10 @@ Document::get_values()
 
 	if (db_handler == nullptr) {
 		return values;
+	}
+
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
 	}
 
 	int flags = db_handler->flags;
@@ -2575,6 +2595,10 @@ Document::hash()
 	uint64_t hash_value = 0;
 	if (db_handler == nullptr) {
 		return hash_value;
+	}
+
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
 	}
 
 	int flags = db_handler->flags;
