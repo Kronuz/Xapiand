@@ -1,0 +1,11 @@
+sudo: required
+
+before_install:
+  - sudo apt-get install -qq cmake gcc clang
+
+script:
+  - mkdir -p builddir
+  - cd builddir
+  - cmake ..
+  - make
+
