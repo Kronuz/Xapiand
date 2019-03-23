@@ -76,9 +76,10 @@ namespace msgpack { MSGPACK_API_VERSION_NAMESPACE(MSGPACK_DEFAULT_API_NS) { name
 					break;
 				}
 				case msgpack::type::NIL:
-					chaiscript::Boxed_Value(nullptr);
+					v = chaiscript::Boxed_Value(nullptr);
+					break;
 				default:
-					chaiscript::Boxed_Value();
+					v = chaiscript::Boxed_Value();
 					break;
 			}
 			return o;
