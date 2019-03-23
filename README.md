@@ -16,5 +16,5 @@ Official site is at [https://kronuz.io/Xapiand](https://kronuz.io/Xapiand)
 
 [MIT](LICENSE)
 
-[travis-image]: https://travis-ci.org/msgpack/msgpack-c.svg
+[travis-image]: https://travis-ci.org/Kronuz/Xapiand.svg
 [travis-url]: https://travis-ci.org/Kronuz/Xapiand
