@@ -636,7 +636,10 @@ void usedir(std::string_view path, bool force) {
 	}
 
 	char buffer[PATH_MAX];
-	getcwd(buffer, sizeof(buffer));
+	if (getcwd(buffer, sizeof(buffer)) == nullptr) {
+		L_CRIT("Cannot get current working directory");
+		throw SystemExit(EX_OSFILE);
+	}
 	Endpoint::cwd = normalize_path(buffer, buffer, true);  // Endpoint::cwd must always end with slash
 	L_NOTICE("Changed current working directory to {}", Endpoint::cwd);
 }
@@ -715,7 +718,7 @@ void setup() {
 	// Flush threshold:
 	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
 	if (p != nullptr) {
-		L_INFO("Flush threshold is now {}. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p) || 10000);
+		L_INFO("Flush threshold is now {}. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p));
 	} else {
 		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::format("{}", opts.flush_threshold).c_str(), 0) == -1) {
 			L_INFO("Flush threshold is 10000: {} ({}): {}", error::name(errno), errno, error::description(errno));
