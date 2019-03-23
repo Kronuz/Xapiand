@@ -108,8 +108,8 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 	return log(clears, std::chrono::milliseconds(timeout), async, info, stacked, once, priority, std::forward<Args>(args)...);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
 #define LOG_ARGS_APPLY0(t, format) format
 #define LOG_ARGS_APPLY1(t, format, a) format, t(a)
@@ -226,4 +226,4 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 #define L_TIMED_VAR _L_TIMED_VAR
 #endif
 
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop

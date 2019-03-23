@@ -64,8 +64,8 @@
 #endif
 
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-statement-expression"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
 // Do not accept any file descriptor less than this value, in order to avoid
 // opening database file using file descriptors that are commonly used for
@@ -423,4 +423,4 @@ inline int fadvise(int fd, off_t, off_t, int) {
 
 } /* namespace io */
 
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop

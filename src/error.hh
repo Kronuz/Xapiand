@@ -37,9 +37,9 @@ inline constexpr std::size_t size(T (&)[N]) noexcept {
 
 inline const auto& errnos() {
 	static const auto _errnos = []{
-		#pragma GCC diagnostic push
-		#pragma GCC diagnostic ignored "-Wc99-extensions"
-		#pragma GCC diagnostic ignored "-Winitializer-overrides"
+		#pragma clang diagnostic push
+		#pragma clang diagnostic ignored "-Wc99-extensions"
+		#pragma clang diagnostic ignored "-Winitializer-overrides"
 		#define __ERRNO_ASSIGN(name) [name] = #name
 		constexpr const char* __errnos[] = {
 			[0] = "UNDEFINED",
@@ -500,7 +500,7 @@ inline const auto& errnos() {
 			#endif
 		};
 		#undef __ERRNO_ASSIGN
-		#pragma GCC diagnostic pop
+		#pragma clang diagnostic pop
 		constexpr size_t num_errnos = size(__errnos);
 		constexpr size_t num_errors = num_errnos < 256 ? 256 : num_errnos;
 		std::array<std::string, num_errors> _names{};
