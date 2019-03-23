@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,10 +24,12 @@
 
 #include "config.h"           // for XAPIAND_TRACEBACKS
 
-#include <mutex>              // for std::mutex, std::lock_guard
-#include <cstdlib>            // for free
+#include <cstdlib>            // for std::free, std::exit
+#include <cstdio>             // for std::perror, std::snprintf, std::fprintf
+#include <cstring>            // for std::memset
 #include <cxxabi.h>           // for abi::__cxa_demangle
 #include <dlfcn.h>            // for dladdr
+#include <mutex>              // for std::mutex, std::lock_guard
 
 #include "likely.h"
 
@@ -67,9 +69,9 @@ atos(const void* address)
 	static int fd = -1;
 	if (fd == -1) {
 		Dl_info info;
-		memset(&info, 0, sizeof(Dl_info));
+		std::memset(&info, 0, sizeof(Dl_info));
 		if (dladdr(reinterpret_cast<const void*>(&atos), &info) == 0) {
-			perror("Could not get base address for `atos`.");
+			std::perror("Could not get base address for `atos`.");
 			return "";
 		}
 
@@ -77,18 +79,18 @@ atos(const void* address)
 		cfmakeraw(&term_opts);  // have to set this first, otherwise queries echo until child kicks in
 		pid_t childpid;
 		if unlikely((childpid = forkpty(&fd, nullptr, &term_opts, nullptr)) < 0) {
-			perror("Could not forkpty for `atos` call.");
+			std::perror("Could not forkpty for `atos` call.");
 			return "";
 		}
 
 		if (childpid == 0) {
-			snprintf(tmp, sizeof(tmp), "%p", static_cast<const void *>(info.dli_fbase));
+			std::snprintf(tmp, sizeof(tmp), "%p", static_cast<const void *>(info.dli_fbase));
 			execlp("/usr/bin/atos", "atos", "-o", info.dli_fname, "-l", tmp, nullptr);
-			fprintf(stderr,"Could not exec `atos` for stack trace!\n");
-			exit(1);
+			std::fprintf(stderr,"Could not exec `atos` for stack trace!\n");
+			std::exit(1);
 		}
 
-		int size = snprintf(tmp, sizeof(tmp), "%p\n", address);
+		int size = std::snprintf(tmp, sizeof(tmp), "%p\n", address);
 		write(fd, tmp, size);
 
 		// atos can take a while to parse symbol table on first request, which
@@ -110,12 +112,12 @@ atos(const void* address)
 		}
 #endif
 		if unlikely(err < 0) {
-			perror("Generating... first call takes some time for `atos` to cache the symbol table.");
+			std::perror("Generating... first call takes some time for `atos` to cache the symbol table.");
 		} else if (err == 0) {  // timeout
-			fprintf(stderr, "Generating... first call takes some time for `atos` to cache the symbol table.\n");
+			std::fprintf(stderr, "Generating... first call takes some time for `atos` to cache the symbol table.\n");
 		}
 	} else {
-		int size = snprintf(tmp, sizeof(tmp), "%p\n", address);
+		int size = std::snprintf(tmp, sizeof(tmp), "%p\n", address);
 		write(fd, tmp, size);
 	}
 
@@ -125,7 +127,7 @@ atos(const void* address)
 	size_t nread = 0;
 	while (c != '\n' && nread < MAXLINE) {
 		if unlikely(read(fd, &c, 1) <= 0) {
-			perror("Lost `atos` connection.");
+			std::perror("Lost `atos` connection.");
 			close(fd);
 			fd = -1;
 			return "";
@@ -137,7 +139,7 @@ atos(const void* address)
 	if (nread < MAXLINE) {
 		return std::string(line, nread);
 	}
-	fprintf(stderr, "Line read from `atos` was too long.\n");
+	std::fprintf(stderr, "Line read from `atos` was too long.\n");
 	return "";
 }
 #else
@@ -188,10 +190,10 @@ traceback(const char* function, const char* filename, int line, const std::vecto
 			result.append(address_string);
 		} else {
 			Dl_info info;
-			memset(&info, 0, sizeof(Dl_info));
+			std::memset(&info, 0, sizeof(Dl_info));
 			if (dladdr(address, &info) != 0) {
 				// Address:
-				snprintf(tmp, sizeof(tmp), "%p ", address);
+				std::snprintf(tmp, sizeof(tmp), "%p ", address);
 				result.append(tmp);
 				// Symbol name:
 				if (info.dli_sname != nullptr) {
@@ -202,9 +204,9 @@ traceback(const char* function, const char* filename, int line, const std::vecto
 					} else {
 						try {
 							result.append(unmangled);
-							free(unmangled);
+							std::free(unmangled);
 						} catch(...) {
-							free(unmangled);
+							std::free(unmangled);
 							throw;
 						}
 					}
@@ -212,10 +214,10 @@ traceback(const char* function, const char* filename, int line, const std::vecto
 					result.append("[unknown symbol]");
 				}
 				// Offset:
-				snprintf(tmp, sizeof(tmp), " + %zu", static_cast<const char*>(address) - static_cast<const char*>(info.dli_saddr));
+				std::snprintf(tmp, sizeof(tmp), " + %zu", static_cast<const char*>(address) - static_cast<const char*>(info.dli_saddr));
 				result.append(tmp);
 			} else {
-				snprintf(tmp, sizeof(tmp), "%p [unknown symbol]", address);
+				std::snprintf(tmp, sizeof(tmp), "%p [unknown symbol]", address);
 				result.append(tmp);
 			}
 		}
@@ -247,10 +249,10 @@ extern "C" void
 __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression)
 {
 #ifdef XAPIAND_TRACEBACKS
-	(void)fprintf(stderr, "Assertion failed: %s in %s %s:%u%s\n",
+	(void)std::fprintf(stderr, "Assertion failed: %s in %s %s:%u%s\n",
 		expression, function, filename, line, traceback(function, filename, line, 2).c_str());
 #else
-	(void)fprintf(stderr, "Assertion failed: %s in %s %s:%u\n",
+	(void)std::fprintf(stderr, "Assertion failed: %s in %s %s:%u\n",
 		expression, function, filename, line);
 #endif
 	abort();
