@@ -426,7 +426,8 @@ void
 UUID::uuid1_node(uint64_t node)
 {
 	auto node_ptr = reinterpret_cast<uint64_t*>(&_bytes[8]);
-	*node_ptr = htobe64((be64toh(*node_ptr) & 0xffff000000000000ULL) | (node & 0xffffffffffffULL));
+	auto hnode = be64toh(*node_ptr) & 0xffff000000000000ULL;
+	*node_ptr = htobe64(hnode | (node & 0xffffffffffffULL));
 }
 
 
