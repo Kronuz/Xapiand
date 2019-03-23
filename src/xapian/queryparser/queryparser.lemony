@@ -240,7 +240,7 @@ class State {
 			Xapian::valueno slot = base->get_slot();
 			return new Term(range_query, str(slot));
 		    }
-		    // FALLTHRU
+		    [[fallthrough]];
 		case Xapian::Query::LEAF_TERM:
 		    return new Term(range_query, i.grouping);
 		default:
