@@ -394,6 +394,7 @@ public:
 	Document& operator=(const Document& doc_) = default;
 
 	Xapian::docid get_docid();
+	bool validate();
 
 	std::string serialise();
 	std::string get_value(Xapian::valueno slot);

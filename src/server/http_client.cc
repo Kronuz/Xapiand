@@ -1502,7 +1502,7 @@ HttpClient::document_info_view(Request& request)
 
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
 
-	db_handler.get_document(request.path_parser.get_id());
+	db_handler.get_document(request.path_parser.get_id()).validate();
 
 	request.ready = std::chrono::system_clock::now();
 

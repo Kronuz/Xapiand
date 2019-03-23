@@ -2416,6 +2416,53 @@ Document::get_data()
 }
 
 
+bool
+Document::validate()
+{
+	L_CALL("Document::validate()");
+
+	if (db_handler == nullptr) {
+		return false;
+	}
+
+	if (did == 0u) {
+		throw Xapian::DocNotFoundError("Document not found");
+	}
+
+	int flags = db_handler->flags;
+	auto& endpoints = db_handler->endpoints;
+	ASSERT(!endpoints.empty());
+	size_t n_shards = endpoints.size();
+	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
+	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+	auto& endpoint = endpoints[shard_num];
+
+	lock_shard lk_shard(endpoint, flags);
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			lk_shard->get_document(shard_did, false);
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError& exc) {
+			if (exc.get_msg() == "Database has been closed") {
+				if (t == 0) { throw; }
+			} else {
+				throw;
+			}
+		}
+		lk_shard->reopen();
+	}
+
+	return true;
+}
+
+
 MsgPack
 Document::get_terms()
 {
