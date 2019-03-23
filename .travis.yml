@@ -1,0 +1,23 @@
+sudo: required
+language: cpp
+dist: trusty
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-7
+      - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main'
+        key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+    packages:
+      - gcc-8
+      - g++-8
+      - clang-7
+      - libc++-7-dev
+      - libc++abi-7-dev
+
+script:
+  - mkdir -p builddir
+  - cd builddir
+  - CC=clang-7 && CXX=clang-7 cmake ..
+  - make
