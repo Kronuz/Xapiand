@@ -118,7 +118,7 @@ public:
 			"BAD", "READY", "SETUP", "JOINING", "WAITING_MORE", "WAITING", "RESET",
 		};
 		auto idx = static_cast<size_t>(type);
-		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
+		if (idx < sizeof(_) / sizeof(_[0])) {
 			return _[idx];
 		}
 		static const std::string UNKNOWN = "UNKNOWN";
