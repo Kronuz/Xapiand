@@ -192,13 +192,13 @@ public:
 		switch (type) {
 			case Type::SKIP_BLANK_FIND:
 				skip_blank = false;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case Type::FIND:
 				search_func = &Split::find;
 				break;
 			case Type::SKIP_BLANK_FIND_FIRST_OF:
 				skip_blank = false;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case Type::FIND_FIRST_OF:
 				search_func = &Split::find_first_of;
 				break;

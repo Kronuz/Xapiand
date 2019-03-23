@@ -1584,7 +1584,7 @@ inline void MsgPack::_append(std::string_view val) {
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_str();
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		case Type::STR: {
 			auto val_size = static_cast<uint32_t>(val.size());
 			_reserve_str(_body->_obj->via.str.size + val_size);
@@ -1638,7 +1638,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_map();
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		case Type::MAP: {
 			auto it = _body->map.find(key);
 			if (it == _body->map.end()) {
@@ -1682,7 +1682,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_array();
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		case Type::ARRAY:
 			if (pos >= _body->_obj->via.array.size) {
 				_reserve_array(pos + 1);
@@ -1751,7 +1751,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool over
 	switch (_body->getType()) {
 		case Type::UNDEFINED:
 			_init_array();
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		case Type::ARRAY:
 			if (pos >= _body->_obj->via.array.size) {
 				_reserve_array(pos + 1);

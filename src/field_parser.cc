@@ -107,7 +107,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						if (++len_field >= 1024) {
 							THROW(FieldParserError, "Syntax error in query");
@@ -152,7 +152,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						++len_field;
 						++len_field_colon;
@@ -198,7 +198,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						currentState = (currentState == FieldParser::State::VALUE_INIT) ? FieldParser::State::VALUE : FieldParser::State::DOT_DOT;
 						offs[lvl] = currentSymbol;
@@ -225,7 +225,7 @@ FieldParser::parse(size_t lvl_max)
 								break;
 						}
 						++currentSymbol;
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						if (*currentSymbol == quote) {
 							currentState = FieldParser::State::COLON;
@@ -294,7 +294,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						THROW(FieldParserError, "Unexpected symbol: '{}'", *currentSymbol);
 				}
@@ -320,7 +320,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						++lens[lvl];
 						break;
@@ -347,7 +347,7 @@ FieldParser::parse(size_t lvl_max)
 							++currentSymbol;
 							break;
 						}
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						++lens[lvl];
 						break;
@@ -444,7 +444,7 @@ FieldParser::parse(size_t lvl_max)
 								break;
 						}
 						++currentSymbol;
-						/* FALLTHROUGH */
+						[[fallthrough]];
 					default:
 						if (*currentSymbol == quote) {
 							currentState = FieldParser::State::SQUARE_BRACKET_COMMA;

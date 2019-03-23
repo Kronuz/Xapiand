@@ -446,7 +446,7 @@ protected:
                                     PutUnsafe(*os_, c);
                                     break;
                                 }
-                                /* FALLTHROUGH */
+                                [[fallthrough]];
                             case 'x':
                                 PutUnsafe(*os_, '\\');
                                 PutUnsafe(*os_, 'x');

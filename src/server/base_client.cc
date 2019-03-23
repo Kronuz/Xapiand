@@ -301,7 +301,7 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 		case WR::RETRY:
 		case WR::PENDING:
 			write_start_async.send();
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		case WR::OK:
 			return true;
 		default:

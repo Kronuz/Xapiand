@@ -1054,7 +1054,7 @@ public:
 				for (auto& acc_prefix : spc.acc_prefix) {
 					acc_prefix.insert(0, spc.prefix.field);
 				}
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			default:
 				return std::move(spc);
 		}

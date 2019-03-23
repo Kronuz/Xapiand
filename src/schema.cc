@@ -2798,7 +2798,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					spc_id.set_type(id_type);
 					set_data_id(spc_id);
 					properties = &get_mutable_properties();
-				/* FALLTHROUGH */
+				[[fallthrough]];
 				case FieldType::UUID: {
 					size_t n_shards = db_handler.endpoints.size();
 					size_t shard_num = 0;
@@ -3533,7 +3533,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 				break;
 			}
 		}
-		/* FALLTHROUGH */
+		[[fallthrough]];
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			if (!specification.flags.concrete) {
@@ -5598,7 +5598,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			if (!field_spc.flags.bool_term) {
 				string::inplace_lower(serialise_val);
 			}
-			/* FALLTHROUGH */
+			[[fallthrough]];
 
 		default: {
 			serialise_val = prefixed(serialise_val, field_spc.prefix.field, field_spc.get_ctype());
@@ -9456,7 +9456,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 						res.error = error_it.value().f64();
 					}
 				}
-				/* FALLTHROUGH */
+				[[fallthrough]];
 				case FieldType::FLOAT:
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:

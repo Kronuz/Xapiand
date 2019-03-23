@@ -660,7 +660,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				case Xapian::Query::OP_AND:
 				case Xapian::Query::OP_OR:
 					parser.set_default_op(default_op);
-					/* FALLTHROUGH */
+					[[fallthrough]];
 				case Xapian::Query::OP_AND_NOT:
 				case Xapian::Query::OP_XOR:
 				case Xapian::Query::OP_AND_MAYBE:
@@ -1300,7 +1300,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 			switch (field.at(0)) {
 				case '-':
 					descending = true;
-					/* FALLTHROUGH */
+					[[fallthrough]];
 				case '+':
 					field.remove_prefix(1);
 					break;

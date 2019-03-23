@@ -67,7 +67,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, 
 						: dec;
 				}
 			}
-			/* FALLTHROUGH */
+			[[fallthrough]];
 			default:
 				switch (c) {
 					case '+':
@@ -144,7 +144,7 @@ QueryParser::next(const char *name, size_t name_len)
 		switch (cn) {
 			case '\1':  // '='
 				v0 = n1;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case '\0':  // '\0' and '&'
 				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
 					if (v0 != nullptr) {
@@ -279,6 +279,7 @@ PathParser::init(std::string_view p)
 					cn1 = '\0';
 					++n1;
 				}
+				[[fallthrough]];
 			default:
 				break;
 		}
@@ -442,6 +443,7 @@ PathParser::init(std::string_view p)
 						takeoff = 1; // Removing the dot
 						addin = 0;   // Adding nothing to length
 						state = State::SLF;
+						[[fallthrough]];
 					default:
 						break;
 				}
@@ -455,6 +457,7 @@ PathParser::init(std::string_view p)
 						break;
 					case State::SLB:
 						state = State::SLB_SUB;
+						[[fallthrough]];
 					default:
 						break;
 				}
@@ -475,6 +478,7 @@ PathParser::init(std::string_view p)
 						break;
 					case State::SLB_SUB:
 						state = State::SLB_SPACE_OR_COMMA;
+						[[fallthrough]];
 					default:
 						break;
 				}
@@ -485,6 +489,7 @@ PathParser::init(std::string_view p)
 						if (slc_level - 1 == 0) {
 							state = State::SLB;
 						}
+						[[fallthrough]];
 					default:
 						break;
 				}
@@ -525,6 +530,7 @@ PathParser::init(std::string_view p)
 							break;
 						}
 						cn = '\0';
+						[[fallthrough]];
 					default:
 						break;
 				}

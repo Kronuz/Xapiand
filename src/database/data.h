@@ -196,7 +196,7 @@ public:
 					}
 				}
 				type = Type::inplace;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case Type::inplace:
 				raw = new_data;
 				break;
@@ -209,7 +209,7 @@ public:
 					}
 				}
 				type = Type::stored;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case Type::stored:
 				raw = new_data;
 				break;
@@ -228,7 +228,7 @@ public:
 					}
 				}
 				type = Type::inplace;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case Type::inplace:
 				_raw_holder = std::move(new_data);
 				raw = _raw_holder;
@@ -242,7 +242,7 @@ public:
 					}
 				}
 				type = Type::stored;
-				/* FALLTHROUGH */
+				[[fallthrough]];
 			case Type::stored:
 				_raw_holder = std::move(new_data);
 				raw = _raw_holder;

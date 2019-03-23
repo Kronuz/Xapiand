@@ -165,13 +165,13 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 							break;
 						case _.fhh(RESERVED_AGGS_VALUE):
 							L_WARNING_ONCE("Aggregation '{}' has been deprecated, use '{}' instead", RESERVED_AGGS_VALUE, RESERVED_AGGS_VALUES);
-							/* FALLTHROUGH */
+							[[fallthrough]];
 						case _.fhh(RESERVED_AGGS_VALUES):
 							add_bucket<ValuesAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 							break;
 						case _.fhh(RESERVED_AGGS_TERM):
 							L_WARNING_ONCE("Aggregation '{}' has been deprecated, use '{}' instead", RESERVED_AGGS_TERM, RESERVED_AGGS_TERMS);
-							/* FALLTHROUGH */
+							[[fallthrough]];
 						case _.fhh(RESERVED_AGGS_TERMS):
 							add_bucket<TermsAggregation>(sub_agg_name, sub_agg, sub_agg_type, schema);
 							break;

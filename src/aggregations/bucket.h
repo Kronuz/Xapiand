@@ -372,7 +372,7 @@ private:
 						return val;
 					}
 				}
-				/* FALLTHROUGH */
+				[[fallthrough]];
 				default:
 					THROW(AggregationError, "'{}' must be a positive integer", RESERVED_AGGS_LIMIT);
 			}
@@ -409,7 +409,7 @@ private:
 						return val;
 					}
 				}
-				/* FALLTHROUGH */
+				[[fallthrough]];
 				default:
 					THROW(AggregationError, "'{}' must be a positive number", RESERVED_AGGS_MIN_DOC_COUNT);
 			}

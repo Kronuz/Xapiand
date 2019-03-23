@@ -138,7 +138,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 				}
 				return obj;
 			}
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		default:
 			THROW(CastError, "Type {} cannot be cast", obj.getStrType());
 	}

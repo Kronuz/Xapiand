@@ -3351,7 +3351,7 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 	switch (e) {
 		case Encoding::gzip:
 			gzip = true;
-			/* FALLTHROUGH */
+			[[fallthrough]];
 		case Encoding::deflate: {
 			if (chunk) {
 				if (start) {
@@ -3477,7 +3477,6 @@ Request::decode(std::string_view body)
 			}
 			ct_type = json_type;
 			return decoded;
-			/* FALLTHROUGH */
 		case _.fhhl(JSON_CONTENT_TYPE):
 			json_load(rdoc, body);
 			decoded = MsgPack(rdoc);

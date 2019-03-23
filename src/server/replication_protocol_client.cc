@@ -917,6 +917,7 @@ ReplicationProtocolClient::operator()()
 			break;
 		case ReplicaState::INIT_REPLICATION_CLIENT:
 			state = ReplicaState::REPLICATION_CLIENT;
+			[[fallthrough]];
 		default:
 			break;
 	}

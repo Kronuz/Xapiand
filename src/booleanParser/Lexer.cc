@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2014 furan
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -215,7 +215,7 @@ Lexer::NextToken()
 							continue;
 						}
 				}
-				/* FALLTHROUGH */
+				[[fallthrough]];
 
 			case LexerState::END_SQUARE_BRACKET:
 				switch (currentSymbol.symbol) {
