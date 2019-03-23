@@ -26,7 +26,7 @@ list of limitations is:
 - Cannot start with `:`
 - Connot contain `.` (except for the first character)
 - Full path cannot be longer than 243 bytes (note it is bytes, so multi-byte
-  characters will count towards the 255 limit faster)
+  characters will count towards that limit faster)
 
 Indices can be paths (including `/` as part of the path).
 
