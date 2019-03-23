@@ -458,7 +458,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
 	if (document_ver && !data.version.empty()) {
-		if (document_ver != unserialise_length(data.version)) {
+		if (document_ver != sortable_unserialise(data.version)) {
 			throw Xapian::DocVersionConflictError("Version mismatch!");
 		}
 	}
@@ -490,7 +490,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 	// Request version
 	if (document_ver) {
-		doc.add_value(DB_SLOT_VERSION, serialise_length(document_ver));
+		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
 	} else if (!data.version.empty()) {
 		doc.add_value(DB_SLOT_VERSION, data.version);
 	}
