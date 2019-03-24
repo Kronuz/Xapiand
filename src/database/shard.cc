@@ -34,7 +34,6 @@
 #include "database/wal.h"         // for DatabaseWAL
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "fs.hh"                  // for build_path_index
-#include "ignore_unused.h"        // for ignore_unused
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_CALL
 #include "manager.h"              // for XapiandManager, trigger_replication
@@ -645,7 +644,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 
 
 bool
-Shard::commit(bool wal_, bool send_update)
+Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 {
 	L_CALL("Shard::commit({})", wal_);
 
@@ -704,8 +703,6 @@ Shard::commit(bool wal_, bool send_update)
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_commit(*this, send_update); }
-#else
-	ignore_unused(wal_);
 #endif
 
 	return true;
@@ -824,8 +821,6 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_delete_document(*this, shard_did); }
-#else
-	ignore_unused(wal_);
 #endif
 
 	if (commit_) {
@@ -908,8 +903,6 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_delete_document_term(*this, term); }
-#else
-	ignore_unused(wal_);
 #endif
 
 	if (commit_) {
@@ -1072,8 +1065,6 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 #endif  // XAPIAND_DATA_STORAGE
 		XapiandManager::wal_writer()->write_add_document(*this, std::move(doc));
 	}
-#else
-	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
 
 	if (commit_) {
@@ -1165,8 +1156,6 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 #endif  // XAPIAND_DATA_STORAGE
 		XapiandManager::wal_writer()->write_replace_document(*this, shard_did, std::move(doc));
 	}
-#else
-	ignore_unused(wal_);
 #endif  // XAPIAND_DATABASE_WAL
 
 	if (commit_) {
@@ -1334,8 +1323,6 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 #endif  // XAPIAND_DATA_STORAGE
 		XapiandManager::wal_writer()->write_replace_document_term(*this, new_term.empty() ? term : new_term, std::move(doc));
 	}
-#else
-	ignore_unused(wal_);
 #endif
 
 	if (commit_) {
@@ -1385,8 +1372,6 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_add_spelling(*this, word, freqinc); }
-#else
-	ignore_unused(wal_);
 #endif
 
 	if (commit_) {
@@ -1436,8 +1421,6 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_remove_spelling(*this, word, freqdec); }
-#else
-	ignore_unused(wal_);
 #endif
 
 	if (commit_) {
@@ -1690,8 +1673,6 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 
 #if XAPIAND_DATABASE_WAL
 	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_set_metadata(*this, key, value); }
-#else
-	ignore_unused(wal_);
 #endif
 
 	if (commit_) {

@@ -33,7 +33,6 @@
 #include "endpoint.h"                       // for Endpoints
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
-#include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
 #include "repr.hh"                          // for repr
@@ -93,14 +92,13 @@ RemoteProtocolServer::accept()
 
 
 void
-RemoteProtocolServer::io_accept_cb(ev::io& watcher, int revents)
+RemoteProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 {
 	L_CALL("RemoteProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("RemoteProtocolServer::io_accept_cb:BEGIN");
 	L_EV_END("RemoteProtocolServer::io_accept_cb:END");
 
-	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("RemoteProtocolServer::io_accept_cb", "RemoteProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);

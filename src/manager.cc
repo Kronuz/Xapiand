@@ -61,7 +61,6 @@
 #include "ev/ev++.h"                             // for ev::async, ev::loop_ref
 #include "exception.h"                           // for SystemExit, Excep...
 #include "hashes.hh"                             // for jump_consistent_hash
-#include "ignore_unused.h"                       // for ignore_unused
 #include "io.hh"                                 // for io::*
 #include "length.h"                              // for serialise_length
 #include "log.h"                                 // for L_CALL, L_DEBUG
@@ -348,11 +347,9 @@ XapiandManager::signal_sig(int sig)
 
 
 void
-XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, int revents)
+XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
 
 	signal_sig_impl();
 }
@@ -693,7 +690,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (!found) {
 		L_INFO("Cluster database doesn't exist. Generating database...");
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		auto did = db_handler.update(local_node->lower_name(), 0, false, {
+		[[maybe_unused]] auto did = db_handler.update(local_node->lower_name(), 0, false, {
 			{ ID_FIELD_NAME, {
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
@@ -709,8 +706,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (!opts.solo) {
 			_discovery->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
 		}
-		#else
-			ignore_unused(did);
 		#endif
 	}
 
@@ -1317,11 +1312,9 @@ XapiandManager::new_leader_impl()
 
 
 void
-XapiandManager::new_leader_async_cb(ev::async& /*unused*/, int revents)
+XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
 
 	auto leader_node = Node::leader_node();
 	L_INFO("New leader of cluster {} is {}{}", opts.cluster_name, leader_node->col().ansi(), leader_node->name());
@@ -1613,7 +1606,7 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, bool writable, const MsgPack* settings)
+XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] const MsgPack* settings)
 {
 	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {})", repr(normalized_path), writable, settings ? settings->to_string() : "null");
 
@@ -1762,8 +1755,6 @@ XapiandManager::resolve_index_nodes_impl(const std::string& normalized_path, boo
 		}
 	}
 	else
-#else
-	ignore_unused(normalized_path);
 #endif
 	{
 		std::vector<std::shared_ptr<const Node>> node_replicas;

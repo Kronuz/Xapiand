@@ -40,7 +40,6 @@
 #include "bloom_filter.hh"    // for BloomFilter
 #include "datetime.h"         // for to_string
 #include "exception.h"        // for traceback, BaseException
-#include "ignore_unused.h"    // for ignore_unused
 #include "io.hh"              // for io::write
 #include "opts.h"             // for opts
 #include "repr.hh"            // for repr
@@ -293,9 +292,9 @@ SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_
 
 
 Logging::Logging(
-	const char *function,
-	const char *filename,
-	int line,
+	[[maybe_unused]] const char *function,
+	[[maybe_unused]] const char *filename,
+	[[maybe_unused]] int line,
 	std::string&& str,
 	std::exception_ptr&& eptr,
 	bool clears,
@@ -324,9 +323,6 @@ Logging::Logging(
 	priority(priority),
 	cleaned_at(0)
 {
-	ignore_unused(function);
-	ignore_unused(filename);
-	ignore_unused(line);
 	if (stacked) {
 		std::lock_guard<std::mutex> lk(stack_mtx);
 		auto it = stack_levels.find(thread_id);

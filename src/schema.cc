@@ -46,7 +46,6 @@
 #include "datetime.h"                             // for isDatetime, tm_t
 #include "exception.h"                            // for ClientError
 #include "geospatial/geospatial.h"                // for GeoSpatial
-#include "ignore_unused.h"                        // for ignore_unused
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
 #include "opts.h"                                 // for opts::*
@@ -7619,7 +7618,7 @@ Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
 
 
 void
-Schema::feed_script(const MsgPack& prop_script)
+Schema::feed_script([[maybe_unused]] const MsgPack& prop_script)
 {
 	L_CALL("Schema::feed_script({})", repr(prop_script.to_string()));
 
@@ -7627,7 +7626,6 @@ Schema::feed_script(const MsgPack& prop_script)
 	specification.script = std::make_unique<const MsgPack>(prop_script);
 	specification.flags.normalized_script = true;
 #else
-	ignore_unused(prop_script);
 	THROW(ClientError, "{} only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
 #endif
 }
@@ -8227,11 +8225,10 @@ Schema::process_position(std::string_view prop_name, const MsgPack& doc_position
 
 
 inline void
-Schema::process_data(std::string_view /*unused*/, const MsgPack& doc_data)
+Schema::process_data(std::string_view /*unused*/, [[maybe_unused]] const MsgPack& doc_data)
 {
 	// RESERVED_DATA is ignored by the schema.
 	L_CALL("Schema::process_data({})", repr(doc_data.to_string()));
-	ignore_unused(doc_data);
 }
 
 
@@ -8417,7 +8414,7 @@ Schema::process_value(std::string_view /*unused*/, const MsgPack& doc_value)
 
 
 inline void
-Schema::process_script(std::string_view /*unused*/, const MsgPack& doc_script)
+Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPack& doc_script)
 {
 	// RESERVED_SCRIPT isn't heritable.
 	L_CALL("Schema::process_script({})", repr(doc_script.to_string()));
@@ -8426,7 +8423,6 @@ Schema::process_script(std::string_view /*unused*/, const MsgPack& doc_script)
 	specification.script = std::make_unique<const MsgPack>(doc_script);
 	specification.flags.normalized_script = false;
 #else
-	ignore_unused(doc_script);
 	THROW(ClientError, "'{}' only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
 #endif
 }
@@ -9111,10 +9107,9 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 }
 
 void
-Schema::set_default_spc_version(MsgPack& mut_properties)
+Schema::set_default_spc_version([[maybe_unused]] MsgPack& mut_properties)
 {
 	L_CALL("Schema::set_default_spc_version({})", repr(mut_properties.to_string()));
-	ignore_unused(mut_properties);
 
 	specification.flags.store = false;
 	specification.slot = DB_SLOT_VERSION;

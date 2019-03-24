@@ -34,7 +34,6 @@
 #include "database/shard.h"                   // for Shard
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
-#include "ignore_unused.h"                    // for ignore_unused
 #include "io.hh"                              // for io::*
 #include "length.h"                           // for serialise_length
 #include "manager.h"                          // for XapiandManager

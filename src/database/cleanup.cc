@@ -93,11 +93,9 @@ DatabaseCleanup::stop_impl()
 
 
 void
-DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, int revents)
+DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("DatabaseCleanup::cleanup_cb(<timer>, {:#04x} ({}))", revents, readable_revents(revents));
-
-	ignore_unused(revents);
 
 	XapiandManager::database_pool()->cleanup();
 }

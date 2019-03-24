@@ -27,7 +27,6 @@
 
 #include "chaipp/chaipp.h"
 #include "hash/md5.h"
-#include "ignore_unused.h"
 #include "reserved/schema.h"
 #include "serialise.h"
 #include "hashes.hh"        // for fnv1ah32
@@ -232,7 +231,7 @@ Script::get_params() const
 
 
 MsgPack
-Script::process_script(bool strict) const
+Script::process_script([[maybe_unused]] bool strict) const
 {
 	L_CALL("Script::process_script({})", strict);
 
@@ -267,7 +266,6 @@ Script::process_script(bool strict) const
 		return script_data;
 	}
 #else
-	ignore_unused(strict);
 	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
 #endif
 }

@@ -35,7 +35,6 @@
 #include "exception.h"
 #include "msgpack.hpp"
 #include "strict_stox.hh"
-#include "ignore_unused.h"      // for ignore_unused
 #ifndef WITHOUT_RAPIDJSON
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
@@ -3147,12 +3146,11 @@ inline T& operator/=(T& o, const M& m) {
 }
 
 
-inline std::string MsgPack::to_string(int indent) const {
+inline std::string MsgPack::to_string([[maybe_unused]] int indent) const {
 #ifdef WITHOUT_RAPIDJSON
 	std::ostringstream oss;
 	oss << *_const_body->_obj;
 	return oss.str();
-	ignore_unused(indent);
 #else
 	if (indent >= 0) {
 		rapidjson::Document doc = as_document();

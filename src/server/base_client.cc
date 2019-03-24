@@ -32,7 +32,6 @@
 #include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
 #include "ev/ev++.h"                // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
-#include "ignore_unused.h"          // for ignore_unused
 #include "io.hh"                    // for io::read, io::close, io::lseek, io::write
 #include "length.h"                 // for serialise_length, unserialise_length
 #include "likely.h"                 // for likely, unlikely
@@ -311,7 +310,7 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 
 
 void
-BaseClient::_io_cb_write(ev::io &watcher, int revents)
+BaseClient::_io_cb_write([[maybe_unused]] ev::io &watcher, int revents)
 {
 	L_CALL("BaseClient::io_cb_write(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
@@ -319,7 +318,6 @@ BaseClient::_io_cb_write(ev::io &watcher, int revents)
 	L_EV_END("BaseClient::io_cb_write:END");
 
 	ASSERT(sock == -1 || sock == watcher.fd);
-	ignore_unused(watcher);
 
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
@@ -364,14 +362,12 @@ BaseClient::_io_cb_write(ev::io &watcher, int revents)
 
 
 void
-BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
+BaseClient::write_start_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("BaseClient::write_start_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BaseClient::write_start_async_cb:BEGIN");
 	L_EV_END("BaseClient::write_start_async_cb:END");
-
-	ignore_unused(revents);
 
 	if (!closed) {
 		io_write.start();
@@ -381,14 +377,12 @@ BaseClient::write_start_async_cb(ev::async& /*unused*/, int revents)
 
 
 void
-BaseClient::read_start_async_cb(ev::async& /*unused*/, int revents)
+BaseClient::read_start_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("BaseClient::read_start_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("BaseClient::read_start_async_cb:BEGIN");
 	L_EV_END("BaseClient::read_start_async_cb:END");
-
-	ignore_unused(revents);
 
 	if (!closed) {
 		io_read.start();

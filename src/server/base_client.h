@@ -35,7 +35,6 @@
 #include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for io::*
 #include "lz4/xxhash.h"             // for XXH32_state_t
-#include "ignore_unused.h"          // for ignore_unused
 #include "log.h"                    // for L_CALL, L_ERR, L_EV_BEGIN, L_CONN
 #include "queue.h"                  // for Queue
 #include "readable_revents.hh"      // for readable_revents
@@ -185,14 +184,13 @@ protected:
 	}
 
 	// Receive message from client socket
-	void _io_cb_read(ev::io &watcher, int revents) {
+	void _io_cb_read([[maybe_unused]] ev::io &watcher, int revents) {
 		L_CALL("BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 		L_EV_END("BaseClient::io_cb_read:END");
 
 		ASSERT(sock == -1 || sock == watcher.fd);
-		ignore_unused(watcher);
 
 		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 

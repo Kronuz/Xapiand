@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +33,6 @@
 #include <sys/socket.h>          // for send
 #include <unistd.h>              // for off_t, ssize_t, close, lseek, unlink
 #include <type_traits>           // for std::forward
-
-#include "ignore_unused.h"       // for ignore_unused
 
 #ifdef XAPIAND_RANDOM_ERRORS
 #include "random.hh"                // for random_real
@@ -411,12 +409,11 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 #define POSIX_FADV_DONTNEED   4
 #define POSIX_FADV_NOREUSE    5
 
-inline int fadvise(int fd, off_t, off_t, int) {
+inline int fadvise([[maybe_unused]] int fd, off_t, off_t, int) {
 	CHECK_OPENED("during fadvise()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
-	ignore_unused(fd);
 	return 0;
 }
 #endif

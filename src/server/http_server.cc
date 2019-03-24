@@ -31,7 +31,6 @@
 #include "ev/ev++.h"                        // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                           // for Http
 #include "http_client.h"                    // for HttpClient
-#include "ignore_unused.h"                  // for ignore_unused
 #include "io.hh"                            // for ignored_errno
 #include "log.h"                            // for L_EV, L_OBJ, L_CALL, L_ERR
 #include "readable_revents.hh"              // for readable_revents
@@ -89,14 +88,13 @@ HttpServer::accept()
 
 
 void
-HttpServer::io_accept_cb(ev::io& watcher, int revents)
+HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 {
 	L_CALL("HttpServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock: {}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 	L_EV_END("HttpServer::io_accept_cb:END");
 
-	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);

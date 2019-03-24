@@ -31,7 +31,6 @@
 #include "database/utils.h"                 // for query_field_t
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
-#include "ignore_unused.h"                  // for ignore_unused
 #include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
 #include "replication_protocol.h"           // for ReplicationProtocol
@@ -96,14 +95,13 @@ ReplicationProtocolServer::accept()
 
 
 void
-ReplicationProtocolServer::io_accept_cb(ev::io& watcher, int revents)
+ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 {
 	L_CALL("ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
 	L_EV_BEGIN("ReplicationProtocolServer::io_accept_cb:BEGIN");
 	L_EV_END("ReplicationProtocolServer::io_accept_cb:END");
 
-	ignore_unused(watcher);
 	ASSERT(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
@@ -137,14 +135,12 @@ ReplicationProtocolServer::trigger_replication()
 
 
 void
-ReplicationProtocolServer::trigger_replication_async_cb(ev::async&, int revents)
+ReplicationProtocolServer::trigger_replication_async_cb(ev::async&, [[maybe_unused]] int revents)
 {
 	L_CALL("ReplicationProtocolServer::trigger_replication_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	L_EV_BEGIN("ReplicationProtocolServer::trigger_replication_async_cb:BEGIN");
 	L_EV_END("ReplicationProtocolServer::trigger_replication_async_cb:END");
-
-	ignore_unused(revents);
 
 	TriggerReplicationArgs args;
 	while (replication.trigger_replication_args.try_dequeue(args)) {

@@ -26,7 +26,6 @@
 #include <atomic>                // for std::atomic
 
 #include "cassert.h"             // for ASSERT
-#include "ignore_unused.h"       // for ignore_unused
 #include "log.h"                 // for L_NOTHING
 
 
@@ -476,11 +475,9 @@ public:
 	}
 
 	template<typename... Args>
-	void put(StashContext& ctx, unsigned long long, Args&&... args) {
+	void put([[maybe_unused]] StashContext& ctx, unsigned long long, Args&&... args) {
 		auto slot = atom_end++;
 		L_STASH("StashValues::" + LIGHT_PURPLE + "PUT" + CLEAR_COLOR + " - {}slot:{}, atom_end:{}, op:{}", ctx._col(), slot, atom_end.load(), ctx._op());
-
-		ignore_unused(ctx);
 
 		std::atomic<_Tp*>* ptr_atom_ptr;
 		Stash_T::get(&ptr_atom_ptr, slot, true);

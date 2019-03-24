@@ -26,7 +26,6 @@
 
 #include "cassert.h"            // for ASSERT
 #include "epoch.hh"             // for epoch::now
-#include "ignore_unused.h"      // for ignore_unused
 #include "log.h"                // for L_CALL
 #include "readable_revents.hh"  // for readable_revents
 
@@ -183,61 +182,51 @@ Worker::_shutdown_async_cb()
 
 
 void
-Worker::_break_loop_async_cb(ev::async& /*unused*/, int revents)
+Worker::_break_loop_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("Worker::_break_loop_async_cb(<watcher>, {:#x} ({})) {}", revents, readable_revents(revents), __repr__());
 
 	L_EV_BEGIN("Worker::_break_loop_async_cb:BEGIN");
 	L_EV_END("Worker::_break_loop_async_cb:END");
 
-	ignore_unused(revents);
-
 	_break_loop_impl();
 }
 
 
 void
-Worker::_start_async_cb(ev::async& /*unused*/, int revents)
+Worker::_start_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("Worker::_start_async_cb(<watcher>, {:#x} ({})) {}", revents, readable_revents(revents), __repr__());
-
-	ignore_unused(revents);
 
 	_start_impl();
 }
 
 
 void
-Worker::_stop_async_cb(ev::async& /*unused*/, int revents)
+Worker::_stop_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("Worker::_stop_async_cb(<watcher>, {:#x} ({})) {}", revents, readable_revents(revents), __repr__());
-
-	ignore_unused(revents);
 
 	_stop_impl();
 }
 
 
 void
-Worker::_destroy_async_cb(ev::async& /*unused*/, int revents)
+Worker::_destroy_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("Worker::_destroy_async_cb(<watcher>, {:#x} ({})) {}", revents, readable_revents(revents), __repr__());
-
-	ignore_unused(revents);
 
 	_destroy_impl();
 }
 
 
 void
-Worker::_detach_children_async_cb(ev::async& /*unused*/, int revents)
+Worker::_detach_children_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("Worker::_detach_children_async_cb(<watcher>, {:#x} ({})) {}", revents, readable_revents(revents), __repr__());
 
 	L_EV_BEGIN("Worker::_detach_children_async_cb:BEGIN");
 	L_EV_END("Worker::_detach_children_async_cb:END");
-
-	ignore_unused(revents);
 
 	_detach_children_impl();
 }

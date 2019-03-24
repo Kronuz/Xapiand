@@ -25,7 +25,6 @@
 #include "cassert.h"                              // for ASSERT
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/utils.h"                       // for unsharded_path
-#include "ignore_unused.h"                        // for ignore_unused
 #include "log.h"                                  // for L_CALL
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
 #include "opts.h"                                 // for opts.strict
@@ -175,10 +174,9 @@ SchemasLRU::SchemasLRU(ssize_t max_size) :
 
 
 std::tuple<bool, std::shared_ptr<const MsgPack>, std::string>
-SchemasLRU::_update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable)
+SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable)
 {
 	L_CALL("SchemasLRU::_update(<db_handler>, {}, {})", new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr");
-	ignore_unused(prefix);
 
 	ASSERT(db_handler);
 	ASSERT(!db_handler->endpoints.empty());

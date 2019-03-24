@@ -46,7 +46,6 @@
 #include "exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description
 #include "fs.hh"                    // for exists
-#include "ignore_unused.h"          // for ignore_unused
 #include "io.hh"                    // for io::*
 #include "log.h"                    // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
 #include "manager.h"                // for XapiandManager
@@ -718,7 +717,7 @@ DatabaseWAL::init_database()
 
 
 void
-DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update)
+DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, [[maybe_unused]] bool send_update)
 {
 	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", ::repr(uuid.to_string()), revision, names[toUType(type)], send_update);
 
@@ -800,8 +799,6 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 				db_updater()->debounce(base_path, base_path);
 			}
 		}
-#else
-	ignore_unused(send_update);
 #endif
 
 	} catch (const StorageException& exc) {

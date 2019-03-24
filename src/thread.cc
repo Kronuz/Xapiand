@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,6 @@
 #endif
 
 #include "error.hh"              // for error::name, error::description
-#include "ignore_unused.h"       // for ignore_unused
 #include "log.h"                 // for L_WARNING_ONCE
 
 
@@ -64,19 +63,15 @@ sched_getcpu()
 
 
 void
-run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType thread_policy)
+run_thread(void *(*thread_routine)(void *), void *arg, ThreadPolicyType)
 {
-	ignore_unused(thread_policy);
-
 	std::thread(thread_routine, arg).detach();
 }
 
 
 void
-setup_thread(const std::string& name, ThreadPolicyType thread_policy)
+setup_thread(const std::string& name, ThreadPolicyType)
 {
-	ignore_unused(thread_policy);
-
 	set_thread_name(name);
 }
 
