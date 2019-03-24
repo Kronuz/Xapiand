@@ -55,6 +55,7 @@
 #include "repr.hh"                  // for repr
 #include "server/discovery.h"       // for db_updater
 #include "string.hh"                // for string::format
+#include "utype.hh"                 // for toUType
 
 #define L_DATABASE_NOW(name)
 
