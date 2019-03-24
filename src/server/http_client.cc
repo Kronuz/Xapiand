@@ -55,6 +55,7 @@
 #include "logger.h"                         // for Logging
 #include "manager.h"                        // for XapiandManager
 #include "metrics.h"                        // for Metrics::metrics
+#include "mime_types.hh"                    // for mime_type
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node, Node::leader_node
@@ -2260,7 +2261,7 @@ HttpClient::retrieve_view(Request& request)
 	auto document = db_handler.get_document(did);
 	auto document_data = document.get_data();
 	const Data data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
-	auto accepted = data.get_accepted(request.accept_set);
+	auto accepted = data.get_accepted(request.accept_set, mime_type(selector));
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;

@@ -548,7 +548,7 @@ public:
 		update("", object.serialise());
 	}
 
-	auto get_accepted(const accept_set_t& accept_set) const {
+	auto get_accepted(const accept_set_t& accept_set, const ct_type_t& mime_type = {}) const {
 		const Accept* accepted_by = nullptr;
 		const Locator* accepted = nullptr;
 		double accepted_priority = -1.0;
@@ -561,19 +561,27 @@ public:
 			}
 			for (auto& ct_type : ct_types) {
 				for (auto& accept : accept_set) {
-					double priority = accept.priority;
-					if (priority < accepted_priority) {
-						break;
-					}
 					if (
 						(accept.ct_type.first == "*" && accept.ct_type.second == "*") ||
 						(accept.ct_type.first == "*" && accept.ct_type.second == ct_type.second) ||
 						(accept.ct_type.first == ct_type.first && accept.ct_type.second == "*") ||
 						(accept.ct_type == ct_type)
 					) {
-						accepted_priority = priority;
-						accepted = &locator;
-						accepted_by = &accept;
+						if (
+							!mime_type.empty() &&
+							ct_type.first == mime_type.first &&
+							ct_type.first == mime_type.first
+						) {
+							accepted = &locator;
+							accepted_by = &accept;
+							break;
+						}
+						double priority = accept.priority;
+						if (priority >= accepted_priority) {
+							accepted_priority = priority;
+							accepted = &locator;
+							accepted_by = &accept;
+						}
 					}
 				}
 			}
