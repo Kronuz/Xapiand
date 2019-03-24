@@ -100,6 +100,7 @@ set (CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 include (AC_HEADER_STDC)
 include (AddCXXCompilerFlag)
 include (CheckSymbolExists)
+include (CheckCXXCompilerFlag)
 include (CheckCXXSourceCompiles)
 include (CheckCXXSourceRuns)
 include (CheckCXXSymbolExists)
@@ -593,6 +594,32 @@ endif ()
 
 
 ########################################################################
+# Use libc++ when available
+########################################################################
+
+check_cxx_compiler_flag("-stdlib=libc++" HAVE_FLAG_STDLIB_LIBCPP)
+if (HAVE_FLAG_STDLIB_LIBCPP)
+	add_cxx_compiler_flag("-stdlib=libc++")
+	find_library(LIBCPP_LIBRARIES c++)
+	if (LIBCPP_LIBRARIES)
+		set (HAVE_LIBCPP 1)
+		target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBCPP_LIBRARIES})
+		find_library(LIBCPPABI_LIBRARIES c++abi)
+		if (LIBCPPABI_LIBRARIES)
+			set (HAVE_LIBCPPABI 1)
+			target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBCPPABI_LIBRARIES})
+		else ()
+			set (HAVE_LIBCPPABI 0)
+			set (LIBCPP_LIBRARIES "")
+		endif ()
+	else ()
+		set (HAVE_LIBCPP 0)
+		set (LIBCPP_LIBRARIES "")
+	endif ()
+endif ()
+
+
+########################################################################
 # Threads Library
 ########################################################################
 
@@ -660,7 +687,7 @@ endif ()
 set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -fstack-protector-strong")
 
 # Add compiler flags.
-add_required_cxx_compiler_flag("-std=c++17 -stdlib=libc++ -lc++ -lc++abi")
+add_required_cxx_compiler_flag("-std=c++17")
 
 add_cxx_compiler_flag("-fdiagnostics-color=always")
 add_cxx_compiler_flag("-fno-common")

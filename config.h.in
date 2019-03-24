@@ -57,6 +57,15 @@
 /* Define to 1 if you have the `m' library (-lm). */
 #cmakedefine HAVE_M @HAVE_M@
 
+/* Define to 1 if you have the `dl' library (-ldl). */
+#cmakedefine HAVE_DL @HAVE_DL@
+
+/* Define to 1 if you have the `libc++' library (-lc++). */
+#cmakedefine HAVE_LIBCPP @HAVE_LIBCPP@
+
+/* Define to 1 if you have the `libc++abi' library (-lc++abi). */
+#cmakedefine HAVE_LIBCPPABI @HAVE_LIBCPPABI@
+
 /* Define to 1 if you have the `rt' library (-lrt). */
 #cmakedefine HAVE_RT @HAVE_RT@
 
