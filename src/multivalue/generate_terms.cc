@@ -27,6 +27,7 @@
 #include <unordered_map>                          // for std::unordered_map
 #include <vector>                                 // for std::vector
 
+#include "config.h"                               // for HAVE_LIBCPP
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "utils/math.hh"                          // for modulus
@@ -91,7 +92,15 @@ template <typename T>
 struct Tree {
 	bool leaf;
 	size_t pos;
+
+#ifdef HAVE_LIBCPP
+	// [https://stackoverflow.com/a/27564183/167522]
+	// In libstdc++, std::unordered_map doesn't take
+	// uncomplete types but std::map does.
 	std::unordered_map<T, Tree<T>> terms;
+#else
+	std::map<T, Tree<T>> terms;
+#endif
 
 	Tree() : leaf{false}, pos{0} {}
 };
