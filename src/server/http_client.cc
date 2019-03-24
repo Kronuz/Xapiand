@@ -1672,7 +1672,8 @@ HttpClient::update_document_view(Request& request)
 	if (request.method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments).second;
 	} else if (request.method == HTTP_STORE) {
-		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+		auto selector = request.path_parser.get_slc();
+		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type).second;
 	} else {
 		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 	}
