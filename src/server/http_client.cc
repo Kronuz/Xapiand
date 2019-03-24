@@ -3033,7 +3033,7 @@ HttpClient::end_http_request(Request& request)
 		int priority = LOG_DEBUG;
 
 		if ((int)request.response.status >= 200 && (int)request.response.status <= 299) {
-			static constexpr auto fmt_2xx = WHITE + "\"{}\" {} {} {}";
+			static constexpr auto fmt_2xx = LIGHT_GREY + "\"{}\" {} {} {}";
 			fmt = fmt_2xx.c_str();
 		} else if ((int)request.response.status >= 300 && (int)request.response.status <= 399) {
 			static constexpr auto fmt_3xx = STEEL_BLUE + "\"{}\" {} {} {}";
