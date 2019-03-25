@@ -2560,7 +2560,7 @@ HttpClient::url_resolve(Request& request)
 		std::unique_ptr<char[]> path_buf_ptr(new char[path_size + 1]);
 		auto path_buf_str = path_buf_ptr.get();
 		const char* path_str = request.path.data() + u.field_data[3].off;
-		normalize_path(path_str, path_str + path_size, path_buf_str);
+		normalize_path(path_str, path_str + path_size, path_buf_str, false, true);
 		if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
 			if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
 				THROW(ClientError, "Invalid path");
