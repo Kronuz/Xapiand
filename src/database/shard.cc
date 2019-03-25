@@ -261,11 +261,9 @@ Shard::reopen_writable()
 
 	auto new_database = std::make_unique<Xapian::WritableDatabase>();
 
-	_local.store(true, std::memory_order_relaxed);
-
 	ASSERT(!endpoint.empty());
 	Xapian::WritableDatabase wsdb;
-	bool localdb = false;
+	bool local = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
@@ -302,15 +300,15 @@ Shard::reopen_writable()
 			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
 			created = true;
 		}
-		localdb = true;
+		local = true;
 	}
 
 	new_database->add_database(wsdb);
 
-	if (localdb) {
+	_local.store(local, std::memory_order_relaxed);
+	if (local) {
 		reopen_revision = new_database->get_revision();
-	} else {
-		_local.store(false, std::memory_order_relaxed);
+		endpoint.local_revision = reopen_revision;
 	}
 
 	if (transaction != Transaction::none) {
@@ -319,7 +317,7 @@ Shard::reopen_writable()
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
-	if (localdb) {
+	if (local) {
 		writable_storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | STORAGE_COMPRESS | STORAGE_SYNC_MODE);
 		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 	} else {
@@ -371,11 +369,9 @@ Shard::reopen_readable()
 
 	auto new_database = std::make_unique<Xapian::Database>();
 
-	_local.store(true, std::memory_order_relaxed);
-
 	ASSERT(!endpoint.empty());
 	Xapian::Database rsdb;
-	bool localdb = false;
+	bool local = false;
 #ifdef XAPIAND_CLUSTERING
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
@@ -403,7 +399,7 @@ Shard::reopen_readable()
 				// Handle remote endpoint and figure out if the endpoint is a local database
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				rsdb = Xapian::Database(endpoint.path, _flags);
-				localdb = true;
+				local = true;
 			} else {
 				try {
 					// If remote is master (it should be), try triggering replication
@@ -440,19 +436,18 @@ Shard::reopen_readable()
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 		}
-		localdb = true;
+		local = true;
 	}
 
 	new_database->add_database(rsdb);
 
-	if (localdb) {
+	_local.store(local, std::memory_order_relaxed);
+	if (local) {
 		reopen_revision = new_database->get_revision();
-	} else {
-		_local.store(false, std::memory_order_relaxed);
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
-	if (localdb) {
+	if (local) {
 		// WAL required on a local database, open it.
 		storage = std::make_unique<DataStorage>(endpoint.path, this, STORAGE_OPEN);
 	} else {
@@ -669,7 +664,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
-			auto prior_revision = local ? wdb->get_revision() : 0;
+			ASSERT(!local || wdb->get_revision() == endpoint.local_revision.load());
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
 				wdb->begin_transaction(true);
@@ -682,11 +677,13 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			}
 			_modified.store(false, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = endpoint.local_revision.load();
 				auto current_revision = wdb->get_revision();
 				if (prior_revision == current_revision) {
 					L_DATABASE("Attempted commit, but it turned out not to change the revision");
 					return false;
 				}
+				ASSERT(current_revision == prior_revision + 1);
 				L_DATABASE("Commit done: {} -> {}", prior_revision, current_revision);
 				endpoint.local_revision = current_revision;
 			}
