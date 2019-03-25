@@ -1020,6 +1020,10 @@ HttpClient::prepare()
 				if (id.front() == ':') {
 					if (id == ":schema") {
 						new_request->view = &HttpClient::schema_view;
+					} else if (id == ":search") {
+						new_request->view = &HttpClient::search_view;
+					} else if (id == ":count") {
+						new_request->view = &HttpClient::count_view;
 #if XAPIAND_DATABASE_WAL
 					} else if (id == ":wal") {
 						new_request->view = &HttpClient::wal_view;
