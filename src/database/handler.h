@@ -206,7 +206,7 @@ public:
 	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
 #if XAPIAND_DATABASE_WAL
-	MsgPack repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised);
+	MsgPack repr_wal(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
 #endif
 
 	MsgPack check();

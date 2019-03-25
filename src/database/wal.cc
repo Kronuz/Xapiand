@@ -523,7 +523,7 @@ DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, boo
 	}
 
 	if (volumes.first <= volumes.second) {
-		if (end_rev < end_revision) {
+		if (end_rev < end_revision && end_revision != std::numeric_limits<Xapian::rev>::max()) {
 			L_WARNING("WAL did not reach the end revision {}, WAL ends at {}: {} volume {}", end_revision, end_rev, repr(base_path), volumes.second);
 		}
 	}

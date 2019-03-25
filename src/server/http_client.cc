@@ -2180,7 +2180,7 @@ HttpClient::wal_view(Request& request)
 
 	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
-	auto repr = db_handler.repr_wal(0, std::numeric_limits<uint32_t>::max(), unserialised);
+	auto repr = db_handler.repr_wal(0, std::numeric_limits<Xapian::rev>::max(), unserialised);
 
 	request.ready = std::chrono::system_clock::now();
 

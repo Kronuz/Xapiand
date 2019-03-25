@@ -343,7 +343,7 @@ DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method
 
 #if XAPIAND_DATABASE_WAL
 MsgPack
-DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision, bool unserialised)
+DatabaseHandler::repr_wal(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised)
 {
 	L_CALL("DatabaseHandler::repr_wal({}, {})", start_revision, end_revision);
 
