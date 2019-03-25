@@ -115,10 +115,17 @@ const ct_type_t&
 mime_type(std::string_view extension)
 {
 	static const auto mime_types = load_mime_types();
+
+	auto found = extension.find_last_of('.');
+	if (found != std::string_view::npos) {
+		extension.remove_prefix(found + 1);
+	}
+
 	auto it = mime_types.find(string::lower(extension));
 	if (it != mime_types.end()) {
 		return it->second;
 	}
+
 	static const ct_type_t no_type;
 	return no_type;
 }
