@@ -99,13 +99,13 @@ correct number of shards is the optimal approach.
 By default, each index in Xapiand is allocated 5 primary shards.
 
 
-## Replicas
+## Replica
 
 In a network/cloud environment where failures can be expected anytime, it is
 very useful and highly recommended to have a failover mechanism in case a
 shard/node somehow goes offline or disappears for whatever reason. To this end,
 Xapiand allows you to make one or more copies of your index's shards into what
-are called replica shards, or replicas for short.
+are called _replica shards_, or _replicas_ for short.
 
 An index can also be replicated zero (meaning no replicas) or more times. Once
 replicated, each index will have primary shards (the original shards that were
