@@ -130,9 +130,9 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	bool validate_uuid;
 
-	MsgPack repr_document(std::string_view document, bool unserialised);
-	MsgPack repr_metadata(std::string_view document, bool unserialised);
-	MsgPack repr_line(std::string_view line, bool unserialised);
+	MsgPack to_string_document(std::string_view document, bool unserialised);
+	MsgPack to_string_metadata(std::string_view document, bool unserialised);
+	MsgPack to_string_line(std::string_view line, bool unserialised);
 	uint32_t highest_valid_slot();
 
 	bool open(std::string_view path, int flags, bool commit_eof = false) {
@@ -176,7 +176,7 @@ public:
 	bool execute_line(std::string_view line, bool wal_, bool send_update, bool unsafe);
 	void write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
 
-	MsgPack repr(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
+	MsgPack to_string(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
 
 	std::pair<Xapian::rev, uint32_t> locate_revision(Xapian::rev revision);
 	iterator find(Xapian::rev revision);
