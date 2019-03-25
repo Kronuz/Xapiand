@@ -237,35 +237,40 @@ public:
 	{
 		if (!database) {
 			ASSERT(locks == 0);
-			shards = XapiandManager::database_pool()->checkout(db_handler.endpoints, db_handler.flags, std::forward<Args>(args)...);
 			auto new_database = std::make_unique<Xapian::Database>();
-			auto valid = shards.size();
-			std::exception_ptr eptr;
-			for (auto& shard : shards) {
-				Xapian::Database db("", Xapian::DB_BACKEND_INMEMORY);
-				try {
-					shard->reopen();
-					db = *shard->db();
-				} catch (const Xapian::DatabaseOpeningError& exc) {
-					eptr = std::current_exception();
-					--valid;
-				} catch (const Xapian::NetworkError& exc) {
-					eptr = std::current_exception();
-					--valid;
-				} catch (const Xapian::DatabaseError& exc) {
-					if (exc.get_msg() != "Database has been closed") {
-						throw;
+			shards = XapiandManager::database_pool()->checkout(db_handler.endpoints, db_handler.flags, std::forward<Args>(args)...);
+			try {
+				auto valid = shards.size();
+				std::exception_ptr eptr;
+				for (auto& shard : shards) {
+					Xapian::Database db("", Xapian::DB_BACKEND_INMEMORY);
+					try {
+						shard->reopen();
+						db = *shard->db();
+					} catch (const Xapian::DatabaseOpeningError& exc) {
+						eptr = std::current_exception();
+						--valid;
+					} catch (const Xapian::NetworkError& exc) {
+						eptr = std::current_exception();
+						--valid;
+					} catch (const Xapian::DatabaseError& exc) {
+						if (exc.get_msg() != "Database has been closed") {
+							throw;
+						}
+						eptr = std::current_exception();
+						--valid;
 					}
-					eptr = std::current_exception();
-					--valid;
+					new_database->add_database(db);
 				}
-				new_database->add_database(db);
+				if (eptr && !valid) {
+					std::rethrow_exception(eptr);
+				}
+				database = std::move(new_database);
+			} catch (...) {
+				new_database.reset();
+				XapiandManager::database_pool()->checkin(shards);
+				throw;
 			}
-			if (eptr && !valid) {
-				std::rethrow_exception(eptr);
-			}
-
-			database = std::move(new_database);
 		}
 		++locks;
 		return database.get();
