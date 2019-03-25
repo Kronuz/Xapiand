@@ -992,8 +992,8 @@ HttpClient::prepare()
 	new_request->method = HTTP_PARSER_METHOD(&new_request->parser);
 	url_resolve(*new_request);
 
-	const auto pth = new_request->path_parser.get_pth();
 	const auto id = new_request->path_parser.get_id();
+	const auto has_pth = new_request->path_parser.has_pth();
 
 	switch (new_request->method) {
 		case HTTP_DELETE:
@@ -1007,7 +1007,7 @@ HttpClient::prepare()
 				} else {
 					new_request->view = &HttpClient::delete_document_view;
 				}
-			} else if (!pth.empty()) {
+			} else if (has_pth) {
 				// new_request->view = &HttpClient::delete_database_view;
 				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
 			} else {
@@ -1024,9 +1024,9 @@ HttpClient::prepare()
 					} else if (id == ":wal") {
 						new_request->view = &HttpClient::wal_view;
 #endif
-					} else if (pth.empty() && id == ":nodes") {
+					} else if (!has_pth && id == ":nodes") {
 						new_request->view = &HttpClient::nodes_view;
-					} else if (pth.empty() && id == ":metrics") {
+					} else if (!has_pth && id == ":metrics") {
 						new_request->view = &HttpClient::metrics_view;
 					} else if (id == ":info") {
 						new_request->view = &HttpClient::info_view;
@@ -1038,7 +1038,7 @@ HttpClient::prepare()
 				} else {
 					new_request->view = &HttpClient::retrieve_view;
 				}
-			} else if (pth.empty()) {
+			} else if (!has_pth) {
 				new_request->view = &HttpClient::home_view;
 			} else {
 				new_request->view = &HttpClient::search_view;
@@ -1207,7 +1207,7 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_QUIT:
-			if (opts.admin_commands && pth.empty() && id.empty()) {
+			if (opts.admin_commands && !has_pth && id.empty()) {
 				XapiandManager::try_shutdown(true);
 				write_http_response(*new_request, HTTP_STATUS_OK);
 				destroy();
@@ -1249,7 +1249,7 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_FLUSH:
-			if (opts.admin_commands && id.empty() && pth.empty()) {
+			if (opts.admin_commands && id.empty() && !has_pth) {
 				// Flush both databases and clients by default (unless one is specified)
 				new_request->query_parser.rewind();
 				int flush_databases = new_request->query_parser.next("databases");

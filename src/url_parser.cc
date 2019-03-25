@@ -515,10 +515,15 @@ PathParser::next()
 }
 
 
-void
-PathParser::skip_id() noexcept
+bool
+PathParser::has_pth() noexcept
 {
-	off_id = nullptr;
+	if (off_id != nullptr) {
+		return off_id > off;
+	}
+	const char *ni = path.data();
+	const char *nf = ni + path.size();
+	return nf > off;
 }
 
 

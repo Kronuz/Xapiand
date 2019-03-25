@@ -104,7 +104,7 @@ public:
 	State init(std::string_view p);
 	State next();
 
-	void skip_id() noexcept;
+	bool has_pth() noexcept;
 
 	std::string_view get_pth();
 	std::string_view get_hst();
