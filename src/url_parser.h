@@ -68,9 +68,10 @@ class PathParser {
 	std::string path;
 	const char *off;
 
+	bool is_only_path;
+
 public:
 	enum class State : uint8_t {
-		PMT_SLC,              // parameter and selector
 		ID_SLC,               // Id and selector
 		SLF,                  // Selector Finded
 		SLC,                  // Selector state
@@ -78,10 +79,7 @@ public:
 		SLB_SUB,              // Subfield Selector Brackets
 		SLB_SPACE_OR_COMMA,   // Expecting space or comma
 		NCM,
-		PMT,
-		CMD,
 		ID,
-		NSP,
 		PTH,
 		HST,
 		END,
@@ -94,14 +92,6 @@ public:
 	const char *off_pth;
 	size_t len_hst;
 	const char *off_hst;
-	size_t len_nsp;
-	const char *off_nsp;
-	size_t len_pmt;
-	const char *off_pmt;
-	size_t len_ppmt;
-	const char *off_ppmt;
-	size_t len_cmd;
-	const char *off_cmd;
 	size_t len_slc;
 	const char *off_slc;
 	size_t len_id;
@@ -118,10 +108,6 @@ public:
 
 	std::string_view get_pth();
 	std::string_view get_hst();
-	std::string_view get_nsp();
-	std::string_view get_pmt();
-	std::string_view get_ppmt();
-	std::string_view get_cmd();
 	std::string_view get_id();
 	std::string_view get_slc();
 };
