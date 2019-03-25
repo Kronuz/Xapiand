@@ -173,40 +173,31 @@ enum http_status
   XX(5,  CONNECT,     CONNECT)      \
   XX(6,  OPTIONS,     OPTIONS)      \
   XX(7,  TRACE,       TRACE)        \
-  /* WebDAV */                      \
-  XX(8,  COPY,        COPY)         \
-  XX(9,  LOCK,        LOCK)         \
-  XX(10, MKCOL,       MKCOL)        \
-  XX(11, MOVE,        MOVE)         \
-  XX(12, PROPFIND,    PROPFIND)     \
-  XX(13, PROPPATCH,   PROPPATCH)    \
-  XX(14, SEARCH,      SEARCH)       \
-  XX(15, UNLOCK,      UNLOCK)       \
-  XX(16, BIND,        BIND)         \
-  XX(17, REBIND,      REBIND)       \
-  XX(18, UNBIND,      UNBIND)       \
-  XX(19, ACL,         ACL)          \
-  /* subversion */                  \
-  XX(20, REPORT,      REPORT)       \
-  XX(21, MKACTIVITY,  MKACTIVITY)   \
-  XX(22, CHECKOUT,    CHECKOUT)     \
-  XX(23, MERGE,       MERGE)        \
-  /* upnp */                        \
-  XX(24, MSEARCH,     M-SEARCH)     \
-  XX(25, NOTIFY,      NOTIFY)       \
-  XX(26, SUBSCRIBE,   SUBSCRIBE)    \
-  XX(27, UNSUBSCRIBE, UNSUBSCRIBE)  \
   /* RFC-5789 */                    \
-  XX(28, PATCH,       PATCH)        \
-  XX(29, PURGE,       PURGE)        \
-  /* CalDAV */                      \
-  XX(30, MKCALENDAR,  MKCALENDAR)   \
+  XX(8,  PATCH,       PATCH)        \
+  XX(9,  PURGE,       PURGE)        \
   /* RFC-2068, section 19.6.1.2 */  \
-  XX(31, LINK,        LINK)         \
-  XX(32, UNLINK,      UNLINK)       \
-  /* Dubalu */                      \
-  XX(33, STORE,       STORE)        \
-  XX(34, UPDATE,      UPDATE)       \
+  XX(10, LINK,        LINK)         \
+  XX(11, UNLINK,      UNLINK)       \
+  /* Xapiand */                     \
+  XX(12, CHECK,       CHECK)        \
+  XX(13, CLOSE,       CLOSE)        \
+  XX(14, COMMIT,      COMMIT)       \
+  XX(15, COPY,        COPY)         \
+  XX(16, COUNT,       COUNT)        \
+  XX(17, DUMP,        DUMP)         \
+  XX(18, FLUSH,       FLUSH)        \
+  XX(19, INFO,        INFO)         \
+  XX(20, LOCK,        LOCK)         \
+  XX(21, MERGE,       MERGE)        \
+  XX(22, MOVE,        MOVE)         \
+  XX(23, OPEN,        OPEN)         \
+  XX(24, QUIT,        QUIT)         \
+  XX(25, RESTORE,     RESTORE)      \
+  XX(26, SEARCH,      SEARCH)       \
+  XX(27, STORE,       STORE)        \
+  XX(28, UNLOCK,      UNLOCK)       \
+  XX(29, UPDATE,      UPDATE)       \
 
 enum http_method
   {

@@ -1054,23 +1054,21 @@ reexecute:
         parser->method = (enum http_method) 0;
         parser->index = 1;
         switch (ch) {
-          case 'A': parser->method = HTTP_ACL; break;
-          case 'B': parser->method = HTTP_BIND; break;
-          case 'C': parser->method = HTTP_CONNECT; /* or COPY, CHECKOUT */ break;
-          case 'D': parser->method = HTTP_DELETE; break;
+          case 'C': parser->method = HTTP_COUNT; /* or COPY, CONNECT, COMMIT, CLOSE, CHECK */ break;
+          case 'D': parser->method = HTTP_DUMP; /* or DELETE */ break;
+          case 'F': parser->method = HTTP_FLUSH; break;
           case 'G': parser->method = HTTP_GET; break;
           case 'H': parser->method = HTTP_HEAD; break;
+          case 'I': parser->method = HTTP_INFO; break;
           case 'L': parser->method = HTTP_LOCK; /* or LINK */ break;
-          case 'M': parser->method = HTTP_MKCOL; /* or MOVE, MKACTIVITY, MERGE, M-SEARCH, MKCALENDAR */ break;
-          case 'N': parser->method = HTTP_NOTIFY; break;
-          case 'O': parser->method = HTTP_OPTIONS; break;
-          case 'P': parser->method = HTTP_POST;
-            /* or PROPFIND|PROPPATCH|PUT|PATCH|PURGE */
-            break;
-          case 'R': parser->method = HTTP_REPORT; /* or REBIND */ break;
-          case 'S': parser->method = HTTP_SUBSCRIBE; /* or SEARCH, STORE */ break;
+          case 'M': parser->method = HTTP_MOVE; /* or MERGE */ break;
+          case 'O': parser->method = HTTP_OPTIONS; /* or OPEN */ break;
+          case 'P': parser->method = HTTP_PUT; /* or PURGE, POST, PATCH */ break;
+          case 'Q': parser->method = HTTP_QUIT; break;
+          case 'R': parser->method = HTTP_RESTORE; break;
+          case 'S': parser->method = HTTP_STORE; /* or SEARCH */ break;
           case 'T': parser->method = HTTP_TRACE; break;
-          case 'U': parser->method = HTTP_UPDATE; /* or UNLOCK, UNSUBSCRIBE, UNBIND, UNLINK */ break;
+          case 'U': parser->method = HTTP_UNLOCK; /* or UNLINK, UPDATE */ break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
@@ -1102,24 +1100,20 @@ reexecute:
             case (HTTP_##meth << 16 | pos << 8 | ch): \
               parser->method = HTTP_##new_meth; break;
 
-            XX(POST,      1, 'U', PUT)
-            XX(POST,      1, 'A', PATCH)
-            XX(CONNECT,   1, 'H', CHECKOUT)
-            XX(CONNECT,   2, 'P', COPY)
-            XX(MKCOL,     1, 'O', MOVE)
-            XX(MKCOL,     1, 'E', MERGE)
-            XX(MKCOL,     2, 'A', MKACTIVITY)
-            XX(MKCOL,     3, 'A', MKCALENDAR)
-            XX(SUBSCRIBE, 1, 'E', SEARCH)
-            XX(SUBSCRIBE, 1, 'T', STORE)
-            XX(REPORT,    2, 'B', REBIND)
-            XX(POST,      1, 'R', PROPFIND)
-            XX(PROPFIND,  4, 'P', PROPPATCH)
-            XX(PUT,       2, 'R', PURGE)
+            XX(COUNT,     1, 'L', CLOSE)
+            XX(COUNT,     1, 'H', CHECK)
+            XX(COUNT,     2, 'M', COMMIT)
+            XX(COUNT,     2, 'N', CONNECT)
+            XX(COUNT,     2, 'P', COPY)
+            XX(DUMP,      1, 'E', DELETE)
             XX(LOCK,      1, 'I', LINK)
-            XX(UPDATE,    1, 'N', UNLOCK)
-            XX(UNLOCK,    2, 'S', UNSUBSCRIBE)
-            XX(UNLOCK,    2, 'B', UNBIND)
+            XX(MOVE,      1, 'E', MERGE)
+            XX(OPTIONS,   2, 'E', OPEN)
+            XX(PUT,       1, 'O', POST)
+            XX(PUT,       1, 'A', PATCH)
+            XX(PUT,       2, 'R', PURGE)
+            XX(STORE,     1, 'E', SEARCH)
+            XX(UNLOCK,    1, 'P', UPDATE)
             XX(UNLOCK,    3, 'I', UNLINK)
 #undef XX
 
@@ -1127,10 +1121,6 @@ reexecute:
               SET_ERRNO(HPE_INVALID_METHOD);
               goto error;
           }
-        } else if (ch == '-' &&
-                   parser->index == 1 &&
-                   parser->method == HTTP_MKCOL) {
-          parser->method = HTTP_MSEARCH;
         } else {
           SET_ERRNO(HPE_INVALID_METHOD);
           goto error;
