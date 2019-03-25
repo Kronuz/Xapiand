@@ -215,10 +215,10 @@ Shard::Shard(ShardEndpoint& endpoint_, int flags_)
 	: reopen_time(std::chrono::system_clock::now()),
 	  reopen_revision(0),
 	  busy(false),
-	  local(false),
-	  closed(false),
-	  modified(false),
-	  incomplete(false),
+	  _local(false),
+	  _closed(false),
+	  _modified(false),
+	  _incomplete(false),
 	  transaction(Transaction::none),
 	  endpoint(endpoint_),
 	  flags(flags_)
@@ -261,7 +261,7 @@ Shard::reopen_writable()
 
 	auto new_database = std::make_unique<Xapian::WritableDatabase>();
 
-	local.store(true, std::memory_order_relaxed);
+	_local.store(true, std::memory_order_relaxed);
 
 	ASSERT(!endpoint.empty());
 	Xapian::WritableDatabase wsdb;
@@ -310,7 +310,7 @@ Shard::reopen_writable()
 	if (localdb) {
 		reopen_revision = new_database->get_revision();
 	} else {
-		local.store(false, std::memory_order_relaxed);
+		_local.store(false, std::memory_order_relaxed);
 	}
 
 	if (transaction != Transaction::none) {
@@ -337,7 +337,7 @@ Shard::reopen_writable()
 		// WAL wasn't already active for the requested endpoint
 		DatabaseWAL wal(this);
 		if (wal.execute(true)) {
-			modified.store(true, std::memory_order_relaxed);
+			_modified.store(true, std::memory_order_relaxed);
 		}
 	}
 #endif  // XAPIAND_DATABASE_WAL
@@ -371,7 +371,7 @@ Shard::reopen_readable()
 
 	auto new_database = std::make_unique<Xapian::Database>();
 
-	local.store(true, std::memory_order_relaxed);
+	_local.store(true, std::memory_order_relaxed);
 
 	ASSERT(!endpoint.empty());
 	Xapian::Database rsdb;
@@ -408,7 +408,7 @@ Shard::reopen_readable()
 				try {
 					// If remote is master (it should be), try triggering replication
 					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
-					incomplete.store(true, std::memory_order_relaxed);
+					_incomplete.store(true, std::memory_order_relaxed);
 				} catch (...) { }
 			}
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
@@ -416,7 +416,7 @@ Shard::reopen_readable()
 			try {
 				// If remote is master (it should be), try triggering replication
 				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
-				incomplete.store(true, std::memory_order_relaxed);
+				_incomplete.store(true, std::memory_order_relaxed);
 			} catch (...) { }
 		}
 #endif  // XAPIAN_LOCAL_DB_FALLBACK
@@ -448,7 +448,7 @@ Shard::reopen_readable()
 	if (localdb) {
 		reopen_revision = new_database->get_revision();
 	} else {
-		local.store(false, std::memory_order_relaxed);
+		_local.store(false, std::memory_order_relaxed);
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -549,10 +549,10 @@ Shard::reset() noexcept
 		database.reset();
 	} catch(...) {}
 	reopen_revision = 0;
-	local.store(false, std::memory_order_relaxed);
-	closed.store(false, std::memory_order_relaxed);
-	modified.store(false, std::memory_order_relaxed);
-	incomplete.store(false, std::memory_order_relaxed);
+	_local.store(false, std::memory_order_relaxed);
+	_closed.store(false, std::memory_order_relaxed);
+	_modified.store(false, std::memory_order_relaxed);
+	_incomplete.store(false, std::memory_order_relaxed);
 #ifdef XAPIAND_DATA_STORAGE
 	try {
 		storage.reset();
@@ -605,8 +605,8 @@ Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw
 
 	reset();
 
-	local.store(local_, std::memory_order_relaxed);
-	closed.store(closed_, std::memory_order_relaxed);
+	_local.store(local_, std::memory_order_relaxed);
+	_closed.store(closed_, std::memory_order_relaxed);
 	transaction = transaction_;
 }
 
@@ -665,9 +665,11 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Commit: t: {}", t);
 		try {
+			auto local = is_local();
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
+			auto prior_revision = local ? wdb->get_revision() : 0;
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
 				wdb->begin_transaction(true);
@@ -678,9 +680,15 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			} else {
 				wdb->commit();
 			}
-			modified.store(false, std::memory_order_relaxed);
-			if (is_local()) {
-				endpoint.local_revision = wdb->get_revision();
+			_modified.store(false, std::memory_order_relaxed);
+			if (local) {
+				auto current_revision = wdb->get_revision();
+				if (prior_revision == current_revision) {
+					L_DATABASE("Attempted commit, but it turned out not to change the revision");
+					return false;
+				}
+				L_DATABASE("Commit done: {} -> {}", prior_revision, current_revision);
+				endpoint.local_revision = current_revision;
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
@@ -780,7 +788,8 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 		// L_DATABASE("Deleting document: {}  t: {}", shard_did, t);
 
 		try {
-			if (is_local() && version && version_) {
+			auto local = is_local();
+			if (local && version && version_) {
 				std::string ver_prefix;
 				ver_prefix = "V" + serialise_length(shard_did);
 				auto ver_prefix_size = ver_prefix.size();
@@ -799,7 +808,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 				}
 			}
 			wdb->delete_document(shard_did);
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -852,7 +861,8 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 		shard_did = 0;
 
 		try {
-			if (is_local() && version && version_) {
+			auto local = is_local();
+			if (local && version && version_) {
 				std::string ver_prefix;
 				auto it = wdb->postlist_begin(term);
 				if (it == wdb->postlist_end(term)) {
@@ -881,7 +891,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 			} else {
 				wdb->delete_document(term);
 			}
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1023,7 +1033,8 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 		shard_did = 0;
 
 		try {
-			if (is_local()) {
+			auto local = is_local();
+			if (local) {
 				std::string ver_prefix;
 				shard_did = wdb->get_lastdocid() + 1;
 				ver_prefix = "V" + serialise_length(shard_did);
@@ -1036,7 +1047,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 			} else {
 				shard_did = wdb->add_document(doc);
 			}
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1104,7 +1115,8 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 		version = 0;
 
 		try {
-			if (is_local()) {
+			auto local = is_local();
+			if (local) {
 				std::string ver_prefix;
 				ver_prefix = "V" + serialise_length(shard_did);
 				auto ver_prefix_size = ver_prefix.size();
@@ -1127,7 +1139,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 			}
 			wdb->replace_document(shard_did, doc);
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1199,7 +1211,8 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 		shard_did = 0;
 
 		try {
-			if (is_local()) {
+			auto local = is_local();
+			if (local) {
 				std::string ver_prefix;
 				ASSERT(term.size() > 2);
 				if (term[0] == 'Q' && term[1] == 'N') {
@@ -1294,7 +1307,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 			} else {
 				shard_did = wdb->replace_document(term, doc);
 			}
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1349,8 +1362,9 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
+			auto local = is_local();
 			wdb->add_spelling(word, freqinc);
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1398,8 +1412,9 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
+			auto local = is_local();
 			result = wdb->remove_spelling(word, freqdec);
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
@@ -1650,8 +1665,9 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
+			auto local = is_local();
 			wdb->set_metadata(key, value);
-			modified.store(commit_ || is_local(), std::memory_order_relaxed);
+			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }

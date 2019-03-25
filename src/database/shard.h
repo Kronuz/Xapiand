@@ -66,10 +66,10 @@ private:
 	Xapian::rev reopen_revision;
 
 	std::atomic_bool busy;
-	std::atomic_bool local;
-	std::atomic_bool closed;
-	std::atomic_bool modified;
-	std::atomic_bool incomplete;
+	std::atomic_bool _local;
+	std::atomic_bool _closed;
+	std::atomic_bool _modified;
+	std::atomic_bool _incomplete;
 
 	std::unique_ptr<Xapian::Database> database;
 
@@ -95,19 +95,19 @@ public:
 	int flags;
 
 	bool is_local() const {
-		return local.load(std::memory_order_relaxed);
+		return _local.load(std::memory_order_relaxed);
 	}
 
 	bool is_closed() const {
-		return closed.load(std::memory_order_relaxed);
+		return _closed.load(std::memory_order_relaxed);
 	}
 
 	bool is_modified() const {
-		return modified.load(std::memory_order_relaxed);
+		return _modified.load(std::memory_order_relaxed);
 	}
 
 	bool is_incomplete() const {
-		return incomplete.load(std::memory_order_relaxed);
+		return _incomplete.load(std::memory_order_relaxed);
 	}
 
 	bool is_writable() const {
