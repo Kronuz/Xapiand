@@ -262,6 +262,9 @@
 /* Path for stopwords files */
 #cmakedefine STOPWORDS_PATH "@STOPWORDS_PATH@"
 
+/* Path for mime types file */
+#cmakedefine MIME_TYPES_PATH "@MIME_TYPES_PATH@"
+
 /* Defines for cross-platform UUID generation */
 #cmakedefine UUID_LIBUUID @UUID_LIBUUID@
 #cmakedefine UUID_CFUUID @UUID_CFUUID@

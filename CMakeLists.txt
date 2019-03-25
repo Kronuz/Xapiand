@@ -214,6 +214,7 @@ endif (CPPLINT)
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 
 set (FIXTURES_PATH "${PROJECT_SOURCE_DIR}/oldtests")
+set (MIME_TYPES_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/mime.types")
 set (STOPWORDS_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand/stopwords")
 
 
@@ -493,6 +494,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 # Copy stopwords during the installation
 install(DIRECTORY ${CMAKE_SOURCE_DIR}/stopwords/ DESTINATION ${STOPWORDS_PATH})
+
+# Copy mime types file
+install(FILES ${CMAKE_SOURCE_DIR}/mime.types DESTINATION ${MIME_TYPES_PATH})
 
 # Manual page generation
 install(FILES ${CMAKE_SOURCE_DIR}/man/xapiand.8 DESTINATION ${CMAKE_INSTALL_MANDIR}/man8 COMPONENT doc)

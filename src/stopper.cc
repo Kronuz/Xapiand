@@ -22,10 +22,12 @@
 
 #include "stopper.h"
 
-#include <mutex>                   // for std::mutex, std::lock_guard
-#include <fstream>                 // for std::ifstream
+#include <cstdlib>                                // for getenv
+#include <mutex>                                  // for std::mutex, std::lock_guard
+#include <fstream>                                // for std::ifstream
 
-#include "log.h"                   // for L_WARNING_ONCE
+#include "config.h"                               // for STOPWORDS_PATH
+#include "log.h"                                  // for L_WARNING_ONCE
 
 
 const std::unique_ptr<Xapian::Stopper>&
