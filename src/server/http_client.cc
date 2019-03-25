@@ -398,12 +398,15 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			// disconnect client!
 			detach();
 			request.atom_ending = true;
-		} else {
+		} else if (http_errors.error_code != HTTP_STATUS_NOT_FOUND) {
 			MsgPack err_response = request.comments ? MsgPack({
 				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
 				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
 			}) : MsgPack::MAP();
 			write_http_response(request, http_errors.error_code, err_response);
+			request.atom_ending = true;
+		} else {
+			write_http_response(request, http_errors.error_code);
 			request.atom_ending = true;
 		}
 	}
