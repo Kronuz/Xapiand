@@ -131,13 +131,13 @@ The result (partially shown) has the available content types listed inside
         "type": "stored",
         "volume": 0,
         "offset": 60063,
-        "size": "288.2KiB"
+        "size": "676.4KiB"
       },
       {
         "content_type": "image/jpeg",
         "type": "stored",
         "volume": 0,
-        "offset": 94433,
+        "offset": 143195,
         "size": "557.6KiB"
       }
     ], ...
