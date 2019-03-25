@@ -324,7 +324,7 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 }
 
 
-char* normalize_path(const char* src, const char* end, char* dst, bool slashed) {
+char* normalize_path(const char* src, const char* end, char* dst, bool slashed, bool keep_slash) {
 	int levels = 0;
 	char* ret = dst;
 	char ch = '\0';
@@ -362,22 +362,27 @@ char* normalize_path(const char* src, const char* end, char* dst, bool slashed) 
 			}
 		}
 	}
+
+	if (*(end - 1) == '/' && keep_slash) {
+		*dst++ = '/';
+	}
+
 	*dst++ = '\0';
 	return ret;
 }
 
 
-char* normalize_path(std::string_view src, char* dst, bool slashed) {
+char* normalize_path(std::string_view src, char* dst, bool slashed, bool keep_slash) {
 	size_t src_size = src.size();
 	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src_size, dst, slashed);
+	return normalize_path(src_str, src_str + src_size, dst, slashed, keep_slash);
 }
 
 
-std::string normalize_path(std::string_view src, bool slashed) {
+std::string normalize_path(std::string_view src, bool slashed, bool keep_slash) {
 	size_t src_size = src.size();
 	const char* src_str = src.data();
 	std::vector<char> dst;
 	dst.resize(src_size + 2);
-	return normalize_path(src_str, src_str + src_size, &dst[0], slashed);
+	return normalize_path(src_str, src_str + src_size, &dst[0], slashed, keep_slash);
 }
