@@ -121,9 +121,11 @@ mime_type(std::string_view extension)
 		extension.remove_prefix(found + 1);
 	}
 
-	auto it = mime_types.find(string::lower(extension));
-	if (it != mime_types.end()) {
-		return it->second;
+	if (!extension.empty()) {
+		auto it = mime_types.find(string::lower(extension));
+		if (it != mime_types.end()) {
+			return it->second;
+		}
 	}
 
 	static const ct_type_t no_type;
