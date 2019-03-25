@@ -95,6 +95,23 @@ In Multi-Content Documents, the last content that was stored is the
 _default content type_, if none is specified using the `Accept` header.
 
 
+### File Extension
+
+If passing a file extension, the default content type is obtained from the
+`mime.types` file (usually in `/usr/local/share/xapiand/mime.types`).
+
+For example, this will return the content with `application/pdf` content
+type of the document with ID `Lenna`:
+
+{% capture req %}
+
+```json
+GET /assets/Lenna.pdf
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+
 ## Retrieving Information
 
 You can get the information about the document as usual:
