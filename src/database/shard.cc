@@ -646,7 +646,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	ASSERT(is_writable());
 
 	if (!is_modified()) {
-		L_DATABASE("Do not commit, because there are not changes");
+		L_DATABASE("Commit on shard {} was discarded, because there are not changes", repr(endpoint.to_string()));
 		return false;
 	}
 
@@ -680,11 +680,11 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				auto prior_revision = endpoint.local_revision.load();
 				auto current_revision = wdb->get_revision();
 				if (prior_revision == current_revision) {
-					L_DATABASE("Attempted commit, but it turned out not to change the revision");
+					L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(endpoint.to_string()));
 					return false;
 				}
 				ASSERT(current_revision == prior_revision + 1);
-				L_DATABASE("Commit done: {} -> {}", prior_revision, current_revision);
+				L_DATABASE("Commit on shard {}: {} -> {}", repr(endpoint.to_string()), prior_revision, current_revision);
 				endpoint.local_revision = current_revision;
 			}
 			break;
