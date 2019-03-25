@@ -126,6 +126,25 @@ UPDATE /test/1
 {% endcapture %}
 {% include curl.html req=req %}
 
+Or remove a field from the document:
+
+{% capture req %}
+
+```json
+UPDATE /test/1
+
+{
+  "_script": {
+    "_body": "_doc.erase(field)",
+    "_params": {
+      "field": "new_field",
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
 See the [Scripting](../scripting) section for more details about scripts
 and the scripting language.
 
