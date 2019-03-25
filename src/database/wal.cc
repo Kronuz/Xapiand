@@ -727,11 +727,6 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 
 	_revision = revision;
 
-	// COMMIT is one prior the current revision
-	if (type == Type::COMMIT) {
-		--revision;
-	}
-
 	try {
 		std::string line;
 		line.append(serialise_length(revision));
@@ -1241,14 +1236,11 @@ DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_add_document;
 
@@ -1267,14 +1259,11 @@ DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& t
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.term_word_val = term;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document_term;
 
@@ -1293,14 +1282,11 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.term_word_val = word;
 	task.freq = freqdec;
 	task.dispatcher = &DatabaseWALWriterTask::write_remove_spelling;
@@ -1320,14 +1306,12 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
+	ASSERT(shard.db()->get_revision() != 0);
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision() - 1;
 	task.send_update = send_update;
 	task.dispatcher = &DatabaseWALWriterTask::write_commit;
 
@@ -1346,14 +1330,11 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.did = did;
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document;
@@ -1373,14 +1354,11 @@ DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& 
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.term_word_val = term;
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document_term;
@@ -1400,14 +1378,11 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.did = did;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document;
 
@@ -1426,14 +1401,11 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.key = key;
 	task.term_word_val = val;
 	task.dispatcher = &DatabaseWALWriterTask::write_set_metadata;
@@ -1453,14 +1425,11 @@ DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xap
 
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
-	auto path = shard.endpoint.path;
-	auto uuid = UUID(shard.db()->get_uuid());
-	auto revision = shard.db()->get_revision();
 
 	DatabaseWALWriterTask task;
-	task.path = path;
-	task.uuid = uuid;
-	task.revision = revision;
+	task.path = shard.endpoint.path;
+	task.uuid = UUID(shard.db()->get_uuid());
+	task.revision = shard.db()->get_revision();
 	task.term_word_val = word;
 	task.freq = freqinc;
 	task.dispatcher = &DatabaseWALWriterTask::write_add_spelling;
