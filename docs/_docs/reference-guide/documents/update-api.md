@@ -89,11 +89,6 @@ UPDATE /test/1
 
 We can remove a tag from the list of tags:
 
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
-
 {% capture req %}
 
 ```json
