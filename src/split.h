@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include <string>                // for std::string
-#include <string_view>           // for std::string_view
+#include <cassert>                                // for assert
+#include <string>                                 // for std::string
+#include <string_view>                            // for std::string_view
 
 
 template <typename S = std::string, typename T = char>
@@ -59,7 +60,10 @@ class Split {
 		size_type end;
 		size_t inc;
 
-		Iterator(const Split* split_, size_type pos_=0)
+		size_type next_start;
+		size_type next_end;
+
+		Iterator(const Split* split_, size_type pos_ = 0)
 			: split(split_),
 			  start(pos_),
 			  end(pos_),
@@ -77,37 +81,45 @@ class Split {
 					inc = split->inc;
 				} while (split->skip_blank && start == end && end != S::npos);
 			}
+			next();
 		}
 
 		void next() {
-			if (end == S::npos) {
-				start = S::npos;
+			next_start = start;
+			next_end = end;
+			if (next_end == S::npos) {
+				next_start = S::npos;
 			} else {
 				do {
-					start = end + inc;
-					if (start == split->str.size()) {
-						start = S::npos;
-						end = S::npos;
-						return;
+					next_start = next_end + inc;
+					if (next_start == split->str.size()) {
+						next_start = S::npos;
+						next_end = S::npos;
+						break;
 					}
-					end = split->next(start);
-				} while (split->skip_blank && start == end && end != S::npos);
+					next_end = split->next(next_start);
+				} while (split->skip_blank && next_start == next_end && next_end != S::npos);
 			}
 		}
 
 	public:
 		Iterator& operator++() {
+			start = next_start;
+			end = next_end;
 			next();
 			return *this;
 		}
 
 		Iterator operator++(int) {
-			iterator it = *this;
+			auto it = *this;
+			start = next_start;
+			end = next_end;
 			next();
 			return it;
 		}
 
 		V operator*() const {
+			assert(start != S::npos);
 			if (end == S::npos) {
 				return V(split->str).substr(start);
 			}
@@ -115,6 +127,7 @@ class Split {
 		}
 
 		V operator*() {
+			assert(start != S::npos);
 			if (end == S::npos) {
 				return V(split->str).substr(start);
 			}
@@ -142,7 +155,7 @@ class Split {
 		}
 
 		bool last() const noexcept {
-			return end == S::npos;
+			return next_end == S::npos;
 		}
 	};
 
