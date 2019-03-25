@@ -780,38 +780,127 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 			}
 
 			constexpr static auto __ = phf::make_phf({
-				hhl("PUT"),
-				hhl("PATCH"),
-				hhl("MERGE"),  // TODO: Remove MERGE (method was renamed to UPDATE)
-				hhl("UPDATE"),
-				hhl("STORE"),
 				hhl("DELETE"),
 				hhl("GET"),
+				hhl("HEAD"),
 				hhl("POST"),
+				hhl("PUT"),
+				hhl("CONNECT"),
+				hhl("OPTIONS"),
+				hhl("TRACE"),
+				hhl("PATCH"),
+				hhl("PURGE"),
+				hhl("LINK"),
+				hhl("UNLINK"),
+				hhl("CHECK"),
+				hhl("CLOSE"),
+				hhl("COMMIT"),
+				hhl("COPY"),
+				hhl("COUNT"),
+				hhl("DUMP"),
+				hhl("FLUSH"),
+				hhl("INFO"),
+				hhl("LOCK"),
+				hhl("MERGE"),
+				hhl("MOVE"),
+				hhl("OPEN"),
+				hhl("QUIT"),
+				hhl("RESTORE"),
+				hhl("SEARCH"),
+				hhl("STORE"),
+				hhl("UNLOCK"),
+				hhl("UPDATE"),
 			});
-
 			switch (__.fhhl(_header_value)) {
-				case __.fhhl("PUT"):
-					parser->method = HTTP_PUT;
-					break;
-				case __.fhhl("PATCH"):
-					parser->method = HTTP_PATCH;
-					break;
-				case __.fhhl("MERGE"):  // TODO: Remove MERGE (method was renamed to UPDATE)
-				case __.fhhl("UPDATE"):
-					parser->method = HTTP_UPDATE;
-					break;
-				case __.fhhl("STORE"):
-					parser->method = HTTP_STORE;
-					break;
 				case __.fhhl("DELETE"):
 					parser->method = HTTP_DELETE;
 					break;
 				case __.fhhl("GET"):
 					parser->method = HTTP_GET;
 					break;
+				case __.fhhl("HEAD"):
+					parser->method = HTTP_HEAD;
+					break;
 				case __.fhhl("POST"):
 					parser->method = HTTP_POST;
+					break;
+				case __.fhhl("PUT"):
+					parser->method = HTTP_PUT;
+					break;
+				case __.fhhl("CONNECT"):
+					parser->method = HTTP_CONNECT;
+					break;
+				case __.fhhl("OPTIONS"):
+					parser->method = HTTP_OPTIONS;
+					break;
+				case __.fhhl("TRACE"):
+					parser->method = HTTP_TRACE;
+					break;
+				case __.fhhl("PATCH"):
+					parser->method = HTTP_PATCH;
+					break;
+				case __.fhhl("PURGE"):
+					parser->method = HTTP_PURGE;
+					break;
+				case __.fhhl("LINK"):
+					parser->method = HTTP_LINK;
+					break;
+				case __.fhhl("UNLINK"):
+					parser->method = HTTP_UNLINK;
+					break;
+				case __.fhhl("CHECK"):
+					parser->method = HTTP_CHECK;
+					break;
+				case __.fhhl("CLOSE"):
+					parser->method = HTTP_CLOSE;
+					break;
+				case __.fhhl("COMMIT"):
+					parser->method = HTTP_COMMIT;
+					break;
+				case __.fhhl("COPY"):
+					parser->method = HTTP_COPY;
+					break;
+				case __.fhhl("COUNT"):
+					parser->method = HTTP_COUNT;
+					break;
+				case __.fhhl("DUMP"):
+					parser->method = HTTP_DUMP;
+					break;
+				case __.fhhl("FLUSH"):
+					parser->method = HTTP_FLUSH;
+					break;
+				case __.fhhl("INFO"):
+					parser->method = HTTP_INFO;
+					break;
+				case __.fhhl("LOCK"):
+					parser->method = HTTP_LOCK;
+					break;
+				case __.fhhl("MERGE"):
+					parser->method = HTTP_MERGE;
+					break;
+				case __.fhhl("MOVE"):
+					parser->method = HTTP_MOVE;
+					break;
+				case __.fhhl("OPEN"):
+					parser->method = HTTP_OPEN;
+					break;
+				case __.fhhl("QUIT"):
+					parser->method = HTTP_QUIT;
+					break;
+				case __.fhhl("RESTORE"):
+					parser->method = HTTP_RESTORE;
+					break;
+				case __.fhhl("SEARCH"):
+					parser->method = HTTP_SEARCH;
+					break;
+				case __.fhhl("STORE"):
+					parser->method = HTTP_STORE;
+					break;
+				case __.fhhl("UNLOCK"):
+					parser->method = HTTP_UNLOCK;
+					break;
+				case __.fhhl("UPDATE"):
+					parser->method = HTTP_UPDATE;
 					break;
 				default:
 					parser->http_errno = HPE_INVALID_METHOD;
