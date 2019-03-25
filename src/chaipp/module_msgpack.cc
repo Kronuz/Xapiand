@@ -264,6 +264,13 @@ Module::msgpack(chaiscript::Module& m)
 			{ chaiscript::fun([](MsgPack& obj, const std::string_view& str) -> size_t {
 				if (obj.is_map()) {
 					return obj.erase(str);
+				} else if (obj.is_array()) {
+					for (auto it = obj.begin(); it != obj.end(); ++it) {
+						if (it.value() == str) {
+							obj.erase(it);
+							return 1;
+						}
+					}
 				}
 				return 0;
 			}), "erase" },
