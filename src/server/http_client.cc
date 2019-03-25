@@ -990,35 +990,283 @@ HttpClient::prepare()
 	}
 
 	new_request->method = HTTP_PARSER_METHOD(&new_request->parser);
+	url_resolve(*new_request);
+
+	const auto pth = new_request->path_parser.get_pth();
+	const auto id = new_request->path_parser.get_id();
+
 	switch (new_request->method) {
 		case HTTP_DELETE:
-			new_request->view = _prepare_delete();
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					if (id == ":schema") {
+						new_request->view = &HttpClient::delete_schema_view;
+					} else {
+						new_request->view = &HttpClient::delete_metadata_view;
+					}
+				} else {
+					new_request->view = &HttpClient::delete_document_view;
+				}
+			} else if (!pth.empty()) {
+				// new_request->view = &HttpClient::delete_database_view;
+				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
+
 		case HTTP_GET:
-			new_request->view = _prepare_get();
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					if (id == ":schema") {
+						new_request->view = &HttpClient::schema_view;
+#if XAPIAND_DATABASE_WAL
+					} else if (id == ":wal") {
+						new_request->view = &HttpClient::wal_view;
+#endif
+					} else if (pth.empty() && id == ":nodes") {
+						new_request->view = &HttpClient::nodes_view;
+					} else if (pth.empty() && id == ":metrics") {
+						new_request->view = &HttpClient::metrics_view;
+					} else if (id == ":info") {
+						new_request->view = &HttpClient::info_view;
+					} else {
+						new_request->view = &HttpClient::metadata_view;
+					}
+				} else if (is_range(id)) {
+					new_request->view = &HttpClient::search_view;
+				} else {
+					new_request->view = &HttpClient::retrieve_view;
+				}
+			} else if (pth.empty()) {
+				new_request->view = &HttpClient::home_view;
+			} else {
+				new_request->view = &HttpClient::search_view;
+			}
 			break;
+
+		case HTTP_SEARCH:
+			if (id.empty()) {
+				new_request->view = &HttpClient::search_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_COUNT:
+			if (id.empty()) {
+				new_request->view = &HttpClient::count_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_INFO:
+			if (id.empty()) {
+				new_request->view = &HttpClient::info_view;
+			} else {
+				new_request->view = &HttpClient::info_view;
+			}
+			break;
+
+		case HTTP_CHECK:
+			if (id.empty()) {
+				new_request->view = &HttpClient::check_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
 		case HTTP_POST:
-			new_request->view = _prepare_post();
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					if (id == ":schema") {
+						new_request->view = &HttpClient::write_schema_view;
+					} else if (id == ":search") {
+						new_request->view = &HttpClient::search_view;
+					} else if (id == ":count") {
+						new_request->view = &HttpClient::count_view;
+					} else if (id == ":touch") {
+						new_request->view = &HttpClient::touch_view;
+					} else if (id == ":commit") {
+						new_request->view = &HttpClient::commit_view;
+					} else if (id == ":dump") {
+						new_request->view = &HttpClient::dump_view;
+					} else if (id == ":restore") {
+						if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
+							if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
+								new_request->mode = Request::Mode::STREAM_NDJSON;
+							} else if (new_request->ct_type == msgpack_type || new_request->ct_type == x_msgpack_type) {
+								new_request->mode = Request::Mode::STREAM_MSGPACK;
+							}
+						}
+						new_request->view = &HttpClient::restore_view;
+					} else if (opts.admin_commands && id == ":quit") {
+						XapiandManager::try_shutdown(true);
+						write_http_response(*new_request, HTTP_STATUS_OK);
+						destroy();
+						detach();
+					} else if (opts.admin_commands && id == ":flush") {
+						// Flush both databases and clients by default (unless one is specified)
+						new_request->query_parser.rewind();
+						int flush_databases = new_request->query_parser.next("databases");
+						new_request->query_parser.rewind();
+						int flush_clients = new_request->query_parser.next("clients");
+						if (flush_databases != -1 || flush_clients == -1) {
+							XapiandManager::database_pool()->cleanup(true);
+						}
+						if (flush_clients != -1 || flush_databases == -1) {
+							XapiandManager::manager()->shutdown(0, 0);
+						}
+						write_http_response(*new_request, HTTP_STATUS_OK);
+					} else {
+						write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+					}
+				} else {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
+			} else {
+				new_request->view = &HttpClient::index_document_view;
+			}
 			break;
+
 		case HTTP_HEAD:
-			new_request->view = _prepare_head();
+			if (id.empty()) {
+				// new_request->view = &HttpClient::database_info_view;
+				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+			} else {
+				new_request->view = &HttpClient::document_info_view;
+			}
 			break;
+
+		case HTTP_STORE:
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				} else {
+					new_request->view = &HttpClient::update_document_view;
+				}
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_PUT:
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					if (id == ":schema") {
+						new_request->view = &HttpClient::write_schema_view;
+					} else {
+						new_request->view = &HttpClient::write_metadata_view;
+					}
+				} else {
+					new_request->view = &HttpClient::index_document_view;
+				}
+			} else {
+				new_request->view = &HttpClient::touch_view;
+			}
+			break;
+
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
-			new_request->view = _prepare_update();
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					if (id == ":schema") {
+						// new_request->view = &HttpClient::update_schema_view;
+						write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+					} else {
+						new_request->view = &HttpClient::update_metadata_view;
+					}
+				} else {
+					new_request->view = &HttpClient::update_document_view;
+				}
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
-		case HTTP_STORE:
-			new_request->view = _prepare_store();
-			break;
-		case HTTP_PUT:
-			new_request->view = _prepare_put();
-			break;
-		case HTTP_OPTIONS:
-			new_request->view = _prepare_options();
-			break;
+
 		case HTTP_PATCH:
-			new_request->view = _prepare_patch();
+			if (!id.empty()) {
+				if (id.front() == ':') {
+					if (id == ":schema") {
+						// new_request->view = &HttpClient::update_schema_view;
+						write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+					} else {
+						new_request->view = &HttpClient::update_metadata_view;
+					}
+				} else {
+					new_request->view = &HttpClient::update_document_view;
+				}
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
+
+		case HTTP_OPTIONS:
+			write(http_response(*new_request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
+			break;
+
+		case HTTP_QUIT:
+			if (opts.admin_commands && pth.empty() && id.empty()) {
+				XapiandManager::try_shutdown(true);
+				write_http_response(*new_request, HTTP_STATUS_OK);
+				destroy();
+				detach();
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_DUMP:
+			if (id.empty()) {
+				new_request->view = &HttpClient::dump_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_RESTORE:
+			if (id.empty()) {
+				if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
+					if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
+						new_request->mode = Request::Mode::STREAM_NDJSON;
+					} else if (new_request->ct_type == msgpack_type || new_request->ct_type == x_msgpack_type) {
+						new_request->mode = Request::Mode::STREAM_MSGPACK;
+					}
+				}
+				new_request->view = &HttpClient::restore_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_COMMIT:
+			if (id.empty()) {
+				new_request->view = &HttpClient::commit_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_FLUSH:
+			if (opts.admin_commands && id.empty() && pth.empty()) {
+				// Flush both databases and clients by default (unless one is specified)
+				new_request->query_parser.rewind();
+				int flush_databases = new_request->query_parser.next("databases");
+				new_request->query_parser.rewind();
+				int flush_clients = new_request->query_parser.next("clients");
+				if (flush_databases != -1 || flush_clients == -1) {
+					XapiandManager::database_pool()->cleanup(true);
+				}
+				if (flush_clients != -1 || flush_databases == -1) {
+					XapiandManager::manager()->shutdown(0, 0);
+				}
+				write_http_response(*new_request, HTTP_STATUS_OK);
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
 		default: {
 			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
 			MsgPack err_response = new_request->comments ? MsgPack({
@@ -1052,254 +1300,6 @@ HttpClient::prepare()
 	}
 
 	return 0;
-}
-
-
-view_function
-HttpClient::_prepare_options()
-{
-	L_CALL("HttpClient::_prepare_options()");
-
-	write(http_response(*new_request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
-	return nullptr;
-}
-
-
-view_function
-HttpClient::_prepare_head()
-{
-	L_CALL("HttpClient::_prepare_head()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_NO_ID: {
-			write_http_response(*new_request, HTTP_STATUS_OK);
-			return nullptr;
-		}
-		case Command::NO_CMD_ID:
-			return &HttpClient::document_info_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_get()
-{
-	L_CALL("HttpClient::_prepare_get()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_NO_ID:
-			return &HttpClient::home_view;
-		case Command::NO_CMD_ID:
-			if (!is_range(new_request->path_parser.get_id())) {
-				return &HttpClient::retrieve_view;
-			}
-			return &HttpClient::search_view;
-		case Command::CMD_SEARCH:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::search_view;
-		case Command::CMD_COUNT:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::count_view;
-		case Command::CMD_SCHEMA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::schema_view;
-#if XAPIAND_DATABASE_WAL
-		case Command::CMD_WAL:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::wal_view;
-#endif
-		case Command::CMD_CHECK:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::check_view;
-		case Command::CMD_INFO:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::info_view;
-		case Command::CMD_METRICS:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::metrics_view;
-		case Command::CMD_NODES:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::nodes_view;
-		case Command::CMD_METADATA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::metadata_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_update()
-{
-	L_CALL("HttpClient::_prepare_update()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			return &HttpClient::update_document_view;
-		case Command::CMD_METADATA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::update_metadata_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_store()
-{
-	L_CALL("HttpClient::_prepare_store()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			return &HttpClient::update_document_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_put()
-{
-	L_CALL("HttpClient::_prepare_put()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			return &HttpClient::index_document_view;
-		case Command::CMD_METADATA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::write_metadata_view;
-		case Command::CMD_SCHEMA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::write_schema_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_post()
-{
-	L_CALL("HttpClient::_prepare_post()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::index_document_view;
-		case Command::CMD_SCHEMA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::write_schema_view;
-		case Command::CMD_SEARCH:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::search_view;
-		case Command::CMD_COUNT:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::count_view;
-		case Command::CMD_TOUCH:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::touch_view;
-		case Command::CMD_COMMIT:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::commit_view;
-		case Command::CMD_DUMP:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::dump_view;
-		case Command::CMD_RESTORE:
-			new_request->path_parser.skip_id();  // Command has no ID
-			if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
-				if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
-					new_request->mode = Request::Mode::STREAM_NDJSON;
-				} else if (new_request->ct_type == msgpack_type || new_request->ct_type == x_msgpack_type) {
-					new_request->mode = Request::Mode::STREAM_MSGPACK;
-				}
-			}
-			return &HttpClient::restore_view;
-		case Command::CMD_QUIT:
-			if (opts.admin_commands) {
-				XapiandManager::try_shutdown(true);
-				write_http_response(*new_request, HTTP_STATUS_OK);
-				destroy();
-				detach();
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			return nullptr;
-		case Command::CMD_FLUSH:
-			if (opts.admin_commands) {
-				// Flush both databases and clients by default (unless one is specified)
-				new_request->query_parser.rewind();
-				int flush_databases = new_request->query_parser.next("databases");
-				new_request->query_parser.rewind();
-				int flush_clients = new_request->query_parser.next("clients");
-				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::database_pool()->cleanup(true);
-				}
-				if (flush_clients != -1 || flush_databases == -1) {
-					XapiandManager::manager()->shutdown(0, 0);
-				}
-				write_http_response(*new_request, HTTP_STATUS_OK);
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			return nullptr;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_patch()
-{
-	L_CALL("HttpClient::_prepare_patch()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			return &HttpClient::update_document_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
-}
-
-
-view_function
-HttpClient::_prepare_delete()
-{
-	L_CALL("HttpClient::_prepare_delete()");
-
-	auto cmd = url_resolve(*new_request);
-	switch (cmd) {
-		case Command::NO_CMD_ID:
-			return &HttpClient::delete_document_view;
-		case Command::CMD_METADATA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::delete_metadata_view;
-		case Command::CMD_SCHEMA:
-			new_request->path_parser.skip_id();  // Command has no ID
-			return &HttpClient::delete_schema_view;
-		default:
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			return nullptr;
-	}
 }
 
 
@@ -1737,7 +1737,8 @@ HttpClient::metadata_view(Request& request)
 	}
 
 	auto selector = request.path_parser.get_slc();
-	auto key = request.path_parser.get_pmt();
+	auto key = request.path_parser.get_id();
+	key.remove_prefix(1);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
@@ -1832,8 +1833,8 @@ HttpClient::info_view(Request& request)
 	}
 
 	// Info about a specific document was requested
-	if (request.path_parser.off_pmt != nullptr) {
-		auto id = request.path_parser.get_pmt();
+	if (request.path_parser.off_id != nullptr) {
+		auto id = request.path_parser.get_id();
 
 		request.query_parser.rewind();
 		bool raw = request.query_parser.next("raw") != -1;
@@ -1867,17 +1868,6 @@ void
 HttpClient::nodes_view(Request& request)
 {
 	L_CALL("HttpClient::nodes_view()");
-
-	request.path_parser.next();
-	if (request.path_parser.next() != PathParser::State::END) {
-		write_status_response(request, HTTP_STATUS_NOT_FOUND);
-		return;
-	}
-
-	if ((request.path_parser.len_pth != 0u) || (request.path_parser.len_pmt != 0u) || (request.path_parser.len_ppmt != 0u)) {
-		write_status_response(request, HTTP_STATUS_NOT_FOUND);
-		return;
-	}
 
 	auto nodes = MsgPack::ARRAY();
 
@@ -2548,18 +2538,7 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 }
 
 
-HttpClient::Command
-HttpClient::getCommand(std::string_view command_name)
-{
-	L_CALL("HttpClient::getCommand({})", repr(command_name));
-
-	static const auto _ = http_commands;
-
-	return static_cast<Command>(_.fhhl(command_name));
-}
-
-
-HttpClient::Command
+void
 HttpClient::url_resolve(Request& request)
 {
 	L_CALL("HttpClient::url_resolve(request)");
@@ -2569,80 +2548,69 @@ HttpClient::url_resolve(Request& request)
 
 	L_HTTP("URL: {}", b);
 
-	if (http_parser_parse_url(request.path.data(), request.path.size(), 0, &u) == 0) {
-		L_HTTP_PROTO("HTTP parsing done!");
-
-		if ((u.field_set & (1 << UF_PATH )) != 0) {
-			size_t path_size = u.field_data[3].len;
-			std::unique_ptr<char[]> path_buf_ptr(new char[path_size + 1]);
-			auto path_buf_str = path_buf_ptr.get();
-			const char* path_str = request.path.data() + u.field_data[3].off;
-			normalize_path(path_str, path_str + path_size, path_buf_str);
-			if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
-				if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
-					return Command::BAD_QUERY;
-				}
-			}
-		}
-
-		if ((u.field_set & (1 <<  UF_QUERY)) != 0) {
-			if (request.query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
-				return Command::BAD_QUERY;
-			}
-		}
-
-		bool pretty = opts.pretty && !opts.no_pretty;
-		if (pretty) {
-			request.indented = DEFAULT_INDENTATION;
-		}
-		request.query_parser.rewind();
-		if (request.query_parser.next("pretty") != -1) {
-			if (request.query_parser.len != 0u) {
-				try {
-					pretty = Serialise::boolean(request.query_parser.get()) == "t";
-					request.indented = pretty ? DEFAULT_INDENTATION : -1;
-				} catch (const Exception&) { }
-			} else if (request.indented == -1) {
-				request.indented = DEFAULT_INDENTATION;
-			}
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("human") != -1) {
-			if (request.query_parser.len != 0u) {
-				try {
-					request.human = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
-				} catch (const Exception&) { }
-			} else {
-				request.human = pretty;
-			}
-		}
-
-		request.query_parser.rewind();
-		if (request.query_parser.next("comments") != -1) {
-			if (request.query_parser.len != 0u) {
-				try {
-					request.comments = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
-				} catch (const Exception&) { }
-			} else {
-				request.comments = true;
-			}
-		}
-
-		if (request.path_parser.off_cmd != nullptr) {
-			return getCommand(request.path_parser.get_cmd());
-		}
-
-		if (request.path_parser.off_id != nullptr) {
-			return Command::NO_CMD_ID;
-		}
-
-		return Command::NO_CMD_NO_ID;
+	if (http_parser_parse_url(request.path.data(), request.path.size(), 0, &u) != 0) {
+		L_HTTP_PROTO("Parsing not done");
+		THROW(ClientError, "Invalid HTTP");
 	}
 
-	L_HTTP_PROTO("Parsing not done");
-	// Bad query
-	return Command::BAD_QUERY;
+	L_HTTP_PROTO("HTTP parsing done!");
+
+	if ((u.field_set & (1 << UF_PATH )) != 0) {
+		size_t path_size = u.field_data[3].len;
+		std::unique_ptr<char[]> path_buf_ptr(new char[path_size + 1]);
+		auto path_buf_str = path_buf_ptr.get();
+		const char* path_str = request.path.data() + u.field_data[3].off;
+		normalize_path(path_str, path_str + path_size, path_buf_str);
+		if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
+			if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
+				THROW(ClientError, "Invalid path");
+			}
+		}
+	}
+
+	if ((u.field_set & (1 <<  UF_QUERY)) != 0) {
+		if (request.query_parser.init(std::string_view(b.data() + u.field_data[4].off, u.field_data[4].len)) < 0) {
+			THROW(ClientError, "Invalid query");
+		}
+	}
+
+	bool pretty = opts.pretty && !opts.no_pretty;
+	if (pretty) {
+		request.indented = DEFAULT_INDENTATION;
+	}
+	request.query_parser.rewind();
+	if (request.query_parser.next("pretty") != -1) {
+		if (request.query_parser.len != 0u) {
+			try {
+				pretty = Serialise::boolean(request.query_parser.get()) == "t";
+				request.indented = pretty ? DEFAULT_INDENTATION : -1;
+			} catch (const Exception&) { }
+		} else if (request.indented == -1) {
+			request.indented = DEFAULT_INDENTATION;
+		}
+	}
+
+	request.query_parser.rewind();
+	if (request.query_parser.next("human") != -1) {
+		if (request.query_parser.len != 0u) {
+			try {
+				request.human = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+			} catch (const Exception&) { }
+		} else {
+			request.human = pretty;
+		}
+	}
+
+	request.query_parser.rewind();
+	if (request.query_parser.next("comments") != -1) {
+		if (request.query_parser.len != 0u) {
+			try {
+				request.comments = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+			} catch (const Exception&) { }
+		} else {
+			request.comments = true;
+		}
+	}
 }
 
 
@@ -2673,22 +2641,8 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, 
 	auto pth = request.path_parser.get_pth();
 	if (string::startswith(pth, '/')) {
 		pth.remove_prefix(1);
-		index_path.append(pth);
-	} else {
-		auto ns = request.path_parser.get_nsp();
-		if (string::startswith(ns, '/')) {
-			ns.remove_prefix(1);
-		}
-		if (pth.empty()) {
-			index_path.append(ns);
-		} else {
-			if (!ns.empty()) {
-				index_path.append(ns);
-				index_path.push_back('/');
-			}
-			index_path.append(pth);
-		}
 	}
+	index_path.append(pth);
 
 	std::vector<std::string> index_paths;
 

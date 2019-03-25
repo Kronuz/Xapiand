@@ -136,44 +136,9 @@ enum class Encoding {
 
 // Available commands
 
-constexpr const char COMMAND_CHECK[]       = COMMAND__ "check";
-constexpr const char COMMAND_COMMIT[]      = COMMAND__ "commit";
-constexpr const char COMMAND_COUNT[]       = COMMAND__ "count";
-constexpr const char COMMAND_DUMP[]        = COMMAND__ "dump";
-constexpr const char COMMAND_FLUSH[]       = COMMAND__ "flush";
-constexpr const char COMMAND_INFO[]        = COMMAND__ "info";
-constexpr const char COMMAND_METADATA[]    = COMMAND__ "metadata";
 constexpr const char COMMAND_METRICS[]     = COMMAND__ "metrics";
-constexpr const char COMMAND_NODES[]       = COMMAND__ "nodes";
-constexpr const char COMMAND_QUIT[]        = COMMAND__ "quit";
-constexpr const char COMMAND_RESTORE[]     = COMMAND__ "restore";
 constexpr const char COMMAND_SCHEMA[]      = COMMAND__ "schema";
-constexpr const char COMMAND_SEARCH[]      = COMMAND__ "search";
-constexpr const char COMMAND_TOUCH[]       = COMMAND__ "touch";
 constexpr const char COMMAND_WAL[]         = COMMAND__ "wal";
-
-#define COMMAND_OPTIONS() \
-	OPTION(CHECK) \
-	OPTION(COMMIT) \
-	OPTION(COUNT) \
-	OPTION(DUMP) \
-	OPTION(FLUSH) \
-	OPTION(INFO) \
-	OPTION(METADATA) \
-	OPTION(METRICS) \
-	OPTION(NODES) \
-	OPTION(QUIT) \
-	OPTION(RESTORE) \
-	OPTION(SCHEMA) \
-	OPTION(SEARCH) \
-	OPTION(TOUCH) \
-	OPTION(WAL)
-
-constexpr static auto http_commands = phf::make_phf({
-	#define OPTION(name) hhl(COMMAND_##name),
-	COMMAND_OPTIONS()
-	#undef OPTION
-});
 
 
 class Request;
@@ -306,21 +271,10 @@ public:
 class HttpClient : public MetaBaseClient<HttpClient> {
 	friend MetaBaseClient<HttpClient>;
 
-	enum class Command : uint32_t {
-		#define OPTION(name) CMD_##name = http_commands.fhhl(COMMAND_##name),
-		COMMAND_OPTIONS()
-		#undef OPTION
-		NO_CMD_NO_ID,
-		NO_CMD_ID,
-		BAD_QUERY,
-	};
-
 	template <typename Func>
 	int handled_errors(Request& request, Func&& func);
 
 	bool is_idle() const;
-
-	Command getCommand(std::string_view command_name);
 
 	ssize_t on_read(const char* buf, ssize_t received);
 	void on_read_file(const char* buf, ssize_t received);
@@ -393,7 +347,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void check_view(Request& request);
 	void nodes_view(Request& request);
 
-	Command url_resolve(Request& request);
+	void url_resolve(Request& request);
 	void _endpoint_maker(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 	void endpoints_maker(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 	query_field_t query_field_maker(Request& request, int flags);
