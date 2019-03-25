@@ -348,7 +348,7 @@ DatabaseHandler::repr_wal(uint32_t start_revision, uint32_t end_revision, bool u
 	L_CALL("DatabaseHandler::repr_wal({}, {})", start_revision, end_revision);
 
 	if (endpoints.size() != 1) {
-		THROW(ClientError, "It is expected one single endpoint");
+		THROW(ClientError, "This operation can only be executed on a single shard");
 	}
 
 	// WAL required on a local writable database, open it.
@@ -363,23 +363,20 @@ DatabaseHandler::check()
 {
 	L_CALL("DatabaseHandler::check()");
 
-	if (endpoints.size() != 1) {
-		THROW(ClientError, "It is expected one single endpoint");
+	MsgPack errors = MsgPack::MAP();
+	for (auto& endpoint : endpoints) {
+		try {
+			errors[endpoint.path] = Xapian::Database::check(endpoint.path);
+		} catch (const Xapian::Error &error) {
+			errors[endpoint.path] = error.get_description();
+		} catch (...) {
+			L_EXC("Check: Unknown error");
+			errors[endpoint.path] = "Unknown error";
+		}
 	}
-
-	try {
-		return {
-			{"errors", Xapian::Database::check(endpoints[0].path)},
-		};
-	} catch (const Xapian::Error &error) {
-		return {
-			{"error", error.get_description()},
-		};
-	} catch (...) {
-		return {
-			{"error", "Unknown error"},
-		};
-	}
+	return {
+		{"errors", errors},
+	};
 }
 
 
