@@ -248,8 +248,12 @@ PathParser::init(std::string_view p)
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(GREEN + "1 ->> {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 		switch (state) {
+				case State::ID_SLC: return "id_slc";
+				case State::SLF: return "slf";
 				case State::SLC: return "slc";
 				case State::SLB: return "slb";
+				case State::SLB_SUB: return "slb_sub";
+				case State::SLB_SPACE_OR_COMMA: return "slb_space_or_comma";
 				case State::NCM: return "ncm";
 				case State::ID: return "id";
 				case State::PTH: return "pth";
@@ -471,8 +475,12 @@ PathParser::next()
 		cn = (n1 >= nf || n1 < ni) ? '\0' : *n1;
 		L_URL_PARSER(CYAN + "3 ->> {:>3} {:#04x} '{}' [n1:{} - n0:{} = length:{}] total:{}", [state]{
 			switch (state) {
+				case State::ID_SLC: return "id_slc";
+				case State::SLF: return "slf";
 				case State::SLC: return "slc";
 				case State::SLB: return "slb";
+				case State::SLB_SUB: return "slb_sub";
+				case State::SLB_SPACE_OR_COMMA: return "slb_space_or_comma";
 				case State::NCM: return "ncm";
 				case State::ID: return "id";
 				case State::PTH: return "pth";

@@ -71,10 +71,10 @@ class PathParser {
 public:
 	enum class State : uint8_t {
 		ID_SLC,               // Id and selector
-		SLF,                  // Selector Finded
+		SLF,                  // Selector found
 		SLC,                  // Selector state
-		SLB,                  // Selector Brackets
-		SLB_SUB,              // Subfield Selector Brackets
+		SLB,                  // Selector brackets
+		SLB_SUB,              // Selector brackets subfield
 		SLB_SPACE_OR_COMMA,   // Expecting space or comma
 		CMD,
 		NCM,
