@@ -187,11 +187,12 @@ QueryParser::get()
 
 
 PathParser::PathParser()
-	: off(nullptr), is_only_path(false),
-	  len_pth(0), off_pth(nullptr),
-	  len_hst(0), off_hst(nullptr),
-	  len_slc(0), off_slc(nullptr),
-	  len_id(0), off_id(nullptr) { }
+	: off(nullptr), len_pth(0),
+	  off_pth(nullptr), len_hst(0),
+	  off_hst(nullptr), len_slc(0),
+	  off_slc(nullptr), len_id(0),
+	  off_id(nullptr), len_cmd(0),
+	  off_cmd(nullptr) { }
 
 
 void
@@ -231,10 +232,11 @@ PathParser::init(std::string_view p)
 	size_t takeoff = 0, addin=0, slc_level = 0;
 	State state;
 
-	state = State::SLC;
+	state = State::CMD;
+
+	off = ni;
 
 	if (path.back() == '/') {
-		is_only_path = true;
 		return State::PTH;
 	}
 
@@ -263,13 +265,14 @@ PathParser::init(std::string_view p)
 			case '\0':
 			case '/':
 				switch (state) {
+					case State::CMD:
 					case State::SLC:
 						length = n0 - n1;
 						if (length != 0u) {
 							off_id = n1 + 1;
 							len_id = length;
-							cn = '\0';
 						}
+						cn = '\0';
 						n0 = n1 - 1;
 						break;
 
@@ -282,18 +285,19 @@ PathParser::init(std::string_view p)
 						if (length != 0u) {
 							off_id = n1 + 1;
 							len_id = length;
-							cn = '\0';
 						}
+						cn = '\0';
 						n0 = n1 - 1;
 						break;
+
 					case State::ID_SLC:
 						ASSERT(n0 >= n1);
 						length = ns - n1 - 1;
 						if (length != 0u) {
 							off_id = n1 + 1;
 							len_id = length;
-							cn = '\0';
 						}
+						cn = '\0';
 						length = n0 - ns + addin;
 						if (length != 0u) {
 							off_slc = ns + takeoff;
@@ -382,6 +386,21 @@ PathParser::init(std::string_view p)
 						break;
 				}
 				break;
+			case ':':
+				switch (state) {
+					case State::CMD:
+						length = n0 - n1 + 1;
+						if (length != 0u) {
+							off_cmd = n1;
+							len_cmd = length;
+						}
+						state = State::SLC;
+						n0 = n1 - 1;
+						break;
+					default:
+						break;
+				}
+				break;
 			case '@':
 				switch (state) {
 					case State::SLC:
@@ -405,8 +424,6 @@ PathParser::init(std::string_view p)
 		}
 		--n1;
 	}
-
-	off = ni;
 
 	char* n = path.data();
 	for (;n != nf; ++n) {
@@ -518,9 +535,14 @@ PathParser::next()
 bool
 PathParser::has_pth() noexcept
 {
+	if (off_cmd != nullptr) {
+		return off_cmd > off;
+	}
+
 	if (off_id != nullptr) {
 		return off_id > off;
 	}
+
 	const char *ni = path.data();
 	const char *nf = ni + path.size();
 	return nf > off;
@@ -556,4 +578,12 @@ PathParser::get_slc()
 {
 	if (off_slc == nullptr) { return ""; }
 	return std::string_view(off_slc, len_slc);
+}
+
+
+std::string_view
+PathParser::get_cmd()
+{
+	if (off_cmd == nullptr) { return ""; }
+	return std::string_view(off_cmd, len_cmd);
 }
