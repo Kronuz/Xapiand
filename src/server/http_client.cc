@@ -1013,6 +1013,10 @@ HttpClient::prepare()
 		switch (http_methods.fhhl(cmd)) {
 			#define OPTION(name, str) \
 			case http_methods.fhhl(str): \
+				if (method != HTTP_POST && method != HTTP_GET && method != HTTP_##name) { \
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED); \
+					return 1; \
+				} \
 				method = HTTP_##name; \
 				cmd = ""; \
 				break;
