@@ -1227,53 +1227,43 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 	Xapian::Query query;
 	std::unique_ptr<Multi_MultiValueKeyMaker> sorter;
-	switch (method) {
-		case HTTP_GET:
-		case HTTP_POST: {
 
-			if (qdsl && qdsl->find(RESERVED_QUERYDSL_SORT) != qdsl->end()) {
-				auto value = qdsl->at(RESERVED_QUERYDSL_SORT);
-				sorter = query_object.get_sorter(value);
-			}
+	if (qdsl && qdsl->find(RESERVED_QUERYDSL_SORT) != qdsl->end()) {
+		auto value = qdsl->at(RESERVED_QUERYDSL_SORT);
+		sorter = query_object.get_sorter(value);
+	}
 
-			if (qdsl && qdsl->find(RESERVED_QUERYDSL_QUERY) != qdsl->end()) {
-				query = query_object.get_query(qdsl->at(RESERVED_QUERYDSL_QUERY));
-			} else {
-				query = query_object.get_query(query_object.make_dsl_query(query_field));
-			}
+	if (qdsl && qdsl->find(RESERVED_QUERYDSL_QUERY) != qdsl->end()) {
+		query = query_object.get_query(qdsl->at(RESERVED_QUERYDSL_QUERY));
+	} else {
+		query = query_object.get_query(query_object.make_dsl_query(query_field));
+	}
 
-			if (qdsl && qdsl->find(RESERVED_QUERYDSL_OFFSET) != qdsl->end()) {
-				auto value = qdsl->at(RESERVED_QUERYDSL_OFFSET);
-				if (value.is_integer()) {
-					offset = value.as_u64();
-				} else {
-					THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_OFFSET);
-				}
-			}
-
-			if (qdsl && qdsl->find(RESERVED_QUERYDSL_LIMIT) != qdsl->end()) {
-				auto value = qdsl->at(RESERVED_QUERYDSL_LIMIT);
-				if (value.is_integer()) {
-					limit = value.as_u64();
-				} else {
-					THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_LIMIT);
-				}
-			}
-
-			if (qdsl && qdsl->find(RESERVED_QUERYDSL_CHECK_AT_LEAST) != qdsl->end()) {
-				auto value = qdsl->at(RESERVED_QUERYDSL_CHECK_AT_LEAST);
-				if (value.is_integer()) {
-					check_at_least = value.as_u64();
-				} else {
-					THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_CHECK_AT_LEAST);
-				}
-			}
-
-			break;
+	if (qdsl && qdsl->find(RESERVED_QUERYDSL_OFFSET) != qdsl->end()) {
+		auto value = qdsl->at(RESERVED_QUERYDSL_OFFSET);
+		if (value.is_integer()) {
+			offset = value.as_u64();
+		} else {
+			THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_OFFSET);
 		}
+	}
 
-		default:
-			break;
+	if (qdsl && qdsl->find(RESERVED_QUERYDSL_LIMIT) != qdsl->end()) {
+		auto value = qdsl->at(RESERVED_QUERYDSL_LIMIT);
+		if (value.is_integer()) {
+			limit = value.as_u64();
+		} else {
+			THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_LIMIT);
+		}
+	}
+
+	if (qdsl && qdsl->find(RESERVED_QUERYDSL_CHECK_AT_LEAST) != qdsl->end()) {
+		auto value = qdsl->at(RESERVED_QUERYDSL_CHECK_AT_LEAST);
+		if (value.is_integer()) {
+			check_at_least = value.as_u64();
+		} else {
+			THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_CHECK_AT_LEAST);
+		}
 	}
 
 	// L_DEBUG("query: {}", query.get_description());
