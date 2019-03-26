@@ -3023,7 +3023,7 @@ HttpClient::end_http_request(Request& request)
 		Metrics::metrics()
 			.xapiand_http_requests_summary
 			.Add({
-				{"method", http_method_str(HTTP_PARSER_METHOD(&request.parser))},
+				{"method", http_method_str(request.method)},
 				{"status", string::format("{}", request.response.status)},
 			})
 			.Observe(took / 1e9);
