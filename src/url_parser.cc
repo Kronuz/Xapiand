@@ -450,6 +450,9 @@ PathParser::next()
 	state = State::PTH;
 	off_hst = nullptr;
 	n0 = n1 = off;
+	if (off_cmd != nullptr && off_cmd < nf) {
+		nf = off_cmd - 1;
+	}
 	if (off_slc != nullptr && off_slc < nf) {
 		nf = off_slc - 1;
 	}
