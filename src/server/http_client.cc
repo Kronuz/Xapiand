@@ -107,6 +107,48 @@ static const std::regex header_accept_encoding_re(R"(([-a-z+]+|\*)((?:\s*;\s*[a-
 static const std::string eol("\r\n");
 
 
+// Available commands
+
+#define METHODS_OPTIONS() \
+	OPTION(DELETE,   "delete") \
+	OPTION(GET,      "get") \
+	OPTION(HEAD,     "head") \
+	OPTION(POST,     "post") \
+	OPTION(PUT,      "put") \
+	OPTION(CONNECT,  "connect") \
+	OPTION(OPTIONS,  "options") \
+	OPTION(TRACE,    "trace") \
+	OPTION(PATCH,    "patch") \
+	OPTION(PURGE,    "purge") \
+	OPTION(LINK,     "link") \
+	OPTION(UNLINK,   "unlink") \
+	OPTION(CHECK,    "check") \
+	OPTION(CLOSE,    "close") \
+	OPTION(COMMIT,   "commit") \
+	OPTION(COPY,     "copy") \
+	OPTION(COUNT,    "count") \
+	OPTION(DUMP,     "dump") \
+	OPTION(FLUSH,    "flush") \
+	OPTION(INFO,     "info") \
+	OPTION(LOCK,     "lock") \
+	OPTION(MERGE,    "merge") \
+	OPTION(MOVE,     "move") \
+	OPTION(OPEN,     "open") \
+	OPTION(QUIT,     "quit") \
+	OPTION(RESTORE,  "restore") \
+	OPTION(SEARCH,   "search") \
+	OPTION(STORE,    "store") \
+	OPTION(UNLOCK,   "unlock") \
+	OPTION(UPDATE,   "update")
+
+
+constexpr static auto http_methods = phf::make_phf({
+	#define OPTION(name, str) hhl(str),
+	METHODS_OPTIONS()
+	#undef OPTION
+});
+
+
 bool is_range(std::string_view str) {
 	try {
 		FieldParser fieldparser(str);
@@ -779,129 +821,10 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 				THROW(ClientError, "{} header must use the POST method", repr(new_request->_header_name));
 			}
 
-			constexpr static auto __ = phf::make_phf({
-				hhl("DELETE"),
-				hhl("GET"),
-				hhl("HEAD"),
-				hhl("POST"),
-				hhl("PUT"),
-				hhl("CONNECT"),
-				hhl("OPTIONS"),
-				hhl("TRACE"),
-				hhl("PATCH"),
-				hhl("PURGE"),
-				hhl("LINK"),
-				hhl("UNLINK"),
-				hhl("CHECK"),
-				hhl("CLOSE"),
-				hhl("COMMIT"),
-				hhl("COPY"),
-				hhl("COUNT"),
-				hhl("DUMP"),
-				hhl("FLUSH"),
-				hhl("INFO"),
-				hhl("LOCK"),
-				hhl("MERGE"),
-				hhl("MOVE"),
-				hhl("OPEN"),
-				hhl("QUIT"),
-				hhl("RESTORE"),
-				hhl("SEARCH"),
-				hhl("STORE"),
-				hhl("UNLOCK"),
-				hhl("UPDATE"),
-			});
-			switch (__.fhhl(_header_value)) {
-				case __.fhhl("DELETE"):
-					parser->method = HTTP_DELETE;
-					break;
-				case __.fhhl("GET"):
-					parser->method = HTTP_GET;
-					break;
-				case __.fhhl("HEAD"):
-					parser->method = HTTP_HEAD;
-					break;
-				case __.fhhl("POST"):
-					parser->method = HTTP_POST;
-					break;
-				case __.fhhl("PUT"):
-					parser->method = HTTP_PUT;
-					break;
-				case __.fhhl("CONNECT"):
-					parser->method = HTTP_CONNECT;
-					break;
-				case __.fhhl("OPTIONS"):
-					parser->method = HTTP_OPTIONS;
-					break;
-				case __.fhhl("TRACE"):
-					parser->method = HTTP_TRACE;
-					break;
-				case __.fhhl("PATCH"):
-					parser->method = HTTP_PATCH;
-					break;
-				case __.fhhl("PURGE"):
-					parser->method = HTTP_PURGE;
-					break;
-				case __.fhhl("LINK"):
-					parser->method = HTTP_LINK;
-					break;
-				case __.fhhl("UNLINK"):
-					parser->method = HTTP_UNLINK;
-					break;
-				case __.fhhl("CHECK"):
-					parser->method = HTTP_CHECK;
-					break;
-				case __.fhhl("CLOSE"):
-					parser->method = HTTP_CLOSE;
-					break;
-				case __.fhhl("COMMIT"):
-					parser->method = HTTP_COMMIT;
-					break;
-				case __.fhhl("COPY"):
-					parser->method = HTTP_COPY;
-					break;
-				case __.fhhl("COUNT"):
-					parser->method = HTTP_COUNT;
-					break;
-				case __.fhhl("DUMP"):
-					parser->method = HTTP_DUMP;
-					break;
-				case __.fhhl("FLUSH"):
-					parser->method = HTTP_FLUSH;
-					break;
-				case __.fhhl("INFO"):
-					parser->method = HTTP_INFO;
-					break;
-				case __.fhhl("LOCK"):
-					parser->method = HTTP_LOCK;
-					break;
-				case __.fhhl("MERGE"):
-					parser->method = HTTP_MERGE;
-					break;
-				case __.fhhl("MOVE"):
-					parser->method = HTTP_MOVE;
-					break;
-				case __.fhhl("OPEN"):
-					parser->method = HTTP_OPEN;
-					break;
-				case __.fhhl("QUIT"):
-					parser->method = HTTP_QUIT;
-					break;
-				case __.fhhl("RESTORE"):
-					parser->method = HTTP_RESTORE;
-					break;
-				case __.fhhl("SEARCH"):
-					parser->method = HTTP_SEARCH;
-					break;
-				case __.fhhl("STORE"):
-					parser->method = HTTP_STORE;
-					break;
-				case __.fhhl("UNLOCK"):
-					parser->method = HTTP_UNLOCK;
-					break;
-				case __.fhhl("UPDATE"):
-					parser->method = HTTP_UPDATE;
-					break;
+			switch (http_methods.fhhl(_header_value)) {
+				#define OPTION(name, str) case http_methods.fhhl(str): parser->method = HTTP_##name; break;
+				METHODS_OPTIONS()
+				#undef OPTION
 				default:
 					parser->http_errno = HPE_INVALID_METHOD;
 					break;
@@ -1081,14 +1004,27 @@ HttpClient::prepare()
 	new_request->method = HTTP_PARSER_METHOD(&new_request->parser);
 	url_resolve(*new_request);
 
-	const auto id = new_request->path_parser.get_id();
-	const auto has_pth = new_request->path_parser.has_pth();
-	const auto cmd = new_request->path_parser.get_cmd();
+	auto id = new_request->path_parser.get_id();
+	auto has_pth = new_request->path_parser.has_pth();
+	auto cmd = new_request->path_parser.get_cmd();
 
-	switch (new_request->method) {
+	auto method = new_request->method;
+	if (!cmd.empty()) {
+		switch (http_methods.fhhl(cmd)) {
+			#define OPTION(name, str) \
+			case http_methods.fhhl(str): \
+				method = HTTP_##name; \
+				cmd = ""; \
+				break;
+			METHODS_OPTIONS()
+			#undef OPTION
+		}
+	}
+
+	switch (method) {
 		case HTTP_DELETE:
 			if (!cmd.empty()) {
-				if (cmd == ":schema") {
+				if (cmd == "schema") {
 					new_request->view = &HttpClient::delete_schema_view;
 				} else {
 					new_request->view = &HttpClient::delete_metadata_view;
@@ -1105,22 +1041,16 @@ HttpClient::prepare()
 
 		case HTTP_GET:
 			if (!cmd.empty()) {
-				if (cmd == ":schema") {
+				if (cmd == "schema") {
 					new_request->view = &HttpClient::schema_view;
-				} else if (cmd == ":search") {
-					new_request->view = &HttpClient::search_view;
-				} else if (cmd == ":count") {
-					new_request->view = &HttpClient::count_view;
 #if XAPIAND_DATABASE_WAL
-				} else if (cmd == ":wal") {
+				} else if (cmd == "wal") {
 					new_request->view = &HttpClient::wal_view;
 #endif
-				} else if (!has_pth && cmd == ":nodes") {
+				} else if (!has_pth && cmd == "nodes") {
 					new_request->view = &HttpClient::nodes_view;
-				} else if (!has_pth && cmd == ":metrics") {
+				} else if (!has_pth && cmd == "metrics") {
 					new_request->view = &HttpClient::metrics_view;
-				} else if (cmd == ":info") {
-					new_request->view = &HttpClient::info_view;
 				} else {
 					new_request->view = &HttpClient::metadata_view;
 				}
@@ -1171,45 +1101,10 @@ HttpClient::prepare()
 
 		case HTTP_POST:
 			if (!cmd.empty()) {
-				if (cmd == ":schema") {
+				if (cmd == "schema") {
 					new_request->view = &HttpClient::write_schema_view;
-				} else if (cmd == ":search") {
-					new_request->view = &HttpClient::search_view;
-				} else if (cmd == ":count") {
-					new_request->view = &HttpClient::count_view;
-				} else if (cmd == ":touch") {
+				} else if (cmd == "touch") {
 					new_request->view = &HttpClient::touch_view;
-				} else if (cmd == ":commit") {
-					new_request->view = &HttpClient::commit_view;
-				} else if (cmd == ":dump") {
-					new_request->view = &HttpClient::dump_view;
-				} else if (cmd == ":restore") {
-					if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
-						if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
-							new_request->mode = Request::Mode::STREAM_NDJSON;
-						} else if (new_request->ct_type == msgpack_type || new_request->ct_type == x_msgpack_type) {
-							new_request->mode = Request::Mode::STREAM_MSGPACK;
-						}
-					}
-					new_request->view = &HttpClient::restore_view;
-				} else if (opts.admin_commands && cmd == ":quit") {
-					XapiandManager::try_shutdown(true);
-					write_http_response(*new_request, HTTP_STATUS_OK);
-					destroy();
-					detach();
-				} else if (opts.admin_commands && cmd == ":flush") {
-					// Flush both databases and clients by default (unless one is specified)
-					new_request->query_parser.rewind();
-					int flush_databases = new_request->query_parser.next("databases");
-					new_request->query_parser.rewind();
-					int flush_clients = new_request->query_parser.next("clients");
-					if (flush_databases != -1 || flush_clients == -1) {
-						XapiandManager::database_pool()->cleanup(true);
-					}
-					if (flush_clients != -1 || flush_databases == -1) {
-						XapiandManager::manager()->shutdown(0, 0);
-					}
-					write_http_response(*new_request, HTTP_STATUS_OK);
 				} else {
 					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 				}
@@ -1243,7 +1138,7 @@ HttpClient::prepare()
 
 		case HTTP_PUT:
 			if (!cmd.empty()) {
-				if (cmd == ":schema") {
+				if (cmd == "schema") {
 					new_request->view = &HttpClient::write_schema_view;
 				} else {
 					new_request->view = &HttpClient::write_metadata_view;
@@ -1258,7 +1153,7 @@ HttpClient::prepare()
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
 			if (!cmd.empty()) {
-				if (cmd == ":schema") {
+				if (cmd == "schema") {
 					// new_request->view = &HttpClient::update_schema_view;
 					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
 				} else {
@@ -1273,7 +1168,7 @@ HttpClient::prepare()
 
 		case HTTP_PATCH:
 			if (!cmd.empty()) {
-				if (cmd == ":schema") {
+				if (cmd == "schema") {
 					// new_request->view = &HttpClient::update_schema_view;
 					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
 				} else {

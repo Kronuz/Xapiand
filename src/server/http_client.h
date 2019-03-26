@@ -134,13 +134,6 @@ enum class Encoding {
 };
 
 
-// Available commands
-
-constexpr const char COMMAND_METRICS[]     = COMMAND__ "metrics";
-constexpr const char COMMAND_SCHEMA[]      = COMMAND__ "schema";
-constexpr const char COMMAND_WAL[]         = COMMAND__ "wal";
-
-
 class Request;
 class Response;
 class HttpClient;
