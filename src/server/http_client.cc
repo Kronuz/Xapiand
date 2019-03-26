@@ -681,11 +681,13 @@ HttpClient::on_message_begin([[maybe_unused]] http_parser* parser)
 }
 
 int
-HttpClient::on_url([[maybe_unused]] http_parser* parser, const char* at, size_t length)
+HttpClient::on_url(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_url(<parser>, <at>, <length>)");
 
 	L_HTTP_PROTO("on_url {{state:{}, header_state:{}}}: {}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
+
+	new_request->method = HTTP_PARSER_METHOD(parser);
 
 	new_request->path.append(at, length);
 
@@ -749,6 +751,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 		case _.fhhl("content-type"):
 			new_request->ct_type = ct_type_t(_header_value);
 			break;
+
 		case _.fhhl("accept"): {
 			static AcceptLRU accept_sets;
 			auto value = string::lower(_header_value);
@@ -817,12 +820,18 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 
 		case _.fhhl("x-http-method-override"):
 		case _.fhhl("http-method-override"): {
-			if (parser->method != HTTP_POST) {
-				THROW(ClientError, "{} header must use the POST method", repr(new_request->_header_name));
-			}
-
 			switch (http_methods.fhhl(_header_value)) {
-				#define OPTION(name, str) case http_methods.fhhl(str): parser->method = HTTP_##name; break;
+				#define OPTION(name, str) \
+				case http_methods.fhhl(str): \
+					if ( \
+						new_request->method != HTTP_POST && \
+						new_request->method != HTTP_GET && \
+						new_request->method != HTTP_##name \
+					) { \
+						THROW(ClientError, "{} header must use the POST method", repr(new_request->_header_name)); \
+					} \
+					new_request->method = HTTP_##name; \
+					break;
 				METHODS_OPTIONS()
 				#undef OPTION
 				default:
@@ -1001,23 +1010,24 @@ HttpClient::prepare()
 		return 1;
 	}
 
-	new_request->method = HTTP_PARSER_METHOD(&new_request->parser);
 	url_resolve(*new_request);
 
 	auto id = new_request->path_parser.get_id();
 	auto has_pth = new_request->path_parser.has_pth();
 	auto cmd = new_request->path_parser.get_cmd();
 
-	auto method = new_request->method;
 	if (!cmd.empty()) {
 		switch (http_methods.fhhl(cmd)) {
 			#define OPTION(name, str) \
 			case http_methods.fhhl(str): \
-				if (method != HTTP_POST && method != HTTP_GET && method != HTTP_##name) { \
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED); \
-					return 1; \
+				if ( \
+					new_request->method != HTTP_POST && \
+					new_request->method != HTTP_GET && \
+					new_request->method != HTTP_##name \
+				) { \
+					THROW(ClientError, "HTTP Mappings must use GET or POST method"); \
 				} \
-				method = HTTP_##name; \
+				new_request->method = HTTP_##name; \
 				cmd = ""; \
 				break;
 			METHODS_OPTIONS()
@@ -1025,7 +1035,7 @@ HttpClient::prepare()
 		}
 	}
 
-	switch (method) {
+	switch (new_request->method) {
 		case HTTP_DELETE:
 			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
