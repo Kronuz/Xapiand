@@ -320,7 +320,7 @@ PathParser::init(std::string_view p)
 						takeoff = 1; // Removing the dot
 						addin = 0;   // Adding nothing to length
 						state = State::SLF;
-						[[fallthrough]];
+						break;
 					default:
 						break;
 				}
@@ -334,7 +334,7 @@ PathParser::init(std::string_view p)
 						break;
 					case State::SLB:
 						state = State::SLB_SUB;
-						[[fallthrough]];
+						break;
 					default:
 						break;
 				}
@@ -355,7 +355,7 @@ PathParser::init(std::string_view p)
 						break;
 					case State::SLB_SUB:
 						state = State::SLB_SPACE_OR_COMMA;
-						[[fallthrough]];
+						break;
 					default:
 						break;
 				}
@@ -366,7 +366,7 @@ PathParser::init(std::string_view p)
 						if (slc_level - 1 == 0) {
 							state = State::SLB;
 						}
-						[[fallthrough]];
+						break;
 					default:
 						break;
 				}
