@@ -47,17 +47,16 @@
 #include "stopper.h"                              // for getStopper
 #include "string.hh"                              // for string::startswith
 
+#define L_QUERY L_NOTHING
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_QUERY
 // #define L_QUERY L_ORANGE
 
-
-#ifndef L_QUERY
-#define L_QUERY L_NOTHING
-#endif
 
 // A domain-specific language (DSL) for query
 
