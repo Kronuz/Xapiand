@@ -1023,13 +1023,16 @@ HttpClient::prepare()
 
 	switch (method) {
 		case HTTP_DELETE:
-			if (!cmd.empty()) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					new_request->view = &HttpClient::delete_schema_view;
 				} else {
 					new_request->view = &HttpClient::delete_metadata_view;
 				}
 			} else if (!id.empty()) {
+				if (!cmd.empty()) {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
 				new_request->view = &HttpClient::delete_document_view;
 			} else if (has_pth) {
 				// new_request->view = &HttpClient::delete_database_view;
@@ -1040,7 +1043,7 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_GET:
-			if (!cmd.empty()) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					new_request->view = &HttpClient::schema_view;
 #if XAPIAND_DATABASE_WAL
@@ -1055,6 +1058,9 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::metadata_view;
 				}
 			} else if (!id.empty()) {
+				if (!cmd.empty()) {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
 				if (is_range(id)) {
 					new_request->view = &HttpClient::search_view;
 				} else {
@@ -1100,7 +1106,7 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_POST:
-			if (!cmd.empty()) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					new_request->view = &HttpClient::write_schema_view;
 				} else if (cmd == "touch") {
@@ -1137,13 +1143,16 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_PUT:
-			if (!cmd.empty()) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					new_request->view = &HttpClient::write_schema_view;
 				} else {
 					new_request->view = &HttpClient::write_metadata_view;
 				}
 			} else if (!id.empty()) {
+				if (!cmd.empty()) {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
 				new_request->view = &HttpClient::index_document_view;
 			} else {
 				new_request->view = &HttpClient::touch_view;
@@ -1152,7 +1161,7 @@ HttpClient::prepare()
 
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
-			if (!cmd.empty()) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					// new_request->view = &HttpClient::update_schema_view;
 					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
@@ -1160,6 +1169,9 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::update_metadata_view;
 				}
 			} else if (!id.empty()) {
+				if (!cmd.empty()) {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
 				new_request->view = &HttpClient::update_document_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1167,7 +1179,7 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_PATCH:
-			if (!cmd.empty()) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					// new_request->view = &HttpClient::update_schema_view;
 					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
@@ -1175,6 +1187,9 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::update_metadata_view;
 				}
 			} else if (!id.empty()) {
+				if (!cmd.empty()) {
+					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				}
 				new_request->view = &HttpClient::update_document_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
