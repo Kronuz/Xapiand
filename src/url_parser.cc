@@ -254,6 +254,7 @@ PathParser::init(std::string_view p)
 				case State::SLB: return "slb";
 				case State::SLB_SUB: return "slb_sub";
 				case State::SLB_SPACE_OR_COMMA: return "slb_space_or_comma";
+				case State::CMD: return "cmd";
 				case State::NCM: return "ncm";
 				case State::ID: return "id";
 				case State::PTH: return "pth";
@@ -390,12 +391,12 @@ PathParser::init(std::string_view p)
 						break;
 				}
 				break;
-			case ':':
+			case command__:
 				switch (state) {
 					case State::CMD:
-						length = n0 - n1 + 1;
+						length = n0 - n1;
 						if (length != 0u) {
-							off_cmd = n1;
+							off_cmd = n1 + 1;
 							len_cmd = length;
 						}
 						state = State::SLC;
@@ -481,6 +482,7 @@ PathParser::next()
 				case State::SLB: return "slb";
 				case State::SLB_SUB: return "slb_sub";
 				case State::SLB_SPACE_OR_COMMA: return "slb_space_or_comma";
+				case State::CMD: return "cmd";
 				case State::NCM: return "ncm";
 				case State::ID: return "id";
 				case State::PTH: return "pth";
