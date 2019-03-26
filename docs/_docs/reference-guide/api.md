@@ -114,7 +114,7 @@ Example:
 {% capture req %}
 
 ```json
-POST /some/resource/name:info
+GET /some/resource/name:info
 ```
 {% endcapture %}
 {% include curl.html req=req %}
