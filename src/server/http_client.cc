@@ -3614,7 +3614,20 @@ Request::head()
 {
 	L_CALL("Request::head()");
 
-	return string::format("{} {} HTTP/{}.{}", http_method_str(HTTP_PARSER_METHOD(&parser)), path, parser.http_major, parser.http_minor);
+	auto parser_method = HTTP_PARSER_METHOD(&parser);
+
+	if (parser_method != method) {
+		return string::format("{} <- {} {} HTTP/{}.{}",
+			http_method_str(method),
+			http_method_str(parser_method),
+			path, parser.http_major,
+			parser.http_minor);
+	}
+
+	return string::format("{} {} HTTP/{}.{}",
+		http_method_str(parser_method),
+		path, parser.http_major,
+		parser.http_minor);
 }
 
 
@@ -3628,7 +3641,7 @@ Request::to_text(bool decode)
 	auto request_head_color = no_col.c_str();
 	auto request_text_color = no_col.c_str();
 
-	switch (HTTP_PARSER_METHOD(&parser)) {
+	switch (method) {
 		case HTTP_OPTIONS: {
 			// rgb(13, 90, 167)
 			static constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
