@@ -16,7 +16,7 @@ PUT /test/types/numeric
     },
 }
 ###
-GET /test/types/:info/numeric
+GET /test/types/numeric:info
 ###
 GET /test/types/:schema
 ###
@@ -39,7 +39,7 @@ PUT /test/types/string
     },
 }
 ###
-GET /test/types/:info/string
+GET /test/types/string:info
 ###
 GET /test/types/:schema
 ###

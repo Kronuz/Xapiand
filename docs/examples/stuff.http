@@ -16,7 +16,7 @@ GET /test/:schema
 ###
 GET /test/:metadata
 ###
-GET /test/:info/doc
+GET /test/doc:info
 ###
 GET /test/:search?q=~notmet
 ###
@@ -175,9 +175,9 @@ PUT /test/feed_cache/C
 	}
 }
 ###
-GET /test/feed_cache/:info/A?volatile
+GET /test/feed_cache/A:info?volatile
 ###
-GET /test/feed_cache/:info/B?volatile
+GET /test/feed_cache/B:info?volatile
 ###
-GET /test/feed_cache/:info/C?volatile
+GET /test/feed_cache/C:info?volatile
 ###
