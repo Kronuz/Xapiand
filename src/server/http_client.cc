@@ -2442,7 +2442,6 @@ HttpClient::search_view(Request& request)
 
 	std::string selector_string_holder;
 	auto selector = request.path_parser.get_slc();
-	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	endpoints_maker(request, query_field);
