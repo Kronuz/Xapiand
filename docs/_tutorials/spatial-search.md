@@ -13,7 +13,7 @@ incorporates places in the United States with a population of at least 100,000.
 The population and location data used in this example is from
 [OpenDataSoft](https://public.opendatasoft.com/explore/dataset/1000-largest-us-cities-by-population-with-geographic-coordinates).
 
-You can download the [sample dataset]({{ '/assets/cities.ndjson' | absolute_url }}){:target="_blank"}.
+You can download the [sample dataset]({{ '/assets/cities.ndjson' | absolute_url }}){:download="cities.ndjson"}.
 Extract it to our current directory and let's load it into our cluster as follows:
 
 {% capture req %}

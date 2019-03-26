@@ -12,7 +12,7 @@ instead, if a change is needed, a new file blob will be written to the volume.
 Storage is envisioned to be used when there are files you need to store which
 you know won't be changing often or at all.
 
-Assuming there is a [PNG]({{ '/assets/Lenna.png' | absolute_url }}){:target="_blank"}
+Assuming there is a [PNG]({{ '/assets/Lenna.png' | absolute_url }}){:download="Lenna.png"}
 file called `Lenna.png` in the working directory, lets add those to the storage
 using `STORE`:
 
@@ -50,8 +50,8 @@ feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example
 ## Multi-Content Documents
 
 Use `STORE` with a different `Content-Type` to add new content to the same
-document. For example, the following adds a [PDF]({{ '/assets/Lenna.pdf' | absolute_url }}){:target="_blank"}
-and a [JPEG]({{ '/assets/Lenna.jpg' | absolute_url }}){:target="_blank"} from
+document. For example, the following adds a [PDF]({{ '/assets/Lenna.pdf' | absolute_url }}){:download="Lenna.pdf"}
+and a [JPEG]({{ '/assets/Lenna.jpg' | absolute_url }}){:download="Lenna.jpg"} from
 files called `Lenna.pdf` and `Lenna.jpg`, respectively:
 
 {% capture req %}

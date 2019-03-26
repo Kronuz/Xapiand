@@ -57,7 +57,7 @@ are all randomly generated.
 
 ## Loading the Sample Dataset
 
-After downloading the [sample dataset]({{ '/assets/accounts.ndjson' | absolute_url }}){:target="_blank"},
+After downloading the [sample dataset]({{ '/assets/accounts.ndjson' | absolute_url }}){:download="accounts.ndjson"},
 let's load it into our cluster as follows:
 
 {% capture req %}
