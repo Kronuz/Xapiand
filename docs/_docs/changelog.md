@@ -13,9 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+
+---
+## [0.16.0] - 2019-03-26
+{: #v0-16-0 }
+
 ### Added
-- Added --pretty (and --no-pretty) options (for default ?pretty)
+- Added --pretty (and --no-pretty) options (for default `?pretty`)
 - Verbosity also toggles "prettiness"
+- HTTP method mapping + override
+- TravisCI builds, thanks to Vitold S. (@vit1251)
 
 ### Fixed
 - Fixed `_version` checks
