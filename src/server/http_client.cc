@@ -1493,7 +1493,7 @@ HttpClient::home_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
 
 	auto local_node = Node::local_node();
 	auto document = db_handler.get_document(local_node->lower_name());
@@ -1583,7 +1583,7 @@ HttpClient::document_info_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
 
 	db_handler.get_document(request.path_parser.get_id()).validate();
 
@@ -1605,7 +1605,7 @@ HttpClient::delete_document_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
 	db_handler.delete_document(doc_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
@@ -1634,7 +1634,7 @@ HttpClient::delete_schema_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	db_handler.delete_schema();
 
 	request.ready = std::chrono::system_clock::now();
@@ -1681,7 +1681,7 @@ HttpClient::index_document_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
@@ -1717,7 +1717,7 @@ HttpClient::write_schema_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	db_handler.write_schema(decoded_body, request.method == HTTP_PUT);
 
 	request.ready = std::chrono::system_clock::now();
@@ -1764,7 +1764,7 @@ HttpClient::update_document_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments).second;
 	} else if (request.method == HTTP_STORE) {
@@ -1824,9 +1824,9 @@ HttpClient::metadata_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, request.method);
+		db_handler.reset(endpoints, DB_OPEN);
 	}
 
 	auto selector = request.path_parser.get_slc();
@@ -1920,9 +1920,9 @@ HttpClient::info_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, request.method);
+		db_handler.reset(endpoints, DB_OPEN);
 	}
 
 	// Info about a specific document was requested
@@ -2011,7 +2011,7 @@ HttpClient::touch_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
 	db_handler.reopen();  // Ensure touch.
 
@@ -2041,7 +2041,7 @@ HttpClient::commit_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method);
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
 	db_handler.commit();  // Ensure touch.
 
@@ -2147,7 +2147,7 @@ HttpClient::restore_view(Request& request)
 
 				request.processing = std::chrono::system_clock::now();
 
-				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method, request.comments);
+				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.comments);
 			}
 			request.indexer->prepare(std::move(obj));
 		}
@@ -2167,7 +2167,7 @@ HttpClient::restore_view(Request& request)
 
 				request.processing = std::chrono::system_clock::now();
 
-				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.method, request.comments);
+				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.comments);
 			}
 			request.indexer->prepare(std::move(obj));
 		}
@@ -2225,9 +2225,9 @@ HttpClient::schema_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, request.method);
+		db_handler.reset(endpoints, DB_OPEN);
 	}
 
 	auto schema = db_handler.get_schema()->get_full(true);
@@ -2335,9 +2335,9 @@ HttpClient::retrieve_view(Request& request)
 	// Open database
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN, request.method);
+		db_handler.reset(endpoints, DB_OPEN);
 	}
 
 	// Retrive document ID
@@ -2460,9 +2460,9 @@ HttpClient::search_view(Request& request)
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.primary) {
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN, request.method);
+			db_handler.reset(endpoints, DB_OPEN);
 		}
 
 		if (request.raw.empty()) {
@@ -2594,9 +2594,9 @@ HttpClient::count_view(Request& request)
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.primary) {
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE, request.method);
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN, request.method);
+			db_handler.reset(endpoints, DB_OPEN);
 		}
 
 		if (request.raw.empty()) {

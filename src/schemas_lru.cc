@@ -100,7 +100,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
-		DatabaseHandler _db_handler(endpoints, DB_OPEN, HTTP_GET, context);
+		DatabaseHandler _db_handler(endpoints, DB_OPEN, context);
 		std::string_view selector;
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		if (needle != std::string_view::npos) {
@@ -154,7 +154,7 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
-		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, HTTP_PUT, context);
+		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
 		_db_handler.update(id.substr(0, needle), 0, false, schema, true, false, msgpack_type);

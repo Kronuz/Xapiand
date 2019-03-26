@@ -149,7 +149,7 @@ Processor::Processor(const Script& script) :
 			if (endpoints.empty()) {
 				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 			}
-			DatabaseHandler _db_handler(endpoints, DB_OPEN, HTTP_GET);
+			DatabaseHandler _db_handler(endpoints, DB_OPEN);
 			auto doc = _db_handler.get_document(foreign_id);
 			foreign_data_script = doc.get_obj();
 		} catch (const Xapian::DocNotFoundError&) {

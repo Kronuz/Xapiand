@@ -37,7 +37,6 @@
 #include "database/flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
-#include "http_parser.h"                     // for http_method
 #include "lightweight_semaphore.h"           // for LightweightSemaphore
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
@@ -176,7 +175,6 @@ class DatabaseHandler {
 	int flags;
 	Endpoints endpoints;
 
-	enum http_method method;
 	std::shared_ptr<Schema> schema;
 
 	std::shared_ptr<std::unordered_set<std::string>> context;
@@ -198,12 +196,12 @@ class DatabaseHandler {
 
 public:
 	DatabaseHandler();
-	DatabaseHandler(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, std::shared_ptr<std::unordered_set<std::string>> context_ = nullptr);
+	DatabaseHandler(const Endpoints& endpoints_, int flags_ = 0, std::shared_ptr<std::unordered_set<std::string>> context_ = nullptr);
 
 	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj = nullptr);
 
-	void reset(const Endpoints& endpoints_, int flags_=0, enum http_method method_=HTTP_GET, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
+	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
 
 #if XAPIAND_DATABASE_WAL
 	MsgPack repr_wal(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
@@ -308,7 +306,6 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	Endpoints endpoints;
 	int flags;
 
-	enum http_method method;
 	bool comments;
 
 	std::atomic_size_t _processed;
@@ -325,12 +322,11 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt;
 
-	DocIndexer(const Endpoints& endpoints, int flags, enum http_method method, bool comments) :
+	DocIndexer(const Endpoints& endpoints, int flags, bool comments) :
 		running{true},
 		ready{false},
 		endpoints{endpoints},
 		flags{flags},
-		method{method},
 		comments{comments},
 		_processed{0},
 		_indexed{0},

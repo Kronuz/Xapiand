@@ -306,14 +306,14 @@ public:
 
 
 DatabaseHandler::DatabaseHandler()
-	: flags(0),
-	  method(HTTP_GET) { }
+	: flags(0)
+{
+}
 
 
-DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, enum http_method method_, std::shared_ptr<std::unordered_set<std::string>> context_)
+DatabaseHandler::DatabaseHandler(const Endpoints& endpoints_, int flags_, std::shared_ptr<std::unordered_set<std::string>> context_)
 	: flags(flags_),
 	  endpoints(endpoints_),
-	  method(method_),
 	  context(std::move(context_)) { }
 
 
@@ -327,15 +327,13 @@ DatabaseHandler::get_schema(const MsgPack* obj)
 
 
 void
-DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, enum http_method method_, const std::shared_ptr<std::unordered_set<std::string>>& context_)
+DatabaseHandler::reset(const Endpoints& endpoints_, int flags_, const std::shared_ptr<std::unordered_set<std::string>>& context_)
 {
-	L_CALL("DatabaseHandler::reset({}, {:#x}, <method>)", repr(endpoints_.to_string()), flags_);
+	L_CALL("DatabaseHandler::reset({}, {:#x})", repr(endpoints_.to_string()), flags_);
 
 	if (endpoints_.empty()) {
 		THROW(ClientError, "It is expected at least one endpoint");
 	}
-
-	method = method_;
 
 	if (endpoints != endpoints_ || flags != flags_) {
 		endpoints = endpoints_;
@@ -401,30 +399,9 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 #ifdef XAPIAND_CHAISCRIPT
 	auto processor = chaipp::Processor::compile(script);
 	if (processor) {
-		std::string http_method;
-		switch (method) {
-			case HTTP_PUT:
-				http_method = "PUT";
-				break;
-			case HTTP_PATCH:
-				http_method = "PATCH";
-				break;
-			case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
-			case HTTP_UPDATE:
-				http_method = "UPDATE";
-				break;
-			case HTTP_DELETE:
-				http_method = "DELETE";
-				break;
-			case HTTP_GET:
-				http_method = "GET";
-				break;
-			case HTTP_POST:
-				http_method = "POST";
-				break;
-			default:
-				return nullptr;
-		}
+		std::string method;  // TODO: Fill vriable "method" to pass to script
+
+		auto doc = std::make_unique<MsgPack>(object);
 
 		MsgPack old_doc;
 		if (data.version.empty()) {
@@ -440,9 +417,9 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 			old_doc = data.get_obj();
 		}
 
-		auto doc = std::make_unique<MsgPack>(object);
 		L_INDEX("Script: call({}, {})", doc->to_string(4), old_doc.to_string(4));
-		(*processor)(http_method, *doc, old_doc, script.get_params());
+
+		(*processor)(method, *doc, old_doc, script.get_params());
 		return doc;
 	}
 	return nullptr;
@@ -1035,7 +1012,7 @@ DatabaseHandler::restore_documents(int fd)
 
 	SHA256 sha256;
 	msgpack::unpacker unpacker;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, method, false);
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, false);
 	try {
 		while (true) {
 			if (XapiandManager::manager()->is_detaching()) {
@@ -2012,7 +1989,7 @@ DocPreparer::operator()()
 	ASSERT(indexer);
 	if (indexer->running) {
 		auto http_errors = catch_http_errors([&]{
-			DatabaseHandler db_handler(indexer->endpoints, indexer->flags, indexer->method);
+			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
 			auto prepared = db_handler.prepare_document(obj);
 			indexer->ready_queue.enqueue(std::make_tuple(std::move(std::get<0>(prepared)), std::move(std::get<1>(prepared)), std::move(std::get<2>(prepared)), idx));
 			return 0;
@@ -2032,7 +2009,7 @@ DocIndexer::operator()()
 {
 	L_CALL("DocIndexer::operator()()");
 
-	DatabaseHandler db_handler(endpoints, flags, method);
+	DatabaseHandler db_handler(endpoints, flags);
 	bool ready_ = false;
 	while (running) {
 		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
