@@ -18,8 +18,10 @@
       docs:
         - link: '#restful-features-of-the-xapiand-api'
           title: RESTful Features
+        - link: '#http-methods'
+          title: HTTP Methods
         - link: '#json-and-messagepack'
-          title: JSON
+          title: JSON/MessagePack
         - link: '#field-expansion'
           title: Field Expansion
         - link: '#multiple-indices'

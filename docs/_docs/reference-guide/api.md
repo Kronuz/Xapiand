@@ -2,6 +2,8 @@
 title: API Conventions
 ---
 
+---
+
 ## RESTful Features of the Xapiand API
 
 Xapiand uses a RESTful API exposed using JSON (or MessagePack) over HTTP.
@@ -12,6 +14,7 @@ stands for [Representational State Transfer](https://en.wikipedia.org/wiki/Repre
 The conventions listed in here can be applied throughout the REST API, unless
 otherwise specified.
 
+
 ### RESTful HTTP Methods
 
 You may see these standard HTTP methods referred to as CRUD, or _Create_, _Read_,
@@ -21,35 +24,103 @@ request to create a new resource, a `GET` request to read or retrieve a resource
 a `PATCH` or `UPDATE` request to edit a resource, and a `DELETE` request to
 delete a resource.
 
+
 ### Deviations from REST
 
 We do our best to use standard HTTP methods with accurate and well-known status
 codes in the Xapiand API, but here are some additions and deviations.
 
-Additionally to the standard HTTP methods, we also use `UPDATE` and `STORE`
-methods for certain operations.
+Additionally to the standard HTTP methods, we also use other custom methods
+such as `UPDATE` and `STORE`, for certain operations.
 
-### HTTP methods and response codes
 
-- `GET`, `OPTIONS` and `HEAD` requests are safe and idempotent, and won't alter a resource.
-- `DELETE`, `PUT`, `UPDATE` and `STORE` methods are idempotent.
-- `POST` and `PATCH` aren't safe or idempotent.
+---
 
-{: .note .info }
-**_Idempotent Methods_**<br>
-An _idempotent_ HTTP method is a HTTP method that can be called many times
-without different outcomes. It would not matter if the method is called only
-once, twice or a hundred times over, the result should be the same. This only
-applies to the result, not the resource itself.
+## HTTP Methods
 
-If your firewall rules don't support HTTP methods like `PATCH`, `UPDATE`, `STORE`
-or `DELETE`, use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"}
+- **_Safe Methods_**
+  Requests that use _safe_ HTTP methods won't alter a resource at all. Examples
+  are `GET`, `OPTIONS` and `HEAD`.
+
+- **_Idempotent Methods_**
+  An _idempotent_ HTTP method is a HTTP method that can be called many times
+  without different outcomes. It would not matter if the method is called only
+  once, twice or a hundred times over, the result should be the same. This only
+  applies to the result, not the resource itself. Examples are `DELETE`, `PUT`.
+
+- **_Not Safe/Idempotent Methods_**
+  This are requests that will alter the resource *and* potentially end up with
+  different results every time. Examples are `POST`.
+
+
+### Custom Methods
+
+The _Standard Methods_, the ones we all are familiar with, have simpler and
+well-defined semantics but there is functionality that cannot be easily
+expressed via standard methods. Custom methods refer to such API methods.
+
+Simply pass the required method as a non-standard HTTP method in the request.
+
+Example:
+
+{% capture req %}
+
+```json
+INFO /some/resource/name
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+If your firewall rules don't support non-standard HTTP methods like `PATCH`,
+`UPDATE`, `STORE` or `DELETE`, for example, you have two options:
+
++ Use HTTP Method Override
++ Use HTTP Method Mapping
+
+
+### HTTP Method Override
+
+You can use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"}
 (or _HTTP-Method-Override_) header. Pass the method you want to use in the
-`X-HTTP-Method-Override` header and use the `POST` method. The
-override won't work with any other method, so if you try and use the override
-header with a `GET`, `PATCH`, `UPDATE`, `STORE`, `PUT`, or `DELETE` method,
-you'll receive an error.
+`X-HTTP-Method-Override` header and use the `POST` method.
 
+Example:
+
+{% capture req %}
+
+```json
+POST /some/resource/name
+X-HTTP-Method-Override: INFO
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{: .note .caution }
+The Method Override won't work with any other method other than `POST`, you'll
+receive an error.
+
+
+### HTTP Method Mapping
+
+Custom methods can use the following generic HTTP mapping:
+`http://service.name:8880/some/resource/name:customMethod`
+
+To use method mappings pass the mapping in the URL and use HTTP `POST` verb
+since it has the most flexible semantics, except for methods serving as an
+alternative get or list which may use `GET`.
+
+Example:
+
+{% capture req %}
+
+```json
+POST /some/resource/name:info
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+
+---
 
 ## JSON and MessagePack
 
@@ -76,6 +147,8 @@ JSON can have trailing commas.
 JSON Accepts binary codes as escaped `"\xHH"` in strings.
 
 
+---
+
 ## Field Expansion
 
 JSON or MessagePack fields in objects passed to Xapiand are expanded. For example,
@@ -101,6 +174,8 @@ Is equivalent to:
 }
 ```
 
+
+---
 
 ## Multiple Indices
 
