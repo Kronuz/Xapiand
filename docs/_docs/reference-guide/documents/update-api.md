@@ -19,19 +19,22 @@ For example, let’s index a simple doc:
 {% capture req %}
 
 ```json
-PUT /test/1
+PUT /twitter/1
 
 {
-  "counter" : 1,
-  "tags" : ["red"]
+  "user" : "Kronuz",
+  "post_date" : "2019-03-22T14:35:26",
+  "message" : "Trying out Xapiand",
+  "likes" : 0,
+  "hashtags" : ["#xapiand"]
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
 {: .note .warning }
-`PUT /test/1` is not the same as `PUT /test/1/`, the former creates a document
-with ID `1` inside index `/test/` while the later creates the index `/test/1/`
+`PUT /twitter/1` is not the same as `PUT /twitter/1/`, the former creates a document
+with ID `1` inside index `/twitter/` while the later creates the index `/twitter/1/`
 itself.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
@@ -45,10 +48,10 @@ passed fields (simple recursive merge, inner merging of objects, replacing core
 {% capture req %}
 
 ```json
-UPDATE /test/1
+UPDATE /twitter/1
 
 {
-  "name" : "new_name"
+  "title" : "Xapiand Rocks!"
 }
 ```
 {% endcapture %}
@@ -61,32 +64,32 @@ used instead.
 
 ## Scripting
 
-Now, we can execute a script that would increment the counter:
+Now, we can execute a script that would increment the number of likes:
 
 {% capture req %}
 
 ```json
-UPDATE /test/1
+UPDATE /twitter/1
 
 {
-  "_script": "_doc.counter = _old_doc.counter + 1"
+  "_script": "_doc.likes = _old_doc.likes + 1"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-We can add a tag to the list of tags (if the tag exists, it still gets added, since this is a list):
+We can add a tag to the list of hashtags (if the tag exists, it still gets added, since this is a list):
 
 {% capture req %}
 
 ```json
-UPDATE /test/1
+UPDATE /twitter/1
 
 {
   "_script": {
-    "_body": "_doc.tags.append(tag)",
+    "_body": "_doc.hashtags.append(tag)",
     "_params": {
-      "tag": "blue"
+      "tag": "#trying"
     }
   }
 }
@@ -94,18 +97,18 @@ UPDATE /test/1
 {% endcapture %}
 {% include curl.html req=req %}
 
-We can remove a tag from the list of tags:
+We can remove a tag from the list of hashtags:
 
 {% capture req %}
 
 ```json
-UPDATE /test/1
+UPDATE /twitter/1
 
 {
   "_script": {
-    "_body": "_doc.tags.erase(tag)",
+    "_body": "_doc.hashtags.erase(tag)",
     "_params": {
-      "tag": "blue"
+      "tag": "#trying"
     }
   }
 }
@@ -118,7 +121,7 @@ We can also programmatically add a new field to the document:
 {% capture req %}
 
 ```json
-UPDATE /test/1
+UPDATE /twitter/1
 
 {
   "_script": {
@@ -138,7 +141,7 @@ Or remove a field from the document:
 {% capture req %}
 
 ```json
-UPDATE /test/1
+UPDATE /twitter/1
 
 {
   "_script": {
