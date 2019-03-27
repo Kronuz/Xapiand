@@ -2423,10 +2423,13 @@ HttpClient::search_view(Request& request)
 		auto document_data = document.get_data();
 		const auto data = Data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
 
-		MsgPack hit_obj;
+		auto hit_obj = MsgPack::MAP();
 		auto main_locator = data.get("");
 		if (main_locator != nullptr) {
-			hit_obj = MsgPack::unserialise(main_locator->data());
+			auto locator_data = main_locator->data();
+			if (!locator_data.empty()) {
+				hit_obj = MsgPack::unserialise(locator_data);
+			}
 		}
 
 		// Detailed info about the document:
