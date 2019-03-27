@@ -62,18 +62,18 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	sed "s#^    cellar :any#    cellar :any${PACKAGE_NL_SHA256}#" Formula/xapiand.rb.tmp > Formula/xapiand.rb
 	rm -f Formula/xapiand.rb.tmp
 
+	# Commit and push formula
+	git checkout mater
+	git add -u
+	git commit --message "Xapiand updated to v${PACKAGE_VERSION} via Travis build: ${TRAVIS_BUILD_NUMBER}"
+	git push --quiet master
+
 	# Add, commit and push bottle
 	git fetch --depth 1 origin gh-pages:gh-pages
 	git checkout gh-pages
 	git add "${PACKAGE_BOTTLE}"
 	git commit --message "${PACKAGE_BOTTLE}"
 	git push --quiet gh-pages
-
-	# Commit and push formula
-	git checkout mater
-	git add -u
-	git commit --message "Xapiand updated to v${PACKAGE_VERSION} via Travis build: ${TRAVIS_BUILD_NUMBER}"
-	git push --quiet master
 
 else
 	# Everywhere else build as usual:
