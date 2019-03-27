@@ -2760,7 +2760,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 	static UUIDGenerator generator;
 
-	L_INDEX("Schema index({}): {}", document_id.to_string(), object.to_string());
+	L_INDEX("Schema index({}): " + DIM_GREY + "{}", document_id.to_string(), object.to_string());
 
 	try {
 		map_values.clear();
@@ -3662,7 +3662,7 @@ Schema::update(const MsgPack& object)
 {
 	L_CALL("Schema::update({})", repr(object.to_string()));
 
-	L_INDEX("Schema update: {}", object.to_string());
+	L_INDEX("Schema update: " + DIM_GREY + "{}", object.to_string());
 
 	try {
 		map_values.clear();
@@ -4106,7 +4106,7 @@ Schema::write(const MsgPack& object, bool replace)
 {
 	L_CALL("Schema::write({}, {})", repr(object.to_string()), replace);
 
-	L_INDEX("Schema write: {}", object.to_string());
+	L_INDEX("Schema write: " + DIM_GREY + "{}", object.to_string());
 
 	try {
 		map_values.clear();
