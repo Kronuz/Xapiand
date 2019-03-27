@@ -33,7 +33,7 @@ PUT /test/1
 `PUT /test/1` is not the same as `PUT /test/1/`, the former creates a document
 with ID `1` inside index `/test/` while the later creates the index `/test/1/`
 itself.
-[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+[Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
 ## Merging

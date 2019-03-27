@@ -39,7 +39,7 @@ The result of the above index operation is:
 `PUT /twitter/1` is not the same as `PUT /twitter/1/`, the former creates a document
 with ID `1` inside index `/twitter/` while the later creates the index `/twitter/1/`
 itself.
-[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+[Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
 ## Automatic Index Creation

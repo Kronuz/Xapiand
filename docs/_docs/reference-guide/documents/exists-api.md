@@ -20,4 +20,4 @@ The result of the above get operation is a `200 OK` HTTP response code with the
 no body.
 
 {: .note .warning }
-[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+[Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).

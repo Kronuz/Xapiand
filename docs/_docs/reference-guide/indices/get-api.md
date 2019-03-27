@@ -19,4 +19,4 @@ GET /twitter/
 {% include curl.html req=req %}
 
 {: .note .warning }
-[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+[Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).

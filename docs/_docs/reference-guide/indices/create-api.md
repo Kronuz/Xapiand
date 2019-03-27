@@ -19,7 +19,7 @@ This create an index named twitter with all default setting.
 {: .note .warning }
 `PUT /twitter/` is not the same as `PUT /twitter`, the former creates index
 `/twitter/` and the later adds document `twitter` to index `/`.
-[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+[Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
 ## Index name limitations

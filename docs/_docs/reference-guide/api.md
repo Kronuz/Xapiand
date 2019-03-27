@@ -124,11 +124,25 @@ GET /some/resource/name:info
 
 ## Resource Paths
 
-**Trailing slashes are important** to distinguish between a path to an _Index_
-and a path to a _Document_.
+### To slash or not to slash
 
-This will delete a _single document_ from index `/some/resource/name`, the
-document with ID `name`:
+That is the question we hear often. Onward to the answers! Historically,
+it's common for URLs _with a trailing slash_ to indicate a _directory_, and
+those _without a trailing slash_ to denote a _file_:
+
++ `http://example.com/foo` (without trailing slash, conventionally a file)
++ `http://example.com/foo/` (with trailing slash, conventionally a directory)
+
+Source: [Google WebMaster Central Blog - To slash or not to slash](https://webmasters.googleblog.com/2010/04/to-slash-or-not-to-slash.html){:target="_blank"}
+
+
+### Trailing slashes are important
+
+To us, trailing slashes are important to distinguish between a path to an
+_Index_ (a _directory_) and a path to a _Document_ (a _file_).
+
+The following will delete a _single document_ from index `/some/resource/name`,
+the document with ID `name`:
 
 {% capture req %}
 
@@ -138,7 +152,7 @@ DELETE /some/resource/name
 {% endcapture %}
 {% include curl.html req=req %}
 
-And the following will delete the whole index `/some/resource/path/` with
+Whilst the next example will delete the whole index `/some/resource/path/` with
 _all its documents_ in it as well:
 
 {% capture req %}

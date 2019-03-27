@@ -36,7 +36,7 @@ retrieve, aditionally to the actual body of the document.
 If the document is not found, it will return a `404 Not Found` HTTP response code.
 
 {: .note .warning }
-[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+[Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
 ## Volatile
