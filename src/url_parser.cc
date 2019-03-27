@@ -318,6 +318,7 @@ PathParser::init(std::string_view p)
 
 			case '.':  // Drill Selector
 				switch (state) {
+					case State::CMD:
 					case State::SLC:
 					case State::SLB:
 					case State::ID_SLC:
@@ -334,6 +335,7 @@ PathParser::init(std::string_view p)
 			case '}':  // Field Selector
 				++slc_level;
 				switch (state) {
+					case State::CMD:
 					case State::SLC:
 						state = State::SLB;
 						break;
@@ -378,6 +380,7 @@ PathParser::init(std::string_view p)
 				break;
 			case ',':
 				switch (state) {
+					case State::CMD:
 					case State::SLC:
 						state = State::ID;
 						n0 = n1;
@@ -408,6 +411,7 @@ PathParser::init(std::string_view p)
 				break;
 			case '@':
 				switch (state) {
+					case State::CMD:
 					case State::SLC:
 						state = State::ID;
 						n0 = n1;
