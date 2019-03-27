@@ -4,7 +4,7 @@ title: API Conventions
 
 ---
 
-## RESTful Features of the Xapiand API
+## RESTful Features
 
 Xapiand uses a RESTful API exposed using JSON (or MessagePack) over HTTP.
 
@@ -32,42 +32,6 @@ codes in the Xapiand API, but here are some additions and deviations.
 
 Additionally to the standard HTTP methods, we also use other custom methods
 such as `UPDATE` and `STORE`, for certain operations.
-
-
----
-
-## Resource Paths
-
-**Trailing slashes are important** to distinguish between a path to an _Index_
-and a path to a _Document_.
-
-This will delete a _single document_ from index `/some/resource/name`, the
-document with ID `name`:
-
-{% capture req %}
-
-```json
-DELETE /some/resource/name
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-And the following will delete the whole index `/some/resource/path/` with
-_all its documents_ in it as well:
-
-{% capture req %}
-
-```json
-DELETE /some/resource/path/
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-{: .note .warning }
-**_Remember_**<br>
-Trailing slashes in resource paths are important, always make sure you are
-requesting a method for the proper resource path.
-**Trailing slashes _do mean something_**.
 
 
 ---
@@ -154,6 +118,42 @@ GET /some/resource/name:info
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+
+---
+
+## Resource Paths
+
+**Trailing slashes are important** to distinguish between a path to an _Index_
+and a path to a _Document_.
+
+This will delete a _single document_ from index `/some/resource/name`, the
+document with ID `name`:
+
+{% capture req %}
+
+```json
+DELETE /some/resource/name
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+And the following will delete the whole index `/some/resource/path/` with
+_all its documents_ in it as well:
+
+{% capture req %}
+
+```json
+DELETE /some/resource/path/
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{: .note .warning }
+**_Remember_**<br>
+Trailing slashes in resource paths are important, always make sure you are
+requesting a method for the proper resource path.
+**Trailing slashes _do mean something_**.
 
 
 ---

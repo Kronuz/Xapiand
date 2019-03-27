@@ -20,6 +20,8 @@
           title: RESTful Features
         - link: '#http-methods'
           title: HTTP Methods
+        - link: '#resource-paths'
+          title: Resource Paths
         - link: '#json-and-messagepack'
           title: JSON/MessagePack
         - link: '#field-expansion'
