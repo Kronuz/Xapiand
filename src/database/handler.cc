@@ -648,7 +648,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 			apply_patch(patches, obj);
 			auto it = obj.find(ID_FIELD_NAME);
-			if (it != obj.end()) {
+			if (it != obj.end() && it + 1 != obj.end()) {
 				auto id_field = *it;
 				obj.erase(it);
 				obj[ID_FIELD_NAME] = std::move(id_field);
@@ -714,7 +714,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 					} else {
 						obj.update(body);
 						auto it = obj.find(ID_FIELD_NAME);
-						if (it != obj.end()) {
+						if (it != obj.end() && it + 1 != obj.end()) {
 							auto id_field = *it;
 							obj.erase(it);
 							obj[ID_FIELD_NAME] = std::move(id_field);
