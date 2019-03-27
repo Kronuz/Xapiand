@@ -1,5 +1,10 @@
 language: cpp
 
+# on:
+#   tags: true
+#   all_branches: true
+#   condition: $TRAVIS_TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+
+
 matrix:
   include:
     - os: linux
@@ -27,4 +32,4 @@ script:
 
 env:
   global:
-    secure: a9Tx4hIUmfq3LaFn3glqxpKMsJlLb4ESxbepNImNPywbwEj3YqCTARhjk+Le5rg0QE0Js50crukhPWYqVEtX5yCp6Es3VZ5Fu7uXD46I6G73nQIuPipofxCisBZt8WLWzz/y0jZlyz+mjEKrh6W6fsC36lGF2zlH/4Ph0oq9GCg=
+    secure: VeM2aH5pa2Q2lsFw6Z1fwfMvDm0WxTZu5AM7Z5wqcgSu+Q+MUoleUy6gh+NSsbqfbAcc06CMsNMCeclGtF8Ft9PHWIT8qPltYgPSYSO6h1FS++RRtt0K5l0rjM3W38yid1607qrj+WCMtJads/JsgbCUiLLfPukPnCVcrL/H/so=

@@ -1,18 +1,9 @@
 #!/bin/sh
 set -eux
 
-echo "TRAVIS_OS_NAME: ${TRAVIS_OS_NAME}"
-echo "TRAVIS_TAG: ${TRAVIS_TAG}"
-
-
 if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	# Under OSX, build a bottle:
 	set -o pipefail
-
-	# if [ -z "${TRAVIS_TAG}" ]; then
-	# 	echo "Bottle not built: Needs to be built from a tag."
-	# 	exit 0
-	# fi
 
 	PACKAGE_ROOT=.
 	PACKAGE_VERSION=$(grep '^set (PACKAGE_VERSION' CMakeLists.txt | sed 's/[^.0-9]//g')
@@ -21,11 +12,6 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	# First, get and link Kronuz Homebrew Tap
 	git clone --depth=1 "https://${GH_TOKEN}@github.com/Kronuz/homebrew-tap.git"
 	cd homebrew-tap
-
-	# if [ grep "v${PACKAGE_VERSION}" --quiet Formula/xapiand.rb ]; then
-	# 	echo "Bottle not built: v${PACKAGE_VERSION} already built."
-	# 	exit 0
-	# fi
 
 	mkdir -p /usr/local/Homebrew/Library/Taps/kronuz
 	ln -fs "${PWD}" /usr/local/Homebrew/Library/Taps/kronuz
@@ -66,8 +52,8 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 
 	# Commit and push the Formula
 	git add -u
-	git commit --message "Xapiand updated to v${PACKAGE_VERSION} via Travis build: ${TRAVIS_BUILD_NUMBER}"
-	git push --quiet master
+	git commit --message "Xapiand updated to v${PACKAGE_VERSION} via Travis build ${TRAVIS_BUILD_NUMBER}"
+	git push --quiet origin master
 
 	# Add, commit and push Bottle
 	git fetch --depth 1 origin gh-pages:gh-pages
@@ -75,7 +61,7 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	mv "xapiand--${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz" "${PACKAGE_BOTTLE}"
 	git add "${PACKAGE_BOTTLE}"
 	git commit --message "${PACKAGE_BOTTLE}"
-	git push --quiet gh-pages
+	git push --quiet origin gh-pages
 
 else
 	# Everywhere else build as usual:
