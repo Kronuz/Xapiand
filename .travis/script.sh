@@ -6,23 +6,25 @@ echo "TRAVIS_TAG: ${TRAVIS_TAG}"
 set -euxo pipefail
 
 if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-	if [ -z "${TRAVIS_TAG}" ]; then
-		echo "Bottle not built: Needs to be built from a tag."
-		exit 0
-	fi
 	# Under OSX, build a bottle:
 
+	# if [ -z "${TRAVIS_TAG}" ]; then
+	# 	echo "Bottle not built: Needs to be built from a tag."
+	# 	exit 0
+	# fi
+
 	PACKAGE_ROOT=.
-	PACKAGE_VERSION=$(grep '^set (PACKAGE_VERSION' ${PACKAGE_ROOT}/CMakeLists.txt | sed 's/[^.0-9]//g')
-	PACKAGE_HASH=$(git --git-dir ${PACKAGE_ROOT}/.git rev-parse --short HEAD)
+	PACKAGE_VERSION=$(grep '^set (PACKAGE_VERSION' CMakeLists.txt | sed 's/[^.0-9]//g')
+	PACKAGE_HASH=$(git --git-dir .git rev-parse --short HEAD)
 
 	# First, get and link Kronuz Homebrew Tap
 	git clone --depth=1 "https://${GH_TOKEN}@github.com/Kronuz/homebrew-tap.git"
 	cd homebrew-tap
-	if [ grep "v${PACKAGE_VERSION}" --quiet Formula/xapiand.rb ]; then
-		echo "Bottle not built: v${PACKAGE_VERSION} already built."
-		exit 0
-	fi
+
+	# if [ grep "v${PACKAGE_VERSION}" --quiet Formula/xapiand.rb ]; then
+	# 	echo "Bottle not built: v${PACKAGE_VERSION} already built."
+	# 	exit 0
+	# fi
 
 	mkdir -p /usr/local/Homebrew/Library/Taps/kronuz
 	ln -fs "${PWD}" /usr/local/Homebrew/Library/Taps/kronuz
