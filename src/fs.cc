@@ -328,12 +328,14 @@ char* normalize_path(const char* src, const char* end, char* dst, bool slashed, 
 	int levels = 0;
 	char* ret = dst;
 	char ch = '\0';
+	size_t len_dst = 0;
 	while (src <= end) {
 		ch = src == end ? '/' : *src;
 		++src;
 		if (ch == '.' && (levels != 0 || dst == ret || *(dst - 1) == '/' )) {
 			*dst++ = ch;
 			++levels;
+			++len_dst;
 		} else if (ch == '/') {
 			while (levels != 0 && dst > ret + 1) {
 				if (*--dst == '/') {
@@ -342,28 +344,33 @@ char* normalize_path(const char* src, const char* end, char* dst, bool slashed, 
 			}
 			if (dst == ret || *(dst - 1) != '/') {
 				*dst++ = ch;
+				++len_dst;
 			}
 		} else {
 			*dst++ = ch;
 			levels = 0;
+			++len_dst;
 		}
 	}
 	if (ch == '.' && levels == 1) {
 		ch = *--dst;
+		--len_dst;
 	}
 	if (dst > ret + 1) {
 		if (slashed) {
 			if (ch != '/') {
 				*dst++ = '/';
+				++len_dst;
 			}
 		} else {
 			if (ch == '/') {
 				--dst;
+				--len_dst;
 			}
 		}
 	}
 
-	if (*(end - 1) == '/' && keep_slash) {
+	if (*(end - 1) == '/' && keep_slash && len_dst != 1) {
 		*dst++ = '/';
 	}
 
