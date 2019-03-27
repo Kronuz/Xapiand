@@ -111,6 +111,9 @@ GET /assets/Lenna.pdf
 {% endcapture %}
 {% include curl.html req=req %}
 
+Or visiting the link to the PDF content with your web browser:
+[http://localhost:8880/assets/Lenna.pdf](http://localhost:8880/assets/Lenna.pdf){:target="_blank"}
+
 
 ## Retrieving Information
 
