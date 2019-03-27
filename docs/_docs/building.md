@@ -59,6 +59,7 @@ dependencies needed for building it are:
 
 * zlib
 * libpthread (internally used by the Standard C++ thread library)
+* ICU 54.1 (optional)
 
 
 ---
