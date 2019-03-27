@@ -46,7 +46,7 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	sed -i '' "s#^  sha256 .*#  sha256 \"${PACKAGE_SHA256}\"#" Formula/xapiand.rb
 
 	# Build bottle
-	HOMEBREW_PACKAGE_HASH=$PACKAGE_HASH brew install --build-bottle Kronuz/tap/xapiand
+	HOMEBREW_PACKAGE_HASH=$PACKAGE_HASH brew install --build-bottle --verbose Kronuz/tap/xapiand
 	PACKAGE_SHA256=$(brew bottle --no-rebuild Kronuz/tap/xapiand | grep sha256)
 	PACKAGE_NL_SHA256=$(echo '\'; echo "$PACKAGE_SHA256")
 	PACKAGE_TYPE=$(echo $PACKAGE_SHA256 | awk '{ print $4 }')
