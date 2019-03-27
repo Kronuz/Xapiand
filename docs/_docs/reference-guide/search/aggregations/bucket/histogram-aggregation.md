@@ -56,7 +56,7 @@ section, the following snippet "buckets" the bank accounts based on their
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -149,7 +149,7 @@ holders: `[15, 25)`, `[25, 35)`, `[35, 45)`:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",

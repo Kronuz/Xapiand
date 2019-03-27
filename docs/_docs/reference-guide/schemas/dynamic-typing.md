@@ -23,7 +23,7 @@ a new date field is added.
 Dynamic date detection can be disabled by setting `date_detection` to `false`
 
 ```json
-PUT my_index/:schema
+PUT /my_index/:schema
 
 {
   "date_detection": false
@@ -31,7 +31,7 @@ PUT my_index/:schema
 ```
 
 ```json
-PUT my_index/1
+PUT /my_index/1
 
 {
   "create": "2015/09/02"

@@ -21,7 +21,7 @@ weights:
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

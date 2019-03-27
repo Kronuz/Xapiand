@@ -36,6 +36,42 @@ such as `UPDATE` and `STORE`, for certain operations.
 
 ---
 
+## Resource Paths
+
+**Trailing slashes are important** to distinguish between a path to an _Index_
+and a path to a _Document_.
+
+This will delete a _single document_ from index `/some/resource/name`, the
+document with ID `name`:
+
+{% capture req %}
+
+```json
+DELETE /some/resource/name
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+And the following will delete the whole index `/some/resource/path/` with
+_all its documents_ in it as well:
+
+{% capture req %}
+
+```json
+DELETE /some/resource/path/
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{: .note .warning }
+**_Remember_**<br>
+Trailing slashes in resource paths are important, always make sure you are
+requesting a method for the proper resource path.
+**Trailing slashes _do mean something_**.
+
+
+---
+
 ## HTTP Methods
 
 - **_Safe Methods_**
@@ -151,8 +187,8 @@ JSON Accepts binary codes as escaped `"\xHH"` in strings.
 
 ## Field Expansion
 
-JSON or MessagePack fields in objects passed to Xapiand are expanded. For example,
-the following nested object:
+JSON or MessagePack fields in objects passed to Xapiand are expanded.
+For example, the following nested object:
 
 ```json
 {

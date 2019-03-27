@@ -34,7 +34,7 @@ are _brown-eyed females_:
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

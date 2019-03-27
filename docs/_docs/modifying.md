@@ -73,7 +73,7 @@ This example shows how to index a document without an explicit ID:
 {% capture req %}
 
 ```json
-POST /customer
+POST /customer/
 
 {
   "name": "Richard Roe"
@@ -144,34 +144,6 @@ In the above example, `_doc` is the current document and `_old_doc` refers to
 the previous document that is about to be updated.
 
 
-{% if site.serving %}
-
-
-### Updating Multiple Documents
-
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
-
-Xapiand provides the ability to update multiple documents given a specific
-query condition (like an SQL UPDATE-WHERE statement):
-
-{% capture req %}
-
-```json
-UPDATE /customer/:search?q=*
-
-{
-  "_script": "_doc.age = _old_doc.age + 5"
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-{% endif %}
-
-
 ## Deleting Documents
 
 Deleting a document is fairly straightforward. This example shows how to delete
@@ -184,29 +156,3 @@ DELETE /customer/2
 ```
 {% endcapture %}
 {% include curl.html req=req %}
-
-{% if site.serving %}
-
-### Deleting Multiple Documents
-
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
-
-Xapiand provides the ability to delete multiple documents given a specific
-query condition.
-
-{% capture req %}
-
-```json
-DELETE /customer/:search?q=gender:male
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-{: .note .caution }
-It is worth noting that it is much more efficient to delete a
-whole index instead of deleting all documents using this method.
-
-{% endif %}

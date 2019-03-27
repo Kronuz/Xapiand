@@ -2,14 +2,15 @@
 title: Search
 ---
 
-You can search for documents by using the `:search` endpoint.
+You can search for documents by using the `SEARCH` or the `GET` method:
 
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-<div style="min-height: 400px"></div>
+{: .note .tip }
+It is also possible to use [HTTP Method Mapping]({{ '/docs/reference-guide/api#http-method-mapping' | relative_url }}).

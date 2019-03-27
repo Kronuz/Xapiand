@@ -3,17 +3,23 @@ title: Index Information API
 short_title: Index Info API
 ---
 
-The simplest form of `:info` gets information about an index:
+The simplest form of `INFO` gets information about an index:
 
 {% capture req %}
 
 ```json
-GET /bank/:info
+INFO /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-Response will include the following information about the index:
+{: .note .warning }
+`INFO /bank/` is not the same as `INFO /bank`, the former gets information about
+the index `/bank/` while the later retrieves information about a document with
+ID `bank` inside index `/`.
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+
+The response will include the following information about the index:
 
 * `uuid`          - UUID of the xapian database.
 * `revision`      - Internal document ID (shown only for shard databases).

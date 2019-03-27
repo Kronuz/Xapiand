@@ -19,7 +19,7 @@ not _ambitious_; and:
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

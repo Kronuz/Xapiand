@@ -12,12 +12,12 @@ The _Open / Close Index APIs_ allow to close an index, and later on opening it.
 A closed index has almost _no overhead_ on the running server. A closed index
 can be opened which will then go through the normal opening process.
 
-The REST endpoint command are `:close` and `:open`. For example:
+The REST endpoint command are `CLOSE and `OPEN`. For example:
 
 {% capture req %}
 
 ```json
-POST /my_index/:close
+CLOSE /my_index/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -25,7 +25,7 @@ POST /my_index/:close
 {% capture req %}
 
 ```json
-POST /my_index/:open
+OPEN /my_index/
 ```
 {% endcapture %}
 {% include curl.html req=req %}

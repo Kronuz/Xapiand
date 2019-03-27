@@ -10,7 +10,7 @@ documents in any given database giving them all a weight of 0.0:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": {
@@ -32,7 +32,7 @@ no documents.
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

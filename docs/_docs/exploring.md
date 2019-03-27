@@ -63,7 +63,7 @@ let's load it into our cluster as follows:
 {% capture req %}
 
 ```json
-POST /bank/:restore
+RESTORE /bank/
 Content-Type: application/x-ndjson
 
 @accounts.ndjson
@@ -74,16 +74,17 @@ Content-Type: application/x-ndjson
 {: .note .caution }
 When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
 
-More information about `:restore` can be found in the [Backups]({{ '/docs/reference-guide/backups' | relative_url }})
-section.
+More information about `RESTORE` method can be found in the
+[Backups]({{ '/docs/reference-guide/backups' | relative_url }}) section.
 
-After having loaded the dataset, you can then use the [Info API]({{ '/docs/reference-guide/info' | relative_url }})
-to get information about the new index:
+After having loaded the dataset, you can then use the
+[Info API]({{ '/docs/reference-guide/info' | relative_url }}) to get
+information about the new index:
 
 {% capture req %}
 
 ```json
-GET /bank/:info
+INFO /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -126,23 +127,23 @@ more readable JSON format. We'll try one example of the request URI method but
 for the remainder of this guide, we will exclusively be using the request body
 method.
 
-The REST API for search is accessible from the `:search` endpoint. This example
+The REST API for search is accessible using the `SEARCH` method. This example
 returns all documents in the bank index:
 
 {% capture req %}
 
 ```json
-GET /bank/:search?q=*&sort=accountNumber
+SEARCH /bank/?q=*&sort=accountNumber&pretty
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-Let's first dissect the search call. We are searching (`:search` endpoint) in
-the `bank` index, and the `q=*` parameter instructs Xapiand to _match all_
-documents in the index (the default if not specified). The `sort=accountNumber`
-parameter indicates to sort the results using the `accountNumber` field of each
-document in an ascending order. The `pretty` parameter just tells Xapiand to
-return pretty-printed JSON results, the same effect can be achieved by using the
+Let's first dissect the search call. We are searching in the `/bank/` index,
+and the `q=*` query parameter instructs Xapiand to _match all_ documents in the
+index (the default if not specified). The `sort=accountNumber` parameter
+indicates to sort the results using the `accountNumber` field of each document
+in an ascending order. The `pretty` parameter just tells Xapiand to return
+pretty-printed JSON results, a similar effect can be achieved by using the
 `Accept` header as in: `Accept: application/json; indent: 2`.
 
 And the response (partially shown):
@@ -224,7 +225,7 @@ method:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -235,7 +236,7 @@ POST /bank/:search
 {% include curl.html req=req %}
 
 The difference here is that instead of passing `q=*` in the URI, we `POST` a
-JSON-style query request body to the `:search` API.
+JSON-style query request body to the `SEARCH` method.
 
 Dissecting the above, the query part tells us what our query definition is and
 the `_query` part is simply the type of query that we want to run. The
@@ -248,7 +249,7 @@ sort, here we pass in `limit`:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -265,7 +266,7 @@ This example does a _match all_ and returns documents 10 through 19:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -287,7 +288,7 @@ descending order and returns the top 10 (default for `limit`) documents.
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -323,7 +324,7 @@ This example shows how to return two fields using the _Field Selector_,
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -344,7 +345,7 @@ from the search:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",
@@ -360,7 +361,7 @@ POST /bank/:search
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": {
@@ -396,7 +397,7 @@ the count of accounts by state:
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": "*",

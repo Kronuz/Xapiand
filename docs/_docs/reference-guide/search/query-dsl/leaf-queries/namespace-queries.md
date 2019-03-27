@@ -34,7 +34,7 @@ and joining the field names with _dot_ ('`.`'):
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {
@@ -51,7 +51,7 @@ GET /bank/:search
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {
@@ -66,7 +66,7 @@ GET /bank/:search
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {
@@ -88,7 +88,7 @@ creation. Having make sure of that, you can perform searches like the following
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

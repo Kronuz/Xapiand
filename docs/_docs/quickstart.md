@@ -119,9 +119,10 @@ Let's find all the tweets that Kronuz posted:
 {% capture req %}
 
 ```json
-GET /twitter/tweet/:search?q=user:Kronuz
+SEARCH /twitter/tweet/?q=user:Kronuz
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-You can find out more in the [Exploring Your Data]({{ '/docs/exploring' | relative_url }}) section.
+You can find out more in the [Exploring Your Data]({{ '/docs/exploring' | relative_url }})
+section.

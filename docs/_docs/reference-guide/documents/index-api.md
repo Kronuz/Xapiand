@@ -55,7 +55,7 @@ instead of `PUT`):
 {% capture req %}
 
 ```json
-POST /twitter
+POST /twitter/
 
 {
     "user" : "Yosef",

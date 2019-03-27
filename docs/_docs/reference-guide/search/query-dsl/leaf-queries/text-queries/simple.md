@@ -29,7 +29,7 @@ the stemmig algorithm.
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

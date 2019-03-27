@@ -19,7 +19,7 @@ _females_ in the ages between 20 and 30:
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

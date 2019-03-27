@@ -36,7 +36,7 @@ section, computing the number of cities with accounts in the state of Indiana:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

@@ -9,12 +9,17 @@ documents in Xapiand are stored inside of one index or another.
 {% capture req %}
 
 ```json
-POST /twitter/:touch
+PUT /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
 This create an index named twitter with all default setting.
+
+{: .note .warning }
+`PUT /twitter/` is not the same as `PUT /twitter`, the former creates index
+`/twitter/` and the later adds document `twitter` to index `/`.
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
 
 
 ## Index name limitations
@@ -39,12 +44,12 @@ defined in the body:
 {% capture req %}
 
 ```json
-POST /twitter/:touch
+PUT /twitter/
 
 {
   "_settings": {
-    "shards": 3,
-    "replicas": 2
+    "number_of_shards": 3,
+    "number_of_replicas": 2
   }
 }
 ```
@@ -60,7 +65,7 @@ body:
 {% capture req %}
 
 ```json
-POST /twitter/:touch
+PUT /twitter/
 
 {
   "_schema": {
@@ -77,69 +82,3 @@ POST /twitter/:touch
 ```
 {% endcapture %}
 {% include curl.html req=req %}
-
-
-
-
-{% if site.serving %}
-
----
-
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
-
-# Future
-
-{% capture req %}
-
-```json
-UPDATE /twitter/
-
-{
-  "_settings": {
-    "number_of_shards": 3,
-    "number_of_replicas": 2
-  },
-  "_schema": {
-    "name": {
-      "_type": "text"
-    },
-    "age": {
-      "_type": "positive"
-    }
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
----
-
-{% capture req %}
-
-```json
-UPDATE /twitter/
-
-{
-  "_settings": {
-    "number_of_shards": 3,
-    "number_of_replicas": 2
-  },
-  "_schema": {
-    "_type": "foreign/object"
-    "_endpoint": ".schemas/object.schema"
-    "name": {
-      "_type": "text"
-    },
-    "age": {
-      "_type": "positive"
-    }
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-{% endif %}

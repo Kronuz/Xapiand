@@ -33,7 +33,7 @@ behaves identically to `_or`.
 {% capture req %}
 
 ```json
-GET /bank/:search
+SEARCH /bank/
 
 {
   "_query": {

@@ -31,7 +31,7 @@ section, we can sum the balances of all accounts in the state of Indiana with:
 {% capture req %}
 
 ```json
-POST /bank/:search
+SEARCH /bank/
 
 {
   "_query": {
