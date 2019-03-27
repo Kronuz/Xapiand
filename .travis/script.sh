@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eux
 
+if [ -z "${TRAVIS_TAG}" ]; then
+	exit 0
+fi
+
 if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	# Under OSX, build a bottle:
 	set -o pipefail
