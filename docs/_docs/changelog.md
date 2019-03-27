@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.16.1] - 2019-03-26
+{: #v0-16-1 }
+
+### Fixed
+- Selectors were not working
+- Mime Types
+
+---
 ## [0.16.0] - 2019-03-26
 {: #v0-16-0 }
 

@@ -1,13 +1,12 @@
 ---
 title: "Xapiand 0.16.0 Released"
-date: "2019-03-21 17:57:00 -0600"
+date: "2019-03-26 17:57:00 -0600"
 author: Kronuz
 version: 0.16.0
 categories: [release]
 ---
 
-This release adds shards support, now Xapiand creates sharded databases by
-default.
+TravisCI + version checks
 
 
 ### Added
