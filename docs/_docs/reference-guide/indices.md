@@ -7,10 +7,10 @@ followed by a list of available indices APIs:
 
 Index management:
 
-- [Create Index](create-api)
-- [Delete Index](delete-api)
-- [Get Index](get-api)
-- [Indices Exists](exists-api)
+- [Create Index API](create-api)
+- [Delete Index API](delete-api)
+- [Get Index API](get-api)
+- [Index Exists API](exists-api)
 - [Open/Close Index API](close-api)
 
 Schema management:

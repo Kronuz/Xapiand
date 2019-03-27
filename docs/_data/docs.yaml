@@ -37,6 +37,17 @@
         - url: close-api
         - url: info-api
         - url: backups
+    - url: documents
+      docs:
+        - url: index-api
+        - url: get-api
+        - url: exists-api
+        - url: delete-api
+        - url: update-api
+        - url: store-api
+        - url: info-api
+        - url: scripting
+        - url: versioning
     - url: schemas
       docs:
         - url: field-types
@@ -55,17 +66,6 @@
             - url: boolean-type
             - url: geospatial-type
         - url: dynamic-typing
-    - url: documents
-      docs:
-        - url: index-api
-        - url: get-api
-        - url: exists-api
-        - url: delete-api
-        - url: update-api
-        - url: store-api
-        - url: info-api
-        - url: scripting
-        - url: versioning
     - url: search
       docs:
         - url: search-api
