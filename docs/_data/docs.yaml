@@ -16,18 +16,18 @@
   docs:
     - url: api
       docs:
-        - link: '#restful-features-of-the-xapiand-api'
-          title: RESTful Features
-        - link: '#http-methods'
-          title: HTTP Methods
-        - link: '#resource-paths'
-          title: Resource Paths
-        - link: '#json-and-messagepack'
-          title: JSON/MessagePack
-        - link: '#field-expansion'
-          title: Field Expansion
-        - link: '#multiple-indices'
-          title: Multiple Indices
+        - title: RESTful Features
+          link: '#restful-features-of-the-xapiand-api'
+        - title: HTTP Methods
+          link: '#http-methods'
+        - title: Resource Paths
+          link: '#resource-paths'
+        - title: JSON/MessagePack
+          link: '#json-and-messagepack'
+        - title: Field Expansion
+          link: '#field-expansion'
+        - title: Multiple Indices
+          link: '#multiple-indices'
     - url: indices
       docs:
         - url: create-api
@@ -46,12 +46,12 @@
             - url: numeric-type
             - url: date-type
               docs:
-              - link: '#date-datatype'
-                title: Date
-              - link: '#time-datatype'
-                title: Time
-              - link: '#time-delta-datatype'
-                title: Time Delta
+              - title: Date
+                link: '#date-datatype'
+              - title: Time
+                link: '#time-datatype'
+              - title: Time Delta
+                link: '#time-delta-datatype'
             - url: boolean-type
             - url: geospatial-type
         - url: dynamic-typing
@@ -95,28 +95,28 @@
                 - url: range-searches
                 - url: geospatial-searches
                   docs:
-                    - link: '#point'
-                      title: Point
-                    - link: '#circle'
-                      title: Circle
-                    - link: '#polygon'
-                      title: Polygon
-                    - link: '#convex'
-                      title: Convex
-                    - link: '#chull'
-                      title: Chull
-                    - link: '#multipoint'
-                      title: Multipoint
-                    - link: '#multicircle'
-                      title: Multicircle
-                    - link: '#multiconvex'
-                      title: Multiconvex
-                    - link: '#multipolygon'
-                      title: Multipolygon
-                    - link: '#multichull'
-                      title: Multichull
-                    - link: '#extended_well_known_text'
-                      title: EWKT
+                    - title: Point
+                      link: '#point'
+                    - title: Circle
+                      link: '#circle'
+                    - title: Polygon
+                      link: '#polygon'
+                    - title: Convex
+                      link: '#convex'
+                    - title: Chull
+                      link: '#chull'
+                    - title: Multipoint
+                      link: '#multipoint'
+                    - title: Multicircle
+                      link: '#multicircle'
+                    - title: Multiconvex
+                      link: '#multiconvex'
+                    - title: Multipolygon
+                      link: '#multipolygon'
+                    - title: Multichull
+                      link: '#multichull'
+                    - title: EWKT
+                      link: '#extended_well_known_text'
         - url: aggregations
           docs:
             - url: metrics
