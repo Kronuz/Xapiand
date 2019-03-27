@@ -1418,7 +1418,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
-			{ "shards", {
+			{ "number_of_shards", {
 				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "positive" },
 			} },
@@ -1453,7 +1453,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
-					{ "shards", {
+					{ "number_of_shards", {
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "positive" },
 						{ RESERVED_VALUE, n_shards },
@@ -1531,7 +1531,7 @@ load_shards(const std::string& normalized_path)
 		DatabaseHandler db_handler(index_endpoints);
 		auto document = db_handler.get_document(normalized_path);
 		auto obj = document.get_obj();
-		auto it = obj.find("shards");
+		auto it = obj.find("number_of_shards");
 		if (it != obj.end()) {
 			auto& n_shards_val = it.value();
 			if (n_shards_val.is_number()) {
@@ -1699,7 +1699,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			size_t num_replicas_plus_master = opts.num_replicas + 1;
 
 			if (settings && settings->is_map()) {
-				auto num_shards_it = settings->find("shards");
+				auto num_shards_it = settings->find("number_of_shards");
 				if (num_shards_it != settings->end()) {
 					auto& num_shards_val = num_shards_it.value();
 					if (num_shards_val.is_number()) {
@@ -1707,7 +1707,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 					}
 				}
 
-				auto num_replicas_it = settings->find("replicas");
+				auto num_replicas_it = settings->find("number_of_replicas");
 				if (num_replicas_it != settings->end()) {
 					auto& num_replicas_val = num_replicas_it.value();
 					if (num_replicas_val.is_number()) {
