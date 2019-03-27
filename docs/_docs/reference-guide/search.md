@@ -2,15 +2,11 @@
 title: Search
 ---
 
-You can search for documents by using the `SEARCH` or the `GET` method:
+The following is the Search API:
 
-{% capture req %}
+- [Search API](search-api)
 
-```json
-SEARCH /bank/
-```
-{% endcapture %}
-{% include curl.html req=req %}
+Additionally, there's also an complementary information about the API:
 
-{: .note .tip }
-It is also possible to use [HTTP Method Mapping]({{ '/docs/reference-guide/api#http-method-mapping' | relative_url }}).
+- [Query DSL](query-dsl)
+- [Aggregations](aggregations)

@@ -67,6 +67,7 @@
         - url: versioning
     - url: search
       docs:
+        - url: search-api
         - url: query-dsl
           docs:
             - url: leaf-queries
