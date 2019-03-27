@@ -59,6 +59,7 @@
       docs:
         - url: index-api
         - url: get-api
+        - url: exists-api
         - url: delete-api
         - url: update-api
         - url: store-api

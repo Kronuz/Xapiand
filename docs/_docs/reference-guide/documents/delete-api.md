@@ -1,5 +1,6 @@
 ---
-title: Delete API
+title: Delete Document API
+short_title: Delete API
 ---
 
 The _Delete API_ allows to delete a document from a specific index based on its

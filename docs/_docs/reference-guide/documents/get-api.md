@@ -1,5 +1,6 @@
 ---
-title: Get API
+title: Get Document API
+short_title: Get API
 ---
 
 The _Get API_ allows to get a document from the index based on its ID. The
@@ -34,22 +35,8 @@ retrieve, aditionally to the actual body of the document.
 
 If the document is not found, it will return a `404 Not Found` HTTP response code.
 
-
-# Existence
-
-The API also allows to check for the existence of a document using HEAD, for
-example:
-
-{% capture req %}
-
-```json
-HEAD /twitter/1
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-The result of the above get operation is a `200 OK` HTTP response code with the
-no body.
+{: .note .warning }
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
 
 
 ## Volatile

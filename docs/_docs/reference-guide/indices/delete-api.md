@@ -17,3 +17,11 @@ DELETE /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .note .warning }
+`DELETE /twitter/` is not the same as `DELETE /twitter`, the former will delete the
+whole index `/twitter/` while the later will delete document `twitter` inside
+index `/`.
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
+
+<div style="min-height: 200px"></div>

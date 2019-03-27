@@ -19,3 +19,6 @@ HEAD /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .note .warning }
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).

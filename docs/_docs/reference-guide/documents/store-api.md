@@ -1,5 +1,6 @@
 ---
-title: Store API
+title: Store Content API
+short_title: Store API
 ---
 
 The _Store API_ allows adding additional content to documents and store such

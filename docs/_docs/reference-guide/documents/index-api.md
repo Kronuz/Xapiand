@@ -1,5 +1,6 @@
 ---
-title: Index API
+title: Index Document API
+short_title: Index API
 ---
 
 The _Index API_ adds or updates a typed JSON document in a specific index,
@@ -33,6 +34,12 @@ The result of the above index operation is:
   "#shard": 1
 }
 ```
+
+{: .note .warning }
+`PUT /twitter/1` is not the same as `PUT /twitter/1/`, the former creates a document
+with ID `1` inside index `/twitter/` while the later creates the index `/twitter/1/`
+itself.
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
 
 
 ## Automatic Index Creation

@@ -1,5 +1,6 @@
 ---
-title: Update API
+title: Update Document API
+short_title: Update API
 ---
 
 The _Update API_ allows to delete a document based on the existent content of
@@ -27,6 +28,12 @@ PUT /test/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .note .warning }
+`PUT /test/1` is not the same as `PUT /test/1/`, the former creates a document
+with ID `1` inside index `/test/` while the later creates the index `/test/1/`
+itself.
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
 
 
 ## Merging

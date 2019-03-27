@@ -1,6 +1,6 @@
 ---
-title: Information API
-short_title: Info API
+title: Document Information API
+short_title: Doc Info API
 ---
 
 You can retrieve information about a given document using the `INFO` method
@@ -15,9 +15,6 @@ INFO /bank/1
 {% include curl.html req=req %}
 
 {: .note .warning }
-`INFO /bank/1` is not the same as `INFO /bank/1/`, the former retrieves
-information about a document with ID `1` inside index `/bank/` while the later
-gets information about the index `/bank/1/` itself.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
 
 The response will include a set of valuable information about the required

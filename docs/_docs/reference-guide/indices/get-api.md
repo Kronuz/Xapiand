@@ -3,9 +3,20 @@ title: Get Index API
 short_title: Get API
 ---
 
-The _Get Index API_ is used to...
+{: .note .unimplemented }
+**_Unimplemented Feature!_**<br>
+This feature hasn't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
 
-{: .note .construction }
-_This section is a **work in progress**..._
+The _Get Index API_ allows to retrieve information about one or more indexes.
 
-<div style="min-height: 400px"></div>
+{% capture req %}
+
+```json
+GET /twitter/
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{: .note .warning }
+[Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).

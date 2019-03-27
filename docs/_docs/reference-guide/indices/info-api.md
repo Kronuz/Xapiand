@@ -14,9 +14,6 @@ INFO /bank/
 {% include curl.html req=req %}
 
 {: .note .warning }
-`INFO /bank/` is not the same as `INFO /bank`, the former gets information about
-the index `/bank/` while the later retrieves information about a document with
-ID `bank` inside index `/`.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#resource-paths' | relative_url }}).
 
 The response will include the following information about the index:
