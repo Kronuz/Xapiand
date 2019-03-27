@@ -380,7 +380,6 @@ PathParser::init(std::string_view p)
 				break;
 			case ',':
 				switch (state) {
-					case State::CMD:
 					case State::SLC:
 						state = State::ID;
 						n0 = n1;
@@ -390,6 +389,8 @@ PathParser::init(std::string_view p)
 							state = State::SLB;
 						}
 						break;
+					case State::CMD:
+						return State::INVALID_STATE;
 					default:
 						break;
 				}
