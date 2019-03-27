@@ -1,12 +1,13 @@
 #!/bin/sh
+set -eux
 
 echo "TRAVIS_OS_NAME: ${TRAVIS_OS_NAME}"
 echo "TRAVIS_TAG: ${TRAVIS_TAG}"
 
-set -euxo pipefail
 
 if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	# Under OSX, build a bottle:
+	set -o pipefail
 
 	# if [ -z "${TRAVIS_TAG}" ]; then
 	# 	echo "Bottle not built: Needs to be built from a tag."
@@ -62,6 +63,7 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 	rm -f Formula/xapiand.rb.tmp
 
 	# Add, commit and push bottle
+	git fetch --depth 1 origin gh-pages:gh-pages
 	git checkout gh-pages
 	git add "${PACKAGE_BOTTLE}"
 	git commit --message "${PACKAGE_BOTTLE}"
