@@ -39,7 +39,7 @@ sudo xcode-select --install
 sudo open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
 ```
 
-##### 2. [Install Homebrew](https://docs.brew.sh/Installation)
+##### 2. [Install Homebrew](https://docs.brew.sh/Installation){:target="_blank"}
 
 ##### 3. Install Requirements
 
