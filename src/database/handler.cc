@@ -647,7 +647,13 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 			auto obj = data.get_obj();
 
 			apply_patch(patches, obj);
-
+			auto it = obj.find(ID_FIELD_NAME);
+			if (it != obj.end()) {
+				auto id_field = *it;
+				obj.erase(it);
+				obj[ID_FIELD_NAME] = std::move(id_field);
+			}
+			inject_data(data, obj);
 			return index(document_id, document_ver, obj, data, commit, comments);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
@@ -707,6 +713,12 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						return index(document_id, document_ver, body, data, commit, comments);
 					} else {
 						obj.update(body);
+						auto it = obj.find(ID_FIELD_NAME);
+						if (it != obj.end()) {
+							auto id_field = *it;
+							obj.erase(it);
+							obj[ID_FIELD_NAME] = std::move(id_field);
+						}
 						inject_data(data, obj);
 						return index(document_id, document_ver, obj, data, commit, comments);
 					}
