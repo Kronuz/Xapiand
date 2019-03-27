@@ -26,7 +26,7 @@
 #include <mutex>                                  // for std::mutex, std::lock_guard
 #include <fstream>                                // for std::ifstream
 
-#include "config.h"                               // for STOPWORDS_PATH
+#include "config.h"                               // for XAPIAND_DATA_PATH
 #include "log.h"                                  // for L_WARNING_ONCE
 
 
@@ -34,7 +34,7 @@ const std::unique_ptr<Xapian::Stopper>&
 getStopper(std::string_view language)
 {
 	static std::mutex mtx;
-	static std::string stopwords_path(getenv("XAPIAN_STOPWORDS_PATH") != nullptr ? getenv("XAPIAN_STOPWORDS_PATH") : STOPWORDS_PATH);
+	static std::string data_path(getenv("XAPIAND_DATA_PATH") != nullptr ? getenv("XAPIAND_DATA_PATH") : XAPIAND_DATA_PATH);
 	static std::unordered_map<uint32_t, std::unique_ptr<Xapian::Stopper>> stoppers;
 	auto language_hash = hh(language);
 	std::lock_guard<std::mutex> lk(mtx);
@@ -43,7 +43,7 @@ getStopper(std::string_view language)
 		return it->second;
 	}
 	auto& stopper = stoppers[language_hash];
-	auto path = stopwords_path + "/" + std::string(language) + ".txt";
+	auto path = data_path + "/stopwords/" + std::string(language) + ".txt";
 	std::ifstream words(path);
 	if (words.is_open()) {
 		stopper = std::make_unique<SimpleStopper<>>(std::istream_iterator<std::string>(words), std::istream_iterator<std::string>());

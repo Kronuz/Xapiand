@@ -27,7 +27,7 @@
 #include <sstream>                                // for std::istringstream
 #include <unordered_map>                          // for std::unordered_map
 
-#include "config.h"                               // for MIME_TYPES_PATH
+#include "config.h"                               // for XAPIAND_DATA_PATH
 #include "database/data.h"                        // for ct_type_t
 #include "hashes.hh"                              // for fnv1ah32
 #include "log.h"                                  // for L_WARNING_ONCE
@@ -47,7 +47,8 @@ load_mime_types()
 		ENDED,
 	} state = EXPECT_TYPES;
 
-	std::string mime_types_path(getenv("XAPIAN_MIME_TYPES_PATH") != nullptr ? getenv("XAPIAN_MIME_TYPES_PATH") : MIME_TYPES_PATH);
+	std::string mime_types_path(getenv("XAPIAND_DATA_PATH") != nullptr ? getenv("XAPIAND_DATA_PATH") : XAPIAND_DATA_PATH);
+	mime_types_path.append("/mime.types");
 	std::ifstream lines(mime_types_path);
 	if (lines.is_open()) {
 		std::string line;
