@@ -1123,8 +1123,6 @@ HttpClient::prepare()
 			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					new_request->view = &HttpClient::write_schema_view;
-				} else if (cmd == "touch") {
-					new_request->view = &HttpClient::touch_view;
 				} else {
 					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 				}
