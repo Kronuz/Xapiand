@@ -2757,7 +2757,10 @@ std::tuple<std::string, Xapian::Document, MsgPack>
 Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data)
 {
 	L_CALL("Schema::index({}, {}, <db_handler>)", repr(object.to_string()), repr(document_id.to_string()));
+
 	static UUIDGenerator generator;
+
+	L_INDEX("Schema index({}): {}", document_id.to_string(), object.to_string());
 
 	try {
 		map_values.clear();
@@ -3659,6 +3662,8 @@ Schema::update(const MsgPack& object)
 {
 	L_CALL("Schema::update({})", repr(object.to_string()));
 
+	L_INDEX("Schema update: {}", object.to_string());
+
 	try {
 		map_values.clear();
 		specification = default_spc;
@@ -4100,6 +4105,8 @@ bool
 Schema::write(const MsgPack& object, bool replace)
 {
 	L_CALL("Schema::write({}, {})", repr(object.to_string()), replace);
+
+	L_INDEX("Schema write: {}", object.to_string());
 
 	try {
 		map_values.clear();
