@@ -1,8 +1,17 @@
 #!/bin/sh
+
+echo "TRAVIS_OS_NAME: ${TRAVIS_OS_NAME}"
+echo "TRAVIS_TAG: ${TRAVIS_TAG}"
+
 set -euxo pipefail
 
-if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+	if [ -z "${TRAVIS_TAG}" ]; then
+		echo "Bottle not built: Needs to be built from a tag."
+		exit 0
+	fi
 	# Under OSX, build a bottle:
+
 	PACKAGE_ROOT=.
 	PACKAGE_VERSION=$(grep '^set (PACKAGE_VERSION' ${PACKAGE_ROOT}/CMakeLists.txt | sed 's/[^.0-9]//g')
 	PACKAGE_HASH=$(git --git-dir ${PACKAGE_ROOT}/.git rev-parse --short HEAD)
@@ -11,7 +20,7 @@ if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
 	git clone --depth=1 "https://${GH_TOKEN}@github.com/Kronuz/homebrew-tap.git"
 	cd homebrew-tap
 	if [ grep "v${PACKAGE_VERSION}" --quiet Formula/xapiand.rb ]; then
-		echo "Bottle for v${PACKAGE_VERSION} already built!"
+		echo "Bottle not built: v${PACKAGE_VERSION} already built."
 		exit 0
 	fi
 
