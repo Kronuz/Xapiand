@@ -11,7 +11,7 @@ we might make the process easier.
 ## Docker
 
 ```sh
-~ $ docker pull dubalu/xapiand:latest
+~ $ docker pull dubalu/xapiand:{{ site.version }}
 ```
 
 ## Installation with Homebrew
@@ -27,10 +27,10 @@ be installed by using the following command:
 ## FreeBSD
 
 ```sh
-~ $ pkg install xapiand
+Not yet available, build from sources.
 ```
 
-There is also a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/contrib/freebsd/xapiand.shar){:target="_blank"} available. The package is built from that one.
+There is a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/contrib/freebsd/xapiand.shar){:target="_blank"} available.
 
 
 ## Linux
