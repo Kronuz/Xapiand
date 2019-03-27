@@ -1,6 +1,11 @@
-sudo: required
 language: cpp
-dist: trusty
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+    - os: osx
 
 addons:
   apt:
@@ -15,7 +20,8 @@ addons:
       - libc++abi-7-dev
 
 script:
-  - mkdir -p build
-  - cd build
-  - CC=clang-7 && CXX=clang-7 cmake ..
-  - make
+  - .travis/script.sh
+
+env:
+  global:
+    secure: a9Tx4hIUmfq3LaFn3glqxpKMsJlLb4ESxbepNImNPywbwEj3YqCTARhjk+Le5rg0QE0Js50crukhPWYqVEtX5yCp6Es3VZ5Fu7uXD46I6G73nQIuPipofxCisBZt8WLWzz/y0jZlyz+mjEKrh6W6fsC36lGF2zlH/4Ph0oq9GCg=
