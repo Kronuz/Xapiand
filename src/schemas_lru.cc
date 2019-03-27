@@ -109,12 +109,11 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		}
 		auto doc = _db_handler.get_document(id);
 		auto o = doc.get_obj();
-		if (!selector.empty()) {
+		if (selector.empty()) {
+			// If there's no selector use "schema":
+			o = o[SCHEMA_FIELD_NAME];
+		} else {
 			o = o.select(selector);
-		}
-		auto it = o.find(SCHEMA_FIELD_NAME);  // If there's a "schema" field inside, extract it
-		if (it != o.end()) {
-			o = it.value();
 		}
 		o = MsgPack({
 			{ RESERVED_RECURSE, false },

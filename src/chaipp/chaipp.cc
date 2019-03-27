@@ -142,7 +142,7 @@ Processor::Processor(const Script& script) :
 			selector = foreign_id.substr(foreign_id[needle] == '.' ? needle + 1 : needle);
 			foreign_id = foreign_id.substr(0, needle);
 		}
-		MsgPack foreign_data_script;
+		MsgPack o;
 		try {
 			Endpoint endpoint{foreign_path};
 			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
@@ -151,21 +151,19 @@ Processor::Processor(const Script& script) :
 			}
 			DatabaseHandler _db_handler(endpoints, DB_OPEN);
 			auto doc = _db_handler.get_document(foreign_id);
-			foreign_data_script = doc.get_obj();
+			o = doc.get_obj();
 		} catch (const Xapian::DocNotFoundError&) {
 			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, foreign_id);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			THROW(ClientError, "Foreign script database {} doesn't exist", repr(foreign_path));
 		}
-		if (!selector.empty()) {
-			foreign_data_script = foreign_data_script.select(selector);
+		if (selector.empty()) {
+			// If there's no selector use "script" (to be consistent with "schema" field):
+			o = o[SCRIPT_FIELD_NAME];
+		} else {
+			o = o.select(selector);
 		}
-		// If there's a "script" field inside, get it (to be consistent with "schema" field):
-		auto it = foreign_data_script.find(SCRIPT_FIELD_NAME);
-		if (it != foreign_data_script.end()) {
-			foreign_data_script = it.value();
-		}
-		Script foreign_script(foreign_data_script);
+		Script foreign_script(o);
 		auto foreign_sep_type = foreign_script.get_types();
 		if (foreign_sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 			THROW(ClientError, "Nested foreign scripts not supported!");
