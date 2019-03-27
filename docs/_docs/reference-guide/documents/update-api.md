@@ -32,6 +32,24 @@ PUT /twitter/1
 {% endcapture %}
 {% include curl.html req=req %}
 
+The result of the above index operation is:
+
+```json
+{
+  "user": "Kronuz",
+  "post_date": "2019-03-22T14:35:26",
+  "message": "Trying out Xapiand",
+  "likes": 0,
+  "hashtags": [
+    "#xapiand"
+  ],
+  "_id": 1,
+  "_version": 1,
+  "#docid": 1,
+  "#shard": 1
+}
+```
+
 {: .note .warning }
 `PUT /twitter/1` is not the same as `PUT /twitter/1/`, the former creates a document
 with ID `1` inside index `/twitter/` while the later creates the index `/twitter/1/`
@@ -56,6 +74,25 @@ UPDATE /twitter/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+As expected, the result of the merge operation is:
+
+```json
+{
+  "user": "Kronuz",
+  "post_date": "2019-03-22T14:35:26",
+  "message": "Trying out Xapiand",
+  "likes": 0,
+  "hashtags": [
+    "#xapiand"
+  ],
+  "title": "Xapiand Rocks!",
+  "_id": 1,
+  "_version": 12,
+  "#docid": 1,
+  "#shard": 1
+}
+```
 
 {: .note .caution }
 To fully replace the existing document, the [Index API](../index-api) should be
