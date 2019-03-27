@@ -20,7 +20,7 @@ addons:
       - libc++abi-7-dev
 
 script:
-  - .travis/script.sh
+  - sh .travis/script.sh
 
 env:
   global:
