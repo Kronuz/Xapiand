@@ -554,16 +554,16 @@ bool
 PathParser::has_pth() noexcept
 {
 	if (off_cmd != nullptr) {
-		return off_cmd > off;
+		return off_cmd > (off + 1);
 	}
 
 	if (off_id != nullptr) {
-		return off_id > off;
+		return off_id > (off + 1);
 	}
 
 	const char *ni = path.data();
 	const char *nf = ni + path.size();
-	return nf > off;
+	return nf > (off + 1);
 }
 
 
