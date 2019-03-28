@@ -1743,8 +1743,7 @@ HttpClient::metadata_view(Request& request)
 	}
 
 	auto selector = request.path_parser.get_slc();
-	auto key = request.path_parser.get_id();
-	key.remove_prefix(1);
+	auto key = request.path_parser.get_cmd();
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
