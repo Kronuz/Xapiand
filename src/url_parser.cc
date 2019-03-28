@@ -398,11 +398,9 @@ PathParser::init(std::string_view p)
 			case command__:
 				switch (state) {
 					case State::CMD:
-						length = n0 - n1;
-						if (length != 0u) {
-							off_cmd = n1 + 1;
-							len_cmd = length;
-						}
+						length = n0 - n1 + 1;
+						off_cmd = n1;
+						len_cmd = length;
 						state = State::SLC;
 						n0 = n1 - 1;
 						break;

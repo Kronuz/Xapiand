@@ -1017,7 +1017,9 @@ HttpClient::prepare()
 	auto cmd = new_request->path_parser.get_cmd();
 
 	if (!cmd.empty()) {
-		switch (http_methods.fhhl(cmd)) {
+		auto mapping = cmd;
+		mapping.remove_prefix(1);
+		switch (http_methods.fhhl(mapping)) {
 			#define OPTION(name, str) \
 			case http_methods.fhhl(str): \
 				if ( \
@@ -1038,7 +1040,7 @@ HttpClient::prepare()
 	switch (new_request->method) {
 		case HTTP_DELETE:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == "schema") {
+				if (cmd == ":schema") {
 					new_request->view = &HttpClient::delete_schema_view;
 				} else {
 					new_request->view = &HttpClient::delete_metadata_view;
@@ -1058,15 +1060,15 @@ HttpClient::prepare()
 
 		case HTTP_GET:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == "schema") {
+				if (cmd == ":schema") {
 					new_request->view = &HttpClient::schema_view;
 #if XAPIAND_DATABASE_WAL
-				} else if (cmd == "wal") {
+				} else if (cmd == ":wal") {
 					new_request->view = &HttpClient::wal_view;
 #endif
-				} else if (!has_pth && cmd == "nodes") {
+				} else if (!has_pth && cmd == ":nodes") {
 					new_request->view = &HttpClient::nodes_view;
-				} else if (!has_pth && cmd == "metrics") {
+				} else if (!has_pth && cmd == ":metrics") {
 					new_request->view = &HttpClient::metrics_view;
 				} else {
 					new_request->view = &HttpClient::metadata_view;
@@ -1121,7 +1123,7 @@ HttpClient::prepare()
 
 		case HTTP_POST:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == "schema") {
+				if (cmd == ":schema") {
 					new_request->view = &HttpClient::write_schema_view;
 				} else {
 					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1156,7 +1158,7 @@ HttpClient::prepare()
 
 		case HTTP_PUT:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == "schema") {
+				if (cmd == ":schema") {
 					new_request->view = &HttpClient::write_schema_view;
 				} else {
 					new_request->view = &HttpClient::write_metadata_view;
@@ -1174,7 +1176,7 @@ HttpClient::prepare()
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == "schema") {
+				if (cmd == ":schema") {
 					// new_request->view = &HttpClient::update_schema_view;
 					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
 				} else {
@@ -1192,7 +1194,7 @@ HttpClient::prepare()
 
 		case HTTP_PATCH:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == "schema") {
+				if (cmd == ":schema") {
 					// new_request->view = &HttpClient::update_schema_view;
 					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
 				} else {
@@ -1744,6 +1746,8 @@ HttpClient::metadata_view(Request& request)
 
 	auto selector = request.path_parser.get_slc();
 	auto key = request.path_parser.get_cmd();
+	ASSERT(!key.empty());
+	key.remove_prefix(1);
 
 	if (!query_field.selector.empty()) {
 		selector = query_field.selector;
