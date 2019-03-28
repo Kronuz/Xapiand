@@ -1475,7 +1475,9 @@ HttpClient::delete_document_view(Request& request)
 	L_CALL("HttpClient::delete_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	std::string document_id(request.path_parser.get_id());
 
@@ -1506,7 +1508,9 @@ HttpClient::delete_schema_view(Request& request)
 	L_CALL("HttpClient::delete_schema_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1547,7 +1551,9 @@ HttpClient::write_document_view(Request& request)
 	auto document_id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field, settings);
+	if (endpoints_maker(request, query_field, settings) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1577,7 +1583,9 @@ HttpClient::write_schema_view(Request& request, bool replace)
 	L_CALL("HttpClient::write_schema_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1639,7 +1647,9 @@ HttpClient::update_document_view(Request& request)
 	}
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	endpoints_maker(request, query_field, settings);
+	if (endpoints_maker(request, query_field, settings) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -1683,7 +1693,9 @@ HttpClient::retrieve_metadata_view(Request& request)
 	L_CALL("HttpClient::retrieve_metadata_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -1747,7 +1759,9 @@ HttpClient::write_metadata_view(Request& request)
 	auto& decoded_body = request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1810,7 +1824,9 @@ HttpClient::info_view(Request& request)
 	MsgPack response_obj;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -1895,7 +1911,9 @@ HttpClient::database_exists_view(Request& request)
 	L_CALL("HttpClient::database_exists_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1934,7 +1952,9 @@ HttpClient::update_database_view(Request& request)
 	}
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-	endpoints_maker(request, query_field, settings);
+	if (endpoints_maker(request, query_field, settings) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2003,7 +2023,9 @@ HttpClient::dump_database_view(Request& request)
 	L_CALL("HttpClient::dump_database_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2079,7 +2101,9 @@ HttpClient::restore_database_view(Request& request)
 					}
 				}
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-				endpoints_maker(request, query_field, settings);
+				if (endpoints_maker(request, query_field, settings) > 1) {
+					THROW(ClientError, "Method can only be used with single indexes");
+				}
 
 				request.processing = std::chrono::system_clock::now();
 
@@ -2099,7 +2123,9 @@ HttpClient::restore_database_view(Request& request)
 					}
 				}
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-				endpoints_maker(request, query_field, settings);
+				if (endpoints_maker(request, query_field, settings) > 1) {
+					THROW(ClientError, "Method can only be used with single indexes");
+				}
 
 				request.processing = std::chrono::system_clock::now();
 
@@ -2149,7 +2175,9 @@ HttpClient::retrieve_schema_view(Request& request)
 	L_CALL("HttpClient::retrieve_schema_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -2191,7 +2219,9 @@ HttpClient::wal_view(Request& request)
 	L_CALL("HttpClient::wal_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2224,7 +2254,9 @@ HttpClient::check_database_view(Request& request)
 	L_CALL("HttpClient::check_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2256,7 +2288,9 @@ HttpClient::retrieve_document_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
-	endpoints_maker(request, query_field);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -2632,24 +2666,24 @@ HttpClient::url_resolve(Request& request)
 }
 
 
-void
+size_t
 HttpClient::endpoints_maker(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
 	L_CALL("HttpClient::endpoints_maker(<request>, <query_field>, <settings>)");
 
 	endpoints.clear();
+	size_t indexes = 0;
 
 	PathParser::State state;
 	while ((state = request.path_parser.next()) < PathParser::State::END) {
-		if (query_field.writable && !endpoints.empty()) {
-			THROW(ClientError, "Writable endpoints can only use single indexes");
-		}
-		_endpoint_maker(request, query_field, settings);
+		indexes += _endpoint_maker(request, query_field, settings);
 	}
+
+	return indexes;
 }
 
 
-void
+size_t
 HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
 	L_CALL("HttpClient::_endpoint_maker(<request>, <query_field>, <settings>)");
@@ -2704,10 +2738,6 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, 
 	}
 #endif
 
-	if (query_field.writable && index_paths.size() != 1) {
-		THROW(ClientError, "Writable endpoints can only use single indexes");
-	}
-
 	for (const auto& path : index_paths) {
 		auto index_endpoints = XapiandManager::resolve_index_endpoints(
 			Endpoint{path},
@@ -2722,6 +2752,8 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, 
 		}
 	}
 	L_HTTP("Endpoint: -> {}", endpoints.to_string());
+
+	return index_paths.size();
 }
 
 
