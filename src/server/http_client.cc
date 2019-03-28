@@ -1046,9 +1046,6 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::delete_metadata_view;
 				}
 			} else if (!id.empty()) {
-				if (!cmd.empty()) {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				}
 				new_request->view = &HttpClient::delete_document_view;
 			} else if (has_pth) {
 				// new_request->view = &HttpClient::delete_database_view;
@@ -1074,9 +1071,6 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::metadata_view;
 				}
 			} else if (!id.empty()) {
-				if (!cmd.empty()) {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				}
 				if (is_range(id)) {
 					new_request->view = &HttpClient::search_view;
 				} else {
@@ -1126,7 +1120,7 @@ HttpClient::prepare()
 				if (cmd == ":schema") {
 					new_request->view = &HttpClient::write_schema_view;
 				} else {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+					new_request->view = &HttpClient::write_metadata_view;
 				}
 			} else if (!id.empty()) {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1146,11 +1140,7 @@ HttpClient::prepare()
 
 		case HTTP_STORE:
 			if (!id.empty()) {
-				if (!cmd.empty()) {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				} else {
-					new_request->view = &HttpClient::update_document_view;
-				}
+				new_request->view = &HttpClient::update_document_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1164,9 +1154,6 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::write_metadata_view;
 				}
 			} else if (!id.empty()) {
-				if (!cmd.empty()) {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				}
 				new_request->view = &HttpClient::index_document_view;
 			} else {
 				new_request->view = &HttpClient::touch_view;
@@ -1183,9 +1170,6 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::update_metadata_view;
 				}
 			} else if (!id.empty()) {
-				if (!cmd.empty()) {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				}
 				new_request->view = &HttpClient::update_document_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
@@ -1201,9 +1185,6 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::update_metadata_view;
 				}
 			} else if (!id.empty()) {
-				if (!cmd.empty()) {
-					write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				}
 				new_request->view = &HttpClient::update_document_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
