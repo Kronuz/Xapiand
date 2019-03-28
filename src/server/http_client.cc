@@ -1093,8 +1093,6 @@ HttpClient::prepare()
 				} else {
 					new_request->view = &HttpClient::retrieve_document_view;
 				}
-			} else if (!has_pth) {
-				new_request->view = &HttpClient::home_view;
 			} else {
 				new_request->view = &HttpClient::retrieve_database_view;
 			}
@@ -1358,16 +1356,14 @@ HttpClient::operator()()
 }
 
 
-void
-HttpClient::home_view(Request& request)
+MsgPack
+HttpClient::node_obj()
 {
-	L_CALL("HttpClient::home_view()");
+	L_CALL("HttpClient::node_obj()");
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
 	endpoints.add(Endpoint{".xapiand", leader_node});
-
-	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
 
@@ -1428,9 +1424,7 @@ HttpClient::home_view(Request& request)
 		} },
 	}));
 
-	request.ready = std::chrono::system_clock::now();
-
-	write_http_response(request, HTTP_STATUS_OK, obj);
+	return obj;
 }
 
 
@@ -1934,6 +1928,8 @@ HttpClient::retrieve_database_view(Request& request)
 
 	ASSERT(request.path_parser.get_id().empty());
 
+	auto has_pth = request.path_parser.has_pth();
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (endpoints_maker(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
@@ -1950,38 +1946,46 @@ HttpClient::retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	DatabaseHandler db_handler;
-	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
-	} else {
-		db_handler.reset(endpoints, DB_OPEN);
+	auto obj = MsgPack::MAP();
+	try {
+		DatabaseHandler db_handler;
+		if (query_field.primary) {
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+		} else {
+			db_handler.reset(endpoints, DB_OPEN);
+		}
+
+		// Retrive document ID
+		auto did = db_handler.get_docid(id);
+
+		// Retrive document data
+		auto document = db_handler.get_document(did);
+
+		obj = document.get_obj();
+
+		// Remove ID and version from document:
+		auto it_e = obj.end();
+		auto it = obj.find(ID_FIELD_NAME);
+		if (it == it_e) {
+			obj.erase(it);
+		}
+		it = obj.find(RESERVED_VERSION);
+		if (it == it_e) {
+			obj.erase(it);
+		}
+	} catch (const Xapian::DocNotFoundError&) {
+		if (has_pth) {
+			throw;
+		}
+	} catch (const Xapian::DatabaseNotFoundError&) {
+		if (has_pth) {
+			throw;
+		}
 	}
 
-	// Retrive document ID
-	Xapian::docid did;
-	did = db_handler.get_docid(id);
-
-	// Retrive document data
-	auto document = db_handler.get_document(did);
-
-	auto obj = document.get_obj();
-
-	// Detailed info about the document:
-	if (obj.find(ID_FIELD_NAME) == obj.end()) {
-		obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
-	}
-	auto version = document.get_value(DB_SLOT_VERSION);
-	if (!version.empty()) {
-		obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-	}
-
-	if (request.comments) {
-		obj[RESPONSE_xDOCID] = did;
-
-		size_t n_shards = endpoints.size();
-		size_t shard_num = (did - 1) % n_shards;
-		obj[RESPONSE_xSHARD] = shard_num + 1;
-		// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+	// Add node information for '/':
+	if (!has_pth) {
+		obj.update(node_obj());
 	}
 
 	if (!selector.empty()) {

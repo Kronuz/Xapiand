@@ -304,7 +304,8 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 
 	int prepare();
 
-	void home_view(Request& request);
+	MsgPack node_obj();
+
 	void metrics_view(Request& request);
 	void info_view(Request& request);
 
