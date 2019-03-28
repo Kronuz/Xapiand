@@ -640,7 +640,7 @@ void usedir(std::string_view path, bool force) {
 		L_CRIT("Cannot get current working directory");
 		throw SystemExit(EX_OSFILE);
 	}
-	Endpoint::cwd = normalize_path(buffer, buffer, true);  // Endpoint::cwd must always end with slash
+	Endpoint::cwd = normalize_path(buffer, true);  // Endpoint::cwd must always end with slash
 	L_NOTICE("Changed current working directory to {}", Endpoint::cwd);
 }
 

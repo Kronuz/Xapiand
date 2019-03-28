@@ -324,72 +324,55 @@ int copy_file(std::string_view src, std::string_view dst, bool create, std::stri
 }
 
 
-char* normalize_path(const char* src, const char* end, char* dst, bool slashed, bool keep_slash) {
+size_t normalize_path(const char* src, const char* end, char* dst, bool slashed, bool keep_slash) {
 	int levels = 0;
 	char* ret = dst;
 	char ch = '\0';
-	size_t len_dst = 0;
-	while (src <= end) {
+	const char* last = keep_slash ? end - 1 : end;
+	while (src <= last) {
 		ch = src == end ? '/' : *src;
 		++src;
 		if (ch == '.' && (levels != 0 || dst == ret || *(dst - 1) == '/' )) {
 			*dst++ = ch;
 			++levels;
-			++len_dst;
 		} else if (ch == '/') {
 			while (levels != 0 && dst > ret + 1) {
 				if (*--dst == '/') {
-					levels -= 1;
+					--levels;
 				}
 			}
 			if (dst == ret || *(dst - 1) != '/') {
 				*dst++ = ch;
-				++len_dst;
 			}
 		} else {
 			*dst++ = ch;
 			levels = 0;
-			++len_dst;
 		}
 	}
 	if (ch == '.' && levels == 1) {
 		ch = *--dst;
-		--len_dst;
 	}
-	if (dst > ret + 1) {
+	if (dst > ret + 1 && !keep_slash) {
 		if (slashed) {
 			if (ch != '/') {
 				*dst++ = '/';
-				++len_dst;
 			}
 		} else {
 			if (ch == '/') {
 				--dst;
-				--len_dst;
 			}
 		}
 	}
-
-	if (*(end - 1) == '/' && keep_slash && len_dst != 1) {
-		*dst++ = '/';
-	}
-
-	*dst++ = '\0';
-	return ret;
-}
-
-
-char* normalize_path(std::string_view src, char* dst, bool slashed, bool keep_slash) {
-	size_t src_size = src.size();
-	const char* src_str = src.data();
-	return normalize_path(src_str, src_str + src_size, dst, slashed, keep_slash);
+	return dst - ret;
 }
 
 
 std::string normalize_path(std::string_view src, bool slashed, bool keep_slash) {
 	size_t src_size = src.size();
 	const char* src_str = src.data();
-	std::vector<char> dst;
-	dst.resize(src_size + 2);
-	return normalize_path(src_str, src_str + src_size, &dst[0], slashed, keep_slash);
+	std::string dst;
+	dst.resize(src_size + 1);
+	auto dst_size = normalize_path(src_str, src_str + src_size, &dst[0], slashed, keep_slash);
+	dst.resize(dst_size);
+	return dst;
 }

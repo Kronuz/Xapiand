@@ -394,7 +394,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 
 HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
 	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
-	  new_request(std::make_shared<Request>(this)), is_root(false)
+	  new_request(std::make_shared<Request>(this))
 {
 	++XapiandManager::http_clients();
 
@@ -1010,7 +1010,6 @@ HttpClient::prepare()
 		return 1;
 	}
 
-	is_root = false;
 	url_resolve(*new_request);
 
 	auto id = new_request->path_parser.get_id();
@@ -1058,7 +1057,7 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_GET:
-			if (!cmd.empty() && id.empty() && !is_root) {
+			if (!cmd.empty() && id.empty()) {
 				if (cmd == "schema") {
 					new_request->view = &HttpClient::schema_view;
 #if XAPIAND_DATABASE_WAL
@@ -1081,7 +1080,7 @@ HttpClient::prepare()
 				} else {
 					new_request->view = &HttpClient::retrieve_view;
 				}
-			} else if (is_root) {
+			} else if (!has_pth) {
 				new_request->view = &HttpClient::home_view;
 			} else {
 				new_request->view = &HttpClient::search_view;
@@ -2566,16 +2565,10 @@ HttpClient::url_resolve(Request& request)
 
 	if ((u.field_set & (1 << UF_PATH )) != 0) {
 		size_t path_size = u.field_data[3].len;
-		std::unique_ptr<char[]> path_buf_ptr(new char[path_size + 1]);
-		auto path_buf_str = path_buf_ptr.get();
 		const char* path_str = request.path.data() + u.field_data[3].off;
-		normalize_path(path_str, path_str + path_size, path_buf_str, false, true);
-		if (*path_buf_str != '/' || *(path_buf_str + 1) != '\0') {
-			if (request.path_parser.init(path_buf_str) >= PathParser::State::END) {
-				THROW(ClientError, "Invalid path");
-			}
-		} else {
-			is_root = true;
+		auto norm_path = normalize_path(std::string_view(path_str, path_size), false, true);
+		if (request.path_parser.init(norm_path) >= PathParser::State::END) {
+			THROW(ClientError, "Invalid path");
 		}
 	}
 
