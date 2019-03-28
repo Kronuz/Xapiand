@@ -504,7 +504,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
 		if (err == HPE_INVALID_METHOD) {
 			if (new_request->response.status == static_cast<http_status>(0)) {
-				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 				end_http_request(*new_request);
 			}
 		} else {
