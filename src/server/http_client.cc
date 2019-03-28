@@ -1673,6 +1673,8 @@ HttpClient::update_document_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field, settings);
 
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
 	std::string doc_id(request.path_parser.get_id());
 	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
 
@@ -1683,7 +1685,6 @@ HttpClient::update_document_view(Request& request)
 	if (request.method == HTTP_PATCH) {
 		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments).second;
 	} else if (request.method == HTTP_STORE) {
-		auto selector = request.path_parser.get_slc();
 		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type).second;
 	} else {
 		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
@@ -1733,6 +1734,8 @@ HttpClient::metadata_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field);
 
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
 	request.processing = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
@@ -1744,14 +1747,9 @@ HttpClient::metadata_view(Request& request)
 		db_handler.reset(endpoints, DB_OPEN);
 	}
 
-	auto selector = request.path_parser.get_slc();
 	auto key = request.path_parser.get_cmd();
 	ASSERT(!key.empty());
 	key.remove_prefix(1);
-
-	if (!query_field.selector.empty()) {
-		selector = query_field.selector;
-	}
 
 	if (key.empty()) {
 		response_obj = MsgPack::MAP();
@@ -1823,14 +1821,11 @@ HttpClient::info_view(Request& request)
 	L_CALL("HttpClient::info_view()");
 
 	MsgPack response_obj;
-	auto selector = request.path_parser.get_slc();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field);
 
-	if (!query_field.selector.empty()) {
-		selector = query_field.selector;
-	}
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2128,14 +2123,10 @@ HttpClient::schema_view(Request& request)
 {
 	L_CALL("HttpClient::schema_view()");
 
-	auto selector = request.path_parser.get_slc();
-
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field);
 
-	if (!query_field.selector.empty()) {
-		selector = query_field.selector;
-	}
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2147,6 +2138,7 @@ HttpClient::schema_view(Request& request)
 	}
 
 	auto schema = db_handler.get_schema()->get_full(true);
+
 	if (!selector.empty()) {
 		schema = schema.select(selector);
 	}
@@ -2236,15 +2228,12 @@ HttpClient::retrieve_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_view()");
 
-	auto selector = request.path_parser.get_slc();
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
 	endpoints_maker(request, query_field);
 
-	if (!query_field.selector.empty()) {
-		selector = query_field.selector;
-	}
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2357,14 +2346,11 @@ HttpClient::search_view(Request& request)
 	L_CALL("HttpClient::search_view()");
 
 	std::string selector_string_holder;
-	auto selector = request.path_parser.get_slc();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	endpoints_maker(request, query_field);
 
-	if (!query_field.selector.empty()) {
-		selector = query_field.selector;
-	}
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
 	MSet mset{};
 	MsgPack aggregations;
