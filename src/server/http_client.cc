@@ -1824,9 +1824,9 @@ HttpClient::info_view(Request& request)
 		request.query_parser.rewind();
 		bool raw = request.query_parser.next("raw") != -1;
 
-		response_obj[RESPONSE_DOCUMENT_INFO] = db_handler.get_document_info(id, raw, request.human);
+		response_obj = db_handler.get_document_info(id, raw, request.human);
 	} else {
-		response_obj[RESPONSE_DATABASE_INFO] = db_handler.get_database_info();
+		response_obj = db_handler.get_database_info();
 	}
 
 	request.ready = std::chrono::system_clock::now();

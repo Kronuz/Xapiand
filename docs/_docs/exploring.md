@@ -93,23 +93,21 @@ Response should be something like:
 
 ```json
 {
-  "database_info": {
-    "endpoint": "bank",
-    "doc_count": 1000,
-    "last_id": 1000,
-    "doc_del": 0,
-    "av_length": 200.023,
-    "doc_len_lower": 176,
-    "doc_len_upper": 238,
-    "has_positions": true,
-    "shards": [
-      "bank/.__1",
-      "bank/.__2",
-      "bank/.__3",
-      "bank/.__4",
-      "bank/.__5"
-    ]
-  }
+  "endpoint": "bank",
+  "doc_count": 1000,
+  "last_id": 1000,
+  "doc_del": 0,
+  "av_length": 200.023,
+  "doc_len_lower": 176,
+  "doc_len_upper": 238,
+  "has_positions": true,
+  "shards": [
+    "bank/.__1",
+    "bank/.__2",
+    "bank/.__3",
+    "bank/.__4",
+    "bank/.__5"
+  ]
 }
 ```
 

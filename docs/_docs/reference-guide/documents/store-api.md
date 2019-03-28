@@ -129,40 +129,38 @@ INFO /assets/Lenna
 {% include curl.html req=req %}
 
 The result (partially shown) has the available content types listed inside
- `document_info ➛ data`
+ `data`
 
 ```json
 {
-  "document_info": {
-    "docid": 1,
-    "data": [
-      {
-        "content_type": "application/msgpack",
-        "type": "inplace"
-      },
-      {
-        "content_type": "image/png",
-        "type": "stored",
-        "volume": 0,
-        "offset": 512,
-        "size": "462.7KiB"
-      },
-      {
-        "content_type": "application/pdf",
-        "type": "stored",
-        "volume": 0,
-        "offset": 60063,
-        "size": "676.4KiB"
-      },
-      {
-        "content_type": "image/jpeg",
-        "type": "stored",
-        "volume": 0,
-        "offset": 143195,
-        "size": "557.6KiB"
-      }
-    ], ...
-  }
+  "docid": 1,
+  "data": [
+    {
+      "content_type": "application/msgpack",
+      "type": "inplace"
+    },
+    {
+      "content_type": "image/png",
+      "type": "stored",
+      "volume": 0,
+      "offset": 512,
+      "size": "462.7KiB"
+    },
+    {
+      "content_type": "application/pdf",
+      "type": "stored",
+      "volume": 0,
+      "offset": 60063,
+      "size": "676.4KiB"
+    },
+    {
+      "content_type": "image/jpeg",
+      "type": "stored",
+      "volume": 0,
+      "offset": 143195,
+      "size": "557.6KiB"
+    }
+  ], ...
 }
 ```
 

@@ -40,9 +40,6 @@ constexpr const char RESPONSE_MATCHES_ESTIMATED[]           = "matches_estimated
 constexpr const char RESPONSE_AGGREGATIONS[]                = "aggregations";
 constexpr const char RESPONSE_HITS[]                        = "hits";
 
-constexpr const char RESPONSE_DOCUMENT_INFO[]               = "document_info";
-constexpr const char RESPONSE_DATABASE_INFO[]               = "database_info";
-
 constexpr const char RESPONSE_ENDPOINT[]                    = "endpoint";
 constexpr const char RESPONSE_PROCESSED[]                   = "processed";
 constexpr const char RESPONSE_INDEXED[]                     = "indexed";
