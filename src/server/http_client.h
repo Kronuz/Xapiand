@@ -279,6 +279,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	std::shared_ptr<Request> new_request;
 	std::deque<std::shared_ptr<Request>> requests;
 	Endpoints endpoints;
+	bool is_root;
 
 	static int message_begin_cb(http_parser* parser);
 	static int url_cb(http_parser* parser, const char* at, size_t length);
