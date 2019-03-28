@@ -1932,7 +1932,77 @@ HttpClient::retrieve_database_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_database_view()");
 
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	ASSERT(request.path_parser.get_id().empty());
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
+
+	auto id = std::string(unsharded_path(endpoints[0].path));
+
+	endpoints = XapiandManager::resolve_index_endpoints(
+		Endpoint{".xapiand/index"},
+		false,
+		query_field.primary);
+
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
+	request.processing = std::chrono::system_clock::now();
+
+	DatabaseHandler db_handler;
+	if (query_field.primary) {
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+	} else {
+		db_handler.reset(endpoints, DB_OPEN);
+	}
+
+	// Retrive document ID
+	Xapian::docid did;
+	did = db_handler.get_docid(id);
+
+	// Retrive document data
+	auto document = db_handler.get_document(did);
+
+	auto obj = document.get_obj();
+
+	// Detailed info about the document:
+	if (obj.find(ID_FIELD_NAME) == obj.end()) {
+		obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+	}
+	auto version = document.get_value(DB_SLOT_VERSION);
+	if (!version.empty()) {
+		obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+	}
+
+	if (request.comments) {
+		obj[RESPONSE_xDOCID] = did;
+
+		size_t n_shards = endpoints.size();
+		size_t shard_num = (did - 1) % n_shards;
+		obj[RESPONSE_xSHARD] = shard_num + 1;
+		// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+	}
+
+	if (!selector.empty()) {
+		obj = obj.select(selector);
+	}
+
+	request.ready = std::chrono::system_clock::now();
+
+	write_http_response(request, HTTP_STATUS_OK, obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Retrieving database took {}", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "retrieve_database"},
+		})
+		.Observe(took / 1e9);
+
+	L_SEARCH("FINISH RETRIEVE DATABASE");
 }
 
 
@@ -1967,12 +2037,12 @@ HttpClient::update_database_view(Request& request)
 	write_http_response(request, HTTP_STATUS_CREATED);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Touch took {}", string::from_delta(took));
+	L_TIME("Updating database took {}", string::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
 		.Add({
-			{"operation", "write_database"},
+			{"operation", "update_database"},
 		})
 		.Observe(took / 1e9);
 }
