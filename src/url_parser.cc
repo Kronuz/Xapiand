@@ -22,12 +22,13 @@
 
 #include "url_parser.h"
 
-#include <cstring>           // for strncmp
+#include <cstring>                                // for std::strncmp
 
-#include "cassert.h"         // for ASSERT
-#include "chars.hh"          // for chars::hexdec
-#include "repr.hh"
-#include "log.h"
+#include "cassert.h"                              // for ASSERT
+#include "chars.hh"                               // for chars::hexdec
+#include "repr.hh"                                // for repr
+#include "fs.hh"                                  // for normalize_path
+#include "log.h"                                  // for L_CALL
 
 #define L_URL_PARSER L_NOTHING
 
@@ -146,7 +147,7 @@ QueryParser::next(const char *name, size_t name_len)
 				v0 = n1;
 				[[fallthrough]];
 			case '\0':  // '\0' and '&'
-				if (name_len == static_cast<size_t>(n1 - n0) && strncmp(n0, name, n1 - n0) == 0) {
+				if (name_len == static_cast<size_t>(n1 - n0) && std::strncmp(n0, name, n1 - n0) == 0) {
 					if (v0 != nullptr) {
 						const char *v1 = v0 + 1;
 						while (true) {
@@ -220,7 +221,8 @@ PathParser::State
 PathParser::init(std::string_view p)
 {
 	clear();
-	path = urldecode(p, ' ', '&', ';', '=', '\\');
+	auto norm_path = normalize_path(p, false, true);
+	path = urldecode(norm_path, ' ', '&', ';', '=', '\\');
 
 	L_URL_PARSER(repr(path));
 

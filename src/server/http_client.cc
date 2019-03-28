@@ -47,7 +47,6 @@
 #include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception.h"                      // for Exception, SerialisationE...
 #include "field_parser.h"                   // for FieldParser, FieldParserError
-#include "fs.hh"                            // for normalize_path
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
 #include "io.hh"                            // for close, write, unlink
@@ -2682,10 +2681,7 @@ HttpClient::url_resolve(Request& request)
 	L_HTTP_PROTO("HTTP parsing done!");
 
 	if ((u.field_set & (1 << UF_PATH )) != 0) {
-		size_t path_size = u.field_data[3].len;
-		const char* path_str = request.path.data() + u.field_data[3].off;
-		auto norm_path = normalize_path(std::string_view(path_str, path_size), false, true);
-		if (request.path_parser.init(norm_path) >= PathParser::State::END) {
+		if (request.path_parser.init(std::string_view(request.path.data() + u.field_data[3].off, u.field_data[3].len)) >= PathParser::State::END) {
 			THROW(ClientError, "Invalid path");
 		}
 	}
