@@ -1604,7 +1604,6 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 #endif
 
 
-
 std::vector<std::vector<std::shared_ptr<const Node>>>
 XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] const MsgPack* settings)
 {
@@ -1772,6 +1771,14 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
 
 	Endpoints endpoints;
+
+	// Shard endpoints (those with /.__) are already resolved.
+	auto pos = endpoint.path.find("/.__");
+	if (pos != std::string_view::npos) {
+		endpoints.add(endpoint);
+		return endpoints;
+	}
+
 	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, settings);
 	int n_shards = endpoint.path == ".xapiand/index"
 		? 0  // unknown number of shards for .xapiand/index, always use .__ notation
