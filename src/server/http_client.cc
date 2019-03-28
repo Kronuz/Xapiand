@@ -2336,9 +2336,7 @@ HttpClient::retrieve_document_view(Request& request)
 		}
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
-			try {
-				obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-			} catch (const SerialisationError&) {}
+			obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 		}
 
 		if (request.comments) {
@@ -2484,9 +2482,7 @@ HttpClient::search_view(Request& request)
 		}
 		auto version = document.get_value(DB_SLOT_VERSION);
 		if (!version.empty()) {
-			try {
-				hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-			} catch (const SerialisationError&) {}
+			hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 		}
 
 		if (request.comments) {
