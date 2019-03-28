@@ -1744,7 +1744,43 @@ HttpClient::write_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::write_metadata_view()");
 
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	auto& decoded_body = request.decoded_body();
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	endpoints_maker(request, query_field);
+
+	request.processing = std::chrono::system_clock::now();
+
+	DatabaseHandler db_handler;
+	if (query_field.primary) {
+		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+	} else {
+		db_handler.reset(endpoints, DB_OPEN);
+	}
+
+	auto key = request.path_parser.get_cmd();
+	ASSERT(!key.empty());
+	key.remove_prefix(1);
+
+	if (key.empty() || key == "schema" || key == "wal" || key == "nodes" || key == "metrics") {
+		THROW(ClientError, "Metadata {} is read-only", repr(request.path_parser.get_cmd()));
+	}
+
+	db_handler.set_metadata(key, decoded_body.serialise());
+
+	request.ready = std::chrono::system_clock::now();
+
+	write_http_response(request, HTTP_STATUS_OK);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Set metadata took {}", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "set_metadata"},
+		})
+		.Observe(took / 1e9);
 }
 
 
