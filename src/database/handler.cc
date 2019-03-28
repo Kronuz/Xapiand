@@ -1505,6 +1505,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 	L_CALL("DatabaseHandler::get_metadata({})", repr(key));
 
 	ASSERT(!endpoints.empty());
+	ASSERT(!key.empty());
 	std::string value;
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
@@ -1539,6 +1540,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 std::string
 DatabaseHandler::get_metadata(std::string_view key)
 {
+	ASSERT(!key.empty());
 	return get_metadata(std::string(key));
 }
 
@@ -1549,6 +1551,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, wal);
 
 	ASSERT(!endpoints.empty());
+	ASSERT(!key.empty());
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
 	for (auto& endpoint : endpoints) {
@@ -1578,6 +1581,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 void
 DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit, bool wal)
 {
+	ASSERT(!key.empty());
 	set_metadata(std::string(key), std::string(value), commit, wal);
 }
 
