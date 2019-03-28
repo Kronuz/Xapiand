@@ -38,7 +38,7 @@
 
 
 std::string
-urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, char slash)
+urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, char encoded)
 {
 	std::string buf;
 	buf.reserve(size);
@@ -63,9 +63,7 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, 
 				auto dec = chars::hexdec(&q);
 				if (dec < 256) {
 					// Reset c, try the special characters again
-					c = dec == 0x2f
-						? slash  // encoded slash is special
-						: dec;
+					c = encoded ? encoded : dec;
 				}
 			}
 			[[fallthrough]];
@@ -93,8 +91,8 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, 
 
 
 QueryParser::QueryParser()
-	: len(0),
-	  off(nullptr) { }
+	: off(nullptr),
+	  len(0) { }
 
 
 void
@@ -102,6 +100,7 @@ QueryParser::clear() noexcept
 {
 	rewind();
 	query.clear();
+	query_decoded.clear();
 }
 
 
@@ -117,7 +116,8 @@ int
 QueryParser::init(std::string_view q)
 {
 	clear();
-	query = urldecode(q, ' ', '\0', '\0', '\1', '/');
+	query = urldecode(q, ' ', '\0', '\0', '\1', '%');
+	query_decoded = urldecode(q);
 	return 0;
 }
 
@@ -183,7 +183,7 @@ std::string_view
 QueryParser::get()
 {
 	if (off == nullptr) { return ""; }
-	return std::string_view(off, len);
+	return std::string_view(off - query.data() + query_decoded.data(), len);
 }
 
 
@@ -200,9 +200,10 @@ void
 PathParser::clear() noexcept
 {
 	rewind();
-	len_id = 0;
-	off_id = nullptr;
 	path.clear();
+	path_decoded.clear();
+	off_id = nullptr;
+	len_id = 0;
 }
 
 
@@ -220,9 +221,11 @@ PathParser::rewind() noexcept
 PathParser::State
 PathParser::init(std::string_view p)
 {
+	auto np = normalize_path(p, false, true);
+
 	clear();
-	auto norm_path = normalize_path(p, false, true);
-	path = urldecode(norm_path, ' ', '&', ';', '=', '\\');
+	path = urldecode(np, ' ', '&', ';', '=', '%');
+	path_decoded = urldecode(np);
 
 	L_URL_PARSER(repr(path));
 
@@ -435,13 +438,6 @@ PathParser::init(std::string_view p)
 		--n1;
 	}
 
-	char* n = path.data();
-	for (;n != nf; ++n) {
-		if (*n == '\\') {
-			*n = '/';
-		}
-	}
-
 	return state;
 }
 
@@ -561,9 +557,7 @@ PathParser::has_pth() noexcept
 		return off_id > (off + 1);
 	}
 
-	const char *ni = path.data();
-	const char *nf = ni + path.size();
-	return nf > (off + 1);
+	return (path.data() + path.size()) > (off + 1);
 }
 
 
@@ -571,7 +565,7 @@ std::string_view
 PathParser::get_pth()
 {
 	if (off_pth == nullptr) { return ""; }
-	return std::string_view(off_pth, len_pth);
+	return std::string_view(off_pth - path.data() + path_decoded.data(), len_pth);
 }
 
 
@@ -579,7 +573,7 @@ std::string_view
 PathParser::get_hst()
 {
 	if (off_hst == nullptr) { return ""; }
-	return std::string_view(off_hst, len_hst);
+	return std::string_view(off_hst - path.data() + path_decoded.data(), len_hst);
 }
 
 
@@ -587,7 +581,7 @@ std::string_view
 PathParser::get_id()
 {
 	if (off_id == nullptr) { return ""; }
-	return std::string_view(off_id, len_id);
+	return std::string_view(off_id - path.data() + path_decoded.data(), len_id);
 }
 
 
@@ -595,7 +589,7 @@ std::string_view
 PathParser::get_slc()
 {
 	if (off_slc == nullptr) { return ""; }
-	return std::string_view(off_slc, len_slc);
+	return std::string_view(off_slc - path.data() + path_decoded.data(), len_slc);
 }
 
 
@@ -603,5 +597,5 @@ std::string_view
 PathParser::get_cmd()
 {
 	if (off_cmd == nullptr) { return ""; }
-	return std::string_view(off_cmd, len_cmd);
+	return std::string_view(off_cmd - path.data() + path_decoded.data(), len_cmd);
 }

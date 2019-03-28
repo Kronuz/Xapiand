@@ -31,22 +31,23 @@
 constexpr const char command__ = COMMAND__[0];
 
 
-std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char slash = '/');
-inline std::string urldecode(std::string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char slash = '/') {
-	return urldecode(string.data(), string.size(), plus, amp, colon, eq, slash);
+std::string urldecode(const void *p, size_t size, char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char encoded = '\0');
+inline std::string urldecode(std::string_view string, char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char encoded = '\0') {
+	return urldecode(string.data(), string.size(), plus, amp, colon, eq, encoded);
 }
 template<typename T, std::size_t N_PLUS_1>
-inline std::string urldecode(T (&s)[N_PLUS_1], char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char slash = '/') {
-	return urldecode(s, N_PLUS_1 - 1, plus, amp, colon, eq, slash);
+inline std::string urldecode(T (&s)[N_PLUS_1], char plus = ' ', char amp = '&', char colon = ';', char eq = '=', char encoded = '\0') {
+	return urldecode(s, N_PLUS_1 - 1, plus, amp, colon, eq, encoded);
 }
 
 
 class QueryParser {
 	std::string query;
+	std::string query_decoded;
 
 public:
-	size_t len;
 	const char *off;
+	size_t len;
 
 	QueryParser();
 
@@ -66,6 +67,8 @@ public:
 
 class PathParser {
 	std::string path;
+	std::string path_decoded;
+
 	const char *off;
 
 public:
