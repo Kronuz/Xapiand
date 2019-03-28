@@ -207,7 +207,7 @@ def _task(args):
                 offset += 1
                 fortune_id = offset
                 db = random.choice(args.databases)
-                client.put(db, body, fortune_id)
+                client.index(index=db, id=fortune_id, body=body)
                 indexed.append((db, fortune_id, fortune, now))
             elif op == 'get':
                 if not indexed:
@@ -233,7 +233,7 @@ def _task(args):
                     check.dne = "⧳"
                 elif now < epoch + 200:
                     check.dne = "▇"
-                body = client.get(db, fortune_id)
+                body = client.get(index=db, id=fortune_id)['_source']
                 if body[FIELD] != fortune:
                     raise ValueError
             else:
@@ -339,7 +339,7 @@ def main():
         from xapiand import Xapiand
         clients = []
         for host, port in hosts:
-            clients.append(Xapiand(host=host, port=port))
+            clients.append(Xapiand({"host": host, "port": port}))
 
         try:
             import fortunate
