@@ -1934,7 +1934,7 @@ HttpClient::retrieve_database_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
-	auto id = std::string(unsharded_path(endpoints[0].path));
+	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path));
 
 	endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/index"},
