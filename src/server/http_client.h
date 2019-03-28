@@ -149,7 +149,7 @@ public:
 	ct_type_t ct_type;
 	std::string blob;
 
-	enum http_status status;
+	std::atomic<http_status> status;
 	size_t size;
 
 	DeflateCompressData encoding_compressor;
