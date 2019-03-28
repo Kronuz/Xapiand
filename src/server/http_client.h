@@ -303,41 +303,44 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	int on_chunk_complete(http_parser* parser);
 
 	int prepare();
-	view_function _prepare_options();
-	view_function _prepare_head();
-	view_function _prepare_get();
-	view_function _prepare_update();
-	view_function _prepare_store();
-	view_function _prepare_put();
-	view_function _prepare_post();
-	view_function _prepare_patch();
-	view_function _prepare_delete();
 
 	void home_view(Request& request);
 	void metrics_view(Request& request);
 	void info_view(Request& request);
-	void metadata_view(Request& request);
+
+	void retrieve_metadata_view(Request& request);
 	void write_metadata_view(Request& request);
 	void update_metadata_view(Request& request);
 	void delete_metadata_view(Request& request);
-	void delete_document_view(Request& request);
-	void delete_schema_view(Request& request);
-	void index_document_view(Request& request);
+
+	void retrieve_schema_view(Request& request);
+	void write_schema_view(Request& request, bool replace);
 	void write_schema_view(Request& request);
-	void document_info_view(Request& request);
+	void update_schema_view(Request& request);
+	void delete_schema_view(Request& request);
+
+	void document_exists_view(Request& request);
+	void retrieve_document_view(Request& request);
+	void write_document_view(Request& request);
 	void update_document_view(Request& request);
-	void retrieve_view(Request& request);
+	void delete_document_view(Request& request);
+
+	void database_exists_view(Request& request);
+	void retrieve_database_view(Request& request);
+	void update_database_view(Request& request);
+	void delete_database_view(Request& request);
+
+	void check_database_view(Request& request);
+	void dump_database_view(Request& request);
+	void restore_database_view(Request& request);
+	void commit_database_view(Request& request);
+
 	void search_view(Request& request);
 	void count_view(Request& request);
-	void touch_view(Request& request);
-	void commit_view(Request& request);
-	void dump_view(Request& request);
-	void restore_view(Request& request);
-	void schema_view(Request& request);
+
 #if XAPIAND_DATABASE_WAL
 	void wal_view(Request& request);
 #endif
-	void check_view(Request& request);
 	void nodes_view(Request& request);
 
 	void url_resolve(Request& request);

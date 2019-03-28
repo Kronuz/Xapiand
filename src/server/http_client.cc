@@ -1038,51 +1038,6 @@ HttpClient::prepare()
 	}
 
 	switch (new_request->method) {
-		case HTTP_DELETE:
-			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::delete_schema_view;
-				} else {
-					new_request->view = &HttpClient::delete_metadata_view;
-				}
-			} else if (!id.empty()) {
-				new_request->view = &HttpClient::delete_document_view;
-			} else if (has_pth) {
-				// new_request->view = &HttpClient::delete_database_view;
-				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_GET:
-			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::schema_view;
-#if XAPIAND_DATABASE_WAL
-				} else if (cmd == ":wal") {
-					new_request->view = &HttpClient::wal_view;
-#endif
-				} else if (!has_pth && cmd == ":nodes") {
-					new_request->view = &HttpClient::nodes_view;
-				} else if (!has_pth && cmd == ":metrics") {
-					new_request->view = &HttpClient::metrics_view;
-				} else {
-					new_request->view = &HttpClient::metadata_view;
-				}
-			} else if (!id.empty()) {
-				if (is_range(id)) {
-					new_request->view = &HttpClient::search_view;
-				} else {
-					new_request->view = &HttpClient::retrieve_view;
-				}
-			} else if (!has_pth) {
-				new_request->view = &HttpClient::home_view;
-			} else {
-				new_request->view = &HttpClient::search_view;
-			}
-			break;
-
 		case HTTP_SEARCH:
 			if (id.empty()) {
 				new_request->view = &HttpClient::search_view;
@@ -1107,11 +1062,41 @@ HttpClient::prepare()
 			}
 			break;
 
-		case HTTP_CHECK:
+		case HTTP_HEAD:
 			if (id.empty()) {
-				new_request->view = &HttpClient::check_view;
+				new_request->view = &HttpClient::database_exists_view;
 			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				new_request->view = &HttpClient::document_exists_view;
+			}
+			break;
+
+		case HTTP_GET:
+			if (!cmd.empty() && id.empty()) {
+				if (cmd == ":schema") {
+					new_request->view = &HttpClient::retrieve_schema_view;
+#if XAPIAND_DATABASE_WAL
+				} else if (cmd == ":wal") {
+					new_request->view = &HttpClient::wal_view;
+#endif
+#if XAPIAND_CLUSTERING
+				} else if (!has_pth && cmd == ":nodes") {
+					new_request->view = &HttpClient::nodes_view;
+#endif
+				} else if (!has_pth && cmd == ":metrics") {
+					new_request->view = &HttpClient::metrics_view;
+				} else {
+					new_request->view = &HttpClient::retrieve_metadata_view;
+				}
+			} else if (!id.empty()) {
+				if (is_range(id)) {
+					new_request->view = &HttpClient::search_view;
+				} else {
+					new_request->view = &HttpClient::retrieve_document_view;
+				}
+			} else if (!has_pth) {
+				new_request->view = &HttpClient::home_view;
+			} else {
+				new_request->view = &HttpClient::retrieve_database_view;
 			}
 			break;
 
@@ -1125,24 +1110,7 @@ HttpClient::prepare()
 			} else if (!id.empty()) {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			} else {
-				new_request->view = &HttpClient::index_document_view;
-			}
-			break;
-
-		case HTTP_HEAD:
-			if (id.empty()) {
-				// new_request->view = &HttpClient::database_info_view;
-				write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
-			} else {
-				new_request->view = &HttpClient::document_info_view;
-			}
-			break;
-
-		case HTTP_STORE:
-			if (!id.empty()) {
-				new_request->view = &HttpClient::update_document_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				new_request->view = &HttpClient::write_document_view;
 			}
 			break;
 
@@ -1154,53 +1122,55 @@ HttpClient::prepare()
 					new_request->view = &HttpClient::write_metadata_view;
 				}
 			} else if (!id.empty()) {
-				new_request->view = &HttpClient::index_document_view;
-			} else {
-				new_request->view = &HttpClient::touch_view;
-			}
-			break;
-
-		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
-		case HTTP_UPDATE:
-			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					// new_request->view = &HttpClient::update_schema_view;
-					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
-				} else {
-					new_request->view = &HttpClient::update_metadata_view;
-				}
-			} else if (!id.empty()) {
-				new_request->view = &HttpClient::update_document_view;
+				new_request->view = &HttpClient::write_document_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			break;
 
 		case HTTP_PATCH:
+		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
+		case HTTP_UPDATE:
 			if (!cmd.empty() && id.empty()) {
 				if (cmd == ":schema") {
-					// new_request->view = &HttpClient::update_schema_view;
-					write_http_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+					new_request->view = &HttpClient::update_schema_view;
 				} else {
 					new_request->view = &HttpClient::update_metadata_view;
 				}
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::update_document_view;
 			} else {
+				new_request->view = &HttpClient::update_database_view;
+			}
+			break;
+
+		case HTTP_STORE:
+			if (!id.empty()) {
+				new_request->view = &HttpClient::update_document_view;
+			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			break;
 
-		case HTTP_OPTIONS:
-			write(http_response(*new_request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
+		case HTTP_DELETE:
+			if (!cmd.empty() && id.empty()) {
+				if (cmd == ":schema") {
+					new_request->view = &HttpClient::delete_schema_view;
+				} else {
+					new_request->view = &HttpClient::delete_metadata_view;
+				}
+			} else if (!id.empty()) {
+				new_request->view = &HttpClient::delete_document_view;
+			} else if (has_pth) {
+				new_request->view = &HttpClient::delete_database_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
 			break;
 
-		case HTTP_QUIT:
-			if (opts.admin_commands && !has_pth && id.empty()) {
-				XapiandManager::try_shutdown(true);
-				write_http_response(*new_request, HTTP_STATUS_OK);
-				destroy();
-				detach();
+		case HTTP_COMMIT:
+			if (id.empty()) {
+				new_request->view = &HttpClient::commit_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1208,7 +1178,7 @@ HttpClient::prepare()
 
 		case HTTP_DUMP:
 			if (id.empty()) {
-				new_request->view = &HttpClient::dump_view;
+				new_request->view = &HttpClient::dump_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1223,15 +1193,15 @@ HttpClient::prepare()
 						new_request->mode = Request::Mode::STREAM_MSGPACK;
 					}
 				}
-				new_request->view = &HttpClient::restore_view;
+				new_request->view = &HttpClient::restore_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			break;
 
-		case HTTP_COMMIT:
+		case HTTP_CHECK:
 			if (id.empty()) {
-				new_request->view = &HttpClient::commit_view;
+				new_request->view = &HttpClient::check_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1256,13 +1226,23 @@ HttpClient::prepare()
 			}
 			break;
 
+		case HTTP_OPTIONS:
+			write(http_response(*new_request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
+			break;
+
+		case HTTP_QUIT:
+			if (opts.admin_commands && !has_pth && id.empty()) {
+				XapiandManager::try_shutdown(true);
+				write_http_response(*new_request, HTTP_STATUS_OK);
+				destroy();
+				detach();
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
 		default: {
-			enum http_status error_code = HTTP_STATUS_NOT_IMPLEMENTED;
-			MsgPack err_response = new_request->comments ? MsgPack({
-				{ RESPONSE_xSTATUS, (int)error_code },
-				{ RESPONSE_xMESSAGE, { MsgPack({ "Method not implemented!" }) } }
-			}) : MsgPack::MAP();
-			write_http_response(*new_request, error_code, err_response);
+			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
 			return 1;
 		}
@@ -1470,9 +1450,9 @@ HttpClient::metrics_view(Request& request)
 
 
 void
-HttpClient::document_info_view(Request& request)
+HttpClient::document_exists_view(Request& request)
 {
-	L_CALL("HttpClient::document_info_view()");
+	L_CALL("HttpClient::document_exists_view()");
 
 	auto query_field = query_field_maker(request, 0);
 	endpoints_maker(request, query_field);
@@ -1497,13 +1477,13 @@ HttpClient::delete_document_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
 
-	std::string doc_id(request.path_parser.get_id());
+	std::string document_id(request.path_parser.get_id());
 
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
-	db_handler.delete_document(doc_id, query_field.commit);
+	db_handler.delete_document(document_id, query_field.commit);
 	request.ready = std::chrono::system_clock::now();
 
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
@@ -1550,16 +1530,9 @@ HttpClient::delete_schema_view(Request& request)
 
 
 void
-HttpClient::index_document_view(Request& request)
+HttpClient::write_document_view(Request& request)
 {
-	L_CALL("HttpClient::index_document_view()");
-
-	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
-
-	std::string doc_id;
-	if (request.method != HTTP_POST) {
-		doc_id = request.path_parser.get_id();
-	}
+	L_CALL("HttpClient::write_document_view()");
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1571,6 +1544,8 @@ HttpClient::index_document_view(Request& request)
 		}
 	}
 
+	auto document_id = request.path_parser.get_id();
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field, settings);
 
@@ -1578,13 +1553,11 @@ HttpClient::index_document_view(Request& request)
 
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	response_obj = db_handler.index(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+	response_obj = db_handler.index(document_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 
 	request.ready = std::chrono::system_clock::now();
 
-	status_code = HTTP_STATUS_OK;
-
-	write_http_response(request, status_code, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Indexing took {}", string::from_delta(took));
@@ -1599,12 +1572,9 @@ HttpClient::index_document_view(Request& request)
 
 
 void
-HttpClient::write_schema_view(Request& request)
+HttpClient::write_schema_view(Request& request, bool replace)
 {
 	L_CALL("HttpClient::write_schema_view()");
-
-	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
-
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_COMMIT);
 	endpoints_maker(request, query_field);
@@ -1614,15 +1584,14 @@ HttpClient::write_schema_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	db_handler.write_schema(decoded_body, request.method == HTTP_PUT);
+	db_handler.write_schema(decoded_body, replace);
 
 	request.ready = std::chrono::system_clock::now();
 
 	MsgPack response_obj;
-	status_code = HTTP_STATUS_OK;
 	response_obj = db_handler.get_schema()->get_full(true);
 
-	write_http_response(request, status_code, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Schema write took {}", string::from_delta(took));
@@ -1633,6 +1602,24 @@ HttpClient::write_schema_view(Request& request)
 			{"operation", "write_schema"},
 		})
 		.Observe(took / 1e9);
+}
+
+
+void
+HttpClient::write_schema_view(Request& request)
+{
+	L_CALL("HttpClient::write_schema_view()");
+
+	write_schema_view(request, true);
+}
+
+
+void
+HttpClient::update_schema_view(Request& request)
+{
+	L_CALL("HttpClient::update_schema_view()");
+
+	write_schema_view(request, false);
 }
 
 
@@ -1656,61 +1643,44 @@ HttpClient::update_document_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	std::string doc_id(request.path_parser.get_id());
-	enum http_status status_code = HTTP_STATUS_BAD_REQUEST;
+	std::string document_id(request.path_parser.get_id());
 
 	request.processing = std::chrono::system_clock::now();
 
+	std::string operation;
 	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
-		response_obj = db_handler.patch(doc_id, query_field.version, decoded_body, query_field.commit, request.comments).second;
+		operation = "patch";
+		response_obj = db_handler.patch(document_id, query_field.version, decoded_body, query_field.commit, request.comments).second;
 	} else if (request.method == HTTP_STORE) {
-		response_obj = db_handler.update(doc_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type).second;
+		operation = "store";
+		response_obj = db_handler.update(document_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type).second;
 	} else {
-		response_obj = db_handler.update(doc_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+		operation = "update";
+		response_obj = db_handler.update(document_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
 	}
 
 	request.ready = std::chrono::system_clock::now();
 
-	status_code = HTTP_STATUS_OK;
-
-	write_http_response(request, status_code, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Updating took {}", string::from_delta(took));
 
-	if (request.method == HTTP_PATCH) {
-		Metrics::metrics()
-			.xapiand_operations_summary
-			.Add({
-				{"operation", "patch"},
-			})
-			.Observe(took / 1e9);
-	} else if (request.method == HTTP_STORE) {
-		Metrics::metrics()
-			.xapiand_operations_summary
-			.Add({
-				{"operation", "store"},
-			})
-			.Observe(took / 1e9);
-	} else {
-		Metrics::metrics()
-			.xapiand_operations_summary
-			.Add({
-				{"operation", "update"},
-			})
-			.Observe(took / 1e9);
-	}
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", operation},
+		})
+		.Observe(took / 1e9);
 }
 
 
 void
-HttpClient::metadata_view(Request& request)
+HttpClient::retrieve_metadata_view(Request& request)
 {
-	L_CALL("HttpClient::metadata_view()");
-
-	enum http_status status_code = HTTP_STATUS_OK;
+	L_CALL("HttpClient::retrieve_metadata_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field);
@@ -1755,7 +1725,7 @@ HttpClient::metadata_view(Request& request)
 		response_obj = response_obj.select(selector);
 	}
 
-	write_http_response(request, status_code, response_obj);
+	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Get metadata took {}", string::from_delta(took));
@@ -1884,9 +1854,38 @@ HttpClient::nodes_view(Request& request)
 
 
 void
-HttpClient::touch_view(Request& request)
+HttpClient::database_exists_view(Request& request)
 {
-	L_CALL("HttpClient::touch_view()");
+	L_CALL("HttpClient::database_exists_view()");
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
+	endpoints_maker(request, query_field);
+
+	request.processing = std::chrono::system_clock::now();
+
+	DatabaseHandler db_handler(endpoints, DB_OPEN);
+
+	db_handler.reopen();  // Ensure it can be opened.
+
+	request.ready = std::chrono::system_clock::now();
+
+	write_http_response(request, HTTP_STATUS_OK);
+}
+
+
+void
+HttpClient::retrieve_database_view(Request& request)
+{
+	L_CALL("HttpClient::retrieve_database_view()");
+
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+}
+
+
+void
+HttpClient::update_database_view(Request& request)
+{
+	L_CALL("HttpClient::update_database_view()");
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1917,16 +1916,25 @@ HttpClient::touch_view(Request& request)
 	Metrics::metrics()
 		.xapiand_operations_summary
 		.Add({
-			{"operation", "touch"},
+			{"operation", "write_database"},
 		})
 		.Observe(took / 1e9);
 }
 
 
 void
-HttpClient::commit_view(Request& request)
+HttpClient::delete_database_view(Request& request)
 {
-	L_CALL("HttpClient::commit_view()");
+	L_CALL("HttpClient::delete_database_view()");
+
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+}
+
+
+void
+HttpClient::commit_database_view(Request& request)
+{
+	L_CALL("HttpClient::commit_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	endpoints_maker(request, query_field);
@@ -1954,9 +1962,9 @@ HttpClient::commit_view(Request& request)
 
 
 void
-HttpClient::dump_view(Request& request)
+HttpClient::dump_database_view(Request& request)
 {
-	L_CALL("HttpClient::dump_view()");
+	L_CALL("HttpClient::dump_database_view()");
 
 	auto query_field = query_field_maker(request, 0);
 	endpoints_maker(request, query_field);
@@ -2019,9 +2027,9 @@ HttpClient::dump_view(Request& request)
 
 
 void
-HttpClient::restore_view(Request& request)
+HttpClient::restore_database_view(Request& request)
 {
-	L_CALL("HttpClient::restore_view()");
+	L_CALL("HttpClient::restore_database_view()");
 
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
 		MsgPack obj;
@@ -2100,9 +2108,9 @@ HttpClient::restore_view(Request& request)
 
 
 void
-HttpClient::schema_view(Request& request)
+HttpClient::retrieve_schema_view(Request& request)
 {
-	L_CALL("HttpClient::schema_view()");
+	L_CALL("HttpClient::retrieve_schema_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	endpoints_maker(request, query_field);
@@ -2175,9 +2183,9 @@ HttpClient::wal_view(Request& request)
 
 
 void
-HttpClient::check_view(Request& request)
+HttpClient::check_database_view(Request& request)
 {
-	L_CALL("HttpClient::wal_view()");
+	L_CALL("HttpClient::check_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	endpoints_maker(request, query_field);
@@ -2205,9 +2213,9 @@ HttpClient::check_view(Request& request)
 
 
 void
-HttpClient::retrieve_view(Request& request)
+HttpClient::retrieve_document_view(Request& request)
 {
-	L_CALL("HttpClient::retrieve_view()");
+	L_CALL("HttpClient::retrieve_document_view()");
 
 	auto id = request.path_parser.get_id();
 
