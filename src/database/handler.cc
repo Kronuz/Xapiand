@@ -1827,6 +1827,11 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 	auto did = document.get_docid();
 	info[RESPONSE_DOCID] = did;
 
+	auto version = document.get_value(DB_SLOT_VERSION);
+	if (!version.empty()) {
+		info[RESPONSE_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+	}
+
 	size_t n_shards = endpoints.size();
 	if (n_shards != 1) {
 		size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
