@@ -1817,32 +1817,16 @@ HttpClient::database_exists_view(Request& request)
 }
 
 
-void
-HttpClient::retrieve_database_view(Request& request)
+MsgPack
+HttpClient::retrieve_database(Request& request, const query_field_t& query_field)
 {
-	L_CALL("HttpClient::retrieve_database_view()");
-
-	ASSERT(request.path_parser.get_id().empty());
+	L_CALL("HttpClient::retrieve_database()");
 
 	auto has_pth = request.path_parser.has_pth();
-
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (endpoints_maker(request, query_field) > 1) {
-		THROW(ClientError, "Method can only be used with single indexes");
-	}
-
-	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
-
-	request.processing = std::chrono::system_clock::now();
 
 	MsgPack schema;
 	MsgPack settings;
 	auto obj = MsgPack::MAP();
-
-	// Add node information for '/':
-	if (!has_pth) {
-		obj.update(node_obj());
-	}
 
 	// Get active schema
 	try {
@@ -1911,6 +1895,11 @@ HttpClient::retrieve_database_view(Request& request)
 		}
 	}
 
+	// Add node information for '/':
+	if (!has_pth) {
+		obj.update(node_obj());
+	}
+
 	if (!settings.empty()) {
 		obj[RESERVED_SETTINGS].update(settings);
 	}
@@ -1918,6 +1907,28 @@ HttpClient::retrieve_database_view(Request& request)
 	if (!schema.empty()) {
 		obj[RESERVED_SCHEMA].update(schema);
 	}
+
+	return obj;
+}
+
+
+void
+HttpClient::retrieve_database_view(Request& request)
+{
+	L_CALL("HttpClient::retrieve_database_view()");
+
+	ASSERT(request.path_parser.get_id().empty());
+
+	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
+	if (endpoints_maker(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
+
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
+	request.processing = std::chrono::system_clock::now();
+
+	auto obj = retrieve_database(request, query_field);
 
 	if (!selector.empty()) {
 		obj = obj.select(selector);
@@ -1961,6 +1972,8 @@ HttpClient::update_database_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
@@ -1975,9 +1988,15 @@ HttpClient::update_database_view(Request& request)
 
 	db_handler.reopen();  // Ensure touch.
 
+	auto obj = retrieve_database(request, query_field);
+
+	if (!selector.empty()) {
+		obj = obj.select(selector);
+	}
+
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_CREATED);
+	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Updating database took {}", string::from_delta(took));
