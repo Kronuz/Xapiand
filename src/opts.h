@@ -39,6 +39,7 @@ extern struct opts_t {
 	bool no_colors = false;
 	bool pretty = false;
 	bool no_pretty = false;
+	bool echo = false;
 	bool admin_commands = false;
 	std::string database = "";
 	std::string cluster_name = XAPIAND_CLUSTER_NAME;

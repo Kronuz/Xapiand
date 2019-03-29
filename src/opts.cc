@@ -305,6 +305,7 @@ parseOptions(int argc, char** argv)
 		SwitchArg colors("", "colors", "Enables colors on the console.", cmd, false);
 		SwitchArg no_pretty("", "no-pretty", "Disables pretty results by default.", cmd, false);
 		SwitchArg pretty("", "pretty", "Enables pretty results by default.", cmd, false);
+		SwitchArg echo("", "echo", "Enables echo for results by default.", cmd, false);
 
 		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
 #ifdef XAPIAND_CLUSTERING
@@ -372,6 +373,8 @@ parseOptions(int argc, char** argv)
 #endif
 		o.strict = strict.getValue();
 		o.force = force.getValue();
+
+		o.echo = echo.getValue();
 
 		o.pretty = pretty.getValue();
 		o.no_pretty = no_pretty.getValue();
