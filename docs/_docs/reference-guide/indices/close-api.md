@@ -13,7 +13,7 @@ A closed index has almost _no overhead_ on the cluster, and is blocked for
 read/write operations. A closed index can be opened which will then go through
 the normal recovery process.
 
-The REST endpoint command are `CLOSE and `OPEN`. For example:
+The REST endpoint command are `CLOSE` and `OPEN`. For example:
 
 {% capture req %}
 

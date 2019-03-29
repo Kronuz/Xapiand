@@ -3,11 +3,6 @@ title: Get Index API
 short_title: Get API
 ---
 
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
-
 The _Get Index API_ allows to retrieve information about one or more indexes.
 
 {% capture req %}
