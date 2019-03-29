@@ -665,7 +665,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 DataType
 DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::update({}, {}, <body>, {}, {}, {}/{})", repr(document_id.to_string()), stored, commit, comments, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, body.getStrType(), commit, comments, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
