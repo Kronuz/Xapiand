@@ -700,7 +700,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 				{ RESERVED_VALUE, local_node->name() },
 			} },
-		}, true, false, msgpack_type).first;
+		}, true, msgpack_type).first;
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
@@ -1433,7 +1433,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_VALUE, replicas },
 			} },
 		};
-		db_handler.update(normalized_path, 0, false, obj, true, false, msgpack_type);
+		db_handler.update(normalized_path, 0, false, obj, true, msgpack_type);
 	}
 }
 
@@ -1474,7 +1474,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_TYPE,  "array/string" },
 					} },
 				};
-				db_handler.update(normalized_path, 0, false, obj, true, false, msgpack_type);
+				db_handler.update(normalized_path, 0, false, obj, true, msgpack_type);
 			}
 		}
 		size_t shard_num = 0;

@@ -514,9 +514,9 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit, bool comments)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit)
 {
-	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {}, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit, comments);
+	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit);
 
 	auto prepared = prepare(document_id, document_ver, obj, data);
 	auto& term_id = std::get<0>(prepared);
@@ -525,59 +525,14 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	auto did = replace_document_term(term_id, std::move(doc), commit);
 
-	Document document(did, this);
-
-	auto it_id = data_obj.find(ID_FIELD_NAME);
-	if (it_id == data_obj.end()) {
-		// TODO: This may be somewhat expensive, but replace_document()
-		//       doesn't currently return the "document_id" (not the docid).
-		data_obj[ID_FIELD_NAME] = document_id ? document_id : document.get_value(ID_FIELD_NAME);
-	} else if (term_id == "QN\x80") {
-		// Set id inside serialized object:
-		auto& value = it_id.value();
-		switch (value.getType()) {
-			case MsgPack::Type::POSITIVE_INTEGER:
-				value = static_cast<uint64_t>(did);
-				break;
-			case MsgPack::Type::NEGATIVE_INTEGER:
-				value = static_cast<int64_t>(did);
-				break;
-			case MsgPack::Type::FLOAT:
-				value = static_cast<double>(did);
-				break;
-			default:
-				break;
-		}
-	}
-
-	try {
-		// TODO: This may be somewhat expensive, but replace_document()
-		//       doesn't currently return the "version".
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			data_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-		}
-	} catch(...) {
-		L_EXC("Cannot retrieve document version for docid {}!", did);
-	}
-
-	if (comments) {
-		data_obj[RESPONSE_xDOCID] = did;
-
-		size_t n_shards = endpoints.size();
-		size_t shard_num = (did - 1) % n_shards;
-		data_obj[RESPONSE_xSHARD] = shard_num + 1;
-		// data_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
-	}
-
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
+DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, comments, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -598,14 +553,14 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit, comments);
+					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
 				case MsgPack::Type::MAP:
 					inject_data(data, body);
-					return index(document_id, document_ver, body, data, commit, comments);
+					return index(document_id, document_ver, body, data, commit);
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
@@ -617,9 +572,9 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 
 
 DataType
-DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit, bool comments)
+DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit)
 {
-	L_CALL("DatabaseHandler::patch({}, {}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit, comments);
+	L_CALL("DatabaseHandler::patch({}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -654,7 +609,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 				obj[ID_FIELD_NAME] = std::move(id_field);
 			}
 			inject_data(data, obj);
-			return index(document_id, document_ver, obj, data, commit, comments);
+			return index(document_id, document_ver, obj, data, commit);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -663,9 +618,9 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 
 DataType
-DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, bool comments, const ct_type_t& ct_type)
+DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, body.getStrType(), commit, comments, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, body.getStrType(), commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -699,18 +654,18 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, obj, data, commit, comments);
+					return index(document_id, document_ver, obj, data, commit);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, obj, data, commit, comments);
+					return index(document_id, document_ver, obj, data, commit);
 				case MsgPack::Type::MAP:
 					if (stored) {
 						THROW(ClientError, "Objects of this type cannot be put in storage");
 					}
 					if (obj.empty()) {
 						inject_data(data, body);
-						return index(document_id, document_ver, body, data, commit, comments);
+						return index(document_id, document_ver, body, data, commit);
 					} else {
 						obj.update(body);
 						auto it = obj.find(ID_FIELD_NAME);
@@ -720,13 +675,13 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 							obj[ID_FIELD_NAME] = std::move(id_field);
 						}
 						inject_data(data, obj);
-						return index(document_id, document_ver, obj, data, commit, comments);
+						return index(document_id, document_ver, obj, data, commit);
 					}
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
 			}
 
-			return index(document_id, document_ver, obj, data, commit, comments);
+			return index(document_id, document_ver, obj, data, commit);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -1024,7 +979,7 @@ DatabaseHandler::restore_documents(int fd)
 
 	SHA256 sha256;
 	msgpack::unpacker unpacker;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, false);
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, false, false);
 	try {
 		while (true) {
 			if (XapiandManager::manager()->is_detaching()) {
