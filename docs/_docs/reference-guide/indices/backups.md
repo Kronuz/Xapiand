@@ -45,6 +45,7 @@ to and from JSON, NDJSON or MessagePack over HTTP, using the online API.
 ### Dump
 
 {% capture req %}
+
 ```json
 DUMP /twitter/
 ```
@@ -54,6 +55,7 @@ DUMP /twitter/
 ### Restore
 
 {% capture req %}
+
 ```json
 RESTORE /twitter/
 
@@ -85,6 +87,7 @@ setting the `Accept` header to either `application/x-msgpack` or
 `application/x-ndjson`, you can dump data to any of those formats:
 
 {% capture req %}
+
 ```json
 DUMP /twitter/
 Accept: application/x-msgpack
@@ -127,31 +130,34 @@ Create a new schema for the new database; in this example we'll create a
 to reindex the dumped documents:
 
 {% capture req %}
+
 ```json
-PUT /new_twitter/:schema
+PUT /new_twitter/
 
 {
-  "_type": "foreign/object",
-  "_endpoint": ".schemas/00000000-0000-1000-8000-010000000000",
-  "_id": {
-    "_type": "uuid",
-  },
-  "description": "Twitter Schema",
-  "schema": {
-    "_type": "object",
+  "_schema": {
+    "_type": "foreign/object",
+    "_endpoint": ".schemas/00000000-0000-1000-8000-010000000000",
     "_id": {
-      "_type": "integer",
+      "_type": "uuid",
     },
-    "user": {
-      "_type": "keyword"
+    "description": "Twitter Schema",
+    "schema": {
+      "_type": "object",
+      "_id": {
+        "_type": "integer",
+      },
+      "user": {
+        "_type": "keyword"
+      },
+      "postDate": {
+        "_type": "datetime"
+      },
+      "message": {
+        "_type": "text"
+      }
     },
-    "postDate": {
-      "_type": "datetime"
-    },
-    "message": {
-      "_type": "text"
-    }
-  },
+  }
 }
 ```
 {% endcapture %}
@@ -160,6 +166,7 @@ PUT /new_twitter/:schema
 Restore the index documents to the new index:
 
 {% capture req %}
+
 ```json
 RESTORE /new_twitter/
 
