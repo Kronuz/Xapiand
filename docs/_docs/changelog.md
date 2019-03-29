@@ -18,10 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `?echo` query param returns the new/updated object
 
 ### Changed
-- By default, write/update operations no longer return the object (see ?echo)
-- Verbosity level 4 or higher (`-vvvv`) turns on echo, pretty and comments
+- **BREAKING**: By default, write/update operations no longer return the object (see `?echo`)
 - **BREAKING**: Removed `:schema`, schemas are now added/edited by using the
                 Create Index API.
+- Verbosity level 4 or higher (`-vvvv`) turns on `--echo`, `--pretty` and `--comments`
 
 
 ---
