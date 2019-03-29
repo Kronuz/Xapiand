@@ -217,6 +217,7 @@ public:
 
 	size_t size;
 
+	bool echo;
 	bool human;
 	bool comments;
 	int indented;

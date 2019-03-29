@@ -2616,6 +2616,7 @@ HttpClient::url_resolve(Request& request)
 	if (pretty) {
 		request.indented = DEFAULT_INDENTATION;
 	}
+
 	request.query_parser.rewind();
 	if (request.query_parser.next("pretty") != -1) {
 		if (request.query_parser.len != 0u) {
@@ -2636,6 +2637,17 @@ HttpClient::url_resolve(Request& request)
 			} catch (const Exception&) { }
 		} else {
 			request.human = pretty;
+		}
+	}
+
+	request.query_parser.rewind();
+	if (request.query_parser.next("echo") != -1) {
+		if (request.query_parser.len != 0u) {
+			try {
+				request.echo = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
+			} catch (const Exception&) { }
+		} else {
+			request.echo = pretty;
 		}
 	}
 
@@ -3395,7 +3407,8 @@ Request::Request(HttpClient* client)
 	  raw_peek{0},
 	  raw_offset{0},
 	  size{0},
-	  human{true},
+	  echo{false},
+	  human{false},
 	  comments{true},
 	  indented{-1},
 	  expect_100{false},
