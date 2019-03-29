@@ -5,7 +5,7 @@ if [ -z "${TRAVIS_TAG}" ]; then
 	exit 0
 fi
 
-if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 	# Under OSX, build a bottle:
 	set -o pipefail
 
@@ -69,6 +69,8 @@ if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
 
 else
 	# Everywhere else build as usual:
-	CC=clang-7 && CXX=clang-7 cmake  -S . -B build
-	cmake --build build
+	mkdir -p build
+	cd build
+	CC=clang-7 && CXX=clang-7 cmake ..
+	make
 fi
