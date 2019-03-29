@@ -6,6 +6,21 @@ permalink: /faq/
 
 
 ---
+### Why I don't see the responses when I create/update objects?
+For performance reasons, newly created or edited objects are not returned in
+the response. If you wish to get objects echoed in the response, turn on the
+`--echo` option, pass `?echo` query param or increase verbosity to level 4 or
+higher (`-vvvv` or --verbosity=4).
+
+
+---
+### Why the responses are unformatted JSON one-liners?
+For performance reasons, to see pretty formatted responses use `--pretty`
+option, pass `?pretty` query param or increase verbosity to level 4 or higher
+(`-vvvv` or --verbosity=4).
+
+
+---
 ### Do I need to pay to get a license?
 No, {{ site.name }} is free and open source (MIT license)
 

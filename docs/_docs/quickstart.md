@@ -28,9 +28,16 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 docker run -p 8880:8880 --rm dubalu/xapiand:{{ site.version }} -vvvv
 ```
 
+{: .note .tip }
+**_High Verbosity_**<br>
+For testing, we recommend running with _*very-very-very* verbose_ output, which
+can be specified by using `-vvvv` or `--verbosity=4`. This will log all full
+requests and will also turn on `pretty`, `echo` and `comments` options. See
+[Options](/docs/options) for more details.
 
 You can also check the [Installation]({{ '/docs/installation' | relative_url }})
 section for more details.
+
 
 ---
 
