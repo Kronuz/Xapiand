@@ -1499,15 +1499,47 @@ HttpClient::write_document_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
 	request.processing = std::chrono::system_clock::now();
 
-	MsgPack response_obj;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	response_obj = db_handler.index(document_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+	auto indexed = db_handler.index(document_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type);
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_OK, response_obj);
+	if (request.echo) {
+		auto did = indexed.first;
+		auto& response_obj = indexed.second;
+
+		Document document(did, &db_handler);
+
+		if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
+			response_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		}
+
+		auto version = document.get_value(DB_SLOT_VERSION);
+		if (!version.empty()) {
+			response_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+		}
+
+		if (request.comments) {
+			response_obj[RESPONSE_xDOCID] = did;
+
+			size_t n_shards = endpoints.size();
+			size_t shard_num = (did - 1) % n_shards;
+			response_obj[RESPONSE_xSHARD] = shard_num + 1;
+			// response_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+		}
+
+		if (!selector.empty()) {
+			response_obj = response_obj.select(selector);
+		}
+
+		write_http_response(request, HTTP_STATUS_OK, response_obj);
+	} else {
+		write_http_response(request, HTTP_STATUS_NO_CONTENT);
+	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Indexing took {}", string::from_delta(took));
@@ -1548,22 +1580,53 @@ HttpClient::update_document_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	std::string operation;
-	MsgPack response_obj;
+	DataType indexed;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
-		response_obj = db_handler.patch(document_id, query_field.version, decoded_body, query_field.commit, request.comments).second;
+		indexed = db_handler.patch(document_id, query_field.version, decoded_body, query_field.commit, request.comments);
 	} else if (request.method == HTTP_STORE) {
 		operation = "store";
-		response_obj = db_handler.update(document_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type).second;
+		indexed = db_handler.update(document_id, query_field.version, true, decoded_body, query_field.commit, request.comments, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
-		response_obj = db_handler.update(document_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type).second;
+		indexed = db_handler.update(document_id, query_field.version, false, decoded_body, query_field.commit, request.comments, request.ct_type);
 	}
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_OK, response_obj);
+	if (request.echo) {
+		auto did = indexed.first;
+		auto& response_obj = indexed.second;
+
+		Document document(did, &db_handler);
+
+		if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
+			response_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+		}
+
+		auto version = document.get_value(DB_SLOT_VERSION);
+		if (!version.empty()) {
+			response_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+		}
+
+		if (request.comments) {
+			response_obj[RESPONSE_xDOCID] = did;
+
+			size_t n_shards = endpoints.size();
+			size_t shard_num = (did - 1) % n_shards;
+			response_obj[RESPONSE_xSHARD] = shard_num + 1;
+			// response_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+		}
+
+		if (!selector.empty()) {
+			response_obj = response_obj.select(selector);
+		}
+
+		write_http_response(request, HTTP_STATUS_OK, response_obj);
+	} else {
+		write_http_response(request, HTTP_STATUS_NO_CONTENT);
+	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Updating took {}", string::from_delta(took));
@@ -1653,6 +1716,8 @@ HttpClient::write_metadata_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler;
@@ -1674,7 +1739,11 @@ HttpClient::write_metadata_view(Request& request)
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_OK);
+	if (request.echo) {
+		write_http_response(request, HTTP_STATUS_OK, selector.empty() ? decoded_body : decoded_body.select(selector));
+	} else {
+		write_http_response(request, HTTP_STATUS_NO_CONTENT);
+	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Set metadata took {}", string::from_delta(took));
@@ -1992,15 +2061,19 @@ HttpClient::update_database_view(Request& request)
 
 	db_handler.reopen();  // Ensure touch.
 
-	auto obj = retrieve_database(query_field, is_root);
-
-	if (!selector.empty()) {
-		obj = obj.select(selector);
-	}
-
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_OK, obj);
+	if (request.echo) {
+		auto obj = retrieve_database(query_field, is_root);
+
+		if (!selector.empty()) {
+			obj = obj.select(selector);
+		}
+
+		write_http_response(request, HTTP_STATUS_OK, obj);
+	} else {
+		write_http_response(request, HTTP_STATUS_NO_CONTENT);
+	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Updating database took {}", string::from_delta(took));
