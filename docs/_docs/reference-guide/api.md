@@ -78,7 +78,7 @@ If your firewall rules don't support non-standard HTTP methods like `PATCH`,
 + Use HTTP Method Mapping
 
 
-### HTTP Method Override
+#### HTTP Method Override
 
 You can use the [X-HTTP-Method-Override](http://www.hanselman.com/blog/HTTPPUTOrDELETENotAllowedUseXHTTPMethodOverrideForYourRESTServiceWithASPNETWebAPI.aspx){:target="_blank"}
 (or _HTTP-Method-Override_) header. Pass the method you want to use in the
@@ -100,7 +100,7 @@ The Method Override won't work with any other method other than `POST`, you'll
 receive an error.
 
 
-### HTTP Method Mapping
+#### HTTP Method Mapping
 
 Custom methods can use the following generic HTTP mapping:
 `http://service.name:8880/some/resource/name:customMethod`
