@@ -6,7 +6,7 @@ version: 0.5.0
 categories: [release]
 ---
 
-After many months of hard work by {{ site.name }}'s contributors, we're excited
+After many months of hard work by Xapiand's contributors, we're excited
 to announce a new minor release of the project, v0.5.0, is *finally released!*.
 
 ### Added

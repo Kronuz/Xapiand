@@ -118,10 +118,10 @@ set using the field key for the aggregations.
 This feature hasn't yet been implemented...
 [Pull requests are welcome!]({{ site.repository }}/pulls)
 
-{{ site.name }} uses the type of the field in the mapping in order to figure out
+Xapiand uses the type of the field in the schema in order to figure out
 how to run the aggregation and format the response. However there are two cases
-in which {{ site.name }} cannot figure out this information. For those cases,
-it is possible to give {{ site.name }} a hint using the `_value_type` option,
+in which Xapiand cannot figure out this information. For those cases,
+it is possible to give Xapiand a hint using the `_value_type` option,
 which accepts the same values as the index schema (e.g. `string`, `positive`,
 `integer`, `datetime`, `boolean`, etc.)
 

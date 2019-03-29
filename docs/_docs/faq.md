@@ -22,13 +22,13 @@ option, pass `?pretty` query param or increase verbosity to level 4 or higher
 
 ---
 ### Do I need to pay to get a license?
-No, {{ site.name }} is free and open source (MIT license)
+No, Xapiand is free and open source (MIT license)
 
 
 ---
 ### How will my donation be used?
 
-The donations will be directly used to support {{ site.name }}'s developers.
+The donations will be directly used to support the developers.
 
 
 ---

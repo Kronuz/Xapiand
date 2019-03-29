@@ -3,14 +3,14 @@ title: Welcome
 redirect_from: /docs/
 ---
 
-This documentation aims to be a comprehensive guide to Xapiand. We'll cover
+This documentation aims to be a comprehensive guide to {{ site.name }}. We'll cover
 topics such as getting your site up and running, indexing and searching
 documents, customizing data schemas, deploying to various environments, and
-give you some advice on participating in the future development of Xapiand
+give you some advice on participating in the future development of {{ site.name }}
 itself.
 
 
-## So what is Xapiand, exactly?
+## So what is {{ site.name }}, exactly?
 
 Xapiand is **A Modern Highly Available Distributed RESTful Search and Storage
 Server built for the Cloud**. It takes JSON (or MessagePack) documents and
@@ -102,8 +102,8 @@ including it in this guide.
 
 ---
 
-Development of Xapiand is done as an open-source project and maintaining it is
-hard and time consuming, if you like Xapiand, please donate whatever
+Development of {{ site.name }} is done as an open-source project and maintaining it is
+hard and time consuming, if you like {{ site.name }}, please donate whatever
 you feel comfortable. We accept donations via PayPal:
 
 <a class="paypalme" href="https://www.paypal.me/Kronuz/25" target="_blank" rel="nofollow">Donate to Kronuz via PayPal</a>

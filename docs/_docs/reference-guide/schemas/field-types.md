@@ -2,7 +2,7 @@
 title: Field Types
 ---
 
-{{ site.name }} supports a small number of different datatypes for the fields
+Xapiand supports a small number of different datatypes for the fields
 in a document:
 
 ## Concrete datatypes

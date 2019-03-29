@@ -2,7 +2,7 @@
 title: Installation
 ---
 
-Getting {{ site.name }} installed and ready-to-go should only take a few minutes.
+Getting Xapiand installed and ready-to-go should only take a few minutes.
 If it ever becomes a pain, please [file an issue]({{ site.repository }}/issues/new)
 (or submit a pull request) describing the issue you encountered and how
 we might make the process easier.

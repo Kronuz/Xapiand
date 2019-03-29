@@ -32,7 +32,7 @@ for new fields.
 
 ## [Explicit Types](explicit-types)
 
-You know more about your data than {{ site.name }} can guess, so while dynamic
+You know more about your data than Xapiand can guess, so while dynamic
 typing can be useful to get started, at some point you will want to specify
 your own explicit types.
 
@@ -91,7 +91,7 @@ and reindex your data into that index.
 
 {: .note .info }
 **_One Index, One Document Type_**<br>
-In {{ site.name }}, one index can contain one document type. E.g. Instead of
+In Xapiand, one index can contain one document type. E.g. Instead of
 storing two document types in a single index, one should store tweets in the
 `tweets` index and users in the `users` index. Indices are completely
 independent of each other and so there will be no conflict of field types
