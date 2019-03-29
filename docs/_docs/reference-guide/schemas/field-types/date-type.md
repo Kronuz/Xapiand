@@ -1,9 +1,12 @@
 ---
-title: Date Datatype
+title: Date / Time Datatypes
 short_title: Date / Time
 ---
 
-JSON doesn't have a date or datetime datatype, so dates in Xapiand can either be:
+# Datetime Datatype
+
+JSON doesn't have a date, datetime, or time datatype, so dates in Xapiand can
+either be:
 
 * Strings containing formatted dates, e.g. `"2001-11-15T13:12:00"`,
   `"2001-11-15"`, `"2001/11/15 13:12:00"` or ISO-8601.
@@ -60,6 +63,12 @@ seaching by terms. To improve the performance of the search, Xapiand uses the
 used during the querying to improve the filtering and searching.
 
 In the above example terms for the day, month and year are generated.
+
+Default accuracy in datetime fields is:
+
+```json
+[ "hour", "day", "month", "year", "decade", "century" ]
+```
 
 
 ## Date Math Expressions

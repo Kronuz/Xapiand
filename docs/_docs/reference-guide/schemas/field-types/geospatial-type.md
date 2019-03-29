@@ -59,8 +59,7 @@ Default accuracy in geospatial fields is:
 This means the precisions for geospatial values will be calculated for each of
 those _HTM_ levels.
 
-See [Hierarchical Triangular Mesh](htm)
-to find how _HTM_ levels work.
+See [Hierarchical Triangular Mesh](htm) to find how _HTM_ levels work.
 
 
 ## Polygon
