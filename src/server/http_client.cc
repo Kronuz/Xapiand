@@ -1097,7 +1097,7 @@ HttpClient::prepare()
 
 		case HTTP_POST:
 			if (!cmd.empty() && id.empty()) {
-				new_request->view = &HttpClient::write_metadata_view;
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			} else if (!id.empty()) {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			} else {
