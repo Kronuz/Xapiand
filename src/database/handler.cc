@@ -2043,24 +2043,26 @@ DocIndexer::operator()()
 						obj[ID_FIELD_NAME] = value;
 					}
 
-					try {
-						// TODO: This may be somewhat expensive, but replace_document()
-						//       doesn't currently return the "version".
-						auto version = document.get_value(DB_SLOT_VERSION);
-						if (!version.empty()) {
-							obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+					if (echo) {
+						try {
+							// TODO: This may be somewhat expensive, but replace_document()
+							//       doesn't currently return the "version".
+							auto version = document.get_value(DB_SLOT_VERSION);
+							if (!version.empty()) {
+								obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+							}
+						} catch(...) {
+							L_EXC("Cannot retrieve document version for docid {}!", did);
 						}
-					} catch(...) {
-						L_EXC("Cannot retrieve document version for docid {}!", did);
-					}
 
-					if (echo && comments) {
-						obj[RESPONSE_xDOCID] = did;
+						if (comments) {
+							obj[RESPONSE_xDOCID] = did;
 
-						size_t n_shards = endpoints.size();
-						size_t shard_num = (did - 1) % n_shards;
-						obj[RESPONSE_xSHARD] = shard_num + 1;
-						// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+							size_t n_shards = endpoints.size();
+							size_t shard_num = (did - 1) % n_shards;
+							obj[RESPONSE_xSHARD] = shard_num + 1;
+							// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+						}
 					}
 
 					++_indexed;
