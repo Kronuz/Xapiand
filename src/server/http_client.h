@@ -314,12 +314,6 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void update_metadata_view(Request& request);
 	void delete_metadata_view(Request& request);
 
-	void retrieve_schema_view(Request& request);
-	void write_schema_view(Request& request, bool replace);
-	void write_schema_view(Request& request);
-	void update_schema_view(Request& request);
-	void delete_schema_view(Request& request);
-
 	void document_exists_view(Request& request);
 	void retrieve_document_view(Request& request);
 	void write_document_view(Request& request);

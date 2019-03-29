@@ -1071,8 +1071,8 @@ HttpClient::prepare()
 
 		case HTTP_GET:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::retrieve_schema_view;
+				if (!has_pth && cmd == ":metrics") {
+					new_request->view = &HttpClient::metrics_view;
 #if XAPIAND_DATABASE_WAL
 				} else if (cmd == ":wal") {
 					new_request->view = &HttpClient::wal_view;
@@ -1081,8 +1081,6 @@ HttpClient::prepare()
 				} else if (!has_pth && cmd == ":nodes") {
 					new_request->view = &HttpClient::nodes_view;
 #endif
-				} else if (!has_pth && cmd == ":metrics") {
-					new_request->view = &HttpClient::metrics_view;
 				} else {
 					new_request->view = &HttpClient::retrieve_metadata_view;
 				}
@@ -1099,11 +1097,7 @@ HttpClient::prepare()
 
 		case HTTP_POST:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::write_schema_view;
-				} else {
-					new_request->view = &HttpClient::write_metadata_view;
-				}
+				new_request->view = &HttpClient::write_metadata_view;
 			} else if (!id.empty()) {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			} else {
@@ -1113,11 +1107,7 @@ HttpClient::prepare()
 
 		case HTTP_PUT:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::write_schema_view;
-				} else {
-					new_request->view = &HttpClient::write_metadata_view;
-				}
+				new_request->view = &HttpClient::write_metadata_view;
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::write_document_view;
 			} else {
@@ -1129,11 +1119,7 @@ HttpClient::prepare()
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::update_schema_view;
-				} else {
-					new_request->view = &HttpClient::update_metadata_view;
-				}
+				new_request->view = &HttpClient::update_metadata_view;
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::update_document_view;
 			} else {
@@ -1151,11 +1137,7 @@ HttpClient::prepare()
 
 		case HTTP_DELETE:
 			if (!cmd.empty() && id.empty()) {
-				if (cmd == ":schema") {
-					new_request->view = &HttpClient::delete_schema_view;
-				} else {
-					new_request->view = &HttpClient::delete_metadata_view;
-				}
+				new_request->view = &HttpClient::delete_metadata_view;
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::delete_document_view;
 			} else if (has_pth) {
@@ -1496,37 +1478,6 @@ HttpClient::delete_document_view(Request& request)
 
 
 void
-HttpClient::delete_schema_view(Request& request)
-{
-	L_CALL("HttpClient::delete_schema_view()");
-
-	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (endpoints_maker(request, query_field) > 1) {
-		THROW(ClientError, "Method can only be used with single indexes");
-	}
-
-	request.processing = std::chrono::system_clock::now();
-
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	db_handler.delete_schema();
-
-	request.ready = std::chrono::system_clock::now();
-
-	write_http_response(request, HTTP_STATUS_NO_CONTENT);
-
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Schema deletion took {}", string::from_delta(took));
-
-	Metrics::metrics()
-		.xapiand_operations_summary
-		.Add({
-			{"operation", "delete_schema"},
-		})
-		.Observe(took / 1e9);
-}
-
-
-void
 HttpClient::write_document_view(Request& request)
 {
 	L_CALL("HttpClient::write_document_view()");
@@ -1567,60 +1518,6 @@ HttpClient::write_document_view(Request& request)
 			{"operation", "index"},
 		})
 		.Observe(took / 1e9);
-}
-
-
-void
-HttpClient::write_schema_view(Request& request, bool replace)
-{
-	L_CALL("HttpClient::write_schema_view()");
-
-	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY | QUERY_FIELD_COMMIT);
-	if (endpoints_maker(request, query_field) > 1) {
-		THROW(ClientError, "Method can only be used with single indexes");
-	}
-
-	auto& decoded_body = request.decoded_body();
-
-	request.processing = std::chrono::system_clock::now();
-
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	db_handler.write_schema(decoded_body, replace);
-
-	request.ready = std::chrono::system_clock::now();
-
-	MsgPack response_obj;
-	response_obj = db_handler.get_schema()->get_full(true);
-
-	write_http_response(request, HTTP_STATUS_OK, response_obj);
-
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Schema write took {}", string::from_delta(took));
-
-	Metrics::metrics()
-		.xapiand_operations_summary
-		.Add({
-			{"operation", "write_schema"},
-		})
-		.Observe(took / 1e9);
-}
-
-
-void
-HttpClient::write_schema_view(Request& request)
-{
-	L_CALL("HttpClient::write_schema_view()");
-
-	write_schema_view(request, true);
-}
-
-
-void
-HttpClient::update_schema_view(Request& request)
-{
-	L_CALL("HttpClient::update_schema_view()");
-
-	write_schema_view(request, false);
 }
 
 
@@ -1934,18 +1831,47 @@ HttpClient::retrieve_database_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
-	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path));
+	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
+	request.processing = std::chrono::system_clock::now();
+
+	MsgPack schema;
+	MsgPack settings;
+	auto obj = MsgPack::MAP();
+
+	// Add node information for '/':
+	if (!has_pth) {
+		obj.update(node_obj());
+	}
+
+	// Get active schema
+	try {
+		DatabaseHandler db_handler;
+		if (query_field.primary) {
+			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+		} else {
+			db_handler.reset(endpoints, DB_OPEN);
+		}
+
+		// Retrieve full schema
+		schema = db_handler.get_schema()->get_full(true);
+	} catch (const Xapian::DocNotFoundError&) {
+		if (has_pth) {
+			throw;
+		}
+	} catch (const Xapian::DatabaseNotFoundError&) {
+		if (has_pth) {
+			throw;
+		}
+	}
+
+	// Get index settings (from .xapiand/index)
+	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path));
 	endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/index"},
 		false,
 		query_field.primary);
 
-	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
-
-	request.processing = std::chrono::system_clock::now();
-
-	auto obj = MsgPack::MAP();
 	try {
 		DatabaseHandler db_handler;
 		if (query_field.primary) {
@@ -1959,18 +1885,21 @@ HttpClient::retrieve_database_view(Request& request)
 
 		// Retrive document data
 		auto document = db_handler.get_document(did);
+		settings = document.get_obj();
 
-		obj = document.get_obj();
-
-		// Remove ID and version from document:
-		auto it_e = obj.end();
-		auto it = obj.find(ID_FIELD_NAME);
-		if (it == it_e) {
-			obj.erase(it);
+		// Remove schema, ID and version from document:
+		auto it_e = settings.end();
+		auto it = settings.find(SCHEMA_FIELD_NAME);
+		if (it != it_e) {
+			settings.erase(it);
 		}
-		it = obj.find(RESERVED_VERSION);
-		if (it == it_e) {
-			obj.erase(it);
+		it = settings.find(ID_FIELD_NAME);
+		if (it != it_e) {
+			settings.erase(it);
+		}
+		it = settings.find(RESERVED_VERSION);
+		if (it != it_e) {
+			settings.erase(it);
 		}
 	} catch (const Xapian::DocNotFoundError&) {
 		if (has_pth) {
@@ -1982,9 +1911,12 @@ HttpClient::retrieve_database_view(Request& request)
 		}
 	}
 
-	// Add node information for '/':
-	if (!has_pth) {
-		obj.update(node_obj());
+	if (!settings.empty()) {
+		obj[RESERVED_SETTINGS].update(settings);
+	}
+
+	if (!schema.empty()) {
+		obj[RESERVED_SCHEMA].update(schema);
 	}
 
 	if (!selector.empty()) {
@@ -2032,6 +1964,14 @@ HttpClient::update_database_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+
+	if (decoded_body.is_map()) {
+		auto schema_it = decoded_body.find(RESERVED_SCHEMA);
+		if (schema_it != decoded_body.end()) {
+			auto& schema = schema_it.value();
+			db_handler.write_schema(schema, false);
+		}
+	}
 
 	db_handler.reopen();  // Ensure touch.
 
@@ -2239,49 +2179,6 @@ HttpClient::restore_database_view(Request& request)
 			})
 			.Observe(took / 1e9);
 	}
-}
-
-
-void
-HttpClient::retrieve_schema_view(Request& request)
-{
-	L_CALL("HttpClient::retrieve_schema_view()");
-
-	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (endpoints_maker(request, query_field) > 1) {
-		THROW(ClientError, "Method can only be used with single indexes");
-	}
-
-	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
-
-	request.processing = std::chrono::system_clock::now();
-
-	DatabaseHandler db_handler;
-	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
-	} else {
-		db_handler.reset(endpoints, DB_OPEN);
-	}
-
-	auto schema = db_handler.get_schema()->get_full(true);
-
-	if (!selector.empty()) {
-		schema = schema.select(selector);
-	}
-
-	request.ready = std::chrono::system_clock::now();
-
-	write_http_response(request, HTTP_STATUS_OK, schema);
-
-	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Schema took {}", string::from_delta(took));
-
-	Metrics::metrics()
-		.xapiand_operations_summary
-		.Add({
-			{"operation", "schema"},
-		})
-		.Observe(took / 1e9);
 }
 
 
