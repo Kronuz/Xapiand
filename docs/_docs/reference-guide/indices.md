@@ -13,11 +13,6 @@ Index management:
 - [Index Exists API](exists-api)
 - [Open/Close Index API](close-api)
 
-Schema management:
-
-- [Put Schema](put-schema-api)
-- [Get Schema](get-schema-api)
-
 Additionally, there's also an informational API to retrieve details about
 the indices:
 

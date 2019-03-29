@@ -28,15 +28,6 @@
           link: '#field-expansion'
         - title: Multiple Indices
           link: '#multiple-indices'
-    - url: indices
-      docs:
-        - url: create-api
-        - url: delete-api
-        - url: get-api
-        - url: exists-api
-        - url: close-api
-        - url: info-api
-        - url: backups
     - url: documents
       docs:
         - url: index-api
@@ -48,6 +39,16 @@
         - url: info-api
         - url: scripting
         - url: versioning
+    - url: indices
+      docs:
+        - url: replication
+        - url: create-api
+        - url: delete-api
+        - url: get-api
+        - url: exists-api
+        - url: close-api
+        - url: info-api
+        - url: backups
     - url: schemas
       docs:
         - url: field-types
