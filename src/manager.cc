@@ -1422,6 +1422,11 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "positive" },
 			} },
+			{ "number_of_replicas", {
+				{ RESERVED_INDEX, "none" },
+				{ RESERVED_TYPE,  "positive" },
+				{ RESERVED_VALUE, replicas.size() - 1 },
+			} },
 			{ "replicas", {
 				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "array/string" },
@@ -1439,11 +1444,12 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 	L_CALL("index_shards(<shards>)");
 
 	auto n_shards = shards.size();
-	if (n_shards) {
-		if (n_shards == 1) {
-			index_replicas(normalized_path, shards.front());
-		} else {
-			auto main_master_name = shards.front().front();  // The very first node is the main master
+	if (n_shards == 1) {
+		index_replicas(normalized_path, shards.front());
+	} else if (n_shards != 0) {
+		auto& replicas = shards.front();
+		if (!replicas.empty()) {
+			auto& main_master_name = replicas.front();  // The very first node is the main master
 			auto node = Node::get_node(main_master_name);
 			if (node && node->is_active()) {
 				Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
@@ -1458,6 +1464,11 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_TYPE,  "positive" },
 						{ RESERVED_VALUE, n_shards },
 					} },
+					{ "number_of_replicas", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  "positive" },
+						{ RESERVED_VALUE, replicas.size() - 1 },
+					} },
 					{ "replicas", {
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "array/string" },
@@ -1465,12 +1476,12 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 				};
 				db_handler.update(normalized_path, 0, false, obj, true, false, msgpack_type);
 			}
-			size_t shard_num = 0;
-			for (auto& replicas : shards) {
-				if (!replicas.empty()) {
-					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
-					index_replicas(shard_normalized_path, replicas);
-				}
+		}
+		size_t shard_num = 0;
+		for (auto& shard_replicas : shards) {
+			if (!shard_replicas.empty()) {
+				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
+				index_replicas(shard_normalized_path, shard_replicas);
 			}
 		}
 	}
