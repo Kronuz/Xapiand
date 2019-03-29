@@ -66,6 +66,7 @@ struct query_field_t;
 #define HTTP_OPTIONS_RESPONSE           (1 << 8)
 #define HTTP_TOTAL_COUNT_RESPONSE       (1 << 9)
 #define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 10)
+#define HTTP_LOCATION_RESPONSE          (1 << 11)
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
@@ -148,6 +149,7 @@ public:
 
 	ct_type_t ct_type;
 	std::string blob;
+	std::string location;
 
 	std::atomic<http_status> status;
 	size_t size;
