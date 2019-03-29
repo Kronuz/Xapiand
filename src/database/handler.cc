@@ -525,6 +525,11 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 
 	auto did = replace_document_term(term_id, std::move(doc), commit);
 
+	auto it = data_obj.find(ID_FIELD_NAME);
+	if (it != data_obj.end() && term_id == "QN\x80") {
+		data_obj.erase(it);
+	}
+
 	return std::make_pair(std::move(did), std::move(data_obj));
 }
 
