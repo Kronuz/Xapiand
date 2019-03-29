@@ -299,7 +299,7 @@ bool can_preview(const ct_type_t& ct_type) {
 
 
 std::string
-HttpClient::http_response(Request& request, enum http_status status, int mode, int total_count, int matches_estimated, const std::string& body, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
+HttpClient::http_response(Request& request, enum http_status status, int mode, const std::string& body, const std::string& location, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
 	L_CALL("HttpClient::http_response()");
 
 	std::string head;
@@ -351,8 +351,8 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, i
 			headers += "Allow: GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS" + eol;
 		}
 
-		if (!request.response.location.empty()) {
-			headers += string::format("Location: {}", request.response.location) + eol;
+		if (!location.empty()) {
+			headers += "Location: " + location + eol;
 		}
 
 		if ((mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 && !ct_type.empty()) {
@@ -1416,7 +1416,7 @@ HttpClient::metrics_view(Request& request)
 	request.processing = std::chrono::system_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
-	write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, server_info, "text/plain", "", server_info.size()));
+	write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size()));
 }
 
 
@@ -1488,14 +1488,14 @@ HttpClient::write_document_view(Request& request)
 		}
 	}
 
-	auto document_id = request.path_parser.get_id();
-
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	if (resolve_index_endpoints(request, query_field, settings) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
+
+	auto document_id = request.path_parser.get_id();
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1504,19 +1504,27 @@ HttpClient::write_document_view(Request& request)
 
 	request.ready = std::chrono::system_clock::now();
 
+	std::string location;
+
+	auto did = indexed.first;
+	auto& response_obj = indexed.second;
+
+	Document document(did, &db_handler);
+
 	if (request.echo) {
-		auto did = indexed.first;
-		auto& response_obj = indexed.second;
-
-		Document document(did, &db_handler);
-
 		auto it = response_obj.find(ID_FIELD_NAME);
-		if (it == response_obj.end()) {
-			auto document_id_obj = document.get_value(ID_FIELD_NAME);
-			request.response.location = string::format("{}/{}", unsharded_path(endpoints[0].path), document_id_obj.as_str());
-			response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
+		if (document_id.empty()) {
+			if (it == response_obj.end()) {
+				auto document_id_obj = document.get_value(ID_FIELD_NAME);
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), document_id_obj.as_str());
+				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
+			} else {
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), it.value().as_str());
+			}
 		} else {
-			request.response.location = string::format("{}/{}", unsharded_path(endpoints[0].path), it.value().as_str());
+			if (it == response_obj.end()) {
+				response_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			}
 		}
 
 		auto version = document.get_value(DB_SLOT_VERSION);
@@ -1537,9 +1545,19 @@ HttpClient::write_document_view(Request& request)
 			response_obj = response_obj.select(selector);
 		}
 
-		write_http_response(request, HTTP_STATUS_OK, response_obj);
+		write_http_response(request, HTTP_STATUS_OK, response_obj, location);
 	} else {
-		write_http_response(request, document_id.empty() ? HTTP_STATUS_CREATED : HTTP_STATUS_NO_CONTENT);
+		if (document_id.empty()) {
+			auto it = response_obj.find(ID_FIELD_NAME);
+			if (it == response_obj.end()) {
+				auto document_id_obj = document.get_value(ID_FIELD_NAME);
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), document_id_obj.as_str());
+			} else {
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), it.value().as_str());
+			}
+		}
+
+		write_http_response(request, document_id.empty() ? HTTP_STATUS_CREATED : HTTP_STATUS_NO_CONTENT, MsgPack(), location);
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
@@ -1576,7 +1594,8 @@ HttpClient::update_document_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	std::string document_id(request.path_parser.get_id());
+	auto document_id = request.path_parser.get_id();
+	ASSERT(!document_id.empty());
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2171,7 +2190,7 @@ HttpClient::dump_database_view(Request& request)
 
 		size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
 		io::close(file_descriptor);
-		write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, 0, 0, "", dump_ct_type.to_string(), "", content_length));
+		write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, "", "", dump_ct_type.to_string(), "", content_length));
 		write_file(path, true);
 		return;
 	}
@@ -2441,12 +2460,12 @@ HttpClient::retrieve_document_view(Request& request)
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, request.response.blob, false, true, true);
 			if (!encoded.empty() && encoded.size() <= request.response.blob.size()) {
-				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, encoded, ct_type.to_string(), readable_encoding(request.type_encoding)));
+				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, request.response.blob, ct_type.to_string(), readable_encoding(Encoding::identity)));
+				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string(), readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, 0, 0, request.response.blob, ct_type.to_string()));
+			write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string()));
 		}
 	}
 
@@ -3291,12 +3310,12 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 
 
 void
-HttpClient::write_http_response(Request& request, enum http_status status, const MsgPack& obj)
+HttpClient::write_http_response(Request& request, enum http_status status, const MsgPack& obj, const std::string& location)
 {
 	L_CALL("HttpClient::write_http_response()");
 
 	if (obj.is_undefined()) {
-		write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE));
+		write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 		return;
 	}
 
@@ -3328,12 +3347,12 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, result.second, readable_encoding(request.type_encoding)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, result.first, result.second, readable_encoding(Encoding::identity)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, result.first, location, result.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, result.first, result.second));
+			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second));
 		}
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
@@ -3345,12 +3364,12 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, response_str, false, true, true);
 			if (!encoded.empty() && encoded.size() <= response_str.size()) {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, encoded, accepted_type.to_string(), readable_encoding(request.type_encoding)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, accepted_type.to_string(), readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, 0, 0, response_str, accepted_type.to_string(), readable_encoding(Encoding::identity)));
+				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, response_str, location, accepted_type.to_string(), readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, 0, 0, response_str, accepted_type.to_string()));
+			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, response_str, location, accepted_type.to_string()));
 		}
 		return;
 	}

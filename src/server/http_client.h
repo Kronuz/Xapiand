@@ -144,7 +144,6 @@ public:
 
 	ct_type_t ct_type;
 	std::string blob;
-	std::string location;
 
 	std::atomic<http_status> status;
 	size_t size;
@@ -345,17 +344,17 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void log_request(Request& request);
 	void log_response(Response& response);
 
-	std::string http_response(Request& request, enum http_status status, int mode, int total_count = 0, int matches_estimated = 0, const std::string& body = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
+	std::string http_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void end_http_request(Request& request);
-	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error=false);
+	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error = false);
 
 	ct_type_t resolve_ct_type(Request& request, ct_type_t ct_type_str);
 	template <typename T>
 	const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type);
 	const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types);
-	void write_status_response(Request& request, enum http_status status, const std::string& message="");
-	void write_http_response(Request& request, enum http_status status, const MsgPack& obj=MsgPack());
+	void write_status_response(Request& request, enum http_status status, const std::string& message = "");
+	void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "");
 	Encoding resolve_encoding(Request& request);
 	std::string readable_encoding(Encoding e);
 	std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
