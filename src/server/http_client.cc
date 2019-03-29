@@ -1121,7 +1121,7 @@ HttpClient::prepare()
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::write_document_view;
 			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				new_request->view = &HttpClient::update_database_view;
 			}
 			break;
 
