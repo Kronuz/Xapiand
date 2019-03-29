@@ -19,7 +19,7 @@ command again:
 PUT /twitter/user/John
 
 {
-  "name": "John Doe"
+  "name": "John"
 }
 ```
 {% endcapture %}
@@ -36,7 +36,7 @@ existing one with the ID of `John`:
 PUT /twitter/user/John
 
 {
-  "name": "Johnny Doe"
+  "name": "John Doe"
 }
 ```
 {% endcapture %}
@@ -91,8 +91,8 @@ as we're not specifying an explicit ID.
 In addition to being able to index and replace documents, we can also update
 documents.
 
-This example shows how to update our previous document (ID of `John`) by changing
-the name field from _"Johnny Doe"_ to _"John Doe"_:
+This example shows how to update our previous document (ID of `John`) by adding
+an `age` field and changing the `name` from _"John Doe"_ to _"Johnny Doe"_:
 
 {% capture req %}
 
