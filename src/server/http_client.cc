@@ -434,15 +434,15 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			// There was an error, but request already had written stuff...
 			// disconnect client!
 			detach();
-			request.atom_ending = true;
-		} else {
-			MsgPack err_response = request.comments ? MsgPack({
+		} else if (request.comments) {
+			write_http_response(request, http_errors.error_code, MsgPack({
 				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
 				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
-			}) : MsgPack::MAP();
-			write_http_response(request, http_errors.error_code, err_response);
-			request.atom_ending = true;
+			}));
+		} else {
+			write_http_response(request, http_errors.error_code);
 		}
+		request.atom_ending = true;
 	}
 
 	return http_errors.ret;
@@ -503,11 +503,14 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			std::string message(http_errno_description(err));
 			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 			if (new_request->response.status == static_cast<http_status>(0)) {
-				MsgPack err_response = new_request->comments ? MsgPack({
-					{ RESPONSE_xSTATUS, (int)error_code },
-					{ RESPONSE_xMESSAGE, string::split(message, '\n') }
-				}) : MsgPack::MAP();
-				write_http_response(*new_request, error_code, err_response);
+				if (new_request->comments) {
+					write_http_response(*new_request, error_code, MsgPack({
+						{ RESPONSE_xSTATUS, (int)error_code },
+						{ RESPONSE_xMESSAGE, string::split(message, '\n') }
+					}));
+				} else {
+					write_http_response(*new_request, error_code);
+				}
 				end_http_request(*new_request);
 			}
 		}
@@ -994,11 +997,14 @@ HttpClient::prepare()
 	new_request->type_encoding = resolve_encoding(*new_request);
 	if (new_request->type_encoding == Encoding::unknown) {
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = new_request->comments ? MsgPack({
-			{ RESPONSE_xSTATUS, (int)error_code },
-			{ RESPONSE_xMESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
-		}) : MsgPack::MAP();
-		write_http_response(*new_request, error_code, err_response);
+		if (new_request->comments) {
+			write_http_response(*new_request, error_code, MsgPack({
+				{ RESPONSE_xSTATUS, (int)error_code },
+				{ RESPONSE_xMESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
+			}));
+		} else {
+			write_http_response(*new_request, error_code);
+		}
 		return 1;
 	}
 
@@ -2164,11 +2170,14 @@ HttpClient::dump_database_view(Request& request)
 		if (dump_ct_type.empty()) {
 			// No content type could be resolved, return NOT ACCEPTABLE.
 			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-			MsgPack err_response = request.comments ? MsgPack({
-				{ RESPONSE_xSTATUS, (int)error_code },
-				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
-			}) : MsgPack::MAP();
-			write_http_response(request, error_code, err_response);
+			if (request.comments) {
+				write_http_response(request, error_code, MsgPack({
+					{ RESPONSE_xSTATUS, (int)error_code },
+					{ RESPONSE_xMESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
+				}));
+			} else {
+				write_http_response(request, error_code);
+			}
 			L_SEARCH("ABORTED SEARCH");
 			return;
 		}
@@ -2399,11 +2408,14 @@ HttpClient::retrieve_document_view(Request& request)
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack err_response = request.comments ? MsgPack({
-			{ RESPONSE_xSTATUS, (int)error_code },
-			{ RESPONSE_xMESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
-		}) : MsgPack::MAP();
-		write_http_response(request, error_code, err_response);
+		if (request.comments) {
+			write_http_response(request, error_code, MsgPack({
+				{ RESPONSE_xSTATUS, (int)error_code },
+				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
+			}));
+		} else {
+			write_http_response(request, error_code);
+		}
 		L_SEARCH("ABORTED RETRIEVE");
 		return;
 	}
@@ -2666,10 +2678,14 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 {
 	L_CALL("HttpClient::write_status_response()");
 
-	write_http_response(request, status, request.comments ? MsgPack({
-		{ RESPONSE_xSTATUS, (int)status },
-		{ RESPONSE_xMESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
-	}) : MsgPack::MAP());
+	if (request.comments) {
+		write_http_response(request, status, MsgPack({
+			{ RESPONSE_xSTATUS, (int)status },
+			{ RESPONSE_xMESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
+		}));
+	} else {
+		write_http_response(request, status);
+	}
 }
 
 
@@ -3363,11 +3379,14 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		}
 	} catch (const SerialisationError& exc) {
 		status = HTTP_STATUS_NOT_ACCEPTABLE;
-		MsgPack response_err = request.comments ? MsgPack({
-			{ RESPONSE_xSTATUS, (int)status },
-			{ RESPONSE_xMESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
-		}) : MsgPack::MAP();
-		auto response_str = response_err.to_string();
+		std::string response_str;
+		if (request.comments) {
+			MsgPack response_err = MsgPack({
+				{ RESPONSE_xSTATUS, (int)status },
+				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
+			});
+			response_str = response_err.to_string(request.indented);
+		}
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, response_str, false, true, true);
 			if (!encoded.empty() && encoded.size() <= response_str.size()) {
