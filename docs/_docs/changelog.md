@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Added
+- The `?echo` query param returns the new/updated object
+
+### Changed
+- By default, write/update operations no longer return the object (see ?echo)
+- Verbosity level 4 or higher (`-vvvv`) turns on echo, pretty and comments
+
 
 ---
 ## [0.17.0] - 2019-03-28
