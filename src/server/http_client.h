@@ -340,8 +340,8 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void nodes_view(Request& request);
 
 	void url_resolve(Request& request);
-	size_t _endpoint_maker(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
-	size_t endpoints_maker(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
+	std::vector<std::string> expand_paths(Request& request);
+	size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 	query_field_t query_field_maker(Request& request, int flags);
 
 	void log_request(Request& request);

@@ -1415,7 +1415,7 @@ HttpClient::metrics_view(Request& request)
 	L_CALL("HttpClient::metrics_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	endpoints_maker(request, query_field);
+	resolve_index_endpoints(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1430,7 +1430,7 @@ HttpClient::document_exists_view(Request& request)
 	L_CALL("HttpClient::document_exists_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	endpoints_maker(request, query_field);
+	resolve_index_endpoints(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1450,7 +1450,7 @@ HttpClient::delete_document_view(Request& request)
 	L_CALL("HttpClient::delete_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1495,7 +1495,7 @@ HttpClient::write_document_view(Request& request)
 	auto document_id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (endpoints_maker(request, query_field, settings) > 1) {
+	if (resolve_index_endpoints(request, query_field, settings) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1537,7 +1537,7 @@ HttpClient::update_document_view(Request& request)
 	}
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (endpoints_maker(request, query_field, settings) > 1) {
+	if (resolve_index_endpoints(request, query_field, settings) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1583,7 +1583,7 @@ HttpClient::retrieve_metadata_view(Request& request)
 	L_CALL("HttpClient::retrieve_metadata_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1649,7 +1649,7 @@ HttpClient::write_metadata_view(Request& request)
 	auto& decoded_body = request.decoded_body();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1714,7 +1714,7 @@ HttpClient::info_view(Request& request)
 	MsgPack response_obj;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1801,7 +1801,7 @@ HttpClient::database_exists_view(Request& request)
 	L_CALL("HttpClient::database_exists_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1920,7 +1920,7 @@ HttpClient::retrieve_database_view(Request& request)
 	auto is_root = !request.path_parser.has_pth();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1972,7 +1972,7 @@ HttpClient::update_database_view(Request& request)
 	}
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-	if (endpoints_maker(request, query_field, settings) > 1) {
+	if (resolve_index_endpoints(request, query_field, settings) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2029,7 +2029,7 @@ HttpClient::commit_database_view(Request& request)
 	L_CALL("HttpClient::commit_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	endpoints_maker(request, query_field);
+	resolve_index_endpoints(request, query_field);
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -2059,7 +2059,7 @@ HttpClient::dump_database_view(Request& request)
 	L_CALL("HttpClient::dump_database_view()");
 
 	auto query_field = query_field_maker(request, 0);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2137,7 +2137,7 @@ HttpClient::restore_database_view(Request& request)
 					}
 				}
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-				if (endpoints_maker(request, query_field, settings) > 1) {
+				if (resolve_index_endpoints(request, query_field, settings) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
@@ -2159,7 +2159,7 @@ HttpClient::restore_database_view(Request& request)
 					}
 				}
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-				if (endpoints_maker(request, query_field, settings) > 1) {
+				if (resolve_index_endpoints(request, query_field, settings) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
@@ -2212,7 +2212,7 @@ HttpClient::wal_view(Request& request)
 	L_CALL("HttpClient::wal_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2247,7 +2247,7 @@ HttpClient::check_database_view(Request& request)
 	L_CALL("HttpClient::check_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2281,7 +2281,7 @@ HttpClient::retrieve_document_view(Request& request)
 	auto id = request.path_parser.get_id();
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_ID);
-	if (endpoints_maker(request, query_field) > 1) {
+	if (resolve_index_endpoints(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2398,7 +2398,7 @@ HttpClient::search_view(Request& request)
 	std::string selector_string_holder;
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
-	endpoints_maker(request, query_field);
+	resolve_index_endpoints(request, query_field);
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
@@ -2536,7 +2536,7 @@ HttpClient::count_view(Request& request)
 	L_CALL("HttpClient::count_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
-	endpoints_maker(request, query_field);
+	resolve_index_endpoints(request, query_field);
 
 	MSet mset{};
 
@@ -2653,78 +2653,14 @@ HttpClient::url_resolve(Request& request)
 
 
 size_t
-HttpClient::endpoints_maker(Request& request, const query_field_t& query_field, const MsgPack* settings)
+HttpClient::resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
-	L_CALL("HttpClient::endpoints_maker(<request>, <query_field>, <settings>)");
+	L_CALL("HttpClient::resolve_index_endpoints(<request>, <query_field>, <settings>)");
+
+	auto paths = expand_paths(request);
 
 	endpoints.clear();
-	size_t indexes = 0;
-
-	PathParser::State state;
-	while ((state = request.path_parser.next()) < PathParser::State::END) {
-		indexes += _endpoint_maker(request, query_field, settings);
-	}
-
-	return indexes;
-}
-
-
-size_t
-HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, const MsgPack* settings)
-{
-	L_CALL("HttpClient::_endpoint_maker(<request>, <query_field>, <settings>)");
-
-	std::string index_path;
-
-	auto pth = request.path_parser.get_pth();
-	if (string::startswith(pth, '/')) {
-		pth.remove_prefix(1);
-	}
-	index_path.append(pth);
-
-	std::vector<std::string> index_paths;
-
-#ifdef XAPIAND_CLUSTERING
-	MSet mset;
-	if (string::endswith(index_path, '*')) {
-		index_path.pop_back();
-		auto stripped_index_path = index_path;
-		if (string::endswith(stripped_index_path, '/')) {
-			stripped_index_path.pop_back();
-		}
-		Endpoints index_endpoints;
-		for (auto& node : Node::nodes()) {
-			if (node->idx) {
-				index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
-			}
-		}
-		DatabaseHandler db_handler;
-		db_handler.reset(index_endpoints);
-		if (stripped_index_path.empty()) {
-			mset = db_handler.get_all_mset("", 0, 100);
-		} else {
-			auto query = Xapian::Query(Xapian::Query::OP_AND_NOT,
-				Xapian::Query(Xapian::Query::OP_OR,
-						Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
-						Xapian::Query(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
-				Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path + "/.", DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR)))
-			);
-			mset = db_handler.get_mset(query, 0, 100);
-		}
-		const auto m_e = mset.end();
-		for (auto m = mset.begin(); m != m_e; ++m) {
-			auto document = db_handler.get_document(*m);
-			index_path = document.get_value(DB_SLOT_ID);
-			index_paths.push_back(std::move(index_path));
-		}
-	} else {
-#endif
-		index_paths.push_back(std::move(index_path));
-#ifdef XAPIAND_CLUSTERING
-	}
-#endif
-
-	for (const auto& path : index_paths) {
+	for (const auto& path : paths) {
 		auto index_endpoints = XapiandManager::resolve_index_endpoints(
 			Endpoint{path},
 			query_field.writable,
@@ -2739,7 +2675,72 @@ HttpClient::_endpoint_maker(Request& request, const query_field_t& query_field, 
 	}
 	L_HTTP("Endpoint: -> {}", endpoints.to_string());
 
-	return index_paths.size();
+	return paths.size();
+}
+
+
+std::vector<std::string>
+HttpClient::expand_paths(Request& request)
+{
+	L_CALL("HttpClient::expand_paths(<request>)");
+
+	std::vector<std::string> paths;
+
+	request.path_parser.rewind();
+
+	PathParser::State state;
+	while ((state = request.path_parser.next()) < PathParser::State::END) {
+		std::string index_path;
+
+		auto pth = request.path_parser.get_pth();
+		if (string::startswith(pth, '/')) {
+			pth.remove_prefix(1);
+		}
+		index_path.append(pth);
+
+
+#ifdef XAPIAND_CLUSTERING
+		MSet mset;
+		if (string::endswith(index_path, '*')) {
+			index_path.pop_back();
+			auto stripped_index_path = index_path;
+			if (string::endswith(stripped_index_path, '/')) {
+				stripped_index_path.pop_back();
+			}
+			Endpoints index_endpoints;
+			for (auto& node : Node::nodes()) {
+				if (node->idx) {
+					index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
+				}
+			}
+			DatabaseHandler db_handler;
+			db_handler.reset(index_endpoints);
+			if (stripped_index_path.empty()) {
+				mset = db_handler.get_all_mset("", 0, 100);
+			} else {
+				auto query = Xapian::Query(Xapian::Query::OP_AND_NOT,
+					Xapian::Query(Xapian::Query::OP_OR,
+							Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
+							Xapian::Query(prefixed(stripped_index_path, DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR))),
+					Xapian::Query(Xapian::Query::OP_WILDCARD, Xapian::Query(prefixed(index_path + "/.", DOCUMENT_ID_TERM_PREFIX, KEYWORD_CHAR)))
+				);
+				mset = db_handler.get_mset(query, 0, 100);
+			}
+			const auto m_e = mset.end();
+			for (auto m = mset.begin(); m != m_e; ++m) {
+				auto document = db_handler.get_document(*m);
+				index_path = document.get_value(DB_SLOT_ID);
+				paths.push_back(std::move(index_path));
+			}
+		} else {
+#endif
+			paths.push_back(std::move(index_path));
+#ifdef XAPIAND_CLUSTERING
+		}
+#endif
+	}
+
+	return paths;
 }
 
 
