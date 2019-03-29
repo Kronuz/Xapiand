@@ -2705,10 +2705,7 @@ HttpClient::url_resolve(Request& request)
 		}
 	}
 
-	bool pretty = opts.pretty && !opts.no_pretty;
-	if (pretty) {
-		request.indented = DEFAULT_INDENTATION;
-	}
+	bool pretty = !opts.no_pretty && (opts.pretty || opts.verbosity >= 4);
 
 	request.query_parser.rewind();
 	if (request.query_parser.next("pretty") != -1) {
@@ -2717,7 +2714,13 @@ HttpClient::url_resolve(Request& request)
 				pretty = Serialise::boolean(request.query_parser.get()) == "t";
 				request.indented = pretty ? DEFAULT_INDENTATION : -1;
 			} catch (const Exception&) { }
-		} else if (request.indented == -1) {
+		} else {
+			if (request.indented == -1) {
+				request.indented = DEFAULT_INDENTATION;
+			}
+		}
+	} else {
+		if (pretty && request.indented == -1) {
 			request.indented = DEFAULT_INDENTATION;
 		}
 	}
@@ -2729,8 +2732,10 @@ HttpClient::url_resolve(Request& request)
 				request.human = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
 			} catch (const Exception&) { }
 		} else {
-			request.human = pretty;
+			request.human = true;
 		}
+	} else {
+		request.human = pretty;
 	}
 
 	request.query_parser.rewind();
@@ -2740,8 +2745,10 @@ HttpClient::url_resolve(Request& request)
 				request.echo = Serialise::boolean(request.query_parser.get()) == "t" ? true : false;
 			} catch (const Exception&) { }
 		} else {
-			request.echo = pretty;
+			request.echo = true;
 		}
+	} else {
+		request.echo = (opts.verbosity >= 4);  // default is form verbosity
 	}
 
 	request.query_parser.rewind();
@@ -2753,6 +2760,8 @@ HttpClient::url_resolve(Request& request)
 		} else {
 			request.comments = true;
 		}
+	} else {
+		request.comments = (opts.verbosity >= 4);  // default is form verbosity
 	}
 }
 

@@ -378,9 +378,6 @@ parseOptions(int argc, char** argv)
 
 		o.pretty = pretty.getValue();
 		o.no_pretty = no_pretty.getValue();
-		if (o.verbosity > 1) {
-			o.pretty = true;
-		}
 
 		o.colors = colors.getValue();
 		o.no_colors = no_colors.getValue();
