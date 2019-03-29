@@ -2054,7 +2054,7 @@ DocIndexer::operator()()
 						L_EXC("Cannot retrieve document version for docid {}!", did);
 					}
 
-					if (comments) {
+					if (echo && comments) {
 						obj[RESPONSE_xDOCID] = did;
 
 						size_t n_shards = endpoints.size();
