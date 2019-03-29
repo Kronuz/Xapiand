@@ -305,7 +305,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	int prepare();
 
 	MsgPack node_obj();
-	MsgPack retrieve_database(Request& request, const query_field_t& query_field);
+	MsgPack retrieve_database(Request& request, const query_field_t& query_field, bool is_root);
 
 	void metrics_view(Request& request);
 	void info_view(Request& request);

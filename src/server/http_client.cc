@@ -1818,11 +1818,9 @@ HttpClient::database_exists_view(Request& request)
 
 
 MsgPack
-HttpClient::retrieve_database(Request& request, const query_field_t& query_field)
+HttpClient::retrieve_database(Request& request, const query_field_t& query_field, bool is_root)
 {
 	L_CALL("HttpClient::retrieve_database()");
-
-	auto has_pth = request.path_parser.has_pth();
 
 	MsgPack schema;
 	MsgPack settings;
@@ -1840,11 +1838,11 @@ HttpClient::retrieve_database(Request& request, const query_field_t& query_field
 		// Retrieve full schema
 		schema = db_handler.get_schema()->get_full(true);
 	} catch (const Xapian::DocNotFoundError&) {
-		if (has_pth) {
+		if (!is_root) {
 			throw;
 		}
 	} catch (const Xapian::DatabaseNotFoundError&) {
-		if (has_pth) {
+		if (!is_root) {
 			throw;
 		}
 	}
@@ -1886,17 +1884,17 @@ HttpClient::retrieve_database(Request& request, const query_field_t& query_field
 			settings.erase(it);
 		}
 	} catch (const Xapian::DocNotFoundError&) {
-		if (has_pth) {
+		if (!is_root) {
 			throw;
 		}
 	} catch (const Xapian::DatabaseNotFoundError&) {
-		if (has_pth) {
+		if (!is_root) {
 			throw;
 		}
 	}
 
 	// Add node information for '/':
-	if (!has_pth) {
+	if (is_root) {
 		obj.update(node_obj());
 	}
 
@@ -1919,6 +1917,8 @@ HttpClient::retrieve_database_view(Request& request)
 
 	ASSERT(request.path_parser.get_id().empty());
 
+	auto is_root = !request.path_parser.has_pth();
+
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (endpoints_maker(request, query_field) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
@@ -1928,7 +1928,7 @@ HttpClient::retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	auto obj = retrieve_database(request, query_field);
+	auto obj = retrieve_database(request, query_field, is_root);
 
 	if (!selector.empty()) {
 		obj = obj.select(selector);
@@ -1956,6 +1956,10 @@ void
 HttpClient::update_database_view(Request& request)
 {
 	L_CALL("HttpClient::update_database_view()");
+
+	ASSERT(request.path_parser.get_id().empty());
+
+	auto is_root = !request.path_parser.has_pth();
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1988,7 +1992,7 @@ HttpClient::update_database_view(Request& request)
 
 	db_handler.reopen();  // Ensure touch.
 
-	auto obj = retrieve_database(request, query_field);
+	auto obj = retrieve_database(request, query_field, is_root);
 
 	if (!selector.empty()) {
 		obj = obj.select(selector);
