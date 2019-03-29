@@ -15,7 +15,7 @@ to increment a "serial" number field:
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "_script": "_doc.serial = _old_doc.serial + 1"
@@ -88,7 +88,7 @@ multipliers, don't hard-code the multiplier into the script:
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "multiplied_field": 7,
@@ -106,7 +106,7 @@ Instead, pass it in as a named parameter:
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "multiplied_field": 7,
@@ -165,7 +165,7 @@ gets the `"script"` field:
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "multiplied_field": 7,

@@ -16,7 +16,7 @@ command again:
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "name": "John Doe"
@@ -26,14 +26,14 @@ PUT /customer/1
 {% include curl.html req=req %}
 
 The above will index the specified document into the customer index, with the
-ID of `1`. If we then executed the above command again with a different (or same)
+ID of `John`. If we then executed the above command again with a different (or same)
 document, Xapiand will replace (i.e. reindex) a new document on top of the
-existing one with the ID of `1`:
+existing one with the ID of `John`:
 
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "name": "Johnny Doe"
@@ -42,7 +42,7 @@ PUT /customer/1
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above completely overwrites the existent document with the ID of `1` with
+The above completely overwrites the existent document with the ID of `John` with
 the new one.
 
 If, on the other hand, we use a different ID, a new document will be indexed
@@ -51,7 +51,7 @@ and the existing document(s) already in the index remains untouched.
 {% capture req %}
 
 ```json
-PUT /customer/2
+PUT /twitter/user/Jane
 
 {
   "name": "Jane Doe",
@@ -61,7 +61,7 @@ PUT /customer/2
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above indexes a new document with an ID of `2`.
+The above indexes a new document with an ID of `Jane`.
 
 When indexing, the ID part is optional. If not specified, Xapiand will generate
 an ID and then use it to index the document. The actual ID Xapiand generates
@@ -73,7 +73,7 @@ This example shows how to index a document without an explicit ID:
 {% capture req %}
 
 ```json
-POST /customer/
+POST /twitter/user/
 
 {
   "name": "Richard Roe"
@@ -91,13 +91,13 @@ as we're not specifying an explicit ID.
 In addition to being able to index and replace documents, we can also update
 documents.
 
-This example shows how to update our previous document (ID of `1`) by changing
+This example shows how to update our previous document (ID of `John`) by changing
 the name field from _"Johnny Doe"_ to _"John Doe"_:
 
 {% capture req %}
 
 ```json
-PUT /customer/1
+PUT /twitter/user/John
 
 {
   "name": "Johnny Doe",
@@ -107,13 +107,13 @@ PUT /customer/1
 {% endcapture %}
 {% include curl.html req=req %}
 
-This example shows how to update our previous document (ID of `1`) by changing
+This example shows how to update our previous document (ID of `John`) by changing
 the name field to _"John Doe"_ and at the same time add a _"gender"_ field to it:
 
 {% capture req %}
 
 ```json
-UPDATE /customer/1
+UPDATE /twitter/user/John
 
 {
   "name": "John Doe",
@@ -131,7 +131,7 @@ script to increment the age by 5:
 {% capture req %}
 
 ```json
-UPDATE /customer/1
+UPDATE /twitter/user/John
 
 {
   "_script": "_doc.age = _old_doc.age + 5"
@@ -147,12 +147,12 @@ the previous document that is about to be updated.
 ## Deleting Documents
 
 Deleting a document is fairly straightforward. This example shows how to delete
-our previous customer with the ID of `2`:
+our previous customer with the ID of `Jane`:
 
 {% capture req %}
 
 ```json
-DELETE /customer/2
+DELETE /twitter/user/Jane
 ```
 {% endcapture %}
 {% include curl.html req=req %}
