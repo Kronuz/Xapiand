@@ -2703,7 +2703,6 @@ HttpClient::url_resolve(Request& request)
 	}
 
 	bool pretty = !opts.no_pretty && (opts.pretty || opts.verbosity >= 4);
-
 	request.query_parser.rewind();
 	if (request.query_parser.next("pretty") != -1) {
 		if (request.query_parser.len != 0u) {
@@ -2735,6 +2734,7 @@ HttpClient::url_resolve(Request& request)
 		request.human = pretty;
 	}
 
+	bool echo = !opts.no_echo && (opts.echo || opts.verbosity >= 4);
 	request.query_parser.rewind();
 	if (request.query_parser.next("echo") != -1) {
 		if (request.query_parser.len != 0u) {
@@ -2745,9 +2745,10 @@ HttpClient::url_resolve(Request& request)
 			request.echo = true;
 		}
 	} else {
-		request.echo = (opts.verbosity >= 4);  // default is form verbosity
+		request.echo = echo;
 	}
 
+	bool comments = !opts.no_comments && (opts.comments || opts.verbosity >= 4);
 	request.query_parser.rewind();
 	if (request.query_parser.next("comments") != -1) {
 		if (request.query_parser.len != 0u) {
@@ -2758,7 +2759,7 @@ HttpClient::url_resolve(Request& request)
 			request.comments = true;
 		}
 	} else {
-		request.comments = (opts.verbosity >= 4);  // default is form verbosity
+		request.comments = comments;
 	}
 }
 
