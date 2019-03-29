@@ -30,7 +30,7 @@ UPDATE /bank/1
 {% include curl.html req=req %}
 
 In the above example, taken from our
-[example dataset]({{ '/docs/exploring/#sample-dataset' | relative_url }}),
+[example dataset]({{ '/docs/exploration/#sample-dataset' | relative_url }}),
 the field "checkin" is a geospatial point but could be any of:
 
 - [Accuracy](#accuracy)

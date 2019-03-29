@@ -34,7 +34,7 @@ in a document:
 
 ### UUID datatype
 
-* `Uuid`
+* `UUID`
 
 ### Script datatype
 

@@ -89,7 +89,7 @@ PUT /twitter/tweet/2
 {% endcapture %}
 {% include curl.html req=req %}
 
-You can dig a little deeper in the [Modifying Your Data]({{ '/docs/modifying' | relative_url }}) section.
+You can dig a little deeper in the [Data Manipulation]({{ '/docs/manipulation' | relative_url }}) section.
 
 ---
 
@@ -131,5 +131,5 @@ SEARCH /twitter/tweet/?q=user:Kronuz
 {% endcapture %}
 {% include curl.html req=req %}
 
-You can find out more in the [Exploring Your Data]({{ '/docs/exploring' | relative_url }})
+You can find out more in the [Data Exploration]({{ '/docs/exploration' | relative_url }})
 section.

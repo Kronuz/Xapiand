@@ -4,8 +4,8 @@
     - url: /docs/quickstart
       docs:
         - url: /docs/basics
-        - url: /docs/modifying
-        - url: /docs/exploring
+        - url: /docs/manipulation
+        - url: /docs/exploration
         - url: /docs/clustering
         - url: /docs/next
     - url: /tutorials/home

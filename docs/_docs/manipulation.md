@@ -1,5 +1,5 @@
 ---
-title: Modifying Your Data
+title: Data Manipulation
 ---
 
 Xapiand provides data manipulation and search capabilities in near real time.

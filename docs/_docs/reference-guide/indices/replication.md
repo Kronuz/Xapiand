@@ -2,7 +2,7 @@
 title: Data Replication
 ---
 
-Each index in Xapiand is divided into [shards]({{ '/docs/basic#shards' | relative_url }})
+Each index in Xapiand is divided into [shards]({{ '/docs/basics#shard' | relative_url }})
 and each shard can have multiple copies. These copies are known as a replicas
 and must be kept in sync when documents are added or removed. If we fail to do
 so, reading from one copy will result in very different results than reading

@@ -1,9 +1,9 @@
 ---
-title: Exploring Your Data
+title: Data Exploration
 ---
 
 Now that we've gotten a glimpse of the basics, let's try to work on a more
-realistic dataset. I've prepared a sample of fictitious JSON documents of
+realistic dataset. We have prepared a sample of fictitious JSON documents of
 customer bank account information. Each document has the following form:
 
 ```json

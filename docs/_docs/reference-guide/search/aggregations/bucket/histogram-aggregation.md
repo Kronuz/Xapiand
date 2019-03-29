@@ -49,7 +49,7 @@ in `[0, _interval)` (a decimal greater than or equal to `0` and less than
 `_interval`)
 
 Assuming the data consists of documents representing bank accounts, as shown in
-the sample dataset of [Exploring Your Data]({{ '/docs/exploring' | relative_url }}#sample-dataset)
+the sample dataset of [Data Exploration]({{ '/docs/exploration' | relative_url }}#sample-dataset)
 section, the following snippet "buckets" the bank accounts based on their
 `balance` by interval of `500`:
 

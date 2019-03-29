@@ -25,7 +25,7 @@ The `<field_name>` in the `_field` parameter defines the specific field from
 which the numeric values in the documents are extracted.
 
 Assuming the data consists of documents representing bank accounts, as shown in
-the sample dataset of [Exploring Your Data]({{ '/docs/exploring' | relative_url }}#sample-dataset)
+the sample dataset of [Data Exploration]({{ '/docs/exploration' | relative_url }}#sample-dataset)
 section, we can sum the balances of all accounts in the state of Indiana with:
 
 {% capture req %}

@@ -159,7 +159,7 @@ field by the Schema.
 We then can use the foreign script by specifying the `_endpoint` (i.e. the full
 index path, the document ID and the selector). In the example, the index is
 `path/to/my_scripts`, the document ID is `multiplier` and the selector is a
-[Drill Selector]({{ '/docs/exploring/drill-selector' | relative_url }}) that
+[Drill Selector]({{ '/docs/exploration#drill-selector' | relative_url }}) that
 gets the `"script"` field:
 
 {% capture req %}

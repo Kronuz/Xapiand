@@ -1,5 +1,5 @@
 ---
-title: Clustering Your Data
+title: Clustering
 ---
 
 {: .note .construction }
