@@ -158,6 +158,15 @@ static const std::vector<uint64_t> def_accuracy_num({
 
 
 static const std::vector<uint64_t> def_accuracy_date({
+	toUType(UnitTime::DAY),             // 86400 s
+	toUType(UnitTime::MONTH),           // 2592000 s
+	toUType(UnitTime::YEAR),            // 31536000 s
+	toUType(UnitTime::DECADE),          // 315360000 s
+	toUType(UnitTime::CENTURY),         // 3153600000 s
+});
+
+
+static const std::vector<uint64_t> def_accuracy_datetime({
 	toUType(UnitTime::HOUR),            // 3600 s
 	toUType(UnitTime::DAY),             // 86400 s
 	toUType(UnitTime::MONTH),           // 2592000 s
@@ -1747,7 +1756,7 @@ get_acc_prefix(const std::vector<uint64_t> accuracy)
 }
 
 static const std::vector<std::string> global_acc_prefix_num(get_acc_prefix(def_accuracy_num));
-static const std::vector<std::string> global_acc_prefix_date(get_acc_prefix(def_accuracy_date));
+static const std::vector<std::string> global_acc_prefix_date(get_acc_prefix(def_accuracy_datetime));
 static const std::vector<std::string> global_acc_prefix_time(get_acc_prefix(def_accuracy_time));
 static const std::vector<std::string> global_acc_prefix_geo(get_acc_prefix(def_accuracy_geo));
 
@@ -2410,11 +2419,11 @@ specification_t::get_global(FieldType field_type)
 			return spc;
 		}
 		case FieldType::DATE: {
-			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
+			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_datetime, global_acc_prefix_date);
 			return spc;
 		}
 		case FieldType::DATETIME: {
-			static const specification_t spc(DB_SLOT_DATE, FieldType::DATETIME, def_accuracy_date, global_acc_prefix_date);
+			static const specification_t spc(DB_SLOT_DATE, FieldType::DATETIME, def_accuracy_datetime, global_acc_prefix_date);
 			return spc;
 		}
 		case FieldType::TIME: {
@@ -5065,7 +5074,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 					}
 				} else {
-					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
+					set_acc.insert(def_accuracy_datetime.begin(), def_accuracy_datetime.end());
 				}
 			}
 			specification.flags.concrete = true;
