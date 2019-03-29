@@ -1818,7 +1818,7 @@ HttpClient::database_exists_view(Request& request)
 
 
 MsgPack
-HttpClient::retrieve_database(Request& request, const query_field_t& query_field, bool is_root)
+HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 {
 	L_CALL("HttpClient::retrieve_database()");
 
@@ -1928,7 +1928,7 @@ HttpClient::retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::system_clock::now();
 
-	auto obj = retrieve_database(request, query_field, is_root);
+	auto obj = retrieve_database(query_field, is_root);
 
 	if (!selector.empty()) {
 		obj = obj.select(selector);
@@ -1992,7 +1992,7 @@ HttpClient::update_database_view(Request& request)
 
 	db_handler.reopen();  // Ensure touch.
 
-	auto obj = retrieve_database(request, query_field, is_root);
+	auto obj = retrieve_database(query_field, is_root);
 
 	if (!selector.empty()) {
 		obj = obj.select(selector);
