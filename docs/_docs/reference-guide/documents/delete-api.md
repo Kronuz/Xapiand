@@ -10,7 +10,7 @@ with ID `1`:
 {% capture req %}
 
 ```json
-DELETE /twitter/1
+DELETE /twitter/tweet/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -19,9 +19,9 @@ The result of the above get operation is a `204 No Content` HTTP response code
 with no body.
 
 {: .note .warning }
-`DELETE /twitter/1` is not the same as `DELETE /twitter/1/`, the former will
-delete document `1` inside index `/twitter/` and the later will delete the
-whole index `/twitter/1/`.
+`DELETE /twitter/tweet/1` is not the same as `DELETE /twitter/tweet/1/`, the
+former will delete document `1` inside index `/twitter/tweet/` and the later
+will delete the whole index `/twitter/tweet/1/`.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 

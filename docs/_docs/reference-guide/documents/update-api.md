@@ -19,7 +19,7 @@ For example, let’s index a simple doc:
 {% capture req %}
 
 ```json
-PUT /twitter/1
+PUT /twitter/tweet/1
 
 {
   "user" : "Kronuz",
@@ -51,9 +51,9 @@ The result of the above index operation is:
 ```
 
 {: .note .warning }
-`PUT /twitter/1` is not the same as `PUT /twitter/1/`, the former creates a document
-with ID `1` inside index `/twitter/` while the later creates the index `/twitter/1/`
-itself.
+`PUT /twitter/tweet/1` is not the same as `PUT /twitter/tweet/1/`, the former
+creates a document with ID `1` inside index `/twitter/tweet/` while the later
+creates the index `/twitter/tweet/1/` itself.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
@@ -66,7 +66,7 @@ passed fields (simple recursive merge, inner merging of objects, replacing core
 {% capture req %}
 
 ```json
-UPDATE /twitter/1
+UPDATE /twitter/tweet/1
 
 {
   "title" : "Xapiand Rocks!"
@@ -106,7 +106,7 @@ Now, we can execute a script that would increment the number of likes:
 {% capture req %}
 
 ```json
-UPDATE /twitter/1
+UPDATE /twitter/tweet/1
 
 {
   "_script": "_doc.likes = _old_doc.likes + 1"
@@ -120,7 +120,7 @@ We can add a tag to the list of hashtags (if the tag exists, it still gets added
 {% capture req %}
 
 ```json
-UPDATE /twitter/1
+UPDATE /twitter/tweet/1
 
 {
   "_script": {
@@ -139,7 +139,7 @@ We can remove a tag from the list of hashtags:
 {% capture req %}
 
 ```json
-UPDATE /twitter/1
+UPDATE /twitter/tweet/1
 
 {
   "_script": {
@@ -158,7 +158,7 @@ We can also programmatically add a new field to the document:
 {% capture req %}
 
 ```json
-UPDATE /twitter/1
+UPDATE /twitter/tweet/1
 
 {
   "_script": {
@@ -178,7 +178,7 @@ Or remove a field from the document:
 {% capture req %}
 
 ```json
-UPDATE /twitter/1
+UPDATE /twitter/tweet/1
 
 {
   "_script": {

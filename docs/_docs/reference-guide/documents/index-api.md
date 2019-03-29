@@ -10,7 +10,7 @@ _"twitter"_ index with an ID of `1`:
 {% capture req %}
 
 ```json
-PUT /twitter/1
+PUT /twitter/tweet/1
 
 {
     "user" : "Kronuz",
@@ -36,9 +36,9 @@ The result of the above index operation is:
 ```
 
 {: .note .warning }
-`PUT /twitter/1` is not the same as `PUT /twitter/1/`, the former creates a document
-with ID `1` inside index `/twitter/` while the later creates the index `/twitter/1/`
-itself.
+`PUT /twitter/tweet/1` is not the same as `PUT /twitter/tweet/1/`, the former
+creates a document with ID `1` inside index `/twitter/tweet/` while the later
+creates the index `/twitter/tweet/1/` itself.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
@@ -62,7 +62,7 @@ instead of `PUT`):
 {% capture req %}
 
 ```json
-POST /twitter/
+POST /twitter/tweet/
 
 {
     "user" : "Yosef",

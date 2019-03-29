@@ -10,7 +10,7 @@ valued `1`:
 {% capture req %}
 
 ```json
-GET /twitter/1
+GET /twitter/tweet/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
