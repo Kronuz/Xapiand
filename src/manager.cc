@@ -1699,12 +1699,14 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			}
 		}
 
-		size_t num_shards;
-		size_t num_replicas_plus_master;
+		if (nodes.empty()) {
+			auto indexed_nodes = Node::indexed_nodes();
+			if (!indexed_nodes) {
+				return nodes;
+			}
 
-		if (settings || nodes.empty()) {
-			num_shards = opts.num_shards;
-			num_replicas_plus_master = opts.num_replicas + 1;
+			auto num_shards = opts.num_shards;
+			auto num_replicas_plus_master = opts.num_replicas + 1;
 
 			if (settings && settings->is_map()) {
 				auto num_shards_it = settings->find("number_of_shards");
@@ -1728,17 +1730,6 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			if (num_shards > 9999UL) {
 				num_shards = 9999UL;
 			}
-			if (num_replicas_plus_master > 9999UL) {
-				num_replicas_plus_master = 9999UL;
-			}
-		}
-
-		if (nodes.empty()) {
-			auto indexed_nodes = Node::indexed_nodes();
-			if (!indexed_nodes) {
-				return nodes;
-			}
-
 			if (num_replicas_plus_master > indexed_nodes) {
 				num_replicas_plus_master = indexed_nodes;
 			}
@@ -1771,13 +1762,27 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			}
 			lk.unlock();
-		} else if (settings) {
-			if (nodes.size() != num_shards) {
-				THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+		} else if (settings && settings->is_map()) {
+			auto num_shards_it = settings->find("number_of_shards");
+			if (num_shards_it != settings->end()) {
+				auto& num_shards_val = num_shards_it.value();
+				if (num_shards_val.is_number()) {
+					size_t num_shards = num_shards_val.u64();
+					if (nodes.size() != num_shards) {
+						THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+					}
+				}
 			}
 
-			if (nodes.front().size() != num_replicas_plus_master) {
-				THROW(ClientError, "It is not allowed to change 'number_of_replicas' setting.");
+			auto num_replicas_it = settings->find("number_of_replicas");
+			if (num_replicas_it != settings->end()) {
+				auto& num_replicas_val = num_replicas_it.value();
+				if (num_replicas_val.is_number()) {
+					size_t num_replicas_plus_master = num_replicas_val.u64() + 1;
+					if (nodes.front().size() != num_replicas_plus_master) {
+						THROW(ClientError, "It is not allowed to change 'number_of_replicas' setting.");
+					}
+				}
 			}
 		}
 	}
