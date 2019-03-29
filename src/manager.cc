@@ -1699,16 +1699,10 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			}
 		}
 
-		size_t indexed_nodes;
 		size_t num_shards;
 		size_t num_replicas_plus_master;
 
 		if (settings || nodes.empty()) {
-			indexed_nodes = Node::indexed_nodes();
-			if (!indexed_nodes) {
-				return nodes;
-			}
-
 			num_shards = opts.num_shards;
 			num_replicas_plus_master = opts.num_replicas + 1;
 
@@ -1734,12 +1728,21 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			if (num_shards > 9999UL) {
 				num_shards = 9999UL;
 			}
-			if (num_replicas_plus_master > indexed_nodes) {
-				num_replicas_plus_master = indexed_nodes;
+			if (num_replicas_plus_master > 9999UL) {
+				num_replicas_plus_master = 9999UL;
 			}
 		}
 
 		if (nodes.empty()) {
+			auto indexed_nodes = Node::indexed_nodes();
+			if (!indexed_nodes) {
+				return nodes;
+			}
+
+			if (num_replicas_plus_master > indexed_nodes) {
+				num_replicas_plus_master = indexed_nodes;
+			}
+
 			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
 
 			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
