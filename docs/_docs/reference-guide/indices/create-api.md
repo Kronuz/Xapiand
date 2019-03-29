@@ -3,8 +3,13 @@ title: Create Index API
 short_title: Create API
 ---
 
-The _Create Index API_ is used to manually create an index in Xapiand. All
-documents in Xapiand are stored inside of one index or another.
+The _Create Index API_ is used to manually create or update an index in Xapiand.
+
+All documents in Xapiand are stored inside of one index or another, indexes
+are usually dynamically created, but certain settings can only be set for
+new indexes.
+
+This creates an index named "twitter" with all default setting:
 
 {% capture req %}
 
@@ -13,8 +18,6 @@ PUT /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
-
-This create an index named twitter with all default setting.
 
 {: .note .warning }
 `PUT /twitter/` is not the same as `PUT /twitter`, the former creates index
@@ -64,7 +67,8 @@ command creates an index with `3` shards and `2` replicas.
 {: .note .info }
 **_New Indexes Only_**
 `number_of_shards` and `number_of_replicas` can be specified like this only
-for new indexes.
+for new indexes and any attempt to change the values during an update will
+result in a Bad Request error.
 
 
 ## Schemas
@@ -92,3 +96,9 @@ PUT /twitter/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .note .info }
+**_New Indexes Only_**
+Some configurations about schemas can be set only the first time a field is
+created (`_type`, for example) and any attempt to change the values during an
+update will result in a Bad Request error.
