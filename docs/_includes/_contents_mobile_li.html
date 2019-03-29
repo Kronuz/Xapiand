@@ -6,9 +6,30 @@
 
 	{%- unless doc.link -%}
 		{%- if link and doc.link != '#' -%}
-			<option value="{{ link | relative_url }}" {% if post.url == page.url %}selected="selected"{% endif %}>
-			{{ include.prefix }}{{ title }}
-			</option>
+			{%- assign link_array = link | split: '/' -%}
+			{%- if link_array.size <= 4 -%}
+				<option value="{{ link | relative_url }}" {% if post.url == page.url %}selected="selected"{% endif %}>
+				{{ include.prefix }}{{ title }}
+				</option>
+			{%- else -%}
+				{%- assign link_path_array = link_array -%}
+				{%- assign link_path_resize = link_path_array.size | minus: 1 -%}
+				{%- assign link_path_array = link_path_array | slice: 0, link_path_resize -%}
+				{%- assign link_path = link_path_array | join: '/' -%}
+				{%- assign url_array = page.url | split: '/' -%}
+				{%- assign url_path_array = url_array -%}
+				{%- for item in url_array -%}
+					{%- assign url_path = url_path_array | join: '/' -%}
+					{%- if link_path == url_path -%}
+						<option value="{{ link | relative_url }}" {% if post.url == page.url %}selected="selected"{% endif %}>
+						{{ include.prefix }}{{ title }}
+						</option>
+						{%- break -%}
+					{%- endif -%}
+					{%- assign url_path_resize = url_path_array.size | minus: 1 -%}
+					{%- assign url_path_array = url_path_array | slice: 0, url_path_resize -%}
+				{%- endfor -%}
+			{%- endif -%}
 		{%- endif -%}
 	{% endunless %}
 
