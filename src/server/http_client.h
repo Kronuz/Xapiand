@@ -57,16 +57,11 @@ struct query_field_t;
 
 #define HTTP_STATUS_RESPONSE            (1 << 0)
 #define HTTP_HEADER_RESPONSE            (1 << 1)
-#define HTTP_ACCEPT_RESPONSE            (1 << 2)
-#define HTTP_BODY_RESPONSE              (1 << 3)
-#define HTTP_CONTENT_TYPE_RESPONSE      (1 << 4)
-#define HTTP_CONTENT_ENCODING_RESPONSE  (1 << 5)
-#define HTTP_CONTENT_LENGTH_RESPONSE    (1 << 6)
-#define HTTP_CHUNKED_RESPONSE           (1 << 7)
-#define HTTP_OPTIONS_RESPONSE           (1 << 8)
-#define HTTP_TOTAL_COUNT_RESPONSE       (1 << 9)
-#define HTTP_MATCHES_ESTIMATED_RESPONSE (1 << 10)
-#define HTTP_LOCATION_RESPONSE          (1 << 11)
+#define HTTP_BODY_RESPONSE              (1 << 2)
+#define HTTP_CONTENT_TYPE_RESPONSE      (1 << 3)
+#define HTTP_CONTENT_ENCODING_RESPONSE  (1 << 4)
+#define HTTP_CONTENT_LENGTH_RESPONSE    (1 << 5)
+#define HTTP_OPTIONS_RESPONSE           (1 << 6)
 
 
 class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
