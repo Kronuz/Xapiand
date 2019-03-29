@@ -1,7 +1,7 @@
 ---
 title: Tutorials
 permalink: /tutorials/home/
-redirect_from: /tutorials/index.html
+redirect_from: /tutorials/
 ---
 
 In contrast to [Docs]({{ '/docs' | relative_url }}), Tutorials provide more detailed, narrative

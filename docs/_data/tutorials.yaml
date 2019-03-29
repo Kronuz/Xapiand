@@ -13,3 +13,11 @@
   docs:
     - url: spatial-search
       title: Spatial Search
+
+- title: Miscellaneous
+  docs:
+    - url: /faq
+    - url: /contributing
+    - url: /conduct
+    - url: /changelog
+    - url: /copyright

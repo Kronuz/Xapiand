@@ -1,6 +1,7 @@
 ---
 title: ChangeLog
 read_only: true
+permalink: /changelog/
 ---
 
 All notable changes to this project will be documented in this file.

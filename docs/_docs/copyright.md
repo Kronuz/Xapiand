@@ -2,6 +2,7 @@
 title: Copyright Notice
 short_title: Copyright
 read_only: true
+permalink: /copyright/
 ---
 
 ## Xapiand

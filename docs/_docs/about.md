@@ -1,6 +1,6 @@
 ---
-layout: page
 title: About
+read_only: true
 permalink: /about/
 ---
 

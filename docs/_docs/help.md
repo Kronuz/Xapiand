@@ -1,6 +1,7 @@
 ---
-layout: page
 title: Getting Help
+read_only: true
+permalink: /help/
 ---
 
 Need help with {{ site.name }}? Try these resources.

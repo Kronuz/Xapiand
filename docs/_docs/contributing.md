@@ -1,8 +1,9 @@
 ---
 title: Contributing
+permalink: /contributing/
 ---
 
-[Code of Conduct]: {{ '/docs/conduct' | relative_url }}
+[Code of Conduct]: {{ '/conduct' | relative_url }}
 [GitHub Issue]: {{ site.repository }}/issues
 
 The {{ site.name }} project welcomes, and depends, on contributions from developers and

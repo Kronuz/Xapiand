@@ -5,7 +5,7 @@ This directory contains the code for the [Xapiand docs site](https://kronuz.io/X
 
 ## Contributing
 
-For information about contributing, see the [Contributing page](https://kronuz.io/Xapiand/docs/contributing/).
+For information about contributing, see the [Contributing page](https://kronuz.io/Xapiand/contributing/).
 
 
 ## Running locally

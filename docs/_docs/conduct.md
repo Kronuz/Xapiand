@@ -1,7 +1,7 @@
 ---
 title: Code of Conduct
-redirect_from: /conduct/
 read_only: true
+permalink: /conduct/
 ---
 
 ## Our Pledge
