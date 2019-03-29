@@ -1699,14 +1699,18 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			}
 		}
 
-		if (nodes.empty()) {
-			auto indexed_nodes = Node::indexed_nodes();
+		size_t indexed_nodes;
+		size_t num_shards;
+		size_t num_replicas_plus_master;
+
+		if (settings || nodes.empty()) {
+			indexed_nodes = Node::indexed_nodes();
 			if (!indexed_nodes) {
 				return nodes;
 			}
 
-			size_t num_shards = opts.num_shards;
-			size_t num_replicas_plus_master = opts.num_replicas + 1;
+			num_shards = opts.num_shards;
+			num_replicas_plus_master = opts.num_replicas + 1;
 
 			if (settings && settings->is_map()) {
 				auto num_shards_it = settings->find("number_of_shards");
@@ -1733,7 +1737,9 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			if (num_replicas_plus_master > indexed_nodes) {
 				num_replicas_plus_master = indexed_nodes;
 			}
+		}
 
+		if (nodes.empty()) {
 			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
 
 			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
@@ -1762,6 +1768,14 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			}
 			lk.unlock();
+		} else if (settings) {
+			if (nodes.size() != num_shards) {
+				THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+			}
+
+			if (nodes.front().size() != num_replicas_plus_master) {
+				THROW(ClientError, "It is not allowed to change 'number_of_replicas' setting.");
+			}
 		}
 	}
 	else
