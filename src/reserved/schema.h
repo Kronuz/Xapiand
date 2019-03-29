@@ -59,6 +59,7 @@ constexpr const char RESERVED_OP_TYPE[]                     = RESERVED__ "op_typ
 
 // Reserved words for detecting types.
 constexpr const char RESERVED_DATE_DETECTION[]              = RESERVED__ "date_detection";
+constexpr const char RESERVED_DATETIME_DETECTION[]          = RESERVED__ "datetime_detection";
 constexpr const char RESERVED_TIME_DETECTION[]              = RESERVED__ "time_detection";
 constexpr const char RESERVED_TIMEDELTA_DETECTION[]         = RESERVED__ "timedelta_detection";
 constexpr const char RESERVED_NUMERIC_DETECTION[]           = RESERVED__ "numeric_detection";

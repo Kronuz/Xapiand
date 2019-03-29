@@ -43,7 +43,7 @@
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
-#include "datetime.h"                             // for isDatetime, tm_t
+#include "datetime.h"                             // for isDate, isDatetime, tm_t
 #include "exception.h"                            // for ClientError
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "manager.h"                              // for XapiandManager, XapiandMan...
@@ -73,6 +73,7 @@ constexpr static auto STRING     = static_string::string(STRING_CHAR);
 constexpr static auto TIMEDELTA  = static_string::string(TIMEDELTA_CHAR);
 constexpr static auto ARRAY      = static_string::string(ARRAY_CHAR);
 constexpr static auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
+constexpr static auto DATE       = static_string::string(DATE_CHAR);
 constexpr static auto DATETIME   = static_string::string(DATETIME_CHAR);
 constexpr static auto FOREIGN    = static_string::string(FOREIGN_CHAR);
 constexpr static auto FLOAT      = static_string::string(FLOAT_CHAR);
@@ -411,6 +412,44 @@ inline UnitTime
 _get_accuracy_date(std::string_view str_accuracy_date)
 {
 	constexpr static auto _ = phf::make_phf({
+		hhl("day"),
+		hhl("month"),
+		hhl("year"),
+		hhl("decade"),
+		hhl("century"),
+		hhl("millennium"),
+	});
+
+	switch (_.fhhl(str_accuracy_date)) {
+		case _.fhhl("day"):
+			return UnitTime::DAY;
+		case _.fhhl("month"):
+			return UnitTime::MONTH;
+		case _.fhhl("year"):
+			return UnitTime::YEAR;
+		case _.fhhl("decade"):
+			return UnitTime::DECADE;
+		case _.fhhl("century"):
+			return UnitTime::CENTURY;
+		case _.fhhl("millennium"):
+			return UnitTime::MILLENNIUM;
+		default:
+			return UnitTime::INVALID;
+	}
+}
+
+
+UnitTime
+get_accuracy_date(std::string_view str_accuracy_date)
+{
+	return _get_accuracy_date(str_accuracy_date);
+}
+
+
+inline UnitTime
+_get_accuracy_datetime(std::string_view str_accuracy_datetime)
+{
+	constexpr static auto _ = phf::make_phf({
 		hhl("second"),
 		hhl("minute"),
 		hhl("hour"),
@@ -422,7 +461,7 @@ _get_accuracy_date(std::string_view str_accuracy_date)
 		hhl("millennium"),
 	});
 
-	switch (_.fhhl(str_accuracy_date)) {
+	switch (_.fhhl(str_accuracy_datetime)) {
 		case _.fhhl("second"):
 			return UnitTime::SECOND;
 		case _.fhhl("minute"):
@@ -446,10 +485,11 @@ _get_accuracy_date(std::string_view str_accuracy_date)
 	}
 }
 
+
 UnitTime
-get_accuracy_date(std::string_view str_accuracy_date)
+get_accuracy_datetime(std::string_view str_accuracy_datetime)
 {
-	return _get_accuracy_date(str_accuracy_date);
+	return _get_accuracy_datetime(str_accuracy_datetime);
 }
 
 
@@ -963,9 +1003,12 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
 			return _;
 		}
-		case _.fhhl("date"):
+		case _.fhhl("date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }};
+			return _;
+		}
 		case _.fhhl("datetime"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATETIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATETIME      }};
 			return _;
 		}
 		case _.fhhl("float"): {
@@ -1019,10 +1062,13 @@ _get_type(std::string_view str_type)
 			return _;
 		}
 		case _.fhhl("date/array"):
-		case _.fhhl("array/date"):
+		case _.fhhl("array/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
+			return _;
+		}
 		case _.fhhl("datetime/array"):
 		case _.fhhl("array/datetime"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATETIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATETIME      }};
 			return _;
 		}
 		case _.fhhl("float/array"):
@@ -1100,14 +1146,17 @@ _get_type(std::string_view str_type)
 		case _.fhhl("object/array/date"):
 		case _.fhhl("date/array/object"):
 		case _.fhhl("date/object/array"):
-		case _.fhhl("object/date/array"):
+		case _.fhhl("object/date/array"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
+			return _;
+		}
 		case _.fhhl("array/datetime/object"):
 		case _.fhhl("array/object/datetime"):
 		case _.fhhl("object/array/datetime"):
 		case _.fhhl("datetime/array/object"):
 		case _.fhhl("datetime/object/array"):
 		case _.fhhl("object/datetime/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATETIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATETIME      }};
 			return _;
 		}
 		case _.fhhl("array/float/object"):
@@ -1212,10 +1261,13 @@ _get_type(std::string_view str_type)
 			return _;
 		}
 		case _.fhhl("date/object"):
-		case _.fhhl("object/date"):
+		case _.fhhl("object/date"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
+			return _;
+		}
 		case _.fhhl("datetime/object"):
 		case _.fhhl("object/datetime"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATETIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATETIME      }};
 			return _;
 		}
 		case _.fhhl("float/object"):
@@ -1323,6 +1375,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + EMPTY  + EMPTY),
 		hh(EMPTY   + EMPTY   + ARRAY  + EMPTY),
 		hh(EMPTY   + EMPTY   + ARRAY  + BOOLEAN),
+		hh(EMPTY   + EMPTY   + ARRAY  + DATE),
 		hh(EMPTY   + EMPTY   + ARRAY  + DATETIME),
 		hh(EMPTY   + EMPTY   + ARRAY  + FLOAT),
 		hh(EMPTY   + EMPTY   + ARRAY  + GEO),
@@ -1335,6 +1388,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + ARRAY  + TIMEDELTA),
 		hh(EMPTY   + EMPTY   + ARRAY  + UUID),
 		hh(EMPTY   + EMPTY   + EMPTY  + BOOLEAN),
+		hh(EMPTY   + EMPTY   + EMPTY  + DATE),
 		hh(EMPTY   + EMPTY   + EMPTY  + DATETIME),
 		hh(EMPTY   + EMPTY   + EMPTY  + FLOAT),
 		hh(FOREIGN + EMPTY   + EMPTY  + EMPTY),
@@ -1345,6 +1399,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + EMPTY  + EMPTY),
 		hh(EMPTY   + OBJECT  + ARRAY  + EMPTY),
 		hh(EMPTY   + OBJECT  + ARRAY  + BOOLEAN),
+		hh(EMPTY   + OBJECT  + ARRAY  + DATE),
 		hh(EMPTY   + OBJECT  + ARRAY  + DATETIME),
 		hh(EMPTY   + OBJECT  + ARRAY  + FLOAT),
 		hh(EMPTY   + OBJECT  + ARRAY  + GEO),
@@ -1357,6 +1412,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + ARRAY  + TIMEDELTA),
 		hh(EMPTY   + OBJECT  + ARRAY  + UUID),
 		hh(EMPTY   + OBJECT  + EMPTY  + BOOLEAN),
+		hh(EMPTY   + OBJECT  + EMPTY  + DATE),
 		hh(EMPTY   + OBJECT  + EMPTY  + DATETIME),
 		hh(EMPTY   + OBJECT  + EMPTY  + FLOAT),
 		hh(EMPTY   + OBJECT  + EMPTY  + GEO),
@@ -1389,6 +1445,10 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		}
 		case _.fhh(EMPTY   + EMPTY   + ARRAY  + BOOLEAN): {
 			static const std::string str_type("array/boolean");
+			return str_type;
+		}
+		case _.fhh(EMPTY   + EMPTY   + ARRAY  + DATE): {
+			static const std::string str_type("array/date");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + EMPTY   + ARRAY  + DATETIME): {
@@ -1439,6 +1499,10 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("boolean");
 			return str_type;
 		}
+		case _.fhh(EMPTY   + EMPTY   + EMPTY  + DATE): {
+			static const std::string str_type("date");
+			return str_type;
+		}
 		case _.fhh(EMPTY   + EMPTY   + EMPTY  + DATETIME): {
 			static const std::string str_type("datetime");
 			return str_type;
@@ -1477,6 +1541,10 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		}
 		case _.fhh(EMPTY   + OBJECT  + ARRAY  + BOOLEAN): {
 			static const std::string str_type("object/array/boolean");
+			return str_type;
+		}
+		case _.fhh(EMPTY   + OBJECT  + ARRAY  + DATE): {
+			static const std::string str_type("object/array/date");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + OBJECT  + ARRAY  + DATETIME): {
@@ -1525,6 +1593,10 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		}
 		case _.fhh(EMPTY   + OBJECT  + EMPTY  + BOOLEAN): {
 			static const std::string str_type("object/boolean");
+			return str_type;
+		}
+		case _.fhh(EMPTY   + OBJECT  + EMPTY  + DATE): {
+			static const std::string str_type("object/date");
 			return str_type;
 		}
 		case _.fhh(EMPTY   + OBJECT  + EMPTY  + DATETIME): {
@@ -1633,7 +1705,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 static inline std::pair<std::string, FieldType>
 _get_acc_data(std::string_view field_acc)
 {
-	auto accuracy_date = _get_accuracy_date(field_acc.substr(1));
+	auto accuracy_date = _get_accuracy_datetime(field_acc.substr(1));
 	if (accuracy_date != UnitTime::INVALID) {
 		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::DATETIME);
 	}
@@ -1956,13 +2028,13 @@ required_spc_t::flags_t::flags_t()
 	  dynamic(true),
 	  strict(false),
 	  date_detection(true),
+	  datetime_detection(true),
 	  time_detection(true),
 	  timedelta_detection(true),
 	  numeric_detection(true),
 	  geo_detection(true),
 	  bool_detection(true),
 	  text_detection(true),
-	  term_detection(true),
 	  uuid_detection(true),
 	  partial_paths(false),
 	  is_namespace(false),
@@ -2111,13 +2183,13 @@ required_spc_t::to_obj() const
 	obj_flags["dynamic"] = flags.dynamic;
 	obj_flags["strict"] = flags.strict;
 	obj_flags["date_detection"] = flags.date_detection;
+	obj_flags["datetime_detection"] = flags.datetime_detection;
 	obj_flags["time_detection"] = flags.time_detection;
 	obj_flags["timedelta_detection"] = flags.timedelta_detection;
 	obj_flags["numeric_detection"] = flags.numeric_detection;
 	obj_flags["geo_detection"] = flags.geo_detection;
 	obj_flags["bool_detection"] = flags.bool_detection;
 	obj_flags["text_detection"] = flags.text_detection;
-	obj_flags["term_detection"] = flags.term_detection;
 	obj_flags["uuid_detection"] = flags.uuid_detection;
 
 	obj_flags["partial_paths"] = flags.partial_paths;
@@ -2298,6 +2370,7 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::INTEGER:
 		case FieldType::POSITIVE:
 		case FieldType::BOOLEAN:
+		case FieldType::DATE:
 		case FieldType::DATETIME:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
@@ -2334,6 +2407,10 @@ specification_t::get_global(FieldType field_type)
 		}
 		case FieldType::BOOLEAN: {
 			static const specification_t spc(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
+			return spc;
+		}
+		case FieldType::DATE: {
+			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_date, global_acc_prefix_date);
 			return spc;
 		}
 		case FieldType::DATETIME: {
@@ -4903,6 +4980,7 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
+		case FieldType::DATE:
 		case FieldType::DATETIME:
 		case FieldType::TIME:
 		case FieldType::TIMEDELTA:
@@ -4933,7 +5011,8 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 	std::set<uint64_t> set_acc;
 
-	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+	auto type = specification.sep_types[SPC_CONCRETE_TYPE];
+	switch (type) {
 		case FieldType::GEO: {
 			// Set partials and error.
 			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
@@ -4959,6 +5038,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
+		case FieldType::DATE:
 		case FieldType::DATETIME: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
@@ -4966,23 +5046,23 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						for (const auto& _accuracy : *specification.doc_acc) {
 							uint64_t accuracy;
 							if (_accuracy.is_string()) {
-								auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+								auto accuracy_date = _get_accuracy_datetime(_accuracy.str_view());
 								if (accuracy_date != UnitTime::INVALID) {
 									accuracy = toUType(accuracy_date);
 								} else {
-									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
 								}
 							} else {
 								accuracy = _accuracy.u64();
 								if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
 								} else {
-									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 								}
 							}
 							set_acc.insert(accuracy);
 						}
 					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 					}
 				} else {
 					set_acc.insert(def_accuracy_date.begin(), def_accuracy_date.end());
@@ -5120,6 +5200,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					}
 					specification.accuracy.assign(set_acc.begin(), set_acc.end());
 					switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+						case FieldType::DATE:
 						case FieldType::DATETIME:
 						case FieldType::TIME:
 						case FieldType::TIMEDELTA:
@@ -5181,7 +5262,11 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::UUID;
 				return;
 			}
-			if (specification.flags.date_detection && Datetime::isDatetime(str_value)) {
+			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATE;
+				return;
+			}
+			if (specification.flags.datetime_detection && Datetime::isDatetime(str_value)) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATETIME;
 				return;
 			}
@@ -5201,10 +5286,6 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
 				return;
 			}
-			if (specification.flags.term_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
-				return;
-			}
 			if (specification.flags.bool_detection) {
 				try {
 					Serialise::boolean(str_value);
@@ -5212,6 +5293,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 					return;
 				} catch (const SerialisationError&) { }
 			}
+			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
 			break;
 		}
 		case MsgPack::Type::MAP:
@@ -5711,6 +5793,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
+		case FieldType::DATE:
 		case FieldType::DATETIME: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::datetime(value, tm);
@@ -5925,6 +6008,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
+		case FieldType::DATE:
 		case FieldType::DATETIME: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::datetime(value, tm);
@@ -6301,13 +6385,13 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		hh(RESERVED_DYNAMIC),
 		hh(RESERVED_STRICT),
 		hh(RESERVED_DATE_DETECTION),
+		hh(RESERVED_DATETIME_DETECTION),
 		hh(RESERVED_TIME_DETECTION),
 		hh(RESERVED_TIMEDELTA_DETECTION),
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
-		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
 		hh(RESERVED_BOOL_TERM),
 		hh(RESERVED_NAMESPACE),
@@ -6348,6 +6432,9 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		case _.fhh(RESERVED_DATE_DETECTION):
 			write_date_detection(mut_properties, prop_name, value);
 			return true;
+		case _.fhh(RESERVED_DATETIME_DETECTION):
+			write_datetime_detection(mut_properties, prop_name, value);
+			return true;
 		case _.fhh(RESERVED_TIME_DETECTION):
 			write_time_detection(mut_properties, prop_name, value);
 			return true;
@@ -6365,9 +6452,6 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			write_text_detection(mut_properties, prop_name, value);
-			return true;
-		case _.fhh(RESERVED_TERM_DETECTION):
-			write_term_detection(mut_properties, prop_name, value);
 			return true;
 		case _.fhh(RESERVED_UUID_DETECTION):
 			write_uuid_detection(mut_properties, prop_name, value);
@@ -6415,13 +6499,13 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 		hh(RESERVED_DYNAMIC),
 		hh(RESERVED_STRICT),
 		hh(RESERVED_DATE_DETECTION),
+		hh(RESERVED_DATETIME_DETECTION),
 		hh(RESERVED_TIME_DETECTION),
 		hh(RESERVED_TIMEDELTA_DETECTION),
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
-		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
 		hh(RESERVED_BOOL_TERM),
 		hh(RESERVED_ACCURACY),
@@ -6479,6 +6563,9 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 		case _.fhh(RESERVED_DATE_DETECTION):
 			Schema::feed_date_detection(value);
 			return true;
+		case _.fhh(RESERVED_DATETIME_DETECTION):
+			Schema::feed_datetime_detection(value);
+			return true;
 		case _.fhh(RESERVED_TIME_DETECTION):
 			Schema::feed_time_detection(value);
 			return true;
@@ -6496,9 +6583,6 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			Schema::feed_text_detection(value);
-			return true;
-		case _.fhh(RESERVED_TERM_DETECTION):
-			Schema::feed_term_detection(value);
 			return true;
 		case _.fhh(RESERVED_UUID_DETECTION):
 			Schema::feed_uuid_detection(value);
@@ -6689,13 +6773,13 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_DYNAMIC),
 		hh(RESERVED_STRICT),
 		hh(RESERVED_DATE_DETECTION),
+		hh(RESERVED_DATETIME_DETECTION),
 		hh(RESERVED_TIME_DETECTION),
 		hh(RESERVED_TIMEDELTA_DETECTION),
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
-		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
 		hh(RESERVED_NAMESPACE),
 		hh(RESERVED_SCHEMA),
@@ -6761,13 +6845,13 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_DYNAMIC),
 		hh(RESERVED_STRICT),
 		hh(RESERVED_DATE_DETECTION),
+		hh(RESERVED_DATETIME_DETECTION),
 		hh(RESERVED_TIME_DETECTION),
 		hh(RESERVED_TIMEDELTA_DETECTION),
 		hh(RESERVED_NUMERIC_DETECTION),
 		hh(RESERVED_GEO_DETECTION),
 		hh(RESERVED_BOOL_DETECTION),
 		hh(RESERVED_TEXT_DETECTION),
-		hh(RESERVED_TERM_DETECTION),
 		hh(RESERVED_UUID_DETECTION),
 		hh(RESERVED_NAMESPACE),
 		hh(RESERVED_SCHEMA),
@@ -6924,6 +7008,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_DATE_DETECTION):
 			Schema::consistency_date_detection(prop_name, value);
 			return true;
+		case _.fhh(RESERVED_DATETIME_DETECTION):
+			Schema::consistency_datetime_detection(prop_name, value);
+			return true;
 		case _.fhh(RESERVED_TIME_DETECTION):
 			Schema::consistency_time_detection(prop_name, value);
 			return true;
@@ -6941,9 +7028,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 			return true;
 		case _.fhh(RESERVED_TEXT_DETECTION):
 			Schema::consistency_text_detection(prop_name, value);
-			return true;
-		case _.fhh(RESERVED_TERM_DETECTION):
-			Schema::consistency_term_detection(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_UUID_DETECTION):
 			Schema::consistency_uuid_detection(prop_name, value);
@@ -7294,7 +7378,7 @@ Schema::feed_accuracy(const MsgPack& prop_accuracy)
 		for (const auto& _accuracy : prop_accuracy) {
 			uint64_t accuracy;
 			if (_accuracy.is_string()) {
-				auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+				auto accuracy_date = _get_accuracy_datetime(_accuracy.str_view());
 				if (accuracy_date != UnitTime::INVALID) {
 					accuracy = toUType(accuracy_date);
 				} else {
@@ -7438,6 +7522,19 @@ Schema::feed_date_detection(const MsgPack& prop_date_detection)
 
 
 void
+Schema::feed_datetime_detection(const MsgPack& prop_datetime_detection)
+{
+	L_CALL("Schema::feed_datetime_detection({})", repr(prop_datetime_detection.to_string()));
+
+	try {
+		specification.flags.datetime_detection = prop_datetime_detection.boolean();
+	} catch (const msgpack::type_error&) {
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_DATETIME_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+	}
+}
+
+
+void
 Schema::feed_time_detection(const MsgPack& prop_time_detection)
 {
 	L_CALL("Schema::feed_time_detection({})", repr(prop_time_detection.to_string()));
@@ -7511,19 +7608,6 @@ Schema::feed_text_detection(const MsgPack& prop_text_detection)
 		specification.flags.text_detection = prop_text_detection.boolean();
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TEXT_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-	}
-}
-
-
-void
-Schema::feed_term_detection(const MsgPack& prop_term_detection)
-{
-	L_CALL("Schema::feed_term_detection({})", repr(prop_term_detection.to_string()));
-
-	try {
-		specification.flags.term_detection = prop_term_detection.boolean();
-	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TERM_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
@@ -7770,7 +7854,7 @@ Schema::write_strict(MsgPack& mut_properties, std::string_view prop_name, const 
 void
 Schema::write_date_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_date_detection)
 {
-	// RESERVED_D_DETECTION is heritable and can't change.
+	// RESERVED_DATE_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_date_detection({})", repr(doc_date_detection.to_string()));
 
 	try {
@@ -7783,9 +7867,24 @@ Schema::write_date_detection(MsgPack& mut_properties, std::string_view prop_name
 
 
 void
+Schema::write_datetime_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_datetime_detection)
+{
+	// RESERVED_DATETIME_DETECTION is heritable and can't change.
+	L_CALL("Schema::write_datetime_detection({})", repr(doc_datetime_detection.to_string()));
+
+	try {
+		specification.flags.datetime_detection = doc_datetime_detection.boolean();
+		mut_properties[prop_name] = static_cast<bool>(specification.flags.datetime_detection);
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
+	}
+}
+
+
+void
 Schema::write_time_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_time_detection)
 {
-	// RESERVED_TI_DETECTION is heritable and can't change.
+	// RESERVED_TIME_DETECTION is heritable and can't change.
 	L_CALL("Schema::write_time_detection({})", repr(doc_time_detection.to_string()));
 
 	try {
@@ -7866,21 +7965,6 @@ Schema::write_text_detection(MsgPack& mut_properties, std::string_view prop_name
 	try {
 		specification.flags.text_detection = doc_text_detection.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
-	}
-}
-
-
-void
-Schema::write_term_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_term_detection)
-{
-	// RESERVED_TE_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_term_detection({})", repr(doc_term_detection.to_string()));
-
-	try {
-		specification.flags.term_detection = doc_term_detection.boolean();
-		mut_properties[prop_name] = static_cast<bool>(specification.flags.term_detection);
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
@@ -8647,12 +8731,13 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				}
 				return;
 			}
+			case FieldType::DATE:
 			case FieldType::DATETIME: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						uint64_t accuracy;
 						if (_accuracy.is_string()) {
-							auto accuracy_date = _get_accuracy_date(_accuracy.str_view());
+							auto accuracy_date = _get_accuracy_datetime(_accuracy.str_view());
 							if (accuracy_date != UnitTime::INVALID) {
 								accuracy = toUType(accuracy_date);
 							} else {
@@ -8838,7 +8923,7 @@ Schema::consistency_strict(std::string_view prop_name, const MsgPack& doc_strict
 inline void
 Schema::consistency_date_detection(std::string_view prop_name, const MsgPack& doc_date_detection)
 {
-	// RESERVED_D_DETECTION is heritable and can't change.
+	// RESERVED_DATE_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_date_detection({})", repr(doc_date_detection.to_string()));
 
 	try {
@@ -8853,9 +8938,26 @@ Schema::consistency_date_detection(std::string_view prop_name, const MsgPack& do
 
 
 inline void
+Schema::consistency_datetime_detection(std::string_view prop_name, const MsgPack& doc_datetime_detection)
+{
+	// RESERVED_DATETIME_DETECTION is heritable and can't change.
+	L_CALL("Schema::consistency_datetime_detection({})", repr(doc_datetime_detection.to_string()));
+
+	try {
+		const auto _datetime_detection = doc_datetime_detection.boolean();
+		if (specification.flags.datetime_detection != _datetime_detection) {
+			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.datetime_detection), _datetime_detection);
+		}
+	} catch (const msgpack::type_error&) {
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
+	}
+}
+
+
+inline void
 Schema::consistency_time_detection(std::string_view prop_name, const MsgPack& doc_time_detection)
 {
-	// RESERVED_TI_DETECTION is heritable and can't change.
+	// RESERVED_TIME_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_time_detection({})", repr(doc_time_detection.to_string()));
 
 	try {
@@ -8872,7 +8974,7 @@ Schema::consistency_time_detection(std::string_view prop_name, const MsgPack& do
 inline void
 Schema::consistency_timedelta_detection(std::string_view prop_name, const MsgPack& doc_timedelta_detection)
 {
-	// RESERVED_TD_DETECTION is heritable and can't change.
+	// RESERVED_TIMEDELTA_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_timedelta_detection({})", repr(doc_timedelta_detection.to_string()));
 
 	try {
@@ -8889,7 +8991,7 @@ Schema::consistency_timedelta_detection(std::string_view prop_name, const MsgPac
 inline void
 Schema::consistency_numeric_detection(std::string_view prop_name, const MsgPack& doc_numeric_detection)
 {
-	// RESERVED_N_DETECTION is heritable and can't change.
+	// RESERVED_NUMERIC_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_numeric_detection({})", repr(doc_numeric_detection.to_string()));
 
 	try {
@@ -8906,7 +9008,7 @@ Schema::consistency_numeric_detection(std::string_view prop_name, const MsgPack&
 inline void
 Schema::consistency_geo_detection(std::string_view prop_name, const MsgPack& doc_geo_detection)
 {
-	// RESERVED_G_DETECTION is heritable and can't change.
+	// RESERVED_GEO_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_geo_detection({})", repr(doc_geo_detection.to_string()));
 
 	try {
@@ -8923,7 +9025,7 @@ Schema::consistency_geo_detection(std::string_view prop_name, const MsgPack& doc
 inline void
 Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& doc_bool_detection)
 {
-	// RESERVED_B_DETECTION is heritable and can't change.
+	// RESERVED_BOOL_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_bool_detection({})", repr(doc_bool_detection.to_string()));
 
 	try {
@@ -8940,7 +9042,7 @@ Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& do
 inline void
 Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& doc_text_detection)
 {
-	// RESERVED_T_DETECTION is heritable and can't change.
+	// RESERVED_TEXT_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_text_detection({})", repr(doc_text_detection.to_string()));
 
 	try {
@@ -8955,26 +9057,9 @@ Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& do
 
 
 inline void
-Schema::consistency_term_detection(std::string_view prop_name, const MsgPack& doc_term_detection)
-{
-	// RESERVED_TE_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_term_detection({})", repr(doc_term_detection.to_string()));
-
-	try {
-		const auto _term_detection = doc_term_detection.boolean();
-		if (specification.flags.term_detection != _term_detection) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.term_detection), _term_detection);
-		}
-	} catch (const msgpack::type_error&) {
-		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
-	}
-}
-
-
-inline void
 Schema::consistency_uuid_detection(std::string_view prop_name, const MsgPack& doc_uuid_detection)
 {
-	// RESERVED_U_DETECTION is heritable and can't change.
+	// RESERVED_UUID_DETECTION is heritable and can't change.
 	L_CALL("Schema::consistency_uuid_detection({})", repr(doc_uuid_detection.to_string()));
 
 	try {
@@ -9462,6 +9547,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				case FieldType::FLOAT:
 				case FieldType::INTEGER:
 				case FieldType::POSITIVE:
+				case FieldType::DATE:
 				case FieldType::DATETIME:
 				case FieldType::TIME:
 				case FieldType::TIMEDELTA: {
@@ -9470,7 +9556,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 						for (const auto& acc : accuracy_it.value()) {
 							uint64_t accuracy;
 							if (acc.is_string()) {
-								auto accuracy_date = _get_accuracy_date(acc.str_view());
+								auto accuracy_date = _get_accuracy_datetime(acc.str_view());
 								if (accuracy_date != UnitTime::INVALID) {
 									accuracy = toUType(accuracy_date);
 								} else {

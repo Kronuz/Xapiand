@@ -174,6 +174,7 @@ constexpr uint8_t STRING_CHAR        = 's';
 constexpr uint8_t TIMEDELTA_CHAR     = 'z';
 constexpr uint8_t ARRAY_CHAR         = 'A';
 constexpr uint8_t BOOLEAN_CHAR       = 'B';
+constexpr uint8_t DATE_CHAR          = 'd';
 constexpr uint8_t DATETIME_CHAR      = 'D';
 constexpr uint8_t FOREIGN_CHAR       = 'E';
 constexpr uint8_t FLOAT_CHAR         = 'F';
@@ -194,6 +195,7 @@ enum class FieldType : uint8_t {
 	OBJECT        = OBJECT_CHAR,
 
 	BOOLEAN       = BOOLEAN_CHAR,
+	DATE          = DATE_CHAR,
 	DATETIME      = DATETIME_CHAR,
 	FLOAT         = FLOAT_CHAR,
 	GEO           = GEO_CHAR,
@@ -281,7 +283,7 @@ inline constexpr size_t getPos(size_t pos, size_t size) noexcept {
 
 
 extern UnitTime get_accuracy_time(std::string_view str_accuracy_time);
-extern UnitTime get_accuracy_date(std::string_view str_accuracy_date);
+extern UnitTime get_accuracy_datetime(std::string_view str_accuracy_datetime);
 
 
 MSGPACK_ADD_ENUM(UnitTime)
@@ -303,13 +305,13 @@ struct required_spc_t {
 		bool dynamic:1;
 		bool strict:1;
 		bool date_detection:1;
+		bool datetime_detection:1;
 		bool time_detection:1;
 		bool timedelta_detection:1;
 		bool numeric_detection:1;
 		bool geo_detection:1;
 		bool bool_detection:1;
 		bool text_detection:1;
-		bool term_detection:1;
 		bool uuid_detection:1;
 
 		bool partial_paths:1;
@@ -362,7 +364,7 @@ struct required_spc_t {
 	Xapian::valueno slot;
 	flags_t flags;
 
-	// For GEO, DATETIME, TIME, TIMEDELTA and Numeric types.
+	// For GEO, DATE, DATETIME, TIME, TIMEDELTA and Numeric types.
 	std::vector<uint64_t> accuracy;
 	std::vector<std::string> acc_prefix;
 
@@ -423,6 +425,7 @@ struct required_spc_t {
 			case FieldType::BOOLEAN:
 				return 'B';
 
+			case FieldType::DATE:
 			case FieldType::DATETIME:
 				return 'D';
 
@@ -796,13 +799,13 @@ class Schema {
 	void feed_dynamic(const MsgPack& prop_dynamic);
 	void feed_strict(const MsgPack& prop_strict);
 	void feed_date_detection(const MsgPack& prop_date_detection);
+	void feed_datetime_detection(const MsgPack& prop_datetime_detection);
 	void feed_time_detection(const MsgPack& prop_time_detection);
 	void feed_timedelta_detection(const MsgPack& prop_timedelta_detection);
 	void feed_numeric_detection(const MsgPack& prop_numeric_detection);
 	void feed_geo_detection(const MsgPack& prop_geo_detection);
 	void feed_bool_detection(const MsgPack& prop_bool_detection);
 	void feed_text_detection(const MsgPack& prop_text_detection);
-	void feed_term_detection(const MsgPack& prop_term_detection);
 	void feed_uuid_detection(const MsgPack& prop_uuid_detection);
 	void feed_bool_term(const MsgPack& prop_bool_term);
 	void feed_partials(const MsgPack& prop_partials);
@@ -828,13 +831,13 @@ class Schema {
 	void write_dynamic(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_dynamic);
 	void write_strict(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_strict);
 	void write_date_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_date_detection);
+	void write_datetime_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_datetime_detection);
 	void write_time_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_time_detection);
 	void write_timedelta_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_timedelta_detection);
 	void write_numeric_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_numeric_detection);
 	void write_geo_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_geo_detection);
 	void write_bool_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_detection);
 	void write_text_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_text_detection);
-	void write_term_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_term_detection);
 	void write_uuid_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_uuid_detection);
 	void write_bool_term(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_term);
 	void write_namespace(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_namespace);
@@ -889,13 +892,13 @@ class Schema {
 	void consistency_dynamic(std::string_view prop_name, const MsgPack& doc_dynamic);
 	void consistency_strict(std::string_view prop_name, const MsgPack& doc_strict);
 	void consistency_date_detection(std::string_view prop_name, const MsgPack& doc_date_detection);
+	void consistency_datetime_detection(std::string_view prop_name, const MsgPack& doc_datetime_detection);
 	void consistency_time_detection(std::string_view prop_name, const MsgPack& doc_time_detection);
 	void consistency_timedelta_detection(std::string_view prop_name, const MsgPack& doc_timedelta_detection);
 	void consistency_numeric_detection(std::string_view prop_name, const MsgPack& doc_numeric_detection);
 	void consistency_geo_detection(std::string_view prop_name, const MsgPack& doc_geo_detection);
 	void consistency_bool_detection(std::string_view prop_name, const MsgPack& doc_bool_detection);
 	void consistency_text_detection(std::string_view prop_name, const MsgPack& doc_text_detection);
-	void consistency_term_detection(std::string_view prop_name, const MsgPack& doc_term_detection);
 	void consistency_uuid_detection(std::string_view prop_name, const MsgPack& doc_uuid_detection);
 	void consistency_namespace(std::string_view prop_name, const MsgPack& doc_namespace);
 	void consistency_chai(std::string_view prop_name, const MsgPack& doc_chai);
@@ -1047,6 +1050,7 @@ public:
 			case FieldType::INTEGER:
 			case FieldType::POSITIVE:
 			case FieldType::FLOAT:
+			case FieldType::DATE:
 			case FieldType::DATETIME:
 			case FieldType::TIME:
 			case FieldType::TIMEDELTA:

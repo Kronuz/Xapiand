@@ -1227,6 +1227,32 @@ Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, 
 
 
 bool
+Datetime::isDate(std::string_view date)
+{
+	int errno_save;
+	auto size = date.size();
+	switch (size) {
+		case 10: // 0000-00-00
+			if (date[4] == '-' && date[7] == '-') {
+				auto year  = strict_stoul(&errno_save, date.substr(0, 4));
+				if (errno_save != 0) { return false; }
+				auto mon   = strict_stoul(&errno_save, date.substr(5, 2));
+				if (errno_save != 0) { return false; }
+				auto day   = strict_stoul(&errno_save, date.substr(8, 2));
+				if (errno_save != 0) { return false; }
+				if (isvalidDate(year, mon, day)) {
+					return true;
+				}
+				return false;
+			}
+			[[fallthrough]];
+		default:
+			return false;
+	}
+}
+
+
+bool
 Datetime::isDatetime(std::string_view datetime)
 {
 	auto format = Iso8601Parser(datetime);

@@ -136,6 +136,7 @@ namespace Datetime {
 	std::string iso8601(const tm_t& tm, bool trim=true, char sep='T');
 	std::string iso8601(double timestamp, bool trim=true, char sep='T');
 	std::string iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim=true, char sep='T');
+	bool isDate(std::string_view date);
 	bool isDatetime(std::string_view datetime);
 
 

@@ -885,6 +885,10 @@ Serialise::guess_type(const class MsgPack& field_value)
 				return FieldType::UUID;
 			}
 
+			if (Datetime::isDate(str_value)) {
+				return FieldType::DATE;
+			}
+
 			if (Datetime::isDatetime(str_value)) {
 				return FieldType::DATETIME;
 			}
