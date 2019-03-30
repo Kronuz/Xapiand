@@ -19,14 +19,14 @@ command again:
 PUT /twitter/user/John
 
 {
-  "name": "John"
+  "name": "John Doe"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-The above will index the specified document into the customer index, with the
-ID of `John`. If we then executed the above command again with a different (or same)
+The above will index the specified document into the user index, with the ID of
+`John`. If we then executed the above command again with a different (or same)
 document, Xapiand will replace (i.e. reindex) a new document on top of the
 existing one with the ID of `John`:
 
@@ -36,7 +36,7 @@ existing one with the ID of `John`:
 PUT /twitter/user/John
 
 {
-  "name": "John Doe"
+  "name": "John"
 }
 ```
 {% endcapture %}
@@ -92,12 +92,28 @@ In addition to being able to index and replace documents, we can also update
 documents.
 
 This example shows how to update our previous document (ID of `John`) by adding
-an `age` field and changing the `name` from _"John Doe"_ to _"Johnny Doe"_:
+a _gender_ field to it and leaving the _name_ intact:
 
 {% capture req %}
 
 ```json
-PUT /twitter/user/John
+UPDATE /twitter/user/John
+
+{
+  "gender": "male"
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+And the following example shows how to update the same document by adding an
+_age_ field to it and at the same time changing the _name_ from simply
+_"John"_ to _"Johnny Doe"_:
+
+{% capture req %}
+
+```json
+UPDATE /twitter/user/John
 
 {
   "name": "Johnny Doe",
@@ -107,8 +123,11 @@ PUT /twitter/user/John
 {% endcapture %}
 {% include curl.html req=req %}
 
-This example shows how to update our previous document (ID of `John`) by changing
-the name field to _"John Doe"_ and at the same time add a _"gender"_ field to it:
+
+### Updating With Scripts
+
+Updates can also be performed by using simple scripts. This example uses a
+script to increment the _age_ by 5 and at the same time change the _name_:
 
 {% capture req %}
 
@@ -117,23 +136,6 @@ UPDATE /twitter/user/John
 
 {
   "name": "John Doe",
-  "gender": "male"
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-### Updating With Scripts
-
-Updates can also be performed by using simple scripts. This example uses a
-script to increment the age by 5:
-
-{% capture req %}
-
-```json
-UPDATE /twitter/user/John
-
-{
   "_script": "_doc.age = _old_doc.age + 5"
 }
 ```
@@ -147,7 +149,7 @@ the previous document that is about to be updated.
 ## Deleting Documents
 
 Deleting a document is fairly straightforward. This example shows how to delete
-our previous customer with the ID of `Jane`:
+our previous user with the ID of `Jane`:
 
 {% capture req %}
 
