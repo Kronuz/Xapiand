@@ -66,10 +66,22 @@ layout: default
 			<h3>Get up and running <em>in&nbsp;seconds</em>.</h3>
 		</div>
 		<div class="unit golden-large">
-			<div class="language-sh highlighter">
+			<div class="language-sh highlighter osx">
+{% highlight sh %}
+~ $ brew install Kronuz/tap/xapiand
+~ $ xapiand -vvvv
+# => Ready to Rock!
+{% endhighlight %}
+			</div>
+			<div class="language-sh highlighter linux">
 {% highlight sh %}
 ~ $ docker run -p 8880:8880 --rm dubalu/xapiand:{{ site.version }}
-
+# => Ready to Rock!
+{% endhighlight %}
+			</div>
+			<div class="language-sh highlighter windows">
+{% highlight sh %}
+~ $ docker run -p 8880:8880 --rm dubalu/xapiand:{{ site.version }}
 # => Ready to Rock!
 {% endhighlight %}
 			</div>
