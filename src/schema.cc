@@ -5291,19 +5291,18 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::GEO;
 				return;
 			}
-			if (specification.flags.text_detection && !specification.flags.bool_term && Serialise::isText(str_value)) {
+			if (specification.flags.bool_detection) {
+				if (str_value == "true" || str_value == "false") {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::BOOLEAN;
+					return;
+				}
+			}
+			if (specification.flags.text_detection && !specification.flags.bool_term) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
 				return;
 			}
-			if (specification.flags.bool_detection) {
-				try {
-					Serialise::boolean(str_value);
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::BOOLEAN;
-					return;
-				} catch (const SerialisationError&) { }
-			}
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
-			break;
+			return;
 		}
 		case MsgPack::Type::MAP:
 			if (item_doc.size() == 1) {
