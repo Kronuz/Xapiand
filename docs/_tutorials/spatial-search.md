@@ -33,6 +33,7 @@ Content-Type: application/x-ndjson
 Let's look for the nearest big cities near **_El Cerrito_, CA**, a city
 neighboring Berkeley in the San Francisco Bay Area.
 
+{:class="rounded"}
 ![El Cerrito, CA]({{ '/assets/el_cerrito.png' | absolute_url }})
 
 The red circle in the map has a radius of **20 km** and is at the latitude/longitude
