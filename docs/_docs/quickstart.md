@@ -21,6 +21,7 @@ docker run -p 8880:8880 --rm dubalu/xapiand:{{ site.version }} -vvvv
 ### Using Homebrew under macOS
 
 {:class="plat_osx"}
+
 ```sh
 # Install with Homebrew:
 ~ $ brew install Kronuz/tap/xapiand

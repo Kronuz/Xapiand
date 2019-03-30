@@ -19,12 +19,16 @@ we might make the process easier.
 Xapiand contains a formula for Homebrew (a package manager for OS X). It can
 be installed by using the following command:
 
+{:class="plat_osx"}
+
 ```sh
 ~ $ brew install Kronuz/tap/xapiand
 ```
 
 
 ## FreeBSD
+
+{:class="plat_linux"}
 
 ```sh
 Not yet available, build from sources.
@@ -34,6 +38,8 @@ There is a [FreeBSD port](https://github.com/Kronuz/Xapiand/blob/master/contrib/
 
 
 ## Linux
+
+{:class="plat_linux"}
 
 ```sh
 Not yet available, build from sources.

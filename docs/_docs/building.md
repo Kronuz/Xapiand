@@ -33,6 +33,8 @@ Simply installing Xcode will not install all of the command line developer
 tools, the first time you must execute the following in Terminal, before trying
 to build:
 
+{:class="plat_osx"}
+
 ```sh
 # Install command tools using:
 sudo xcode-select --install
@@ -42,6 +44,8 @@ sudo open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_mac
 ##### 2. [Install Homebrew](https://docs.brew.sh/Installation){:target="_blank"}
 
 ##### 3. Install Requirements
+
+{:class="plat_osx"}
 
 ```sh
 ~/ $ brew install ninja
