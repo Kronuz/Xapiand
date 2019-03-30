@@ -317,15 +317,17 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void write_document_view(Request& request);
 	void update_document_view(Request& request);
 	void delete_document_view(Request& request);
+	void dump_document_view(Request& request);
+	void restore_document_view(Request& request);
 
 	void database_exists_view(Request& request);
 	void retrieve_database_view(Request& request);
 	void update_database_view(Request& request);
 	void delete_database_view(Request& request);
-
-	void check_database_view(Request& request);
 	void dump_database_view(Request& request);
 	void restore_database_view(Request& request);
+
+	void check_database_view(Request& request);
 	void commit_database_view(Request& request);
 
 	void search_view(Request& request);

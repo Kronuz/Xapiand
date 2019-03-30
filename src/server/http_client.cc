@@ -1158,7 +1158,7 @@ HttpClient::prepare()
 			if (id.empty()) {
 				new_request->view = &HttpClient::dump_database_view;
 			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				new_request->view = &HttpClient::dump_document_view;
 			}
 			break;
 
@@ -1173,7 +1173,7 @@ HttpClient::prepare()
 				}
 				new_request->view = &HttpClient::restore_database_view;
 			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+				new_request->view = &HttpClient::restore_document_view;
 			}
 			break;
 
@@ -2146,6 +2146,24 @@ HttpClient::commit_database_view(Request& request)
 			{"operation", "commit"},
 		})
 		.Observe(took / 1e9);
+}
+
+
+void
+HttpClient::dump_document_view(Request& request)
+{
+	L_CALL("HttpClient::dump_document_view()");
+
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+}
+
+
+void
+HttpClient::restore_document_view(Request& request)
+{
+	L_CALL("HttpClient::restore_document_view()");
+
+	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
