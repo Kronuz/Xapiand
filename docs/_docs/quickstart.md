@@ -13,6 +13,7 @@ storage indexes. **DON'T PANIC**, it will take just a few minutes.
 
 ### Using Homebrew under macOS
 
+{:class="plat_osx"}
 ```sh
 # Install with Homebrew:
 ~ $ brew install Kronuz/tap/xapiand
