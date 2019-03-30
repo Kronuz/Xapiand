@@ -2154,7 +2154,33 @@ HttpClient::dump_document_view(Request& request)
 {
 	L_CALL("HttpClient::dump_document_view()");
 
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	auto query_field = query_field_maker(request, 0);
+	if (resolve_index_endpoints(request, query_field) > 1) {
+		THROW(ClientError, "Method can only be used with single indexes");
+	}
+
+	auto document_id = request.path_parser.get_id();
+	ASSERT(!document_id.empty());
+
+	request.processing = std::chrono::system_clock::now();
+
+	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
+
+	auto obj = db_handler.dump_document(document_id);
+
+	request.ready = std::chrono::system_clock::now();
+
+	write_http_response(request, HTTP_STATUS_OK, obj);
+
+	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
+	L_TIME("Dump took {}", string::from_delta(took));
+
+	Metrics::metrics()
+		.xapiand_operations_summary
+		.Add({
+			{"operation", "dump"},
+		})
+		.Observe(took / 1e9);
 }
 
 
