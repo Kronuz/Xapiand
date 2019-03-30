@@ -23,5 +23,3 @@ DELETE /twitter/
 whole index `/twitter/` while the later will delete document `twitter` inside
 index `/`.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
-
-<div style="min-height: 200px"></div>
