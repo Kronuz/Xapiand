@@ -194,6 +194,8 @@ class DatabaseHandler {
 
 	bool update_schema();
 
+	MsgPack _dump_document(Xapian::docid did, const Data& data);
+
 public:
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints& endpoints_, int flags_ = 0, std::shared_ptr<std::unordered_set<std::string>> context_ = nullptr);
@@ -223,6 +225,8 @@ public:
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
 	MSet get_mset(const Xapian::Query& query, unsigned offset = 0, unsigned limit = 10, unsigned check_at_least = 0, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr);
 
+	MsgPack dump_document(Xapian::docid did);
+	MsgPack dump_document(std::string_view document_id);
 	MsgPack dump_documents();
 	std::string dump_documents(int fd);
 	std::string restore_documents(int fd);

@@ -816,6 +816,61 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 
 
 MsgPack
+DatabaseHandler::_dump_document(Xapian::docid did, const Data& data) {
+	auto main_locator = data.get("");
+	auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
+	for (auto& locator : data) {
+		switch (locator.type) {
+			case Locator::Type::inplace:
+			case Locator::Type::compressed_inplace: {
+				if (!locator.ct_type.empty()) {
+					obj["_data"].push_back(MsgPack({
+						{ "_content_type", locator.ct_type.to_string() },
+						{ "_type", "inplace" },
+						{ "_blob", locator.data() },
+					}));
+				}
+				break;
+			}
+			case Locator::Type::stored:
+			case Locator::Type::compressed_stored: {
+#ifdef XAPIAND_DATA_STORAGE
+				auto stored = storage_get_stored(locator, did);
+				obj["_data"].push_back(MsgPack({
+					{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
+					{ "_type", "stored" },
+					{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
+				}));
+#endif
+				break;
+			}
+		}
+	}
+	return obj;
+}
+
+
+MsgPack
+DatabaseHandler::dump_document(Xapian::docid did)
+{
+	L_CALL("DatabaseHandler::dump_document()");
+
+	auto document = get_document(did);
+	return _dump_document(did, Data(document.get_data()));
+}
+
+
+MsgPack
+DatabaseHandler::dump_document(std::string_view document_id)
+{
+	L_CALL("DatabaseHandler::dump_document()");
+
+	auto did = get_docid(document_id);
+	return dump_document(did);
+}
+
+
+MsgPack
 DatabaseHandler::dump_documents()
 {
 	L_CALL("DatabaseHandler::dump_documents()");
@@ -838,37 +893,7 @@ DatabaseHandler::dump_documents()
 			for (; it != it_e; ++it) {
 				did = *it;
 				auto doc = db->get_document(did);
-				auto data = Data(doc.get_data());
-				auto main_locator = data.get("");
-				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
-				for (auto& locator : data) {
-					switch (locator.type) {
-						case Locator::Type::inplace:
-						case Locator::Type::compressed_inplace: {
-							if (!locator.ct_type.empty()) {
-								obj["_data"].push_back(MsgPack({
-									{ "_content_type", locator.ct_type.to_string() },
-									{ "_type", "inplace" },
-									{ "_blob", locator.data() },
-								}));
-							}
-							break;
-						}
-						case Locator::Type::stored:
-						case Locator::Type::compressed_stored: {
-#ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(locator, did);
-							obj["_data"].push_back(MsgPack({
-								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
-								{ "_type", "stored" },
-								{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
-							}));
-#endif
-							break;
-						}
-					}
-				}
-				docs.push_back(obj);
+				docs.push_back(_dump_document(did, Data(doc.get_data())));
 			}
 			break;
 		} catch (const Xapian::DatabaseModifiedError& exc) {
@@ -918,36 +943,7 @@ DatabaseHandler::dump_documents(int fd)
 			for (; it != it_e; ++it) {
 				did = *it;
 				auto doc = db->get_document(did);
-				auto data = Data(doc.get_data());
-				auto main_locator = data.get("");
-				auto obj = main_locator != nullptr ? MsgPack::unserialise(main_locator->data()) : MsgPack::MAP();
-				for (auto& locator : data) {
-					switch (locator.type) {
-						case Locator::Type::inplace:
-						case Locator::Type::compressed_inplace: {
-							if (!locator.ct_type.empty()) {
-								obj["_data"].push_back(MsgPack({
-									{ "_content_type", locator.ct_type.to_string() },
-									{ "_type", "inplace" },
-									{ "_blob", locator.data() },
-								}));
-							}
-							break;
-						}
-						case Locator::Type::stored:
-						case Locator::Type::compressed_stored: {
-#ifdef XAPIAND_DATA_STORAGE
-							auto stored = storage_get_stored(locator, did);
-							obj["_data"].push_back(MsgPack({
-								{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
-								{ "_type", "stored" },
-								{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
-							}));
-#endif
-							break;
-						}
-					}
-				}
+				auto obj = _dump_document(did, Data(doc.get_data()));
 				std::string obj_ser = obj.serialise();
 				ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
 				if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
