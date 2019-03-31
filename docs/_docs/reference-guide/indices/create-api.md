@@ -9,19 +9,19 @@ All documents in Xapiand are stored inside of one index or another, indexes
 are usually dynamically created, but certain settings can only be set for
 new indexes.
 
-This creates an index named "twitter" with all default setting:
+This creates an index named `twitter/tweet` with all default setting:
 
 {% capture req %}
 
 ```json
-PUT /twitter/
+PUT /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
 {: .note .warning }
-`PUT /twitter/` is not the same as `PUT /twitter`, the former creates index
-`/twitter/` and the later adds document `twitter` to index `/`.
+`PUT /twitter/tweet/` is not the same as `PUT /twitter/tweet`, the former creates index
+`/twitter/tweet/` and the later adds document `twitter/tweet` to index `/`.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 
@@ -48,7 +48,7 @@ defined in the body:
 {% capture req %}
 
 ```json
-PUT /twitter/
+PUT /twitter/tweet/
 
 {
   "_settings": {
@@ -79,7 +79,7 @@ the body:
 {% capture req %}
 
 ```json
-PUT /twitter/
+PUT /twitter/tweet/
 
 {
   "_schema": {

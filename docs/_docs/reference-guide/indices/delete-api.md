@@ -13,13 +13,13 @@ The _Delete Index API_ allows to delete an existing index.
 {% capture req %}
 
 ```json
-DELETE /twitter/
+DELETE /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
 {: .note .warning }
-`DELETE /twitter/` is not the same as `DELETE /twitter`, the former will delete the
-whole index `/twitter/` while the later will delete document `twitter` inside
+`DELETE /twitter/tweet/` is not the same as `DELETE /twitter/tweet`, the former will delete the
+whole index `/twitter/tweet/` while the later will delete document `twitter/tweet` inside
 index `/`.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).

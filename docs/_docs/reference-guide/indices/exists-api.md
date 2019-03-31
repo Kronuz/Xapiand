@@ -10,7 +10,7 @@ For example:
 {% capture req %}
 
 ```json
-HEAD /twitter/
+HEAD /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}

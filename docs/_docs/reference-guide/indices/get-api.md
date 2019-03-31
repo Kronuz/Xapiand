@@ -8,7 +8,7 @@ The _Get Index API_ allows to retrieve information about one or more indexes.
 {% capture req %}
 
 ```json
-GET /twitter/
+GET /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}

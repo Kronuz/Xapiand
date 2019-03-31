@@ -13,11 +13,11 @@ It's also possible to dump and restore documents from the command line.
 
 ### Dump
 
-A dump of all documents in the "twitter" database can be saved by running the
-following command:
+A dump of all documents in the `/twitter/tweet/` database can be saved by
+running the following command:
 
 ```sh
-~ $ xapiand --dump="twitter" --out="twitter.msgpack"
+~ $ xapiand --dump="twitter/tweet" --out="twitter.msgpack"
 ```
 
 
@@ -26,7 +26,7 @@ following command:
 To restore for the dump in the file `twitter.msgpack`:
 
 ```sh
-~ $ xapiand --restore="twitter" --in="twitter.msgpack"
+~ $ xapiand --restore="twitter/tweet" --in="twitter.msgpack"
 ```
 
 {: .note .warning }
@@ -47,7 +47,7 @@ to and from JSON, NDJSON or MessagePack over HTTP, using the online API.
 {% capture req %}
 
 ```json
-DUMP /twitter/
+DUMP /twitter/tweet/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -57,7 +57,7 @@ DUMP /twitter/
 {% capture req %}
 
 ```json
-RESTORE /twitter/
+RESTORE /twitter/tweet/
 
 [
   {
@@ -89,7 +89,7 @@ setting the `Accept` header to either `application/x-msgpack` or
 {% capture req %}
 
 ```json
-DUMP /twitter/
+DUMP /twitter/tweet/
 Accept: application/x-msgpack
 ```
 {% endcapture %}
@@ -100,7 +100,7 @@ To restore those, you should specify the `Content-Type` header accordingly:
 {% capture req %}
 
 ```json
-RESTORE /new_twitter/
+RESTORE /twitter/tweets/
 Content-Type: application/x-msgpack
 
 @twitter.msgpack
@@ -111,7 +111,7 @@ Content-Type: application/x-msgpack
 When using curl, make sure to use `--data-binary` and not simply `-d` or `--data`:
 
 ```sh
-curl -X RESTORE 'localhost:8880/new_twitter/' \
+curl -X RESTORE 'localhost:8880/twitter/tweets/' \
      -H 'Content-Type: application/x-msgpack' \
      --data-binary '@twitter.msgpack'
 ```
@@ -132,7 +132,7 @@ to reindex the dumped documents:
 {% capture req %}
 
 ```json
-PUT /new_twitter/
+PUT /twitter/tweets/
 
 {
   "_schema": {
@@ -168,7 +168,7 @@ Restore the index documents to the new index:
 {% capture req %}
 
 ```json
-RESTORE /new_twitter/
+RESTORE /twitter/tweets/
 
 [
   {
