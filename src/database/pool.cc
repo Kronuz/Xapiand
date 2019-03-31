@@ -302,7 +302,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 	if (shard->is_writable()) {
 		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
 			std::lock_guard<std::mutex> lk(mtx);
-			writable = nullptr;
+			writable.reset();
 			database_pool.checkin_clears_cond.notify_all();
 		} else {
 			Shard::autocommit(shard);
