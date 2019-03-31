@@ -201,10 +201,6 @@ parseOptions(int argc, char** argv)
 		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
 		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
 
-#ifdef XAPIAN_HAS_GLASS_BACKEND
-		SwitchArg chert("", "chert", "Prefer Chert databases.", cmd, false);
-#endif
-
 		std::vector<std::string> uuid_allowed({
 			"vanilla",
 #ifdef XAPIAND_UUID_GUID
@@ -363,11 +359,6 @@ parseOptions(int argc, char** argv)
 		o.processors = std::max(1.0, std::min(processors.getValue(), hardware_concurrency));
 		o.verbosity = verbosity.getValue() + verbose.getValue();
 		o.detach = detach.getValue();
-#ifdef XAPIAN_HAS_GLASS_BACKEND
-		o.chert = chert.getValue();
-#else
-		o.chert = true;
-#endif
 
 #ifdef XAPIAND_CLUSTERING
 		o.solo = solo.getValue();

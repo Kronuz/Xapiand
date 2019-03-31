@@ -31,7 +31,6 @@ extern struct opts_t {
 	double processors = 1;
 	int verbosity = 0;
 	bool detach = false;
-	bool chert = false;
 	bool solo = false;
 	bool strict = false;
 	bool force = false;

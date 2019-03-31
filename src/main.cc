@@ -727,12 +727,6 @@ void setup() {
 		}
 	}
 
-	if (opts.chert) {
-		L_INFO("Using Chert databases by default.");
-	} else {
-		L_INFO("Using Glass databases by default.");
-	}
-
 	std::vector<std::string> modes;
 	if (opts.strict) {
 		modes.emplace_back("strict");
@@ -915,15 +909,6 @@ int main(int argc, char **argv) {
 		Logging::no_colors = opts.no_colors;
 
 		demote(opts.uid.c_str(), opts.gid.c_str());
-
-#ifdef XAPIAN_HAS_GLASS_BACKEND
-		if (!opts.chert) {
-			// Prefer glass database
-			if (setenv("XAPIAN_PREFER_GLASS", "1", 0) != 0) {
-				opts.chert = true;
-			}
-		}
-#endif
 
 		if (opts.strict) {
 			default_spc.flags.strict = true;
