@@ -35,10 +35,10 @@
 #include <vector>                                 // for std::vector
 
 #include "aggregations.h"                         // for Aggregation, RESERVED_AGGS_*
+#include "database/schema.h"                      // for FieldType
 #include "metrics.h"                              // for HandledSubAggregation
 #include "msgpack.h"                              // for MsgPack, object::object, ...
 #include "exception.h"                            // for AggregationError, MSG_Agg...
-#include "schema.h"                               // for FieldType
 #include "string.hh"                              // for string::format
 #include "hashes.hh"                              // for xxh64
 #include "xapian.h"                               // for Document, valueno

@@ -29,8 +29,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "database/schema.h"
 #include "exception.h"
-#include "schema.h"
 
 
 class ScriptNotFoundError : public ClientError {

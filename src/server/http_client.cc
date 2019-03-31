@@ -41,6 +41,7 @@
 #include "database/handler.h"               // for DatabaseHandler
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
+#include "database/schema.h"                // for Schema
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
@@ -67,7 +68,6 @@
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "reserved/schema.h"                // for RESERVED_VERSION
 #include "response.h"                       // for RESPONSE_*
-#include "schema.h"                         // for Schema
 #include "serialise.h"                      // for Serialise::boolean
 #include "string.hh"                        // for string::from_delta
 #include "xapian.h"                         // for Xapian::major_version, Xapian::minor_version

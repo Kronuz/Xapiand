@@ -27,8 +27,8 @@
 #include <set>                                    // for std::set
 
 #include "aggregations.h"                         // for Aggregation
+#include "database/schema.h"                      // for Schema, required_spc_t
 #include "metrics/basic_string_metric.h"          // for Counter
-#include "schema.h"                               // for Schema, required_spc_t
 #include "serialise.h"                            // for Serialise::MsgPack
 
 

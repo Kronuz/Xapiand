@@ -22,10 +22,10 @@
 
 #include "metrics.h"
 
+#include "database/schema.h"       // for FieldType, required_spc_t, FieldTy...
 #include "exception.h"             // for AggregationError, MSG_AggregationE...
 #include "msgpack/object_fwd.hpp"  // for type_error
 #include "repr.hh"                 // for repr
-#include "schema.h"                // for FieldType, required_spc_t, FieldTy...
 #include "string.hh"               // for string::startswith
 #include "utype.hh"                // for toUType
 

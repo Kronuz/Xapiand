@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "schemas_lru.h"
+#include "database/schemas_lru.h"
 
 #include "cassert.h"                              // for ASSERT
 #include "database/handler.h"                     // for DatabaseHandler

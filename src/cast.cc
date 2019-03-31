@@ -22,7 +22,7 @@
 
 #include "cast.h"
 
-#include "schema.h"
+#include "database/schema.h"
 #include "string.hh"                              // for string::format
 
 

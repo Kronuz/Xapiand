@@ -24,9 +24,9 @@
 
 #include <cmath>                                  // for M_PI
 
+#include "database/schema.h"                      // for required_spc_t
 #include "generate_terms.h"                       // for GenerateTerms
 #include "geospatial/geospatial.h"                // for GeoSpatial
-#include "schema.h"                               // for required_spc_t
 #include "serialise_list.h"                       // for StringList
 
 

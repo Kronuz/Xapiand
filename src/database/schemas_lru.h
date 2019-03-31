@@ -26,10 +26,10 @@
 #include <string_view>           // for std::string_view
 
 #include "atomic_shared_ptr.h"
+#include "database/schema.h"
 #include "endpoint.h"
 #include "lru.h"
 #include "msgpack.h"
-#include "schema.h"
 
 
 constexpr size_t MAX_SCHEMA_RECURSION = 10;

@@ -28,11 +28,11 @@
 #include <vector>                                 // for std::vector
 
 #include "config.h"                               // for HAVE_LIBCPP
+#include "database/schema.h"                      // for required_spc_t, FieldType, UnitTime
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "utils/math.hh"                          // for modulus
 #include "reversed.hh"                            // for reversed
-#include "schema.h"                               // for required_spc_t, FieldType, UnitTime
 #include "utype.hh"                               // for toUType
 
 

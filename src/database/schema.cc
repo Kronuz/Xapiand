@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "schema.h"
+#include "database/schema.h"
 
 #include <algorithm>                              // for std::move
 #include <cmath>                                  // for std::pow

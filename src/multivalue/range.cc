@@ -29,6 +29,7 @@
 #include <vector>                                 // for vector
 
 #include "cast.h"                                 // for Cast
+#include "database/schema.h"                      // for required_spc_t, FieldType
 #include "datetime.h"                             // for timestamp
 #include "exception.h"                            // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                       // for datetime, geo, numeric
@@ -36,7 +37,6 @@
 #include "length.h"                               // for serialise_length
 #include "utils/math.hh"                          // for max, min
 #include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO
-#include "schema.h"                               // for required_spc_t, FieldType
 #include "serialise_list.h"                       // for StringList
 
 

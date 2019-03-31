@@ -25,13 +25,13 @@
 #include <stdexcept>                        // for out_of_range
 
 #include "bucket.h"                         // for FilterAggregation, Histog...
+#include "database/schema.h"                // for Schema
 #include "database/utils.h"                 // for is_valid
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
 #include "phf.hh"                           // for phf
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
-#include "schema.h"                         // for Schema
 
 
 Aggregation::Aggregation()

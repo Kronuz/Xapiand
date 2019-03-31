@@ -29,6 +29,7 @@
 #include "cast.h"                                     // for Cast
 #include "chars.hh"                                   // for iskeyword
 #include "cuuid/uuid.h"                               // for UUID
+#include "database/schema.h"                          // for FieldType, FieldType::KEYWORD, Fiel...
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
@@ -37,7 +38,6 @@
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
-#include "schema.h"                                   // for FieldType, FieldType::KEYWORD, Fiel...
 #include "serialise_list.h"                           // for StringList, CartesianList and RangeList
 #include "split.h"                                    // for Split
 #include "utype.hh"                                   // for toUType

@@ -32,6 +32,8 @@
 #include "cast.h"                           // for Cast
 #include "chaipp/exception.h"               // for chaipp::Error
 #include "database/lock.h"                  // for lock_shard
+#include "database/schema.h"                // for Schema, required_spc_t
+#include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for split_path_id
 #include "database/wal.h"                   // for DatabaseWAL
@@ -51,8 +53,6 @@
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
 #include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
-#include "schema.h"                         // for Schema, required_spc_t
-#include "schemas_lru.h"                    // for SchemasLRU
 #include "script.h"                         // for Script
 #include "string.hh"                        // for string::from_bytes
 #include "serialise.h"                      // for cast, serialise, type

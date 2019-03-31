@@ -49,6 +49,7 @@
 
 #include "check_size.h"                           // for check_size
 #include "database/handler.h"                     // for DatabaseHandler
+#include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
 #include "error.hh"                               // for error::name, error::description
 #include "ev/ev++.h"                              // for ::DEVPOLL, ::EPOLL, ::KQUEUE
@@ -61,7 +62,6 @@
 #include "manager.h"                              // for XapiandManager
 #include "opts.h"                                 // for opts_t
 #include "package.h"                              // for Package::
-#include "schema.h"                               // for default_spc
 #include "string.hh"                              // for string::format, string::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...

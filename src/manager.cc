@@ -54,6 +54,7 @@
 #include "database/cleanup.h"                    // for DatabaseCleanup
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
 #include "database/pool.h"                       // for DatabasePool
+#include "database/schemas_lru.h"                // for SchemasLRU
 #include "database/utils.h"                      // for RESERVED_TYPE
 #include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
@@ -73,7 +74,6 @@
 #include "package.h"                             // for Package
 #include "readable_revents.hh"                   // for readable_revents
 #include "reserved/schema.h"                     // for RESERVED_INDEX, RESERVED_TYPE, ...
-#include "schemas_lru.h"                         // for SchemasLRU
 #include "serialise.h"                           // for KEYWORD_STR
 #include "serialise_list.h"                      // for StringList
 #include "server/http.h"                         // for Http

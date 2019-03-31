@@ -31,6 +31,7 @@
 
 #include "base_x.hh"                                 // for base62
 #include "cast.h"                                    // for Cast
+#include "database/schema.h"                         // for FieldType
 #include "exception.h"                               // for ClientError, MSG_ClientError
 #include "io.hh"                                     // for close, open, read, write
 #include "length.h"                                  // for serialise_length and unserialise_length
@@ -39,7 +40,6 @@
 #include "rapidjson/document.h"                      // for Document, GenericDocument
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
-#include "schema.h"                                  // for FieldType
 #include "serialise.h"                               // for Serialise
 #include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
 
