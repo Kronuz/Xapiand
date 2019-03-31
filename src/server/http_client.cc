@@ -1173,7 +1173,7 @@ HttpClient::prepare()
 				}
 				new_request->view = &HttpClient::restore_database_view;
 			} else {
-				new_request->view = &HttpClient::restore_document_view;
+				new_request->view = &HttpClient::write_document_view;
 			}
 			break;
 
@@ -2181,15 +2181,6 @@ HttpClient::dump_document_view(Request& request)
 			{"operation", "dump"},
 		})
 		.Observe(took / 1e9);
-}
-
-
-void
-HttpClient::restore_document_view(Request& request)
-{
-	L_CALL("HttpClient::restore_document_view()");
-
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 

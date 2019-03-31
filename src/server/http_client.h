@@ -318,7 +318,6 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	void update_document_view(Request& request);
 	void delete_document_view(Request& request);
 	void dump_document_view(Request& request);
-	void restore_document_view(Request& request);
 
 	void database_exists_view(Request& request);
 	void retrieve_database_view(Request& request);
