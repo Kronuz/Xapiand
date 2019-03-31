@@ -824,7 +824,7 @@ DatabaseHandler::_dump_document(Xapian::docid did, const Data& data) {
 			case Locator::Type::inplace:
 			case Locator::Type::compressed_inplace: {
 				if (!locator.ct_type.empty()) {
-					obj["_data"].push_back(MsgPack({
+					obj[RESERVED_DATA].push_back(MsgPack({
 						{ "_content_type", locator.ct_type.to_string() },
 						{ "_type", "inplace" },
 						{ "_blob", locator.data() },
@@ -836,7 +836,7 @@ DatabaseHandler::_dump_document(Xapian::docid did, const Data& data) {
 			case Locator::Type::compressed_stored: {
 #ifdef XAPIAND_DATA_STORAGE
 				auto stored = storage_get_stored(locator, did);
-				obj["_data"].push_back(MsgPack({
+				obj[RESERVED_DATA].push_back(MsgPack({
 					{ "_content_type", unserialise_string_at(STORED_CONTENT_TYPE, stored) },
 					{ "_type", "stored" },
 					{ "_blob", unserialise_string_at(STORED_BLOB, stored) },
