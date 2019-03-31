@@ -33,21 +33,21 @@
         - url: index-api
         - url: get-api
         - url: exists-api
-        - url: delete-api
         - url: update-api
-        - url: store-api
         - url: info-api
+        - url: delete-api
+        - url: store-api
         - url: scripting
         - url: versioning
     - url: indices
       docs:
         - url: replication
         - url: create-api
-        - url: delete-api
         - url: get-api
         - url: exists-api
-        - url: close-api
         - url: info-api
+        - url: delete-api
+        - url: close-api
         - url: backups
     - url: schemas
       docs:
