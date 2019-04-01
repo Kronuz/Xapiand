@@ -230,20 +230,25 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
+		destroy();
 		detach();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
+		L_EXC("ERROR: Dispatching remote protocol message");
+		destroy();
 		detach();
 	} catch (const Xapian::Error& exc) {
-		// Propagate the exception to the client, then return to the main
-		// message handling loop.
+		// Propagate the exception to the client, then close the connection.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
+		destroy();
+		detach();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
+		destroy();
 		detach();
 	}
 }
