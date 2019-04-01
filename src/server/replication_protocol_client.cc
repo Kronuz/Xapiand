@@ -396,11 +396,11 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
 
 	auto ends = std::chrono::system_clock::now();
-	total_sent_bytes = total_sent_bytes - total_sent_bytes;
+	_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 	if (from_revision == to_revision) {
-		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK EMPTY {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK EMPTY {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 	} else {
-		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 	}
 
 	detach();
