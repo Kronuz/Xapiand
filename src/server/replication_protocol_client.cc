@@ -230,7 +230,6 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
-		destroy();
 		detach();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
@@ -238,17 +237,14 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching remote protocol message");
-		destroy();
 		detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then close the connection.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		destroy();
 		detach();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
-		destroy();
 		detach();
 	}
 }
@@ -278,7 +274,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 		L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 
-		destroy();
 		detach();
 
 		return;
@@ -364,7 +359,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 
-					destroy();
 					detach();
 
 					return;
@@ -409,7 +403,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	}
 
-	destroy();
 	detach();
 }
 
