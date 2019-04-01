@@ -118,7 +118,6 @@ inline bool ignored_errno(int e, bool again, bool tcp, bool udp) {
 		case EWOULDBLOCK:
 #endif
 			return again;  //  Ignore not-available error
-		case EPIPE:
 		case EINPROGRESS:
 			return tcp;  //  Ignore error on TCP sockets
 
