@@ -163,7 +163,7 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	try {
-		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_WRITABLE | DB_CREATE_OR_OPEN, false);
 		lk_shard_ptr->lock(0, [=] {
 			// If it cannot checkout because database is busy, retry when ready...
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
