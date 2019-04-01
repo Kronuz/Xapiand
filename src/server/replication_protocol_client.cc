@@ -791,7 +791,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		ssize_t len;
 		try {
 			len = unserialise_length(&p, p_end, true);
-		} catch (const Xapian::SerialisationError) {
+		} catch (const Xapian::SerialisationError&) {
 			return received;
 		}
 
