@@ -272,8 +272,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		auto ends = std::chrono::system_clock::now();
 		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 		L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
-
-		shutdown();
 		return;
 	}
 
@@ -356,9 +354,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					auto ends = std::chrono::system_clock::now();
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
-
-					shutdown();
-
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					db = lk_shard.lock()->db();
@@ -400,8 +395,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	} else {
 		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 	}
-
-	shutdown();
 }
 
 
