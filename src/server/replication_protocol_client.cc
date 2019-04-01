@@ -680,6 +680,11 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 bool
 ReplicationProtocolClient::is_idle() const
 {
+	L_CALL("ReplicationProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, messages_empty:{}}}", is_waiting(), is_running(), write_queue.empty(), [&]{
+		std::lock_guard<std::mutex> lk(runner_mutex);
+		return messages.empty();
+	});
+
 	if (!is_waiting() && !is_running() && write_queue.empty()) {
 		std::lock_guard<std::mutex> lk(runner_mutex);
 		return messages.empty();
