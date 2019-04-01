@@ -136,6 +136,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 			writable = std::make_shared<Shard>(*this, flags);
 		}
 		if (!is_locked() && !writable->busy.exchange(true)) {
+			writable->flags = flags;  // update shard flags
 			return writable;
 		}
 		auto wait_pred = [&]() {
@@ -183,6 +184,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 					readable = std::make_shared<Shard>(*this, flags);
 				}
 				if (!is_locked() && !readable->busy.exchange(true)) {
+					readable->flags = flags;  // update shard flags
 					--readables_available;
 					return readable;
 				}
@@ -193,6 +195,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 			auto& readable = *readables.insert(readables.end(), new_database);
 			++readables_available;
 			if (!is_locked() && !readable->busy.exchange(true)) {
+				readable->flags = flags;  // update shard flags
 				--readables_available;
 				return readable;
 			}
@@ -234,12 +237,9 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 	std::unique_lock<std::mutex> lk(mtx);
 
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
-		auto& shard = _writable_checkout(flags, timeout, callback, now, lk);
-		shard->flags = flags;  // update shard flags
-		return shard;
+		return _writable_checkout(flags, timeout, callback, now, lk);
 	} else {
 		auto& shard = _readable_checkout(flags, timeout, callback, now, lk);
-		shard->flags = flags;  // update shard flags
 		lk.unlock();
 		try {
 			// Reopening of old/outdated (readable) databases:
