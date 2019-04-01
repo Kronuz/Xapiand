@@ -269,11 +269,13 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 			if (reopen) {
 				// Create a new shard and discard old one
 				auto new_database = std::make_shared<Shard>(*this, flags);
-				new_database->busy = true;
+				new_database->busy.store(true);
 				lk.lock();
 				shard = new_database;
 			}
-		} catch (...) {}
+		} catch (...) {
+			L_WARNING("WARNING: Readable shard reopening failed: {}", to_string());
+		}
 		return shard;
 	}
 }
@@ -287,11 +289,6 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 	ASSERT(shard);
 	ASSERT(shard->is_busy());
 	ASSERT(&shard->endpoint == this);
-
-	if (shard->log) {
-		shard->log->clear();
-		shard->log.reset();
-	}
 
 	TaskQueue<void()> pending_callbacks;
 	{
@@ -307,7 +304,11 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			Shard::autocommit(shard);
 		}
-		shard->busy = false;
+		if (shard->log) {
+			shard->log->clear();
+			shard->log.reset();
+		}
+		shard->busy.store(false);
 		writable_cond.notify_one();
 	} else {
 		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
@@ -320,7 +321,11 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			++readables_available;
 		}
-		shard->busy = false;
+		if (shard->log) {
+			shard->log->clear();
+			shard->log.reset();
+		}
+		shard->busy.store(false);
 		readables_cond.notify_one();
 	}
 
@@ -362,14 +367,14 @@ ShardEndpoint::clear()
 				// If it's the last one, reset() will delete the shard object:
 				shared_writable.reset();
 			} catch (...) {
-				L_WARNING("WARNING: Writable shard deletion failed!");
+				L_WARNING("WARNING: Writable shard deletion failed: {}", to_string());
 			}
 			lk.lock();
 			if ((shared_writable = weak_writable.lock())) {
 				// It wasn't the last one,
 				// add it back:
 				writable = shared_writable;
-				writable->busy = false;
+				writable->busy.store(false);
 			}
 		}
 	}
@@ -393,14 +398,14 @@ ShardEndpoint::clear()
 					// If it's the last one, reset() will delete the shard object:
 					shared_readable.reset();
 				} catch (...) {
-					L_WARNING("WARNING: Readable shard deletion failed!");
+					L_WARNING("WARNING: Readable shard deletion failed: {}", to_string());
 				}
 				lk.lock();
 				if ((shared_readable = weak_readable.lock())) {
 					// It wasn't the last one,
 					// add it back:
 					readable = shared_readable;
-					readable->busy = false;
+					readable->busy.store(false);
 					++it;
 				} else {
 					// It was the last one,
@@ -740,6 +745,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 		}
 		return shards;
 	} catch (...) {
+		// Unable to checkout all requested shards, checkin
 		checkin(shards);
 		throw;
 	}
