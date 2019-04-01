@@ -230,22 +230,22 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
-		detach();
+		shutdown();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching remote protocol message");
-		detach();
+		shutdown();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then close the connection.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		detach();
+		shutdown();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
-		detach();
+		shutdown();
 	}
 }
 
@@ -274,8 +274,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 		L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 
-		detach();
-
+		shutdown();
 		return;
 	}
 
@@ -359,7 +358,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 
-					detach();
+					shutdown();
 
 					return;
 				} else if (--whole_db_copies_left == 0) {
@@ -403,7 +402,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 	}
 
-	detach();
+	shutdown();
 }
 
 
@@ -531,8 +530,7 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::set_cluster_database_ready();
 	}
 
-	destroy();
-	detach();
+	shutdown();
 }
 
 
@@ -547,8 +545,7 @@ ReplicationProtocolClient::reply_fail(const std::string&)
 	reset();
 
 	L_ERR("ReplicationProtocolClient failure!");
-	destroy();
-	detach();
+	shutdown();
 }
 
 
@@ -934,8 +931,8 @@ ReplicationProtocolClient::operator()()
 			} catch (...) {
 				lk.lock();
 				running = false;
-				lk.unlock();
 				L_CONN("Running in worker ended with an exception.");
+				lk.unlock();
 				detach();
 				throw;
 			}
@@ -972,8 +969,8 @@ ReplicationProtocolClient::operator()()
 				} catch (...) {
 					lk.lock();
 					running = false;
-					lk.unlock();
 					L_CONN("Running in worker ended with an exception.");
+					lk.unlock();
 					detach();
 					throw;
 				}
@@ -1003,8 +1000,8 @@ ReplicationProtocolClient::operator()()
 				} catch (...) {
 					lk.lock();
 					running = false;
-					lk.unlock();
 					L_CONN("Running in worker ended with an exception.");
+					lk.unlock();
 					detach();
 					throw;
 				}
@@ -1014,6 +1011,7 @@ ReplicationProtocolClient::operator()()
 
 			default:
 				running = false;
+				L_CONN("Running in worker ended with unexpected state.");
 				lk.unlock();
 				L_ERR("Unexpected ReplicationProtocolClient State!");
 				stop();
@@ -1024,15 +1022,14 @@ ReplicationProtocolClient::operator()()
 	}
 
 	running = false;
+	L_CONN("Running in replication worker ended. {{messages_empty:{}, closed:{}, is_shutting_down:{}}}", messages.empty(), closed.load(), is_shutting_down());
 	lk.unlock();
 
-	if (is_shutting_down() && is_idle()) {
-		L_CONN("Running in worker ended due shutdown.");
-		detach();
+	if (is_shutting_down()) {
+		shutdown();
 		return;
 	}
 
-	L_CONN("Running in replication worker ended.");
 	redetach();  // try re-detaching if already flagged as detaching
 }
 

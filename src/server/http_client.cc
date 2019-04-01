@@ -1212,8 +1212,7 @@ HttpClient::prepare()
 			if (opts.admin_commands && !has_pth && id.empty()) {
 				XapiandManager::try_shutdown(true);
 				write_http_response(*new_request, HTTP_STATUS_OK);
-				destroy();
-				detach();
+				shutdown();
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1299,8 +1298,8 @@ HttpClient::operator()()
 			lk.lock();
 			requests.pop_front();
 			running = false;
-			lk.unlock();
 			L_CONN("Running in worker ended with an exception.");
+			lk.unlock();
 			detach();
 			throw;
 		}
@@ -1311,10 +1310,9 @@ HttpClient::operator()()
 			requests.pop_front();
 			if (closing) {
 				running = false;
-				lk.unlock();
 				L_CONN("Running in worker ended after request closing.");
-				destroy();
-				detach();
+				lk.unlock();
+				shutdown();
 				return;
 			}
 		} else {
@@ -1323,15 +1321,14 @@ HttpClient::operator()()
 	}
 
 	running = false;
+	L_CONN("Running in replication worker ended. {{requests_empty:{}, closed:{}, is_shutting_down:{}}}", requests.empty(), closed.load(), is_shutting_down());
 	lk.unlock();
 
-	if (is_shutting_down() && is_idle()) {
-		L_CONN("Running in worker ended due shutdown.");
-		detach();
+	if (is_shutting_down()) {
+		shutdown();
 		return;
 	}
 
-	L_CONN("Running in worker ended.");
 	redetach();  // try re-detaching if already flagged as detaching
 }
 

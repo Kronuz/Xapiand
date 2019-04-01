@@ -224,7 +224,7 @@ protected:
 				L_ERR("ERROR: read error {{sock:{}}} - {}: {} ({})", watcher.fd, error::name(errno), errno, error::description(errno));
 			}
 			on_read(nullptr, received);
-			detach();
+			shutdown();
 			return;
 		}
 
@@ -232,7 +232,7 @@ protected:
 			// The peer has closed its half side of the connection.
 			L_CONN("Received EOF {{sock:{}}}!", watcher.fd);
 			on_read(nullptr, received);
-			detach();
+			shutdown();
 			return;
 		}
 

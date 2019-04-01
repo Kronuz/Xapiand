@@ -347,7 +347,7 @@ BaseClient::_io_cb_write([[maybe_unused]] ev::io &watcher, int revents)
 					io_write.stop();
 					L_EV("Disable write event");
 					if (is_shutting_down()) {
-						detach();
+						shutdown();
 					}
 				}
 			});

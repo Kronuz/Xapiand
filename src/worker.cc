@@ -434,7 +434,7 @@ Worker::shutdown(bool async)
 	L_CALL("Worker::shutdown() {}", __repr__());
 
 	auto now = epoch::now<>();
-	shutdown(now, now, async);
+	shutdown(now, 0, async);
 }
 
 

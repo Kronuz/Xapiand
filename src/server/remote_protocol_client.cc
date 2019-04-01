@@ -1514,9 +1514,9 @@ RemoteProtocolClient::operator()()
 	running = false;
 	lk.unlock();
 
-	if (is_shutting_down() && is_idle()) {
+	if (is_shutting_down()) {
 		L_CONN("Running in worker ended due shutdown.");
-		detach();
+		shutdown();
 		return;
 	}
 
