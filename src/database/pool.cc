@@ -267,7 +267,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 				}
 			}
 			if (reopen) {
-				// Discard old shard and create a new one
+				// Create a new shard and discard old one
 				auto new_database = std::make_shared<Shard>(*this, flags);
 				new_database->busy = true;
 				lk.lock();
@@ -649,7 +649,7 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 		database_endpoint = it->second.get();
 	}
 
-	// Return a busy shard endpoint so it cannot get deleted while the object exists
+	// Return a referenced shard endpoint so it cannot get deleted while the object exists
 	return ReferencedShardEndpoint(database_endpoint);
 }
 
@@ -676,7 +676,7 @@ DatabasePool::_get(const Endpoint& endpoint) const
 		database_endpoint = it->second.get();
 	}
 
-	// Return a busy shard endpoint so it cannot get deleted while the object exists
+	// Return a referenced shard endpoint so it cannot get deleted while the object exists
 	return ReferencedShardEndpoint(database_endpoint);
 }
 
