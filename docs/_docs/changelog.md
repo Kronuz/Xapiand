@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.18.0] - 2019-04-01
+{: #v0-18-0 }
+
 ### Added
 - The `?echo` query param returns the new/updated object
 
@@ -22,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Removed `:schema`, schemas are now added/edited by using the
                 Create Index API.
 - Verbosity level 4 or higher (`-vvvv`) turns on `--echo`, `--pretty` and `--comments`
+
+### Fixed
+- Replication protocol now properly closing connections on errors
 
 
 ---
@@ -529,7 +537,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/Kronuz/Xapiand/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/Kronuz/Xapiand/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/Kronuz/Xapiand/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/Kronuz/Xapiand/compare/v0.15.0...v0.16.0
