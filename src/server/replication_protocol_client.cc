@@ -390,6 +390,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	} else {
 		L(LOG_DEBUG, WHITE, "\"GET_CHANGESETS {{{}}} {} {}\" OK [{}..{}] {} {}", remote_uuid, remote_revision, repr(endpoint_path), from_revision + 1, to_revision, string::from_bytes(total_sent_bytes), string::from_delta(begins, ends));
 	}
+
+	destroy();
+	detach();
 }
 
 
