@@ -461,8 +461,6 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 		ASSERT(lk_shard_ptr);
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	} catch (const Xapian::DatabaseNotFoundError& exc) {
-		ASSERT(lk_shard_ptr);
-		L_WARNING("WARNING: Replicating non-existent database: {}", (*lk_shard_ptr)->endpoint.path);
 	} catch (const Xapian::Error& exc) {
 		ASSERT(lk_shard_ptr);
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
