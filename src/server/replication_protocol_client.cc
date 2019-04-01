@@ -273,6 +273,15 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	if (endpoint_path.empty()) {
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
+
+		auto ends = std::chrono::system_clock::now();
+		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
+		L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+
+		destroy();
+		detach();
+
+		return;
 	}
 
 	Xapian::Database* db;
@@ -354,6 +363,10 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					auto ends = std::chrono::system_clock::now();
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 					L(LOG_NOTICE, RED, "\"GET_CHANGESETS {{{}}} {} {}\" ERROR {} {}", remote_uuid, remote_revision, repr(endpoint_path), string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+
+					destroy();
+					detach();
+
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					db = lk_shard.lock()->db();
