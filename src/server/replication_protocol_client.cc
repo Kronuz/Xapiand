@@ -933,6 +933,7 @@ ReplicationProtocolClient::operator()()
 				running = false;
 				L_CONN("Running in worker ended with an exception.");
 				lk.unlock();
+				L_EXC("ERROR: Replication server ended with an unhandled exception");
 				detach();
 				throw;
 			}
@@ -971,6 +972,7 @@ ReplicationProtocolClient::operator()()
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
 					lk.unlock();
+					L_EXC("ERROR: Replication server ended with an unhandled exception");
 					detach();
 					throw;
 				}
@@ -1002,6 +1004,7 @@ ReplicationProtocolClient::operator()()
 					running = false;
 					L_CONN("Running in worker ended with an exception.");
 					lk.unlock();
+					L_EXC("ERROR: Replication client ended with an unhandled exception");
 					detach();
 					throw;
 				}
@@ -1013,7 +1016,7 @@ ReplicationProtocolClient::operator()()
 				running = false;
 				L_CONN("Running in worker ended with unexpected state.");
 				lk.unlock();
-				L_ERR("Unexpected ReplicationProtocolClient State!");
+				L_ERR("ERROR: Unexpected ReplicationProtocolClient state");
 				stop();
 				destroy();
 				detach();
