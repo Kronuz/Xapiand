@@ -15,6 +15,7 @@ import os
 import sys
 import re
 from concurrent.futures import ThreadPoolExecutor, wait
+from xapiand.exceptions import NotFoundError
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
 
@@ -186,7 +187,7 @@ def _task(args):
                     elif issubclass(exc_type, requests.exceptions.RequestsDependencyWarning):
                         # (RequestsWarning)
                         sys.stderr.write(self.err['RequestsDependencyWarning'])
-                    elif issubclass(exc_type, client.DoesNotExist):
+                    elif issubclass(exc_type, NotFoundError):
                         if self.dne:
                             sys.stderr.write(self.dne)
                     else:
@@ -233,7 +234,7 @@ def _task(args):
                     check.dne = "⧳"
                 elif now < epoch + 200:
                     check.dne = "▇"
-                body = client.get(index=db, id=fortune_id)['_source']
+                body = client.get(index=db, id=fortune_id)
                 if body[FIELD] != fortune:
                     raise ValueError
             else:
@@ -339,7 +340,7 @@ def main():
         from xapiand import Xapiand
         clients = []
         for host, port in hosts:
-            clients.append(Xapiand({"host": host, "port": port}))
+            clients.append(Xapiand(hosts=[{"host": host, "port": port}]))
 
         try:
             import fortunate
