@@ -278,13 +278,13 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {}
-		detach();
+		shutdown();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
-		detach();
+		shutdown();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
@@ -292,7 +292,7 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		detach();
+		shutdown();
 	}
 }
 
@@ -1456,8 +1456,9 @@ RemoteProtocolClient::operator()()
 			} catch (...) {
 				lk.lock();
 				running = false;
-				lk.unlock();
 				L_CONN("Running in worker ended with an exception.");
+				lk.unlock();
+				L_EXC("ERROR: Remote server ended with an unhandled exception");
 				detach();
 				throw;
 			}
@@ -1491,8 +1492,9 @@ RemoteProtocolClient::operator()()
 				} catch (...) {
 					lk.lock();
 					running = false;
-					lk.unlock();
 					L_CONN("Running in worker ended with an exception.");
+					lk.unlock();
+					L_EXC("ERROR: Remote server ended with an unhandled exception");
 					detach();
 					throw;
 				}
@@ -1502,8 +1504,9 @@ RemoteProtocolClient::operator()()
 
 			default:
 				running = false;
+				L_CONN("Running in worker ended with unexpected state.");
 				lk.unlock();
-				L_ERR("Unexpected RemoteProtocolClient State!");
+				L_ERR("ERROR: Unexpected RemoteProtocolClient state");
 				stop();
 				destroy();
 				detach();
@@ -1512,15 +1515,14 @@ RemoteProtocolClient::operator()()
 	}
 
 	running = false;
+	L_CONN("Running in replication worker ended. {{messages_empty:{}, closed:{}, is_shutting_down:{}}}", messages.empty(), closed.load(), is_shutting_down());
 	lk.unlock();
 
 	if (is_shutting_down()) {
-		L_CONN("Running in worker ended due shutdown.");
 		shutdown();
 		return;
 	}
 
-	L_CONN("Running in binary worker ended.");
 	redetach();  // try re-detaching if already flagged as detaching
 }
 

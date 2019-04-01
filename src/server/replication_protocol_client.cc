@@ -241,7 +241,6 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then close the connection.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		shutdown();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());

@@ -1300,6 +1300,7 @@ HttpClient::operator()()
 			running = false;
 			L_CONN("Running in worker ended with an exception.");
 			lk.unlock();
+			L_EXC("ERROR: HTTP client ended with an unhandled exception");
 			detach();
 			throw;
 		}
