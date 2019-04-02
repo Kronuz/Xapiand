@@ -277,13 +277,17 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 			// We've had a timeout, so the client may not be listening, if we can't
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		} catch (...) {}
+		} catch (...) {
+			close();
+		}
 		shutdown();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
+		L_EXC("ERROR: Dispatching remote protocol message");
+		close();
 		shutdown();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
@@ -1220,9 +1224,7 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 	L_CALL("RemoteProtocolClient::msg_shutdown(<message>)");
 
 	close();
-	stop();
-	destroy();
-	detach();
+	shutdown();
 }
 
 

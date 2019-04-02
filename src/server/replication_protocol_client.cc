@@ -230,20 +230,24 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// We've had a timeout, so the client may not be listening, if we can't
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		} catch (...) {}
+		} catch (...) {
+			close();
+		}
 		shutdown();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
-		L_EXC("ERROR: Dispatching remote protocol message");
+		L_EXC("ERROR: Dispatching replication protocol message");
+		close();
 		shutdown();
 	} catch (const Xapian::Error& exc) {
-		// Propagate the exception to the client, then close the connection.
+		// Propagate the exception to the client, then return to the main
+		// message handling loop.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
 	} catch (...) {
-		L_EXC("ERROR: Dispatching remote protocol message");
+		L_EXC("ERROR: Dispatching replication protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
 		shutdown();
 	}
@@ -457,8 +461,8 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	}
 
-	destroy();
-	detach();
+	close();
+	shutdown();
 }
 
 
@@ -523,6 +527,7 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::set_cluster_database_ready();
 	}
 
+	close();
 	shutdown();
 }
 
@@ -538,6 +543,8 @@ ReplicationProtocolClient::reply_fail(const std::string&)
 	reset();
 
 	L_ERR("ReplicationProtocolClient failure!");
+
+	close();
 	shutdown();
 }
 
