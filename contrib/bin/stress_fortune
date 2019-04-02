@@ -14,7 +14,10 @@ from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
 import re
+import json
+import threading
 from concurrent.futures import ThreadPoolExecutor, wait
+
 from xapiand.exceptions import NotFoundError
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'python')))
@@ -31,6 +34,7 @@ FIELD = 'fortune'
 
 
 running = True
+lock = threading.Lock()
 
 
 class Args:
@@ -128,7 +132,7 @@ def _task(args):
                             else:
                                 content = msgpack.loads(exc_val.response.content)
                                 message = content.get('#message', [content])[0]
-                                print('\n{}: {}'.format(exc_val, message))
+                                print('\n{}: {}'.format(exc_val, message), file=sys.stderr)
                         elif issubclass(exc_type, NotFoundError):
                             if self.dne:
                                 sys.stderr.write(self.dne)
@@ -143,14 +147,19 @@ def _task(args):
         op = random.choice(args.ops)
         with Check(errors[op]) as check:
             if op == 'put':
-                fortune = args.fortune()
+                fortune = args.generator()
                 body = {
                     FIELD: fortune,
                 }
                 offset += 1
                 fortune_id = offset
                 db = random.choice(args.databases)
-                client.index(index=db, id=fortune_id, body=body)
+                if args.file:
+                    line = "http://{}:{}/{}/{} PUT {}".format(client.transport.hosts[0]['host'], client.transport.hosts[0]['port'], db, fortune_id, json.dumps(body))
+                    with lock:
+                        print(line, file=args.file)
+                else:
+                    client.index(index=db, id=fortune_id, body=body)
                 indexed.append((db, fortune_id, fortune, now))
             elif op == 'get':
                 if not indexed:
@@ -176,9 +185,14 @@ def _task(args):
                     check.dne = "⧳"
                 elif now < epoch + 200:
                     check.dne = "▇"
-                body = client.get(index=db, id=fortune_id)
-                if body[FIELD] != fortune:
-                    raise ValueError
+                if args.file:
+                    line = "http://{}:{}/{}/{}".format(client.transport.hosts[0]['host'], client.transport.hosts[0]['port'], db, fortune_id)
+                    with lock:
+                        print(line, file=args.file)
+                else:
+                    body = client.get(index=db, id=fortune_id)
+                    if body[FIELD] != fortune:
+                        raise ValueError
             else:
                 check.err = None
                 continue
@@ -211,6 +225,7 @@ def task(args):
 def main():
     global running
 
+    file = None
     hosts = []
     databases = []
     start = 0
@@ -271,6 +286,8 @@ def main():
         ), file=sys.stderr)
         sys.exit(64)
 
+    # file = sys.stdout
+
     try:
         hosts = hosts or [(DEFAULT_HOST, DEFAULT_PORT + i) for i in range(NUM_HOSTS)]
         databases = databases or ['fortune.{}'.format(i) for i in range(NUM_DATABASES)]
@@ -284,13 +301,17 @@ def main():
         for host, port in hosts:
             clients.append(Xapiand(hosts=[{"host": host, "port": port}]))
 
+        # Initialize Fortunate:
         try:
             import fortunate
         except ImportError:
             print("You need to install 'fortunate' package:\nUse: pip install fortunate", file=sys.stderr)
             sys.exit(70)
-        fortune = fortunate.Fortunate()
-        fortune()
+
+        generator = fortunate.Fortunate()
+
+        if file:
+            print("# siege -c50 -t60S --content-type 'application/json' -f urls.txt", file=file)
 
         if workers:
             executor = ThreadPoolExecutor(max_workers=workers)
@@ -299,16 +320,17 @@ def main():
                 fs = []
                 for i in range(workers):
                     fs.append(executor.submit(task, Args(
+                        file=file,
                         start=start + i * tpw,
                         end=start + i * tpw + tpw,
                         ops=ops,
                         clients=clients,
                         databases=databases,
-                        fortune=fortune,
+                        generator=generator,
                     )))
             except (KeyboardInterrupt, SystemExit):
                 running = False
-            print("#")
+            print("#", file=sys.stderr)
             try:
                 not_done = fs
                 while not_done:
@@ -318,16 +340,17 @@ def main():
                 executor.shutdown()
         else:
             task(Args(
+                file=file,
                 start=start,
                 end=tasks,
                 ops=ops,
                 clients=clients,
                 databases=databases,
-                fortune=fortune,
+                generator=generator,
             ))
     except (KeyboardInterrupt, SystemExit):
         pass
-    print("done!")
+    print("done!", file=sys.stderr)
 
 if __name__ == '__main__':
     main()
