@@ -1271,12 +1271,12 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		close();
 
 		if (received < 0) {
-			L_NOTICE("Remote Protocol client connection closed unexpectedly {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
+			L_NOTICE("Remote Protocol {} connection closed unexpectedly {{sock:{}}}: {} ({}): {}", StateNames(state.load(std::memory_order_relaxed)), sock, error::name(errno), errno, error::description(errno));
 			return received;
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("Remote Protocol client closed unexpectedly: There was still a request in progress");
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There was still a request in progress", StateNames(state.load(std::memory_order_relaxed)));
 			return received;
 		}
 
@@ -1291,9 +1291,9 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 			if (pending_bytes) {
 				auto pending = pending_messages();
 				if (pending) {
-					L_NOTICE("Remote Protocol client closed unexpectedly: There {} still {} {} of pending data and {} pending {}", pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes", pending, pending == 1 ? "message" : "messages");
+					L_NOTICE("Remote Protocol {} closed unexpectedly: There {} still {} {} of pending data and {} pending {}", StateNames(state.load(std::memory_order_relaxed)), pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes", pending, pending == 1 ? "message" : "messages");
 				} else {
-					L_NOTICE("Remote Protocol client closed unexpectedly: There {} still {} {} of pending data", pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes");
+					L_NOTICE("Remote Protocol {} closed unexpectedly: There {} still {} {} of pending data", StateNames(state.load(std::memory_order_relaxed)), pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes");
 				}
 				return received;
 			}
@@ -1301,11 +1301,11 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 
 		auto pending = pending_messages();
 		if (pending) {
-			L_NOTICE("Remote Protocol client closed unexpectedly: There {} still {} pending {}", pending == 1 ? "was" : "were", pending, pending == 1 ? "message" : "messages");
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There {} still {} pending {}", StateNames(state.load(std::memory_order_relaxed)), pending == 1 ? "was" : "were", pending, pending == 1 ? "message" : "messages");
 			return received;
 		}
 
-		// Remote Protocol client normally closed connection.
+		// Remote Protocol normally closed connection.
 		return received;
 	}
 
