@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.18.1] - 2019-04-02
+{: #v0-18-1 }
+
+### Fixed
+- Fixed logging for verbose request/responses
+
+
+---
 ## [0.18.0] - 2019-04-01
 {: #v0-18-0 }
 
@@ -537,7 +545,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.18.1...HEAD
+[0.18.1]: https://github.com/Kronuz/Xapiand/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/Kronuz/Xapiand/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/Kronuz/Xapiand/compare/v0.16.1...v0.17.0
 [0.16.1]: https://github.com/Kronuz/Xapiand/compare/v0.16.0...v0.16.1

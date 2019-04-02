@@ -6,8 +6,8 @@ version: 0.18.0
 categories: [release]
 ---
 
-Replicatio protocol fixes and response bodies not echoing created or modified
-objects.
+Replication protocol fixed and response bodies are now not echoing created
+or modified objects.
 
 
 ### Added
