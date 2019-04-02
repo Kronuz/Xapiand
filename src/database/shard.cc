@@ -495,15 +495,19 @@ Shard::reopen()
 		do_close(true, is_closed(), transaction, false);
 	}
 
-	try {
-		if (is_writable()) {
-			reopen_writable();
-		} else {
-			reopen_readable();
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			if (is_writable()) {
+				reopen_writable();
+			} else {
+				reopen_readable();
+			}
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { throw; }
+		} catch (...) {
+			reset();
+			throw;
 		}
-	} catch (...) {
-		reset();
-		throw;
 	}
 
 	ASSERT(database);
