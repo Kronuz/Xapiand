@@ -75,7 +75,7 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  running(false),
 	  shutting_down(false),
 	  sock(-1),
-	  closed(false),
+	  closed(true),
 	  writes(0),
 	  total_received_bytes(0),
 	  total_sent_bytes(0),
@@ -97,6 +97,7 @@ BaseClient::init(int sock_)
 		throw std::invalid_argument("Socket already initialized");
 	}
 
+	closed = false;
 	sock = sock_;
 
 	write_start_async.set<BaseClient, &BaseClient::write_start_async_cb>(this);
@@ -201,7 +202,7 @@ BaseClient::write_from_queue()
 	L_CALL("BaseClient::write_from_queue()");
 
 	if (closed) {
-		L_ERR("ERROR: write error {{sock:{}}}: Connection already closed!", sock);
+		L_ERR("ERROR: write error {{sock:{}}}: Connection is closed!", sock);
 		L_CONN("WR:ERR.1: {{sock:{}}}", sock);
 		return WR::ERROR;
 	}
