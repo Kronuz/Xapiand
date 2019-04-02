@@ -155,7 +155,7 @@ class Split {
 		}
 
 		bool last() const noexcept {
-			return next_end == S::npos;
+			return next_start == S::npos;
 		}
 	};
 
