@@ -486,6 +486,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 				L_NOTICE("Client closed unexpectedly after {}: There were still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 			}
 		}
+		close();
 		return received;
 	}
 
