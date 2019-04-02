@@ -202,7 +202,7 @@ BaseClient::write_from_queue()
 	L_CALL("BaseClient::write_from_queue()");
 
 	if (closed) {
-		L_ERR("ERROR: write error {{sock:{}}}: Connection is closed!", sock);
+		// Catch if connection has been flagged as closed and just return WR::ERROR
 		L_CONN("WR:ERR.1: {{sock:{}}}", sock);
 		return WR::ERROR;
 	}
@@ -222,12 +222,18 @@ BaseClient::write_from_queue()
 
 		if (sent < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_RED("WR:RETRY: {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
+				L_CONN("WR:RETRY: {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 				return WR::RETRY;
 			}
 
+			if (closed) {
+				// Catch if connection has been flagged as closed and just return WR::ERROR
+				L_CONN("WR:ERR.2: {{sock:{}}}", sock);
+				return WR::ERROR;
+			}
+
 			L_ERR("ERROR: write error {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
-			L_CONN("WR:ERR.2: {{sock:{}}}", sock);
+			L_CONN("WR:ERR.3: {{sock:{}}}", sock);
 			close();
 			return WR::ERROR;
 		}
