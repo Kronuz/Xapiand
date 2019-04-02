@@ -31,6 +31,9 @@
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
 
+#define L_POOL_TIMED L_NOTHING
+#define L_POOL_TIMED_CLEAR L_NOTHING
+
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -38,28 +41,27 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
+// #undef L_POOL_TIMED_CLEAR
+// #define L_POOL_TIMED_CLEAR() { \
+// 	if (shard->log) { \
+// 		shard->log->clear(); \
+// 		shard->log.reset(); \
+// 	} \
+// }
+// #undef L_POOL_TIMED
+// #define L_POOL_TIMED(delay, format_timeout, format_done, ...) { \
+// 	if (shard->log) { \
+// 		shard->log->clear(); \
+// 		shard->log.reset(); \
+// 	} \
+// 	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
+// 	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
+// 	shard->log = __log_timed.release(); \
+// }
 
 
 #define REMOTE_DATABASE_UPDATE_TIME 3
 #define LOCAL_DATABASE_UPDATE_TIME 10
-
-
-#define L_POOL_TIMED_CLEAR() { \
-	if (shard->log) { \
-		shard->log->clear(); \
-		shard->log.reset(); \
-	} \
-}
-
-#define L_POOL_TIMED(delay, format_timeout, format_done, ...) { \
-	if (shard->log) { \
-		shard->log->clear(); \
-		shard->log.reset(); \
-	} \
-	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
-	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
-	shard->log = __log_timed.release(); \
-}
 
 
 class ReferencedShardEndpoint {
