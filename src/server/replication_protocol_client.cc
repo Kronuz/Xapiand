@@ -226,6 +226,7 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			}
 		}
 	} catch (const Xapian::NetworkTimeoutError& exc) {
+		L_EXC("ERROR: Dispatching replication protocol message");
 		try {
 			// We've had a timeout, so the client may not be listening, if we can't
 			// send the message right away, just exit and the client will cope.
