@@ -378,7 +378,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 	auto this_response_size = response_body.size();
 	request.response.size += this_response_size;
 
-	if (Logging::log_level > LOG_DEBUG) {
+	if (Logging::log_level >= LOG_DEBUG) {
 		request.response.head += head;
 		request.response.headers += headers;
 	}
@@ -739,7 +739,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 	L_HTTP_PROTO("on_header_value {{state:{}, header_state:{}}}: {}", HttpParserStateNames(parser->state), HttpParserHeaderStateNames(parser->header_state), repr(at, length));
 
 	auto _header_value = std::string_view(at, length);
-	if (Logging::log_level > LOG_DEBUG) {
+	if (Logging::log_level >= LOG_DEBUG) {
 		new_request->headers.append(new_request->_header_name);
 		new_request->headers.append(": ");
 		new_request->headers.append(_header_value);
@@ -903,14 +903,20 @@ HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t
 
 	new_request->size += length;
 
-	if likely(!closed && !new_request->atom_ending && new_request->view) {
-		if (new_request->append(at, length)) {
-			new_request->pending.signal();
+	if likely(!closed && !new_request->atom_ending) {
+		bool signal_pending = false;
+		if (Logging::log_level >= LOG_DEBUG || new_request->view) {
+			signal_pending = new_request->append(at, length);
+		}
+		if (new_request->view) {
+			if (signal_pending) {
+				new_request->pending.signal();
 
-			std::lock_guard<std::mutex> lk(runner_mutex);
-			if (!running) {  // Start a runner if not running
-				running = true;
-				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+				std::lock_guard<std::mutex> lk(runner_mutex);
+				if (!running) {  // Start a runner if not running
+					running = true;
+					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+				}
 			}
 		}
 	}
@@ -938,18 +944,26 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 		std::shared_ptr<Request> request = std::make_shared<Request>(this);
 		std::swap(new_request, request);
 
-		if (request->view) {
+		bool signal_pending = false;
+		if (Logging::log_level >= LOG_DEBUG || request->view) {
 			request->append(nullptr, 0);  // flush pending stuff
-			request->pending.signal();  // always signal, so view continues ending
+			signal_pending = true;  // always signal pending
+		}
+		if (request->view) {
+			if (signal_pending) {
+				request->pending.signal();  // always signal, so view continues ending
 
-			std::lock_guard<std::mutex> lk(runner_mutex);
-			if (requests.empty() || request != requests.front()) {
-				requests.push_back(std::move(request));  // Enqueue request
+				std::lock_guard<std::mutex> lk(runner_mutex);
+				if (requests.empty() || request != requests.front()) {
+					requests.push_back(std::move(request));  // Enqueue request
+				}
+				if (!running) {  // Start a runner if not running
+					running = true;
+					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+				}
 			}
-			if (!running) {  // Start a runner if not running
-				running = true;
-				XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
-			}
+		} else {
+			end_http_request(*request);
 		}
 	}
 
@@ -1245,7 +1259,7 @@ HttpClient::prepare()
 		}
 	}
 
-	if (!new_request->view) {
+	if (!new_request->view && Logging::log_level < LOG_DEBUG) {
 		return 1;
 	}
 
@@ -3154,6 +3168,11 @@ HttpClient::log_request(Request& request)
 
 	std::string request_prefix = " 🌎  ";
 	int priority = LOG_DEBUG;
+	if ((int)request.response.status >= 400 && (int)request.response.status <= 499) {
+		priority = LOG_INFO;
+	} else if ((int)request.response.status >= 500 && (int)request.response.status <= 599) {
+		priority = LOG_NOTICE;
+	}
 	auto request_text = request.to_text(true);
 	L(priority, NO_COLOR, "{}{}", request_prefix, string::indent(request_text, ' ', 4, false));
 }
@@ -3227,6 +3246,9 @@ HttpClient::end_http_request(Request& request)
 			priority = LOG_NOTICE;
 		}
 		if (Logging::log_level > LOG_DEBUG) {
+			log_response(request.response);
+		} else if (Logging::log_level == LOG_DEBUG && (int)request.response.status >= 400) {
+			log_request(request);
 			log_response(request.response);
 		}
 
@@ -3405,7 +3427,7 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 
 	try {
 		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
-		if (Logging::log_level > LOG_DEBUG && request.response.size <= 1024 * 10) {
+		if (Logging::log_level >= LOG_DEBUG && request.response.size <= 1024 * 10) {
 			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {
