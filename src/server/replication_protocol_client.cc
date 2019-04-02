@@ -152,6 +152,7 @@ ReplicationProtocolClient::reset()
 
 	if (log) {
 		log->clear();
+		log.reset();
 	}
 	changesets = 0;
 }

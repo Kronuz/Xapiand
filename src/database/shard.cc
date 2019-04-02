@@ -232,6 +232,7 @@ Shard::~Shard() noexcept
 		do_close(true, true, Shard::Transaction::none, false);
 		if (log) {
 			log->clear();
+			log.reset();
 		}
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");

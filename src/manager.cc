@@ -110,12 +110,14 @@
 #define L_MANAGER_TIMED_CLEAR() { \
 	if (log) { \
 		log->clear(); \
+		log.reset(); \
 	} \
 }
 
 #define L_MANAGER_TIMED(delay, format_timeout, format_done, ...) { \
 	if (log) { \
 		log->clear(); \
+		log.reset(); \
 	} \
 	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
 	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
@@ -230,6 +232,7 @@ XapiandManager::~XapiandManager() noexcept
 
 		if (log) {
 			log->clear();
+			log.reset();
 		}
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");

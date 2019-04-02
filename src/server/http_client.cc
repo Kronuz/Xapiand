@@ -3620,6 +3620,7 @@ Request::~Request() noexcept
 	try {
 		if (log) {
 			log->clear();
+			log.reset();
 		}
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
