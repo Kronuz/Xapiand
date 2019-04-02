@@ -3247,9 +3247,11 @@ HttpClient::end_http_request(Request& request)
 		}
 		if (Logging::log_level > LOG_DEBUG) {
 			log_response(request.response);
-		} else if (Logging::log_level == LOG_DEBUG && (int)request.response.status >= 400) {
-			log_request(request);
-			log_response(request.response);
+		} else if (Logging::log_level == LOG_DEBUG) {
+			if ((int)request.response.status >= 400 && (int)request.response.status != 404) {
+				log_request(request);
+				log_response(request.response);
+			}
 		}
 
 		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count();
