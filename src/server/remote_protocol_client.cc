@@ -88,8 +88,8 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
 }
 
 
-RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: MetaBaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
+RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
+	: MetaBaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  flags(0),
 	  state(State::INIT_REMOTE),
 #ifdef SAVE_LAST_MESSAGES
@@ -107,7 +107,7 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 		.xapiand_remote_connections
 		.Increment();
 
-	L_CONN("New Remote Protocol Client in socket {}, {} client(s) of a total of {} connected.", sock_, XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Remote Protocol Client, {} client(s) of a total of {} connected.", XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
 }
 
 

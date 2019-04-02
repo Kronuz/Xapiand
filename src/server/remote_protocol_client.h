@@ -250,7 +250,7 @@ class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
 	void init_msg_query();
 	void reset();
 
-	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
+	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
 	bool is_idle() const;
 

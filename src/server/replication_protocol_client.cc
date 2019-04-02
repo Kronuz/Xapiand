@@ -75,8 +75,8 @@
  */
 
 
-ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: MetaBaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
+ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
+	: MetaBaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  state(ReplicaState::INIT_REPLICATION_CLIENT),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
@@ -94,7 +94,7 @@ ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worke
 		.xapiand_replication_connections
 		.Increment();
 
-	L_CONN("New Replication Protocol Client in socket {}, {} client(s) of a total of {} connected.", sock_, XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Replication Protocol Client, {} client(s) of a total of {} connected.", XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
 }
 
 

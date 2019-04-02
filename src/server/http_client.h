@@ -363,7 +363,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	friend Worker;
 
 public:
-	HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
+	HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 
 	~HttpClient() noexcept;
 

@@ -65,7 +65,7 @@ constexpr int WRITE_QUEUE_LIMIT = 10;
 constexpr int WRITE_QUEUE_THRESHOLD = WRITE_QUEUE_LIMIT * 2 / 3;
 
 
-BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
+BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: Worker(std::move(parent_), ev_loop_, ev_flags_),
 	  io_read(*ev_loop),
 	  io_write(*ev_loop),
@@ -74,7 +74,7 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  waiting(false),
 	  running(false),
 	  shutting_down(false),
-	  sock(sock_),
+	  sock(-1),
 	  closed(false),
 	  writes(0),
 	  total_received_bytes(0),
@@ -82,17 +82,28 @@ BaseClient::BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	  mode(MODE::READ_BUF),
 	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD)
 {
-	if (sock == -1) {
+	++XapiandManager::total_clients();
+}
+
+
+void
+BaseClient::init(int sock_)
+{
+	if (sock_ == -1) {
 		throw std::invalid_argument("Invalid socket");
 	}
+
+	if (sock != -1) {
+		throw std::invalid_argument("Socket already initialized");
+	}
+
+	sock = sock_;
 
 	write_start_async.set<BaseClient, &BaseClient::write_start_async_cb>(this);
 	read_start_async.set<BaseClient, &BaseClient::read_start_async_cb>(this);
 
 	io_write.set<BaseClient, &BaseClient::io_cb_write>(this);
 	io_write.set(sock, ev::WRITE);
-
-	++XapiandManager::total_clients();
 }
 
 
@@ -108,7 +119,7 @@ BaseClient::~BaseClient() noexcept
 		}
 
 		if (XapiandManager::total_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of binary clients");
+			L_CRIT("Inconsistency in number of clients");
 			sig_exit(-EX_SOFTWARE);
 		}
 
@@ -210,7 +221,7 @@ BaseClient::write_from_queue()
 
 		if (sent < 0) {
 			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("WR:RETRY: {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
+				L_RED("WR:RETRY: {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 				return WR::RETRY;
 			}
 

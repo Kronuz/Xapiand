@@ -153,7 +153,7 @@ class ReplicationProtocolClient : public MetaBaseClient<ReplicationProtocolClien
 	std::deque<Buffer> messages;
 	bool cluster_database;
 
-	ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
+	ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
 	bool is_idle() const;
 

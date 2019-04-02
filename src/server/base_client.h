@@ -103,8 +103,10 @@ protected:
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
-	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_);
+	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~BaseClient() noexcept;
+
+	void init(int sock_);
 
 	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);
@@ -176,12 +178,9 @@ protected:
 		client.on_read_file_done();
 	}
 
-	MetaBaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_) :
-		BaseClient(parent_, ev_loop_, ev_flags_, sock_),
-		client(static_cast<ClientImpl&>(*this)) {
-		io_read.set<MetaBaseClient<ClientImpl>, &MetaBaseClient<ClientImpl>::io_cb_read>(this);
-		io_read.set(sock, ev::READ);
-	}
+	MetaBaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_) :
+		BaseClient(parent_, ev_loop_, ev_flags_),
+		client(static_cast<ClientImpl&>(*this)) {}
 
 	// Receive message from client socket
 	void _io_cb_read([[maybe_unused]] ev::io &watcher, int revents) {
@@ -364,5 +363,12 @@ protected:
 				detach();
 			}
 		}
+	}
+
+public:
+	void init(int sock_) {
+		BaseClient::init(sock_);
+		io_read.set<MetaBaseClient<ClientImpl>, &MetaBaseClient<ClientImpl>::io_cb_read>(this);
+		io_read.set(sock, ev::READ);
 	}
 };

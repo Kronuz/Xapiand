@@ -113,7 +113,9 @@ ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int re
 
 	int client_sock = accept();
 	if (client_sock != -1) {
-		auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout);
+		auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout);
+
+		client->init(client_sock);
 
 		if (!client->init_replication()) {
 			client->detach();
@@ -207,6 +209,13 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	int port = (node->replication_port == XAPIAND_REPLICATION_SERVERPORT) ? XAPIAND_REPLICATION_SERVERPORT : node->replication_port;
 	auto& host = node->host();
 
+	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout, args.cluster_database);
+
+	if (!client->init_replication(args.src_endpoint, args.dst_endpoint)) {
+		client->detach();
+		return;
+	}
+
 	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
 	if (client_sock == -1) {
 		if (args.cluster_database) {
@@ -215,14 +224,9 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		}
 		return;
 	}
+
 	L_CONN("Connected to {}! (in socket {})", repr(args.src_endpoint.to_string()), client_sock);
-
-	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, client_sock, active_timeout, idle_timeout, args.cluster_database);
-
-	if (!client->init_replication(args.src_endpoint, args.dst_endpoint)) {
-		client->detach();
-		return;
-	}
+	client->init(client_sock);
 
 	client->start();
 	L_DEBUG("Database {} being synchronized from {}{}" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), node->col().ansi(), node->name());

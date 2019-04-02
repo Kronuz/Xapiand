@@ -387,8 +387,8 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 }
 
 
-HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, int sock_)
-	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_, sock_),
+HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  new_request(std::make_shared<Request>(this))
 {
 	++XapiandManager::http_clients();
@@ -400,7 +400,7 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
 	new_request->begins = std::chrono::system_clock::now();
 
-	L_CONN("New Http Client in socket {}, {} client(s) of a total of {} connected.", sock_, XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Http Client, {} client(s) of a total of {} connected.", XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
 }
 
 
