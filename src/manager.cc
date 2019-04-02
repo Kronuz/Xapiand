@@ -917,7 +917,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	} else {
 		std::vector<std::string> nodes;
 		for (const auto& node : Node::nodes()) {
-			nodes.push_back(string::format("{}{}" + NOTICE_COL, local_node->col().ansi(), node->name()));
+			nodes.push_back(string::format("{}{}" + NOTICE_COL, node->col().ansi(), node->name()));
 		}
 		switch (_new_cluster) {
 			case 0:
