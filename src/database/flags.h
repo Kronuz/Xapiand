@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,7 +30,7 @@ constexpr int DB_WRITABLE          = 0x0002;  // Opens as writable
 constexpr int DB_DISABLE_WAL       = 0x0010;  // Disable open wal file
 constexpr int DB_SYNCHRONOUS_WAL   = 0x0020;  // Use sync wal
 
-constexpr int DB_RETRIES           = 3;   // Number of tries to do an operation on a Xapian::Database or Document
+constexpr int DB_RETRIES           = 10;      // Number of tries to do an operation on a Xapian::Database or Document
 
 
 inline std::string readable_flags(int flags) {
