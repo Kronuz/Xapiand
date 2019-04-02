@@ -478,12 +478,20 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		// } else if (running) {
 		// 	L_NOTICE("Client closed unexpectedly after {}: There was still a worker running", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 		} else if (!write_queue.empty()) {
-			L_NOTICE("Client closed unexpectedly after {}: There was still pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+			size_t pending_bytes = 0;
+			std::shared_ptr<Buffer> buffer;
+			while (write_queue.front(buffer)) {
+				pending_bytes += buffer->size();
+				write_queue.pop(buffer);
+			}
+			if (pending_bytes) {
+				L_NOTICE("Client closed unexpectedly after {}: There were still {} bytes of pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending_bytes);
+			}
 		} else {
 			std::lock_guard<std::mutex> lk(runner_mutex);
 			auto requests_size = requests.size();
 			if (requests_size && (requests_size > 1 || requests.front()->response.status == static_cast<http_status>(0))) {
-				L_NOTICE("Client closed unexpectedly after {}: There were still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+				L_NOTICE("Client closed unexpectedly after {}: There were still {} pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()), requests_size);
 			}
 		}
 		close();
