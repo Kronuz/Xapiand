@@ -454,7 +454,7 @@ HttpClient::pending_requests() const
 {
 	std::lock_guard<std::mutex> lk(runner_mutex);
 	auto requests_size = requests.size();
-	if (requests_size && requests.front()->response.status == static_cast<http_status>(0)) {
+	if (requests_size && requests.front()->response.status != static_cast<http_status>(0)) {
 		--requests_size;
 	}
 	return requests_size;
