@@ -1291,9 +1291,9 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 			if (pending_bytes) {
 				auto pending = pending_messages();
 				if (pending) {
-					L_NOTICE("Remote Protocol client closed unexpectedly: There were still {} bytes of pending data and {} pending messages", pending_bytes, pending);
+					L_NOTICE("Remote Protocol client closed unexpectedly: There {} still {} {} of pending data and {} pending {}", pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes", pending, pending == 1 ? "message" : "messages");
 				} else {
-					L_NOTICE("Remote Protocol client closed unexpectedly: There were still {} bytes of pending data", pending_bytes);
+					L_NOTICE("Remote Protocol client closed unexpectedly: There {} still {} {} of pending data", pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes");
 				}
 				return received;
 			}
@@ -1301,7 +1301,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 
 		auto pending = pending_messages();
 		if (pending) {
-			L_NOTICE("Remote Protocol client closed unexpectedly: There were still {} pending messages", pending);
+			L_NOTICE("Remote Protocol client closed unexpectedly: There {} still {} pending {}", pending == 1 ? "was" : "were", pending, pending == 1 ? "message" : "messages");
 			return received;
 		}
 
