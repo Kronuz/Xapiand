@@ -703,7 +703,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				{ RESERVED_TYPE,  KEYWORD_STR },
 				{ RESERVED_VALUE, local_node->name() },
 			} },
-		}, true, msgpack_type).first;
+		}, false, msgpack_type).first;
 		_new_cluster = 1;
 		#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
@@ -1420,7 +1420,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 	if (node && node->is_active()) {
 		Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		MsgPack obj = {
+		db_handler.update(normalized_path, 0, false, {
 			{ ID_FIELD_NAME, {
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1439,8 +1439,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_TYPE,  "array/string" },
 				{ RESERVED_VALUE, replicas },
 			} },
-		};
-		db_handler.update(normalized_path, 0, false, obj, true, msgpack_type);
+		}, false, msgpack_type);
 	}
 }
 
@@ -1461,7 +1460,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			if (node && node->is_active()) {
 				Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				MsgPack obj = {
+				db_handler.update(normalized_path, 0, false, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1480,8 +1479,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "array/string" },
 					} },
-				};
-				db_handler.update(normalized_path, 0, false, obj, true, msgpack_type);
+				}, false, msgpack_type);
 			}
 		}
 		size_t shard_num = 0;
