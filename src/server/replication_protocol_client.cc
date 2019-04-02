@@ -751,27 +751,12 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		}
 
 		if (!write_queue.empty()) {
-			size_t pending_bytes = 0;
-			std::shared_ptr<Buffer> tmp_buffer;
-			while (write_queue.front(tmp_buffer)) {
-				auto buffer_size = tmp_buffer->size();
-				pending_bytes += buffer_size;
-				write_queue.pop(tmp_buffer);
-			}
-			if (pending_bytes) {
-				auto pending = pending_messages();
-				if (pending) {
-					L_NOTICE("Replication Protocol {} closed unexpectedly: There {} still {} {} of pending data and {} pending {}", StateNames(state.load(std::memory_order_relaxed)), pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes", pending, pending == 1 ? "message" : "messages");
-				} else {
-					L_NOTICE("Replication Protocol {} closed unexpectedly: There {} still {} {} of pending data", StateNames(state.load(std::memory_order_relaxed)), pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes");
-				}
-				return received;
-			}
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There is still pending data", StateNames(state.load(std::memory_order_relaxed)));
+			return received;
 		}
 
-		auto pending = pending_messages();
-		if (pending) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There {} still {} pending {}", StateNames(state.load(std::memory_order_relaxed)), pending == 1 ? "was" : "were", pending, pending == 1 ? "message" : "messages");
+		if (pending_messages()) {
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There are still pending messages", StateNames(state.load(std::memory_order_relaxed)));
 			return received;
 		}
 

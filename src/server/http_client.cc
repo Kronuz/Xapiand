@@ -496,27 +496,12 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		}
 
 		if (!write_queue.empty()) {
-			size_t pending_bytes = 0;
-			std::shared_ptr<Buffer> tmp_buffer;
-			while (write_queue.front(tmp_buffer)) {
-				auto buffer_size = tmp_buffer->size();
-				pending_bytes += buffer_size;
-				write_queue.pop(tmp_buffer);
-			}
-			if (pending_bytes) {
-				auto pending = pending_requests();
-				if (pending) {
-					L_NOTICE("HTTP client closed unexpectedly after {}: There {} still {} {} of pending data and {} pending {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes", pending, pending == 1 ? "request" : "requests");
-				} else {
-					L_NOTICE("HTTP client closed unexpectedly after {}: There {} still {} {} of pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending_bytes == 1 ? "was" : "were", pending_bytes, pending_bytes == 1 ? "byte" : "bytes");
-				}
-				return received;
-			}
+			L_NOTICE("HTTP client closed unexpectedly after {}: There is still pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+			return received;
 		}
 
-		auto pending = pending_requests();
-		if (pending) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There {} still {} pending {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending == 1 ? "was" : "were", pending, pending == 1 ? "message" : "messages");
+		if (pending_requests()) {
+			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
 			return received;
 		}
 
