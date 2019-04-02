@@ -56,6 +56,7 @@ def _task(args):
             'SSLError': "l",
             'Timeout': "t",
             'ConnectTimeout': "t",
+            'ConnectionTimeout': "t",
             'ReadTimeout': "t",
             'URLRequired': "u",
             'TooManyRedirects': "m",
@@ -82,6 +83,7 @@ def _task(args):
             'SSLError': "L",
             'Timeout': "T",
             'ConnectTimeout': "T",
+            'ConnectionTimeout': "T",
             'ReadTimeout': "T",
             'URLRequired': "U",
             'TooManyRedirects': "M",
@@ -191,7 +193,7 @@ def _task(args):
                         if self.dne:
                             sys.stderr.write(self.dne)
                     else:
-                        sys.stderr.write(self.err['Exception'])
+                        sys.stderr.write("<{}>".format(exc_type.__name__))
                 return True
 
     indexed = []
