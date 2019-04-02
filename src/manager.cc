@@ -1570,7 +1570,10 @@ load_shards(const std::string& normalized_path)
 			shards.push_back(std::move(replicas));
 		}
 	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
+	} catch (const Xapian::DatabaseNotFoundError&) {
+	} catch (...) {
+		L_EXC("Cannot load database index settings: {}", normalized_path);
+	}
 
 	return shards;
 }
@@ -1671,13 +1674,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			nodes = shards_to_nodes(shards);
 		} else {
 			lk.unlock();
-			try {
-				shards = load_shards(normalized_path);
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {
-			} catch (...) {
-				L_EXC("Cannot load database index settings: {}", normalized_path);
-			}
+			shards = load_shards(normalized_path);
 			if (!shards.empty()) {
 				nodes = shards_to_nodes(shards);
 				lk.lock();
