@@ -464,7 +464,7 @@ HttpClient::pending_requests() const
 bool
 HttpClient::is_idle() const
 {
-	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
+	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_requests:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_requests());
 
 	return !is_waiting() && !is_running() && write_queue.empty() && !pending_requests();
 }
