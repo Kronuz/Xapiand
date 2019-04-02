@@ -201,7 +201,7 @@ BaseClient::write_from_queue()
 	L_CALL("BaseClient::write_from_queue()");
 
 	if (closed) {
-		L_ERR("ERROR: write error {{sock:{}}}: Socket already closed!", sock);
+		L_ERR("ERROR: write error {{sock:{}}}: Connection already closed!", sock);
 		L_CONN("WR:ERR.1: {{sock:{}}}", sock);
 		return WR::ERROR;
 	}

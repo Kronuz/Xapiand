@@ -264,6 +264,7 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 	template <typename Func>
 	int handled_errors(Request& request, Func&& func);
 
+	size_t pending_requests() const;
 	bool is_idle() const;
 
 	ssize_t on_read(const char* buf, ssize_t received);

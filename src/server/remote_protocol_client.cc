@@ -1226,14 +1226,20 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 }
 
 
+size_t
+RemoteProtocolClient::pending_messages() const
+{
+	std::lock_guard<std::mutex> lk(runner_mutex);
+	return messages.size();
+}
+
+
 bool
 RemoteProtocolClient::is_idle() const
 {
-	if (!is_waiting() && !is_running() && write_queue.empty()) {
-		std::lock_guard<std::mutex> lk(runner_mutex);
-		return messages.empty();
-	}
-	return false;
+	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
+
+	return !is_waiting() && !is_running() && write_queue.empty() && !pending_messages();
 }
 
 
@@ -1262,6 +1268,44 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 	L_CALL("RemoteProtocolClient::on_read(<buf>, {})", received);
 
 	if (received <= 0) {
+		close();
+
+		if (received < 0) {
+			L_NOTICE("Remote Protocol client connection closed unexpectedly {{sock:{}}}: {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
+			return received;
+		}
+
+		if (is_waiting()) {
+			L_NOTICE("Remote Protocol client closed unexpectedly: There was still a request in progress");
+			return received;
+		}
+
+		if (!write_queue.empty()) {
+			size_t pending_bytes = 0;
+			std::shared_ptr<Buffer> tmp_buffer;
+			while (write_queue.front(tmp_buffer)) {
+				auto buffer_size = tmp_buffer->size();
+				pending_bytes += buffer_size;
+				write_queue.pop(tmp_buffer);
+			}
+			if (pending_bytes) {
+				auto pending = pending_messages();
+				if (pending) {
+					L_NOTICE("Remote Protocol client closed unexpectedly: There were still {} bytes of pending data and {} pending messages", pending_bytes, pending);
+				} else {
+					L_NOTICE("Remote Protocol client closed unexpectedly: There were still {} bytes of pending data", pending_bytes);
+				}
+				return received;
+			}
+		}
+
+		auto pending = pending_messages();
+		if (pending) {
+			L_NOTICE("Remote Protocol client closed unexpectedly: There were still {} pending messages", pending);
+			return received;
+		}
+
+		// Remote Protocol client normally closed connection.
 		return received;
 	}
 

@@ -252,6 +252,7 @@ class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
 
 	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
+	size_t pending_messages() const;
 	bool is_idle() const;
 
 	ssize_t on_read(const char *buf, ssize_t received);

@@ -449,15 +449,24 @@ HttpClient::handled_errors(Request& request, Func&& func)
 }
 
 
+size_t
+HttpClient::pending_requests() const
+{
+	std::lock_guard<std::mutex> lk(runner_mutex);
+	auto requests_size = requests.size();
+	if (requests_size && requests.front()->response.status == static_cast<http_status>(0)) {
+		--requests_size;
+	}
+	return requests_size;
+}
+
+
 bool
 HttpClient::is_idle() const
 {
-	if (!waiting && !running && write_queue.empty()) {
-		std::lock_guard<std::mutex> lk(runner_mutex);
-		auto requests_size = requests.size();
-		return !requests_size || (requests_size == 1 && requests.front()->response.status != static_cast<http_status>(0));
-	}
-	return false;
+	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
+
+	return !is_waiting() && !is_running() && write_queue.empty() && !pending_requests();
 }
 
 
@@ -469,32 +478,49 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	unsigned init_state = new_request->parser.state;
 
 	if (received <= 0) {
+		close();
+
 		if (received < 0) {
-			L_NOTICE("Client connection closed unexpectedly after {}: {} ({}): {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), error::name(errno), errno, error::description(errno));
-		} else if (init_state != 18) {
-			L_NOTICE("Client closed unexpectedly after {}: Not in final HTTP state ({})", string::from_delta(new_request->begins, std::chrono::system_clock::now()), init_state);
-		} else if (waiting) {
-			L_NOTICE("Client closed unexpectedly after {}: There was still a request in progress", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
-		// } else if (running) {
-		// 	L_NOTICE("Client closed unexpectedly after {}: There was still a worker running", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
-		} else if (!write_queue.empty()) {
+			L_NOTICE("HTTP client connection closed unexpectedly after {} {{sock:{}}}: {} ({}): {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), sock, error::name(errno), errno, error::description(errno));
+			return received;
+		}
+
+		if (init_state != 18) {
+			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({})", string::from_delta(new_request->begins, std::chrono::system_clock::now()), init_state);
+			return received;
+		}
+
+		if (is_waiting()) {
+			L_NOTICE("HTTP client closed unexpectedly after {}: There was still a request in progress", string::from_delta(new_request->begins, std::chrono::system_clock::now()));
+			return received;
+		}
+
+		if (!write_queue.empty()) {
 			size_t pending_bytes = 0;
-			std::shared_ptr<Buffer> buffer;
-			while (write_queue.front(buffer)) {
-				pending_bytes += buffer->size();
-				write_queue.pop(buffer);
+			std::shared_ptr<Buffer> tmp_buffer;
+			while (write_queue.front(tmp_buffer)) {
+				auto buffer_size = tmp_buffer->size();
+				pending_bytes += buffer_size;
+				write_queue.pop(tmp_buffer);
 			}
 			if (pending_bytes) {
-				L_NOTICE("Client closed unexpectedly after {}: There were still {} bytes of pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending_bytes);
-			}
-		} else {
-			std::lock_guard<std::mutex> lk(runner_mutex);
-			auto requests_size = requests.size();
-			if (requests_size && (requests_size > 1 || requests.front()->response.status == static_cast<http_status>(0))) {
-				L_NOTICE("Client closed unexpectedly after {}: There were still {} pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()), requests_size);
+				auto pending = pending_requests();
+				if (pending) {
+					L_NOTICE("HTTP client closed unexpectedly after {}: There were still {} bytes of pending data and {} pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending_bytes, pending);
+				} else {
+					L_NOTICE("HTTP client closed unexpectedly after {}: There were still {} bytes of pending data", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending_bytes);
+				}
+				return received;
 			}
 		}
-		close();
+
+		auto pending = pending_requests();
+		if (pending) {
+			L_NOTICE("HTTP client closed unexpectedly after {}: There were still {} pending requests", string::from_delta(new_request->begins, std::chrono::system_clock::now()), pending);
+			return received;
+		}
+
+		// HTTP client normally closed connection.
 		return received;
 	}
 
