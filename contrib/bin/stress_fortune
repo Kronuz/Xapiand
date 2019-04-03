@@ -233,39 +233,49 @@ def main():
     workers = WORKERS
     try:
         # "10000-20000/200"  "10000/200" "127.0.0.1:8880" ":8881" ":8882-8883" "fortune.0-20"
+        option = None
         for arg in sys.argv[1:]:
-            if arg in ("-h", "--help"):
-                raise ValueError("Help!")
-            elif arg.startswith('-'):
-                raise ValueError("Unknown option")
-            m = re.match(r'^(\d+)?(?:-(\d+))?(?:/(\d+))?$', arg)
-            if m and any(m.groups()):
-                if m.group(2):
-                    start = int(m.group(1) or start)
-                    tasks = int(m.group(2) or tasks) - start
-                    if tasks < 0:
-                        print("ERROR: When using a range for tasks the start value must be smaller!", file=sys.stderr)
-                        raise ValueError("Invalid!")
-                else:
-                    tasks = int(m.group(1) or tasks)
-                workers = int(m.group(3) or workers)
-                continue
-            m = re.match(r'^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))?(?::(\d+)(?:-(\d+))?)?$', arg)
-            if m and any(m.groups()):
-                ip = m.group(1) or DEFAULT_HOST
-                port1 = int(m.group(2) or 8880)
-                port2 = int(m.group(3) or port1)
-                hosts += [(ip, port) for port in range(port1, port2 + 1)]
-                continue
-            m = re.match(r'^([^.]+)?(?:\.(\d+)(?:-(\d+))?)?$', arg)
-            if m and any(m.groups()):
-                db = m.group(1) or 'fortune'
-                n1 = int(m.group(2) or DEFAULT_PORT)
-                n2 = int(m.group(3) or n1)
-                databases += ["{}.{}".format(db, n) for n in range(n1, n2 + 1)]
-                databases = databases
-                continue
-            databases += [arg]
+            if option is None:
+                if arg.startswith('-'):
+                    if arg in ("-f", "--file"):
+                        option = arg
+                    elif arg in ("-h", "--help"):
+                        raise ValueError("Help!")
+                    else:
+                        raise ValueError("Unknown option!")
+                m = re.match(r'^(\d+)?(?:-(\d+))?(?:/(\d+))?$', arg)
+                if m and any(m.groups()):
+                    if m.group(2):
+                        start = int(m.group(1) or start)
+                        tasks = int(m.group(2) or tasks) - start
+                        if tasks < 0:
+                            print("ERROR: When using a range for tasks the start value must be smaller!", file=sys.stderr)
+                            raise ValueError("Invalid tasks!")
+                    else:
+                        tasks = int(m.group(1) or tasks)
+                    workers = int(m.group(3) or workers)
+                    continue
+                m = re.match(r'^((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?))?(?::(\d+)(?:-(\d+))?)?$', arg)
+                if m and any(m.groups()):
+                    ip = m.group(1) or DEFAULT_HOST
+                    port1 = int(m.group(2) or 8880)
+                    port2 = int(m.group(3) or port1)
+                    hosts += [(ip, port) for port in range(port1, port2 + 1)]
+                    continue
+                m = re.match(r'^([^.]+)?(?:\.(\d+)(?:-(\d+))?)?$', arg)
+                if m and any(m.groups()):
+                    db = m.group(1) or 'fortune'
+                    n1 = int(m.group(2) or DEFAULT_PORT)
+                    n2 = int(m.group(3) or n1)
+                    databases += ["{}.{}".format(db, n) for n in range(n1, n2 + 1)]
+                    databases = databases
+                    continue
+                databases += [arg]
+            elif option in ("-f", "--file"):
+                file = open(arg, 'w')
+            else:
+                raise ValueError("Invalid option!")
+            option = None
     except Exception:
         print((
             "usage: {fortune} [options...]\n"
@@ -287,8 +297,6 @@ def main():
             **globals()
         ), file=sys.stderr)
         sys.exit(64)
-
-    # file = sys.stdout
 
     try:
         hosts = hosts or [(DEFAULT_HOST, DEFAULT_PORT + i) for i in range(NUM_HOSTS)]
