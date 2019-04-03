@@ -29,8 +29,9 @@
 #include "hash/md5.h"
 #include "reserved/schema.h"
 #include "serialise.h"
-#include "hashes.hh"        // for fnv1ah32
-#include "phf.hh"           // for phf
+#include "hashes.hh"                              // for fnv1ah32
+#include "nameof.hh"                              // for NAMEOF_ENUM
+#include "phf.hh"                                 // for phf
 
 
 Script::Script(const MsgPack& _obj)
@@ -165,10 +166,10 @@ Script::get_types(bool strict) const
 {
 	if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
 		if (!body.empty()) {
-			THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_BODY);
+			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::FOREIGN), RESERVED_BODY);
 		}
 		if (!name.empty()) {
-			THROW(ClientError, "For type {}, '{}' should not be defined", Serialise::type(FieldType::FOREIGN), RESERVED_NAME);
+			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::FOREIGN), RESERVED_NAME);
 		}
 		if (!value.empty() && !endpoint.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
@@ -179,10 +180,10 @@ Script::get_types(bool strict) const
 		}
 		_sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
 		if (_sep_types[SPC_CONCRETE_TYPE] != FieldType::SCRIPT) {
-			THROW(ClientError, "Only type {} is allowed in '{}'", Serialise::type(FieldType::SCRIPT), RESERVED_SCRIPT);
+			THROW(ClientError, "Only type {} is allowed in '{}'", NAMEOF_ENUM(FieldType::SCRIPT), RESERVED_SCRIPT);
 		}
 		if (!endpoint.empty()) {
-			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, Serialise::type(FieldType::FOREIGN));
+			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, NAMEOF_ENUM(FieldType::FOREIGN));
 		}
 		if (!value.empty() && !body.empty() && !name.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);

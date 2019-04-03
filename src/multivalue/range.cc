@@ -35,6 +35,7 @@
 #include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange
 #include "length.h"                               // for serialise_length
+#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "utils/math.hh"                          // for max, min
 #include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_FROM, RESERVED_QUERYDSL_TO
 #include "serialise_list.h"                       // for StringList
@@ -312,7 +313,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 		}
 	} catch (const Exception& exc) {
 		THROW(QueryParserError, "Failed to serialize: {} - {} like {} ({})", start ? start->to_string() : "", end ? end->to_string() : "",
-			Serialise::type(field_spc.get_type()), exc.what());
+			NAMEOF_ENUM(field_spc.get_type()), exc.what());
 	}
 }
 

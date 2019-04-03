@@ -77,23 +77,6 @@ enum class ReplicationReplyType {
 };
 
 
-inline const std::string& ReplicationReplyTypeNames(ReplicationReplyType type) {
-	static const std::string _[] = {
-		"REPLY_WELCOME",
-		"REPLY_EXCEPTION",
-		"REPLY_END_OF_CHANGES", "REPLY_FAIL",
-		"REPLY_DB_HEADER", "REPLY_DB_FILENAME", "REPLY_DB_FILEDATA", "REPLY_DB_FOOTER",
-		"REPLY_CHANGESET",
-	};
-	auto idx = static_cast<size_t>(type);
-	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-		return _[idx];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
-
-
 class Shard;
 class DatabaseWAL;
 class lock_shard;

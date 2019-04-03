@@ -1688,19 +1688,19 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		default: {
 			std::string result;
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
-				result += Serialise::type(sep_types[SPC_FOREIGN_TYPE]);
+				result += NAMEOF_ENUM(sep_types[SPC_FOREIGN_TYPE]);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
 				if (!result.empty()) { result += "/"; }
-				result += Serialise::type(sep_types[SPC_OBJECT_TYPE]);
+				result += NAMEOF_ENUM(sep_types[SPC_OBJECT_TYPE]);
 			}
 			if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
 				if (!result.empty()) { result += "/"; }
-				result += Serialise::type(sep_types[SPC_ARRAY_TYPE]);
+				result += NAMEOF_ENUM(sep_types[SPC_ARRAY_TYPE]);
 			}
 			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
 				if (!result.empty()) { result += "/"; }
-				result += Serialise::type(sep_types[SPC_CONCRETE_TYPE]);
+				result += NAMEOF_ENUM(sep_types[SPC_CONCRETE_TYPE]);
 			}
 			THROW(ClientError, "{} not supported.", repr(result), RESERVED_TYPE);
 		}
@@ -5007,7 +5007,7 @@ Schema::validate_required_namespace_data()
 			break;
 
 		default:
-			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 }
 
@@ -5090,11 +5090,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 							try {
 								set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 							} catch (const std::out_of_range&) {
-								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 							}
 						}
 					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 					}
 				} else {
 					set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
@@ -5113,7 +5113,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 							set_acc.insert(_accuracy.u64());
 						}
 					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
 				} else {
 					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -5180,7 +5180,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			break;
 
 		default:
-			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 
 	// If field is namespace fallback to index anything but values.
@@ -5888,7 +5888,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::STRING:
@@ -5907,7 +5907,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -6131,7 +6131,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::STRING:
@@ -6151,7 +6151,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", Serialise::type(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::BOOLEAN: {
@@ -8692,7 +8692,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 		} else {
 			++init_pos;
 		}
-		const auto str_type = Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]);
+		const auto str_type = NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
 			auto str_concretr_type = _str_type.substr(init_pos);
 			if ((str_concretr_type != "term" || str_type != "keyword") && (str_concretr_type != "keyword" || str_type != "term")) {  // FIXME: remove legacy term
@@ -8783,11 +8783,11 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						try {
 							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 						} catch (const std::out_of_range&) {
-							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8809,7 +8809,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8824,7 +8824,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				return;
 			}
 			default:
-				THROW(ClientError, "{} is not allowed in {} type fields", repr(prop_name), Serialise::type(specification.sep_types[SPC_CONCRETE_TYPE]));
+				THROW(ClientError, "{} is not allowed in {} type fields", repr(prop_name), NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be array", repr(prop_name));

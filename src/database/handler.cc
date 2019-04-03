@@ -804,7 +804,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 	std::vector<std::string> prefixes;
 	prefixes.reserve(similar.type.size() + similar.field.size());
 	for (const auto& sim_type : similar.type) {
-		char type = toUType(Unserialise::type(sim_type));
+		char type = toUType(Unserialise::get_field_type(sim_type));
 		prefixes.emplace_back(1, type);
 		prefixes.emplace_back(1, tolower(type));
 	}

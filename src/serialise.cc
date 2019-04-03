@@ -303,7 +303,7 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 		case FieldType::UUID:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not string", type(field_spc.get_type()));
+			THROW(SerialisationError, "Type: {} is not string", NAMEOF_ENUM(field_spc.get_type()));
 	}
 }
 
@@ -390,7 +390,7 @@ Serialise::floating(FieldType field_type, long double field_value)
 		case FieldType::FLOAT:
 			return floating(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not a float", type(field_type));
+			THROW(SerialisationError, "Type: {} is not a float", NAMEOF_ENUM(field_type));
 	}
 }
 
@@ -401,7 +401,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 	switch (field_type) {
 		case FieldType::POSITIVE:
 			if (field_value < 0) {
-				THROW(SerialisationError, "Type: {} must be a positive number [{}]", type(field_type), field_value);
+				THROW(SerialisationError, "Type: {} must be a positive number [{}]", NAMEOF_ENUM(field_type), field_value);
 			}
 			return positive(field_value);
 		case FieldType::DATETIME:
@@ -415,7 +415,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 		case FieldType::INTEGER:
 			return integer(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not a integer [{}]", type(field_type), field_value);
+			THROW(SerialisationError, "Type: {} is not a integer [{}]", NAMEOF_ENUM(field_type), field_value);
 	}
 }
 
@@ -437,7 +437,7 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::POSITIVE:
 			return positive(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not a positive integer [{}]", type(field_type), field_value);
+			THROW(SerialisationError, "Type: {} is not a positive integer [{}]", NAMEOF_ENUM(field_type), field_value);
 	}
 }
 
@@ -449,7 +449,7 @@ Serialise::boolean(FieldType field_type, bool field_value)
 		return boolean(field_value);
 	}
 
-	THROW(SerialisationError, "Type: {} is not boolean", type(field_type));
+	THROW(SerialisationError, "Type: {} is not boolean", NAMEOF_ENUM(field_type));
 }
 
 
@@ -460,7 +460,7 @@ Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
 		return geospatial(field_value);
 	}
 
-	THROW(SerialisationError, "Type: {} is not geospatial", type(field_type));
+	THROW(SerialisationError, "Type: {} is not geospatial", NAMEOF_ENUM(field_type));
 }
 
 
@@ -780,86 +780,6 @@ Serialise::range(const range_t& range)
 								(char)(end & 0xFF), (char)((end >> 8) & 0xFF), (char)((end >> 16) & 0xFF), (char)((end >> 24) & 0xFF),
 								(char)((end >> 32) & 0xFF), (char)((end >> 40) & 0xFF), (char)((end >> 48) & 0xFF) };
 	return std::string(serialised, SERIALISED_LENGTH_RANGE);
-}
-
-
-const std::string&
-Serialise::type(FieldType field_type)
-{
-	switch (field_type) {
-		case FieldType::KEYWORD: {
-			static const std::string keyword_str(KEYWORD_STR);
-			return keyword_str;
-		}
-		case FieldType::TEXT: {
-			static const std::string text_str(TEXT_STR);
-			return text_str;
-		}
-		case FieldType::STRING: {
-			static const std::string string_str(STRING_STR);
-			return string_str;
-		}
-		case FieldType::FLOAT: {
-			static const std::string float_str(FLOAT_STR);
-			return float_str;
-		}
-		case FieldType::INTEGER: {
-			static const std::string integer_str(INTEGER_STR);
-			return integer_str;
-		}
-		case FieldType::POSITIVE: {
-			static const std::string positive_str(POSITIVE_STR);
-			return positive_str;
-		}
-		case FieldType::BOOLEAN: {
-			static const std::string boolean_str(BOOLEAN_STR);
-			return boolean_str;
-		}
-		case FieldType::GEO: {
-			static const std::string geo_str(GEO_STR);
-			return geo_str;
-		}
-		case FieldType::DATETIME: {
-			static const std::string date_str(DATE_STR);
-			return date_str;
-		}
-		case FieldType::TIME: {
-			static const std::string time_str(TIME_STR);
-			return time_str;
-		}
-		case FieldType::TIMEDELTA: {
-			static const std::string timedelta_str(TIMEDELTA_STR);
-			return timedelta_str;
-		}
-		case FieldType::UUID: {
-			static const std::string uuid_str(UUID_STR);
-			return uuid_str;
-		}
-		case FieldType::SCRIPT: {
-			static const std::string script_str(SCRIPT_STR);
-			return script_str;
-		}
-		case FieldType::OBJECT: {
-			static const std::string object_str(OBJECT_STR);
-			return object_str;
-		}
-		case FieldType::ARRAY: {
-			static const std::string array_str(ARRAY_STR);
-			return array_str;
-		}
-		case FieldType::FOREIGN: {
-			static const std::string foreign_str(FOREIGN_STR);
-			return foreign_str;
-		}
-		case FieldType::EMPTY: {
-			static const std::string empty_str(EMPTY_STR);
-			return empty_str;
-		}
-		default: {
-			static const std::string unknown("unknown");
-			return unknown;
-		}
-	}
 }
 
 
@@ -1373,7 +1293,7 @@ Unserialise::range(std::string_view serialised_range)
 
 
 FieldType
-Unserialise::type(std::string_view str_type)
+Unserialise::get_field_type(std::string_view str_type)
 {
 	constexpr static auto _ = phf::make_phf({
 		hhl(" "),

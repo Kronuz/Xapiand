@@ -218,9 +218,6 @@ namespace Serialise {
 	// Serialise a range_t.
 	std::string range(const range_t& range);
 
-	// Serialise type to its string representation.
-	const std::string& type(FieldType field_type);
-
 	// Guess type of field_value. If bool_term can not return FieldType::TEXT.
 	FieldType guess_type(const class MsgPack& field_value);
 
@@ -329,5 +326,5 @@ namespace Unserialise {
 	range_t range(std::string_view serialised_range);
 
 	// Unserialise str_type to its FieldType.
-	FieldType type(std::string_view str_type);
+	FieldType get_field_type(std::string_view str_type);
 }
