@@ -383,15 +383,6 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 	p_end = p + data.size();
 
 	switch (type) {
-		case Type::ADD_DOCUMENT:
-			repr["op"] = "ADD_DOCUMENT";
-			repr["document"] = to_string_document(data, unserialised);
-			break;
-		case Type::DELETE_DOCUMENT_TERM:
-			repr["op"] = "DELETE_DOCUMENT_TERM";
-			size = unserialise_length(&p, p_end, true);
-			repr["term"] = std::string(p, size);
-			break;
 		case Type::COMMIT:
 			repr["op"] = "COMMIT";
 			break;
@@ -399,12 +390,6 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 			repr["op"] = "REPLACE_DOCUMENT";
 			repr["docid"] = unserialise_length(&p, p_end);
 			repr["document"] = to_string_document(std::string_view(p, p_end - p), unserialised);
-			break;
-		case Type::REPLACE_DOCUMENT_TERM:
-			repr["op"] = "REPLACE_DOCUMENT_TERM";
-			size = unserialise_length(&p, p_end, true);
-			repr["term"] = std::string(p, size);
-			repr["document"] = to_string_document(std::string_view(p + size, p_end - p - size), unserialised);
 			break;
 		case Type::DELETE_DOCUMENT:
 			repr["op"] = "DELETE_DOCUMENT";
@@ -588,28 +573,16 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 	bool modified = true;
 
 	switch (type) {
-		case Type::ADD_DOCUMENT:
-			_shard->add_document(Xapian::Document::unserialise(data), false, wal_, false);
-			break;
-		case Type::DELETE_DOCUMENT_TERM:
-			size = unserialise_length(&p, p_end, true);
-			term = std::string(p, size);
-			_shard->delete_document_term(term, false, wal_, false);
-			break;
 		case Type::COMMIT:
-			_shard->commit(wal_, send_update);
+			if (!_shard->commit(wal_, send_update)) {
+				L_WARNING("WAL commit did nothing ({})", db_revision);
+			}
 			modified = false;
 			break;
 		case Type::REPLACE_DOCUMENT:
 			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 			document = std::string(p, p_end - p);
 			_shard->replace_document(did, Xapian::Document::unserialise(document), false, wal_, false);
-			break;
-		case Type::REPLACE_DOCUMENT_TERM:
-			size = unserialise_length(&p, p_end, true);
-			term = std::string(p, size);
-			document = std::string(p + size, p_end - p - size);
-			_shard->replace_document_term(term, Xapian::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
 			try {
@@ -721,7 +694,7 @@ DatabaseWAL::init_database()
 void
 DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, [[maybe_unused]] bool send_update)
 {
-	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", repr(uuid.to_string()), revision, names[toUType(type)], send_update);
+	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", repr(uuid.to_string()), revision, NAMEOF_ENUM(type), send_update);
 
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);
@@ -734,7 +707,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		line.append(serialise_length(toUType(type)));
 		line.append(compress_lz4(data));
 
-		L_DATABASE_WAL("{} on {}: '{}'", names[toUType(type)], base_path, repr(line, quote));
+		L_DATABASE_WAL("{} on {}: '{}'", NAMEOF_ENUM(type), base_path, repr(line, quote));
 
 		if (closed()) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
@@ -1067,42 +1040,6 @@ DatabaseWALWriter::running_size()
 
 
 void
-DatabaseWALWriterTask::write_add_document(DatabaseWALWriterThread& thread)
-{
-	L_CALL("DatabaseWALWriterTask::write_add_document()");
-
-	L_DATABASE_NOW(start);
-
-	auto line = doc.serialise();
-	L_DATABASE("write_add_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
-
-	auto& wal = thread.wal(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_DOCUMENT, line, false);
-
-	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
-}
-
-
-void
-DatabaseWALWriterTask::write_delete_document_term(DatabaseWALWriterThread& thread)
-{
-	L_CALL("DatabaseWALWriterTask::write_delete_document_term()");
-
-	L_DATABASE_NOW(start);
-
-	auto line = serialise_string(term_word_val);  // term
-	L_DATABASE("write_delete_document_term {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
-
-	auto& wal = thread.wal(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT_TERM, line, false);
-
-	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
-}
-
-
-void
 DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 {
 	L_CALL("DatabaseWALWriterTask::write_remove_spelling()");
@@ -1151,25 +1088,6 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 
 	auto& wal = thread.wal(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
-
-	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
-}
-
-
-void
-DatabaseWALWriterTask::write_replace_document_term(DatabaseWALWriterThread& thread)
-{
-	L_CALL("DatabaseWALWriterTask::write_replace_document_term()");
-
-	L_DATABASE_NOW(start);
-
-	auto line = serialise_string(term_word_val);  // term
-	line.append(doc.serialise());
-	L_DATABASE("write_replace_document_term {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
-
-	auto& wal = thread.wal(path);
-	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT_TERM, line, false);
 
 	L_DATABASE_NOW(end);
 	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
@@ -1233,52 +1151,6 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 
 
 void
-DatabaseWALWriter::write_add_document(Shard& shard, Xapian::Document&& doc)
-{
-	L_CALL("DatabaseWALWriter::write_add_document()");
-
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
-
-	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
-	task.doc = std::move(doc);
-	task.dispatcher = &DatabaseWALWriterTask::write_add_document;
-
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
-		execute(std::move(task));
-	} else {
-		enqueue(std::move(task));
-	}
-}
-
-
-void
-DatabaseWALWriter::write_delete_document_term(Shard& shard, const std::string& term)
-{
-	L_CALL("DatabaseWALWriter::write_delete_document_term()");
-
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
-
-	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
-	task.term_word_val = term;
-	task.dispatcher = &DatabaseWALWriterTask::write_delete_document_term;
-
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
-		execute(std::move(task));
-	} else {
-		enqueue(std::move(task));
-	}
-}
-
-
-void
 DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec)
 {
 	L_CALL("DatabaseWALWriter::write_remove_spelling()");
@@ -1331,6 +1203,7 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 {
 	L_CALL("DatabaseWALWriter::write_replace_document()");
 
+	ASSERT(did != 0);
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
 
@@ -1351,34 +1224,11 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 
 
 void
-DatabaseWALWriter::write_replace_document_term(Shard& shard, const std::string& term, Xapian::Document&& doc)
-{
-	L_CALL("DatabaseWALWriter::write_replace_document_term()");
-
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
-
-	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
-	task.term_word_val = term;
-	task.doc = std::move(doc);
-	task.dispatcher = &DatabaseWALWriterTask::write_replace_document_term;
-
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
-		execute(std::move(task));
-	} else {
-		enqueue(std::move(task));
-	}
-}
-
-
-void
 DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 {
 	L_CALL("DatabaseWALWriter::write_delete_document()");
 
+	ASSERT(did != 0);
 	ASSERT(shard.is_wal_active());
 	ASSERT(shard.endpoint.is_local());
 

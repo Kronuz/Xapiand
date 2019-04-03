@@ -115,19 +115,6 @@ class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 
 	friend WalHeader;
 
-	static constexpr const char* const names[] = {
-		"ADD_DOCUMENT",
-		"DELETE_DOCUMENT_TERM",
-		"COMMIT",
-		"REPLACE_DOCUMENT",
-		"REPLACE_DOCUMENT_TERM",
-		"DELETE_DOCUMENT",
-		"SET_METADATA",
-		"ADD_SPELLING",
-		"REMOVE_SPELLING",
-		"MAX",
-	};
-
 	bool validate_uuid;
 
 	MsgPack to_string_document(std::string_view document, bool unserialised);
@@ -144,11 +131,8 @@ public:
 	static constexpr uint32_t max_slot = std::numeric_limits<uint32_t>::max();
 
 	enum class Type : uint8_t {
-		ADD_DOCUMENT,
-		DELETE_DOCUMENT_TERM,
 		COMMIT,
 		REPLACE_DOCUMENT,
-		REPLACE_DOCUMENT_TERM,
 		DELETE_DOCUMENT,
 		SET_METADATA,
 		ADD_SPELLING,
@@ -278,15 +262,12 @@ class DatabaseWALWriterTask {
 	Xapian::docid did;
 	bool send_update;
 
-	void write_add_document(DatabaseWALWriterThread& thread);
-	void write_delete_document_term(DatabaseWALWriterThread& thread);
-	void write_remove_spelling(DatabaseWALWriterThread& thread);
 	void write_commit(DatabaseWALWriterThread& thread);
 	void write_replace_document(DatabaseWALWriterThread& thread);
-	void write_replace_document_term(DatabaseWALWriterThread& thread);
 	void write_delete_document(DatabaseWALWriterThread& thread);
 	void write_set_metadata(DatabaseWALWriterThread& thread);
 	void write_add_spelling(DatabaseWALWriterThread& thread);
+	void write_remove_spelling(DatabaseWALWriterThread& thread);
 
 public:
 	DatabaseWALWriterTask() : dispatcher(nullptr) {}
@@ -356,15 +337,12 @@ public:
 
 	std::size_t running_size();
 
-	void write_add_document(Shard& shard, Xapian::Document&& doc);
-	void write_delete_document_term(Shard& shard, const std::string& term);
-	void write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec);
 	void write_commit(Shard& shard, bool send_update);
 	void write_replace_document(Shard& shard, Xapian::docid did, Xapian::Document&& doc);
-	void write_replace_document_term(Shard& shard, const std::string& term, Xapian::Document&& doc);
 	void write_delete_document(Shard& shard, Xapian::docid did);
 	void write_set_metadata(Shard& shard, const std::string& key, const std::string& val);
 	void write_add_spelling(Shard& shard, const std::string& word, Xapian::termcount freqinc);
+	void write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec);
 };
 
 
