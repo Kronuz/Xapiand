@@ -366,8 +366,6 @@ HttpClient::on_read(const char* buf, ssize_t received)
 {
 	L_CALL("HttpClient::on_read(<buf>, {})", received);
 
-	unsigned init_state = new_request->parser.state;
-
 	if (received <= 0) {
 		close();
 
@@ -376,8 +374,9 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			return received;
 		}
 
-		if (init_state != 18) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({})", string::from_delta(new_request->begins, std::chrono::system_clock::now()), init_state);
+		auto state = HTTP_PARSER_STATE(&new_request->parser);
+		if (state != s_start_req) {
+			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({})", string::from_delta(new_request->begins, std::chrono::system_clock::now()), state);
 			return received;
 		}
 
