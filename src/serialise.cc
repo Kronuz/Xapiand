@@ -35,6 +35,7 @@
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
+#include "nameof.hh"                                  // for NAMEOF_ENUM
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
@@ -156,7 +157,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
-			THROW(SerialisationError, "msgpack::type {} is not supported", field_value.getStrType());
+			THROW(SerialisationError, "msgpack::type {} is not supported", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -332,10 +333,10 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 				case FieldType::STRING:
 					return Datetime::iso8601(Datetime::DatetimeParser(field_value));
 				default:
-					THROW(SerialisationError, "Type: {} is not a datetime", field_value.getStrType());
+					THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.getType()));
 			}
 		default:
-			THROW(SerialisationError, "Type: {} is not a datetime", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -353,7 +354,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {} is not a time", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a time", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -371,7 +372,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {} is not a timedelta", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not a timedelta", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -516,7 +517,7 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: {} is not time", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not time", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -563,7 +564,7 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: {} is not timedelta", field_value.getStrType());
+			THROW(SerialisationError, "Type: {} is not timedelta", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -991,7 +992,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 		}
 
 		default:
-			THROW(SerialisationError, "Unexpected type {}", field_value.getStrType());
+			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 
@@ -1116,7 +1117,7 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 		}
 
 		default:
-			THROW(SerialisationError, "Unexpected type {}", field_value.getStrType());
+			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.getType()));
 	}
 }
 

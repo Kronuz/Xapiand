@@ -48,6 +48,7 @@
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
+#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "opts.h"                                 // for opts::*
 #include "reserved/schema.h"                      // for RESERVED_
 #include "script.h"                               // for Script
@@ -3023,7 +3024,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			mut_object = db_handler.call_script(object, term_id, *specification.script, data);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
-					THROW(ClientError, "Script must return an object, it returned {}", mut_object->getStrType());
+					THROW(ClientError, "Script must return an object, it returned {}", NAMEOF_ENUM(mut_object->getType()));
 				}
 				// Rebuild fields with new values.
 				fields.clear();

@@ -44,6 +44,7 @@
 #include "log.h"                            // for L_CALL
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
+#include "nameof.hh"                        // for NAMEOF_ENUM
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
@@ -510,7 +511,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 			inject_data(data, body);
 			return prepare(document_id, document_ver, body, data);
 		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.getType()));
 	}
 }
 
@@ -569,7 +570,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 					inject_data(data, body);
 					return index(document_id, document_ver, body, data, commit);
 				default:
-					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
+					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.getType()));
 			}
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
@@ -627,7 +628,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 DataType
 DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, body.getStrType(), commit, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, NAMEOF_ENUM(body.getType()), commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -685,7 +686,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						return index(document_id, document_ver, obj, data, commit);
 					}
 				default:
-					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", body.getStrType());
+					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.getType()));
 			}
 
 			return index(document_id, document_ver, obj, data, commit);
@@ -2107,7 +2108,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 	L_CALL("DocIndexer::_prepare(<obj>)");
 
 	if (!obj.is_map()) {
-		L_ERR("Indexing object has an unsupported type: {}", obj.getStrType());
+		L_ERR("Indexing object has an unsupported type: {}", NAMEOF_ENUM(obj.getType()));
 		return;
 	}
 

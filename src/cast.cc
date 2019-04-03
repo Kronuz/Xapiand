@@ -23,6 +23,7 @@
 #include "cast.h"
 
 #include "database/schema.h"
+#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "string.hh"                              // for string::format
 
 
@@ -104,12 +105,12 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			if (obj.is_map()) {
 				return obj;
 			}
-			THROW(CastError, "Type {} cannot be cast to script", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to script", NAMEOF_ENUM(obj.getType()));
 		case FieldType::GEO:
 			if (obj.is_map() || obj.is_string()) {
 				return obj;
 			}
-			THROW(CastError, "Type {} cannot be cast to geo", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to geo", NAMEOF_ENUM(obj.getType()));
 		case FieldType::EMPTY:
 			if (obj.is_string()) {
 				{
@@ -140,7 +141,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			}
 			[[fallthrough]];
 		default:
-			THROW(CastError, "Type {} cannot be cast", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -159,14 +160,14 @@ Cast::integer(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoll(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to integer", obj.getStrType());
+				THROW(CastError, "Value {} cannot be cast to integer", NAMEOF_ENUM(obj.getType()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<int64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to integer", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to integer", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -185,14 +186,14 @@ Cast::positive(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoull(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to positive", obj.getStrType());
+				THROW(CastError, "Value {} cannot be cast to positive", NAMEOF_ENUM(obj.getType()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<uint64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to positive", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to positive", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -211,14 +212,14 @@ Cast::floating(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stod(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to float", obj.getStrType());
+				THROW(CastError, "Value {} cannot be cast to float", NAMEOF_ENUM(obj.getType()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<double>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to float", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to float", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -298,7 +299,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type {} cannot be cast to boolean", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to boolean", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -309,7 +310,7 @@ Cast::uuid(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type {} cannot be cast to uuid", obj.getStrType());
+	THROW(CastError, "Type {} cannot be cast to uuid", NAMEOF_ENUM(obj.getType()));
 }
 
 
@@ -324,7 +325,7 @@ Cast::datetime(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to datetime", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to datetime", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -339,7 +340,7 @@ Cast::time(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to time", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to time", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -354,7 +355,7 @@ Cast::timedelta(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to timedelta", obj.getStrType());
+			THROW(CastError, "Type {} cannot be cast to timedelta", NAMEOF_ENUM(obj.getType()));
 	}
 }
 
@@ -365,7 +366,7 @@ Cast::ewkt(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type {} cannot be cast to ewkt", obj.getStrType());
+	THROW(CastError, "Type {} cannot be cast to ewkt", NAMEOF_ENUM(obj.getType()));
 }
 
 
