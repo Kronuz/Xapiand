@@ -52,10 +52,12 @@
 
 #define L_DATABASE_NOW(name)
 
-#undef L_DEBUG
-#define L_DEBUG L_GREY
+// #undef L_DEBUG
+// #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_REPLICATION
+// #define L_REPLICATION L_ROSY_BROWN
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
 // #undef L_DATABASE_NOW
@@ -544,12 +546,15 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 		THROW(Error, "Database is not defined");
 	}
 
+	auto db_revision = _shard->db()->get_revision();
+
 	const char *p = line.data();
 	const char *p_end = p + line.size();
 
 	auto revision = unserialise_length(&p, p_end);
-	auto db_revision = _shard->db()->get_revision();
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
+
+	L_REPLICATION("EXECUTE LINE: {} ({})", revision, NAMEOF_ENUM(type));
 
 	if (revision != db_revision) {
 		if (!unsafe) {

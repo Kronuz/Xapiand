@@ -288,7 +288,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
-	auto revision = db->get_revision();
+	auto db_revision = db->get_revision();
 	lk_shard.unlock();
 
 	auto from_revision = remote_revision;
@@ -303,15 +303,15 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	auto to_revision = from_revision;
 
-	if (from_revision < revision) {
-		if (from_revision == 0) {
+	if (to_revision < db_revision) {
+		if (to_revision == 0) {
 			int whole_db_copies_left = 5;
 
 			while (true) {
 				// Send the current revision number in the header.
 				send_message(ReplicationReplyType::REPLY_DB_HEADER,
 					serialise_string(uuid) +
-					serialise_length(revision));
+					serialise_length(db_revision));
 
 				static std::array<const std::string, 7> filenames = {
 					"termlist.glass",
@@ -350,8 +350,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 				send_message(ReplicationReplyType::REPLY_DB_FOOTER, serialise_length(final_revision));
 
-				if (revision == final_revision) {
-					to_revision = revision;
+				if (db_revision == final_revision) {
+					to_revision = db_revision;
 					break;
 				}
 
@@ -365,11 +365,11 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				} else if (--whole_db_copies_left == 0) {
 					db = lk_shard.lock()->db();
 					uuid = db->get_uuid();
-					revision = db->get_revision();
+					db_revision = db->get_revision();
 				} else {
 					db = lk_shard.lock()->db();
 					uuid = db->get_uuid();
-					revision = db->get_revision();
+					db_revision = db->get_revision();
 					lk_shard.unlock();
 				}
 			}
@@ -379,18 +379,31 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		int wal_iterations = 5;
 		do {
 			// Send WAL operations.
-			auto wal_it = wal->find(to_revision);
-			for (; wal_it != wal->end(); ++wal_it) {
-				to_revision = wal_it->first + 1;
-				if (to_revision > revision) {
+			std::vector<std::string> reply_changesets;
+			for (auto wal_it = wal->find(to_revision); wal_it != wal->end(); ++wal_it) {
+				auto& line = wal_it->second;
+				const char *lp = line.data();
+				const char *lp_end = lp + line.size();
+				auto revision = unserialise_length(&lp, lp_end);
+				if (revision >= db_revision) {
 					break;
 				}
-				send_message(ReplicationReplyType::REPLY_CHANGESET, wal_it->second);
+				auto type = static_cast<DatabaseWAL::Type>(unserialise_length(&lp, lp_end));
+				if (type == DatabaseWAL::Type::COMMIT) {
+					for (auto& reply_changeset : reply_changesets) {
+						send_message(ReplicationReplyType::REPLY_CHANGESET, reply_changeset);
+					}
+					send_message(ReplicationReplyType::REPLY_CHANGESET, line);
+					reply_changesets.clear();
+					++to_revision;
+				} else {
+					reply_changesets.push_back(line);
+				}
 			}
 			db = lk_shard.lock()->db();
-			revision = db->get_revision();
+			db_revision = db->get_revision();
 			lk_shard.unlock();
-		} while (to_revision < revision && --wal_iterations != 0);
+		} while (to_revision < db_revision && --wal_iterations != 0);
 	}
 
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
@@ -398,9 +411,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	auto ends = std::chrono::system_clock::now();
 	_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 	if (from_revision == to_revision) {
-		L(LOG_DEBUG, rgba(116, 100, 77, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT NONE {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, rgba(116, 100, 77, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT EMPTY {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 	} else {
-		L(LOG_DEBUG, rgba(55, 100, 79, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT [{}..{}] {} {}", repr(endpoint_path), remote_uuid, remote_revision, from_revision + 1, to_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, rgba(55, 100, 79, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT [{}..{}] {} {}", repr(endpoint_path), remote_uuid, remote_revision, from_revision, to_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 	}
 }
 
