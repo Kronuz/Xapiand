@@ -75,7 +75,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 		auto it = obj.find(RESERVED_QUERYDSL_RANGE);
 		if (it == obj.end()) {
 			// If is not _range must be geo.
-			return FieldType::GEO;
+			return FieldType::geo;
 		}
 
 		const auto& range = it.value();
@@ -88,7 +88,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 			if (it_t != range.end()) {
 				return Serialise::guess_type(it_t.value());
 			}
-			return FieldType::EMPTY;
+			return FieldType::empty;
 		} catch (const msgpack::type_error&) {
 			THROW(QueryDslError, "{} must be object [{}]", RESERVED_QUERYDSL_RANGE, repr(range.to_string()));
 		}
@@ -96,7 +96,7 @@ QueryDSL::get_in_type(const MsgPack& obj)
 		THROW(QueryDslError, "{} must be object [{}]", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
 	}
 
-	return FieldType::EMPTY;
+	return FieldType::empty;
 }
 
 
@@ -114,7 +114,7 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 	MsgPack value;
 	auto& _range = value[RESERVED_QUERYDSL_RANGE] = MsgPack::MAP();
 	auto start = fp.get_start();
-	auto field_type = FieldType::EMPTY;
+	auto field_type = FieldType::empty;
 	if (!start.empty()) {
 		auto& obj = _range[RESERVED_QUERYDSL_FROM] = Cast::cast(field_spc.get_type(), start);
 		field_type = Serialise::guess_type(obj);
@@ -122,7 +122,7 @@ QueryDSL::parse_guess_range(const required_spc_t& field_spc, std::string_view ra
 	auto end = fp.get_end();
 	if (!end.empty()) {
 		auto& obj = _range[RESERVED_QUERYDSL_TO] = Cast::cast(field_spc.get_type(), end);
-		if (field_type == FieldType::EMPTY) {
+		if (field_type == FieldType::empty) {
 			field_type = Serialise::guess_type(obj);
 		}
 	}
@@ -455,41 +455,41 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 
 	Datetime::tm_t tm = Datetime::DatetimeParser(obj);
 	switch (get_accuracy_datetime(field_accuracy.substr(1))) {
-		case UnitTime::SECOND: {
+		case UnitTime::second: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::MINUTE: {
+		case UnitTime::minute: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::HOUR: {
+		case UnitTime::hour: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::DAY: {
+		case UnitTime::day: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::MONTH: {
+		case UnitTime::month: {
 			Datetime::tm_t _tm(tm.year, tm.mon);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::YEAR: {
+		case UnitTime::year: {
 			Datetime::tm_t _tm(tm.year);
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::DECADE: {
+		case UnitTime::decade: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::CENTURY: {
+		case UnitTime::century: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
-		case UnitTime::MILLENNIUM: {
+		case UnitTime::millennium: {
 			Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
-			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::DATETIME)), wqf);
+			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);
 		}
 		case UnitTime::INVALID:
 			THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
@@ -508,7 +508,7 @@ QueryDSL::get_acc_time_query(const required_spc_t& field_spc, std::string_view f
 	}
 
 	int64_t value = Datetime::time_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
 }
 
 
@@ -523,7 +523,7 @@ QueryDSL::get_acc_timedelta_query(const required_spc_t& field_spc, std::string_v
 	}
 
 	int64_t value = Datetime::timedelta_to_double(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, static_cast<uint64_t>(acc))), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
 }
 
 
@@ -538,7 +538,7 @@ QueryDSL::get_acc_num_query(const required_spc_t& field_spc, std::string_view fi
 		THROW(QueryDslError, "Invalid field name: {}", field_accuracy);
 	}
 	auto value = Cast::integer(obj);
-	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix(), required_spc_t::get_ctype(FieldType::INTEGER)), wqf);
+	return Xapian::Query(prefixed(Serialise::integer(value - modulus(value, acc)), field_spc.prefix(), required_spc_t::get_ctype(FieldType::integer)), wqf);
 }
 
 
@@ -568,15 +568,15 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 	L_CALL("QueryDSL::get_accuracy_query(<field_spc>, {}, {}, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
 	switch (field_spc.get_type()) {
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return get_acc_num_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return get_acc_date_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
-		case FieldType::TIME:
+		case FieldType::time:
 			return get_acc_time_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return get_acc_timedelta_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
-		case FieldType::GEO:
+		case FieldType::geo:
 			return get_acc_geo_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
 		default:
 			THROW(Error, "Type: {} does not handle accuracy terms", NAMEOF_ENUM(field_spc.get_type()));
@@ -645,8 +645,8 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 	L_CALL("QueryDSL::get_term_query(<field_spc>, {}, <default_op>, <wqf>, <flags>)", repr(serialised_term));
 
 	switch (field_spc.get_type()) {
-		case FieldType::STRING:
-		case FieldType::TEXT: {
+		case FieldType::string:
+		case FieldType::text: {
 			// There cannot be non-keyword fields with bool_term
 			Xapian::QueryParser parser;
 			switch (default_op) {
@@ -680,7 +680,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			return parser.parse_query(std::string(serialised_term), flags, field_spc.prefix() + field_spc.get_ctype());
 		}
 
-		case FieldType::KEYWORD: {
+		case FieldType::keyword: {
 			std::string serialised_term_holder;
 			if (!field_spc.flags.bool_term) {
 				serialised_term_holder = string::lower(serialised_term);
@@ -706,7 +706,7 @@ QueryDSL::get_namespace_in_query(const required_spc_t& field_spc, const MsgPack&
 
 	if (obj.is_string()) {
 		auto parsed = parse_guess_range(field_spc, obj.str_view());
-		if (parsed.first == FieldType::EMPTY) {
+		if (parsed.first == FieldType::empty) {
 			return Xapian::Query(std::string());
 		}
 		if (field_spc.prefix().empty()) {
@@ -715,7 +715,7 @@ QueryDSL::get_namespace_in_query(const required_spc_t& field_spc, const MsgPack&
 		return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix()), parsed.second, default_op, wqf, flags);
 	}
 	auto field_type = get_in_type(obj);
-	if (field_type == FieldType::EMPTY) {
+	if (field_type == FieldType::empty) {
 		return Xapian::Query(std::string());
 	}
 	if (field_spc.prefix().empty()) {
@@ -1190,25 +1190,25 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 				}
 				if (value) {
 					switch (field_spc.get_type()) {
-						case FieldType::FLOAT:
-							sorter->add_float(field_spc.slot, descending, Cast::cast(FieldType::FLOAT, *value).f64());
+						case FieldType::floating:
+							sorter->add_float(field_spc.slot, descending, Cast::cast(FieldType::floating, *value).f64());
 							break;
-						case FieldType::INTEGER:
-							sorter->add_integer(field_spc.slot, descending, Cast::cast(FieldType::INTEGER, *value).i64());
+						case FieldType::integer:
+							sorter->add_integer(field_spc.slot, descending, Cast::cast(FieldType::integer, *value).i64());
 							break;
-						case FieldType::POSITIVE:
-							sorter->add_positive(field_spc.slot, descending, Cast::cast(FieldType::POSITIVE, *value).u64());
+						case FieldType::positive:
+							sorter->add_positive(field_spc.slot, descending, Cast::cast(FieldType::positive, *value).u64());
 							break;
-						case FieldType::DATETIME:
-							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DatetimeParser(Cast::cast(FieldType::DATETIME, *value))));
+						case FieldType::datetime:
+							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DatetimeParser(Cast::cast(FieldType::datetime, *value))));
 							break;
-						case FieldType::BOOLEAN:
-							sorter->add_date(field_spc.slot, descending, Cast::cast(FieldType::BOOLEAN, *value).boolean());
+						case FieldType::boolean:
+							sorter->add_date(field_spc.slot, descending, Cast::cast(FieldType::boolean, *value).boolean());
 							break;
-						case FieldType::UUID:  // FIXME: Should UUID be here?
-						case FieldType::KEYWORD:
-						case FieldType::STRING:
-						case FieldType::TEXT: {
+						case FieldType::uuid:  // FIXME: Should UUID be here?
+						case FieldType::keyword:
+						case FieldType::string:
+						case FieldType::text: {
 							constexpr static auto _ = phf::make_phf({
 								hh("levenshtein"),
 								hh("leven"),
@@ -1229,42 +1229,42 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 							switch (_.fhh(metric)) {
 								case _.fhh("levenshtein"):
 								case _.fhh("leven"):
-									sorter->add_string_levenshtein(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_levenshtein(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("jarowinkler"):
 								case _.fhh("jarow"):
-									sorter->add_string_jaro_winkler(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_jaro_winkler(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("sorensendice"):
 								case _.fhh("sorensen"):
 								case _.fhh("dice"):
-									sorter->add_string_sorensen_dice(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_sorensen_dice(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("jaccard"):
-									sorter->add_string_jaccard(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_jaccard(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("lcsubstr"):
 								case _.fhh("lcs"):
-									sorter->add_string_lcs(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_lcs(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("lcsubsequence"):
 								case _.fhh("lcsq"):
-									sorter->add_string_lcsq(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_lcsq(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("soundex"):
 								case _.fhh("sound"):
-									sorter->add_string_soundex(field_spc.language, field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_soundex(field_spc.language, field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("jaro"):
 								default:
-									sorter->add_string_jaro(field_spc.slot, descending, Cast::cast(FieldType::TEXT, *value).str_view(), icase);
+									sorter->add_string_jaro(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 							}
 							break;
 						}
-						case FieldType::EMPTY:
+						case FieldType::empty:
 							break;
-						case FieldType::GEO: {
+						case FieldType::geo: {
 							GeoSpatial geo(*value);
 							auto centroids = geo.getGeometry()->getCentroids();
 							if (!centroids.empty()) {
@@ -1277,9 +1277,9 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 					}
 				} else {
 					switch (field_spc.get_type()) {
-						case FieldType::EMPTY:
+						case FieldType::empty:
 							break;
-						case FieldType::GEO:
+						case FieldType::geo:
 							THROW(QueryDslError, "Type '{}' must define a reference value", field_spc.get_str_type());
 							break;
 						default:
@@ -1307,9 +1307,9 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 			}
 			const auto field_spc = schema->get_slot_field(field);
 			switch (field_spc.get_type()) {
-				case FieldType::EMPTY:
+				case FieldType::empty:
 					break;
-				case FieldType::GEO:
+				case FieldType::geo:
 					THROW(QueryDslError, "Type '{}' must define a reference value", field_spc.get_str_type());
 					break;
 				default:

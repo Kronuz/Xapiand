@@ -75,7 +75,7 @@ Engine::compile(const Script& script)
 
 	auto sep_type = script.get_types();
 
-	if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+	if (sep_type[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		script_name = script.get_endpoint();
 	} else {
 		auto name_body = script.get_name_body();
@@ -129,7 +129,7 @@ Processor::Processor(const Script& script) :
 	std::string script_name;
 	std::string script_body;
 
-	if (sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+	if (sep_type[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		std::string foreign_path, foreign_id;
 		auto foreign_uri = script.get_endpoint();
 		std::string_view foreign_path_view, foreign_id_view;
@@ -165,7 +165,7 @@ Processor::Processor(const Script& script) :
 		}
 		Script foreign_script(o);
 		auto foreign_sep_type = foreign_script.get_types();
-		if (foreign_sep_type[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (foreign_sep_type[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "Nested foreign scripts not supported!");
 		}
 		auto name_body = foreign_script.get_name_body();

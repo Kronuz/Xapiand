@@ -77,7 +77,7 @@ constexpr static auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
 constexpr static auto DATE       = static_string::string(DATE_CHAR);
 constexpr static auto DATETIME   = static_string::string(DATETIME_CHAR);
 constexpr static auto FOREIGN    = static_string::string(FOREIGN_CHAR);
-constexpr static auto FLOAT      = static_string::string(FLOAT_CHAR);
+constexpr static auto FLOATING   = static_string::string(FLOATING_CHAR);
 constexpr static auto GEO        = static_string::string(GEO_CHAR);
 constexpr static auto INTEGER    = static_string::string(INTEGER_CHAR);
 constexpr static auto OBJECT     = static_string::string(OBJECT_CHAR);
@@ -159,27 +159,27 @@ static const std::vector<uint64_t> def_accuracy_num({
 
 
 static const std::vector<uint64_t> def_accuracy_date({
-	toUType(UnitTime::DAY),             // 86400 s
-	toUType(UnitTime::MONTH),           // 2592000 s
-	toUType(UnitTime::YEAR),            // 31536000 s
-	toUType(UnitTime::DECADE),          // 315360000 s
-	toUType(UnitTime::CENTURY),         // 3153600000 s
+	toUType(UnitTime::day),             // 86400 s
+	toUType(UnitTime::month),           // 2592000 s
+	toUType(UnitTime::year),            // 31536000 s
+	toUType(UnitTime::decade),          // 315360000 s
+	toUType(UnitTime::century),         // 3153600000 s
 });
 
 
 static const std::vector<uint64_t> def_accuracy_datetime({
-	toUType(UnitTime::HOUR),            // 3600 s
-	toUType(UnitTime::DAY),             // 86400 s
-	toUType(UnitTime::MONTH),           // 2592000 s
-	toUType(UnitTime::YEAR),            // 31536000 s
-	toUType(UnitTime::DECADE),          // 315360000 s
-	toUType(UnitTime::CENTURY),         // 3153600000 s
+	toUType(UnitTime::hour),            // 3600 s
+	toUType(UnitTime::day),             // 86400 s
+	toUType(UnitTime::month),           // 2592000 s
+	toUType(UnitTime::year),            // 31536000 s
+	toUType(UnitTime::decade),          // 315360000 s
+	toUType(UnitTime::century),         // 3153600000 s
 });
 
 
 static const std::vector<uint64_t> def_accuracy_time({
-	toUType(UnitTime::MINUTE),          // 60 s
-	toUType(UnitTime::HOUR),            // 3600 s
+	toUType(UnitTime::minute),          // 60 s
+	toUType(UnitTime::hour),            // 3600 s
 });
 
 
@@ -209,15 +209,15 @@ static inline bool
 validate_acc_date(UnitTime unit) noexcept
 {
 	switch (unit) {
-		case UnitTime::SECOND:
-		case UnitTime::MINUTE:
-		case UnitTime::HOUR:
-		case UnitTime::DAY:
-		case UnitTime::MONTH:
-		case UnitTime::YEAR:
-		case UnitTime::DECADE:
-		case UnitTime::CENTURY:
-		case UnitTime::MILLENNIUM:
+		case UnitTime::second:
+		case UnitTime::minute:
+		case UnitTime::hour:
+		case UnitTime::day:
+		case UnitTime::month:
+		case UnitTime::year:
+		case UnitTime::decade:
+		case UnitTime::century:
+		case UnitTime::millennium:
 			return true;
 		default:
 			return false;
@@ -228,106 +228,6 @@ validate_acc_date(UnitTime unit) noexcept
 /*
  * Helper functions to print readable form of enums
  */
-
-static inline const std::string&
-_get_str_acc_date(UnitTime unit) noexcept
-{
-	switch (unit) {
-		case UnitTime::SECOND: {
-			static const std::string second("second");
-			return second;
-		}
-		case UnitTime::MINUTE: {
-			static const std::string minute("minute");
-			return minute;
-		}
-		case UnitTime::HOUR: {
-			static const std::string hour("hour");
-			return hour;
-		}
-		case UnitTime::DAY: {
-			static const std::string day("day");
-			return day;
-		}
-		case UnitTime::MONTH: {
-			static const std::string month("month");
-			return month;
-		}
-		case UnitTime::YEAR: {
-			static const std::string year("year");
-			return year;
-		}
-		case UnitTime::DECADE: {
-			static const std::string decade("decade");
-			return decade;
-		}
-		case UnitTime::CENTURY: {
-			static const std::string century("century");
-			return century;
-		}
-		case UnitTime::MILLENNIUM: {
-			static const std::string millennium("millennium");
-			return millennium;
-		}
-		default: {
-			static const std::string unknown("unknown");
-			return unknown;
-		}
-	}
-}
-
-
-static inline const std::string&
-_get_str_stop_strategy(StopStrategy stop_strategy) noexcept
-{
-	switch (stop_strategy) {
-		case StopStrategy::STOP_NONE: {
-			static const std::string stop_none("stop_none");
-			return stop_none;
-		}
-		case StopStrategy::STOP_ALL: {
-			static const std::string stop_all("stop_all");
-			return stop_all;
-		}
-		case StopStrategy::STOP_STEMMED: {
-			static const std::string stop_stemmed("stop_stemmed");
-			return stop_stemmed;
-		}
-		default: {
-			static const std::string unknown("unknown");
-			return unknown;
-		}
-	}
-}
-
-
-static inline const std::string&
-_get_str_stem_strategy(StemStrategy stem_strategy) noexcept
-{
-	switch (stem_strategy) {
-		case StemStrategy::STEM_NONE: {
-			static const std::string stem_none("stem_none");
-			return stem_none;
-		}
-		case StemStrategy::STEM_SOME: {
-			static const std::string stem_some("stem_some");
-			return stem_some;
-		}
-		case StemStrategy::STEM_ALL: {
-			static const std::string stem_all("stem_all");
-			return stem_all;
-		}
-		case StemStrategy::STEM_ALL_Z: {
-			static const std::string stem_all_z("stem_all_z");
-			return stem_all_z;
-		}
-		default: {
-			static const std::string unknown("unknown");
-			return unknown;
-		}
-	}
-}
-
 
 static inline const std::string&
 _get_str_index(TypeIndex index) noexcept
@@ -432,17 +332,17 @@ _get_accuracy_date(std::string_view str_accuracy_date)
 
 	switch (_.fhhl(str_accuracy_date)) {
 		case _.fhhl("day"):
-			return UnitTime::DAY;
+			return UnitTime::day;
 		case _.fhhl("month"):
-			return UnitTime::MONTH;
+			return UnitTime::month;
 		case _.fhhl("year"):
-			return UnitTime::YEAR;
+			return UnitTime::year;
 		case _.fhhl("decade"):
-			return UnitTime::DECADE;
+			return UnitTime::decade;
 		case _.fhhl("century"):
-			return UnitTime::CENTURY;
+			return UnitTime::century;
 		case _.fhhl("millennium"):
-			return UnitTime::MILLENNIUM;
+			return UnitTime::millennium;
 		default:
 			return UnitTime::INVALID;
 	}
@@ -473,23 +373,23 @@ _get_accuracy_datetime(std::string_view str_accuracy_datetime)
 
 	switch (_.fhhl(str_accuracy_datetime)) {
 		case _.fhhl("second"):
-			return UnitTime::SECOND;
+			return UnitTime::second;
 		case _.fhhl("minute"):
-			return UnitTime::MINUTE;
+			return UnitTime::minute;
 		case _.fhhl("hour"):
-			return UnitTime::HOUR;
+			return UnitTime::hour;
 		case _.fhhl("day"):
-			return UnitTime::DAY;
+			return UnitTime::day;
 		case _.fhhl("month"):
-			return UnitTime::MONTH;
+			return UnitTime::month;
 		case _.fhhl("year"):
-			return UnitTime::YEAR;
+			return UnitTime::year;
 		case _.fhhl("decade"):
-			return UnitTime::DECADE;
+			return UnitTime::decade;
 		case _.fhhl("century"):
-			return UnitTime::CENTURY;
+			return UnitTime::century;
 		case _.fhhl("millennium"):
-			return UnitTime::MILLENNIUM;
+			return UnitTime::millennium;
 		default:
 			return UnitTime::INVALID;
 	}
@@ -520,11 +420,11 @@ _get_accuracy_time(std::string_view str_accuracy_time)
 
 	switch (_.fhhl(str_accuracy_time)) {
 		case _.fhhl("second"):
-			return UnitTime::SECOND;
+			return UnitTime::second;
 		case _.fhhl("minute"):
-			return UnitTime::MINUTE;
+			return UnitTime::minute;
 		case _.fhhl("hour"):
-			return UnitTime::HOUR;
+			return UnitTime::hour;
 		default:
 			return UnitTime::INVALID;
 	}
@@ -561,17 +461,17 @@ _get_stop_strategy(std::string_view str_stop_strategy)
 
 	switch (_.fhhl(str_stop_strategy)) {
 		case _.fhhl("stop_none"):
-			return StopStrategy::STOP_NONE;
+			return StopStrategy::stop_none;
 		case _.fhhl("none"):
-			return StopStrategy::STOP_NONE;
+			return StopStrategy::stop_none;
 		case _.fhhl("stop_all"):
-			return StopStrategy::STOP_ALL;
+			return StopStrategy::stop_all;
 		case _.fhhl("all"):
-			return StopStrategy::STOP_ALL;
+			return StopStrategy::stop_all;
 		case _.fhhl("stop_stemmed"):
-			return StopStrategy::STOP_STEMMED;
+			return StopStrategy::stop_stemmed;
 		case _.fhhl("stemmed"):
-			return StopStrategy::STOP_STEMMED;
+			return StopStrategy::stop_stemmed;
 		default:
 			return StopStrategy::INVALID;
 	}
@@ -605,21 +505,21 @@ _get_stem_strategy(std::string_view str_stem_strategy)
 
 	switch (_.fhhl(str_stem_strategy)) {
 		case _.fhhl("stem_none"):
-			return  StemStrategy::STEM_NONE;
+			return  StemStrategy::stem_none;
 		case _.fhhl("none"):
-			return  StemStrategy::STEM_NONE;
+			return  StemStrategy::stem_none;
 		case _.fhhl("stem_some"):
-			return  StemStrategy::STEM_SOME;
+			return  StemStrategy::stem_some;
 		case _.fhhl("some"):
-			return  StemStrategy::STEM_SOME;
+			return  StemStrategy::stem_some;
 		case _.fhhl("stem_all"):
-			return  StemStrategy::STEM_ALL;
+			return  StemStrategy::stem_all;
 		case _.fhhl("all"):
-			return  StemStrategy::STEM_ALL;
+			return  StemStrategy::stem_all;
 		case _.fhhl("stem_all_z"):
-			return  StemStrategy::STEM_ALL_Z;
+			return  StemStrategy::stem_all_z;
 		case _.fhhl("all_z"):
-			return  StemStrategy::STEM_ALL_Z;
+			return  StemStrategy::stem_all_z;
 		default:
 			return StemStrategy::INVALID;
 	}
@@ -643,11 +543,11 @@ _get_index_uuid_field(std::string_view str_index_uuid_field)
 
 	switch (_.fhhl(str_index_uuid_field)) {
 		case _.fhhl("uuid"):
-			return UUIDFieldIndex::UUID;
+			return UUIDFieldIndex::uuid;
 		case _.fhhl("uuid_field"):
-			return UUIDFieldIndex::UUID_FIELD;
+			return UUIDFieldIndex::uuid_field;
 		case _.fhhl("both"):
-			return UUIDFieldIndex::BOTH;
+			return UUIDFieldIndex::both;
 		default:
 			return UUIDFieldIndex::INVALID;
 	}
@@ -847,6 +747,7 @@ _get_type(std::string_view str_type)
 		hhl("date"),
 		hhl("datetime"),
 		hhl("float"),
+		hhl("floating"),
 		hhl("geospatial"),
 		hhl("integer"),
 		hhl("positive"),
@@ -1010,136 +911,137 @@ _get_type(std::string_view str_type)
 
 	switch(_.fhhl(str_type)) {
 		case _.fhhl("boolean"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::BOOLEAN       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::boolean       }};
 			return _;
 		}
 		case _.fhhl("date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATE          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::date          }};
 			return _;
 		}
 		case _.fhhl("datetime"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::DATETIME      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::datetime      }};
 			return _;
 		}
-		case _.fhhl("float"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::FLOAT         }};
+		case _.fhhl("float"):
+		case _.fhhl("floating"): {
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::floating      }};
 			return _;
 		}
 		case _.fhhl("geospatial"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::GEO           }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::geo           }};
 			return _;
 		}
 		case _.fhhl("integer"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::INTEGER       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::integer       }};
 			return _;
 		}
 		case _.fhhl("positive"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::POSITIVE      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::positive      }};
 			return _;
 		}
 		case _.fhhl("string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::STRING        }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::string        }};
 			return _;
 		}
 		case _.fhhl("term"):  // FIXME: remove legacy term
 		case _.fhhl("keyword"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::KEYWORD       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::keyword       }};
 			return _;
 		}
 		case _.fhhl("text"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TEXT          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::text          }};
 			return _;
 		}
 		case _.fhhl("time"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::time          }};
 			return _;
 		}
 		case _.fhhl("timedelta"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::TIMEDELTA     }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::timedelta     }};
 			return _;
 		}
 		case _.fhhl("uuid"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::UUID          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::uuid          }};
 			return _;
 		}
 		case _.fhhl("array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::EMPTY         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::empty         }};
 			return _;
 		}
 		case _.fhhl("boolean/array"):
 		case _.fhhl("array/boolean"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::BOOLEAN       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::boolean       }};
 			return _;
 		}
 		case _.fhhl("date/array"):
 		case _.fhhl("array/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATE          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::date          }};
 			return _;
 		}
 		case _.fhhl("datetime/array"):
 		case _.fhhl("array/datetime"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::DATETIME      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::datetime      }};
 			return _;
 		}
 		case _.fhhl("float/array"):
 		case _.fhhl("array/float"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::FLOAT         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::floating      }};
 			return _;
 		}
 		case _.fhhl("geospatial/array"):
 		case _.fhhl("array/geospatial"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::GEO           }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::geo           }};
 			return _;
 		}
 		case _.fhhl("integer/array"):
 		case _.fhhl("array/integer"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::INTEGER       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::integer       }};
 			return _;
 		}
 		case _.fhhl("positive/array"):
 		case _.fhhl("array/positive"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::POSITIVE      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::positive      }};
 			return _;
 		}
 		case _.fhhl("string/array"):
 		case _.fhhl("array/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::STRING        }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::string        }};
 			return _;
 		}
 		case _.fhhl("term/array"):  // FIXME: remove legacy term
 		case _.fhhl("array/term"):  // FIXME: remove legacy term
 		case _.fhhl("keyword/array"):
 		case _.fhhl("array/keyword"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::KEYWORD       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::keyword       }};
 			return _;
 		}
 		case _.fhhl("text/array"):
 		case _.fhhl("array/text"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TEXT          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::text          }};
 			return _;
 		}
 		case _.fhhl("time/array"):
 		case _.fhhl("array/time"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::time          }};
 			return _;
 		}
 		case _.fhhl("timedelta/array"):
 		case _.fhhl("array/timedelta"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::TIMEDELTA     }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::timedelta     }};
 			return _;
 		}
 		case _.fhhl("uuid/array"):
 		case _.fhhl("array/uuid"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::ARRAY, FieldType::UUID          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::array, FieldType::uuid          }};
 			return _;
 		}
 		case _.fhhl("object"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::empty         }};
 			return _;
 		}
 		case _.fhhl("array/object"):
 		case _.fhhl("object/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::EMPTY         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::empty         }};
 			return _;
 		}
 		case _.fhhl("array/boolean/object"):
@@ -1148,7 +1050,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("boolean/array/object"):
 		case _.fhhl("boolean/object/array"):
 		case _.fhhl("object/boolean/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::BOOLEAN       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::boolean       }};
 			return _;
 		}
 		case _.fhhl("array/date/object"):
@@ -1157,7 +1059,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("date/array/object"):
 		case _.fhhl("date/object/array"):
 		case _.fhhl("object/date/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATE          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::date          }};
 			return _;
 		}
 		case _.fhhl("array/datetime/object"):
@@ -1166,7 +1068,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("datetime/array/object"):
 		case _.fhhl("datetime/object/array"):
 		case _.fhhl("object/datetime/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::DATETIME      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::datetime      }};
 			return _;
 		}
 		case _.fhhl("array/float/object"):
@@ -1175,7 +1077,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("float/array/object"):
 		case _.fhhl("float/object/array"):
 		case _.fhhl("object/float/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::FLOAT         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::floating      }};
 			return _;
 		}
 		case _.fhhl("array/geospatial/object"):
@@ -1184,7 +1086,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("geospatial/array/object"):
 		case _.fhhl("geospatial/object/array"):
 		case _.fhhl("object/geospatial/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::GEO           }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::geo           }};
 			return _;
 		}
 		case _.fhhl("array/integer/object"):
@@ -1193,7 +1095,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("integer/array/object"):
 		case _.fhhl("integer/object/array"):
 		case _.fhhl("object/integer/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::INTEGER       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::integer       }};
 			return _;
 		}
 		case _.fhhl("array/positive/object"):
@@ -1202,7 +1104,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("positive/array/object"):
 		case _.fhhl("positive/object/array"):
 		case _.fhhl("object/positive/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::POSITIVE      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::positive      }};
 			return _;
 		}
 		case _.fhhl("array/string/object"):
@@ -1211,7 +1113,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("string/array/object"):
 		case _.fhhl("string/object/array"):
 		case _.fhhl("object/string/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::STRING        }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::string        }};
 			return _;
 		}
 		case _.fhhl("array/term/object"):  // FIXME: remove legacy term
@@ -1226,7 +1128,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("keyword/array/object"):
 		case _.fhhl("keyword/object/array"):
 		case _.fhhl("object/keyword/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::KEYWORD       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::keyword       }};
 			return _;
 		}
 		case _.fhhl("array/text/object"):
@@ -1235,7 +1137,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("text/array/object"):
 		case _.fhhl("text/object/array"):
 		case _.fhhl("object/text/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TEXT          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::text          }};
 			return _;
 		}
 		case _.fhhl("array/time/object"):
@@ -1244,7 +1146,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("time/array/object"):
 		case _.fhhl("time/object/array"):
 		case _.fhhl("object/time/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::time          }};
 			return _;
 		}
 		case _.fhhl("array/timedelta/object"):
@@ -1253,7 +1155,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("timedelta/array/object"):
 		case _.fhhl("timedelta/object/array"):
 		case _.fhhl("object/timedelta/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::TIMEDELTA     }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::timedelta     }};
 			return _;
 		}
 		case _.fhhl("array/uuid/object"):
@@ -1262,92 +1164,92 @@ _get_type(std::string_view str_type)
 		case _.fhhl("uuid/array/object"):
 		case _.fhhl("uuid/object/array"):
 		case _.fhhl("object/uuid/array"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::ARRAY, FieldType::UUID          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::array, FieldType::uuid          }};
 			return _;
 		}
 		case _.fhhl("boolean/object"):
 		case _.fhhl("object/boolean"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::BOOLEAN       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::boolean       }};
 			return _;
 		}
 		case _.fhhl("date/object"):
 		case _.fhhl("object/date"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATE          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::date          }};
 			return _;
 		}
 		case _.fhhl("datetime/object"):
 		case _.fhhl("object/datetime"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::DATETIME      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::datetime      }};
 			return _;
 		}
 		case _.fhhl("float/object"):
 		case _.fhhl("object/float"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::FLOAT         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::floating      }};
 			return _;
 		}
 		case _.fhhl("geospatial/object"):
 		case _.fhhl("object/geospatial"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::GEO           }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::geo           }};
 			return _;
 		}
 		case _.fhhl("integer/object"):
 		case _.fhhl("object/integer"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::INTEGER       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::integer       }};
 			return _;
 		}
 		case _.fhhl("positive/object"):
 		case _.fhhl("object/positive"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::POSITIVE      }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::positive      }};
 			return _;
 		}
 		case _.fhhl("string/object"):
 		case _.fhhl("object/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::STRING        }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::string        }};
 			return _;
 		}
 		case _.fhhl("term/object"):  // FIXME: remove legacy term
 		case _.fhhl("object/term"):  // FIXME: remove legacy term
 		case _.fhhl("keyword/object"):
 		case _.fhhl("object/keyword"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::KEYWORD       }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::keyword       }};
 			return _;
 		}
 		case _.fhhl("text/object"):
 		case _.fhhl("object/text"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TEXT          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::text          }};
 			return _;
 		}
 		case _.fhhl("time/object"):
 		case _.fhhl("object/time"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIME          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::time          }};
 			return _;
 		}
 		case _.fhhl("timedelta/object"):
 		case _.fhhl("object/timedelta"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::TIMEDELTA     }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::timedelta     }};
 			return _;
 		}
 		case _.fhhl("uuid/object"):
 		case _.fhhl("object/uuid"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::OBJECT, FieldType::EMPTY, FieldType::UUID          }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::object, FieldType::empty, FieldType::uuid          }};
 			return _;
 		}
 		case _.fhhl("foreign"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty,  FieldType::empty, FieldType::empty         }};
 			return _;
 		}
 		case _.fhhl("object/foreign"):
 		case _.fhhl("foreign/object"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::FOREIGN, FieldType::OBJECT, FieldType::EMPTY, FieldType::EMPTY         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::object, FieldType::empty, FieldType::empty         }};
 			return _;
 		}
 		case _.fhhl("script"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::SCRIPT        }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::script        }};
 			return _;
 		}
 		default:
 		case _.fhhl("undefined"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::EMPTY,   FieldType::EMPTY,  FieldType::EMPTY, FieldType::EMPTY         }};
+			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty,   FieldType::empty,  FieldType::empty, FieldType::empty         }};
 			return _;
 		}
 	}
@@ -1358,15 +1260,15 @@ static inline const std::string&
 _get_str_index_uuid_field(UUIDFieldIndex index_uuid_field) noexcept
 {
 	switch (index_uuid_field) {
-		case UUIDFieldIndex::UUID: {
+		case UUIDFieldIndex::uuid: {
 			static const std::string uuid("uuid");
 			return uuid;
 		}
-		case UUIDFieldIndex::UUID_FIELD: {
+		case UUIDFieldIndex::uuid_field: {
 			static const std::string uuid_field("uuid_field");
 			return uuid_field;
 		}
-		case UUIDFieldIndex::BOTH: {
+		case UUIDFieldIndex::both: {
 			static const std::string both("both");
 			return both;
 		}
@@ -1387,7 +1289,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + ARRAY  + BOOLEAN),
 		hh(EMPTY   + EMPTY   + ARRAY  + DATE),
 		hh(EMPTY   + EMPTY   + ARRAY  + DATETIME),
-		hh(EMPTY   + EMPTY   + ARRAY  + FLOAT),
+		hh(EMPTY   + EMPTY   + ARRAY  + FLOATING),
 		hh(EMPTY   + EMPTY   + ARRAY  + GEO),
 		hh(EMPTY   + EMPTY   + ARRAY  + INTEGER),
 		hh(EMPTY   + EMPTY   + ARRAY  + POSITIVE),
@@ -1400,7 +1302,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + EMPTY   + EMPTY  + BOOLEAN),
 		hh(EMPTY   + EMPTY   + EMPTY  + DATE),
 		hh(EMPTY   + EMPTY   + EMPTY  + DATETIME),
-		hh(EMPTY   + EMPTY   + EMPTY  + FLOAT),
+		hh(EMPTY   + EMPTY   + EMPTY  + FLOATING),
 		hh(FOREIGN + EMPTY   + EMPTY  + EMPTY),
 		hh(FOREIGN + OBJECT  + EMPTY  + EMPTY),
 		hh(FOREIGN + EMPTY   + EMPTY  + SCRIPT),
@@ -1411,7 +1313,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + ARRAY  + BOOLEAN),
 		hh(EMPTY   + OBJECT  + ARRAY  + DATE),
 		hh(EMPTY   + OBJECT  + ARRAY  + DATETIME),
-		hh(EMPTY   + OBJECT  + ARRAY  + FLOAT),
+		hh(EMPTY   + OBJECT  + ARRAY  + FLOATING),
 		hh(EMPTY   + OBJECT  + ARRAY  + GEO),
 		hh(EMPTY   + OBJECT  + ARRAY  + INTEGER),
 		hh(EMPTY   + OBJECT  + ARRAY  + POSITIVE),
@@ -1424,7 +1326,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY   + OBJECT  + EMPTY  + BOOLEAN),
 		hh(EMPTY   + OBJECT  + EMPTY  + DATE),
 		hh(EMPTY   + OBJECT  + EMPTY  + DATETIME),
-		hh(EMPTY   + OBJECT  + EMPTY  + FLOAT),
+		hh(EMPTY   + OBJECT  + EMPTY  + FLOATING),
 		hh(EMPTY   + OBJECT  + EMPTY  + GEO),
 		hh(EMPTY   + OBJECT  + EMPTY  + INTEGER),
 		hh(EMPTY   + OBJECT  + EMPTY  + POSITIVE),
@@ -1465,7 +1367,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("array/datetime");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + ARRAY  + FLOAT): {
+		case _.fhh(EMPTY   + EMPTY   + ARRAY  + FLOATING): {
 			static const std::string str_type("array/float");
 			return str_type;
 		}
@@ -1517,8 +1419,8 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("datetime");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + EMPTY   + EMPTY  + FLOAT): {
-			static const std::string str_type("float");
+		case _.fhh(EMPTY   + EMPTY   + EMPTY  + FLOATING): {
+			static const std::string str_type("floating");
 			return str_type;
 		}
 		case _.fhh(FOREIGN + EMPTY   + EMPTY  + EMPTY): {
@@ -1561,7 +1463,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("object/array/datetime");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + OBJECT  + ARRAY  + FLOAT): {
+		case _.fhh(EMPTY   + OBJECT  + ARRAY  + FLOATING): {
 			static const std::string str_type("object/array/float");
 			return str_type;
 		}
@@ -1613,7 +1515,7 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 			static const std::string str_type("object/datetime");
 			return str_type;
 		}
-		case _.fhh(EMPTY   + OBJECT  + EMPTY  + FLOAT): {
+		case _.fhh(EMPTY   + OBJECT  + EMPTY  + FLOATING): {
 			static const std::string str_type("object/float");
 			return str_type;
 		}
@@ -1687,18 +1589,18 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		}
 		default: {
 			std::string result;
-			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 				result += NAMEOF_ENUM(sep_types[SPC_FOREIGN_TYPE]);
 			}
-			if (sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
+			if (sep_types[SPC_OBJECT_TYPE] == FieldType::object) {
 				if (!result.empty()) { result += "/"; }
 				result += NAMEOF_ENUM(sep_types[SPC_OBJECT_TYPE]);
 			}
-			if (sep_types[SPC_ARRAY_TYPE] == FieldType::ARRAY) {
+			if (sep_types[SPC_ARRAY_TYPE] == FieldType::array) {
 				if (!result.empty()) { result += "/"; }
 				result += NAMEOF_ENUM(sep_types[SPC_ARRAY_TYPE]);
 			}
-			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 				if (!result.empty()) { result += "/"; }
 				result += NAMEOF_ENUM(sep_types[SPC_CONCRETE_TYPE]);
 			}
@@ -1717,22 +1619,22 @@ _get_acc_data(std::string_view field_acc)
 {
 	auto accuracy_date = _get_accuracy_datetime(field_acc.substr(1));
 	if (accuracy_date != UnitTime::INVALID) {
-		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::DATETIME);
+		return std::make_pair(get_prefix(toUType(accuracy_date)), FieldType::datetime);
 	}
 	try {
 		switch (field_acc[1]) {
 			case 'g':
 				if (field_acc[2] == 'e' && field_acc[3] == 'o') {
-					return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::GEO);
+					return std::make_pair(get_prefix(strict_stoull(field_acc.substr(4))), FieldType::geo);
 				}
 				break;
 			case 't':
 				if (field_acc[2] == 'd') {
-					return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(3)))), FieldType::TIMEDELTA);
+					return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(3)))), FieldType::timedelta);
 				}
-				return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(2)))), FieldType::TIME);
+				return std::make_pair(get_prefix(toUType(_get_accuracy_time(field_acc.substr(2)))), FieldType::time);
 			default:
-				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::INTEGER);
+				return std::make_pair(get_prefix(strict_stoull(field_acc.substr(1))), FieldType::integer);
 		}
 	} catch (const std::invalid_argument&) {
 	} catch (const std::out_of_range&) { }
@@ -2085,7 +1987,7 @@ required_spc_t::prefix_t::operator()() const noexcept
 
 
 required_spc_t::required_spc_t()
-	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY }}),
+	: sep_types({{ FieldType::empty, FieldType::empty, FieldType::empty, FieldType::empty }}),
 	  slot(Xapian::BAD_VALUENO),
 	  stop_strategy(DEFAULT_STOP_STRATEGY),
 	  stem_strategy(DEFAULT_STEM_STRATEGY),
@@ -2093,7 +1995,7 @@ required_spc_t::required_spc_t()
 
 
 required_spc_t::required_spc_t(Xapian::valueno slot, FieldType type, std::vector<uint64_t> accuracy, std::vector<std::string> acc_prefix)
-	: sep_types({{ FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, type }}),
+	: sep_types({{ FieldType::empty, FieldType::empty, FieldType::empty, type }}),
 	  slot(slot),
 	  accuracy(std::move(accuracy)),
 	  acc_prefix(std::move(acc_prefix)),
@@ -2232,8 +2134,8 @@ required_spc_t::to_obj() const
 	}
 
 	obj["language"] = language;
-	obj["stop_strategy"] = _get_str_stop_strategy(stop_strategy);
-	obj["stem_strategy"] = _get_str_stem_strategy(stem_strategy);
+	obj["stop_strategy"] = NAMEOF_ENUM(stop_strategy);
+	obj["stem_strategy"] = NAMEOF_ENUM(stem_strategy);
 	obj["stem_language"] = stem_language;
 
 	obj["error"] = error;
@@ -2376,22 +2278,22 @@ FieldType
 specification_t::global_type(FieldType field_type)
 {
 	switch (field_type) {
-		case FieldType::FLOAT:
-		case FieldType::INTEGER:
-		case FieldType::POSITIVE:
-		case FieldType::BOOLEAN:
-		case FieldType::DATE:
-		case FieldType::DATETIME:
-		case FieldType::TIME:
-		case FieldType::TIMEDELTA:
-		case FieldType::GEO:
-		case FieldType::UUID:
-		case FieldType::KEYWORD:
+		case FieldType::floating:
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::boolean:
+		case FieldType::date:
+		case FieldType::datetime:
+		case FieldType::time:
+		case FieldType::timedelta:
+		case FieldType::geo:
+		case FieldType::uuid:
+		case FieldType::keyword:
 			return field_type;
 
-		case FieldType::STRING:
-		case FieldType::TEXT:
-			return FieldType::TEXT;
+		case FieldType::string:
+		case FieldType::text:
+			return FieldType::text;
 
 		default:
 			THROW(ClientError, "Type: {:#04x} is an unknown type", toUType(field_type));
@@ -2403,53 +2305,53 @@ const specification_t&
 specification_t::get_global(FieldType field_type)
 {
 	switch (field_type) {
-		case FieldType::FLOAT: {
-			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::FLOAT, def_accuracy_num, global_acc_prefix_num);
+		case FieldType::floating: {
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::floating, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case FieldType::INTEGER: {
-			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::INTEGER, def_accuracy_num, global_acc_prefix_num);
+		case FieldType::integer: {
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::integer, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case FieldType::POSITIVE: {
-			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::POSITIVE, def_accuracy_num, global_acc_prefix_num);
+		case FieldType::positive: {
+			static const specification_t spc(DB_SLOT_NUMERIC, FieldType::positive, def_accuracy_num, global_acc_prefix_num);
 			return spc;
 		}
-		case FieldType::BOOLEAN: {
-			static const specification_t spc(DB_SLOT_BOOLEAN, FieldType::BOOLEAN, default_spc.accuracy, default_spc.acc_prefix);
+		case FieldType::boolean: {
+			static const specification_t spc(DB_SLOT_BOOLEAN, FieldType::boolean, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::DATE: {
-			static const specification_t spc(DB_SLOT_DATE, FieldType::DATE, def_accuracy_datetime, global_acc_prefix_date);
+		case FieldType::date: {
+			static const specification_t spc(DB_SLOT_DATE, FieldType::date, def_accuracy_datetime, global_acc_prefix_date);
 			return spc;
 		}
-		case FieldType::DATETIME: {
-			static const specification_t spc(DB_SLOT_DATE, FieldType::DATETIME, def_accuracy_datetime, global_acc_prefix_date);
+		case FieldType::datetime: {
+			static const specification_t spc(DB_SLOT_DATE, FieldType::datetime, def_accuracy_datetime, global_acc_prefix_date);
 			return spc;
 		}
-		case FieldType::TIME: {
-			static const specification_t spc(DB_SLOT_TIME, FieldType::TIME, def_accuracy_time, global_acc_prefix_time);
+		case FieldType::time: {
+			static const specification_t spc(DB_SLOT_TIME, FieldType::time, def_accuracy_time, global_acc_prefix_time);
 			return spc;
 		}
-		case FieldType::TIMEDELTA: {
-			static const specification_t spc(DB_SLOT_TIMEDELTA, FieldType::TIMEDELTA, def_accuracy_time, global_acc_prefix_time);
+		case FieldType::timedelta: {
+			static const specification_t spc(DB_SLOT_TIMEDELTA, FieldType::timedelta, def_accuracy_time, global_acc_prefix_time);
 			return spc;
 		}
-		case FieldType::GEO: {
-			static const specification_t spc(DB_SLOT_GEO, FieldType::GEO, def_accuracy_geo, global_acc_prefix_geo);
+		case FieldType::geo: {
+			static const specification_t spc(DB_SLOT_GEO, FieldType::geo, def_accuracy_geo, global_acc_prefix_geo);
 			return spc;
 		}
-		case FieldType::UUID: {
-			static const specification_t spc(DB_SLOT_UUID, FieldType::UUID, default_spc.accuracy, default_spc.acc_prefix);
+		case FieldType::uuid: {
+			static const specification_t spc(DB_SLOT_UUID, FieldType::uuid, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::KEYWORD: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::KEYWORD, default_spc.accuracy, default_spc.acc_prefix);
+		case FieldType::keyword: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::keyword, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::STRING:
-		case FieldType::TEXT: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::TEXT, default_spc.accuracy, default_spc.acc_prefix);
+		case FieldType::string:
+		case FieldType::text: {
+			static const specification_t spc(DB_SLOT_STRING, FieldType::text, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
 		default:
@@ -2579,7 +2481,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			}
 			auto type_name = type.str_view();
 			const auto& sep_types = required_spc_t::get_types(type_name);
-			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 				auto endpoint_it = object.find(RESERVED_ENDPOINT);
 				if (endpoint_it == it_end) {
 					THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, RESERVED_ENDPOINT);
@@ -2590,7 +2492,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 				}
 				return std::make_pair(&endpoint, &object);
 			}
-			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+			if (sep_types[SPC_OBJECT_TYPE] != FieldType::object) {
 				THROW(ErrorType, "{}Schema object has an unsupported type: {}", prefix, type_name);
 			}
 		}
@@ -2624,7 +2526,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 		}
 		auto type_name = type.str_view();
 		const auto& sep_types = required_spc_t::get_types(type_name);
-		if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
+		if (sep_types[SPC_OBJECT_TYPE] != FieldType::object) {
 			THROW(ErrorType, "{}Schema field '{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
 		}
 	}
@@ -2882,13 +2784,13 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 		if (!document_id) {
 			switch (id_type) {
-				case FieldType::EMPTY:
-					id_type = FieldType::UUID;
+				case FieldType::empty:
+					id_type = FieldType::uuid;
 					spc_id.set_type(id_type);
 					set_data_id(spc_id);
 					properties = &get_mutable_properties();
 				[[fallthrough]];
-				case FieldType::UUID: {
+				case FieldType::uuid: {
 					size_t n_shards = db_handler.endpoints.size();
 					size_t shard_num = 0;
 					// Try getting a new ID which can currently be indexed (active node)
@@ -2926,24 +2828,24 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				}
-				case FieldType::INTEGER:
+				case FieldType::integer:
 					document_id = MsgPack(0).as_i64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
-				case FieldType::POSITIVE:
+				case FieldType::positive:
 					document_id = MsgPack(0).as_u64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
-				case FieldType::FLOAT:
+				case FieldType::floating:
 					document_id = MsgPack(0).as_f64();
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
-				case FieldType::TEXT:
-				case FieldType::STRING:
-				case FieldType::KEYWORD: {
+				case FieldType::text:
+				case FieldType::string:
+				case FieldType::keyword: {
 					size_t n_shards = db_handler.endpoints.size();
 					size_t shard_num = 0;
 					// Try getting a new ID which can currently be indexed (active node)
@@ -2988,11 +2890,11 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		} else {
 			// Get early term ID when possible
 			switch (id_type) {
-				case FieldType::EMPTY: {
+				case FieldType::empty: {
 					const auto type_ser = Serialise::guess_serialise(document_id);
 					id_type = type_ser.first;
-					if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
-						id_type = FieldType::KEYWORD;
+					if (id_type == FieldType::text || id_type == FieldType::string) {
+						id_type = FieldType::keyword;
 					}
 					spc_id.set_type(id_type);
 					spc_id.flags.bool_term = true;
@@ -3002,13 +2904,13 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					document_id = Cast::cast(id_type, document_id);
 					break;
 				}
-				case FieldType::UUID:
-				case FieldType::INTEGER:
-				case FieldType::POSITIVE:
-				case FieldType::FLOAT:
-				case FieldType::TEXT:
-				case FieldType::STRING:
-				case FieldType::KEYWORD:
+				case FieldType::uuid:
+				case FieldType::integer:
+				case FieldType::positive:
+				case FieldType::floating:
+				case FieldType::text:
+				case FieldType::string:
+				case FieldType::keyword:
 					document_id = Cast::cast(id_type, document_id);
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
 					break;
@@ -3589,9 +3491,9 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
-		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 		set_type_to_object();
 	}
 }
@@ -3626,7 +3528,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 			if (!specification.flags.concrete) {
-				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 					if (specification.flags.inside_namespace) {
 						validate_required_namespace_data();
 					} else {
@@ -3664,7 +3566,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		if (!specification.flags.static_endpoint) {
 			data[RESERVED_ENDPOINT] = specification.endpoint;
 		}
@@ -3678,25 +3580,25 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 	L_CALL("Schema::index_item_value({}, <doc>, {}, <FieldVector>)", repr(properties->to_string()), repr(data->to_string()));
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
 	}
 
 	auto val = specification.value ? specification.value.get() : specification.value_rec.get();
 
 	if (val != nullptr) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have a value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		index_item_value(doc, *data, *val);
 	} else {
 		if (!specification.flags.concrete) {
-			if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 				if (specification.flags.inside_namespace) {
 					validate_required_namespace_data();
 				} else {
@@ -3706,20 +3608,20 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		}
 		if (fields.empty()) {
 			index_partial_paths(doc);
-			if (specification.flags.store && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::OBJECT) {
+			if (specification.flags.store && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::object) {
 				*data = MsgPack::MAP();
 			}
 		}
 	}
 
 	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 			set_type_to_object();
 		}
 	} else {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		set_type_to_object();
@@ -4090,20 +3992,20 @@ Schema::update_item_value()
 	L_CALL("Schema::update_item_value()");
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
-		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 			if (specification.flags.inside_namespace) {
 				validate_required_namespace_data();
 			} else {
@@ -4120,9 +4022,9 @@ Schema::update_item_value()
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
-		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 		set_type_to_object();
 	}
 }
@@ -4136,14 +4038,14 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 	const auto spc_start = specification;
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 			if (specification.flags.inside_namespace) {
 				validate_required_namespace_data();
 			} else {
@@ -4158,13 +4060,13 @@ Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
 	}
 
 	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 			set_type_to_object();
 		}
 	} else {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		set_type_to_object();
@@ -4532,14 +4434,14 @@ Schema::write_item_value(MsgPack*& mut_properties)
 	L_CALL("Schema::write_item_value()");
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -4560,9 +4462,9 @@ Schema::write_item_value(MsgPack*& mut_properties)
 		specification.update(std::move(start_index_spc));
 	}
 
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
-		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 		set_type_to_object();
 	}
 }
@@ -4576,12 +4478,12 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 	const auto spc_start = specification;
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
 		if (specification.flags.inside_namespace) {
 			validate_required_namespace_data();
@@ -4596,13 +4498,13 @@ Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
 	}
 
 	if (fields.empty()) {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY &&
-			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 			set_type_to_object();
 		}
 	} else {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		set_type_to_object();
@@ -4693,14 +4595,14 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	L_CALL("Schema::complete_namespace_specification({})", repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -4728,7 +4630,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	} else {
 		if (specification.flags.uuid_path) {
 			switch (specification.index_uuid_field) {
-				case UUIDFieldIndex::UUID: {
+				case UUIDFieldIndex::uuid: {
 					if (specification.prefix.uuid.empty()) {
 						auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 						if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
@@ -4751,7 +4653,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					}
 					break;
 				}
-				case UUIDFieldIndex::UUID_FIELD: {
+				case UUIDFieldIndex::uuid_field: {
 					auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
 					if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
 						// Use specification directly because type is the same as global_type.
@@ -4770,7 +4672,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 					}
 					break;
 				}
-				case UUIDFieldIndex::BOTH: {
+				case UUIDFieldIndex::both: {
 					if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
 						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
@@ -4811,21 +4713,21 @@ Schema::complete_specification(const MsgPack& item_value)
 	L_CALL("Schema::complete_specification({})", repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN;
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
 		if (!foreign_type && !specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::FOREIGN;
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
 		if (!concrete_type && !foreign_type) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			guess_field_type(item_value);
 		}
-		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 			validate_required_data(get_mutable_properties(specification.full_meta_name));
 		}
 	}
@@ -4853,7 +4755,7 @@ Schema::complete_specification(const MsgPack& item_value)
 
 	if (specification.flags.uuid_path) {
 		switch (specification.index_uuid_field) {
-			case UUIDFieldIndex::UUID: {
+			case UUIDFieldIndex::uuid: {
 				if (specification.prefix.uuid.empty()) {
 					// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH.
 					if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
@@ -4874,7 +4776,7 @@ Schema::complete_specification(const MsgPack& item_value)
 				}
 				break;
 			}
-			case UUIDFieldIndex::UUID_FIELD: {
+			case UUIDFieldIndex::uuid_field: {
 				// Use specification directly.
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 					if (specification.flags.has_uuid_prefix) {
@@ -4886,7 +4788,7 @@ Schema::complete_specification(const MsgPack& item_value)
 				}
 				break;
 			}
-			case UUIDFieldIndex::BOTH: {
+			case UUIDFieldIndex::both: {
 				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
 					index_spc_t spc_field(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field,
 						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
@@ -4927,8 +4829,8 @@ Schema::set_type_to_object()
 {
 	L_CALL("Schema::set_type_to_object()");
 
-	if unlikely(specification.sep_types[SPC_OBJECT_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		specification.sep_types[SPC_OBJECT_TYPE] = FieldType::OBJECT;
+	if unlikely(specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty && !specification.flags.inside_namespace) {
+		specification.sep_types[SPC_OBJECT_TYPE] = FieldType::object;
 		auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 		mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
 	}
@@ -4940,8 +4842,8 @@ Schema::set_type_to_array()
 {
 	L_CALL("Schema::set_type_to_array()");
 
-	if unlikely(specification.sep_types[SPC_ARRAY_TYPE] == FieldType::EMPTY && !specification.flags.inside_namespace) {
-		specification.sep_types[SPC_ARRAY_TYPE] = FieldType::ARRAY;
+	if unlikely(specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty && !specification.flags.inside_namespace) {
+		specification.sep_types[SPC_ARRAY_TYPE] = FieldType::array;
 		auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 		mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
 	}
@@ -4954,15 +4856,15 @@ Schema::validate_required_namespace_data()
 	L_CALL("Schema::validate_required_namespace_data()");
 
 	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::GEO:
+		case FieldType::geo:
 			// Set partials and error.
 			specification.flags.partials = default_spc.flags.partials;
 			specification.error = default_spc.error;
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::STRING:
-		case FieldType::TEXT:
+		case FieldType::string:
+		case FieldType::text:
 			specification.language = default_spc.language;
 			if (!specification.language.empty()) {
 				specification.stop_strategy = default_spc.stop_strategy;
@@ -4974,7 +4876,7 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::KEYWORD:
+		case FieldType::keyword:
 			if (!specification.flags.has_bool_term) {
 				specification.flags.bool_term = string::hasupper(specification.meta_name);
 				specification.flags.has_bool_term = specification.flags.bool_term;
@@ -4982,7 +4884,7 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::SCRIPT:
+		case FieldType::script:
 			if (!specification.flags.has_index) {
 				specification.index = TypeIndex::NONE; // Fallback to index anything.
 				specification.flags.has_index = true;
@@ -4990,19 +4892,19 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::DATE:
-		case FieldType::DATETIME:
-		case FieldType::TIME:
-		case FieldType::TIMEDELTA:
-		case FieldType::INTEGER:
-		case FieldType::POSITIVE:
-		case FieldType::FLOAT:
-		case FieldType::BOOLEAN:
-		case FieldType::UUID:
+		case FieldType::date:
+		case FieldType::datetime:
+		case FieldType::time:
+		case FieldType::timedelta:
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating:
+		case FieldType::boolean:
+		case FieldType::uuid:
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::EMPTY:
+		case FieldType::empty:
 			specification.flags.concrete = false;
 			break;
 
@@ -5023,7 +4925,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 	auto type = specification.sep_types[SPC_CONCRETE_TYPE];
 	switch (type) {
-		case FieldType::GEO: {
+		case FieldType::geo: {
 			// Set partials and error.
 			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
 			mut_properties[RESERVED_ERROR] = specification.error;
@@ -5048,8 +4950,8 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::DATE:
-		case FieldType::DATETIME: {
+		case FieldType::date:
+		case FieldType::datetime: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					try {
@@ -5060,19 +4962,19 @@ Schema::validate_required_data(MsgPack& mut_properties)
 								if (accuracy_date != UnitTime::INVALID) {
 									accuracy = toUType(accuracy_date);
 								} else {
-									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
 								}
 							} else {
 								accuracy = _accuracy.u64();
 								if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
 								} else {
-									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
+									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 								}
 							}
 							set_acc.insert(accuracy);
 						}
 					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::DATETIME ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 					}
 				} else {
 					set_acc.insert(def_accuracy_datetime.begin(), def_accuracy_datetime.end());
@@ -5081,8 +4983,8 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::TIME:
-		case FieldType::TIMEDELTA: {
+		case FieldType::time:
+		case FieldType::timedelta: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					try {
@@ -5103,9 +5005,9 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::INTEGER:
-		case FieldType::POSITIVE:
-		case FieldType::FLOAT: {
+		case FieldType::integer:
+		case FieldType::positive:
+		case FieldType::floating: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					try {
@@ -5122,28 +5024,28 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::STRING:
-		case FieldType::TEXT: {
+		case FieldType::string:
+		case FieldType::text: {
 			// Language could be needed, for soundex.
 			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
 				specification.language = specification.aux_stem_language;
 			}
 			if (!specification.language.empty()) {
 				mut_properties[RESERVED_LANGUAGE] = specification.language;
-				mut_properties[RESERVED_STOP_STRATEGY] = _get_str_stop_strategy(specification.stop_strategy);
+				mut_properties[RESERVED_STOP_STRATEGY] = NAMEOF_ENUM(specification.stop_strategy);
 			}
 			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
 				specification.stem_language = specification.aux_language;
 			}
 			if (!specification.stem_language.empty()) {
 				mut_properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
-				mut_properties[RESERVED_STEM_STRATEGY] = _get_str_stem_strategy(specification.stem_strategy);
+				mut_properties[RESERVED_STEM_STRATEGY] = NAMEOF_ENUM(specification.stem_strategy);
 			}
 
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::KEYWORD: {
+		case FieldType::keyword: {
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
 				// By default, if normalized name has upper characters then it is consider bool term.
@@ -5158,7 +5060,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::SCRIPT: {
+		case FieldType::script: {
 			if (!specification.flags.has_index) {
 				const auto index = TypeIndex::NONE; // Fallback to index anything.
 				if (specification.index != index) {
@@ -5170,12 +5072,12 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 		}
-		case FieldType::BOOLEAN:
-		case FieldType::UUID:
+		case FieldType::boolean:
+		case FieldType::uuid:
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::EMPTY:
+		case FieldType::empty:
 			specification.flags.concrete = false;
 			break;
 
@@ -5210,13 +5112,13 @@ Schema::validate_required_data(MsgPack& mut_properties)
 					}
 					specification.accuracy.assign(set_acc.begin(), set_acc.end());
 					switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-						case FieldType::DATE:
-						case FieldType::DATETIME:
-						case FieldType::TIME:
-						case FieldType::TIMEDELTA:
+						case FieldType::date:
+						case FieldType::datetime:
+						case FieldType::time:
+						case FieldType::timedelta:
 							mut_properties[RESERVED_ACCURACY] = MsgPack::ARRAY();
 							for (auto& acc : specification.accuracy) {
-								mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date((UnitTime)acc));
+								mut_properties[RESERVED_ACCURACY].push_back(NAMEOF_ENUM((UnitTime)acc));
 							}
 							break;
 						default:
@@ -5244,65 +5146,65 @@ Schema::guess_field_type(const MsgPack& item_doc)
 	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::POSITIVE;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
 				return;
 			}
 			break;
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::INTEGER;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::integer;
 				return;
 			}
 			break;
 		case MsgPack::Type::FLOAT:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::FLOAT;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::floating;
 				return;
 			}
 			break;
 		case MsgPack::Type::BOOLEAN:
 			if (specification.flags.bool_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::BOOLEAN;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
 				return;
 			}
 			break;
 		case MsgPack::Type::STR: {
 			const auto str_value = item_doc.str_view();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::UUID;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::uuid;
 				return;
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATE;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::date;
 				return;
 			}
 			if (specification.flags.datetime_detection && Datetime::isDatetime(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::DATETIME;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::datetime;
 				return;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TIME;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::time;
 				return;
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TIMEDELTA;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::timedelta;
 				return;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::GEO;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::geo;
 				return;
 			}
 			if (specification.flags.bool_detection) {
 				if (str_value == "true" || str_value == "false") {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::BOOLEAN;
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
 					return;
 				}
 			}
 			if (specification.flags.text_detection && !specification.flags.bool_term) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::TEXT;
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::text;
 				return;
 			}
-			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
+			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 			return;
 		}
 		case MsgPack::Type::MAP:
@@ -5335,7 +5237,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 	if (specification.flags.store && add_value) {
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = normalize_uuid(value);
@@ -5377,7 +5279,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 		if (specification.flags.store && add_values) {
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
-			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
 				switch (data_value.get_type()) {
 					case MsgPack::Type::UNDEFINED:
 						data_value = MsgPack::ARRAY();
@@ -5448,7 +5350,7 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 	L_CALL("Schema::index_simple_term(<doc>, {}, <field_spc>, {})", repr(term), pos);
 
 	if (term.size() > 245) {
-		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
+		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::keyword) {
 			THROW(ClientError, "Keyword too long");
 		}
 		return;
@@ -5669,8 +5571,8 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 	L_CALL("Schema::index_term(<Xapian::Document>, {}, <specification_t>, {})", repr(serialise_val), pos);
 
 	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::STRING:
-		case FieldType::TEXT: {
+		case FieldType::string:
+		case FieldType::text: {
 			Xapian::TermGenerator term_generator;
 			term_generator.set_document(doc);
 			if (!field_spc.language.empty()) {
@@ -5691,7 +5593,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 			break;
 		}
 
-		case FieldType::KEYWORD:
+		case FieldType::keyword:
 			if (!field_spc.flags.bool_term) {
 				string::inplace_lower(serialise_val);
 			}
@@ -5751,7 +5653,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 	L_CALL("Schema::index_value(<Xapian::Document>, {}, <std::set<std::string>>, <specification_t>, {}, <specification_t*>, <specification_t*>)", repr(value.to_string()), pos);
 
 	switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::FLOAT: {
+		case FieldType::floating: {
 			try {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::floating(f_val);
@@ -5768,7 +5670,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
 			}
 		}
-		case FieldType::INTEGER: {
+		case FieldType::integer: {
 			try {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
@@ -5785,7 +5687,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
-		case FieldType::POSITIVE: {
+		case FieldType::positive: {
 			try {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
@@ -5802,8 +5704,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
-		case FieldType::DATE:
-		case FieldType::DATETIME: {
+		case FieldType::date:
+		case FieldType::datetime: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::datetime(value, tm);
 			if (field_spc != nullptr) {
@@ -5816,7 +5718,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			GenerateTerms::datetime(doc, spc.accuracy, spc.acc_prefix, tm);
 			return;
 		}
-		case FieldType::TIME: {
+		case FieldType::time: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
 			if (field_spc != nullptr) {
@@ -5829,7 +5731,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
 			return;
 		}
-		case FieldType::TIMEDELTA: {
+		case FieldType::timedelta: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::timedelta(value, t_val);
 			if (field_spc != nullptr) {
@@ -5842,7 +5744,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
 			return;
 		}
-		case FieldType::GEO: {
+		case FieldType::geo: {
 			GeoSpatial geo(value);
 			const auto& geometry = geo.getGeometry();
 			auto ranges = geometry->getRanges(spc.flags.partials, spc.error);
@@ -5876,7 +5778,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
 			return;
 		}
-		case FieldType::KEYWORD: {
+		case FieldType::keyword: {
 			try {
 				auto ser_value = value.str();
 				if (field_spc != nullptr) {
@@ -5891,8 +5793,8 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
-		case FieldType::STRING:
-		case FieldType::TEXT: {
+		case FieldType::string:
+		case FieldType::text: {
 			try {
 				auto ser_value = value.str();
 				if (field_spc != nullptr) {
@@ -5910,7 +5812,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
-		case FieldType::BOOLEAN: {
+		case FieldType::boolean: {
 			auto ser_value = Serialise::MsgPack(spc, value);
 			if (field_spc != nullptr) {
 				index_term(doc, ser_value, *field_spc, pos);
@@ -5921,7 +5823,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			s.insert(std::move(ser_value));
 			return;
 		}
-		case FieldType::UUID: {
+		case FieldType::uuid: {
 			try {
 				auto ser_value = Serialise::uuid(value.str_view());
 				if (field_spc != nullptr) {
@@ -5948,7 +5850,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 	L_CALL("Schema::index_all_value(<Xapian::Document>, {}, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, {})", repr(value.to_string()), pos);
 
 	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::FLOAT: {
+		case FieldType::floating: {
 			try {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::floating(f_val);
@@ -5971,7 +5873,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
 			}
 		}
-		case FieldType::INTEGER: {
+		case FieldType::integer: {
 			try {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
@@ -5994,7 +5896,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
-		case FieldType::POSITIVE: {
+		case FieldType::positive: {
 			try {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
@@ -6017,8 +5919,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
-		case FieldType::DATE:
-		case FieldType::DATETIME: {
+		case FieldType::date:
+		case FieldType::datetime: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::datetime(value, tm);
 			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6037,7 +5939,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
-		case FieldType::TIME: {
+		case FieldType::time: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
 			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6056,7 +5958,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
-		case FieldType::TIMEDELTA: {
+		case FieldType::timedelta: {
 			double t_val;
 			auto ser_value = Serialise::timedelta(value, t_val);
 			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6075,7 +5977,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
-		case FieldType::GEO: {
+		case FieldType::geo: {
 			GeoSpatial geo(value);
 			const auto& geometry = geo.getGeometry();
 			auto ranges = geometry->getRanges(field_spc.flags.partials, field_spc.error);
@@ -6118,7 +6020,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
-		case FieldType::KEYWORD: {
+		case FieldType::keyword: {
 			try {
 				auto ser_value = value.str();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6134,8 +6036,8 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
-		case FieldType::STRING:
-		case FieldType::TEXT: {
+		case FieldType::string:
+		case FieldType::text: {
 			try {
 				auto ser_value = value.str();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6154,7 +6056,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
-		case FieldType::BOOLEAN: {
+		case FieldType::boolean: {
 			auto ser_value = Serialise::MsgPack(field_spc, value);
 			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 				index_term(doc, ser_value, field_spc, pos);
@@ -6166,7 +6068,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			s_g.insert(std::move(ser_value));
 			return;
 		}
-		case FieldType::UUID: {
+		case FieldType::uuid: {
 			try {
 				auto ser_value = Serialise::uuid(value.str_view());
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6196,7 +6098,7 @@ Schema::update_prefixes()
 	if (specification.flags.uuid_path) {
 		if (specification.flags.uuid_field) {
 			switch (specification.index_uuid_field) {
-				case UUIDFieldIndex::UUID: {
+				case UUIDFieldIndex::uuid: {
 					specification.flags.has_uuid_prefix = true;
 					specification.prefix.field.append(specification.local_prefix.uuid);
 					if (!specification.prefix.uuid.empty()) {
@@ -6206,7 +6108,7 @@ Schema::update_prefixes()
 					specification.local_prefix.uuid.clear();
 					break;
 				}
-				case UUIDFieldIndex::UUID_FIELD: {
+				case UUIDFieldIndex::uuid_field: {
 					specification.prefix.field.append(specification.local_prefix.field);
 					if (!specification.prefix.uuid.empty()) {
 						specification.prefix.uuid.append(specification.local_prefix.field);
@@ -6214,7 +6116,7 @@ Schema::update_prefixes()
 					specification.local_prefix.uuid.clear();
 					break;
 				}
-				case UUIDFieldIndex::BOTH: {
+				case UUIDFieldIndex::both: {
 					if (specification.prefix.uuid.empty()) {
 						specification.prefix.uuid = specification.prefix.field;
 					}
@@ -7369,7 +7271,7 @@ Schema::feed_type(const MsgPack& prop_type)
 		} else {
 			THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TYPE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY;
+		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
 	} catch (const msgpack::type_error&) {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TYPE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -8218,7 +8120,7 @@ Schema::process_type(std::string_view prop_name, const MsgPack& doc_type)
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 	if (!specification.endpoint.empty()) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign) {
 			THROW(ClientError, "Data inconsistency, {} must be foreign", repr(prop_name));
 		}
 	}
@@ -8546,10 +8448,10 @@ Schema::process_endpoint(std::string_view prop_name, const MsgPack& doc_endpoint
 		}
 		if (specification.endpoint != _endpoint) {
 			if (
-				specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN && (
-					specification.sep_types[SPC_OBJECT_TYPE] != FieldType::EMPTY ||
-					specification.sep_types[SPC_ARRAY_TYPE] != FieldType::EMPTY ||
-					specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::EMPTY
+				specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign && (
+					specification.sep_types[SPC_OBJECT_TYPE] != FieldType::empty ||
+					specification.sep_types[SPC_ARRAY_TYPE] != FieldType::empty ||
+					specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty
 				)
 			) {
 				THROW(ClientError, "Data inconsistency, {} cannot be used in non-foreign fields", repr(prop_name));
@@ -8620,9 +8522,9 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc
 	L_CALL("Schema::consistency_stop_strategy({})", repr(doc_stop_strategy.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 			const auto _stop_strategy = string::lower(doc_stop_strategy.str_view());
-			const auto stop_strategy = _get_str_stop_strategy(specification.stop_strategy);
+			const auto stop_strategy = NAMEOF_ENUM(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), stop_strategy, _stop_strategy, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
@@ -8642,9 +8544,9 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc
 	L_CALL("Schema::consistency_stem_strategy({})", repr(doc_stem_strategy.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 			const auto _stem_strategy = string::lower(doc_stem_strategy.str_view());
-			const auto stem_strategy = _get_str_stem_strategy(specification.stem_strategy);
+			const auto stem_strategy = NAMEOF_ENUM(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(stem_strategy), repr(_stem_strategy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
@@ -8664,7 +8566,7 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& doc
 	L_CALL("Schema::consistency_stem_language({})", repr(doc_stem_language.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 			const auto _stem_language = string::lower(doc_stem_language.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(specification.stem_language), repr(_stem_language), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8704,7 +8606,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 	}
 
 	if (!specification.endpoint.empty()) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::FOREIGN) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign) {
 			THROW(ClientError, "Data inconsistency, {} must be foreign", repr(prop_name));
 		}
 	}
@@ -8720,7 +8622,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 	if (doc_accuracy.is_array()) {
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
-			case FieldType::GEO: {
+			case FieldType::geo: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						set_acc.insert(_accuracy.u64());
@@ -8740,8 +8642,8 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				}
 				return;
 			}
-			case FieldType::DATE:
-			case FieldType::DATETIME: {
+			case FieldType::date:
+			case FieldType::datetime: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						uint64_t accuracy;
@@ -8767,17 +8669,17 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(_get_str_acc_date((UnitTime)acc)).push_back(' ');
+						str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(_get_str_acc_date((UnitTime)acc)).push_back(' ');
+						_str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				return;
 			}
-			case FieldType::TIME:
-			case FieldType::TIMEDELTA: {
+			case FieldType::time:
+			case FieldType::timedelta: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						try {
@@ -8792,18 +8694,18 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(_get_str_acc_date((UnitTime)acc)).push_back(' ');
+						str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(_get_str_acc_date((UnitTime)acc)).push_back(' ');
+						_str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				return;
 			}
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT: {
+			case FieldType::integer:
+			case FieldType::positive:
+			case FieldType::floating: {
 				try {
 					for (const auto& _accuracy : doc_accuracy) {
 						set_acc.insert(_accuracy.u64());
@@ -8839,7 +8741,7 @@ Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& doc_boo
 	L_CALL("Schema::consistency_bool_term({})", repr(doc_bool_term.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::KEYWORD) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::keyword) {
 			const auto _bool_term = doc_bool_term.boolean();
 			if (specification.flags.bool_term != _bool_term) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.bool_term), _bool_term, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8860,7 +8762,7 @@ Schema::consistency_partials(std::string_view prop_name, const MsgPack& doc_part
 	L_CALL("Schema::consistency_partials({})", repr(doc_partials.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::geo) {
 			const auto _partials = doc_partials.boolean();
 			if (specification.flags.partials != _partials) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.partials), _partials);
@@ -8881,7 +8783,7 @@ Schema::consistency_error(std::string_view prop_name, const MsgPack& doc_error)
 	L_CALL("Schema::consistency_error({})", repr(doc_error.to_string()));
 
 	try {
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::GEO) {
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::geo) {
 			const auto _error = doc_error.f64();
 			if (specification.error != _error) {
 				THROW(ClientError, "It is not allowed to change {} [{:.2}  ->  {:.2}]", repr(prop_name), specification.error, _error);
@@ -9168,8 +9070,8 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 	L_CALL("Schema::set_namespace_spc_id(<spc>)");
 
 	// ID_FIELD_NAME cannot be text or string.
-	if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::STRING) {
-		spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
+	if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::text || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::string) {
+		spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 	}
 	spc.prefix.field = NAMESPACE_PREFIX_ID_FIELD_NAME;
 	spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
@@ -9195,8 +9097,8 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 	}
 
 	// ID_FIELD_NAME cannot be TEXT nor STRING.
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::TEXT || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::STRING) {
-		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::string) {
+		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 		L_DEBUG("{} cannot be type string or text, it's type was changed to keyword", ID_FIELD_NAME);
 	}
 
@@ -9215,7 +9117,7 @@ Schema::set_default_spc_version([[maybe_unused]] MsgPack& mut_properties)
 	specification.flags.store = false;
 	specification.slot = DB_SLOT_VERSION;
 	specification.index = TypeIndex::FIELD_VALUES;
-	specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::POSITIVE;
+	specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
 }
 
 
@@ -9403,7 +9305,7 @@ _get_data_id(required_spc_t& spc_id, const MsgPack& id_properties)
 
 	// Get required specification.
 	switch (spc_id.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::GEO: {
+		case FieldType::geo: {
 			auto id_partials_it = id_properties.find(RESERVED_PARTIALS);
 			if (id_partials_it != id_it_e) {
 				spc_id.flags.partials = id_partials_it.value().boolean();
@@ -9414,7 +9316,7 @@ _get_data_id(required_spc_t& spc_id, const MsgPack& id_properties)
 			}
 			break;
 		}
-		case FieldType::KEYWORD: {
+		case FieldType::keyword: {
 			auto id_bool_term_it = id_properties.find(RESERVED_BOOL_TERM);
 			if (id_bool_term_it != id_it_e) {
 				spc_id.flags.bool_term = id_bool_term_it.value().boolean();
@@ -9468,12 +9370,12 @@ Schema::set_data_id(const required_spc_t& spc_id)
 	mut_properties[RESERVED_PREFIX] = spc_id.prefix.field;
 
 	switch (spc_id.get_type()) {
-		case FieldType::GEO: {
+		case FieldType::geo: {
 			mut_properties[RESERVED_PARTIALS] = spc_id.flags.partials;
 			mut_properties[RESERVED_ERROR] = spc_id.error;
 			break;
 		}
-		case FieldType::KEYWORD: {
+		case FieldType::keyword: {
 			mut_properties[RESERVED_BOOL_TERM] = spc_id.flags.bool_term;
 			break;
 		}
@@ -9526,7 +9428,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 		if (type_it != it_e) {
 			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(type_it.value().str_view())[SPC_CONCRETE_TYPE];
 		}
-		if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::EMPTY) {
+		if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
 			return std::make_pair(std::move(res), "");
 		}
 
@@ -9542,7 +9444,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 
 			// Get required specification.
 			switch (res.sep_types[SPC_CONCRETE_TYPE]) {
-				case FieldType::GEO: {
+				case FieldType::geo: {
 					auto partials_it = properties.find(RESERVED_PARTIALS);
 					if (partials_it != it_e) {
 						res.flags.partials = partials_it.value().boolean();
@@ -9553,13 +9455,13 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 				}
 				[[fallthrough]];
-				case FieldType::FLOAT:
-				case FieldType::INTEGER:
-				case FieldType::POSITIVE:
-				case FieldType::DATE:
-				case FieldType::DATETIME:
-				case FieldType::TIME:
-				case FieldType::TIMEDELTA: {
+				case FieldType::floating:
+				case FieldType::integer:
+				case FieldType::positive:
+				case FieldType::date:
+				case FieldType::datetime:
+				case FieldType::time:
+				case FieldType::timedelta: {
 					auto accuracy_it = properties.find(RESERVED_ACCURACY);
 					if (accuracy_it != it_e) {
 						for (const auto& acc : accuracy_it.value()) {
@@ -9585,8 +9487,8 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::STRING:
-				case FieldType::TEXT: {
+				case FieldType::string:
+				case FieldType::text: {
 					auto language_it = properties.find(RESERVED_LANGUAGE);
 					if (language_it != it_e) {
 						res.language = language_it.value().str();
@@ -9609,7 +9511,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::KEYWORD: {
+				case FieldType::keyword: {
 					auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
 					if (bool_term_it != it_e) {
 						res.flags.bool_term = bool_term_it.value().boolean();
@@ -9622,7 +9524,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 		} else {
 			// Get required specification.
 			switch (res.sep_types[SPC_CONCRETE_TYPE]) {
-				case FieldType::GEO: {
+				case FieldType::geo: {
 					auto partials_it = properties.find(RESERVED_PARTIALS);
 					if (partials_it != it_e) {
 						res.flags.partials = partials_it.value().boolean();
@@ -9633,8 +9535,8 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::STRING:
-				case FieldType::TEXT: {
+				case FieldType::string:
+				case FieldType::text: {
 					auto language_it = properties.find(RESERVED_LANGUAGE);
 					if (language_it != it_e) {
 						res.language = language_it.value().str();
@@ -9657,7 +9559,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					}
 					break;
 				}
-				case FieldType::KEYWORD: {
+				case FieldType::keyword: {
 					auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
 					if (bool_term_it != it_e) {
 						res.flags.bool_term = bool_term_it.value().boolean();
@@ -9693,7 +9595,7 @@ Schema::get_slot_field(std::string_view field_name) const
 	}
 
 	if (res.flags.inside_namespace) {
-		res.sep_types[SPC_CONCRETE_TYPE] = FieldType::KEYWORD;
+		res.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 		res.slot = get_slot(spc.prefix, res.get_ctype());
 	} else {
 		const auto& properties = *spc.properties;
@@ -9715,7 +9617,7 @@ Schema::get_slot_field(std::string_view field_name) const
 
 		// Get required specification.
 		switch (res.sep_types[SPC_CONCRETE_TYPE]) {
-			case FieldType::GEO: {
+			case FieldType::geo: {
 				auto partials_it = properties.find(RESERVED_PARTIALS);
 				if (partials_it != it_e) {
 					res.flags.partials = partials_it.value().boolean();
@@ -9726,8 +9628,8 @@ Schema::get_slot_field(std::string_view field_name) const
 				}
 				break;
 			}
-			case FieldType::STRING:
-			case FieldType::TEXT: {
+			case FieldType::string:
+			case FieldType::text: {
 				auto language_it = properties.find(RESERVED_LANGUAGE);
 				if (language_it != it_e) {
 					res.language = language_it.value().str();
@@ -9750,7 +9652,7 @@ Schema::get_slot_field(std::string_view field_name) const
 				}
 				break;
 			}
-			case FieldType::KEYWORD: {
+			case FieldType::keyword: {
 				auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
 				if (bool_term_it != it_e) {
 					res.flags.bool_term = bool_term_it.value().boolean();

@@ -38,7 +38,7 @@
 #include "hashes.hh"                // for fnv1ah32
 
 
-constexpr const char FLOAT_STR[]     = "float";
+constexpr const char FLOATING_STR[]  = "floating";
 constexpr const char INTEGER_STR[]   = "integer";
 constexpr const char POSITIVE_STR[]  = "positive";
 constexpr const char KEYWORD_STR[]   = "keyword";
@@ -218,12 +218,12 @@ namespace Serialise {
 	// Serialise a range_t.
 	std::string range(const range_t& range);
 
-	// Guess type of field_value. If bool_term can not return FieldType::TEXT.
+	// Guess type of field_value. If bool_term can not return FieldType::text.
 	FieldType guess_type(const class MsgPack& field_value);
 
 
 	/*
-	 * Given a field_value, it guess the type and serialise. If bool_term can not return FieldType::TEXT.
+	 * Given a field_value, it guess the type and serialise. If bool_term can not return FieldType::text.
 	 *
 	 * Returns the guess type and the serialised values according to type.
 	 */

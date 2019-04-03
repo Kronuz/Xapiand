@@ -35,29 +35,29 @@ static auto
 get_func_value_handle(FieldType type, std::string_view field_name)
 {
 	switch (type) {
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return &HandledSubAggregation<Handler>::_aggregate_float;
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return &HandledSubAggregation<Handler>::_aggregate_integer;
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			return &HandledSubAggregation<Handler>::_aggregate_positive;
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return &HandledSubAggregation<Handler>::_aggregate_date;
-		case FieldType::TIME:
+		case FieldType::time:
 			return &HandledSubAggregation<Handler>::_aggregate_time;
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return &HandledSubAggregation<Handler>::_aggregate_timedelta;
-		case FieldType::BOOLEAN:
+		case FieldType::boolean:
 			return &HandledSubAggregation<Handler>::_aggregate_boolean;
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::string:
 			return &HandledSubAggregation<Handler>::_aggregate_string;
-		case FieldType::GEO:
+		case FieldType::geo:
 			return &HandledSubAggregation<Handler>::_aggregate_geo;
-		case FieldType::UUID:
+		case FieldType::uuid:
 			return &HandledSubAggregation<Handler>::_aggregate_uuid;
-		case FieldType::EMPTY:
+		case FieldType::empty:
 			THROW(AggregationError, "Field: {} has not been indexed", repr(field_name));
 		default:
 			THROW(AggregationError, "Type: '{}' is not supported", toUType(type));

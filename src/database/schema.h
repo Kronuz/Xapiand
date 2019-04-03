@@ -67,53 +67,53 @@ enum class TypeIndex : uint8_t {
 
 
 enum class UUIDFieldIndex : uint8_t {
-	UUID        = 0b0001,  // Indexin using the field name.
-	UUID_FIELD  = 0b0010,  // Indexing using the meta name.
-	BOTH        = 0b0011,  // Indexing using field_uuid and uuid.
+	uuid        = 0b0001,  // Indexin using the field name.
+	uuid_field  = 0b0010,  // Indexing using the meta name.
+	both        = 0b0011,  // Indexing using field_uuid and uuid.
 	INVALID     = static_cast<uint8_t>(-1),
 };
 
 
 enum class StopStrategy : uint8_t {
-	STOP_NONE,
-	STOP_ALL,
-	STOP_STEMMED,
+	stop_none,
+	stop_all,
+	stop_stemmed,
 	INVALID    = static_cast<uint8_t>(-1),
 };
 
 
 enum class StemStrategy : uint8_t {
-	STEM_NONE,
-	STEM_SOME,
-	STEM_ALL,
-	STEM_ALL_Z,
+	stem_none,
+	stem_some,
+	stem_all,
+	stem_all_z,
 	INVALID    = static_cast<uint8_t>(-1),
 };
 
 
 enum class UnitTime : uint64_t {
-	SECOND     = 1,                     // 1                  60
-	MINUTE     = SECOND * 60,           // 60                 60
-	HOUR       = MINUTE * 60,           // 3600               24
-	DAY        = HOUR * 24,             // 86400              30
-	MONTH      = DAY * 30,              // 2592000            12
-	YEAR       = DAY * 365,             // 31536000           10
-	DECADE     = YEAR * 10,             // 315360000          10
-	CENTURY    = YEAR * 100,            // 3153600000         10
-	MILLENNIUM = YEAR * 1000,           // 31536000000        8
+	second     = 1,                     // 1                  60
+	minute     = second * 60,           // 60                 60
+	hour       = minute * 60,           // 3600               24
+	day        = hour * 24,             // 86400              30
+	month      = day * 30,              // 2592000            12
+	year       = day * 365,             // 31536000           10
+	decade     = year * 10,             // 315360000          10
+	century    = year * 100,            // 3153600000         10
+	millennium = year * 1000,           // 31536000000        8
 	INVALID    = static_cast<uint64_t>(-1),
 };
 
 
-constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::STOP_STEMMED;
-constexpr StemStrategy DEFAULT_STEM_STRATEGY      = StemStrategy::STEM_SOME;
+constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::stop_stemmed;
+constexpr StemStrategy DEFAULT_STEM_STRATEGY      = StemStrategy::stem_some;
 constexpr bool DEFAULT_GEO_PARTIALS               = true;
 constexpr double DEFAULT_GEO_ERROR                = 0.3;
 constexpr bool DEFAULT_POSITIONS                  = true;
 constexpr bool DEFAULT_SPELLING                   = false;
 constexpr bool DEFAULT_BOOL_TERM                  = false;
 constexpr TypeIndex DEFAULT_INDEX                 = TypeIndex::FIELD_ALL;
-constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::UUID;
+constexpr UUIDFieldIndex DEFAULT_INDEX_UUID_FIELD = UUIDFieldIndex::uuid;
 constexpr size_t LIMIT_PARTIAL_PATHS_DEPTH        = 10; // 2^(n - 2) => 2^8 => 256 namespace terms
 
 
@@ -177,7 +177,7 @@ constexpr uint8_t BOOLEAN_CHAR       = 'B';
 constexpr uint8_t DATE_CHAR          = 'd';
 constexpr uint8_t DATETIME_CHAR      = 'D';
 constexpr uint8_t FOREIGN_CHAR       = 'E';
-constexpr uint8_t FLOAT_CHAR         = 'F';
+constexpr uint8_t FLOATING_CHAR      = 'F';
 constexpr uint8_t GEO_CHAR           = 'G';
 constexpr uint8_t INTEGER_CHAR       = 'I';
 constexpr uint8_t OBJECT_CHAR        = 'O';
@@ -189,35 +189,36 @@ constexpr uint8_t SCRIPT_CHAR        = 'X';
 constexpr uint8_t TIME_CHAR          = 'Z';
 
 enum class FieldType : uint8_t {
-	EMPTY         = EMPTY_CHAR,
-	ARRAY         = ARRAY_CHAR,
-	FOREIGN       = FOREIGN_CHAR,
-	OBJECT        = OBJECT_CHAR,
+	empty         = EMPTY_CHAR,
 
-	BOOLEAN       = BOOLEAN_CHAR,
-	DATE          = DATE_CHAR,
-	DATETIME      = DATETIME_CHAR,
-	FLOAT         = FLOAT_CHAR,
-	GEO           = GEO_CHAR,
-	INTEGER       = INTEGER_CHAR,
-	KEYWORD       = KEYWORD_CHAR,
-	POSITIVE      = POSITIVE_CHAR,
-	SCRIPT        = SCRIPT_CHAR,
-	STRING        = STRING_CHAR,
-	TEXT          = TEXT_CHAR,
-	TIME          = TIME_CHAR,
-	TIMEDELTA     = TIMEDELTA_CHAR,
-	UUID          = UUID_CHAR,
+	array         = ARRAY_CHAR,
+	foreign       = FOREIGN_CHAR,
+	object        = OBJECT_CHAR,
+
+	boolean       = BOOLEAN_CHAR,
+	date          = DATE_CHAR,
+	datetime      = DATETIME_CHAR,
+	floating      = FLOATING_CHAR,
+	geo           = GEO_CHAR,
+	integer       = INTEGER_CHAR,
+	keyword       = KEYWORD_CHAR,
+	positive      = POSITIVE_CHAR,
+	script        = SCRIPT_CHAR,
+	string        = STRING_CHAR,
+	text          = TEXT_CHAR,
+	time          = TIME_CHAR,
+	timedelta     = TIMEDELTA_CHAR,
+	uuid          = UUID_CHAR,
 };
 
 
 inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
 	switch (stop_strategy) {
-		case StopStrategy::STOP_NONE:
+		case StopStrategy::stop_none:
 			return Xapian::TermGenerator::STOP_NONE;
-		case StopStrategy::STOP_ALL:
+		case StopStrategy::stop_all:
 			return Xapian::TermGenerator::STOP_ALL;
-		case StopStrategy::STOP_STEMMED:
+		case StopStrategy::stop_stemmed:
 			return Xapian::TermGenerator::STOP_STEMMED;
 		default:
 			THROW(Error, "Schema is corrupt: invalid stop strategy");
@@ -227,13 +228,13 @@ inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(S
 
 inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
-		case StemStrategy::STEM_NONE:
+		case StemStrategy::stem_none:
 			return Xapian::TermGenerator::STEM_NONE;
-		case StemStrategy::STEM_SOME:
+		case StemStrategy::stem_some:
 			return Xapian::TermGenerator::STEM_SOME;
-		case StemStrategy::STEM_ALL:
+		case StemStrategy::stem_all:
 			return Xapian::TermGenerator::STEM_ALL;
-		case StemStrategy::STEM_ALL_Z:
+		case StemStrategy::stem_all_z:
 			return Xapian::TermGenerator::STEM_ALL_Z;
 		default:
 			THROW(Error, "Schema is corrupt: invalid stem strategy");
@@ -245,11 +246,11 @@ inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(S
 // https://trac.xapian.org/ticket/750
 // inline constexpr Xapian::QueryParser::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {
 // 	switch (stop_strategy) {
-// 		case StopStrategy::STOP_NONE:
+// 		case StopStrategy::stop_none:
 // 			return Xapian::QueryParser::STOP_NONE;
-// 		case StopStrategy::STOP_ALL:
+// 		case StopStrategy::stop_all:
 // 			return Xapian::QueryParser::STOP_ALL;
-// 		case StopStrategy::STOP_STEMMED:
+// 		case StopStrategy::stop_stemmed:
 // 			return Xapian::QueryParser::STOP_STEMMED;
 // 		default:
 // 			THROW(Error, "Schema is corrupt: invalid stop strategy");
@@ -259,13 +260,13 @@ inline constexpr Xapian::TermGenerator::stem_strategy getGeneratorStemStrategy(S
 
 inline constexpr Xapian::QueryParser::stem_strategy getQueryParserStemStrategy(StemStrategy stem_strategy) {
 	switch (stem_strategy) {
-		case StemStrategy::STEM_NONE:
+		case StemStrategy::stem_none:
 			return Xapian::QueryParser::STEM_NONE;
-		case StemStrategy::STEM_SOME:
+		case StemStrategy::stem_some:
 			return Xapian::QueryParser::STEM_SOME;
-		case StemStrategy::STEM_ALL:
+		case StemStrategy::stem_all:
 			return Xapian::QueryParser::STEM_ALL;
-		case StemStrategy::STEM_ALL_Z:
+		case StemStrategy::stem_all_z:
 			return Xapian::QueryParser::STEM_ALL_Z;
 		default:
 			THROW(Error, "Schema is corrupt: invalid stem strategy");
@@ -406,40 +407,40 @@ struct required_spc_t {
 
 	static char get_ctype(FieldType type) noexcept {
 		switch (type) {
-			case FieldType::UUID:
+			case FieldType::uuid:
 				return 'U';
 
-			case FieldType::KEYWORD:
+			case FieldType::keyword:
 				return 'K';
 
-			case FieldType::SCRIPT:
-			case FieldType::STRING:
-			case FieldType::TEXT:
+			case FieldType::script:
+			case FieldType::string:
+			case FieldType::text:
 				return 'S';
 
-			case FieldType::POSITIVE:
-			case FieldType::INTEGER:
-			case FieldType::FLOAT:
+			case FieldType::positive:
+			case FieldType::integer:
+			case FieldType::floating:
 				return 'N';
 
-			case FieldType::BOOLEAN:
+			case FieldType::boolean:
 				return 'B';
 
-			case FieldType::DATE:
-			case FieldType::DATETIME:
+			case FieldType::date:
+			case FieldType::datetime:
 				return 'D';
 
-			case FieldType::TIMEDELTA:
-			case FieldType::TIME:
+			case FieldType::timedelta:
+			case FieldType::time:
 				return 'T';
 
-			case FieldType::GEO:
+			case FieldType::geo:
 				return 'G';
 
-			case FieldType::EMPTY:
-			case FieldType::ARRAY:
-			case FieldType::OBJECT:
-			case FieldType::FOREIGN:
+			case FieldType::array:
+			case FieldType::object:
+			case FieldType::foreign:
+			case FieldType::empty:
 			default:
 				return '\x00';
 		}
@@ -954,7 +955,7 @@ class Schema {
 			: properties(_properties),
 			  inside_namespace(false),
 			  has_uuid_prefix(false),
-			  acc_field_type(FieldType::EMPTY) { }
+			  acc_field_type(FieldType::empty) { }
 	};
 
 
@@ -1047,14 +1048,14 @@ public:
 		}
 
 		switch (spc.get_type()) {
-			case FieldType::INTEGER:
-			case FieldType::POSITIVE:
-			case FieldType::FLOAT:
-			case FieldType::DATE:
-			case FieldType::DATETIME:
-			case FieldType::TIME:
-			case FieldType::TIMEDELTA:
-			case FieldType::GEO:
+			case FieldType::integer:
+			case FieldType::positive:
+			case FieldType::floating:
+			case FieldType::date:
+			case FieldType::datetime:
+			case FieldType::time:
+			case FieldType::timedelta:
+			case FieldType::geo:
 				for (auto& acc_prefix : spc.acc_prefix) {
 					acc_prefix.insert(0, spc.prefix.field);
 				}

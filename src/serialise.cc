@@ -29,7 +29,7 @@
 #include "cast.h"                                     // for Cast
 #include "chars.hh"                                   // for iskeyword
 #include "cuuid/uuid.h"                               // for UUID
-#include "database/schema.h"                          // for FieldType, FieldType::KEYWORD, Fiel...
+#include "database/schema.h"                          // for FieldType, FieldType::keyword, Fiel...
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
@@ -220,27 +220,27 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 	auto field_type = field_spc.get_type();
 
 	switch (field_type) {
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return integer(field_value.i64());
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			return positive(field_value.u64());
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return floating(field_value.f64());
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return datetime(field_value);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(field_value);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(field_value);
-		case FieldType::BOOLEAN:
+		case FieldType::boolean:
 			return boolean(field_value.boolean());
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::string:
 			return field_value.str();
-		case FieldType::GEO:
+		case FieldType::geo:
 			return geospatial(field_value);
-		case FieldType::UUID:
+		case FieldType::uuid:
 			return uuid(field_value.str_view());
 		default:
 			THROW(SerialisationError, "Type: {:#04x} is an unknown type", toUType(field_type));
@@ -254,27 +254,27 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 	auto field_type = field_spc.get_type();
 
 	switch (field_type) {
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return integer(field_value);
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			return positive(field_value);
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return floating(field_value);
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return datetime(field_value);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(field_value);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(field_value);
-		case FieldType::BOOLEAN:
+		case FieldType::boolean:
 			return boolean(field_value);
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::string:
 			return std::string(field_value);
-		case FieldType::GEO:
+		case FieldType::geo:
 			return geospatial(field_value);
-		case FieldType::UUID:
+		case FieldType::uuid:
 			return uuid(field_value);
 		default:
 			THROW(SerialisationError, "Type: {:#04x} is an unknown type", toUType(field_type));
@@ -286,21 +286,21 @@ std::string
 Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 {
 	switch (field_spc.get_type()) {
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return datetime(field_value);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(field_value);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(field_value);
-		case FieldType::BOOLEAN:
+		case FieldType::boolean:
 			return boolean(field_value);
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::string:
 			return std::string(field_value);
-		case FieldType::GEO:
+		case FieldType::geo:
 			return geospatial(field_value);
-		case FieldType::UUID:
+		case FieldType::uuid:
 			return uuid(field_value);
 		default:
 			THROW(SerialisationError, "Type: {} is not string", NAMEOF_ENUM(field_spc.get_type()));
@@ -322,15 +322,15 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 			return string(field_spc, field_value.str_view());
 		case MsgPack::Type::MAP:
 			switch (field_spc.get_type()) {
-				case FieldType::FLOAT:
+				case FieldType::floating:
 					return floating(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
-				case FieldType::DATETIME:
+				case FieldType::datetime:
 					return datetime(field_value);
-				case FieldType::TIME:
+				case FieldType::time:
 					return time(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
-				case FieldType::TIMEDELTA:
+				case FieldType::timedelta:
 					return timedelta(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
-				case FieldType::STRING:
+				case FieldType::string:
 					return Datetime::iso8601(Datetime::DatetimeParser(field_value));
 				default:
 					THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.get_type()));
@@ -381,13 +381,13 @@ std::string
 Serialise::floating(FieldType field_type, long double field_value)
 {
 	switch (field_type) {
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return timestamp(field_value);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(field_value);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(field_value);
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return floating(field_value);
 		default:
 			THROW(SerialisationError, "Type: {} is not a float", NAMEOF_ENUM(field_type));
@@ -399,20 +399,20 @@ std::string
 Serialise::integer(FieldType field_type, int64_t field_value)
 {
 	switch (field_type) {
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			if (field_value < 0) {
 				THROW(SerialisationError, "Type: {} must be a positive number [{}]", NAMEOF_ENUM(field_type), field_value);
 			}
 			return positive(field_value);
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return timestamp(field_value);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(field_value);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(field_value);
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return floating(field_value);
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return integer(field_value);
 		default:
 			THROW(SerialisationError, "Type: {} is not a integer [{}]", NAMEOF_ENUM(field_type), field_value);
@@ -424,17 +424,17 @@ std::string
 Serialise::positive(FieldType field_type, uint64_t field_value)
 {
 	switch (field_type) {
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return timestamp(field_value);
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return floating(field_value);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(field_value);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(field_value);
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return integer(field_value);
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			return positive(field_value);
 		default:
 			THROW(SerialisationError, "Type: {} is not a positive integer [{}]", NAMEOF_ENUM(field_type), field_value);
@@ -445,7 +445,7 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 std::string
 Serialise::boolean(FieldType field_type, bool field_value)
 {
-	if (field_type == FieldType::BOOLEAN) {
+	if (field_type == FieldType::boolean) {
 		return boolean(field_value);
 	}
 
@@ -456,7 +456,7 @@ Serialise::boolean(FieldType field_type, bool field_value)
 std::string
 Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
 {
-	if (field_type == FieldType::GEO) {
+	if (field_type == FieldType::geo) {
 		return geospatial(field_value);
 	}
 
@@ -788,42 +788,42 @@ Serialise::guess_type(const class MsgPack& field_value)
 {
 	switch (field_value.get_type()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return FieldType::INTEGER;
+			return FieldType::integer;
 
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return FieldType::POSITIVE;
+			return FieldType::positive;
 
 		case MsgPack::Type::FLOAT:
-			return FieldType::FLOAT;
+			return FieldType::floating;
 
 		case MsgPack::Type::BOOLEAN:
-			return FieldType::BOOLEAN;
+			return FieldType::boolean;
 
 		case MsgPack::Type::STR: {
 			const auto str_value = field_value.str_view();
 
 			if (isUUID(str_value)) {
-				return FieldType::UUID;
+				return FieldType::uuid;
 			}
 
 			if (Datetime::isDate(str_value)) {
-				return FieldType::DATE;
+				return FieldType::date;
 			}
 
 			if (Datetime::isDatetime(str_value)) {
-				return FieldType::DATETIME;
+				return FieldType::datetime;
 			}
 
 			if (Datetime::isTime(str_value)) {
-				return FieldType::TIME;
+				return FieldType::time;
 			}
 
 			if (Datetime::isTimedelta(str_value)) {
-				return FieldType::TIMEDELTA;
+				return FieldType::timedelta;
 			}
 
 			if (EWKT::isEWKT(str_value)) {
-				return FieldType::GEO;
+				return FieldType::geo;
 			}
 
 			// Try like INTEGER.
@@ -831,7 +831,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 				int errno_save;
 				strict_stoll(&errno_save, str_value);
 				if (errno_save == 0) {
-					return FieldType::INTEGER;
+					return FieldType::integer;
 				}
 			}
 
@@ -840,7 +840,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 				int errno_save;
 				strict_stoull(&errno_save, str_value);
 				if (errno_save == 0) {
-					return FieldType::POSITIVE;
+					return FieldType::positive;
 				}
 			}
 
@@ -849,16 +849,16 @@ Serialise::guess_type(const class MsgPack& field_value)
 				int errno_save;
 				strict_stold(&errno_save, str_value);
 				if (errno_save == 0) {
-					return FieldType::FLOAT;
+					return FieldType::floating;
 				}
 			}
 
 			// Try like TEXT
 			if (isText(str_value)) {
-				return FieldType::TEXT;
+				return FieldType::text;
 			}
 
-			return FieldType::KEYWORD;
+			return FieldType::keyword;
 		}
 
 		case MsgPack::Type::MAP: {
@@ -869,27 +869,27 @@ Serialise::guess_type(const class MsgPack& field_value)
 				}
 				switch (Cast::get_hash_type(str_key)) {
 					case Cast::HashType::INTEGER:
-						return FieldType::INTEGER;
+						return FieldType::integer;
 					case Cast::HashType::POSITIVE:
-						return FieldType::POSITIVE;
+						return FieldType::positive;
 					case Cast::HashType::FLOAT:
-						return FieldType::FLOAT;
+						return FieldType::floating;
 					case Cast::HashType::BOOLEAN:
-						return FieldType::BOOLEAN;
+						return FieldType::boolean;
 					case Cast::HashType::KEYWORD:
-						return FieldType::KEYWORD;
+						return FieldType::keyword;
 					case Cast::HashType::TEXT:
-						return FieldType::TEXT;
+						return FieldType::text;
 					case Cast::HashType::STRING:
-						return FieldType::STRING;
+						return FieldType::string;
 					case Cast::HashType::UUID:
-						return FieldType::UUID;
+						return FieldType::uuid;
 					case Cast::HashType::DATETIME:
-						return FieldType::DATETIME;
+						return FieldType::datetime;
 					case Cast::HashType::TIME:
-						return FieldType::TIME;
+						return FieldType::time;
 					case Cast::HashType::TIMEDELTA:
-						return FieldType::TIMEDELTA;
+						return FieldType::timedelta;
 					case Cast::HashType::EWKT:
 					case Cast::HashType::POINT:
 					case Cast::HashType::CIRCLE:
@@ -902,7 +902,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 					case Cast::HashType::MULTICHULL:
 					case Cast::HashType::GEO_COLLECTION:
 					case Cast::HashType::GEO_INTERSECTION:
-						return FieldType::GEO;
+						return FieldType::geo;
 					default:
 						THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
@@ -922,67 +922,67 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 {
 	switch (field_value.get_type()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return std::make_pair(FieldType::INTEGER, integer(field_value.i64()));
+			return std::make_pair(FieldType::integer, integer(field_value.i64()));
 
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return std::make_pair(FieldType::POSITIVE, positive(field_value.u64()));
+			return std::make_pair(FieldType::positive, positive(field_value.u64()));
 
 		case MsgPack::Type::FLOAT:
-			return std::make_pair(FieldType::FLOAT, floating(field_value.f64()));
+			return std::make_pair(FieldType::floating, floating(field_value.f64()));
 
 		case MsgPack::Type::BOOLEAN:
-			return std::make_pair(FieldType::BOOLEAN, boolean(field_value.boolean()));
+			return std::make_pair(FieldType::boolean, boolean(field_value.boolean()));
 
 		case MsgPack::Type::STR: {
 			auto str_value = field_value.str_view();
 
 			// Try like UUID
 			try {
-				return std::make_pair(FieldType::UUID, uuid(str_value));
+				return std::make_pair(FieldType::uuid, uuid(str_value));
 			} catch (const SerialisationError&) { }
 
 			// Try like DATETIME
 			try {
-				return std::make_pair(FieldType::DATETIME, datetime(str_value));
+				return std::make_pair(FieldType::datetime, datetime(str_value));
 			} catch (const DatetimeError&) { }
 
 			// Try like TIME
 			try {
-				return std::make_pair(FieldType::TIME, time(str_value));
+				return std::make_pair(FieldType::time, time(str_value));
 			} catch (const TimeError&) { }
 
 			// Try like TIMEDELTA
 			try {
-				return std::make_pair(FieldType::TIMEDELTA, timedelta(str_value));
+				return std::make_pair(FieldType::timedelta, timedelta(str_value));
 			} catch (const TimedeltaError&) { }
 
 			// Try like GEO
 			try {
-				return std::make_pair(FieldType::GEO, geospatial(str_value));
+				return std::make_pair(FieldType::geo, geospatial(str_value));
 			} catch (const EWKTError&) { }
 
 			// Try like INTEGER.
 			try {
-				return std::make_pair(FieldType::INTEGER, integer(str_value));
+				return std::make_pair(FieldType::integer, integer(str_value));
 			} catch (const SerialisationError&) { }
 
 			// Try like POSITIVE.
 			try {
-				return std::make_pair(FieldType::POSITIVE, positive(str_value));
+				return std::make_pair(FieldType::positive, positive(str_value));
 			} catch (const SerialisationError&) { }
 
 			// Try like FLOAT
 			try {
-				return std::make_pair(FieldType::FLOAT, floating(str_value));
+				return std::make_pair(FieldType::floating, floating(str_value));
 			} catch (const SerialisationError&) { }
 
 			// Try like TEXT
 			if (isText(str_value)) {
-				return std::make_pair(FieldType::TEXT, std::string(str_value));
+				return std::make_pair(FieldType::text, std::string(str_value));
 			}
 
 			// Default type KEYWORD.
-			return std::make_pair(FieldType::KEYWORD, std::string(str_value));
+			return std::make_pair(FieldType::keyword, std::string(str_value));
 		}
 
 		case MsgPack::Type::MAP: {
@@ -994,27 +994,27 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 				}
 				switch (Cast::get_hash_type(str_key)) {
 					case Cast::HashType::INTEGER:
-						return std::make_pair(FieldType::INTEGER, integer(Cast::integer(it.value())));
+						return std::make_pair(FieldType::integer, integer(Cast::integer(it.value())));
 					case Cast::HashType::POSITIVE:
-						return std::make_pair(FieldType::POSITIVE, positive(Cast::positive(it.value())));
+						return std::make_pair(FieldType::positive, positive(Cast::positive(it.value())));
 					case Cast::HashType::FLOAT:
-						return std::make_pair(FieldType::FLOAT, floating(Cast::floating(it.value())));
+						return std::make_pair(FieldType::floating, floating(Cast::floating(it.value())));
 					case Cast::HashType::BOOLEAN:
-						return std::make_pair(FieldType::BOOLEAN, boolean(Cast::boolean(it.value())));
+						return std::make_pair(FieldType::boolean, boolean(Cast::boolean(it.value())));
 					case Cast::HashType::KEYWORD:
-						return std::make_pair(FieldType::KEYWORD, Cast::string(it.value()));
+						return std::make_pair(FieldType::keyword, Cast::string(it.value()));
 					case Cast::HashType::TEXT:
-						return std::make_pair(FieldType::TEXT, Cast::string(it.value()));
+						return std::make_pair(FieldType::text, Cast::string(it.value()));
 					case Cast::HashType::STRING:
-						return std::make_pair(FieldType::STRING, Cast::string(it.value()));
+						return std::make_pair(FieldType::string, Cast::string(it.value()));
 					case Cast::HashType::UUID:
-						return std::make_pair(FieldType::UUID, uuid(Cast::uuid(it.value())));
+						return std::make_pair(FieldType::uuid, uuid(Cast::uuid(it.value())));
 					case Cast::HashType::DATETIME:
-						return std::make_pair(FieldType::DATETIME, datetime(Cast::datetime(it.value())));
+						return std::make_pair(FieldType::datetime, datetime(Cast::datetime(it.value())));
 					case Cast::HashType::TIME:
-						return std::make_pair(FieldType::TIME, datetime(Cast::time(it.value())));
+						return std::make_pair(FieldType::time, datetime(Cast::time(it.value())));
 					case Cast::HashType::TIMEDELTA:
-						return std::make_pair(FieldType::TIMEDELTA, datetime(Cast::timedelta(it.value())));
+						return std::make_pair(FieldType::timedelta, datetime(Cast::timedelta(it.value())));
 					case Cast::HashType::EWKT:
 					case Cast::HashType::POINT:
 					case Cast::HashType::CIRCLE:
@@ -1027,7 +1027,7 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 					case Cast::HashType::MULTICHULL:
 					case Cast::HashType::GEO_COLLECTION:
 					case Cast::HashType::GEO_INTERSECTION:
-						return std::make_pair(FieldType::GEO, geospatial(field_value));
+						return std::make_pair(FieldType::geo, geospatial(field_value));
 					default:
 						THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
@@ -1047,33 +1047,33 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 {
 	class MsgPack result;
 	switch (field_type) {
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			result = static_cast<double>(floating(serialised_val));
 			break;
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			result = integer(serialised_val);
 			break;
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			result = positive(serialised_val);
 			break;
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			result = datetime(serialised_val);
 			break;
-		case FieldType::TIME:
+		case FieldType::time:
 			result = time(serialised_val);
 			break;
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			result = timedelta(serialised_val);
 			break;
-		case FieldType::BOOLEAN:
+		case FieldType::boolean:
 			result = boolean(serialised_val);
 			break;
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::string:
 			result = serialised_val;
 			break;
-		case FieldType::GEO: {
+		case FieldType::geo: {
 			const auto unser_geo = ranges_centroids(serialised_val);
 			auto& ranges = result["Ranges"];
 			int i = 0;
@@ -1087,7 +1087,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 			}
 			break;
 		}
-		case FieldType::UUID:
+		case FieldType::uuid:
 			result = uuid(serialised_val);
 			break;
 		default:
@@ -1317,6 +1317,7 @@ Unserialise::get_field_type(std::string_view str_type)
 		hhl("array"),
 		hhl("empty"),
 		hhl("float"),
+		hhl("floating"),
 		hhl("object"),
 		hhl("script"),
 		hhl("string"),
@@ -1333,51 +1334,52 @@ Unserialise::get_field_type(std::string_view str_type)
 		case _.fhhl(" "):
 		case _.fhhl("e"):
 		case _.fhhl("empty"):
-			return FieldType::EMPTY;
+			return FieldType::empty;
 		case _.fhhl("a"):
 		case _.fhhl("array"):
-			return FieldType::ARRAY;
+			return FieldType::array;
 		case _.fhhl("b"):
-			return FieldType::BOOLEAN;
+			return FieldType::boolean;
 		case _.fhhl("boolean"):
 		case _.fhhl("d"):
 		case _.fhhl("datetime"):
-			return FieldType::DATETIME;
+			return FieldType::datetime;
 		case _.fhhl("f"):
 		case _.fhhl("float"):
-			return FieldType::FLOAT;
+		case _.fhhl("floating"):
+			return FieldType::floating;
 		case _.fhhl("g"):
 		case _.fhhl("geospatial"):
-			return FieldType::GEO;
+			return FieldType::geo;
 		case _.fhhl("i"):
 		case _.fhhl("integer"):
-			return FieldType::INTEGER;
+			return FieldType::integer;
 		case _.fhhl("o"):
 		case _.fhhl("object"):
-			return FieldType::OBJECT;
+			return FieldType::object;
 		case _.fhhl("p"):
 		case _.fhhl("positive"):
-			return FieldType::POSITIVE;
+			return FieldType::positive;
 		case _.fhhl("s"):
 		case _.fhhl("string"):
-			return FieldType::STRING;
+			return FieldType::string;
 		case _.fhhl("term"):  // FIXME: remove legacy term
 		case _.fhhl("k"):
 		case _.fhhl("keyword"):
-			return FieldType::KEYWORD;
+			return FieldType::keyword;
 		case _.fhhl("u"):
-			return FieldType::UUID;
+			return FieldType::uuid;
 		case _.fhhl("x"):
 		case _.fhhl("script"):
-			return FieldType::SCRIPT;
+			return FieldType::script;
 		case _.fhhl("text"):
-			return FieldType::TEXT;
+			return FieldType::text;
 		case _.fhhl("time"):
-			return FieldType::TIME;
+			return FieldType::time;
 		case _.fhhl("foreign"):
-			return FieldType::FOREIGN;
+			return FieldType::foreign;
 		case _.fhhl("timedelta"):
-			return FieldType::TIMEDELTA;
+			return FieldType::timedelta;
 		default:
 			THROW(SerialisationError, "Type: {} is an unsupported type", repr(str_type));
 	}

@@ -47,9 +47,9 @@
 #define L_GENERATE_TERMS L_NOTHING
 #endif
 
-const char ctype_date    = required_spc_t::get_ctype(FieldType::DATETIME);
-const char ctype_geo     = required_spc_t::get_ctype(FieldType::GEO);
-const char ctype_integer = required_spc_t::get_ctype(FieldType::INTEGER);
+const char ctype_date    = required_spc_t::get_ctype(FieldType::datetime);
+const char ctype_geo     = required_spc_t::get_ctype(FieldType::geo);
+const char ctype_integer = required_spc_t::get_ctype(FieldType::integer);
 
 
 template<typename T>
@@ -245,47 +245,47 @@ GenerateTerms::datetime(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto it = acc_prefix.begin();
 	for (const auto& acc : accuracy) {
 		switch (static_cast<UnitTime>(acc)) {
-			case UnitTime::MILLENNIUM: {
+			case UnitTime::millennium: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::CENTURY: {
+			case UnitTime::century: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::DECADE: {
+			case UnitTime::decade: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::YEAR: {
+			case UnitTime::year: {
 				Datetime::tm_t _tm(tm.year);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::MONTH: {
+			case UnitTime::month: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::DAY: {
+			case UnitTime::day: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::HOUR: {
+			case UnitTime::hour: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::MINUTE: {
+			case UnitTime::minute: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
 			}
-			case UnitTime::SECOND: {
+			case UnitTime::second: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				doc.add_term(prefixed(Serialise::timestamp(Datetime::timegm(_tm)), *it, ctype_date));
 				break;
@@ -380,63 +380,63 @@ GenerateTerms::datetime(Xapian::Document& doc, const std::vector<uint64_t>& accu
 	auto itg = acc_global_prefix.begin();
 	for (const auto& acc : accuracy) {
 		switch (static_cast<UnitTime>(acc)) {
-			case UnitTime::MILLENNIUM: {
+			case UnitTime::millennium: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 1000));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::CENTURY: {
+			case UnitTime::century: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 100));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::DECADE: {
+			case UnitTime::decade: {
 				Datetime::tm_t _tm(GenerateTerms::year(tm.year, 10));
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::YEAR: {
+			case UnitTime::year: {
 				Datetime::tm_t _tm(tm.year);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::MONTH: {
+			case UnitTime::month: {
 				Datetime::tm_t _tm(tm.year, tm.mon);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::DAY: {
+			case UnitTime::day: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::HOUR: {
+			case UnitTime::hour: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::MINUTE: {
+			case UnitTime::minute: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
 				doc.add_term(prefixed(term_v, *itg, ctype_date));
 				break;
 			}
-			case UnitTime::SECOND: {
+			case UnitTime::second: {
 				Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 				auto term_v = Serialise::timestamp(Datetime::timegm(_tm));
 				doc.add_term(prefixed(term_v, *it, ctype_date));
@@ -510,24 +510,24 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 	// Find the accuracy needed.
 	if (diff != 0u) {
 		if (diff >= 1000) {
-			acc = toUType(UnitTime::MILLENNIUM);
+			acc = toUType(UnitTime::millennium);
 		} else if (diff >= 100) {
-			acc = toUType(UnitTime::CENTURY);
+			acc = toUType(UnitTime::century);
 		} else if (diff >= 10) {
-			acc = toUType(UnitTime::DECADE);
+			acc = toUType(UnitTime::decade);
 		} else {
-			acc = toUType(UnitTime::YEAR);
+			acc = toUType(UnitTime::year);
 		}
 	} else if (tm_e.mon != tm_s.mon) {
-		acc = toUType(UnitTime::MONTH);
+		acc = toUType(UnitTime::month);
 	} else if (tm_e.day != tm_s.day) {
-		acc = toUType(UnitTime::DAY);
+		acc = toUType(UnitTime::day);
 	} else if (tm_e.hour != tm_s.hour) {
-		acc = toUType(UnitTime::HOUR);
+		acc = toUType(UnitTime::hour);
 	} else if (tm_e.min != tm_s.min) {
-		acc = toUType(UnitTime::MINUTE);
+		acc = toUType(UnitTime::minute);
 	} else {
-		acc = toUType(UnitTime::SECOND);
+		acc = toUType(UnitTime::second);
 	}
 
 	// Find the upper or equal accuracy.
@@ -544,31 +544,31 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 		auto c_tm_s = tm_s;
 		auto c_tm_e = tm_e;
 		switch (static_cast<UnitTime>(accuracy[pos])) {
-			case UnitTime::MILLENNIUM:
+			case UnitTime::millennium:
 				query_upper = millennium(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::CENTURY:
+			case UnitTime::century:
 				query_upper = century(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::DECADE:
+			case UnitTime::decade:
 				query_upper = decade(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::YEAR:
+			case UnitTime::year:
 				query_upper = year(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::MONTH:
+			case UnitTime::month:
 				query_upper = month(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::DAY:
+			case UnitTime::day:
 				query_upper = day(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::HOUR:
+			case UnitTime::hour:
 				query_upper = hour(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::MINUTE:
+			case UnitTime::minute:
 				query_upper = minute(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::SECOND:
+			case UnitTime::second:
 				query_upper = second(c_tm_s, c_tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::INVALID:
@@ -579,31 +579,31 @@ GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>&
 	// If there is the needed accuracy.
 	if (pos > 0 && acc == accuracy[--pos]) {
 		switch (static_cast<UnitTime>(accuracy[pos])) {
-			case UnitTime::MILLENNIUM:
+			case UnitTime::millennium:
 				query_needed = millennium(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::CENTURY:
+			case UnitTime::century:
 				query_needed = century(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::DECADE:
+			case UnitTime::decade:
 				query_needed = decade(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::YEAR:
+			case UnitTime::year:
 				query_needed = year(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::MONTH:
+			case UnitTime::month:
 				query_needed = month(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::DAY:
+			case UnitTime::day:
 				query_needed = day(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::HOUR:
+			case UnitTime::hour:
 				query_needed = hour(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::MINUTE:
+			case UnitTime::minute:
 				query_needed = minute(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
-			case UnitTime::SECOND:
+			case UnitTime::second:
 				query_needed = second(tm_s, tm_e, acc_prefix[pos], wqf);
 				break;
 			case UnitTime::INVALID:

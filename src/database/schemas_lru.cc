@@ -595,7 +595,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		if (it != o.end()) {
 			auto &type = it.value();
 			auto sep_types = required_spc_t::get_types(type.str_view());
-			sep_types[SPC_FOREIGN_TYPE] = FieldType::EMPTY;
+			sep_types[SPC_FOREIGN_TYPE] = FieldType::empty;
 			type = required_spc_t::get_str_type(sep_types);
 		}
 		o[RESERVED_RECURSE] = false;

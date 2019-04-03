@@ -81,37 +81,37 @@ MsgPack
 Cast::cast(FieldType type, const MsgPack& obj)
 {
 	switch (type) {
-		case FieldType::INTEGER:
+		case FieldType::integer:
 			return integer(obj);
-		case FieldType::POSITIVE:
+		case FieldType::positive:
 			return positive(obj);
-		case FieldType::FLOAT:
+		case FieldType::floating:
 			return static_cast<double>(floating(obj));
-		case FieldType::BOOLEAN:
+		case FieldType::boolean:
 			return boolean(obj);
-		case FieldType::KEYWORD:
-		case FieldType::TEXT:
-		case FieldType::STRING:
+		case FieldType::keyword:
+		case FieldType::text:
+		case FieldType::string:
 			return string(obj);
-		case FieldType::UUID:
+		case FieldType::uuid:
 			return uuid(obj);
-		case FieldType::DATETIME:
+		case FieldType::datetime:
 			return datetime(obj);
-		case FieldType::TIME:
+		case FieldType::time:
 			return time(obj);
-		case FieldType::TIMEDELTA:
+		case FieldType::timedelta:
 			return timedelta(obj);
-		case FieldType::SCRIPT:
+		case FieldType::script:
 			if (obj.is_map()) {
 				return obj;
 			}
 			THROW(CastError, "Type {} cannot be cast to script", NAMEOF_ENUM(obj.get_type()));
-		case FieldType::GEO:
+		case FieldType::geo:
 			if (obj.is_map() || obj.is_string()) {
 				return obj;
 			}
 			THROW(CastError, "Type {} cannot be cast to geo", NAMEOF_ENUM(obj.get_type()));
-		case FieldType::EMPTY:
+		case FieldType::empty:
 			if (obj.is_string()) {
 				{
 					// Try like INTEGER.
@@ -386,30 +386,30 @@ Cast::get_field_type(std::string_view cast_word)
 		THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
 	switch (get_hash_type(cast_word)) {
-		case HashType::INTEGER:           return FieldType::INTEGER;
-		case HashType::POSITIVE:          return FieldType::POSITIVE;
-		case HashType::FLOAT:             return FieldType::FLOAT;
-		case HashType::BOOLEAN:           return FieldType::BOOLEAN;
-		case HashType::KEYWORD:           return FieldType::KEYWORD;
-		case HashType::TEXT:              return FieldType::TEXT;
-		case HashType::STRING:            return FieldType::STRING;
-		case HashType::UUID:              return FieldType::UUID;
-		case HashType::DATETIME:          return FieldType::DATETIME;
-		case HashType::TIME:              return FieldType::TIME;
-		case HashType::TIMEDELTA:         return FieldType::TIMEDELTA;
-		case HashType::EWKT:              return FieldType::GEO;
-		case HashType::POINT:             return FieldType::GEO;
-		case HashType::CIRCLE:            return FieldType::GEO;
-		case HashType::CONVEX:            return FieldType::GEO;
-		case HashType::POLYGON:           return FieldType::GEO;
-		case HashType::CHULL:             return FieldType::GEO;
-		case HashType::MULTIPOINT:        return FieldType::GEO;
-		case HashType::MULTICIRCLE:       return FieldType::GEO;
-		case HashType::MULTIPOLYGON:      return FieldType::GEO;
-		case HashType::MULTICHULL:        return FieldType::GEO;
-		case HashType::GEO_COLLECTION:    return FieldType::GEO;
-		case HashType::GEO_INTERSECTION:  return FieldType::GEO;
-		case HashType::CHAI:              return FieldType::SCRIPT;
+		case HashType::INTEGER:           return FieldType::integer;
+		case HashType::POSITIVE:          return FieldType::positive;
+		case HashType::FLOAT:             return FieldType::floating;
+		case HashType::BOOLEAN:           return FieldType::boolean;
+		case HashType::KEYWORD:           return FieldType::keyword;
+		case HashType::TEXT:              return FieldType::text;
+		case HashType::STRING:            return FieldType::string;
+		case HashType::UUID:              return FieldType::uuid;
+		case HashType::DATETIME:          return FieldType::datetime;
+		case HashType::TIME:              return FieldType::time;
+		case HashType::TIMEDELTA:         return FieldType::timedelta;
+		case HashType::EWKT:              return FieldType::geo;
+		case HashType::POINT:             return FieldType::geo;
+		case HashType::CIRCLE:            return FieldType::geo;
+		case HashType::CONVEX:            return FieldType::geo;
+		case HashType::POLYGON:           return FieldType::geo;
+		case HashType::CHULL:             return FieldType::geo;
+		case HashType::MULTIPOINT:        return FieldType::geo;
+		case HashType::MULTICIRCLE:       return FieldType::geo;
+		case HashType::MULTIPOLYGON:      return FieldType::geo;
+		case HashType::MULTICHULL:        return FieldType::geo;
+		case HashType::GEO_COLLECTION:    return FieldType::geo;
+		case HashType::GEO_INTERSECTION:  return FieldType::geo;
+		case HashType::CHAI:              return FieldType::script;
 		default:
 			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}

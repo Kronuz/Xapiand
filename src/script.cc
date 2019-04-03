@@ -36,7 +36,7 @@
 
 Script::Script(const MsgPack& _obj)
 	: type(Type::EMPTY),
-	  _sep_types({ { FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY } })
+	  _sep_types({ { FieldType::empty, FieldType::empty, FieldType::empty, FieldType::empty } })
 {
 	switch (_obj.get_type()) {
 		case MsgPack::Type::STR: {
@@ -96,7 +96,7 @@ Script::Script(const MsgPack& _obj)
 						endpoint = val.str_view();
 						break;
 					default:
-						if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+						if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_ENDPOINT, RESERVED_PARAMS);
 						} else {
 							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_CHAI, RESERVED_PARAMS);
@@ -164,12 +164,12 @@ Script::process_value(const MsgPack& _value)
 const std::array<FieldType, SPC_TOTAL_TYPES>&
 Script::get_types(bool strict) const
 {
-	if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+	if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		if (!body.empty()) {
-			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::FOREIGN), RESERVED_BODY);
+			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::foreign), RESERVED_BODY);
 		}
 		if (!name.empty()) {
-			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::FOREIGN), RESERVED_NAME);
+			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::foreign), RESERVED_NAME);
 		}
 		if (!value.empty() && !endpoint.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
@@ -178,12 +178,12 @@ Script::get_types(bool strict) const
 		if (strict) {
 			THROW(MissingTypeError, "Type of field '{}' is missing", RESERVED_TYPE);
 		}
-		_sep_types[SPC_CONCRETE_TYPE] = FieldType::SCRIPT;
-		if (_sep_types[SPC_CONCRETE_TYPE] != FieldType::SCRIPT) {
-			THROW(ClientError, "Only type {} is allowed in '{}'", NAMEOF_ENUM(FieldType::SCRIPT), RESERVED_SCRIPT);
+		_sep_types[SPC_CONCRETE_TYPE] = FieldType::script;
+		if (_sep_types[SPC_CONCRETE_TYPE] != FieldType::script) {
+			THROW(ClientError, "Only type {} is allowed in '{}'", NAMEOF_ENUM(FieldType::script), RESERVED_SCRIPT);
 		}
 		if (!endpoint.empty()) {
-			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, NAMEOF_ENUM(FieldType::FOREIGN));
+			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, NAMEOF_ENUM(FieldType::foreign));
 		}
 		if (!value.empty() && !body.empty() && !name.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);
@@ -239,7 +239,7 @@ Script::process_script([[maybe_unused]] bool strict) const
 #ifdef XAPIAND_CHAISCRIPT
 	auto sep_types = get_types(strict);
 
-	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::FOREIGN) {
+	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		chaipp::Processor::compile(*this);
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },

@@ -810,7 +810,7 @@ DatabaseHandler::get_edecider(const similar_field_t& similar)
 	}
 	for (const auto& sim_field : similar.field) {
 		auto field_spc = schema->get_data_field(sim_field).first;
-		if (field_spc.get_type() != FieldType::EMPTY) {
+		if (field_spc.get_type() != FieldType::empty) {
 			prefixes.push_back(field_spc.prefix());
 		}
 	}
@@ -1404,12 +1404,12 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 	std::string unprefixed_term_id;
 	auto spc_id = schema->get_data_id();
 	auto id_type = spc_id.get_type();
-	if (id_type == FieldType::EMPTY) {
+	if (id_type == FieldType::empty) {
 		// Search like namespace.
 		const auto type_ser = Serialise::guess_serialise(document_id);
 		id_type = type_ser.first;
-		if (id_type == FieldType::TEXT || id_type == FieldType::STRING) {
-			id_type = FieldType::KEYWORD;
+		if (id_type == FieldType::text || id_type == FieldType::string) {
+			id_type = FieldType::keyword;
 		}
 		spc_id.set_type(id_type);
 		spc_id.flags.bool_term = true;

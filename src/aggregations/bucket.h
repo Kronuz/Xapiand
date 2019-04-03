@@ -728,16 +728,16 @@ public:
 		  shift_f64{0.0}
 	{
 		switch (_handler.get_type()) {
-			case FieldType::POSITIVE:
+			case FieldType::positive:
 				configure_u64();
 				break;
-			case FieldType::INTEGER:
+			case FieldType::integer:
 				configure_i64();
 				break;
-			case FieldType::FLOAT:
-			case FieldType::DATETIME:
-			case FieldType::TIME:
-			case FieldType::TIMEDELTA:
+			case FieldType::floating:
+			case FieldType::datetime:
+			case FieldType::time:
+			case FieldType::timedelta:
 				configure_f64();
 				break;
 			default:
@@ -986,16 +986,16 @@ public:
 		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_index)
 	{
 		switch (_handler.get_type()) {
-			case FieldType::POSITIVE:
+			case FieldType::positive:
 				configure_u64();
 				break;
-			case FieldType::INTEGER:
+			case FieldType::integer:
 				configure_i64();
 				break;
-			case FieldType::FLOAT:
-			case FieldType::DATETIME:
-			case FieldType::TIME:
-			case FieldType::TIMEDELTA:
+			case FieldType::floating:
+			case FieldType::datetime:
+			case FieldType::time:
+			case FieldType::timedelta:
 				configure_f64();
 				break;
 			default:

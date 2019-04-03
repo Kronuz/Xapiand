@@ -48,7 +48,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 	std::string ser_start, ser_end;
 	T value_s, value_e;
 	switch (field_spc.get_type()) {
-		case FieldType::FLOAT: {
+		case FieldType::floating: {
 			double val_s = start ? start->is_map() ? Cast::cast(*start).f64() : Cast::floating(*start) : min<double>(field_spc.accuracy);
 			double val_e = end ? end->is_map() ? Cast::cast(*end).f64() : Cast::floating(*end) : max<double>(field_spc.accuracy);
 
@@ -62,7 +62,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			value_e = val_e;
 			break;
 		}
-		case FieldType::INTEGER: {
+		case FieldType::integer: {
 			int64_t val_s = start ? start->is_map() ? Cast::cast(*start).i64() : Cast::integer(*start) : min<int64_t>(field_spc.accuracy);
 			int64_t val_e = end ? end->is_map() ? Cast::cast(*end).i64() : Cast::integer(*end) : max<int64_t>(field_spc.accuracy);
 
@@ -76,7 +76,7 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 			value_e = val_e;
 			break;
 		}
-		case FieldType::POSITIVE: {
+		case FieldType::positive: {
 			uint64_t val_s = start ? start->is_map() ? Cast::cast(*start).u64() : Cast::positive(*start) : min<uint64_t>(field_spc.accuracy);
 			uint64_t val_e = end ? end->is_map() ? Cast::cast(*end).u64() : Cast::positive(*end) : max<uint64_t>(field_spc.accuracy);
 
@@ -283,24 +283,24 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 		}
 
 		switch (field_spc.get_type()) {
-			case FieldType::INTEGER:
-			case FieldType::FLOAT:
+			case FieldType::integer:
+			case FieldType::floating:
 				return getNumericQuery<int64_t>(field_spc, start, end);
-			case FieldType::POSITIVE:
+			case FieldType::positive:
 				return getNumericQuery<uint64_t>(field_spc, start, end);
-			case FieldType::UUID:
-			case FieldType::BOOLEAN:
-			case FieldType::KEYWORD:
-			case FieldType::TEXT:
-			case FieldType::STRING:
+			case FieldType::uuid:
+			case FieldType::boolean:
+			case FieldType::keyword:
+			case FieldType::text:
+			case FieldType::string:
 				return getStringQuery(field_spc, start, end);
-			case FieldType::DATETIME:
+			case FieldType::datetime:
 				return getDateQuery(field_spc, start, end);
-			case FieldType::TIME:
+			case FieldType::time:
 				return getTimeQuery(field_spc, start, end);
-			case FieldType::TIMEDELTA:
+			case FieldType::timedelta:
 				return getTimedeltaQuery(field_spc, start, end);
-			case FieldType::GEO:
+			case FieldType::geo:
 				if (!start) {
 					return GeoSpatialRange::getQuery(field_spc, *end);
 				}
