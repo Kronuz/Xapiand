@@ -43,6 +43,7 @@
 #include "manager.h"                // for XapiandManager
 #include "metrics.h"                // for Metrics::metrics
 #include "msgpack.h"                // for MsgPack
+#include "nameof.hh"                // for NAMEOF_ENUM
 #include "opts.h"                   // for opts::*
 #include "repr.hh"                  // for repr
 #include "server/discovery.h"       // for db_updater
@@ -563,16 +564,15 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 
 	auto revision = unserialise_length(&p, p_end);
 	auto db_revision = _shard->db()->get_revision();
+	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
 	if (revision != db_revision) {
 		if (!unsafe) {
-			L_DEBUG("WAL revision mismatch for {}: expected {}, got {}", repr(base_path), db_revision, revision);
+			L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, NAMEOF_ENUM(type));
 			THROW(StorageCorruptVolume, "WAL revision mismatch!");
 		}
-		// L_WARNING("WAL revision mismatch for {}: expected {}, got {}", repr(base_path), db_revision, revision);
+		// L_WARNING("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, NAMEOF_ENUM(type));
 	}
-
-	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
 

@@ -57,39 +57,10 @@ enum class ReplicaState {
 };
 
 
-inline const std::string& StateNames(ReplicaState type) {
-	static const std::string _[] = {
-		"INIT_REPLICATION_CLIENT",
-		"INIT_REPLICATION_SERVER",
-		"REPLICATION_CLIENT",
-		"REPLICATION_SERVER",
-	};
-	auto idx = static_cast<size_t>(type);
-	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-		return _[idx];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
-
-
 enum class ReplicationMessageType {
 	MSG_GET_CHANGESETS,
 	MSG_MAX
 };
-
-
-inline const std::string& ReplicationMessageTypeNames(ReplicationMessageType type) {
-	static const std::string _[] = {
-		"MSG_GET_CHANGESETS",
-	};
-	auto idx = static_cast<size_t>(type);
-	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-		return _[idx];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
 
 
 enum class ReplicationReplyType {

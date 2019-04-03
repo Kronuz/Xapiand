@@ -70,6 +70,7 @@
 #include "metrics.h"                             // for Metrics::metrics
 #include "msgpack.h"                             // for MsgPack, object::object
 #include "namegen.h"                             // for name_generator
+#include "nameof.hh"                             // for NAMEOF_ENUM
 #include "net.hh"                                // for inet_ntop
 #include "package.h"                             // for Package
 #include "readable_revents.hh"                   // for readable_revents
@@ -1943,7 +1944,7 @@ std::string
 XapiandManager::__repr__() const
 {
 	return string::format("<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
-		StateNames(_state),
+		NAMEOF_ENUM(_state.load()),
 		use_count(),
 		is_runner() ? " (runner)" : " (worker)",
 		is_running_loop() ? " (running loop)" : " (stopped loop)",

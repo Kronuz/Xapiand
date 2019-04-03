@@ -38,6 +38,7 @@
 #include "length.h"                           // for serialise_length
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics
+#include "nameof.hh"                          // for NAMEOF_ENUM
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
@@ -149,9 +150,9 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 void
 RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& message)
 {
-	L_CALL("RemoteProtocolClient::send_message({}, <message>)", RemoteReplyTypeNames(type));
+	L_CALL("RemoteProtocolClient::send_message({}, <message>)", NAMEOF_ENUM(type));
 
-	L_BINARY_PROTO("<< send_message ({}): {}", RemoteReplyTypeNames(type), repr(message));
+	L_BINARY_PROTO("<< send_message ({}): {}", NAMEOF_ENUM(type), repr(message));
 
 	send_message(toUType(type), message);
 }
@@ -160,10 +161,10 @@ RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& mess
 void
 RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::remote_server({}, <message>)", RemoteMessageTypeNames(type));
+	L_CALL("RemoteProtocolClient::remote_server({}, <message>)", NAMEOF_ENUM(type));
 
-	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", RemoteMessageTypeNames(type));
-	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", RemoteMessageTypeNames(type));
+	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", NAMEOF_ENUM(type));
+	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", NAMEOF_ENUM(type));
 
 	try {
 		switch (type) {
@@ -1274,22 +1275,22 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		close();
 
 		if (received < 0) {
-			L_NOTICE("Remote Protocol {} connection closed unexpectedly {{sock:{}}}: {} ({}): {}", StateNames(state.load(std::memory_order_relaxed)), sock, error::name(errno), errno, error::description(errno));
+			L_NOTICE("Remote Protocol {} connection closed unexpectedly {{sock:{}}}: {} ({}): {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), sock, error::name(errno), errno, error::description(errno));
 			return received;
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There was still a request in progress", StateNames(state.load(std::memory_order_relaxed)));
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There was still a request in progress", NAMEOF_ENUM(state.load(std::memory_order_relaxed)));
 			return received;
 		}
 
 		if (!write_queue.empty()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There is still pending data", StateNames(state.load(std::memory_order_relaxed)));
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There is still pending data", NAMEOF_ENUM(state.load(std::memory_order_relaxed)));
 			return received;
 		}
 
 		if (pending_messages()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There are still pending messages", StateNames(state.load(std::memory_order_relaxed)));
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There are still pending messages", NAMEOF_ENUM(state.load(std::memory_order_relaxed)));
 			return received;
 		}
 
@@ -1306,7 +1307,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), StateNames(state));
+		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), NAMEOF_ENUM(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
 				char path[PATH_MAX];
@@ -1508,7 +1509,7 @@ RemoteProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] ({}): {}", RemoteMessageTypeNames(type), repr(message));
+					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] ({}): {}", NAMEOF_ENUM(type), repr(message));
 					remote_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -1571,15 +1572,15 @@ RemoteProtocolClient::__repr__() const
 			case State::INIT_REMOTE:
 			case State::REMOTE_SERVER:
 				return string::format("{}) ({}<->{}",
-					StateNames(st),
-					RemoteMessageTypeNames(static_cast<RemoteMessageType>(received)),
-					RemoteReplyTypeNames(static_cast<RemoteReplyType>(sent)));
+					NAMEOF_ENUM(st),
+					NAMEOF_ENUM(static_cast<RemoteMessageType>(received)),
+					NAMEOF_ENUM(static_cast<RemoteReplyType>(sent)));
 			default:
 				return "";
 		}
 	})();
 #else
-	auto& state_repr = StateNames(state.load(std::memory_order_relaxed));
+	auto& state_repr = NAMEOF_ENUM(state.load(std::memory_order_relaxed));
 #endif
 	return string::format("<RemoteProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,

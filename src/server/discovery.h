@@ -71,18 +71,6 @@ public:
 		RAFT_LEADER,
 	};
 
-	static const std::string& RoleNames(Role type) {
-		static const std::string _[] = {
-			"RAFT_FOLLOWER", "RAFT_CANDIDATE", "RAFT_LEADER",
-		};
-		auto idx = static_cast<size_t>(type);
-		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-			return _[idx];
-		}
-		static const std::string UNKNOWN = "UNKNOWN";
-		return UNKNOWN;
-	}
-
 	enum class Message {
 		CLUSTER_HELLO,                // New node saying hello
 		CLUSTER_WAVE,                 // Nodes telling the client they do agree with the new node's name
@@ -99,24 +87,6 @@ public:
 		DB_UPDATED,                   //
 		MAX,                          //
 	};
-
-	static const std::string& MessageNames(Message type) {
-		static const std::string _[] = {
-			"CLUSTER_HELLO", "CLUSTER_WAVE", "CLUSTER_SNEER",
-			"CLUSTER_ENTER", "CLUSTER_BYE",
-			"RAFT_HEARTBEAT", "RAFT_HEARTBEAT_RESPONSE",
-			"RAFT_APPEND_ENTRIES", "RAFT_APPEND_ENTRIES_RESPONSE",
-			"RAFT_REQUEST_VOTE", "RAFT_REQUEST_VOTE_RESPONSE",
-			"RAFT_ADD_COMMAND",
-			"DB_UPDATED",
-		};
-		auto idx = static_cast<size_t>(type);
-		if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-			return _[idx];
-		}
-		static const std::string UNKNOWN = "UNKNOWN";
-		return UNKNOWN;
-	}
 
 private:
 	ev::io io;

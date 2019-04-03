@@ -112,18 +112,6 @@ public:
 		RESET,
 	};
 
-	static const std::string& StateNames(State type) {
-		static const std::string _[] = {
-			"BAD", "READY", "SETUP", "JOINING", "WAITING_MORE", "WAITING", "RESET",
-		};
-		auto idx = static_cast<size_t>(type);
-		if (idx < sizeof(_) / sizeof(_[0])) {
-			return _[idx];
-		}
-		static const std::string UNKNOWN = "UNKNOWN";
-		return UNKNOWN;
-	}
-
 private:
 	static std::shared_ptr<XapiandManager> _manager;
 

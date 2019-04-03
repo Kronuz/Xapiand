@@ -89,20 +89,6 @@ enum class State {
 };
 
 
-inline const std::string& StateNames(State type) {
-	static const std::string _[] = {
-		"INIT_REMOTE",
-		"REMOTE_SERVER",
-	};
-	auto idx = static_cast<size_t>(type);
-	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-		return _[idx];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
-
-
 enum class RemoteMessageType {
 	MSG_ALLTERMS,               // All Terms
 	MSG_COLLFREQ,               // Get Collection Frequency
@@ -141,28 +127,6 @@ enum class RemoteMessageType {
 };
 
 
-inline const std::string& RemoteMessageTypeNames(RemoteMessageType type) {
-	static const std::string _[] = {
-		"MSG_ALLTERMS", "MSG_COLLFREQ", "MSG_DOCUMENT", "MSG_TERMEXISTS",
-		"MSG_TERMFREQ", "MSG_VALUESTATS", "MSG_KEEPALIVE", "MSG_DOCLENGTH",
-		"MSG_QUERY", "MSG_TERMLIST", "MSG_POSITIONLIST", "MSG_POSTLIST",
-		"MSG_REOPEN", "MSG_UPDATE", "MSG_ADDDOCUMENT", "MSG_CANCEL",
-		"MSG_DELETEDOCUMENTTERM", "MSG_COMMIT", "MSG_REPLACEDOCUMENT",
-		"MSG_REPLACEDOCUMENTTERM", "MSG_DELETEDOCUMENT", "MSG_WRITEACCESS",
-		"MSG_GETMETADATA", "MSG_SETMETADATA", "MSG_ADDSPELLING",
-		"MSG_REMOVESPELLING", "MSG_GETMSET", "MSG_SHUTDOWN",
-		"MSG_METADATAKEYLIST", "MSG_FREQS", "MSG_UNIQUETERMS",
-		"MSG_POSITIONLISTCOUNT", "MSG_READACCESS",
-	};
-	auto idx = static_cast<size_t>(type);
-	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-		return _[idx];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
-
-
 enum class RemoteReplyType {
 	REPLY_UPDATE,               // Updated database stats
 	REPLY_EXCEPTION,            // Exception
@@ -192,26 +156,6 @@ enum class RemoteReplyType {
 	REPLY_TERMLIST0,            // Header for get Termlist
 	REPLY_MAX
 };
-
-
-inline const std::string& RemoteReplyTypeNames(RemoteReplyType type) {
-	static const std::string _[] = {
-		"REPLY_UPDATE", "REPLY_EXCEPTION", "REPLY_DONE", "REPLY_ALLTERMS",
-		"REPLY_COLLFREQ", "REPLY_DOCDATA", "REPLY_TERMDOESNTEXIST",
-		"REPLY_TERMEXISTS", "REPLY_TERMFREQ", "REPLY_VALUESTATS", "REPLY_DOCLENGTH",
-		"REPLY_STATS", "REPLY_TERMLIST", "REPLY_POSITIONLIST", "REPLY_POSTLISTSTART",
-		"REPLY_POSTLISTITEM", "REPLY_VALUE", "REPLY_ADDDOCUMENT", "REPLY_RESULTS",
-		"REPLY_METADATA", "REPLY_METADATAKEYLIST", "REPLY_FREQS", "REPLY_UNIQUETERMS",
-		"REPLY_POSITIONLISTCOUNT", "REPLY_REMOVESPELLING",
-	};
-	auto idx = static_cast<size_t>(type);
-	if (idx >= 0 && idx < sizeof(_) / sizeof(_[0])) {
-		return _[idx];
-	}
-	static const std::string UNKNOWN = "UNKNOWN";
-	return UNKNOWN;
-}
-
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
