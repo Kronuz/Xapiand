@@ -143,7 +143,7 @@ Serialise::isUUID(std::string_view field_value) noexcept
 std::string
 Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::BOOLEAN:
 			return boolean(field_spc.get_type(), field_value.boolean());
 		case MsgPack::Type::POSITIVE_INTEGER:
@@ -157,7 +157,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
-			THROW(SerialisationError, "msgpack::type {} is not supported", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "msgpack::type {} is not supported", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -170,40 +170,40 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 		if (str_key.empty() || str_key[0] != reserved__) {
 			THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 		}
-		switch (Cast::getHash(str_key)) {
-			case Cast::Hash::INTEGER:
+		switch (Cast::get_hash_type(str_key)) {
+			case Cast::HashType::INTEGER:
 				return integer(field_spc.get_type(), Cast::integer(o.at(str_key)));
-			case Cast::Hash::POSITIVE:
+			case Cast::HashType::POSITIVE:
 				return positive(field_spc.get_type(), Cast::positive(o.at(str_key)));
-			case Cast::Hash::FLOAT:
+			case Cast::HashType::FLOAT:
 				return floating(field_spc.get_type(), Cast::floating(o.at(str_key)));
-			case Cast::Hash::BOOLEAN:
+			case Cast::HashType::BOOLEAN:
 				return boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
-			case Cast::Hash::KEYWORD:
-			case Cast::Hash::TEXT:
-			case Cast::Hash::STRING:
+			case Cast::HashType::KEYWORD:
+			case Cast::HashType::TEXT:
+			case Cast::HashType::STRING:
 				return string(field_spc, Cast::string(o.at(str_key)));
-			case Cast::Hash::UUID:
+			case Cast::HashType::UUID:
 				return string(field_spc, Cast::uuid(o.at(str_key)));
-			case Cast::Hash::DATETIME:
+			case Cast::HashType::DATETIME:
 				return datetime(field_spc, Cast::datetime(o.at(str_key)));
-			case Cast::Hash::TIME:
+			case Cast::HashType::TIME:
 				return time(field_spc, Cast::time(o.at(str_key)));
-			case Cast::Hash::TIMEDELTA:
+			case Cast::HashType::TIMEDELTA:
 				return timedelta(field_spc, Cast::timedelta(o.at(str_key)));
-			case Cast::Hash::EWKT:
+			case Cast::HashType::EWKT:
 				return string(field_spc, Cast::ewkt(o.at(str_key)));
-			case Cast::Hash::POINT:
-			case Cast::Hash::CIRCLE:
-			case Cast::Hash::CONVEX:
-			case Cast::Hash::POLYGON:
-			case Cast::Hash::CHULL:
-			case Cast::Hash::MULTIPOINT:
-			case Cast::Hash::MULTICIRCLE:
-			case Cast::Hash::MULTIPOLYGON:
-			case Cast::Hash::MULTICHULL:
-			case Cast::Hash::GEO_COLLECTION:
-			case Cast::Hash::GEO_INTERSECTION:
+			case Cast::HashType::POINT:
+			case Cast::HashType::CIRCLE:
+			case Cast::HashType::CONVEX:
+			case Cast::HashType::POLYGON:
+			case Cast::HashType::CHULL:
+			case Cast::HashType::MULTIPOINT:
+			case Cast::HashType::MULTICIRCLE:
+			case Cast::HashType::MULTIPOLYGON:
+			case Cast::HashType::MULTICHULL:
+			case Cast::HashType::GEO_COLLECTION:
+			case Cast::HashType::GEO_INTERSECTION:
 				return geospatial(field_spc.get_type(), o);
 			default:
 				THROW(SerialisationError, "Unknown cast type {}", repr(str_key));
@@ -311,7 +311,7 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 std::string
 Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -333,10 +333,10 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 				case FieldType::STRING:
 					return Datetime::iso8601(Datetime::DatetimeParser(field_value));
 				default:
-					THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.getType()));
+					THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.get_type()));
 			}
 		default:
-			THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -344,7 +344,7 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 std::string
 Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -354,7 +354,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {} is not a time", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Type: {} is not a time", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -362,7 +362,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 std::string
 Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return positive(field_spc.get_type(), field_value.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -372,7 +372,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {} is not a timedelta", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Type: {} is not a timedelta", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -503,7 +503,7 @@ Serialise::time(const class MsgPack& field_value)
 std::string
 Serialise::time(const class MsgPack& field_value, double& t_val)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			t_val = field_value.u64();
 			return time(t_val);
@@ -517,7 +517,7 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: {} is not time", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Type: {} is not time", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -550,7 +550,7 @@ Serialise::timedelta(const class MsgPack& field_value)
 std::string
 Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			t_val = field_value.u64();
 			return timedelta(t_val);
@@ -564,7 +564,7 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: {} is not timedelta", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Type: {} is not timedelta", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -866,7 +866,7 @@ Serialise::type(FieldType field_type)
 FieldType
 Serialise::guess_type(const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return FieldType::INTEGER;
 
@@ -947,41 +947,41 @@ Serialise::guess_type(const class MsgPack& field_value)
 				if (str_key.empty() || str_key[0] != reserved__) {
 					THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
-				switch (Cast::getHash(str_key)) {
-					case Cast::Hash::INTEGER:
+				switch (Cast::get_hash_type(str_key)) {
+					case Cast::HashType::INTEGER:
 						return FieldType::INTEGER;
-					case Cast::Hash::POSITIVE:
+					case Cast::HashType::POSITIVE:
 						return FieldType::POSITIVE;
-					case Cast::Hash::FLOAT:
+					case Cast::HashType::FLOAT:
 						return FieldType::FLOAT;
-					case Cast::Hash::BOOLEAN:
+					case Cast::HashType::BOOLEAN:
 						return FieldType::BOOLEAN;
-					case Cast::Hash::KEYWORD:
+					case Cast::HashType::KEYWORD:
 						return FieldType::KEYWORD;
-					case Cast::Hash::TEXT:
+					case Cast::HashType::TEXT:
 						return FieldType::TEXT;
-					case Cast::Hash::STRING:
+					case Cast::HashType::STRING:
 						return FieldType::STRING;
-					case Cast::Hash::UUID:
+					case Cast::HashType::UUID:
 						return FieldType::UUID;
-					case Cast::Hash::DATETIME:
+					case Cast::HashType::DATETIME:
 						return FieldType::DATETIME;
-					case Cast::Hash::TIME:
+					case Cast::HashType::TIME:
 						return FieldType::TIME;
-					case Cast::Hash::TIMEDELTA:
+					case Cast::HashType::TIMEDELTA:
 						return FieldType::TIMEDELTA;
-					case Cast::Hash::EWKT:
-					case Cast::Hash::POINT:
-					case Cast::Hash::CIRCLE:
-					case Cast::Hash::CONVEX:
-					case Cast::Hash::POLYGON:
-					case Cast::Hash::CHULL:
-					case Cast::Hash::MULTIPOINT:
-					case Cast::Hash::MULTICIRCLE:
-					case Cast::Hash::MULTIPOLYGON:
-					case Cast::Hash::MULTICHULL:
-					case Cast::Hash::GEO_COLLECTION:
-					case Cast::Hash::GEO_INTERSECTION:
+					case Cast::HashType::EWKT:
+					case Cast::HashType::POINT:
+					case Cast::HashType::CIRCLE:
+					case Cast::HashType::CONVEX:
+					case Cast::HashType::POLYGON:
+					case Cast::HashType::CHULL:
+					case Cast::HashType::MULTIPOINT:
+					case Cast::HashType::MULTICIRCLE:
+					case Cast::HashType::MULTIPOLYGON:
+					case Cast::HashType::MULTICHULL:
+					case Cast::HashType::GEO_COLLECTION:
+					case Cast::HashType::GEO_INTERSECTION:
 						return FieldType::GEO;
 					default:
 						THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
@@ -992,7 +992,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 		}
 
 		default:
-			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 
@@ -1000,7 +1000,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 std::pair<FieldType, std::string>
 Serialise::guess_serialise(const class MsgPack& field_value)
 {
-	switch (field_value.getType()) {
+	switch (field_value.get_type()) {
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			return std::make_pair(FieldType::INTEGER, integer(field_value.i64()));
 
@@ -1072,41 +1072,41 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 				if (str_key.empty() || str_key[0] != reserved__) {
 					THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
 				}
-				switch (Cast::getHash(str_key)) {
-					case Cast::Hash::INTEGER:
+				switch (Cast::get_hash_type(str_key)) {
+					case Cast::HashType::INTEGER:
 						return std::make_pair(FieldType::INTEGER, integer(Cast::integer(it.value())));
-					case Cast::Hash::POSITIVE:
+					case Cast::HashType::POSITIVE:
 						return std::make_pair(FieldType::POSITIVE, positive(Cast::positive(it.value())));
-					case Cast::Hash::FLOAT:
+					case Cast::HashType::FLOAT:
 						return std::make_pair(FieldType::FLOAT, floating(Cast::floating(it.value())));
-					case Cast::Hash::BOOLEAN:
+					case Cast::HashType::BOOLEAN:
 						return std::make_pair(FieldType::BOOLEAN, boolean(Cast::boolean(it.value())));
-					case Cast::Hash::KEYWORD:
+					case Cast::HashType::KEYWORD:
 						return std::make_pair(FieldType::KEYWORD, Cast::string(it.value()));
-					case Cast::Hash::TEXT:
+					case Cast::HashType::TEXT:
 						return std::make_pair(FieldType::TEXT, Cast::string(it.value()));
-					case Cast::Hash::STRING:
+					case Cast::HashType::STRING:
 						return std::make_pair(FieldType::STRING, Cast::string(it.value()));
-					case Cast::Hash::UUID:
+					case Cast::HashType::UUID:
 						return std::make_pair(FieldType::UUID, uuid(Cast::uuid(it.value())));
-					case Cast::Hash::DATETIME:
+					case Cast::HashType::DATETIME:
 						return std::make_pair(FieldType::DATETIME, datetime(Cast::datetime(it.value())));
-					case Cast::Hash::TIME:
+					case Cast::HashType::TIME:
 						return std::make_pair(FieldType::TIME, datetime(Cast::time(it.value())));
-					case Cast::Hash::TIMEDELTA:
+					case Cast::HashType::TIMEDELTA:
 						return std::make_pair(FieldType::TIMEDELTA, datetime(Cast::timedelta(it.value())));
-					case Cast::Hash::EWKT:
-					case Cast::Hash::POINT:
-					case Cast::Hash::CIRCLE:
-					case Cast::Hash::CONVEX:
-					case Cast::Hash::POLYGON:
-					case Cast::Hash::CHULL:
-					case Cast::Hash::MULTIPOINT:
-					case Cast::Hash::MULTICIRCLE:
-					case Cast::Hash::MULTIPOLYGON:
-					case Cast::Hash::MULTICHULL:
-					case Cast::Hash::GEO_COLLECTION:
-					case Cast::Hash::GEO_INTERSECTION:
+					case Cast::HashType::EWKT:
+					case Cast::HashType::POINT:
+					case Cast::HashType::CIRCLE:
+					case Cast::HashType::CONVEX:
+					case Cast::HashType::POLYGON:
+					case Cast::HashType::CHULL:
+					case Cast::HashType::MULTIPOINT:
+					case Cast::HashType::MULTICIRCLE:
+					case Cast::HashType::MULTIPOLYGON:
+					case Cast::HashType::MULTICHULL:
+					case Cast::HashType::GEO_COLLECTION:
+					case Cast::HashType::GEO_INTERSECTION:
 						return std::make_pair(FieldType::GEO, geospatial(field_value));
 					default:
 						THROW(SerialisationError, "Unknown cast type: {}", repr(str_key));
@@ -1117,7 +1117,7 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 		}
 
 		default:
-			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.getType()));
+			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.get_type()));
 	}
 }
 

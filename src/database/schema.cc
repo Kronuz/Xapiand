@@ -3024,7 +3024,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			mut_object = db_handler.call_script(object, term_id, *specification.script, data);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
-					THROW(ClientError, "Script must return an object, it returned {}", NAMEOF_ENUM(mut_object->getType()));
+					THROW(ClientError, "Script must return an object, it returned {}", NAMEOF_ENUM(mut_object->get_type()));
 				}
 				// Rebuild fields with new values.
 				fields.clear();
@@ -3396,7 +3396,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		return;
 	}
 
-	switch (object.getType()) {
+	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
@@ -3486,7 +3486,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 	auto spc_start = specification;
 	size_t pos = 0;
 	for (const auto& item : array) {
-		switch (item.getType()) {
+		switch (item.get_type()) {
 			case MsgPack::Type::MAP: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
@@ -3602,7 +3602,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 {
 	L_CALL("Schema::index_item_value(<doc>, {}, {})", repr(data.to_string()), repr(item_value.to_string()));
 
-	switch (item_value.getType()) {
+	switch (item_value.get_type()) {
 		case MsgPack::Type::ARRAY: {
 			bool valid = false;
 			for (const auto& item : item_value) {
@@ -4005,7 +4005,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		return;
 	}
 
-	switch (object.getType()) {
+	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
@@ -4053,7 +4053,7 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, st
 	auto spc_start = specification;
 	size_t pos = 0;
 	for (const auto& item : array) {
-		switch (item.getType()) {
+		switch (item.get_type()) {
 			case MsgPack::Type::MAP: {
 				auto properties = &*parent_properties;
 				FieldVector fields;
@@ -4446,7 +4446,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std
 		return;
 	}
 
-	switch (object.getType()) {
+	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
 			auto spc_start = specification;
 			auto properties = &*mut_parent_properties;
@@ -4495,7 +4495,7 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, std::
 	auto spc_start = specification;
 	size_t pos = 0;
 	for (const auto& item : array) {
-		switch (item.getType()) {
+		switch (item.get_type()) {
 			case MsgPack::Type::MAP: {
 				auto properties = &*mut_parent_properties;
 				FieldVector fields;
@@ -5241,7 +5241,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 {
 	L_CALL("Schema::guess_field_type({})", repr(item_doc.to_string()));
 
-	switch (item_doc.getType()) {
+	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::POSITIVE;
@@ -5309,7 +5309,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			if (item_doc.size() == 1) {
 				auto item = item_doc.begin();
 				if (item->is_string()) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = Cast::getType(item->str());
+					specification.sep_types[SPC_CONCRETE_TYPE] = Cast::get_field_type(item->str());
 					return;
 				}
 			}
@@ -5336,7 +5336,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 		// Add value to data.
 		auto& data_value = data[RESERVED_VALUE];
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
-			switch (data_value.getType()) {
+			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = normalize_uuid(value);
 					break;
@@ -5348,7 +5348,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 					break;
 			}
 		} else {
-			switch (data_value.getType()) {
+			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = value;
 					break;
@@ -5378,7 +5378,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 			// Add value to data.
 			auto& data_value = data[RESERVED_VALUE];
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::UUID) {
-				switch (data_value.getType()) {
+				switch (data_value.get_type()) {
 					case MsgPack::Type::UNDEFINED:
 						data_value = MsgPack::ARRAY();
 						for (const auto& value : values) {
@@ -5398,7 +5398,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						break;
 				}
 			} else {
-				switch (data_value.getType()) {
+				switch (data_value.get_type()) {
 					case MsgPack::Type::UNDEFINED:
 						data_value = values;
 						break;

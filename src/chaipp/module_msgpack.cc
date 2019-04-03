@@ -305,7 +305,7 @@ Module::msgpack(chaiscript::Module& m)
 			{ chaiscript::fun(&MsgPack::is_array),      "is_array"      },
 			{ chaiscript::fun(&MsgPack::is_string),     "is_string"     },
 
-			{ chaiscript::fun(&MsgPack::getType),       "getType"       },
+			{ chaiscript::fun(&MsgPack::get_type),      "get_type"      },
 			{ chaiscript::fun(&MsgPack::hash),          "hash"          },
 
 			{ chaiscript::fun(&MsgPack::operator==),     "=="           },

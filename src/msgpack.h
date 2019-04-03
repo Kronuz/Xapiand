@@ -388,7 +388,7 @@ public:
 	bool is_array() const noexcept;
 	bool is_string() const noexcept;
 
-	MsgPack::Type getType() const noexcept;
+	MsgPack::Type get_type() const noexcept;
 
 	bool operator==(const MsgPack& other) const;
 	bool operator!=(const MsgPack& other) const;
@@ -473,13 +473,13 @@ class MsgPack::Iterator : public std::iterator<std::input_iterator_tag, MsgPack>
 		: _mobj(o),
 		  _off(off)
 	{
-		switch (_mobj->_const_body->getType()) {
+		switch (_mobj->_const_body->get_type()) {
 			case MsgPack::Type::MAP:
 			case MsgPack::Type::ARRAY:
 			case MsgPack::Type::UNDEFINED:
 				return;
 			default:
-				THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_mobj->_const_body->getType()));
+				THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_mobj->_const_body->get_type()));
 		}
 	}
 
@@ -539,7 +539,7 @@ public:
 	}
 
 	T& operator*() {
-		if (_mobj->_const_body->getType() == MsgPack::Type::MAP) {
+		if (_mobj->_const_body->get_type() == MsgPack::Type::MAP) {
 			return _mobj->at(_off)._body->_key;
 		} else {
 			return _mobj->at(_off);
@@ -551,7 +551,7 @@ public:
 	}
 
 	T& operator*() const {
-		if (_mobj->_const_body->getType() == MsgPack::Type::MAP) {
+		if (_mobj->_const_body->get_type() == MsgPack::Type::MAP) {
 			return _mobj->at(_off)._const_body->_key;
 		} else {
 			return _mobj->at(_off);
@@ -681,7 +681,7 @@ struct MsgPack::Body {
 		}
 	}
 
-	Type getType() const noexcept {
+	Type get_type() const noexcept {
 		return _obj->type == msgpack::type::EXT ? (Type)(_obj->via.ext.type() | MSGPACK_EXT_BEGIN) : (Type)_obj->type;
 	}
 };
@@ -1013,7 +1013,7 @@ inline void MsgPack::_initialize() {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::MAP:
 			_init_map(0);
 			break;
@@ -1034,7 +1034,7 @@ inline void MsgPack::_deinitialize() {
 	}
 	_body->_initialized = false;
 
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::MAP:
 			_body->map.clear();
 			break;
@@ -1162,7 +1162,7 @@ inline void MsgPack::_init_type(const bool&) {
 
 
 inline void MsgPack::_init_type(const MsgPack& val) {
-	switch (val.getType()) {
+	switch (val.get_type()) {
 		case Type::NIL:
 			_init_nil();
 			break;
@@ -1276,7 +1276,7 @@ inline void MsgPack::_reserve_array(size_t rsize) {
 
 
 inline MsgPack::iterator MsgPack::_find(std::string_view key) {
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			return end();
 		case Type::MAP: {
@@ -1287,13 +1287,13 @@ inline MsgPack::iterator MsgPack::_find(std::string_view key) {
 			return MsgPack::iterator(this, it->second.second._body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
 
 inline MsgPack::const_iterator MsgPack::_find(std::string_view key) const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::UNDEFINED:
 			return cend();
 		case Type::MAP: {
@@ -1304,13 +1304,13 @@ inline MsgPack::const_iterator MsgPack::_find(std::string_view key) const {
 			return MsgPack::const_iterator(this, it->second.second._const_body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
 
 inline MsgPack::iterator MsgPack::_find(size_t pos) {
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			return end();
 		case Type::MAP: {
@@ -1334,13 +1334,13 @@ inline MsgPack::iterator MsgPack::_find(size_t pos) {
 			return MsgPack::iterator(this, it->_body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
 
 inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::UNDEFINED:
 			return cend();
 		case Type::MAP: {
@@ -1364,7 +1364,7 @@ inline MsgPack::const_iterator MsgPack::_find(size_t pos) const {
 			return MsgPack::const_iterator(this, it->_const_body->_pos);
 		}
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
@@ -1378,18 +1378,18 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(M&& o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::STR:
 			return _erase(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 			}
 			return _erase(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return _erase(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1402,7 +1402,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
 		case Type::MAP: {
@@ -1429,7 +1429,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(std::string_view key
 			return std::make_pair(1, MsgPack::iterator(this, next->second.second._body->_pos));
 		}
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1442,7 +1442,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			return std::make_pair(0, end());
 		case Type::MAP: {
@@ -1478,7 +1478,7 @@ inline std::pair<size_t, MsgPack::iterator> MsgPack::_erase(size_t pos) {
 			return std::make_pair(1, MsgPack::iterator(this, next->_body->_pos));
 		}
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1493,7 +1493,7 @@ inline void MsgPack::_clear() {
 	}
 	_body->_initialized = false;
 
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::MAP:
 			_body->_obj->via.map.size = 0;
 			_body->map.clear();
@@ -1531,7 +1531,7 @@ inline void MsgPack::_append(std::string_view val) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			_init_str();
 			[[fallthrough]];
@@ -1546,7 +1546,7 @@ inline void MsgPack::_append(std::string_view val) {
 			break;
 		}
 		default:
-			THROW(msgpack::type_error, "Cannot append STR to {}", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "Cannot append STR to {}", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1560,18 +1560,18 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(M&& o, T&& val, bool overwrite) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::STR:
 			return _put(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 			}
 			return _put(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
 		case Type::POSITIVE_INTEGER:
 			return _put(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1585,7 +1585,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			_init_map();
 			[[fallthrough]];
@@ -1613,9 +1613,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(std::string_view key, T&& val, bo
 			}
 		}
 		case Type::ARRAY:
-			THROW(msgpack::type_error, "{} cannot have string keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} cannot have string keys", NAMEOF_ENUM(_body->get_type()));
 		default:
-			THROW(msgpack::type_error, "{} is not a container that can have keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a container that can have keys", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1629,7 +1629,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			_init_array();
 			[[fallthrough]];
@@ -1657,9 +1657,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_put(size_t pos, T&& val, bool overwri
 				return std::make_pair(&_body->at(pos), false);
 			}
 		case Type::MAP:
-			THROW(msgpack::type_error, "{} cannot have numeric keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} cannot have numeric keys", NAMEOF_ENUM(_body->get_type()));
 		default:
-			THROW(msgpack::type_error, "{} is not a container that can have keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a container that can have keys", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1673,18 +1673,18 @@ inline std::pair<MsgPack*, bool> MsgPack::_emplace(M&& o, T&& val, bool overwrit
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::STR:
 			return _put(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size), std::forward<T>(val), overwrite);
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 			}
 			return _insert(static_cast<size_t>(o._body->_obj->via.i64), std::forward<T>(val), overwrite);
 		case Type::POSITIVE_INTEGER:
 			return _insert(static_cast<size_t>(o._body->_obj->via.u64), std::forward<T>(val), overwrite);
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1698,7 +1698,7 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool over
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			_init_array();
 			[[fallthrough]];
@@ -1732,9 +1732,9 @@ inline std::pair<MsgPack*, bool> MsgPack::_insert(size_t pos, T&& val, bool over
 			}
 			break;
 		case Type::MAP:
-			THROW(msgpack::type_error, "{} cannot have numeric keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} cannot have numeric keys", NAMEOF_ENUM(_body->get_type()));
 		default:
-			THROW(msgpack::type_error, "{} is not a container that can have keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a container that can have keys", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -1748,7 +1748,7 @@ inline void MsgPack::_fill(bool recursive, bool lock) {
 	}
 	_body->_lock = lock;
 	if (recursive) {
-		switch (_body->getType()) {
+		switch (_body->get_type()) {
 			case Type::MAP:
 				for (auto& item : _body->map) {
 					item.second.second._fill(recursive, lock);
@@ -1773,36 +1773,36 @@ inline void MsgPack::_fill(bool recursive, bool lock) const {
 
 template <typename M, typename>
 inline MsgPack::iterator MsgPack::_find(M&& o) {
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::STR:
 			return _find(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 			}
 			return _find(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return _find(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
 
 template <typename M, typename>
 inline MsgPack::const_iterator MsgPack::_find(M&& o) const {
-	switch (o._const_body->getType()) {
+	switch (o._const_body->get_type()) {
 		case Type::STR:
 			return _find(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->getType()), NAMEOF_ENUM(_const_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->get_type()), NAMEOF_ENUM(_const_body->get_type()));
 			}
 			return _find(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return _find(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->getType()), NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->get_type()), NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
@@ -1931,11 +1931,11 @@ inline void MsgPack::update(M&& o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::UNDEFINED:
 			break;
 		case Type::MAP:
-			if (_body->getType() == Type::UNDEFINED) {
+			if (_body->get_type() == Type::UNDEFINED) {
 				_init_map();
 			}
 			for (const auto& key : o) {
@@ -1953,7 +1953,7 @@ inline void MsgPack::update(M&& o) {
 			}
 			break;
 		default:
-			THROW(msgpack::type_error, "Cannot update {} with {}", NAMEOF_ENUM(_body->getType()), NAMEOF_ENUM(o._body->getType()));
+			THROW(msgpack::type_error, "Cannot update {} with {}", NAMEOF_ENUM(_body->get_type()), NAMEOF_ENUM(o._body->get_type()));
 	}
 }
 
@@ -2015,7 +2015,7 @@ inline MsgPack& MsgPack::add(size_t pos, T&& val) {
 template <typename T>
 inline MsgPack& MsgPack::append(T&& v) {
 	_fill(false, false);
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::STR:
 			_append(std::forward<T>(v));
 			return *this;
@@ -2030,18 +2030,18 @@ inline MsgPack& MsgPack::append(T&& v) {
 template <typename M, typename>
 inline MsgPack& MsgPack::get(M&& o) {
 	_fill(false, false);
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::STR:
 			return get(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 			}
 			return get(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return get(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -2049,18 +2049,18 @@ inline MsgPack& MsgPack::get(M&& o) {
 template <typename M, typename>
 inline const MsgPack& MsgPack::get(M&& o) const {
 	_fill(false, false);
-	switch (o._const_body->getType()) {
+	switch (o._const_body->get_type()) {
 		case Type::STR:
 			return get(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->getType()), NAMEOF_ENUM(_const_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->get_type()), NAMEOF_ENUM(_const_body->get_type()));
 			}
 			return get(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return get(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->getType()), NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->get_type()), NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
@@ -2104,18 +2104,18 @@ inline const MsgPack& MsgPack::get(size_t pos) const {
 template <typename M, typename>
 inline MsgPack& MsgPack::at(M&& o) {
 	_fill(false, false);
-	switch (o._body->getType()) {
+	switch (o._body->get_type()) {
 		case Type::STR:
 			return at(std::string_view(o._body->_obj->via.str.ptr, o._body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 			}
 			return at(static_cast<size_t>(o._body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return at(static_cast<size_t>(o._body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->getType()), NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._body->get_type()), NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -2123,54 +2123,54 @@ inline MsgPack& MsgPack::at(M&& o) {
 template <typename M, typename>
 inline const MsgPack& MsgPack::at(M&& o) const {
 	_fill(false, false);
-	switch (o._const_body->getType()) {
+	switch (o._const_body->get_type()) {
 		case Type::STR:
 			return at(std::string_view(o._const_body->_obj->via.str.ptr, o._const_body->_obj->via.str.size));
 		case Type::NEGATIVE_INTEGER:
 			if (o._const_body->_obj->via.i64 < 0) {
-				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->getType()), NAMEOF_ENUM(_const_body->getType()));
+				THROW(msgpack::type_error, "Negative value of {} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->get_type()), NAMEOF_ENUM(_const_body->get_type()));
 			}
 			return at(static_cast<size_t>(o._const_body->_obj->via.i64));
 		case Type::POSITIVE_INTEGER:
 			return at(static_cast<size_t>(o._const_body->_obj->via.u64));
 		default:
-			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->getType()), NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} is not a valid key type for {}", NAMEOF_ENUM(o._const_body->get_type()), NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
 
 inline MsgPack& MsgPack::at(std::string_view key) {
 	_fill(false, false);
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			return _body->at(key);
 		case Type::ARRAY:
-			THROW(msgpack::type_error, "{} cannot have string keys", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} cannot have string keys", NAMEOF_ENUM(_body->get_type()));
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
 inline const MsgPack& MsgPack::at(std::string_view key) const {
 	_fill(false, false);
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
 			return _const_body->at(key);
 		case Type::ARRAY:
-			THROW(msgpack::type_error, "{} cannot have string keys", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} cannot have string keys", NAMEOF_ENUM(_const_body->get_type()));
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
 
 inline MsgPack& MsgPack::at(size_t pos) {
 	_fill(false, false);
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
@@ -2181,14 +2181,14 @@ inline MsgPack& MsgPack::at(size_t pos) {
 		case Type::ARRAY:
 			return _body->at(pos);
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
 
 inline const MsgPack& MsgPack::at(size_t pos) const {
 	_fill(false, false);
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::UNDEFINED:
 			THROW(out_of_range, "undefined");
 		case Type::MAP:
@@ -2199,7 +2199,7 @@ inline const MsgPack& MsgPack::at(size_t pos) const {
 		case Type::ARRAY:
 			return _const_body->at(pos);
 		default:
-			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "{} is not iterable", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -2219,7 +2219,7 @@ template <typename T>
 inline MsgPack& MsgPack::path(const std::vector<T>& path) {
 	auto current = this;
 	for (const auto& s : path) {
-		switch (current->_const_body->getType()) {
+		switch (current->_const_body->get_type()) {
 			case Type::MAP: {
 				current = &current->at(s);
 				break;
@@ -2247,7 +2247,7 @@ template <typename T>
 inline const MsgPack& MsgPack::path(const std::vector<T>& path) const {
 	auto current = this;
 	for (const auto& s : path) {
-		switch (current->getType()) {
+		switch (current->get_type()) {
 			case Type::MAP: {
 				current = &current->at(s);
 				break;
@@ -2452,7 +2452,7 @@ inline size_t MsgPack::count(T&& v) const {
 
 
 inline std::size_t MsgPack::hash() const {
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::MAP: {
 			_fill(false, false);
 			size_t pos = 0;
@@ -2547,7 +2547,7 @@ inline MsgPack::operator std::string() const {
 
 
 inline void MsgPack::reserve(size_t n) {
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::MAP:
 			return _reserve_map(n);
 		case Type::ARRAY:
@@ -2574,7 +2574,7 @@ inline bool MsgPack::empty() const noexcept {
 
 
 inline uint64_t MsgPack::u64() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NEGATIVE_INTEGER: {
 			auto val = _const_body->_obj->via.i64;
 			if (val < 0) {
@@ -2585,13 +2585,13 @@ inline uint64_t MsgPack::u64() const {
 		case Type::POSITIVE_INTEGER:
 			return _const_body->_obj->via.u64;
 		default:
-			THROW(msgpack::type_error, "Value of {} is not a valid POSITIVE_INTEGER", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "Value of {} is not a valid POSITIVE_INTEGER", NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
 
 inline int64_t MsgPack::i64() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
 		case Type::POSITIVE_INTEGER: {
@@ -2602,13 +2602,13 @@ inline int64_t MsgPack::i64() const {
 			return val;
 		}
 		default:
-			THROW(msgpack::type_error, "Value of {} is not a valid NEGATIVE_INTEGER", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "Value of {} is not a valid NEGATIVE_INTEGER", NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
 
 inline double MsgPack::f64() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 			return _const_body->_obj->via.i64;
 		case Type::POSITIVE_INTEGER:
@@ -2616,16 +2616,16 @@ inline double MsgPack::f64() const {
 		case Type::FLOAT:
 			return _const_body->_obj->via.f64;
 		default:
-			THROW(msgpack::type_error, "Value of {} is not a valid FLOAT", NAMEOF_ENUM(_const_body->getType()));
+			THROW(msgpack::type_error, "Value of {} is not a valid FLOAT", NAMEOF_ENUM(_const_body->get_type()));
 	}
 }
 
 
 inline std::string_view MsgPack::str_view() const {
-	if (_const_body->getType() == Type::STR) {
+	if (_const_body->get_type() == Type::STR) {
 		return std::string_view(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size);
 	}
-	THROW(msgpack::type_error, "Value of {} is not a valid STR", NAMEOF_ENUM(_const_body->getType()));
+	THROW(msgpack::type_error, "Value of {} is not a valid STR", NAMEOF_ENUM(_const_body->get_type()));
 }
 
 
@@ -2635,15 +2635,15 @@ inline std::string MsgPack::str() const {
 
 
 inline bool MsgPack::boolean() const {
-	if (_const_body->getType() == Type::BOOLEAN) {
+	if (_const_body->get_type() == Type::BOOLEAN) {
 		return _const_body->_obj->via.boolean;
 	}
-	THROW(msgpack::type_error, "Value of {} is not a valid BOOLEAN", NAMEOF_ENUM(_const_body->getType()));
+	THROW(msgpack::type_error, "Value of {} is not a valid BOOLEAN", NAMEOF_ENUM(_const_body->get_type()));
 }
 
 
 inline uint64_t MsgPack::as_u64() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NIL:
 			return 0;
 		case Type::BOOLEAN:
@@ -2665,7 +2665,7 @@ inline uint64_t MsgPack::as_u64() const {
 
 
 inline int64_t MsgPack::as_i64() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NIL:
 			return 0;
 		case Type::BOOLEAN:
@@ -2687,7 +2687,7 @@ inline int64_t MsgPack::as_i64() const {
 
 
 inline double MsgPack::as_f64() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NIL:
 			return 0;
 		case Type::BOOLEAN:
@@ -2709,7 +2709,7 @@ inline double MsgPack::as_f64() const {
 
 
 inline std::string MsgPack::as_str() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NIL:
 			return "<null>";
 		case Type::BOOLEAN:
@@ -2734,7 +2734,7 @@ inline std::string MsgPack::as_str() const {
 
 
 inline bool MsgPack::as_boolean() const {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::MAP:
 		case Type::ARRAY:
 		case Type::STR:
@@ -2763,22 +2763,22 @@ inline rapidjson::Document MsgPack::as_document() const {
 
 
 inline bool MsgPack::is_undefined() const noexcept {
-	return _const_body->getType() == Type::UNDEFINED;
+	return _const_body->get_type() == Type::UNDEFINED;
 }
 
 
 inline bool MsgPack::is_null() const noexcept {
-	return _const_body->getType() == Type::NIL;
+	return _const_body->get_type() == Type::NIL;
 }
 
 
 inline bool MsgPack::is_boolean() const noexcept {
-	return _const_body->getType() == Type::BOOLEAN;
+	return _const_body->get_type() == Type::BOOLEAN;
 }
 
 
 inline bool MsgPack::is_number() const noexcept {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 		case Type::POSITIVE_INTEGER:
 		case Type::FLOAT:
@@ -2790,7 +2790,7 @@ inline bool MsgPack::is_number() const noexcept {
 
 
 inline bool MsgPack::is_integer() const noexcept {
-	switch (_const_body->getType()) {
+	switch (_const_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 		case Type::POSITIVE_INTEGER:
 			return true;
@@ -2801,27 +2801,27 @@ inline bool MsgPack::is_integer() const noexcept {
 
 
 inline bool MsgPack::is_float() const noexcept {
-	return _const_body->getType() == Type::FLOAT;
+	return _const_body->get_type() == Type::FLOAT;
 }
 
 
 inline bool MsgPack::is_map() const noexcept {
-	return _const_body->getType() == Type::MAP;
+	return _const_body->get_type() == Type::MAP;
 }
 
 
 inline bool MsgPack::is_array() const noexcept {
-	return _const_body->getType() == Type::ARRAY;
+	return _const_body->get_type() == Type::ARRAY;
 }
 
 
 inline bool MsgPack::is_string() const noexcept {
-	return _const_body->getType() == Type::STR;
+	return _const_body->get_type() == Type::STR;
 }
 
 
-inline MsgPack::Type MsgPack::getType() const noexcept {
-	return _const_body->getType();
+inline MsgPack::Type MsgPack::get_type() const noexcept {
+	return _const_body->get_type();
 }
 
 
@@ -2873,10 +2873,10 @@ inline MsgPack& MsgPack::operator+=(T&& o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	if (_body->getType() == Type::UNDEFINED) {
+	if (_body->get_type() == Type::UNDEFINED) {
 		_init_type(o);
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 += static_cast<long long>(o);
 			return *this;
@@ -2890,7 +2890,7 @@ inline MsgPack& MsgPack::operator+=(T&& o) {
 			_append(std::to_string(o));
 			return *this;
 		default:
-			THROW(msgpack::type_error, "Cannot add to value of {}", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "Cannot add to value of {}", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -2906,15 +2906,15 @@ inline MsgPack& MsgPack::operator+=(std::string_view o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	if (_body->getType() == Type::UNDEFINED) {
+	if (_body->get_type() == Type::UNDEFINED) {
 		_init_type(o);
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::STR:
 			_append(o);
 			return *this;
 		default:
-			THROW(msgpack::type_error, "Cannot add to value of {}", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "Cannot add to value of {}", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -2947,10 +2947,10 @@ inline MsgPack& MsgPack::operator-=(T&& o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	if (_body->getType() == Type::UNDEFINED) {
+	if (_body->get_type() == Type::UNDEFINED) {
 		_init_type(o);
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 -= static_cast<long long>(o);
 			return *this;
@@ -2961,7 +2961,7 @@ inline MsgPack& MsgPack::operator-=(T&& o) {
 			_body->_obj->via.f64 -= static_cast<double>(o);
 			return *this;
 		default:
-			THROW(msgpack::type_error, "Cannot subtract from value of {}", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "Cannot subtract from value of {}", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -3000,10 +3000,10 @@ inline MsgPack& MsgPack::operator*=(T&& o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	if (_body->getType() == Type::UNDEFINED) {
+	if (_body->get_type() == Type::UNDEFINED) {
 		_init_type(o);
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 *= static_cast<long long>(o);
 			return *this;
@@ -3014,7 +3014,7 @@ inline MsgPack& MsgPack::operator*=(T&& o) {
 			_body->_obj->via.f64 *= static_cast<double>(o);
 			return *this;
 		default:
-			THROW(msgpack::type_error, "Cannot multiply by value of {}", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "Cannot multiply by value of {}", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 
@@ -3053,10 +3053,10 @@ inline MsgPack& MsgPack::operator/=(T&& o) {
 		ASSERT(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	if (_body->getType() == Type::UNDEFINED) {
+	if (_body->get_type() == Type::UNDEFINED) {
 		_init_type(o);
 	}
-	switch (_body->getType()) {
+	switch (_body->get_type()) {
 		case Type::NEGATIVE_INTEGER:
 			_body->_obj->via.i64 /= static_cast<long long>(o);
 			return *this;
@@ -3067,7 +3067,7 @@ inline MsgPack& MsgPack::operator/=(T&& o) {
 			_body->_obj->via.f64 /= static_cast<double>(o);
 			return *this;
 		default:
-			THROW(msgpack::type_error, "Cannot divide value of {}", NAMEOF_ENUM(_body->getType()));
+			THROW(msgpack::type_error, "Cannot divide value of {}", NAMEOF_ENUM(_body->get_type()));
 	}
 }
 

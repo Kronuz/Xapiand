@@ -163,7 +163,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 	Xapian::Query final_query;
 
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::MAP: {
 			if (is_leaf) {
 				auto query = get_value_query(path, obj, default_op, wqf, flags);
@@ -588,7 +588,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 {
 	L_CALL("QueryDSL::get_namespace_query(<field_spc>, {}, <default_op>, <wqf>, <flags>)", repr(obj.to_string()));
 
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
 			return Xapian::Query(field_spc.prefix());
 		case MsgPack::Type::STR: {
@@ -617,7 +617,7 @@ QueryDSL::get_regular_query(const required_spc_t& field_spc, const MsgPack& obj,
 {
 	L_CALL("QueryDSL::get_regular_query(<field_spc>, {}, <default_op>, <wqf>, <flags>)", repr(obj.to_string()));
 
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
 			return Xapian::Query(field_spc.prefix());
 		case MsgPack::Type::STR: {
@@ -754,19 +754,19 @@ QueryDSL::get_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapi
 		}
 		return MultipleValueRange::getQuery(field_spc, value);
 	}
-	switch (Cast::getHash(field_name)) {
-		case Cast::Hash::EWKT:
-		case Cast::Hash::POINT:
-		case Cast::Hash::CIRCLE:
-		case Cast::Hash::CONVEX:
-		case Cast::Hash::POLYGON:
-		case Cast::Hash::CHULL:
-		case Cast::Hash::MULTIPOINT:
-		case Cast::Hash::MULTICIRCLE:
-		case Cast::Hash::MULTIPOLYGON:
-		case Cast::Hash::MULTICHULL:
-		case Cast::Hash::GEO_COLLECTION:
-		case Cast::Hash::GEO_INTERSECTION:
+	switch (Cast::get_hash_type(field_name)) {
+		case Cast::HashType::EWKT:
+		case Cast::HashType::POINT:
+		case Cast::HashType::CIRCLE:
+		case Cast::HashType::CONVEX:
+		case Cast::HashType::POLYGON:
+		case Cast::HashType::CHULL:
+		case Cast::HashType::MULTIPOINT:
+		case Cast::HashType::MULTICIRCLE:
+		case Cast::HashType::MULTIPOLYGON:
+		case Cast::HashType::MULTICHULL:
+		case Cast::HashType::GEO_COLLECTION:
+		case Cast::HashType::GEO_INTERSECTION:
 			return GeoSpatialRange::getQuery(field_spc, obj);
 		default:
 			THROW(QueryDslError, "Invalid format '{}': {}", RESERVED_QUERYDSL_IN, repr(obj.to_string()));
@@ -1091,7 +1091,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 {
 	L_CALL("QueryDSL::get_sorter({})", repr(obj.to_string()));
 
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::MAP: {
 			const auto it_e = obj.end();
 			for (auto it = obj.begin(); it != it_e; ++it) {

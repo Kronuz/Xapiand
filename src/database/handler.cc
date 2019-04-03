@@ -152,7 +152,7 @@ inject_data(Data& data, const MsgPack& obj)
 	auto data_it = obj.find(RESERVED_DATA);
 	if (data_it != obj.end()) {
 		auto& _data = data_it.value();
-		switch (_data.getType()) {
+		switch (_data.get_type()) {
 			case MsgPack::Type::STR: {
 				auto blob = _data.str_view();
 				if (blob.size() > NON_STORED_SIZE_LIMIT) {
@@ -491,7 +491,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 	}
 
 	Data data;
-	switch (body.getType()) {
+	switch (body.get_type()) {
 		case MsgPack::Type::STR:
 			if (stored) {
 				data.update(ct_type, -1, 0, 0, body.str_view());
@@ -511,7 +511,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 			inject_data(data, body);
 			return prepare(document_id, document_ver, body, data);
 		default:
-			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.getType()));
+			THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.get_type()));
 	}
 }
 
@@ -550,7 +550,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 	while (true) {
 		try {
 			Data data;
-			switch (body.getType()) {
+			switch (body.get_type()) {
 				case MsgPack::Type::STR:
 					if (stored) {
 						data.update(ct_type, -1, 0, 0, body.str_view());
@@ -570,7 +570,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 					inject_data(data, body);
 					return index(document_id, document_ver, body, data, commit);
 				default:
-					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.getType()));
+					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.get_type()));
 			}
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
@@ -628,7 +628,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 DataType
 DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
-	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, NAMEOF_ENUM(body.getType()), commit, ct_type.first, ct_type.second);
+	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, NAMEOF_ENUM(body.get_type()), commit, ct_type.first, ct_type.second);
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "database is read-only");
@@ -651,7 +651,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 			auto obj = data.get_obj();
 
-			switch (body.getType()) {
+			switch (body.get_type()) {
 				case MsgPack::Type::STR:
 					if (stored) {
 						data.update(ct_type, -1, 0, 0, body.str_view());
@@ -686,7 +686,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						return index(document_id, document_ver, obj, data, commit);
 					}
 				default:
-					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.getType()));
+					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", NAMEOF_ENUM(body.get_type()));
 			}
 
 			return index(document_id, document_ver, obj, data, commit);
@@ -2026,7 +2026,7 @@ DocIndexer::operator()()
 					} else if (term_id == "QN\x80") {
 						// Set id inside serialized object:
 						auto& value = it_id.value();
-						switch (value.getType()) {
+						switch (value.get_type()) {
 							case MsgPack::Type::POSITIVE_INTEGER:
 								value = static_cast<uint64_t>(did);
 								break;
@@ -2108,7 +2108,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 	L_CALL("DocIndexer::_prepare(<obj>)");
 
 	if (!obj.is_map()) {
-		L_ERR("Indexing object has an unsupported type: {}", NAMEOF_ENUM(obj.getType()));
+		L_ERR("Indexing object has an unsupported type: {}", NAMEOF_ENUM(obj.get_type()));
 		return;
 	}
 

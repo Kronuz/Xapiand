@@ -32,41 +32,41 @@ Cast::cast(const MsgPack& obj)
 {
 	if (obj.size() == 1) {
 		const auto str_key = obj.begin()->str();
-		switch (getHash(str_key)) {
-			case Hash::INTEGER:
+		switch (get_hash_type(str_key)) {
+			case HashType::INTEGER:
 				return integer(obj.at(str_key));
-			case Hash::POSITIVE:
+			case HashType::POSITIVE:
 				return positive(obj.at(str_key));
-			case Hash::FLOAT:
+			case HashType::FLOAT:
 				return static_cast<double>(floating(obj.at(str_key)));
-			case Hash::BOOLEAN:
+			case HashType::BOOLEAN:
 				return boolean(obj.at(str_key));
-			case Hash::KEYWORD:
-			case Hash::TEXT:
-			case Hash::STRING:
+			case HashType::KEYWORD:
+			case HashType::TEXT:
+			case HashType::STRING:
 				return string(obj.at(str_key));
-			case Hash::UUID:
+			case HashType::UUID:
 				return uuid(obj.at(str_key));
-			case Hash::DATE:
-			case Hash::DATETIME:
+			case HashType::DATE:
+			case HashType::DATETIME:
 				return datetime(obj.at(str_key));
-			case Hash::TIME:
+			case HashType::TIME:
 				return time(obj.at(str_key));
-			case Hash::TIMEDELTA:
+			case HashType::TIMEDELTA:
 				return timedelta(obj.at(str_key));
-			case Hash::EWKT:
+			case HashType::EWKT:
 				return ewkt(obj.at(str_key));
-			case Hash::POINT:
-			case Hash::CIRCLE:
-			case Hash::CONVEX:
-			case Hash::POLYGON:
-			case Hash::CHULL:
-			case Hash::MULTIPOINT:
-			case Hash::MULTICIRCLE:
-			case Hash::MULTIPOLYGON:
-			case Hash::MULTICHULL:
-			case Hash::GEO_COLLECTION:
-			case Hash::GEO_INTERSECTION:
+			case HashType::POINT:
+			case HashType::CIRCLE:
+			case HashType::CONVEX:
+			case HashType::POLYGON:
+			case HashType::CHULL:
+			case HashType::MULTIPOINT:
+			case HashType::MULTICIRCLE:
+			case HashType::MULTIPOLYGON:
+			case HashType::MULTICHULL:
+			case HashType::GEO_COLLECTION:
+			case HashType::GEO_INTERSECTION:
 				return obj;
 			default:
 				THROW(CastError, "Unknown cast type {}", str_key);
@@ -105,12 +105,12 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			if (obj.is_map()) {
 				return obj;
 			}
-			THROW(CastError, "Type {} cannot be cast to script", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to script", NAMEOF_ENUM(obj.get_type()));
 		case FieldType::GEO:
 			if (obj.is_map() || obj.is_string()) {
 				return obj;
 			}
-			THROW(CastError, "Type {} cannot be cast to geo", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to geo", NAMEOF_ENUM(obj.get_type()));
 		case FieldType::EMPTY:
 			if (obj.is_string()) {
 				{
@@ -141,7 +141,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			}
 			[[fallthrough]];
 		default:
-			THROW(CastError, "Type {} cannot be cast", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -149,7 +149,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 int64_t
 Cast::integer(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -160,14 +160,14 @@ Cast::integer(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoll(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to integer", NAMEOF_ENUM(obj.getType()));
+				THROW(CastError, "Value {} cannot be cast to integer", NAMEOF_ENUM(obj.get_type()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<int64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to integer", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to integer", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -175,7 +175,7 @@ Cast::integer(const MsgPack& obj)
 uint64_t
 Cast::positive(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -186,14 +186,14 @@ Cast::positive(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoull(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to positive", NAMEOF_ENUM(obj.getType()));
+				THROW(CastError, "Value {} cannot be cast to positive", NAMEOF_ENUM(obj.get_type()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<uint64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to positive", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to positive", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -201,7 +201,7 @@ Cast::positive(const MsgPack& obj)
 long double
 Cast::floating(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return obj.u64();
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -212,14 +212,14 @@ Cast::floating(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stod(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to float", NAMEOF_ENUM(obj.getType()));
+				THROW(CastError, "Value {} cannot be cast to float", NAMEOF_ENUM(obj.get_type()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<double>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to float", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to float", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -227,7 +227,7 @@ Cast::floating(const MsgPack& obj)
 std::string
 Cast::string(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return string::format("{}", obj.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -247,7 +247,7 @@ Cast::string(const MsgPack& obj)
 bool
 Cast::boolean(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			return obj.u64() != 0;
 		case MsgPack::Type::NEGATIVE_INTEGER:
@@ -299,7 +299,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type {} cannot be cast to boolean", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to boolean", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -310,14 +310,14 @@ Cast::uuid(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type {} cannot be cast to uuid", NAMEOF_ENUM(obj.getType()));
+	THROW(CastError, "Type {} cannot be cast to uuid", NAMEOF_ENUM(obj.get_type()));
 }
 
 
 MsgPack
 Cast::datetime(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 		case MsgPack::Type::NEGATIVE_INTEGER:
 		case MsgPack::Type::FLOAT:
@@ -325,7 +325,7 @@ Cast::datetime(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to datetime", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to datetime", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -333,14 +333,14 @@ Cast::datetime(const MsgPack& obj)
 MsgPack
 Cast::time(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 		case MsgPack::Type::NEGATIVE_INTEGER:
 		case MsgPack::Type::FLOAT:
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to time", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to time", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -348,14 +348,14 @@ Cast::time(const MsgPack& obj)
 MsgPack
 Cast::timedelta(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 		case MsgPack::Type::NEGATIVE_INTEGER:
 		case MsgPack::Type::FLOAT:
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to timedelta", NAMEOF_ENUM(obj.getType()));
+			THROW(CastError, "Type {} cannot be cast to timedelta", NAMEOF_ENUM(obj.get_type()));
 	}
 }
 
@@ -366,50 +366,50 @@ Cast::ewkt(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type {} cannot be cast to ewkt", NAMEOF_ENUM(obj.getType()));
+	THROW(CastError, "Type {} cannot be cast to ewkt", NAMEOF_ENUM(obj.get_type()));
 }
 
 
-Cast::Hash
-Cast::getHash(std::string_view cast_word)
+Cast::HashType
+Cast::get_hash_type(std::string_view cast_word)
 {
 	static const auto _ = cast_hash;
 
-	return static_cast<Hash>(_.fhh(cast_word));
+	return static_cast<HashType>(_.fhh(cast_word));
 }
 
 
 FieldType
-Cast::getType(std::string_view cast_word)
+Cast::get_field_type(std::string_view cast_word)
 {
 	if (cast_word.empty() || cast_word[0] != reserved__) {
 		THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
-	switch (getHash(cast_word)) {
-		case Hash::INTEGER:           return FieldType::INTEGER;
-		case Hash::POSITIVE:          return FieldType::POSITIVE;
-		case Hash::FLOAT:             return FieldType::FLOAT;
-		case Hash::BOOLEAN:           return FieldType::BOOLEAN;
-		case Hash::KEYWORD:           return FieldType::KEYWORD;
-		case Hash::TEXT:              return FieldType::TEXT;
-		case Hash::STRING:            return FieldType::STRING;
-		case Hash::UUID:              return FieldType::UUID;
-		case Hash::DATETIME:              return FieldType::DATETIME;
-		case Hash::TIME:              return FieldType::TIME;
-		case Hash::TIMEDELTA:         return FieldType::TIMEDELTA;
-		case Hash::EWKT:              return FieldType::GEO;
-		case Hash::POINT:             return FieldType::GEO;
-		case Hash::CIRCLE:            return FieldType::GEO;
-		case Hash::CONVEX:            return FieldType::GEO;
-		case Hash::POLYGON:           return FieldType::GEO;
-		case Hash::CHULL:             return FieldType::GEO;
-		case Hash::MULTIPOINT:        return FieldType::GEO;
-		case Hash::MULTICIRCLE:       return FieldType::GEO;
-		case Hash::MULTIPOLYGON:      return FieldType::GEO;
-		case Hash::MULTICHULL:        return FieldType::GEO;
-		case Hash::GEO_COLLECTION:    return FieldType::GEO;
-		case Hash::GEO_INTERSECTION:  return FieldType::GEO;
-		case Hash::CHAI:              return FieldType::SCRIPT;
+	switch (get_hash_type(cast_word)) {
+		case HashType::INTEGER:           return FieldType::INTEGER;
+		case HashType::POSITIVE:          return FieldType::POSITIVE;
+		case HashType::FLOAT:             return FieldType::FLOAT;
+		case HashType::BOOLEAN:           return FieldType::BOOLEAN;
+		case HashType::KEYWORD:           return FieldType::KEYWORD;
+		case HashType::TEXT:              return FieldType::TEXT;
+		case HashType::STRING:            return FieldType::STRING;
+		case HashType::UUID:              return FieldType::UUID;
+		case HashType::DATETIME:          return FieldType::DATETIME;
+		case HashType::TIME:              return FieldType::TIME;
+		case HashType::TIMEDELTA:         return FieldType::TIMEDELTA;
+		case HashType::EWKT:              return FieldType::GEO;
+		case HashType::POINT:             return FieldType::GEO;
+		case HashType::CIRCLE:            return FieldType::GEO;
+		case HashType::CONVEX:            return FieldType::GEO;
+		case HashType::POLYGON:           return FieldType::GEO;
+		case HashType::CHULL:             return FieldType::GEO;
+		case HashType::MULTIPOINT:        return FieldType::GEO;
+		case HashType::MULTICIRCLE:       return FieldType::GEO;
+		case HashType::MULTIPOLYGON:      return FieldType::GEO;
+		case HashType::MULTICHULL:        return FieldType::GEO;
+		case HashType::GEO_COLLECTION:    return FieldType::GEO;
+		case HashType::GEO_INTERSECTION:  return FieldType::GEO;
+		case HashType::CHAI:              return FieldType::SCRIPT;
 		default:
 			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}

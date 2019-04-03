@@ -37,7 +37,7 @@ Script::Script(const MsgPack& _obj)
 	: type(Type::EMPTY),
 	  _sep_types({ { FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY, FieldType::EMPTY } })
 {
-	switch (_obj.getType()) {
+	switch (_obj.get_type()) {
 		case MsgPack::Type::STR: {
 			body = _obj.str_view();
 			break;
@@ -115,7 +115,7 @@ Script::process_value(const MsgPack& _value)
 {
 	L_CALL("Script::process_value({})", repr(_value.to_string()));
 
-	switch (_value.getType()) {
+	switch (_value.get_type()) {
 		case MsgPack::Type::STR:
 			value = _value.str_view();
 			break;

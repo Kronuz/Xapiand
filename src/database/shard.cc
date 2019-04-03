@@ -1240,7 +1240,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						auto it = data_obj.find(ID_FIELD_NAME);
 						if (it != data_obj.end()) {
 							auto& value = it.value();
-							switch (value.getType()) {
+							switch (value.get_type()) {
 								case MsgPack::Type::POSITIVE_INTEGER:
 									value = static_cast<uint64_t>(did);
 									break;

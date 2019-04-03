@@ -602,7 +602,7 @@ public:
 		const auto it = _conf.find(RESERVED_AGGS_SIGMA);
 		if (it != _conf.end()) {
 			const auto& sigma_value = it.value();
-			switch (sigma_value.getType()) {
+			switch (sigma_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:

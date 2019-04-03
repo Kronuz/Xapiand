@@ -31,7 +31,7 @@
 
 GeoSpatial::GeoSpatial(const MsgPack& obj)
 {
-	switch (obj.getType()) {
+	switch (obj.get_type()) {
 		case MsgPack::Type::STR: {
 			EWKT ewkt(obj.str_view());
 			geometry = ewkt.getGeometry();
@@ -40,8 +40,8 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 		case MsgPack::Type::MAP: {
 			auto it = obj.begin();
 			const auto str_key = it->str();
-			switch (Cast::getHash(str_key)) {
-				case Cast::Hash::EWKT: {
+			switch (Cast::get_hash_type(str_key)) {
+				case Cast::HashType::EWKT: {
 					try {
 						EWKT ewkt(it.value().str_view());
 						geometry = ewkt.getGeometry();
@@ -50,34 +50,34 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 						THROW(GeoSpatialError, "{} must be string", RESERVED_EWKT);
 					}
 				}
-				case Cast::Hash::POINT:
+				case Cast::HashType::POINT:
 					geometry = std::make_unique<Point>(make_point(it.value()));
 					return;
-				case Cast::Hash::CIRCLE:
+				case Cast::HashType::CIRCLE:
 					geometry = std::make_unique<Circle>(make_circle(it.value()));
 					return;
-				case Cast::Hash::CONVEX:
+				case Cast::HashType::CONVEX:
 					geometry = std::make_unique<Convex>(make_convex(it.value()));
 					return;
-				case Cast::Hash::POLYGON:
+				case Cast::HashType::POLYGON:
 					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::POLYGON));
 					return;
-				case Cast::Hash::CHULL:
+				case Cast::HashType::CHULL:
 					geometry = std::make_unique<Polygon>(make_polygon(it.value(), Geometry::Type::CHULL));
 					return;
-				case Cast::Hash::MULTIPOINT:
+				case Cast::HashType::MULTIPOINT:
 					geometry = std::make_unique<MultiPoint>(make_multipoint(it.value()));
 					return;
-				case Cast::Hash::MULTICIRCLE:
+				case Cast::HashType::MULTICIRCLE:
 					geometry = std::make_unique<MultiCircle>(make_multicircle(it.value()));
 					return;
-				case Cast::Hash::MULTIPOLYGON:
+				case Cast::HashType::MULTIPOLYGON:
 					geometry = std::make_unique<MultiPolygon>(make_multipolygon(it.value()));
 					return;
-				case Cast::Hash::GEO_COLLECTION:
+				case Cast::HashType::GEO_COLLECTION:
 					geometry = std::make_unique<Collection>(make_collection(it.value()));
 					return;
-				case Cast::Hash::GEO_INTERSECTION:
+				case Cast::HashType::GEO_INTERSECTION:
 					geometry = std::make_unique<Intersection>(make_intersection(it.value()));
 					return;
 				default:
@@ -232,7 +232,7 @@ Point
 GeoSpatial::make_point(const MsgPack& o)
 {
 
-	switch (o.getType()) {
+	switch (o.get_type()) {
 		case MsgPack::Type::MAP: {
 			const auto data = get_data(o);
 			if ((data.lat == nullptr) || (data.lon == nullptr)) {
@@ -456,18 +456,18 @@ GeoSpatial::make_multicircle(const MsgPack& o)
 MultiPolygon
 GeoSpatial::make_multipolygon(const MsgPack& o)
 {
-	switch (o.getType()) {
+	switch (o.get_type()) {
 		case MsgPack::Type::MAP: {
 			MultiPolygon multipolygon;
 			multipolygon.reserve(o.size());
 			const auto it_e = o.end();
 			for (auto it = o.begin(); it != it_e; ++it) {
 				const auto str_key = it->str();
-				switch (Cast::getHash(str_key)) {
-					case Cast::Hash::POLYGON:
+				switch (Cast::get_hash_type(str_key)) {
+					case Cast::HashType::POLYGON:
 						multipolygon.add(make_polygon(it.value(), Geometry::Type::POLYGON));
 						break;
-					case Cast::Hash::CHULL:
+					case Cast::HashType::CHULL:
 						multipolygon.add(make_polygon(it.value(), Geometry::Type::CHULL));
 						break;
 					default:
@@ -545,35 +545,35 @@ GeoSpatial::make_collection(const MsgPack& o)
 		const auto it_e = o.end();
 		for (auto it = o.begin(); it != it_e; ++it) {
 			const auto str_key = it->str();
-			switch (Cast::getHash(str_key)) {
-				case Cast::Hash::POINT:
+			switch (Cast::get_hash_type(str_key)) {
+				case Cast::HashType::POINT:
 					collection.add_point(make_point(it.value()));
 					break;
-				case Cast::Hash::CIRCLE:
+				case Cast::HashType::CIRCLE:
 					collection.add_circle(make_circle(it.value()));
 					break;
-				case Cast::Hash::CONVEX:
+				case Cast::HashType::CONVEX:
 					collection.add_convex(make_convex(it.value()));
 					break;
-				case Cast::Hash::POLYGON:
+				case Cast::HashType::POLYGON:
 					collection.add_polygon(make_polygon(it.value(), Geometry::Type::POLYGON));
 					break;
-				case Cast::Hash::CHULL:
+				case Cast::HashType::CHULL:
 					collection.add_polygon(make_polygon(it.value(), Geometry::Type::CHULL));
 					break;
-				case Cast::Hash::MULTIPOINT:
+				case Cast::HashType::MULTIPOINT:
 					collection.add_multipoint(make_multipoint(it.value()));
 					break;
-				case Cast::Hash::MULTICIRCLE:
+				case Cast::HashType::MULTICIRCLE:
 					collection.add_multicircle(make_multicircle(it.value()));
 					break;
-				case Cast::Hash::MULTIPOLYGON:
+				case Cast::HashType::MULTIPOLYGON:
 					collection.add_multipolygon(make_multipolygon(it.value()));
 					break;
-				case Cast::Hash::GEO_COLLECTION:
+				case Cast::HashType::GEO_COLLECTION:
 					collection.add(make_collection(it.value()));
 					break;
-				case Cast::Hash::GEO_INTERSECTION:
+				case Cast::HashType::GEO_INTERSECTION:
 					collection.add_intersection(make_intersection(it.value()));
 					break;
 				default:
@@ -595,35 +595,35 @@ GeoSpatial::make_intersection(const MsgPack& o)
 		const auto it_e = o.end();
 		for (auto it = o.begin(); it != it_e; ++it) {
 			const auto str_key = it->str();
-			switch (Cast::getHash(str_key)) {
-				case Cast::Hash::POINT:
+			switch (Cast::get_hash_type(str_key)) {
+				case Cast::HashType::POINT:
 					intersection.add(std::make_shared<Point>(make_point(it.value())));
 					break;
-				case Cast::Hash::CIRCLE:
+				case Cast::HashType::CIRCLE:
 					intersection.add(std::make_shared<Circle>(make_circle(it.value())));
 					break;
-				case Cast::Hash::CONVEX:
+				case Cast::HashType::CONVEX:
 					intersection.add(std::make_shared<Convex>(make_convex(it.value())));
 					break;
-				case Cast::Hash::POLYGON:
+				case Cast::HashType::POLYGON:
 					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::POLYGON)));
 					break;
-				case Cast::Hash::CHULL:
+				case Cast::HashType::CHULL:
 					intersection.add(std::make_shared<Polygon>(make_polygon(it.value(), Geometry::Type::CHULL)));
 					break;
-				case Cast::Hash::MULTIPOINT:
+				case Cast::HashType::MULTIPOINT:
 					intersection.add(std::make_shared<MultiPoint>(make_multipoint(it.value())));
 					break;
-				case Cast::Hash::MULTICIRCLE:
+				case Cast::HashType::MULTICIRCLE:
 					intersection.add(std::make_shared<MultiCircle>(make_multicircle(it.value())));
 					break;
-				case Cast::Hash::MULTIPOLYGON:
+				case Cast::HashType::MULTIPOLYGON:
 					intersection.add(std::make_shared<MultiPolygon>(make_multipolygon(it.value())));
 					break;
-				case Cast::Hash::GEO_COLLECTION:
+				case Cast::HashType::GEO_COLLECTION:
 					intersection.add(std::make_shared<Collection>(make_collection(it.value())));
 					break;
-				case Cast::Hash::GEO_INTERSECTION:
+				case Cast::HashType::GEO_INTERSECTION:
 					intersection.add(std::make_shared<Intersection>(make_intersection(it.value())));
 					break;
 				default:

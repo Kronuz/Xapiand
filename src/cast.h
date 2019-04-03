@@ -69,7 +69,7 @@ namespace Cast {
 		#undef OPTION
 	});
 
-	enum class Hash : uint32_t {
+	enum class HashType : uint32_t {
 		#define OPTION(name) name = cast_hash.fhh(RESERVED_##name),
 		HASH_OPTIONS()
 		#undef OPTION
@@ -92,6 +92,6 @@ namespace Cast {
 	MsgPack timedelta(const MsgPack& obj);
 	std::string ewkt(const MsgPack& obj);
 
-	Hash getHash(std::string_view cast_word);
-	FieldType getType(std::string_view cast_word);
+	HashType get_hash_type(std::string_view cast_word);
+	FieldType get_field_type(std::string_view cast_word);
 };

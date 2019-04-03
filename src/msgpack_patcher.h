@@ -69,7 +69,7 @@ double get_patch_double(const MsgPack& val, const char* patch_op);
 
 
 inline void _add(MsgPack& o, const MsgPack& val, std::string_view target) {
-	switch (o.getType()) {
+	switch (o.get_type()) {
 		case MsgPack::Type::MAP:
 			o[target] = val;
 			return;
@@ -93,7 +93,7 @@ inline void _add(MsgPack& o, const MsgPack& val, std::string_view target) {
 
 inline void _erase(MsgPack& o, std::string_view target) {
 	try {
-		switch (o.getType()) {
+		switch (o.get_type()) {
 			case MsgPack::Type::MAP:
 				o.erase(target);
 				return;

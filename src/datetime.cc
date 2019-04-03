@@ -57,7 +57,7 @@ static constexpr int cumdays[2][12] = {
 
 
 static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
-	switch (year.getType()) {
+	switch (year.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			tm.year = year.u64();
 			return;
@@ -71,7 +71,7 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 
 
 static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
-	switch (month.getType()) {
+	switch (month.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			tm.mon = month.u64();
 			return;
@@ -85,7 +85,7 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 
 
 static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
-	switch (day.getType()) {
+	switch (day.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			tm.day = day.u64();
 			return;
@@ -325,7 +325,7 @@ Datetime::tm_t
 Datetime::DatetimeParser(const MsgPack& value)
 {
 	double _timestamp;
-	switch (value.getType()) {
+	switch (value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			_timestamp = value.u64();
 			return Datetime::to_tm_t(_timestamp);
@@ -1445,7 +1445,7 @@ Datetime::time_to_clk_t(double t)
 double
 Datetime::time_to_double(const MsgPack& _time)
 {
-	switch (_time.getType()) {
+	switch (_time.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER: {
 			double t_val = _time.u64();
 			if (isvalidTime(t_val)) {
@@ -1694,7 +1694,7 @@ Datetime::timedelta_to_clk_t(double t)
 double
 Datetime::timedelta_to_double(const MsgPack& timedelta)
 {
-	switch (timedelta.getType()) {
+	switch (timedelta.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER: {
 			double t_val = timedelta.u64();
 			if (isvalidTimedelta(t_val)) {

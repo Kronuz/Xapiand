@@ -205,7 +205,7 @@ private:
 		auto it = conf.find(RESERVED_AGGS_SORT);
 		if (it != conf.end()) {
 			const auto& value = it.value();
-			switch (value.getType()) {
+			switch (value.get_type()) {
 				case MsgPack::Type::STR: {
 					auto str = value.str_view();
 					if (str == RESERVED_AGGS_DOC_COUNT) {
@@ -221,7 +221,7 @@ private:
 					it = value.find(RESERVED_AGGS_DOC_COUNT);
 					if (it != value.end()) {
 						const auto& sorter = it.value();
-						switch (sorter.getType()) {
+						switch (sorter.get_type()) {
 							case MsgPack::Type::STR: {
 								auto order_str = sorter.str_view();
 								if (order_str == "desc") {
@@ -236,7 +236,7 @@ private:
 								it = sorter.find(RESERVED_AGGS_ORDER);
 								if (it != sorter.end()) {
 									const auto& order = it.value();
-									switch (order.getType()) {
+									switch (order.get_type()) {
 										case MsgPack::Type::STR: {
 											auto order_str = order.str_view();
 											if (order_str == "desc") {
@@ -262,7 +262,7 @@ private:
 					it = value.find(RESERVED_AGGS_KEY);
 					if (it != value.end()) {
 						const auto& sorter = it.value();
-						switch (sorter.getType()) {
+						switch (sorter.get_type()) {
 							case MsgPack::Type::STR: {
 								auto order_str = sorter.str_view();
 								if (order_str == "desc") {
@@ -277,7 +277,7 @@ private:
 								it = sorter.find(RESERVED_AGGS_ORDER);
 								if (it != sorter.end()) {
 									const auto& order = it.value();
-									switch (order.getType()) {
+									switch (order.get_type()) {
 										case MsgPack::Type::STR: {
 											auto order_str = order.str_view();
 											if (order_str == "desc") {
@@ -307,7 +307,7 @@ private:
 							THROW(AggregationError, "'{}' must have a valid field name", RESERVED_AGGS_SORT);
 						}
 						const auto& sorter = it.value();
-						switch (sorter.getType()) {
+						switch (sorter.get_type()) {
 							case MsgPack::Type::STR: {
 								auto order_str = sorter.str_view();
 								if (order_str == "desc") {
@@ -324,7 +324,7 @@ private:
 								it = sorter.find(RESERVED_AGGS_ORDER);
 								if (it != sorter.end()) {
 									const auto& order = it.value();
-									switch (order.getType()) {
+									switch (order.get_type()) {
 										case MsgPack::Type::STR: {
 											auto order_str = order.str_view();
 											if (order_str == "desc") {
@@ -364,7 +364,7 @@ private:
 		auto it = conf.find(RESERVED_AGGS_LIMIT);
 		if (it != conf.end()) {
 			const auto& value = it.value();
-			switch (value.getType()) {
+			switch (value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER: {
 					auto val = value.as_i64();
@@ -385,7 +385,7 @@ private:
 		auto it = conf.find(RESERVED_AGGS_KEYED);
 		if (it != conf.end()) {
 			const auto& value = it.value();
-			switch (value.getType()) {
+			switch (value.get_type()) {
 				case MsgPack::Type::BOOLEAN: {
 					return value.as_boolean();
 				}
@@ -401,7 +401,7 @@ private:
 		auto it = conf.find(RESERVED_AGGS_MIN_DOC_COUNT);
 		if (it != conf.end()) {
 			const auto& value = it.value();
-			switch (value.getType()) {
+			switch (value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER: {
 					auto val = value.as_i64();
@@ -625,7 +625,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		const auto interval_it = _conf.find(RESERVED_AGGS_INTERVAL);
 		if (interval_it != _conf.end()) {
 			const auto& interval_value = interval_it.value();
-			switch (interval_value.getType()) {
+			switch (interval_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
@@ -641,7 +641,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		const auto shift_it = _conf.find(RESERVED_AGGS_SHIFT);
 		if (shift_it != _conf.end()) {
 			const auto& shift_value = shift_it.value();
-			switch (shift_value.getType()) {
+			switch (shift_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
@@ -657,7 +657,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		const auto interval_it = _conf.find(RESERVED_AGGS_INTERVAL);
 		if (interval_it != _conf.end()) {
 			const auto& interval_value = interval_it.value();
-			switch (interval_value.getType()) {
+			switch (interval_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
@@ -673,7 +673,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		const auto shift_it = _conf.find(RESERVED_AGGS_SHIFT);
 		if (shift_it != _conf.end()) {
 			const auto& shift_value = shift_it.value();
-			switch (shift_value.getType()) {
+			switch (shift_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
@@ -689,7 +689,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		const auto interval_it = _conf.find(RESERVED_AGGS_INTERVAL);
 		if (interval_it != _conf.end()) {
 			const auto& interval_value = interval_it.value();
-			switch (interval_value.getType()) {
+			switch (interval_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
@@ -705,7 +705,7 @@ class HistogramAggregation : public BucketAggregation<ValuesHandler> {
 		const auto shift_it = _conf.find(RESERVED_AGGS_SHIFT);
 		if (shift_it != _conf.end()) {
 			const auto& shift_value = shift_it.value();
-			switch (shift_value.getType()) {
+			switch (shift_value.get_type()) {
 				case MsgPack::Type::POSITIVE_INTEGER:
 				case MsgPack::Type::NEGATIVE_INTEGER:
 				case MsgPack::Type::FLOAT:
@@ -823,7 +823,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				auto from_it = range.find(RESERVED_AGGS_FROM);
 				if (from_it != range.end()) {
 					const auto& from_value = from_it.value();
-					switch (from_value.getType()) {
+					switch (from_value.get_type()) {
 						case MsgPack::Type::POSITIVE_INTEGER:
 						case MsgPack::Type::NEGATIVE_INTEGER:
 						case MsgPack::Type::FLOAT:
@@ -838,7 +838,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				auto to_it = range.find(RESERVED_AGGS_TO);
 				if (to_it != range.end()) {
 					const auto& to_value = to_it.value();
-					switch (to_value.getType()) {
+					switch (to_value.get_type()) {
 						case MsgPack::Type::POSITIVE_INTEGER:
 						case MsgPack::Type::NEGATIVE_INTEGER:
 						case MsgPack::Type::FLOAT:
@@ -884,7 +884,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				auto from_it = range.find(RESERVED_AGGS_FROM);
 				if (from_it != range.end()) {
 					const auto& from_value = from_it.value();
-					switch (from_value.getType()) {
+					switch (from_value.get_type()) {
 						case MsgPack::Type::POSITIVE_INTEGER:
 						case MsgPack::Type::NEGATIVE_INTEGER:
 						case MsgPack::Type::FLOAT:
@@ -899,7 +899,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				auto to_it = range.find(RESERVED_AGGS_TO);
 				if (to_it != range.end()) {
 					const auto& to_value = to_it.value();
-					switch (to_value.getType()) {
+					switch (to_value.get_type()) {
 						case MsgPack::Type::POSITIVE_INTEGER:
 						case MsgPack::Type::NEGATIVE_INTEGER:
 						case MsgPack::Type::FLOAT:
@@ -944,7 +944,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				auto from_it = range.find(RESERVED_AGGS_FROM);
 				if (from_it != range.end()) {
 					const auto& from_value = from_it.value();
-					switch (from_value.getType()) {
+					switch (from_value.get_type()) {
 						case MsgPack::Type::POSITIVE_INTEGER:
 						case MsgPack::Type::NEGATIVE_INTEGER:
 						case MsgPack::Type::FLOAT:
@@ -959,7 +959,7 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 				auto to_it = range.find(RESERVED_AGGS_TO);
 				if (to_it != range.end()) {
 					const auto& to_value = to_it.value();
-					switch (to_value.getType()) {
+					switch (to_value.get_type()) {
 						case MsgPack::Type::POSITIVE_INTEGER:
 						case MsgPack::Type::NEGATIVE_INTEGER:
 						case MsgPack::Type::FLOAT:
