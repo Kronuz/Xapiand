@@ -191,8 +191,12 @@ def _task(args):
                         print(line, file=args.file)
                 else:
                     body = client.get(index=db, id=fortune_id)
-                    if body[FIELD] != fortune:
-                        raise ValueError
+                    try:
+                        if body[FIELD] != fortune:
+                            raise ValueError
+                    except KeyError:
+                        sys.stderr.write(repr(body))
+                        raise
             else:
                 check.err = None
                 continue
