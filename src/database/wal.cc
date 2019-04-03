@@ -833,20 +833,16 @@ DatabaseWAL::find(Xapian::rev revision)
 }
 
 
-std::pair<Xapian::rev, std::string>
+std::string
 DatabaseWAL::get_current_line(uint32_t end_off)
 {
 	L_CALL("DatabaseWAL::get_current_line(...)");
 
 	try {
-		std::string line = read(end_off);
-		const char* p = line.data();
-		const char *p_end = p + line.size();
-		auto revision = static_cast<Xapian::rev>(unserialise_length(&p, p_end));
-		return std::make_pair(revision, line);
+		return read(end_off);
 	}  catch (const StorageEOF& exc) { }
 
-	return std::make_pair(DatabaseWAL::max_rev, "");
+	return "";
 }
 
 

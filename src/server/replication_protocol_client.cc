@@ -381,7 +381,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 			// Send WAL operations.
 			std::vector<std::string> reply_changesets;
 			for (auto wal_it = wal->find(to_revision); wal_it != wal->end(); ++wal_it) {
-				auto& line = wal_it->second;
+				auto& line = *wal_it;
 				const char *lp = line.data();
 				const char *lp_end = lp + line.size();
 				auto revision = unserialise_length(&lp, lp_end);
@@ -397,7 +397,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					reply_changesets.clear();
 					++to_revision;
 				} else {
-					reply_changesets.push_back(line);
+					reply_changesets.push_back(std::move(line));
 				}
 			}
 			db = lk_shard.lock()->db();

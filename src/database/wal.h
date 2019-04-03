@@ -164,7 +164,7 @@ public:
 
 	std::pair<Xapian::rev, uint32_t> locate_revision(Xapian::rev revision);
 	iterator find(Xapian::rev revision);
-	std::pair<Xapian::rev, std::string> get_current_line(uint32_t end_off);
+	std::string get_current_line(uint32_t end_off);
 };
 
 
@@ -172,46 +172,46 @@ class DatabaseWAL::iterator {
 	friend DatabaseWAL;
 
 	DatabaseWAL* wal;
-	std::pair<Xapian::rev, std::string> item;
+	std::string line;
 	uint32_t end_off;
 
 public:
 	using iterator_category = std::forward_iterator_tag;
-	using value_type = std::pair<Xapian::rev, std::string>;
-	using difference_type = std::pair<Xapian::rev, std::string>;
-	using pointer = std::pair<Xapian::rev, std::string>*;
-	using reference = std::pair<Xapian::rev, std::string>&;
+	using value_type = std::string;
+	using difference_type = std::string;
+	using pointer = std::string*;
+	using reference = std::string&;
 
-	iterator(DatabaseWAL* wal_, std::pair<Xapian::rev, std::string>&& item_, uint32_t end_off_)
+	iterator(DatabaseWAL* wal_, std::string&& item_, uint32_t end_off_)
 		: wal(wal_),
-		  item(item_),
+		  line(item_),
 		  end_off(end_off_) { }
 
 	iterator& operator++() {
-		item = wal->get_current_line(end_off);
+		line = wal->get_current_line(end_off);
 		return *this;
 	}
 
 	iterator operator=(const iterator& other) {
 		wal = other.wal;
-		item = other.item;
+		line = other.line;
 		return *this;
 	}
 
-	std::pair<Xapian::rev, std::string>& operator*() {
-		return item;
+	std::string& operator*() {
+		return line;
 	}
 
-	std::pair<Xapian::rev, std::string>* operator->() {
+	std::string* operator->() {
 		return &operator*();
 	}
 
-	std::pair<Xapian::rev, std::string>& value() {
-		return item;
+	std::string& value() {
+		return line;
 	}
 
 	bool operator==(const iterator& other) const {
-		return this == &other || item == other.item;
+		return this == &other || line == other.line;
 	}
 
 	bool operator!=(const iterator& other) const {
@@ -227,7 +227,7 @@ inline DatabaseWAL::iterator DatabaseWAL::begin() {
 
 
 inline DatabaseWAL::iterator DatabaseWAL::end() {
-	return iterator(this, std::make_pair(DatabaseWAL::max_rev, ""), 0);
+	return iterator(this, "", 0);
 }
 
 
