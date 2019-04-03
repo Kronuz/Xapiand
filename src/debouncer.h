@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,27 +28,30 @@
 #include <utility>                           // for std::move, std::forward
 
 #include "callable_traits.hh"                // for callable_traits
-#include "log.h"                             // for L_OBJ, L_CALL, L_DEBUG, L_WARNING
-#include "repr.hh"                           // for repr
-#include "scheduler.h"                       // for SchedulerTask, SchedulerThread
-#include "string.hh"                         // for string::from_delta
+#include "log.h"                             // for L_CALL, L_DEBUG_HOOK
+#include "scheduler.h"                       // for ScheduledTask, ThreadedScheduler
 #include "time_point.hh"                     // for time_point_to_ullong
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
 class DebouncerTask;
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
-class Debouncer : public ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>> {
-	friend DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>;
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+class Debouncer : public ThreadedScheduler<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>> {
+	friend DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>;
 
+	static_assert(TT == 0 || TT >= DT, "");
+	static_assert(DBT >= DT, "");
+	static_assert(DFT >= DBT, "");
+
+	static constexpr auto throttle_time = std::chrono::milliseconds(TT);
 	static constexpr auto debounce_timeout = std::chrono::milliseconds(DT);
 	static constexpr auto debounce_busy_timeout = std::chrono::milliseconds(DBT);
 	static constexpr auto debounce_force_timeout = std::chrono::milliseconds(DFT);
 
 	struct Status {
-		std::shared_ptr<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>> task;
+		std::shared_ptr<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>> task;
 		unsigned long long max_wakeup_time;
 	};
 
@@ -57,79 +60,120 @@ class Debouncer : public ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func
 
 	Func func;
 
-	void release(Key key);
+	void release(const Key& key);
+	void throttle(const Key& key);
 
 public:
 	Debouncer(std::string name, const char* format, size_t num_threads, Func func) :
-		ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>>(name, format, num_threads),
+		ThreadedScheduler<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>>(name, format, num_threads),
 		func(std::move(func)) {}
 
 	template <typename... Args>
-	void debounce(Key key, Args&&... args);
+	void debounce(const Key& key, Args&&... args);
 
 	template <typename... Args>
-	void delayed_debounce(std::chrono::milliseconds delay, Key key, Args&&... args);
+	void delayed_debounce(std::chrono::milliseconds delay, const Key& key, Args&&... args);
 };
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
-class DebouncerTask : public ScheduledTask<ThreadedScheduler<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>>, DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>> {
-	friend Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>;
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+class DebouncerTask : public ScheduledTask<ThreadedScheduler<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>>, DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>> {
+	friend Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>;
 
-	Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer;
+	Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer;
 
-	bool forced;
+	bool throttler;
+
 	Key key;
 	Tuple args;
 
 public:
-	DebouncerTask(Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer, bool forced, Key key, Tuple args);
+	DebouncerTask(Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer, const Key& key);
+	DebouncerTask(Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer, const Key& key, Tuple args);
 
 	void operator()();
 };
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
 inline
-DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::DebouncerTask(Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer, bool forced, Key key, Tuple args) :
+DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::DebouncerTask(Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer, const Key& key, Tuple args) :
 	debouncer(debouncer),
-	forced(forced),
+	throttler(false),
 	key(std::move(key)),
 	args(std::move(args))
 {
 }
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+inline
+DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::DebouncerTask(Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>& debouncer, const Key& key) :
+	debouncer(debouncer),
+	throttler(true),
+	key(std::move(key))
+{
+}
+
+
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
 inline void
-DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::operator()()
+DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::operator()()
 {
 	L_CALL("DebouncerTask::operator()()");
 	L_DEBUG_HOOK("DebouncerTask::operator()", "DebouncerTask::operator()()");
 
-	debouncer.release(key);
-
-	if (forced) {
-		L_DEBUG("Forced call for debounced function!");
+	if (throttler) {
+		debouncer.release(key);
+	} else {
+		debouncer.throttle(key);
+		std::apply(debouncer.func, args);
 	}
-
-	std::apply(debouncer.func, args);
 }
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
 inline void
-Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::release(Key key)
+Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::release(const Key& key)
 {
 	std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
 	statuses.erase(key);
 }
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+inline void
+Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::throttle(const Key& key)
+{
+	if constexpr (TT > DT) {
+		// No throttler, just release:
+		release(key);
+	} else {
+		// Throttling, configure:
+		std::shared_ptr<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>> task;
+
+		{
+			auto now = std::chrono::system_clock::now();
+
+			std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
+			auto status = &statuses.at(key);
+
+			status->max_wakeup_time = 0;  // flag status as throttler
+
+			task = std::make_shared<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>>(*this, key);
+			task->wakeup_time = time_point_to_ullong(now + throttle_time);
+			status->task = task;
+		}
+
+		this->add(task);
+	}
+}
+
+
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
 template <typename... Args>
 inline void
-Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::debounce(Key key, Args&&... args)
+Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::debounce(const Key& key, Args&&... args)
 {
 	L_CALL("Debouncer::debounce(<key>, ...)");
 
@@ -137,17 +181,18 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::debounce(Key key, Args
 }
 
 
-template <typename Key, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
+template <typename Key, unsigned long long TT, unsigned long long DT, unsigned long long DBT, unsigned long long DFT, typename Func, typename Tuple, ThreadPolicyType thread_policy>
 template <typename... Args>
 inline void
-Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::milliseconds delay, Key key, Args&&... args)
+Debouncer<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::milliseconds delay, const Key& key, Args&&... args)
 {
 	L_CALL("Debouncer::delayed_debounce(<delay>, <key>, ...)");
 
-	std::shared_ptr<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>> task;
-	unsigned long long next_wakeup_time;
+	std::shared_ptr<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>> task;
 
 	{
+		unsigned long long next_wakeup_time;
+
 		auto now = std::chrono::system_clock::now();
 
 		std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
@@ -155,6 +200,7 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::delayed_debounce(std::
 
 		Status* status;
 		if (it == statuses.end()) {
+			// status doesn't exists, initialize:
 			auto& status_ref = statuses[key] = {
 				nullptr,
 				time_point_to_ullong(now + debounce_force_timeout + delay)
@@ -163,24 +209,35 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::delayed_debounce(std::
 			next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
 		} else {
 			status = &(it->second);
-			next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout + delay);
+			if (status->max_wakeup_time) {
+				// status exists, so new timeout is of busy type:
+				next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout + delay);
+			} else {
+				// status exists but is a throttler (max_wakeup_time == 0), initialize:
+				status->max_wakeup_time = time_point_to_ullong(now + debounce_force_timeout + delay);
+				next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
+			}
 		}
 
-		bool forced;
 		if (next_wakeup_time > status->max_wakeup_time) {
 			next_wakeup_time = status->max_wakeup_time;
-			forced = true;
-		} else {
-			forced = false;
 		}
 
 		if (status->task) {
-			if (status->task->wakeup_time == next_wakeup_time) {
-				return;
+			if (status->task->throttler) {
+				// if throttling, use throttler wakeup time:
+				if (next_wakeup_time < status->task->wakeup_time) {
+					next_wakeup_time = status->task->wakeup_time;
+				}
+			} else {
+				// if task is already waking up some time in the future, do nothing:
+				if (next_wakeup_time <= status->task->wakeup_time) {
+					return;
+				}
 			}
 			status->task->clear();
 		}
-		task = std::make_shared<DebouncerTask<Key, DT, DBT, DFT, Func, Tuple, thread_policy>>(*this, forced, key, std::make_tuple(std::forward<Args>(args)...));
+		task = std::make_shared<DebouncerTask<Key, TT, DT, DBT, DFT, Func, Tuple, thread_policy>>(*this, key, std::make_tuple(std::forward<Args>(args)...));
 		task->wakeup_time = next_wakeup_time;
 		status->task = task;
 	}
@@ -189,25 +246,25 @@ Debouncer<Key, DT, DBT, DFT, Func, Tuple, thread_policy>::delayed_debounce(std::
 }
 
 
-template <typename Key, unsigned long long DT = 1000, unsigned long long DBT = 3000, unsigned long long DFT = 9000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
+template <typename Key, unsigned long long TT = 1000, unsigned long long DT = 100, unsigned long long DBT = 500, unsigned long long DFT = 5000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
 inline auto
 make_debouncer(std::string name, const char* format, size_t num_threads, Func func)
 {
-	return Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>(name, format, num_threads, func);
+	return Debouncer<Key, TT, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>(name, format, num_threads, func);
 }
 
 
-template <typename Key, unsigned long long DT = 1000, unsigned long long DBT = 3000, unsigned long long DFT = 9000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
+template <typename Key, unsigned long long TT = 1000, unsigned long long DT = 100, unsigned long long DBT = 500, unsigned long long DFT = 5000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
 inline auto
 make_unique_debouncer(std::string name, const char* format, size_t num_threads, Func func)
 {
-	return std::make_unique<Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func);
+	return std::make_unique<Debouncer<Key, TT, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func);
 }
 
 
-template <typename Key, unsigned long long DT = 1000, unsigned long long DBT = 3000, unsigned long long DFT = 9000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
+template <typename Key, unsigned long long TT = 1000, unsigned long long DT = 100, unsigned long long DBT = 500, unsigned long long DFT = 5000, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
 inline auto
 make_shared_debouncer(std::string name, const char* format, size_t num_threads, Func func)
 {
-	return std::make_shared<Debouncer<Key, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func);
+	return std::make_shared<Debouncer<Key, TT, DT, DBT, DFT, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func);
 }
