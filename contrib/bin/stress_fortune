@@ -236,6 +236,8 @@ def main():
         for arg in sys.argv[1:]:
             if arg in ("-h", "--help"):
                 raise ValueError("Help!")
+            elif arg.startswith('-'):
+                raise ValueError("Unknown option")
             m = re.match(r'^(\d+)?(?:-(\d+))?(?:/(\d+))?$', arg)
             if m and any(m.groups()):
                 if m.group(2):
