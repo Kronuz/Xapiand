@@ -122,8 +122,8 @@ namespace queue {
 		}
 
 		template<typename E>
-		bool _push_front_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
-			bool ret = _push_wait(timeout, lk);
+		bool _push_front_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk, bool force = false) {
+			bool ret = force || _push_wait(timeout, lk);
 			if (ret) {
 				// Insert the element in the queue
 				_items_queue.push_front(std::forward<E>(element));
@@ -133,8 +133,8 @@ namespace queue {
 		}
 
 		template<typename E>
-		bool _push_back_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk) {
-			bool ret = _push_wait(timeout, lk);
+		bool _push_back_impl(E&& element, double timeout, std::unique_lock<std::mutex>& lk, bool force = false) {
+			bool ret = force || _push_wait(timeout, lk);
 			if (ret) {
 				// Insert the element in the queue
 				_items_queue.push_back(std::forward<E>(element));
@@ -256,9 +256,9 @@ namespace queue {
 		}
 
 		template<typename E>
-		bool push_back(E&& element, double timeout=-1.0) {
+		bool push_back(E&& element, double timeout = -1.0, bool force = false) {
 			std::unique_lock<std::mutex> lk(_state->_mutex);
-			bool pushed = _push_back_impl(std::forward<E>(element), timeout, lk);
+			bool pushed = _push_back_impl(std::forward<E>(element), timeout, lk, force);
 			lk.unlock();
 
 			if (pushed) {
@@ -275,9 +275,9 @@ namespace queue {
 		}
 
 		template<typename E>
-		bool push_front(E&& element, double timeout=-1.0) {
+		bool push_front(E&& element, double timeout = -1.0, bool force = false) {
 			std::unique_lock<std::mutex> lk(_state->_mutex);
-			bool pushed = _push_front_impl(std::forward<E>(element), timeout, lk);
+			bool pushed = _push_front_impl(std::forward<E>(element), timeout, lk, force);
 			lk.unlock();
 
 			if (pushed) {
