@@ -1970,7 +1970,7 @@ DocPreparer::operator()()
 	L_CALL("DocPreparer::operator()()");
 
 	ASSERT(indexer);
-	if (indexer->running) {
+	if (indexer->running.load(std::memory_order_acquire)) {
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
 			auto prepared = db_handler.prepare_document(obj);
@@ -1994,7 +1994,7 @@ DocIndexer::operator()()
 
 	DatabaseHandler db_handler(endpoints, flags);
 	bool ready_ = false;
-	while (running) {
+	while (running.load(std::memory_order_acquire)) {
 		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
 		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
@@ -2089,7 +2089,7 @@ DocIndexer::operator()()
 		}
 
 		if (ready_) {
-			if (processed_ >= _total) {
+			if (processed_ >= _total.load(std::memory_order_acquire)) {
 				break;
 			}
 		} else {
@@ -2099,7 +2099,7 @@ DocIndexer::operator()()
 		}
 	}
 
-	running = false;
+	running.store(false, std::memory_order_release);
 	done.signal();
 }
 
@@ -2116,13 +2116,13 @@ DocIndexer::_prepare(MsgPack&& obj)
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	if (bulk_cnt == bulk.size()) {
-		_total += bulk_cnt;
+		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
 		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total -= bulk_cnt;
+			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
-		if (_total == bulk_cnt) {
-			if (!finished && !running.exchange(true)) {
+		if (_total.load(std::memory_order_acquire) == bulk_cnt) {
+			if (!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
 				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 			}
 		}
@@ -2153,13 +2153,13 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
-		_total += bulk_cnt;
+		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
 		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total -= bulk_cnt;
+			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
-		if (_total == bulk_cnt) {
-			if (!finished && !running.exchange(true)) {
+		if (_total.load(std::memory_order_acquire) == bulk_cnt) {
+			if (!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
 				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 			}
 		}
@@ -2183,7 +2183,7 @@ DocIndexer::wait(double timeout)
 		}
 	}
 
-	return _processed >= _total;
+	return !running.load(std::memory_order_acquire) && _processed.load(std::memory_order_acquire) >= _total.load(std::memory_order_acquire);
 }
 
 
@@ -2192,8 +2192,8 @@ DocIndexer::finish()
 {
 	L_CALL("DocIndexer::finish()");
 
-	finished = true;
-	running = false;
+	finished.store(true, std::memory_order_release);
+	running.store(false, std::memory_order_release);
 	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, 0));
 }
 
