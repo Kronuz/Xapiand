@@ -764,29 +764,39 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 	L_CALL("ReplicationProtocolClient::on_read(<buf>, {})", received);
 
 	if (received <= 0) {
-		close();
+		std::string reason;
 
 		if (received < 0) {
-			L_NOTICE("Replication Protocol {} connection closed unexpectedly {{sock:{}}}: {} ({}): {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), sock, error::name(errno), errno, error::description(errno));
-			return received;
+			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
+			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
+				L_NOTICE("Replication Protocol {} connection closed unexpectedly: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+				close();
+				return received;
+			}
+		} else {
+			reason = "EOF";
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There was still a request in progress", NAMEOF_ENUM(state.load(std::memory_order_relaxed)));
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There was still a request in progress: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			close();
 			return received;
 		}
 
 		if (!write_queue.empty()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There is still pending data", NAMEOF_ENUM(state.load(std::memory_order_relaxed)));
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There is still pending data: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			close();
 			return received;
 		}
 
 		if (pending_messages()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There are still pending messages", NAMEOF_ENUM(state.load(std::memory_order_relaxed)));
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There are still pending messages: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			close();
 			return received;
 		}
 
 		// Replication Protocol normally closed connection.
+		close();
 		return received;
 	}
 
