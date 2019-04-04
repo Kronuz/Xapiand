@@ -2289,11 +2289,11 @@ HttpClient::wal_view(Request& request)
 
 	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
-	auto repr = db_handler.repr_wal(0, std::numeric_limits<Xapian::rev>::max(), unserialised);
+	auto obj = db_handler.repr_wal(0, std::numeric_limits<Xapian::rev>::max(), unserialised);
 
 	request.ready = std::chrono::system_clock::now();
 
-	write_http_response(request, HTTP_STATUS_OK, repr);
+	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("WAL took {}", string::from_delta(took));
