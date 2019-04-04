@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+## Changed
+- **BREAKING**: Remove support for \xHH in json
+
 
 ---
 ## [0.18.1] - 2019-04-02

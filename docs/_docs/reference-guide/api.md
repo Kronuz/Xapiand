@@ -192,10 +192,6 @@ allowed everywhere in the JSON document.
 
 JSON can have trailing commas.
 
-#### Hex Codes
-
-JSON Accepts binary codes as escaped `"\xHH"` in strings.
-
 
 ---
 
