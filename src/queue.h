@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -256,7 +256,7 @@ namespace queue {
 		}
 
 		template<typename E>
-		bool push(E&& element, double timeout=-1.0) {
+		bool push_back(E&& element, double timeout=-1.0) {
 			std::unique_lock<std::mutex> lk(_state->_mutex);
 			bool pushed = _push_back_impl(std::forward<E>(element), timeout, lk);
 			lk.unlock();
@@ -274,7 +274,52 @@ namespace queue {
 			return pushed;
 		}
 
-		bool pop(T& element, double timeout=-1.0) {
+		template<typename E>
+		bool push_front(E&& element, double timeout=-1.0) {
+			std::unique_lock<std::mutex> lk(_state->_mutex);
+			bool pushed = _push_front_impl(std::forward<E>(element), timeout, lk);
+			lk.unlock();
+
+			if (pushed) {
+				// Notifiy waiting thread it can push/pop now
+				_state->_pop_cond.notify_one();
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				_state->_pop_cond.notify_all();
+				_state->_push_cond.notify_all();
+			}
+
+			return pushed;
+		}
+
+		template<typename E>
+		bool push(E&& element, double timeout=-1.0) {
+			return push_back(std::forward<E>(element), timeout);
+		}
+
+		bool pop_back(T& element, double timeout=-1.0) {
+			std::unique_lock<std::mutex> lk(_state->_mutex);
+			bool popped = _pop_back_impl(element, timeout, lk);
+			auto size = _items_queue.size();
+			lk.unlock();
+
+			if (popped) {
+				if (size < _state->_threshold) {
+					// Notifiy waiting thread it can push/pop now
+					_state->_push_cond.notify_one();
+				}
+			} else {
+				// FIXME: This block shouldn't be needed!
+				// Signal the condition variable in case any threads are waiting
+				_state->_pop_cond.notify_all();
+				_state->_push_cond.notify_all();
+			}
+
+			return popped;
+		}
+
+		bool pop_front(T& element, double timeout=-1.0) {
 			std::unique_lock<std::mutex> lk(_state->_mutex);
 			bool popped = _pop_front_impl(element, timeout, lk);
 			auto size = _items_queue.size();
@@ -293,6 +338,10 @@ namespace queue {
 			}
 
 			return popped;
+		}
+
+		bool pop(T& element, double timeout=-1.0) {
+			return pop_front(element, timeout);
 		}
 
 		void clear() {
