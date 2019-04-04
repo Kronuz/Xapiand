@@ -304,6 +304,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	static constexpr size_t limit_max = 16;
 	static constexpr size_t limit_signal = 8;
 
+	std::atomic_bool finished;
 	std::atomic_bool running;
 	std::atomic_bool ready;
 
@@ -328,7 +329,8 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	size_t bulk_cnt;
 
 	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments) :
-		running{true},
+		finished{false},
+		running{false},
 		ready{false},
 		endpoints{endpoints},
 		flags{flags},

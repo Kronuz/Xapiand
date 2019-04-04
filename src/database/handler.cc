@@ -2090,7 +2090,6 @@ DocIndexer::operator()()
 
 		if (ready_) {
 			if (processed_ >= _total) {
-				done.signal();
 				break;
 			}
 		} else {
@@ -2099,6 +2098,9 @@ DocIndexer::operator()()
 			}
 		}
 	}
+
+	running = false;
+	done.signal();
 }
 
 
@@ -2120,7 +2122,9 @@ DocIndexer::_prepare(MsgPack&& obj)
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		if (_total == bulk_cnt) {
-			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			if (!finished && !running.exchange(true)) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
 		}
 		bulk_cnt = 0;
 		limit.wait();  // throttle the prepare
@@ -2155,7 +2159,9 @@ DocIndexer::wait(double timeout)
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		if (_total == bulk_cnt) {
-			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			if (!finished && !running.exchange(true)) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
 		}
 		bulk_cnt = 0;
 	}
@@ -2186,6 +2192,7 @@ DocIndexer::finish()
 {
 	L_CALL("DocIndexer::finish()");
 
+	finished = true;
 	running = false;
 	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, 0));
 }
