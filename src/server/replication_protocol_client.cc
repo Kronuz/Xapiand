@@ -1123,7 +1123,7 @@ ReplicationProtocolClient::__repr__() const
 		}
 	})();
 #else
-	auto& state_repr = NAMEOF_ENUM(state.load(std::memory_order_relaxed));
+	const auto& state_repr = NAMEOF_ENUM(state.load(std::memory_order_relaxed));
 #endif
 	return string::format("<ReplicationProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,
