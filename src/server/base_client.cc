@@ -210,7 +210,7 @@ BaseClient::write_from_queue()
 	std::lock_guard<std::mutex> lk(_mutex);
 
 	std::shared_ptr<Buffer> buffer;
-	if (write_queue.front(buffer)) {
+	if (write_queue.pop_front(buffer)) {
 		size_t buf_size = buffer->size();
 		const char *buf_data = buffer->data();
 
@@ -221,6 +221,8 @@ BaseClient::write_from_queue()
 #endif
 
 		if (sent < 0) {
+			write_queue.push_front(buffer, 0, true);
+
 			if (io::ignored_errno(errno, true, true, false)) {
 				L_CONN("WR:RETRY: {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
 				return WR::RETRY;
@@ -242,13 +244,11 @@ BaseClient::write_from_queue()
 		L_TCP_WIRE("{{sock:{}}} <<-- {} ({} bytes)", sock, repr(buf_data, sent, true, true, 500), sent);
 
 		buffer->remove_prefix(sent);
-		if (buffer->size() == 0) {
-			if (write_queue.pop(buffer)) {
-				if (write_queue.empty()) {
-					L_CONN("WR:OK: {{sock:{}}}", sock);
-					return WR::OK;
-				}
-			}
+		if (buffer->size() != 0) {
+			write_queue.push_front(buffer, 0, true);
+		} else if (write_queue.empty()) {
+			L_CONN("WR:OK: {{sock:{}}}", sock);
+			return WR::OK;
 		}
 
 		L_CONN("WR:PENDING: {{sock:{}}}", sock);
@@ -309,7 +309,7 @@ BaseClient::write_buffer(const std::shared_ptr<Buffer>& buffer)
 		if (closed) {
 			return false;
 		}
-	} while (!write_queue.push(buffer, 1));
+	} while (!write_queue.push_back(buffer, 1));
 
 	writes += 1;
 	L_TCP_ENQUEUE("{{sock:{}}} <ENQUEUE> buffer ({} bytes)", sock, buffer->full_size());
