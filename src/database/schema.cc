@@ -230,6 +230,54 @@ validate_acc_date(UnitTime unit) noexcept
  */
 
 static inline const std::string&
+_get_str_acc_date(UnitTime unit) noexcept
+{
+	switch (unit) {
+		case UnitTime::second: {
+			static const std::string second("second");
+			return second;
+		}
+		case UnitTime::minute: {
+			static const std::string minute("minute");
+			return minute;
+		}
+		case UnitTime::hour: {
+			static const std::string hour("hour");
+			return hour;
+		}
+		case UnitTime::day: {
+			static const std::string day("day");
+			return day;
+		}
+		case UnitTime::month: {
+			static const std::string month("month");
+			return month;
+		}
+		case UnitTime::year: {
+			static const std::string year("year");
+			return year;
+		}
+		case UnitTime::decade: {
+			static const std::string decade("decade");
+			return decade;
+		}
+		case UnitTime::century: {
+			static const std::string century("century");
+			return century;
+		}
+		case UnitTime::millennium: {
+			static const std::string millennium("millennium");
+			return millennium;
+		}
+		default: {
+			static const std::string unknown("unknown");
+			return unknown;
+		}
+	}
+}
+
+
+static inline const std::string&
 _get_str_index(TypeIndex index) noexcept
 {
 	switch (index) {
@@ -5118,7 +5166,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 						case FieldType::timedelta:
 							mut_properties[RESERVED_ACCURACY] = MsgPack::ARRAY();
 							for (auto& acc : specification.accuracy) {
-								mut_properties[RESERVED_ACCURACY].push_back(NAMEOF_ENUM((UnitTime)acc));
+								mut_properties[RESERVED_ACCURACY].push_back(_get_str_acc_date(static_cast<UnitTime>(acc)));
 							}
 							break;
 						default:
@@ -8669,10 +8717,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
+						str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
+						_str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
@@ -8694,10 +8742,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
+						str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(NAMEOF_ENUM((UnitTime)acc)).push_back(' ');
+						_str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
