@@ -43,27 +43,29 @@ def create_git_index(client, index):
     }
 
     create_index_body = {
-        'schema': {
-            'repository': {
-                '_type': 'keyword'
-            },
-            'author': user_mapping,
-            'authored_date': {
-                '_type': 'date'
-            },
-            'committer': user_mapping,
-            'committed_date': {
-                '_type': 'date'
-            },
-            'parent_shas': {
-                '_type': 'keyword'
-            },
-            'description': {
-                '_type': 'text',
-                '_language': 'en'
-            },
-            'files': {
-                '_type': 'array/keyword',
+        '_schema': {
+            'schema': {
+                'repository': {
+                    '_type': 'keyword'
+                },
+                'author': user_mapping,
+                'authored_date': {
+                    '_type': 'date'
+                },
+                'committer': user_mapping,
+                'committed_date': {
+                    '_type': 'date'
+                },
+                'parent_shas': {
+                    '_type': 'keyword'
+                },
+                'description': {
+                    '_type': 'text',
+                    '_language': 'en'
+                },
+                'files': {
+                    '_type': 'array/keyword',
+                }
             }
         }
     }
