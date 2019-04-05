@@ -28,7 +28,7 @@ from .utils import make_path
 
 def get_node_info(node_info, host):
     """
-    Simple callback that takes the node info from `/:nodes` and a
+    Simple callback that takes the node info from `GET /` and a
     parsed connection information and return the connection information. If
     `None` is returned this node will be skipped.
 
@@ -36,7 +36,7 @@ def get_node_info(node_info, host):
     information needs to be provided for the :class:`~xapiand.Connection`
     class.
 
-    :arg node_info: node information from `/:nodes`
+    :arg node_info: node information from `GET /`
     :arg host: connection information (host, port) extracted from the node info
     """
     return host
@@ -61,7 +61,7 @@ class Transport(object):
         :arg connection_class: subclass of :class:`~xapiand.Connection` to use
         :arg connection_pool_class: subclass of :class:`~xapiand.ConnectionPool` to use
         :arg node_info_callback: callback responsible for taking the node information from
-            `/:nodes`, along with already extracted information, and
+            `GET /`, along with already extracted information, and
             producing a list of arguments (same as `hosts` parameter)
         :arg sniff_on_start: flag indicating whether to obtain a list of nodes
             from the cluser at startup time
@@ -131,7 +131,7 @@ class Transport(object):
         self.last_sniff = time.time()
         self.sniff_timeout = sniff_timeout
 
-        # callback to construct host dict from data in /:nodes
+        # callback to construct host dict from data in `GET /`
         self.node_info_callback = node_info_callback
 
         if sniff_on_start:
@@ -209,8 +209,7 @@ class Transport(object):
             for c in chain(self.connection_pool.connections, self.seed_connections):
                 try:
                     # use small timeout for the sniffing request, should be a fast api call
-                    _, headers, node_info = c.perform_request(
-                        'GET', '/:nodes',
+                    _, headers, node_info = c.perform_request('GET', '',
                         timeout=self.sniff_timeout if not initial else None)
                     node_info = self.deserializer.loads(node_info, headers.get('content-type'))
                     break
@@ -290,10 +289,13 @@ class Transport(object):
             underlying :class:`~xapiand.Connection` class for serialization
         :arg body: body of the request, will be serializes using serializer and
             passed to the connection
+        :arg directory: treat resource as a directory (add trailing slash)
         """
         headers = kwargs.get('headers')
         params = kwargs.get('params')
         body = kwargs.get('body')
+        directory = kwargs.get('directory')
+
         if body is not None:
             body = self.serializer.dumps(body)
 
@@ -317,13 +319,17 @@ class Transport(object):
             if isinstance(ignore, int):
                 ignore = (ignore, )
 
+        url = make_path(path)
+        if directory:
+            url += '/'
+
         for attempt in range(1, self.max_retries + 1):
             connection = self.get_connection(method=method, path=path, headers=headers, params=params)
 
             try:
                 status, headers_response, data = connection.perform_request(
                     method,
-                    make_path(path),
+                    url,
                     params,
                     body,
                     headers=headers,
