@@ -22,6 +22,7 @@
 
 cmake_minimum_required(VERSION 3.5)
 project(xapiand C CXX)
+cmake_policy(SET CMP0074 NEW)
 
 # Make sure we can import out CMake functions
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
@@ -74,6 +75,8 @@ endforeach ()
 
 if (APPLE)
 	set (CMAKE_FIND_FRAMEWORK "LAST")
+	set (HOMEBREW_OPT_DIR "/usr/local/opt")
+	message(STATUS "HOMEBREW_OPT_DIR is ${HOMEBREW_OPT_DIR}")
 endif ()
 
 
@@ -203,6 +206,144 @@ endif (CPPLINT)
 
 
 ########################################################################
+#  _     _ _                    _
+# | |   (_) |__  _ __ __ _ _ __(_) ___  ___
+# | |   | | '_ \| '__/ _` | '__| |/ _ \/ __|
+# | |___| | |_) | | | (_| | |  | |  __/\__ \
+# |_____|_|_.__/|_|  \__,_|_|  |_|\___||___/
+#
+########################################################################
+
+
+########################################################################
+# Use libc++ when available
+########################################################################
+
+check_cxx_compiler_flag("-stdlib=libc++" HAVE_FLAG_STDLIB_LIBCPP)
+if (HAVE_FLAG_STDLIB_LIBCPP)
+	add_cxx_compiler_flag("-stdlib=libc++")
+	find_library(LIBCPP_LIBRARIES c++)
+	if (LIBCPP_LIBRARIES)
+		set (HAVE_LIBCPP 1)
+		find_library(LIBCPPABI_LIBRARIES c++abi)
+		if (LIBCPPABI_LIBRARIES)
+			set (HAVE_LIBCPPABI 1)
+			set (LIBCPP_INCLUDE_DIRS "${LIBCPP_INCLUDE_DIRS}" "${LIBCPPABI_INCLUDE_DIRS}")
+			set (LIBCPP_LIBRARIES "${LIBCPP_LIBRARIES}" "${LIBCPPABI_LIBRARIES}")
+		else ()
+			set (HAVE_LIBCPPABI 0)
+			set (LIBCPP_LIBRARIES "")
+			set (LIBCPPABI_LIBRARIES "")
+		endif ()
+	else ()
+		set (HAVE_LIBCPP 0)
+		set (LIBCPP_LIBRARIES "")
+	endif ()
+endif ()
+
+
+########################################################################
+# ZLIB Library
+########################################################################
+
+find_package(ZLIB)
+if (ZLIB_FOUND)
+	set (HAVE_ZLIB 1)
+else ()
+	set (HAVE_ZLIB 0)
+endif ()
+
+
+########################################################################
+# Exec Info Library
+########################################################################
+
+find_library(EXECINFO_LIBRARIES execinfo)
+if (EXECINFO_LIBRARIES)
+	set (HAVE_EXECINFO 1)
+else ()
+	set (HAVE_EXECINFO 0)
+	set (EXECINFO_LIBRARIES "")
+endif ()
+
+
+########################################################################
+# Real Time Library
+########################################################################
+
+find_library(RT_LIBRARIES rt)
+if (RT_LIBRARIES)
+	set (HAVE_RT 1)
+else ()
+	set (HAVE_RT 0)
+	set (RT_LIBRARIES "")
+endif ()
+
+
+########################################################################
+# Math Library
+########################################################################
+
+find_library(M_LIBRARIES m)
+if (M_LIBRARIES)
+	set (HAVE_M 1)
+else ()
+	set (HAVE_M 0)
+	set (M_LIBRARIES "")
+endif ()
+
+
+########################################################################
+# Dynamic Linking Library (for dladdr)
+########################################################################
+
+find_library(DL_LIBRARIES dl)
+if (DL_LIBRARIES)
+	set (HAVE_DL 1)
+else ()
+	set (HAVE_DL 0)
+	set (DL_LIBRARIES "")
+endif ()
+
+
+########################################################################
+# Threads Library
+########################################################################
+
+set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+if (CMAKE_USE_PTHREADS_INIT)
+	set (HAVE_PTHREADS 1)
+else ()
+	set (HAVE_PTHREADS 0)
+endif ()
+
+
+########################################################################
+# UUID Library
+########################################################################
+
+find_package(UUID REQUIRED)
+
+
+########################################################################
+# ICU Library
+########################################################################
+# ICU's UTF-8 word boundary code was broken before 54.1.
+
+if (APPLE AND NOT ICU_ROOT)
+  set (ICU_ROOT "${HOMEBREW_OPT_DIR}/icu4c")
+endif ()
+find_package(ICU 54.1 COMPONENTS uc)
+if (ICU_FOUND)
+	set (USE_ICU 1)
+else ()
+	set (USE_ICU 0)
+endif ()
+
+
+
+########################################################################
 #  _____                    _
 # |_   _|_ _ _ __ __ _  ___| |_ ___
 #   | |/ _` | '__/ _` |/ _ \ __/ __|
@@ -218,8 +359,15 @@ set (XAPIAND_DATA_PATH "${CMAKE_INSTALL_FULL_DATAROOTDIR}/xapiand")
 
 
 include_directories(
+	"${LIBCPP_INCLUDE_DIRS}"
 	"${PROJECT_SOURCE_DIR}/src"
-	"${PROJECT_BINARY_DIR}/src")
+	"${PROJECT_BINARY_DIR}/src"
+)
+
+link_libraries(
+	"${LIBCPP_LIBRARIES}"
+	"${CMAKE_THREAD_LIBS_INIT}"
+)
 
 
 ########################################################################
@@ -358,11 +506,22 @@ list(APPEND XAPIAN_SRC_LIST ${UNICODE_SRC_LIST})
 list(APPEND XAPIAN_SRC_LIST ${QUERYPARSER_SRC_LIST})
 add_library(XAPIAN_OBJ OBJECT ${XAPIAN_SRC_LIST})
 
+target_include_directories(XAPIAN_OBJ PUBLIC
+	"${ZLIB_INCLUDE_DIRS}"
+	"${UUID_INCLUDE_DIRS}"
+	"${ICU_INCLUDE_DIRS}"
+)
+
+target_link_libraries(XAPIAN_OBJ PUBLIC
+	"${ZLIB_LIBRARIES}"
+	"${UUID_LIBRARIES}"
+	"${ICU_LIBRARIES}"
+)
+
 
 ########################################################################
 # Boolean parser library target
 ########################################################################
-
 
 file(GLOB BOOLEAN_PARSER_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h*"
@@ -374,7 +533,6 @@ add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 ########################################################################
 # Libev library target
 ########################################################################
-
 
 file(GLOB LIBEV_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h*"
@@ -395,7 +553,6 @@ add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 # LZ4 library target
 ########################################################################
 
-
 file(GLOB LZ4_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h*"
 )
@@ -407,18 +564,24 @@ add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 # Condensed UUID library target
 ########################################################################
 
-
-file(GLOB UUID_SRC_LIST
+file(GLOB CUUID_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h*"
 )
-list(APPEND UUID_SRC_LIST ${XAPIAN_H_LIST})
-add_library(UUID_OBJ OBJECT ${UUID_SRC_LIST})
+list(APPEND CUUID_SRC_LIST ${XAPIAN_H_LIST})
+add_library(CUUID_OBJ OBJECT ${CUUID_SRC_LIST})
+
+target_include_directories(CUUID_OBJ PUBLIC
+	"${UUID_INCLUDE_DIRS}"
+)
+
+target_link_libraries(CUUID_OBJ PUBLIC
+	"${UUID_LIBRARIES}"
+)
 
 
 ########################################################################
 # Prometheus library target
 ########################################################################
-
 
 file(GLOB PROMETHEUS_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h*"
@@ -431,7 +594,6 @@ add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
 # Xapiand package configuration target
 ########################################################################
 
-
 list(APPEND PACKAGE_SRC_LIST "${PROJECT_SOURCE_DIR}/src/package.cc")
 list(APPEND PACKAGE_SRC_LIST ${XAPIAN_H_LIST})
 add_library(PACKAGE_OBJ OBJECT ${PACKAGE_SRC_LIST})
@@ -440,7 +602,6 @@ add_library(PACKAGE_OBJ OBJECT ${PACKAGE_SRC_LIST})
 ########################################################################
 # Xapiand library target
 ########################################################################
-
 
 file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h*"
@@ -456,25 +617,42 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h*"
 )
 list(REMOVE_ITEM XAPIAND_SRC_LIST
+"${PROJECT_SOURCE_DIR}/src/main.cc"
 "${PROJECT_SOURCE_DIR}/src/package.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
+
+target_include_directories(XAPIAND_OBJ PUBLIC
+	"${ZLIB_INCLUDE_DIRS}"
+	"${UUID_INCLUDE_DIRS}"
+)
+
+target_link_libraries(XAPIAND_OBJ PUBLIC
+	"${ZLIB_LIBRARIES}"
+	"${UUID_LIBRARIES}"
+	"${M_LIBRARIES}"
+	"${DL_LIBRARIES}"
+	"${RT_LIBRARIES}"
+	"${EXECINFO_LIBRARIES}"
+)
 
 
 ########################################################################
 # Primary target
 ########################################################################
 
-add_executable(${PROJECT_NAME}
-	"$<TARGET_OBJECTS:PACKAGE_OBJ>"
-	"$<TARGET_OBJECTS:XAPIAND_OBJ>"
-	"$<TARGET_OBJECTS:XAPIAN_OBJ>"
-	"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
-	"$<TARGET_OBJECTS:LIBEV_OBJ>"
-	"$<TARGET_OBJECTS:LZ4_OBJ>"
-	"$<TARGET_OBJECTS:UUID_OBJ>"
-	"$<TARGET_OBJECTS:PROMETHEUS_OBJ>"
+add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/main.cc")
+
+target_link_libraries(${PROJECT_NAME}
+	PACKAGE_OBJ
+	XAPIAND_OBJ
+	XAPIAN_OBJ
+	BOOLEAN_PARSER_OBJ
+	LIBEV_OBJ
+	LZ4_OBJ
+	CUUID_OBJ
+	PROMETHEUS_OBJ
 )
 
 
@@ -516,134 +694,6 @@ configure_file(
 add_custom_target(uninstall
 	COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
 
-
-
-########################################################################
-#  _     _ _                    _
-# | |   (_) |__  _ __ __ _ _ __(_) ___  ___
-# | |   | | '_ \| '__/ _` | '__| |/ _ \/ __|
-# | |___| | |_) | | | (_| | |  | |  __/\__ \
-# |_____|_|_.__/|_|  \__,_|_|  |_|\___||___/
-#
-########################################################################
-
-
-########################################################################
-# ZLIB Library
-########################################################################
-
-find_package(ZLIB)
-if (ZLIB_FOUND)
-	set (HAVE_ZLIB 1)
-	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${ZLIB_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${ZLIB_LIBRARIES})
-else ()
-	set (HAVE_ZLIB 0)
-endif ()
-
-
-########################################################################
-# Exec Info Library
-########################################################################
-
-find_library(EXECINFO_LIBRARIES execinfo)
-if (EXECINFO_LIBRARIES)
-	set (HAVE_EXECINFO 1)
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${EXECINFO_LIBRARIES})
-else ()
-	set (HAVE_EXECINFO 0)
-endif ()
-
-
-########################################################################
-# Real Time Library
-########################################################################
-
-find_library(RT_LIBRARIES rt)
-if (RT_LIBRARIES)
-	set (HAVE_RT 1)
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${RT_LIBRARIES})
-else ()
-	set (HAVE_RT 0)
-endif ()
-
-
-########################################################################
-# Math Library
-########################################################################
-
-find_library(M_LIBRARIES m)
-if (M_LIBRARIES)
-	set (HAVE_M 1)
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${M_LIBRARIES})
-else ()
-	set (HAVE_M 0)
-	set (M_LIBRARIES "")
-endif ()
-
-
-########################################################################
-# Dynamic Linking Library (for dladdr)
-########################################################################
-
-find_library(DL_LIBRARIES dl)
-if (DL_LIBRARIES)
-	set (HAVE_DL 1)
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${DL_LIBRARIES})
-else ()
-	set (HAVE_DL 0)
-	set (DL_LIBRARIES "")
-endif ()
-
-
-########################################################################
-# Use libc++ when available
-########################################################################
-
-check_cxx_compiler_flag("-stdlib=libc++" HAVE_FLAG_STDLIB_LIBCPP)
-if (HAVE_FLAG_STDLIB_LIBCPP)
-	add_cxx_compiler_flag("-stdlib=libc++")
-	find_library(LIBCPP_LIBRARIES c++)
-	if (LIBCPP_LIBRARIES)
-		set (HAVE_LIBCPP 1)
-		target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBCPP_LIBRARIES})
-		find_library(LIBCPPABI_LIBRARIES c++abi)
-		if (LIBCPPABI_LIBRARIES)
-			set (HAVE_LIBCPPABI 1)
-			target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBCPPABI_LIBRARIES})
-		else ()
-			set (HAVE_LIBCPPABI 0)
-			set (LIBCPP_LIBRARIES "")
-		endif ()
-	else ()
-		set (HAVE_LIBCPP 0)
-		set (LIBCPP_LIBRARIES "")
-	endif ()
-endif ()
-
-
-########################################################################
-# Threads Library
-########################################################################
-
-set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_THREAD_LIBS_INIT})
-
-if (CMAKE_USE_PTHREADS_INIT)
-	set (HAVE_PTHREADS 1)
-else ()
-	set (HAVE_PTHREADS 0)
-endif ()
-
-
-########################################################################
-# UUID Library
-########################################################################
-
-find_package(UUID REQUIRED)
-target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${UUID_INCLUDE_DIRS}")
-target_link_libraries(${PROJECT_NAME} PRIVATE ${UUID_LIBRARIES})
 
 
 ########################################################################
@@ -824,16 +874,6 @@ set (HAVE_CLOCK_SYSCALL ${HAVE_CLOCK_GETTIME})
 ########################################################################
 # xapian Flags
 ########################################################################
-
-# ICU's UTF-8 word boundary code was broken before 54.1.
-find_package(ICU 54.1 COMPONENTS uc)
-if (ICU_FOUND)
-	set (USE_ICU 1)
-	target_include_directories(${PROJECT_NAME} BEFORE PRIVATE "${ICU_INCLUDE_DIRS}")
-	target_link_libraries(${PROJECT_NAME} PRIVATE ${ICU_LIBRARIES})
-else ()
-	set (USE_ICU 0)
-endif ()
 
 check_symbol_exists(exp10 "math.h" HAVE_DECL_EXP10)
 check_symbol_exists(log2 "math.h" HAVE_DECL_LOG2)
@@ -1084,7 +1124,7 @@ endif ()
 # Externalize debug information
 ########################################################################
 
-if (DEBUGINFO_EXTERNALIZE AND APPLE)
+if (APPLE AND DEBUGINFO_EXTERNALIZE)
 	if (NOT DEBUGINFO_EXTERNALIZE_SKIP_STRIP)
 		set (strip_command COMMAND strip -Sl $<TARGET_FILE:${PROJECT_NAME}>)
 	endif ()
@@ -1188,7 +1228,7 @@ if (BUILD_TESTS)
 				"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
 				"$<TARGET_OBJECTS:LIBEV_OBJ>"
 				"$<TARGET_OBJECTS:LZ4_OBJ>"
-				"$<TARGET_OBJECTS:UUID_OBJ>"
+				"$<TARGET_OBJECTS:CUUID_OBJ>"
 				"$<TARGET_OBJECTS:PROMETHEUS_OBJ>"
 			)
 			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})
