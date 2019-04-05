@@ -2006,15 +2006,66 @@ DocPreparer::operator()()
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
 			auto prepared = db_handler.prepare_document(obj);
-			indexer->ready_queue.enqueue(std::make_tuple(std::move(std::get<0>(prepared)), std::move(std::get<1>(prepared)), std::move(std::get<2>(prepared)), idx));
+			indexer->ready_queue.enqueue(std::make_tuple(
+				std::move(std::get<0>(prepared)),
+				std::move(std::get<1>(prepared)),
+				std::move(std::get<2>(prepared)),
+				idx));
 			return 0;
 		});
 		if (http_errors.error_code != HTTP_STATUS_OK) {
-			indexer->ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, indexer->comments ? MsgPack{
-				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
-			} : MsgPack::MAP(), idx));
+			indexer->ready_queue.enqueue(std::make_tuple(
+				std::string{},
+				Xapian::Document{},
+				indexer->comments ? MsgPack{
+					{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
+					{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
+				} : MsgPack::MAP(),
+				idx));
 		}
+	}
+}
+
+
+void
+DocIndexer::_prepare(MsgPack&& obj)
+{
+	L_CALL("DocIndexer::_prepare(<obj>)");
+
+	if (!obj.is_map()) {
+		L_ERR("Indexing object has an unsupported type: {}", NAMEOF_ENUM(obj.get_type()));
+		return;
+	}
+
+	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
+	if (bulk_cnt == bulk.size()) {
+		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
+		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
+			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
+		}
+		if (_total.load(std::memory_order_acquire) == bulk_cnt) {
+			if (!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
+		}
+		bulk_cnt = 0;
+		limit.wait();  // throttle the prepare
+	}
+}
+
+
+void
+DocIndexer::prepare(MsgPack&& obj)
+{
+	L_CALL("DocIndexer::prepare(<obj>)");
+
+	if (obj.is_array()) {
+		for (auto &o : obj) {
+			_prepare(std::move(o));
+		}
+	} else {
+		_prepare(std::move(obj));
 	}
 }
 
@@ -2133,49 +2184,6 @@ DocIndexer::operator()()
 
 	running.store(false, std::memory_order_release);
 	done.signal();
-}
-
-
-void
-DocIndexer::_prepare(MsgPack&& obj)
-{
-	L_CALL("DocIndexer::_prepare(<obj>)");
-
-	if (!obj.is_map()) {
-		L_ERR("Indexing object has an unsupported type: {}", NAMEOF_ENUM(obj.get_type()));
-		return;
-	}
-
-	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
-	if (bulk_cnt == bulk.size()) {
-		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
-		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
-			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-		}
-		if (_total.load(std::memory_order_acquire) == bulk_cnt) {
-			if (!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
-			}
-		}
-		bulk_cnt = 0;
-		limit.wait();  // throttle the prepare
-	}
-}
-
-
-void
-DocIndexer::prepare(MsgPack&& obj)
-{
-	L_CALL("DocIndexer::prepare(<obj>)");
-
-	if (obj.is_array()) {
-		for (auto &o : obj) {
-			_prepare(std::move(o));
-		}
-	} else {
-		_prepare(std::move(obj));
-	}
 }
 
 
