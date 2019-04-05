@@ -42,7 +42,7 @@ class IndicesClient(NamespacedClient):
         :arg body: The configuration for the index (`_settings` and `_schema`)
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('POST', *index.split('/'),
+        return self.transport.perform_request('UPDATE', *index.split('/'),
             directory=True, params=params, body=body)
 
     @query_params('timeout')
@@ -55,7 +55,7 @@ class IndicesClient(NamespacedClient):
             string to perform the operation on all indices
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('POST', *index.split('/'),
+        return self.transport.perform_request('COMMIT', *index.split('/'),
             directory=True, params=params)
 
     @query_params('timeout')
@@ -68,7 +68,7 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('POST', *index.split('/'),
+        return self.transport.perform_request('OPEN', *index.split('/'),
             directory=True, params=params)
 
     @query_params('timeout')
@@ -82,7 +82,7 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('POST', *index.split('/'),
+        return self.transport.perform_request('CLOSE', *index.split('/'),
             directory=True, params=params)
 
     @query_params('timeout')
@@ -95,7 +95,7 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('POST', *index.split('/'),
+        return self.transport.perform_request('DELETE', *index.split('/'),
             directory=True, params=params)
 
     @query_params('q', 'refresh', 'timeout')
