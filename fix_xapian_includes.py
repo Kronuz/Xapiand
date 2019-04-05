@@ -7,6 +7,7 @@ import re
 
 
 def main():
+    os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
     prefix_len = len(os.path.dirname(os.path.abspath('xapian'))) + 1
     for dirpath, dirnames, filenames in os.walk('xapian'):
         if dirpath not in ('.deps', '.libs'):
