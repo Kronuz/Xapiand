@@ -594,9 +594,19 @@ add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
 # Xapiand package configuration target
 ########################################################################
 
-list(APPEND PACKAGE_SRC_LIST "${PROJECT_SOURCE_DIR}/src/package.cc")
-list(APPEND PACKAGE_SRC_LIST ${XAPIAN_H_LIST})
-add_library(PACKAGE_OBJ OBJECT ${PACKAGE_SRC_LIST})
+file(GLOB FMT_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/fmt/*.c*" "${PROJECT_SOURCE_DIR}/src/fmt/*.h*"
+)
+add_library(FMT_OBJ OBJECT ${FMT_SRC_LIST})
+
+
+########################################################################
+# Xapiand package configuration target
+########################################################################
+
+list(APPEND XAPIAND_PACKAGE_SRC_LIST "${PROJECT_SOURCE_DIR}/src/package.cc")
+list(APPEND XAPIAND_PACKAGE_SRC_LIST ${XAPIAN_H_LIST})
+add_library(XAPIAND_PACKAGE_OBJ OBJECT ${XAPIAND_PACKAGE_SRC_LIST})
 
 
 ########################################################################
@@ -608,7 +618,6 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/chaipp/*.c*" "${PROJECT_SOURCE_DIR}/src/chaipp/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/fmt/*.c*" "${PROJECT_SOURCE_DIR}/src/fmt/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/hash/*.c*" "${PROJECT_SOURCE_DIR}/src/hash/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h*"
@@ -645,7 +654,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/main.cc")
 
 target_link_libraries(${PROJECT_NAME}
-	PACKAGE_OBJ
+	XAPIAND_PACKAGE_OBJ
 	XAPIAND_OBJ
 	XAPIAN_OBJ
 	BOOLEAN_PARSER_OBJ
@@ -653,6 +662,7 @@ target_link_libraries(${PROJECT_NAME}
 	LZ4_OBJ
 	CUUID_OBJ
 	PROMETHEUS_OBJ
+	FMT_OBJ
 )
 
 
@@ -1222,7 +1232,7 @@ if (BUILD_TESTS)
 				"${PROJECT_SOURCE_DIR}/oldtests/test_${VAR_TEST}.cc"
 				"${PROJECT_SOURCE_DIR}/oldtests/set_${VAR_TEST}_test.cc"
 				"${PROJECT_SOURCE_DIR}/oldtests/utils.cc"
-				"$<TARGET_OBJECTS:PACKAGE_OBJ>"
+				"$<TARGET_OBJECTS:XAPIAND_PACKAGE_OBJ>"
 				"$<TARGET_OBJECTS:XAPIAND_OBJ>"
 				"$<TARGET_OBJECTS:XAPIAN_OBJ>"
 				"$<TARGET_OBJECTS:BOOLEAN_PARSER_OBJ>"
