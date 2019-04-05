@@ -41,7 +41,7 @@
 #include "chaiscript/chaiscript_defines.hpp"  // for chaiscript::Build_Info
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
-#include "database/handler.h"               // for DatabaseHandler
+#include "database/handler.h"               // for DatabaseHandler, DocIndexer
 #include "database/utils.h"                 // for query_field_t
 #include "database/pool.h"                  // for DatabasePool
 #include "database/schema.h"                // for Schema
@@ -361,6 +361,25 @@ HttpClient::is_idle() const
 	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_requests:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_requests());
 
 	return !is_waiting() && !is_running() && write_queue.empty() && !pending_requests();
+}
+
+
+void
+HttpClient::destroy_impl()
+{
+	L_CALL("BaseClient::destroy_impl()");
+
+	MetaBaseClient<HttpClient>::destroy_impl();
+
+	// HttpClient could be using indexer (which would block)
+	// if destroying is received, finish indexer:
+	std::unique_lock<std::mutex> lk(runner_mutex);
+	if (!requests.empty()) {
+		auto& request = *requests.front();
+		if (request.indexer) {
+			request.indexer->finish();
+		}
+	}
 }
 
 
