@@ -336,7 +336,6 @@ class HttpClient : public MetaBaseClient<HttpClient> {
 #if XAPIAND_DATABASE_WAL
 	void wal_view(Request& request);
 #endif
-	void nodes_view(Request& request);
 
 	void url_resolve(Request& request);
 	std::vector<std::string> expand_paths(Request& request);

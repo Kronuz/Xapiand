@@ -1014,10 +1014,6 @@ HttpClient::prepare()
 				} else if (cmd == ":wal") {
 					new_request->view = &HttpClient::wal_view;
 #endif
-#if XAPIAND_CLUSTERING
-				} else if (!has_pth && cmd == ":nodes") {
-					new_request->view = &HttpClient::nodes_view;
-#endif
 				} else {
 					new_request->view = &HttpClient::retrieve_metadata_view;
 				}
@@ -1288,6 +1284,27 @@ HttpClient::node_obj()
 
 	auto obj = document.get_obj();
 
+#ifdef XAPIAND_CLUSTERING
+	auto nodes = MsgPack::ARRAY();
+	for (auto& node : Node::nodes()) {
+		if (node->idx) {
+			auto node_obj = MsgPack::MAP();
+			node_obj["idx"] = node->idx;
+			node_obj["name"] = node->name();
+			if (Node::is_active(node)) {
+				node_obj["host"] = node->host();
+				node_obj["http_port"] = node->http_port;
+				node_obj["remote_port"] = node->remote_port;
+				node_obj["replication_port"] = node->replication_port;
+				node_obj["active"] = true;
+			} else {
+				node_obj["active"] = false;
+			}
+			nodes.push_back(node_obj);
+		}
+	}
+#endif
+
 	obj.update(MsgPack({
 #ifdef XAPIAND_CLUSTERING
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
@@ -1341,6 +1358,9 @@ HttpClient::node_obj()
 #endif
 			} },
 		} },
+#ifdef XAPIAND_CLUSTERING
+		{ RESPONSE_NODES, nodes },
+#endif
 	}));
 
 	return obj;
@@ -1789,40 +1809,6 @@ HttpClient::info_view(Request& request)
 			{"operation", "info"}
 		})
 		.Observe(took / 1e9);
-}
-
-
-void
-HttpClient::nodes_view(Request& request)
-{
-	L_CALL("HttpClient::nodes_view()");
-
-	auto nodes = MsgPack::ARRAY();
-
-#ifdef XAPIAND_CLUSTERING
-	for (auto& node : Node::nodes()) {
-		if (node->idx) {
-			auto obj = MsgPack::MAP();
-			obj["idx"] = node->idx;
-			obj["name"] = node->name();
-			if (Node::is_active(node)) {
-				obj["host"] = node->host();
-				obj["http_port"] = node->http_port;
-				obj["remote_port"] = node->remote_port;
-				obj["replication_port"] = node->replication_port;
-				obj["active"] = true;
-			} else {
-				obj["active"] = false;
-			}
-			nodes.push_back(obj);
-		}
-	}
-#endif
-
-	write_http_response(request, HTTP_STATUS_OK, {
-		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
-		{ RESPONSE_NODES, nodes },
-	});
 }
 
 
