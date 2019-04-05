@@ -614,6 +614,15 @@ Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw
 
 
 void
+Shard::do_close()
+{
+	L_CALL("Shard::do_close()");
+
+	do_close(false, is_closed(), transaction, false);
+}
+
+
+void
 Shard::close()
 {
 	L_CALL("Shard::close()");
@@ -700,11 +709,10 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(false, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(false, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -820,11 +828,10 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -904,11 +911,10 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1059,11 +1065,10 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1150,11 +1155,10 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1318,11 +1322,10 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1375,11 +1378,10 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1425,11 +1427,10 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}
@@ -1479,11 +1480,10 @@ Shard::get_docid_term(const std::string& term)
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -1527,11 +1527,10 @@ Shard::get_document(Xapian::docid shard_did, bool assume_valid_)
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -1584,11 +1583,10 @@ Shard::get_metadata(const std::string& key)
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -1632,11 +1630,10 @@ Shard::get_metadata_keys()
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		} catch (const Xapian::InvalidArgumentError&) {
@@ -1678,11 +1675,10 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 		} catch (const Xapian::NetworkError& exc) {
 			if (t == 0) { do_close(true, true, transaction, false); throw; }
 		} catch (const Xapian::DatabaseError& exc) {
+			do_close();
 			if (exc.get_msg() == "Database has been closed") {
 				if (t == 0) { do_close(true, true, transaction, false); throw; }
-				do_close(false, is_closed(), transaction, false);
 			} else {
-				do_close(false, is_closed(), transaction, false);
 				throw;
 			}
 		}

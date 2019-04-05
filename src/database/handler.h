@@ -264,7 +264,9 @@ public:
 #endif /* XAPIAND_DATA_STORAGE */
 
 	bool commit(bool wal = true);
-	bool reopen();
+	void reopen();
+
+	void do_close();
 };
 
 
