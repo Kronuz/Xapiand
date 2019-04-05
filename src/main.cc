@@ -722,18 +722,6 @@ void banner() {
 
 
 void setup() {
-	// Flush threshold:
-	const char *p = std::getenv("XAPIAN_FLUSH_THRESHOLD");
-	if (p != nullptr) {
-		L_INFO("Flush threshold is now {}. (from XAPIAN_FLUSH_THRESHOLD)", std::atoi(p));
-	} else {
-		if (setenv("XAPIAN_FLUSH_THRESHOLD", string::format("{}", opts.flush_threshold).c_str(), 0) == -1) {
-			L_INFO("Flush threshold is 10000: {} ({}): {}", error::name(errno), errno, error::description(errno));
-		} else {
-			L_INFO("Flush threshold is now {}. (it was originally 10000)", opts.flush_threshold);
-		}
-	}
-
 	std::vector<std::string> modes;
 	if (opts.strict) {
 		modes.emplace_back("strict");
