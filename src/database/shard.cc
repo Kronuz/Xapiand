@@ -482,10 +482,10 @@ Shard::reopen()
 				try {
 					bool ret = database->reopen();
 					return ret;
-				} catch (const Xapian::DatabaseModifiedError& exc) {
-					if (t == 0) { throw; }
-				} catch (const Xapian::DatabaseOpeningError& exc) {
-				} catch (const Xapian::NetworkError& exc) {
+				} catch (const Xapian::DatabaseModifiedError&) {
+				} catch (const Xapian::DatabaseCorruptError&) {
+				} catch (const Xapian::DatabaseOpeningError&) {
+				} catch (const Xapian::NetworkError&) {
 				} catch (const Xapian::DatabaseError& exc) {
 					if (exc.get_msg() != "Database has been closed") {
 						throw;
@@ -504,12 +504,21 @@ Shard::reopen()
 			} else {
 				reopen_readable();
 			}
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { throw; }
-		} catch (...) {
-			reset();
-			throw;
-		}
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t == 0) { reset(); throw; }
+		} catch (const Xapian::DatabaseCorruptError&) {
+			if (t == 0) { reset(); throw; }
+		} catch (const Xapian::DatabaseOpeningError&) {
+			if (t == 0) { reset(); throw; }
+		} catch (const Xapian::NetworkError&) {
+			if (t == 0) { reset(); throw; }
+		} catch (const Xapian::DatabaseError& exc) {
+			if (t == 0) { reset(); throw; }
+			if (exc.get_msg() != "Database has been closed") {
+				reset();
+				throw;
+			}
+		} catch (...) { reset(); throw; }
 	}
 
 	ASSERT(database);
