@@ -1075,6 +1075,10 @@ QueryDSL::get_query(const MsgPack& obj)
 		query = Xapian::Query(std::string());
 	} else {
 		unsigned flags = (
+			Xapian::QueryParser::FLAG_CJK_NGRAM |
+#ifdef USE_ICU
+			Xapian::QueryParser::FLAG_CJK_WORDS |
+#endif
 			Xapian::QueryParser::FLAG_PHRASE |
 			Xapian::QueryParser::FLAG_LOVEHATE |
 			Xapian::QueryParser::FLAG_WILDCARD

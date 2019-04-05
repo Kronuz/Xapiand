@@ -5622,6 +5622,12 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 		case FieldType::string:
 		case FieldType::text: {
 			Xapian::TermGenerator term_generator;
+			Xapian::TermGenerator::flags flags = 0;
+#ifdef USE_ICU
+			flags |= Xapian::TermGenerator::FLAG_CJK_WORDS;
+#endif
+			flags |= Xapian::TermGenerator::FLAG_CJK_NGRAM;
+			term_generator.set_flags(flags);
 			term_generator.set_document(doc);
 			if (!field_spc.language.empty()) {
 				term_generator.set_stopper(getStopper(field_spc.language).get());
