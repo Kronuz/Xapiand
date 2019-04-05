@@ -1047,12 +1047,6 @@ GlassWritableDatabase::GlassWritableDatabase(const string &dir, int flags,
 	  modify_shortcut_docid(0)
 {
     LOGCALL_CTOR(DB, "GlassWritableDatabase", dir | flags | block_size);
-
-    const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-    if (p)
-	flush_threshold = atoi(p);
-    if (flush_threshold == 0)
-	flush_threshold = 10000;
 }
 
 GlassWritableDatabase::~GlassWritableDatabase()
