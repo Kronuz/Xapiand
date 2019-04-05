@@ -33,10 +33,13 @@
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
 #include <utility>                          // for std::move
 
+#ifdef USE_ICU
+#include <unicode/uvernum.h>
+#endif
+
 #ifdef XAPIAND_CHAISCRIPT
 #include "chaiscript/chaiscript_defines.hpp"  // for chaiscript::Build_Info
 #endif
-
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler
 #include "database/utils.h"                 // for query_field_t
@@ -1296,6 +1299,9 @@ HttpClient::node_obj()
 			{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
 			{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+#endif
+#ifdef USE_ICU
+			{ "ICU", string::format("{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM) },
 #endif
 		} },
 		{ "options", {

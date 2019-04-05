@@ -635,6 +635,7 @@ add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 target_include_directories(XAPIAND_OBJ PUBLIC
 	"${ZLIB_INCLUDE_DIRS}"
 	"${UUID_INCLUDE_DIRS}"
+	"${ICU_INCLUDE_DIRS}"
 )
 
 target_link_libraries(XAPIAND_OBJ PUBLIC

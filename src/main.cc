@@ -43,6 +43,10 @@
 #include <sys/prctl.h>
 #endif
 
+#ifdef USE_ICU
+#include <unicode/uvernum.h>
+#endif
+
 #ifdef XAPIAND_CHAISCRIPT
 #include "chaiscript/chaiscript_defines.hpp"      // for chaiscript::Build_Info
 #endif
@@ -687,6 +691,9 @@ void banner() {
 #ifdef XAPIAND_CHAISCRIPT
 			string::format("ChaiScript v{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
 #endif
+#ifdef USE_ICU
+			string::format("ICU v{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM),
+#endif
 	});
 
 	if (Logging::log_level >= LOG_NOTICE) {
@@ -703,11 +710,11 @@ void banner() {
 			outer + "| " +     inner + "`-_`-´_-´" + outer + " | "                         + rgb(128, 128, 128) + " / /\\__\\__,_| .__/|_|\\__,_|_| |_|\\__,_|\n" +
 			outer + " `-_ " +     inner + "`-´" + outer + " _-´  "                         + rgb(96, 96, 96)    + "/_/" + rgb(144, 238, 144) + "{:^9}" + rgb(96, 96, 96) + "|_|" + rgb(144, 238, 144) + "{:^24}" + "\n" +
 			outer + "    ``-´´   " + rgb(0, 128, 0) + "{:^42}" + "\n" +
-					"            " + rgb(0, 96, 0)  + "{:^42}" + "\n\n",
+					                 rgb(0, 96, 0)  + "{:^54}" + "\n\n",
 			"v" + Package::VERSION,
 			"rev:" + Package::REVISION,
-			"Using " + string::join(values, ", ", " and "),
-			"[" + Package::BUGREPORT + "]");
+			"[" + Package::BUGREPORT + "]",
+			"Using " + string::join(values, ", ", " and "));
 	}
 
 	L(-LOG_NOTICE, NOTICE_COL, "{} (pid:{})", Package::STRING, getpid());
