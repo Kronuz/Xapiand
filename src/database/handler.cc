@@ -2006,22 +2006,33 @@ DocPreparer::operator()()
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
 			auto prepared = db_handler.prepare_document(obj);
-			indexer->ready_queue.enqueue(std::make_tuple(
-				std::move(std::get<0>(prepared)),
-				std::move(std::get<1>(prepared)),
-				std::move(std::get<2>(prepared)),
-				idx));
+			if unlikely(!indexer->ready_queue.enqueue(
+				std::make_tuple(
+					std::move(std::get<0>(prepared)),
+					std::move(std::get<1>(prepared)),
+					std::move(std::get<2>(prepared)),
+					idx
+				)
+			)) {
+				L_ERR("Prepared document: cannot enqueue to index!");
+				return 1;
+			}
 			return 0;
 		});
-		if (http_errors.error_code != HTTP_STATUS_OK) {
-			indexer->ready_queue.enqueue(std::make_tuple(
-				std::string{},
-				Xapian::Document{},
-				indexer->comments ? MsgPack{
-					{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-					{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
-				} : MsgPack::MAP(),
-				idx));
+		if (http_errors.ret) {
+			if unlikely(!indexer->ready_queue.enqueue(
+				std::make_tuple(
+					std::string{},
+					Xapian::Document{},
+					indexer->comments ? MsgPack{
+						{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
+						{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
+					} : MsgPack::MAP(),
+					idx
+				)
+			)) {
+				L_ERR("Prepared document: cannot enqueue to index!");
+			}
 		}
 	}
 }
@@ -2039,15 +2050,13 @@ DocIndexer::_prepare(MsgPack&& obj)
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	if (bulk_cnt == bulk.size()) {
+		if unlikely(!running.exchange(true, std::memory_order_release) && !finished.load(std::memory_order_acquire)) {
+			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		}
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
-		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-		}
-		if (_total.load(std::memory_order_acquire) == bulk_cnt) {
-			if (!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
-			}
 		}
 		bulk_cnt = 0;
 		limit.wait();  // throttle the prepare
@@ -2193,15 +2202,13 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
+		if unlikely(!running.exchange(true, std::memory_order_release) && !finished.load(std::memory_order_acquire)) {
+			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		}
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
-		if (!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
-		}
-		if (_total.load(std::memory_order_acquire) == bulk_cnt) {
-			if (!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
-			}
 		}
 		bulk_cnt = 0;
 	}
