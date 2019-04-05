@@ -37,6 +37,7 @@ constexpr const char RESERVED_QUERYDSL_SELECTOR[]           = RESERVED__ "select
 constexpr const char RESERVED_QUERYDSL_ORDER[]              = RESERVED__ "order";
 constexpr const char RESERVED_QUERYDSL_METRIC[]             = RESERVED__ "metric";
 constexpr const char RESERVED_QUERYDSL_PARTIAL[]            = RESERVED__ "partial";
+constexpr const char RESERVED_QUERYDSL_FUZZY[]              = RESERVED__ "fuzzy";
 
 constexpr const char RESERVED_QUERYDSL_AND[]                = RESERVED__ "and";
 constexpr const char RESERVED_QUERYDSL_OR[]                 = RESERVED__ "or";
@@ -52,6 +53,7 @@ constexpr const char RESERVED_QUERYDSL_ELITE_SET[]          = RESERVED__ "elite_
 constexpr const char RESERVED_QUERYDSL_SYNONYM[]            = RESERVED__ "synonym";
 constexpr const char RESERVED_QUERYDSL_MAX[]                = RESERVED__ "max";
 constexpr const char RESERVED_QUERYDSL_WILDCARD[]           = RESERVED__ "wildcard";
+constexpr const char RESERVED_QUERYDSL_EDIT_DISTANCE[]      = RESERVED__ "edit_distance";
 
 constexpr const char RESERVED_QUERYDSL_MATCH_ALL[]          = RESERVED__ "match_all";
 constexpr const char RESERVED_QUERYDSL_MATCH_NONE[]         = RESERVED__ "match_none";
