@@ -979,8 +979,7 @@ QueryParser::Internal::parse_query(const string &qs, unsigned flags,
 					      "building Xapian to use ICU");
     }
 #endif
-    bool cjk_enable =
-	(flags & (FLAG_CJK_NGRAM|FLAG_CJK_WORDS)) || CJK::is_cjk_enabled();
+    bool cjk_enable = (flags & (FLAG_CJK_NGRAM|FLAG_CJK_WORDS));
 
     // Set ranges if we may have to handle ranges in the query.
     bool ranges = !rangeprocs.empty() && (qs.find("..") != string::npos);

@@ -288,9 +288,6 @@ TermGenerator::Internal::index_text(Utf8Iterator itor, termcount wdf_inc,
     }
 #endif
     unsigned cjk_flags = flags & (FLAG_CJK_NGRAM | FLAG_CJK_WORDS);
-    if (cjk_flags == 0 && CJK::is_cjk_enabled()) {
-	cjk_flags = FLAG_CJK_NGRAM;
-    }
 
     stop_strategy current_stop_mode;
     if (!stopper.get()) {
@@ -766,9 +763,6 @@ MSet::Internal::snippet(const string & text,
 #endif
     auto SNIPPET_CJK_MASK = MSet::SNIPPET_CJK_NGRAM | MSet::SNIPPET_CJK_WORDS;
     unsigned cjk_flags = flags & SNIPPET_CJK_MASK;
-    if (cjk_flags == 0 && CJK::is_cjk_enabled()) {
-	cjk_flags = MSet::SNIPPET_CJK_NGRAM;
-    }
 
     size_t term_start = 0;
     double min_tw = 0, max_tw = 0;

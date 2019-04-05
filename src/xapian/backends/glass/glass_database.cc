@@ -1040,21 +1040,11 @@ GlassWritableDatabase::GlassWritableDatabase(const string &dir, int flags,
 					     int block_size)
 	: GlassDatabase(dir, flags, block_size),
 	  change_count(0),
-	  flush_threshold(0),
+	  flush_threshold(100000),
 	  modify_shortcut_document(NULL),
 	  modify_shortcut_docid(0)
 {
     LOGCALL_CTOR(DB, "GlassWritableDatabase", dir | flags | block_size);
-
-    const char *p = getenv("XAPIAN_FLUSH_THRESHOLD");
-    if (p && *p) {
-	if (!parse_unsigned(p, flush_threshold)) {
-	    throw Xapian::InvalidArgumentError("XAPIAN_FLUSH_THRESHOLD must "
-					       "be a non-negative integer");
-	}
-    }
-    if (flush_threshold == 0)
-	flush_threshold = 10000;
 }
 
 GlassWritableDatabase::~GlassWritableDatabase()
