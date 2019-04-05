@@ -47,7 +47,7 @@ class XAPIAN_VISIBILITY_DEFAULT ESet {
     /// Class representing the ESet internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, ESet> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Copying is allowed.
      *

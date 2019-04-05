@@ -22,7 +22,6 @@
 #define XAPIAN_INCLUDED_ENQUIREINTERNAL_H
 
 #include "xapian/backends/databaseinternal.h"
-#include "xapian/weight/weightinternal.h"
 #include "xapian/constants.h"
 #include "xapian/database.h"
 #include "xapian/enquire.h"
@@ -36,12 +35,11 @@
 #include <string>
 #include <vector>
 
-class Matcher;
-
 namespace Xapian {
 
 class ESet;
 class RSet;
+class Weight;
 
 class Enquire::Internal : public Xapian::Internal::intrusive_base {
     friend class Enquire;
@@ -85,18 +83,9 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
 
     double expand_k = 1.0;
 
-    mutable std::unique_ptr<Xapian::Weight::Internal> stats;
-    mutable std::unique_ptr<::Matcher> match;
-
   public:
     explicit
     Internal(const Database& db_);
-
-    void unserialise_stats(const std::string& serialised);
-
-    const std::string serialise_stats() const;
-
-    void prepare_mset(const RSet *rset, const MatchDecider *mdecider) const;
 
     MSet get_mset(doccount first,
 		  doccount maxitems,

@@ -341,8 +341,6 @@ GlassTable::block_to_cursor(Glass::Cursor * C_, int j, uint4 n) const
     if (rare(j != GET_LEVEL(p))) {
 	string msg = "Expected block ";
 	msg += str(n);
-	msg += " in table ";
-	msg += tablename;
 	msg += " to be level ";
 	msg += str(j);
 	msg += ", not ";

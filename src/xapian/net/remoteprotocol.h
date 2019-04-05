@@ -94,7 +94,6 @@ enum message_type {
     MSG_FREQS,			// Get termfreq and collfreq
     MSG_UNIQUETERMS,		// Get number of unique terms in doc
     MSG_POSITIONLISTCOUNT,	// Get PositionList length
-    MSG_READACCESS,             // Select currenty active read access
     MSG_MAX
 };
 
