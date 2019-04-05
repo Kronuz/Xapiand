@@ -294,6 +294,7 @@ MultipleValueRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj
 			case FieldType::text:
 			case FieldType::string:
 				return getStringQuery(field_spc, start, end);
+			case FieldType::date:
 			case FieldType::datetime:
 				return getDateQuery(field_spc, start, end);
 			case FieldType::time:
