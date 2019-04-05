@@ -6,7 +6,7 @@ title: API Conventions
 
 ## RESTful Features
 
-Xapiand uses a RESTful API exposed using JSON (or MessagePack) over HTTP.
+Xapiand uses a RESTful API exposed using JSON over HTTP.
 
 When we talk about our API, we use terms like "_REST_" and "_RESTful_." "_REST_"
 stands for [Representational State Transfer](https://en.wikipedia.org/wiki/Representational_state_transfer){:target="_blank"}.

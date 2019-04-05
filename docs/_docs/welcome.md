@@ -13,8 +13,8 @@ itself.
 ## So what is {{ site.name }}, exactly?
 
 Xapiand is **A Modern Highly Available Distributed RESTful Search and Storage
-Server built for the Cloud**. It takes JSON (or MessagePack) documents and
-indexes them efficiently for later retrieval.
+Server built for the Cloud**. It takes JSON documents and indexes them
+efficiently for later retrieval.
 
 
 ---
