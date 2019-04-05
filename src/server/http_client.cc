@@ -400,7 +400,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		}
 
 		if (pending_requests()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests{}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests: {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), reason);
 			close();
 			return received;
 		}
