@@ -40,14 +40,6 @@
 using namespace std;
 
 bool
-CJK::is_cjk_enabled()
-{
-    const char * p;
-    static bool result = ((p = getenv("XAPIAN_CJK_NGRAM")) != NULL && *p);
-    return result;
-}
-
-bool
 CJK::codepoint_is_cjk(unsigned p)
 {
     // Array containing the last value in each range of codepoints which
