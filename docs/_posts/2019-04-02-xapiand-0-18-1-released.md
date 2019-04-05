@@ -1,6 +1,6 @@
 ---
 title: "Xapiand 0.18.1 Released"
-date: "2019-04-01 17:38:00 -0600"
+date: "2019-04-02 17:38:00 -0600"
 author: Kronuz
 version: 0.18.1
 categories: [release]
