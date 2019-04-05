@@ -1030,8 +1030,20 @@ QueryDSL::make_dsl_query(std::string_view query)
 					fp.parse();
 
 					MsgPack value;
-					if (fp.is_range()) {
-						value[RESERVED_QUERYDSL_IN] = fp.get_values();
+					auto is_range = fp.is_range();
+					if (is_range) {
+						auto dates = string::split(fp.get_values(), "..");
+						if (dates.size() > 2) {
+							THROW(QueryDslError, "Bad query range: {}", fp.get_values());
+						}
+						auto d_it = dates.begin();
+						const auto& from = *d_it;
+						value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_FROM] = from.substr(1, from.size() - 2);
+						++d_it;
+						if (d_it != dates.end()) {
+							const auto& to = *d_it;
+							value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_TO] = to.substr(1, to.size() - 2);
+						}
 					} else {
 						value = fp.get_value();
 					}
@@ -1041,6 +1053,8 @@ QueryDSL::make_dsl_query(std::string_view query)
 					MsgPack object;
 					if (field_name.empty()) {
 						object[RESERVED_VALUE] = value;
+					} else if (is_range) {
+						object[field_name] = value;
 					} else {
 						object[field_name][RESERVED_VALUE] = value;
 					}
