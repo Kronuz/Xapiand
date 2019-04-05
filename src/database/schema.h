@@ -317,6 +317,7 @@ struct required_spc_t {
 
 		bool partial_paths:1;
 		bool is_namespace:1;
+		bool ngrams:1;
 
 		// Auxiliar variables.
 		bool field_found:1;          // Flag if the property is already in the schema saved in the metadata
@@ -785,6 +786,7 @@ class Schema {
 	void feed_weight(const MsgPack& prop_weight);
 	void feed_spelling(const MsgPack& prop_spelling);
 	void feed_positions(const MsgPack& prop_positions);
+	void feed_ngrams(const MsgPack& prop_ngrams);
 	void feed_language(const MsgPack& prop_language);
 	void feed_stop_strategy(const MsgPack& prop_stop_strategy);
 	void feed_stem_strategy(const MsgPack& prop_stem_strategy);
@@ -858,6 +860,7 @@ class Schema {
 	void process_position(std::string_view prop_name, const MsgPack& doc_position);
 	void process_spelling(std::string_view prop_name, const MsgPack& doc_spelling);
 	void process_positions(std::string_view prop_name, const MsgPack& doc_positions);
+	void process_ngrams(std::string_view prop_name, const MsgPack& doc_ngrams);
 	void process_language(std::string_view prop_name, const MsgPack& doc_language);
 	void process_prefix(std::string_view prop_name, const MsgPack& doc_prefix);
 	void process_slot(std::string_view prop_name, const MsgPack& doc_slot);
@@ -880,7 +883,8 @@ class Schema {
 	void process_cast_object(std::string_view prop_name, const MsgPack& doc_cast_object);
 	void process_script(std::string_view prop_name, const MsgPack& doc_script);
 	// Next functions only check the consistency of user provided data.
-	void consistency_slot(std::string_view prop_name, const MsgPack& doc_language);
+	void consistency_slot(std::string_view prop_name, const MsgPack& doc_slot);
+	void consistency_ngrams(std::string_view prop_name, const MsgPack& doc_ngrams);
 	void consistency_language(std::string_view prop_name, const MsgPack& doc_language);
 	void consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc_stop_strategy);
 	void consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc_stem_strategy);
