@@ -60,10 +60,6 @@ enum class MODE {
 
 
 class BaseClient : public Worker {
-	void destroy_impl() override;
-	void start_impl() override;
-	void stop_impl() override;
-
 	std::mutex _mutex;
 
 public:
@@ -110,6 +106,10 @@ protected:
 
 	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);
+
+	void destroy_impl() override;
+	void start_impl() override;
+	void stop_impl() override;
 
 	// Socket is writable
 	void _io_cb_write(ev::io &watcher, int revents);
