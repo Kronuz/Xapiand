@@ -687,9 +687,13 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 					}
 			}
-			flags |= Xapian::QueryParser::FLAG_CJK_NGRAM;
+			if (field_spc.flags.cjk_ngram) {
+				flags |= Xapian::QueryParser::FLAG_CJK_NGRAM;
+			}
 #ifdef USE_ICU
-			flags |= Xapian::QueryParser::FLAG_CJK_WORDS;
+			if (field_spc.flags.cjk_words) {
+				flags |= Xapian::QueryParser::FLAG_CJK_WORDS;
+			}
 #endif
 			flags |= Xapian::QueryParser::FLAG_PHRASE;
 			flags |= Xapian::QueryParser::FLAG_LOVEHATE;
