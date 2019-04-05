@@ -226,6 +226,7 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 			return positive(field_value.u64());
 		case FieldType::floating:
 			return floating(field_value.f64());
+		case FieldType::date:
 		case FieldType::datetime:
 			return datetime(field_value);
 		case FieldType::time:
@@ -260,6 +261,7 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 			return positive(field_value);
 		case FieldType::floating:
 			return floating(field_value);
+		case FieldType::date:
 		case FieldType::datetime:
 			return datetime(field_value);
 		case FieldType::time:
@@ -286,6 +288,7 @@ std::string
 Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 {
 	switch (field_spc.get_type()) {
+		case FieldType::date:
 		case FieldType::datetime:
 			return datetime(field_value);
 		case FieldType::time:
@@ -324,6 +327,7 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 			switch (field_spc.get_type()) {
 				case FieldType::floating:
 					return floating(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
+				case FieldType::date:
 				case FieldType::datetime:
 					return datetime(field_value);
 				case FieldType::time:
@@ -381,6 +385,7 @@ std::string
 Serialise::floating(FieldType field_type, long double field_value)
 {
 	switch (field_type) {
+		case FieldType::date:
 		case FieldType::datetime:
 			return timestamp(field_value);
 		case FieldType::time:
@@ -404,6 +409,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 				THROW(SerialisationError, "Type: {} must be a positive number [{}]", NAMEOF_ENUM(field_type), field_value);
 			}
 			return positive(field_value);
+		case FieldType::date:
 		case FieldType::datetime:
 			return timestamp(field_value);
 		case FieldType::time:
@@ -424,6 +430,7 @@ std::string
 Serialise::positive(FieldType field_type, uint64_t field_value)
 {
 	switch (field_type) {
+		case FieldType::date:
 		case FieldType::datetime:
 			return timestamp(field_value);
 		case FieldType::floating:
@@ -1056,6 +1063,7 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 		case FieldType::positive:
 			result = positive(serialised_val);
 			break;
+		case FieldType::date:
 		case FieldType::datetime:
 			result = datetime(serialised_val);
 			break;

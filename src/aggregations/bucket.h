@@ -735,6 +735,7 @@ public:
 				configure_i64();
 				break;
 			case FieldType::floating:
+			case FieldType::date:
 			case FieldType::datetime:
 			case FieldType::time:
 			case FieldType::timedelta:
@@ -993,6 +994,7 @@ public:
 				configure_i64();
 				break;
 			case FieldType::floating:
+			case FieldType::date:
 			case FieldType::datetime:
 			case FieldType::time:
 			case FieldType::timedelta:

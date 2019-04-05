@@ -95,6 +95,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			return string(obj);
 		case FieldType::uuid:
 			return uuid(obj);
+		case FieldType::date:
 		case FieldType::datetime:
 			return datetime(obj);
 		case FieldType::time:

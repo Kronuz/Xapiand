@@ -578,6 +578,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 	switch (field_spc.get_type()) {
 		case FieldType::integer:
 			return get_acc_num_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
+		case FieldType::date:
 		case FieldType::datetime:
 			return get_acc_date_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
 		case FieldType::time:
@@ -1221,6 +1222,7 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 						case FieldType::positive:
 							sorter->add_positive(field_spc.slot, descending, Cast::cast(FieldType::positive, *value).u64());
 							break;
+						case FieldType::date:
 						case FieldType::datetime:
 							sorter->add_date(field_spc.slot, descending, Datetime::timestamp(Datetime::DatetimeParser(Cast::cast(FieldType::datetime, *value))));
 							break;
