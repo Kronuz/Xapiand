@@ -14,8 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.19.0] - 2019-04-05
+{: #v0-19-0 }
+
+
 ## Changed
 - **BREAKING**: Remove support for \xHH in json
+
+## Fixed
+- Fixed errors during heavy writes/reads
+- Fixed race condition in restore indexer
 
 
 ---
@@ -548,7 +558,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.18.1...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/Kronuz/Xapiand/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/Kronuz/Xapiand/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/Kronuz/Xapiand/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/Kronuz/Xapiand/compare/v0.16.1...v0.17.0
