@@ -1042,7 +1042,7 @@ GlassWritableDatabase::GlassWritableDatabase(const string &dir, int flags,
 					     int block_size)
 	: GlassDatabase(dir, flags, block_size),
 	  change_count(0),
-	  flush_threshold(0),
+	  flush_threshold(100000),
 	  modify_shortcut_document(NULL),
 	  modify_shortcut_docid(0)
 {
