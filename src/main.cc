@@ -205,31 +205,31 @@ void toggle_hooks(int /*unused*/) {
 }
 
 
-void sig_handler(int sig) {
+void sig_handler(int signum) {
 	int old_errno = errno; // save errno because write will clobber it
 
-	signals.write(STDERR_FILENO, sig);
+	signals.write(STDERR_FILENO, signum);
 
-	if (sig == SIGTERM || sig == SIGINT) {
+	if (signum == SIGTERM || signum == SIGINT) {
 		::close(STDIN_FILENO);
 	}
 
 // #if defined(__APPLE__) || defined(__FreeBSD__)
-//  if (sig == SIGINFO) {
-//      toggle_hooks(sig);
+//  if (signum == SIGINFO) {
+//      toggle_hooks(signum);
 //  }
 // #endif
 
 	auto manager = XapiandManager::manager();
 	if (manager && !manager->is_deinited()) {
 		try {
-			manager->signal_sig(sig);
+			manager->signal_sig(signum);
 		} catch (const SystemExit& exc) {
 			// Flag atom_sig for clean exit in the next Manager::join() timeout
 			manager->atom_sig = -exc.code;
 		}
 	} else {
-		if (sig == SIGTERM || sig == SIGINT) {
+		if (signum == SIGTERM || signum == SIGINT) {
 			exit(EX_SOFTWARE);
 		}
 	}
