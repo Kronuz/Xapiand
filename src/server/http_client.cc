@@ -1029,10 +1029,6 @@ HttpClient::prepare()
 			if (!cmd.empty() && id.empty()) {
 				if (!has_pth && cmd == ":metrics") {
 					new_request->view = &HttpClient::metrics_view;
-#if XAPIAND_DATABASE_WAL
-				} else if (cmd == ":wal") {
-					new_request->view = &HttpClient::wal_view;
-#endif
 				} else {
 					new_request->view = &HttpClient::retrieve_metadata_view;
 				}
@@ -1170,6 +1166,16 @@ HttpClient::prepare()
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			break;
+
+#if XAPIAND_DATABASE_WAL
+		case HTTP_WAL:
+			if (id.empty()) {
+				new_request->view = &HttpClient::wal_view;
+			} else {
+				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+#endif
 
 		default: {
 			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
