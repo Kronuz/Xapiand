@@ -145,7 +145,7 @@ Processor::Processor(const Script& script) :
 		MsgPack o;
 		try {
 			Endpoint endpoint{foreign_path};
-			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
 			if (endpoints.empty()) {
 				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 			}
