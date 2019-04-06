@@ -96,7 +96,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
 	try {
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
