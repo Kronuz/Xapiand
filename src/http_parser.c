@@ -943,6 +943,7 @@ reexecute:
           case 'S': parser->method = HTTP_STORE; /* or SEARCH */ break;
           case 'T': parser->method = HTTP_TRACE; break;
           case 'U': parser->method = HTTP_UNLOCK; /* or UNLINK, UPDATE */ break;
+          case 'W': parser->method = HTTP_WAL; break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
             goto error;

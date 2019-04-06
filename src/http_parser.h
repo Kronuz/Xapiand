@@ -198,6 +198,7 @@ enum http_status
   XX(27, STORE,       STORE)        \
   XX(28, UNLOCK,      UNLOCK)       \
   XX(29, UPDATE,      UPDATE)       \
+  XX(30, WAL,         WAL)          \
 
 enum http_method
   {
