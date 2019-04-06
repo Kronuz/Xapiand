@@ -2256,17 +2256,19 @@ HttpClient::restore_database_view(Request& request)
 	}
 
 	if (request.ending) {
-		request.indexer->wait();
+		if (request.indexer) {
+			request.indexer->wait();
+		}
 
 		request.ready = std::chrono::system_clock::now();
 		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 
 		MsgPack response_obj = {
 			// { RESPONSE_ENDPOINT, endpoints.to_string() },
-			{ RESPONSE_PROCESSED, request.indexer->processed() },
-			{ RESPONSE_INDEXED, request.indexer->indexed() },
-			{ RESPONSE_TOTAL, request.indexer->total() },
-			{ RESPONSE_ITEMS, request.indexer->results() },
+			{ RESPONSE_PROCESSED, request.indexer ? request.indexer->processed() : 0 },
+			{ RESPONSE_INDEXED, request.indexer ? request.indexer->indexed() : 0 },
+			{ RESPONSE_TOTAL, request.indexer ? request.indexer->total() : 0 },
+			{ RESPONSE_ITEMS, request.indexer ? request.indexer->results() : MsgPack::ARRAY() },
 		};
 
 		if (request.human) {
