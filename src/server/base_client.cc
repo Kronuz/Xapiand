@@ -210,7 +210,7 @@ BaseClient::write_from_queue()
 	std::lock_guard<std::mutex> lk(_mutex);
 
 	std::shared_ptr<Buffer> buffer;
-	if (write_queue.pop_front(buffer)) {
+	if (write_queue.pop_front(buffer, 0)) {
 		size_t buf_size = buffer->size();
 		const char *buf_data = buffer->data();
 
