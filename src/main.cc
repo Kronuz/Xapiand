@@ -68,6 +68,7 @@
 #include "package.h"                              // for Package::
 #include "string.hh"                              // for string::format, string::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
+#include "thread.hh"
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
@@ -210,15 +211,15 @@ void sig_handler(int signum) {
 
 	signals.write(STDERR_FILENO, signum);
 
-	if (signum == SIGTERM || signum == SIGINT) {
-		::close(STDIN_FILENO);
-	}
+	// if (signum == SIGTERM || signum == SIGINT) {
+	// 	::close(STDIN_FILENO);
+	// }
 
-// #if defined(__APPLE__) || defined(__FreeBSD__)
-//  if (signum == SIGINFO) {
-//      toggle_hooks(signum);
-//  }
-// #endif
+	// #if defined(__APPLE__) || defined(__FreeBSD__)
+	// if (signum == SIGINFO) {
+	// 	toggle_hooks(signum);
+	// }
+	// #endif
 
 	auto manager = XapiandManager::manager();
 	if (manager && !manager->is_deinited()) {
@@ -244,17 +245,20 @@ void setup_signal_handlers() {
 
 	struct sigaction sa;
 
-	/* When the SA_SIGINFO flag is set in sa_flags then sa_sigaction is used.
-	 * Otherwise, sa_handler is used. */
 	sigemptyset(&sa.sa_mask);
+
 	sa.sa_flags = SA_RESTART;          // If restarting works we save iterations
 	sa.sa_handler = sig_handler;
+
 	sigaction(SIGTERM, &sa, nullptr);  // On software termination signal
 	sigaction(SIGINT, &sa, nullptr);   // On interrupt program (Ctrl-C)
 #if defined(__APPLE__) || defined(__FreeBSD__)
 	sigaction(SIGINFO, &sa, nullptr);  // On status request from keyboard (Ctrl-T)
 #endif
 	sigaction(SIGUSR1, &sa, nullptr);
+
+	sa.sa_flags |= SA_SIGINFO;         // Use sa_sigaction
+	sa.sa_sigaction = sig_collect_callstack;
 	sigaction(SIGUSR2, &sa, nullptr);
 }
 

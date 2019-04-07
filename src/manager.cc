@@ -83,6 +83,7 @@
 #include "storage.h"                             // for Storage
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
+#include "thread.hh"                             // for collect_callstacks
 
 #ifdef XAPIAND_CLUSTERING
 #include "server/remote_protocol.h"              // for RemoteProtocol
@@ -376,10 +377,10 @@ XapiandManager::signal_sig_impl()
 			shutdown_sig(sig);
 			break;
 		case SIGUSR1:
-		case SIGUSR2:
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
 #endif
+			collect_callstacks();
 
 #ifdef XAPIAND_CLUSTERING
 			print(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
@@ -878,6 +879,14 @@ XapiandManager::make_servers()
 	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
 	_database_cleanup->run();
 	_database_cleanup->start();
+
+	// Start updaters, committers and fsynchers.
+	db_updater();
+	committer();
+	fsyncher();
+
+	// Once all threads have started, get a callstacks snapshot:
+	callstacks_snapshot();
 }
 
 
