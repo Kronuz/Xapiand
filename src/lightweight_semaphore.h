@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2019 German Mendez Bravo (Kronuz)
  * Copyright (C) 2015 Jeff Preshing
  * Copyright (C) 2015-2016 Cameron Desrochers
  *
@@ -135,7 +136,10 @@ public:
 
 	void wait()
 	{
-		semaphore_wait(m_sema);
+		kern_return_t kr;
+		do {
+			kr = semaphore_wait(m_sema);
+		} while (kr == KERN_ABORTED);
 	}
 
 	bool try_wait()
@@ -149,10 +153,13 @@ public:
 		ts.tv_sec = timeout_usecs / 1000000;
 		ts.tv_nsec = (timeout_usecs % 1000000) * 1000;
 
-		// added in OSX 10.10: https://developer.apple.com/library/prerelease/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/Darwin.html
-		kern_return_t rc = semaphore_timedwait(m_sema, ts);
+		kern_return_t kr;
+		do {
+			// added in OSX 10.10: https://developer.apple.com/library/prerelease/mac/documentation/General/Reference/APIDiffsMacOSX10_10SeedDiff/modules/Darwin.html
+			kr = semaphore_timedwait(m_sema, ts);
+		} while (kr == KERN_ABORTED);
 
-		return rc != KERN_OPERATION_TIMED_OUT;
+		return kr != KERN_OPERATION_TIMED_OUT;
 	}
 
 	void signal()
