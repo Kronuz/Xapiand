@@ -59,9 +59,6 @@ const std::string& get_thread_name(std::thread::id thread_id);
 
 const std::string& get_thread_name();
 
-void collect_callstack_sig_handler(int signum);
-void collect_callstacks();
-void callstacks_snapshot();
 
 ////////////////////////////////////////////////////////////////////////////////
 

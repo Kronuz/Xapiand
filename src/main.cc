@@ -68,8 +68,7 @@
 #include "package.h"                              // for Package::
 #include "string.hh"                              // for string::format, string::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
-#include "thread.hh"                              // for collect_callstack_sig_handler
-#include "traceback.h"                            // for backtrace, traceback
+#include "traceback.h"                            // for backtrace, traceback, collect_callstack_sig_handler
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
@@ -291,9 +290,6 @@ void setup_signal_handlers() {
 #endif
 	sigaction(SIGUSR1, &sa, nullptr);
 
-	sa.sa_handler = collect_callstack_sig_handler;
-	sigaction(SIGUSR2, &sa, nullptr);
-
 #ifdef XAPIAND_TRACEBACKS
 	sa.sa_handler = backtrace_sig_handler;
 	sigaction(SIGQUIT, &sa, nullptr);
@@ -308,6 +304,10 @@ void setup_signal_handlers() {
 	sigaction(SIGSEGV, &sa, nullptr);
 	sigaction(SIGSYS, &sa, nullptr);
 #endif
+
+	sa.sa_flags |= SA_SIGINFO | SA_NODEFER;
+	sa.sa_sigaction = collect_callstack_sig_handler;
+	sigaction(SIGUSR2, &sa, nullptr);
 }
 
 

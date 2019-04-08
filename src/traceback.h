@@ -27,7 +27,9 @@
 #include <exception>          // for std::exception_ptr
 #include <string>             // for std::string
 #include <vector>             // for std::vector
-
+#ifdef HAVE_PTHREADS
+#include <pthread.h>          // for pthread_t
+#endif
 #ifdef HAVE_EXECINFO_H
 #include <execinfo.h>         // for backtrace
 #else
@@ -35,6 +37,12 @@ static inline int backtrace(void**, int) { return 0; }
 #endif
 
 void** backtrace();
+
+void init_thread_info(pthread_t pthread, const char* name);
+
+void collect_callstack_sig_handler(int signum, siginfo_t* info, void* ptr);
+void collect_callstacks();
+void callstacks_snapshot();
 
 void** exception_callstack(std::exception_ptr& eptr);
 

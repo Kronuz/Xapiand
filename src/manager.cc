@@ -656,6 +656,9 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	make_servers();
 
+	// Once all threads have started, get a callstacks snapshot:
+	callstacks_snapshot();
+
 	auto local_node = Node::local_node();
 	auto leader_node = Node::leader_node();
 	auto is_leader = Node::is_superset(local_node, leader_node);
@@ -884,9 +887,6 @@ XapiandManager::make_servers()
 	db_updater();
 	committer();
 	fsyncher();
-
-	// Once all threads have started, get a callstacks snapshot:
-	callstacks_snapshot();
 }
 
 

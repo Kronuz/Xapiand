@@ -22,24 +22,135 @@
 
 #include "traceback.h"
 
-#include "config.h"           // for XAPIAND_TRACEBACKS
+#include "config.h"                               // for XAPIAND_TRACEBACKS
 
-#include <cstdlib>            // for std::free, std::exit
-#include <cstdio>             // for std::perror, std::snprintf, std::fprintf
-#include <cstring>            // for std::memset
-#include <cxxabi.h>           // for abi::__cxa_demangle
-#include <dlfcn.h>            // for dladdr
+#include <array>                                  // for std::array
+#include <atomic>                                 // for std::atomic_size
+#include <cstdlib>                                // for std::free, std::exit
+#include <cstdio>                                 // for std::perror, std::snprintf, std::fprintf
+#include <cstring>                                // for std::memset
+#include <cxxabi.h>                               // for abi::__cxa_demangle
+#include <dlfcn.h>                                // for dladdr, dlsym
 #include <exception>
-#include <mutex>              // for std::mutex, std::lock_guard
+#include <memory>                                 // for std::make_shared
+#include <mutex>                                  // for std::mutex, std::lock_guard
 #include <unwind.h>
+#if defined(__FreeBSD__)
+#include <ucontext.h>                             // for ucontext_t
+#else
+#include <sys/ucontext.h>                         // for ucontext_t
+#endif
 
+#include "atomic_shared_ptr.h"                    // for atomic_shared_ptr
 #include "likely.h"
+#include "log.h"                                  // for print
+#include "string.hh"                              // for string::format
+
 
 #ifndef NDEBUG
 #ifndef XAPIAND_TRACEBACKS
 #define XAPIAND_TRACEBACKS 1
 #endif
 #endif
+
+static std::atomic_size_t pthreads_req;
+static std::atomic_size_t pthreads_cnt;
+
+
+class Callstack {
+	void** callstack;
+
+public:
+	Callstack(void** callstack) : callstack(callstack) {}
+
+	Callstack(const Callstack& other) {
+		callstack = (void**)malloc((other.size() + 1) * sizeof(void*));
+		memcpy(callstack + 1, other.callstack + 1, other.size() * sizeof(void*));
+		callstack[0] = &callstack[other.size()];
+	}
+
+	~Callstack() {
+		if (callstack) {
+			free(callstack);
+		}
+	}
+
+	size_t size() const {
+		return callstack ? static_cast<void**>(*callstack) - callstack : 0;
+	}
+
+	void** get() const {
+		return callstack;
+	}
+
+	void** release() {
+		auto ret = callstack;
+		callstack = nullptr;
+		return ret;
+	}
+
+	void* operator[](size_t idx) const {
+		return idx < size() ? callstack[idx + 1] : nullptr;
+	}
+
+	bool operator==(const Callstack& other) const {
+		if (size() != other.size()) {
+			return false;
+		}
+		for (size_t idx = 0; idx < size(); ++idx) {
+			if (callstack[idx + 1] != other.callstack[idx + 1]) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool operator!=(const Callstack& other) const {
+		return !operator==(other);
+	}
+
+	std::string __repr__() const {
+		std::string rep;
+		rep.push_back('{');
+		for (size_t idx = 0; idx < size(); ++idx) {
+			rep.push_back(' ');
+			rep.append(string::format("{}", callstack[idx + 1]));
+		}
+		rep.append(" }");
+		return rep;
+	}
+};
+
+
+struct ThreadInfo {
+	pthread_t pthread;
+	const char* name;
+	std::shared_ptr<Callstack> callstack;
+	std::shared_ptr<Callstack> snapshot;
+	size_t req;
+
+	ThreadInfo(pthread_t pthread, const char* name) :
+		pthread(pthread),
+		name(name),
+		callstack(std::make_shared<Callstack>(nullptr)),
+		snapshot(std::make_shared<Callstack>(nullptr)),
+		req(pthreads_req.load(std::memory_order_acquire)) {}
+
+	ThreadInfo(const ThreadInfo& other) :
+		pthread(other.pthread),
+		name(other.name),
+		callstack(other.callstack),
+		snapshot(other.snapshot),
+		req(pthreads_req.load(std::memory_order_acquire)) {}
+
+	~ThreadInfo() {
+
+	}
+};
+
+
+static std::array<atomic_shared_ptr<ThreadInfo>, 1000> pthreads;
+
 
 #define BUFFER_SIZE 1024
 
@@ -201,6 +312,9 @@ traceback(const char* function, const char* filename, int line, void** callstack
 		result.assign(std::to_string(frames - i - 1));
 		result.push_back(' ');
 
+		std::snprintf(tmp, sizeof(tmp), "[%p] ", address);
+		result.append(tmp);
+
 		auto address_string = atos(address);
 		if (address_string.size() > 2 && address_string.compare(0, 2, "0x") != 0) {
 			result.append(address_string);
@@ -346,3 +460,185 @@ void __cxa_throw(void* thrown_object, std::type_info* tinfo, void (*dest)(void*)
 }
 
 #endif
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+void
+collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
+{
+	struct frameinfo {
+		frameinfo *next;
+		void *return_address;
+	};
+
+	ucontext_t *uc = static_cast<ucontext_t *>(ptr);
+#if defined(__i386__)
+	#if defined(__FreeBSD__)
+		auto return_address = ((const frameinfo*)uc->uc_mcontext.mc_ebp)->return_address;
+	#elif defined(__linux__)
+		auto return_address = ((const frameinfo*)uc->uc_mcontext.gregs[REG_EBP])->return_address;
+	#elif defined(__APPLE__)
+		auto return_address = ((const frameinfo*)uc->uc_mcontext->__ss.__ebp)->return_address;
+	#else
+		#error Unsupported OS.
+	#endif
+#elif defined(__x86_64__)
+	#if defined(__FreeBSD__)
+		auto return_address = ((const frameinfo*)uc->uc_mcontext.mc_rbp)->return_address;
+	#elif defined(__linux__)
+		auto return_address = ((const frameinfo*)uc->uc_mcontext.gregs[REG_RBP])->return_address;
+	#elif defined(__APPLE__)
+		auto return_address = ((const frameinfo*)uc->uc_mcontext->__ss.__rbp)->return_address;
+	#else
+		#error Unsupported OS.
+	#endif
+#else
+	#error Unsupported architecture.
+#endif
+
+	auto pthread = pthread_self();
+	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+		std::shared_ptr<ThreadInfo> thread_info;
+		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+		if (thread_info->pthread == pthread) {
+			auto callstack = backtrace();
+			if (callstack) {
+				size_t frames = static_cast<void**>(*callstack) - callstack;
+				void** actual = nullptr;
+				for (size_t n = 0; n < frames; ++n) {
+					if (callstack[n + 1] == return_address) {
+						actual = callstack + n;
+						break;
+					}
+				}
+				if (actual) {
+					frames = static_cast<void**>(*callstack) - actual;
+					auto new_callstack = (void**)malloc((frames + 1) * sizeof(void*));
+					memcpy(new_callstack + 1, actual + 1, frames * sizeof(void*));
+					new_callstack[0] = &new_callstack[frames];
+					free(callstack);
+					callstack = new_callstack;
+				}
+			}
+			auto new_info = std::make_shared<ThreadInfo>(*thread_info);
+			new_info->callstack = std::make_shared<Callstack>(callstack);
+			pthreads[idx].store(new_info);
+			return;
+		}
+	}
+}
+
+
+void
+collect_callstacks()
+{
+	size_t req = pthreads_req.fetch_add(1) + 1;
+
+	// request all threads to collect their callstack
+	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+		std::shared_ptr<ThreadInfo> thread_info;
+		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+		pthread_kill(thread_info->pthread, SIGUSR2);
+	}
+
+	// try waiting for callstacks
+	for (int t = 10; t >= 0; --t) {
+		size_t ok = 0;
+		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+			std::shared_ptr<ThreadInfo> thread_info;
+			while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+			if (thread_info->req >= req) {
+				++ok;
+			}
+		}
+		if (ok == pthreads_cnt.load(std::memory_order_acquire)) {
+			break;
+		}
+		sched_yield();
+	}
+
+	// print tracebacks:
+	// The first idx is main thread, skip 4 frames:
+	//     callstacks_snapshot -> setup_node_async_cb -> ev::base -> ev_invoke_pending
+	//     collect_callstacks -> signal_sig_impl -> ev::base -> ev_invoke_pending
+	size_t skip = 4;
+	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+		std::shared_ptr<ThreadInfo> thread_info;
+		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+		auto& callstack = *thread_info->callstack;
+		auto& snapshot = *thread_info->snapshot;
+		if (callstack[skip] != snapshot[skip]) {
+			print(traceback(thread_info->name, "", idx, callstack.get(), skip));
+		}
+		skip = 0;
+	}
+}
+
+
+void
+callstacks_snapshot()
+{
+	do {
+		size_t req = pthreads_req.fetch_add(1) + 1;
+
+		// request all threads to collect their callstack
+		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+			std::shared_ptr<ThreadInfo> thread_info;
+			while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+			auto& callstack = *thread_info->callstack;
+			auto& snapshot = *thread_info->snapshot;
+			if (!callstack.size() || callstack != snapshot) {
+				pthread_kill(thread_info->pthread, SIGUSR2);
+			} else {
+				auto new_info = std::make_shared<ThreadInfo>(*thread_info);
+				pthreads[idx].store(new_info);
+			}
+		}
+
+		// try waiting for callstacks
+		for (int t = 10; t >= 0; --t) {
+			size_t ok = 0;
+			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+				std::shared_ptr<ThreadInfo> thread_info;
+				while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+				if (thread_info->req >= req) {
+					++ok;
+				}
+			}
+			if (ok == pthreads_cnt.load(std::memory_order_acquire)) {
+				break;
+			}
+			sched_yield();
+		}
+
+		auto retry = false;
+		// save snapshots:
+		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+			std::shared_ptr<ThreadInfo> thread_info;
+			while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
+			auto& callstack = *thread_info->callstack;
+			auto& snapshot = *thread_info->snapshot;
+			if (!callstack.size() || callstack != snapshot) {
+				auto new_info = std::make_shared<ThreadInfo>(*thread_info);
+				new_info->snapshot = std::make_shared<Callstack>(callstack);
+				pthreads[idx].store(new_info);
+				retry = true;
+			}
+		}
+		if (!retry) {
+			break;
+		}
+		sched_yield();
+	} while (true);
+}
+
+
+void
+init_thread_info(pthread_t pthread, const char* name)
+{
+	auto idx = pthreads_cnt.fetch_add(1);
+	if (idx < pthreads.size()) {
+		pthreads[idx].store(std::make_shared<ThreadInfo>(pthread, name));
+	}
+}
