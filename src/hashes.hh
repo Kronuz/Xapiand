@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2015 Daniel Kirchner
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -314,7 +314,16 @@ inline uint32_t jump_consistent_hash(uint64_t key, int32_t num_buckets) {
 }
 
 inline uint32_t jump_consistent_hash(std::string_view key, int32_t num_buckets) {
-	return jump_consistent_hash(fnv1ah64::hash(key), num_buckets);
+	auto p = key.data();
+	auto len = key.size();
+	// calculates FNV-1a 64 bit hash (skipping slashes)
+	uint64_t h = 14695981039346656037ULL;
+	for (std::size_t i = 0; i < len; ++i) {
+		if (p[i] != '/') {
+			h = (h ^ static_cast<unsigned char>(p[i])) * 0x100000001b3ULL;
+		}
+	}
+	return jump_consistent_hash(h, num_buckets);
 }
 
 #endif // HASHES_HH

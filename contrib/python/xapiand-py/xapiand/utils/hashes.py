@@ -29,14 +29,6 @@
 from ..compat import integer_types, integer_type
 
 
-def fnv1ah64(s):
-    # calculate FNV-1a 64 bit hash
-    fnv = 0xcbf29ce484222325
-    for c in s:
-        fnv = ((fnv ^ ord(c)) * 0x100000001b3) & 0xffffffffffffffff
-    return fnv
-
-
 def jump_consistent_hash(key, num_buckets):
     # Computes the bucket number for key in the range [0, num_buckets).
     # The algorithm used is the jump consistent hash by Lamping and Veach.
@@ -45,7 +37,12 @@ def jump_consistent_hash(key, num_buckets):
     if num_buckets < 1:
         raise ValueError("num_buckets must be a positive number")
     if not isinstance(key, integer_types):
-        key = fnv1ah64(key)
+        # calculates FNV-1a 64 bit hash (skipping slashes)
+        h = 0xcbf29ce484222325
+        for c in key:
+            if c != '/':
+                h = ((h ^ ord(c)) * 0x100000001b3) & 0xffffffffffffffff
+        key = h
     b, j = -1, 0
     while j < num_buckets:
         b = j
