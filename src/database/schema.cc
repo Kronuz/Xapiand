@@ -5313,6 +5313,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, s
 					data_value = MsgPack({ data_value, normalize_uuid(value) });
 					break;
 			}
+		} else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					break;
+				default:
+					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
+					break;
+			}
 		} else {
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
@@ -5360,6 +5372,24 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, 
 						data_value = MsgPack({ data_value });
 						for (const auto& value : values) {
 							data_value.push_back(normalize_uuid(value));
+						}
+						break;
+				}
+			}  else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
+				switch (data_value.get_type()) {
+					case MsgPack::Type::UNDEFINED:
+						for (const auto& value : values) {
+							data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+						}
+						break;
+					case MsgPack::Type::ARRAY:
+						for (const auto& value : values) {
+							data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+						}
+						break;
+					default:
+						for (const auto& value : values) {
+							data_value.push_back(MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) }));
 						}
 						break;
 				}
