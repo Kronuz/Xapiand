@@ -102,16 +102,17 @@ class signals_t {
 
 	std::array<std::string, signals> tty_messages;
 	std::array<std::string, signals> messages;
+	std::array<std::string, signals> names;
 
 public:
 	signals_t() {
-		for (std::size_t sig = 0; sig < signals; ++sig) {
+		for (std::size_t signum = 0; signum < signals; ++signum) {
 #if defined(__linux__)
-				const char* sig_str = strsignal(sig);
+				const char* sig_str = strsignal(signum);
 #elif defined(__APPLE__) || defined(__FreeBSD__)
-				const char* sig_str = sys_signame[sig];
+				const char* sig_str = sys_signame[signum];
 #endif
-			switch (sig) {
+			switch (signum) {
 				case SIGQUIT:
 				case SIGILL:
 				case SIGTRAP:
@@ -124,8 +125,9 @@ public:
 				case SIGSEGV:
 				case SIGSYS:
 					// create core image
-					tty_messages[sig] = string::format(LIGHT_RED + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = string::format(LIGHT_RED + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					names[signum] = sig_str;
 					break;
 				case SIGHUP:
 				case SIGINT:
@@ -143,16 +145,18 @@ public:
 				case SIGSTKFLT:
 #endif
 					// terminate process
-					tty_messages[sig] = string::format(BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = string::format(BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					names[signum] = sig_str;
 					break;
 				case SIGSTOP:
 				case SIGTSTP:
 				case SIGTTIN:
 				case SIGTTOU:
 					// stop process
-					tty_messages[sig] = string::format(SADDLE_BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = string::format(SADDLE_BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					names[signum] = sig_str;
 					break;
 				case SIGURG:
 				case SIGCONT:
@@ -164,23 +168,29 @@ public:
 #endif
 					// discard signal
 
-					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					names[signum] = sig_str;
 					break;
 				default:
-					tty_messages[sig] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[sig] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					names[signum] = sig_str;
 					break;
 			}
 		}
 	}
 
-	void write(int fildes, int sig) {
+	void write(int fildes, int signum) {
 		if (is_tty) {
-			::write(fildes, tty_messages[(sig >= 0 && sig < signals) ? sig : signals - 1]);
+			::write(fildes, tty_messages[(signum >= 0 && signum < signals) ? signum : signals - 1]);
 		} else {
-			::write(fildes, messages[(sig >= 0 && sig < signals) ? sig : signals - 1]);
+			::write(fildes, messages[(signum >= 0 && signum < signals) ? signum : signals - 1]);
 		}
+	}
+
+	const std::string& name(int signum) {
+		return names[(signum >= 0 && signum < signals) ? signum : signals - 1];
 	}
 };
 
