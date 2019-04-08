@@ -108,11 +108,20 @@ set_thread_name(const std::string& name)
 	auto emplaced = thread_names.emplace(std::piecewise_construct,
 		std::forward_as_tuple(std::this_thread::get_id()),
 		std::forward_as_tuple(name));
+
+	size_t zero;
+	do {
+		zero = 0;
+		sched_yield();
+	} while (!pthreads_busy.compare_exchange_weak(zero, 1));
+
 	auto idx = pthreads_num.fetch_add(1);
 	if (idx < pthreads.size()) {
 		pthreads[idx] = pthread;
 		pthreads_names[idx] = emplaced.first->second.c_str();
 	}
+
+	pthreads_busy.store(0);
 }
 
 
