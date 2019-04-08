@@ -26,6 +26,7 @@
 
 #include <array>                                  // for std::array
 #include <atomic>                                 // for std::atomic_size
+#include <cassert>                                // for std::array
 #include <cstdlib>                                // for std::free, std::exit
 #include <cstdio>                                 // for std::perror, std::snprintf, std::fprintf
 #include <cstring>                                // for std::memset
@@ -426,6 +427,7 @@ void* __cxa_allocate_exception(size_t thrown_size) noexcept
 {
 	// call original __cxa_allocate_exception (reserving extra space for the callstack):
 	static cxa_allocate_exception_type orig_cxa_allocate_exception = (cxa_allocate_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_exception");
+	assert(orig_cxa_allocate_exception != nullptr);
 	void* thrown_object = orig_cxa_allocate_exception(sizeof(void**) + thrown_size);
 	return thrown_object;
 }
@@ -441,7 +443,33 @@ void __cxa_free_exception(void* thrown_object) noexcept
 	}
 	// call original __cxa_free_exception:
 	static cxa_free_exception_type orig_cxa_free_exception = (cxa_free_exception_type)dlsym(RTLD_NEXT, "__cxa_free_exception");
+	assert(orig_cxa_free_exception != nullptr);
 	orig_cxa_free_exception(thrown_object);
+}
+
+typedef void* (*cxa_allocate_dependent_exception_type)(size_t thrown_size);
+void* __cxa_allocate_dependent_exception(size_t thrown_size) noexcept
+{
+	// call original __cxa_allocate_dependent_exception (reserving extra space for the callstack):
+	static cxa_allocate_dependent_exception_type orig_cxa_allocate_dependent_exception = (cxa_allocate_dependent_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_dependent_exception");
+	assert(orig_cxa_allocate_dependent_exception != nullptr);
+	void* thrown_object = orig_cxa_allocate_dependent_exception(sizeof(void**) + thrown_size);
+	return thrown_object;
+}
+
+typedef void (*cxa_free_dependent_exception_type)(void* thrown_object);
+void __cxa_free_dependent_exception(void* thrown_object) noexcept
+{
+	// free callstack (if any):
+	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
+	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
+	if (*callstack != nullptr) {
+		free(*callstack);
+	}
+	// call original __cxa_free_dependent_exception:
+	static cxa_free_dependent_exception_type orig_cxa_free_dependent_exception = (cxa_free_dependent_exception_type)dlsym(RTLD_NEXT, "__cxa_free_dependent_exception");
+	assert(orig_cxa_free_dependent_exception != nullptr);
+	orig_cxa_free_dependent_exception(thrown_object);
 }
 
 typedef void (*cxa_throw_type)(void*, std::type_info*, void (*)(void*));
@@ -453,6 +481,7 @@ void __cxa_throw(void* thrown_object, std::type_info* tinfo, void (*dest)(void*)
 	*callstack = backtrace();
 	// call original __cxa_throw:
 	static cxa_throw_type orig_cxa_throw = (cxa_throw_type)dlsym(RTLD_NEXT, "__cxa_throw");
+	assert(orig_cxa_throw != nullptr);
 	orig_cxa_throw(thrown_object, tinfo, dest);
 	__builtin_unreachable();
 }
