@@ -15,6 +15,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #unreleased }
 
 
+
+---
+## [0.19.1] - 2019-04-08
+{: #v0-19-1 }
+
+## Added
+- Added CJK NGRAM and CJK words as parameters to 'text' datatype
+- Enable fuzzy searches in queries: use '~'. E.g. "unserten~3" would expand to "uncertain"
+
+## Changed
+- Ignore XAPIAN_* environment variables
+- INFO signal showing busy threads callstacks, when tracebacks are enabled
+- All exceptions now contain tracebacks, when tracebacks are enabled
+- Hash for resolving cluster node for indexes skipping slashes
+
+## Fixed
+- Fix ranges in query
+- Fix restoring from an empty request
+- Formatting applied to saved dates
+
+
 ---
 ## [0.19.0] - 2019-04-05
 {: #v0-19-0 }
@@ -558,7 +579,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.1...HEAD
+[0.19.1]: https://github.com/Kronuz/Xapiand/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/Kronuz/Xapiand/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/Kronuz/Xapiand/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/Kronuz/Xapiand/compare/v0.17.0...v0.18.0
