@@ -29,7 +29,9 @@
 #include <cstring>            // for std::memset
 #include <cxxabi.h>           // for abi::__cxa_demangle
 #include <dlfcn.h>            // for dladdr
+#include <exception>
 #include <mutex>              // for std::mutex, std::lock_guard
+#include <unwind.h>
 
 #include "likely.h"
 
@@ -152,18 +154,32 @@ atos(const void*)
 
 
 std::string
-traceback(const char* function, const char* filename, int line, const std::vector<void*>& callstack, int skip)
+traceback(const char* function, const char* filename, int line, void** callstack, int skip)
 {
-	char tmp[20];
+	char tmp[100];
 
 	std::string tb = "\n== Traceback (most recent call first): ";
-	tb.append(filename);
-	tb.push_back(':');
-	tb.append(std::to_string(line));
-	tb.append(" at ");
-	tb.append(function);
+	if (filename && *filename) {
+		tb.append(filename);
+	}
+	if (line) {
+		if (filename && *filename) {
+			tb.push_back(':');
+		}
+		tb.append(std::to_string(line));
+	}
+	if (function && *function) {
+		if ((filename && *filename) || line) {
+			tb.append(" at ");
+		}
+		tb.append(function);
+	}
 
-	int frames = callstack.size();
+	if (callstack == nullptr) {
+		tb.append(":\n    <invalid traceback>");
+	}
+
+	size_t frames = static_cast<void**>(*callstack) - callstack;
 
 	if (frames == 0) {
 		tb.append(":\n    <empty traceback>");
@@ -179,8 +195,8 @@ traceback(const char* function, const char* filename, int line, const std::vecto
 
 	// Iterate over the callstack. Skip the first, it is the address of this function.
 	std::string result;
-	for (int i = skip; i < frames; ++i) {
-		auto address = callstack[i];
+	for (size_t i = skip; i < frames; ++i) {
+		auto address = callstack[i + 1];
 
 		result.assign(std::to_string(frames - i - 1));
 		result.push_back(' ');
@@ -229,31 +245,104 @@ traceback(const char* function, const char* filename, int line, const std::vecto
 }
 
 
+void**
+backtrace()
+{
+	void* tmp[128];
+	auto frames = backtrace(tmp, 128);
+	void** callstack = (void**)malloc((frames + 1) * sizeof(void*));
+	if (callstack != nullptr) {
+		memcpy(callstack + 1, tmp, frames * sizeof(void*));
+		callstack[0] = &callstack[frames];
+	}
+	return callstack;
+}
+
+
 std::string
 traceback(const char* function, const char* filename, int line, int skip)
 {
-	std::vector<void*> callstack;
-
 	// retrieve current stack addresses
-	callstack.resize(128);
-	callstack.resize(backtrace(callstack.data(), callstack.size()));
-	callstack.shrink_to_fit();
-
+	auto callstack = backtrace();
 	auto tb = traceback(function, filename, line, callstack, skip);
-
+	free(callstack);
 	return tb;
 }
 
 
-extern "C" void
-__assert_tb(const char* function, const char* filename, unsigned int line, const char* expression)
+typedef void (*unexpected_handler)();
+
+struct __cxa_exception {
+    size_t referenceCount;
+
+    std::type_info *exceptionType;
+    void (*exceptionDestructor)(void *);
+    unexpected_handler unexpectedHandler;
+    std::terminate_handler  terminateHandler;
+
+    __cxa_exception *nextException;
+
+    int handlerCount;
+
+    int handlerSwitchValue;
+    const unsigned char *actionRecord;
+    const unsigned char *languageSpecificData;
+    void *catchTemp;
+    void *adjustedPtr;
+
+    _Unwind_Exception unwindHeader;
+};
+
+
+void**
+exception_callstack(std::exception_ptr& eptr)
 {
-#ifdef XAPIAND_TRACEBACKS
-	(void)std::fprintf(stderr, "Assertion failed: %s in %s %s:%u%s\n",
-		expression, function, filename, line, traceback(function, filename, line, 2).c_str());
-#else
-	(void)std::fprintf(stderr, "Assertion failed: %s in %s %s:%u\n",
-		expression, function, filename, line);
-#endif
-	abort();
+	void* thrown_object = *static_cast<void**>(static_cast<void*>(&eptr));
+	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
+	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
+	return *callstack;
 }
+
+#ifdef XAPIAND_TRACEBACKS
+
+extern "C" {
+
+typedef void* (*cxa_allocate_exception_type)(size_t thrown_size);
+void* __cxa_allocate_exception(size_t thrown_size) noexcept
+{
+	// call original __cxa_allocate_exception (reserving extra space for the callstack):
+	static cxa_allocate_exception_type orig_cxa_allocate_exception = (cxa_allocate_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_exception");
+	void* thrown_object = orig_cxa_allocate_exception(sizeof(void**) + thrown_size);
+	return thrown_object;
+}
+
+typedef void (*cxa_free_exception_type)(void* thrown_object);
+void __cxa_free_exception(void* thrown_object) noexcept
+{
+	// free callstack (if any):
+	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
+	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
+	if (*callstack != nullptr) {
+		free(*callstack);
+	}
+	// call original __cxa_free_exception:
+	static cxa_free_exception_type orig_cxa_free_exception = (cxa_free_exception_type)dlsym(RTLD_NEXT, "__cxa_free_exception");
+	orig_cxa_free_exception(thrown_object);
+}
+
+typedef void (*cxa_throw_type)(void*, std::type_info*, void (*)(void*));
+void __cxa_throw(void* thrown_object, std::type_info* tinfo, void (*dest)(void*))
+{
+	// save callstack for exception (at the start of the reserved memory)
+	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
+	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
+	*callstack = backtrace();
+	// call original __cxa_throw:
+	static cxa_throw_type orig_cxa_throw = (cxa_throw_type)dlsym(RTLD_NEXT, "__cxa_throw");
+	orig_cxa_throw(thrown_object, tinfo, dest);
+	__builtin_unreachable();
+}
+
+}
+
+#endif

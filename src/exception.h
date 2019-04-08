@@ -60,19 +60,17 @@ class BaseException {
 
 protected:
 	std::string type;
-	const char* function;
-	const char* filename;
-	int line;
-
-	std::vector<void*> callstack;
 
 	mutable std::string message;
 	mutable std::string context;
-	mutable std::string traceback;
 
 	BaseException();
 
 public:
+	const char* function;
+	const char* filename;
+	const int line;
+
 	BaseException(const BaseException& exc);
 	BaseException(BaseException&& exc);
 
@@ -98,7 +96,6 @@ public:
 
 	const char* get_message() const;
 	const char* get_context() const;
-	const char* get_traceback() const;
 
 	bool empty() const {
 		return type.empty();

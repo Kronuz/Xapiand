@@ -24,64 +24,48 @@
 
 #include "config.h"           // for XAPIAND_TRACEBACKS
 
-#include "traceback.h"        // for traceback
-
 
 BaseException::BaseException()
 	: line{0}
-{ }
+{
+}
 
 
 BaseException::BaseException(const BaseException& exc)
 	: type{exc.type},
-	  function{exc.function},
-	  filename{exc.filename},
-	  line{exc.line},
-	  callstack{exc.callstack},
 	  message{exc.message},
 	  context{exc.context},
-	  traceback{exc.traceback}
+	  function{exc.function},
+	  filename{exc.filename},
+	  line{exc.line}
 {
 }
 
 
 BaseException::BaseException(BaseException&& exc)
 	: type{std::move(exc.type)},
-	  function{std::move(exc.function)},
-	  filename{std::move(exc.filename)},
-	  line{std::move(exc.line)},
-	  callstack{std::move(exc.callstack)},
 	  message{std::move(exc.message)},
 	  context{std::move(exc.context)},
-	  traceback{std::move(exc.traceback)}
-{ }
+	  function{std::move(exc.function)},
+	  filename{std::move(exc.filename)},
+	  line{std::move(exc.line)}
+{
+}
 
 
 BaseException::BaseException(const BaseException* exc)
 	: BaseException(exc != nullptr ? *exc : BaseException())
-{ }
+{
+}
 
 
 BaseException::BaseException(BaseException::private_ctor, const BaseException& exc, const char *function_, const char *filename_, int line_, const char* type, std::string_view format, format_args args)
 	: type(type),
-	  function(function_),
-	  filename(filename_),
-	  line(line_),
-	  message(vformat(format, args))
+	  message(vformat(format, args)),
+	  function(exc.type.empty() ? function_ : exc.function),
+	  filename(exc.type.empty() ? filename_ : exc.filename),
+	  line(exc.type.empty() ? line_ : exc.line)
 {
-	if (!exc.type.empty()) {
-		function = exc.function;
-		filename = exc.filename;
-		line = exc.line;
-		callstack = exc.callstack;
-	} else {
-#ifdef XAPIAND_TRACEBACKS
-		// retrieve current stack addresses
-		callstack.resize(128);
-		callstack.resize(backtrace(callstack.data(), callstack.size()));
-		callstack.shrink_to_fit();
-#endif
-	}
 }
 
 const char*
@@ -107,14 +91,4 @@ BaseException::get_context() const
 		context.append(get_message());
 	}
 	return context.c_str();
-}
-
-
-const char*
-BaseException::get_traceback() const
-{
-	if (traceback.empty()) {
-		traceback = ::traceback(function, filename, line, callstack);
-	}
-	return traceback.c_str();
 }

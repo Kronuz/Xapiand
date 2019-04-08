@@ -68,7 +68,8 @@
 #include "package.h"                              // for Package::
 #include "string.hh"                              // for string::format, string::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
-#include "thread.hh"
+#include "thread.hh"                              // for collect_callstack_sig_handler
+#include "traceback.h"                            // for backtrace, traceback
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
@@ -221,9 +222,13 @@ void sig_handler(int signum) {
 
 	signals.write(STDERR_FILENO, signum);
 
-	// if (signum == SIGTERM || signum == SIGINT) {
-	// 	::close(STDIN_FILENO);
-	// }
+	if (signum == SIGTERM || signum == SIGINT) {
+		int null = ::open("/dev/null", O_RDONLY);
+		if (null == -1) {
+			exit(EX_OSFILE);
+		}
+		::dup2(null, STDIN_FILENO);
+	}
 
 	// #if defined(__APPLE__) || defined(__FreeBSD__)
 	// if (signum == SIGINFO) {
@@ -249,27 +254,60 @@ void sig_handler(int signum) {
 }
 
 
+void backtrace_sig_handler(int signum)
+{
+	// print traceback
+	auto tb = traceback(signals.name(signum).c_str(), nullptr, 0, backtrace(), 4);
+	if (is_tty) {
+		::write(STDERR_FILENO, DEBUG_COL);
+		::write(STDERR_FILENO, tb);
+		::write(STDERR_FILENO, CLEAR_COLOR + "\n");
+	} else {
+		::write(STDERR_FILENO, tb);
+		::write(STDERR_FILENO, "\n");
+	}
+
+	// restore default handler, and continue
+	signal(signum, SIG_DFL);
+    kill(getpid(), signum);
+}
+
+
 void setup_signal_handlers() {
-	signal(SIGHUP, SIG_IGN);   // Ignore terminal line hangup
-	signal(SIGPIPE, SIG_IGN);  // Ignore write on a pipe with no reader
+	signal(SIGHUP, SIG_IGN);            // Ignore terminal line hangup
+	signal(SIGPIPE, SIG_IGN);           // Ignore write on a pipe with no reader
 
 	struct sigaction sa;
 
 	sigemptyset(&sa.sa_mask);
 
-	sa.sa_flags = SA_RESTART;          // If restarting works we save iterations
+	sa.sa_flags = SA_RESTART;           // If restarting works we save iterations
 	sa.sa_handler = sig_handler;
 
-	sigaction(SIGTERM, &sa, nullptr);  // On software termination signal
-	sigaction(SIGINT, &sa, nullptr);   // On interrupt program (Ctrl-C)
+	sigaction(SIGTERM, &sa, nullptr);   // On software termination signal
+	sigaction(SIGINT, &sa, nullptr);    // On interrupt program (Ctrl-C)
 #if defined(__APPLE__) || defined(__FreeBSD__)
-	sigaction(SIGINFO, &sa, nullptr);  // On status request from keyboard (Ctrl-T)
+	sigaction(SIGINFO, &sa, nullptr);   // On status request from keyboard (Ctrl-T)
 #endif
 	sigaction(SIGUSR1, &sa, nullptr);
 
-	sa.sa_flags |= SA_SIGINFO;         // Use sa_sigaction
-	sa.sa_sigaction = sig_collect_callstack;
+	sa.sa_handler = collect_callstack_sig_handler;
 	sigaction(SIGUSR2, &sa, nullptr);
+
+#ifdef XAPIAND_TRACEBACKS
+	sa.sa_handler = backtrace_sig_handler;
+	sigaction(SIGQUIT, &sa, nullptr);
+	sigaction(SIGILL, &sa, nullptr);
+	sigaction(SIGTRAP, &sa, nullptr);
+	sigaction(SIGABRT, &sa, nullptr);
+#if defined(__APPLE__) || defined(__FreeBSD__)
+	sigaction(SIGEMT, &sa, nullptr);
+#endif
+	sigaction(SIGFPE, &sa, nullptr);
+	sigaction(SIGBUS, &sa, nullptr);
+	sigaction(SIGSEGV, &sa, nullptr);
+	sigaction(SIGSYS, &sa, nullptr);
+#endif
 }
 
 

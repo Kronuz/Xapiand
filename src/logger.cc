@@ -628,9 +628,6 @@ Logging::operator()()
 	std::string exception_description;
 	std::string exception;
 	if (eptr) {
-#ifdef XAPIAND_TRACEBACKS
-		exception.append(DEBUG_COL.c_str(), DEBUG_COL.size());
-#endif
 		try {
 			std::rethrow_exception(eptr);
 		} catch (const BaseException& exc) {
@@ -639,53 +636,24 @@ Logging::operator()()
 			} else {
 				exception_description.append("Unkown BaseException");
 			}
-#ifdef XAPIAND_TRACEBACKS
-			if (exc.empty()) {
-				exception.append("\n== Location: ");
-				exception.append(filename);
-				exception.push_back(':');
-				exception.append(std::to_string(line));
-				exception.append(" at ");
-				exception.append(function);
-			} else {
-				exception.append(exc.get_traceback());
-			}
-#endif
+			function = exc.function;
+			filename = exc.filename;
+			line = exc.line;
 		} catch (const Xapian::Error& exc) {
 			exception_description.append(exc.get_description());
-#ifdef XAPIAND_TRACEBACKS
-			exception.append("\n== Location: ");
-			exception.append(filename);
-			exception.push_back(':');
-			exception.append(std::to_string(line));
-			exception.append(" at ");
-			exception.append(function);
-#endif
 		} catch (const std::exception& exc) {
 			if (*exc.what()) {
 				exception_description.append(exc.what());
 			} else {
 				exception_description.append("Unkown std::exception");
 			}
-#ifdef XAPIAND_TRACEBACKS
-			exception.append("\n== Location: ");
-			exception.append(filename);
-			exception.push_back(':');
-			exception.append(std::to_string(line));
-			exception.append(" at ");
-			exception.append(function);
-#endif
 		} catch (...) {
 			exception_description.append("Unkown exception");
-#ifdef XAPIAND_TRACEBACKS
-			exception.append("\n== Location: ");
-			exception.append(filename);
-			exception.push_back(':');
-			exception.append(std::to_string(line));
-			exception.append(" at ");
-			exception.append(function);
-#endif
 		}
+#ifdef XAPIAND_TRACEBACKS
+		exception.append(DEBUG_COL.c_str(), DEBUG_COL.size());
+		exception.append(traceback(function, filename, line, exception_callstack(eptr)));
+#endif
 		if (!str.empty()) {
 			msg.append(": ");
 		}

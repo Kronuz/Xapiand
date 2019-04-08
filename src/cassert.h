@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,48 +20,22 @@
  * THE SOFTWARE.
  */
 
-#pragma once
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-	void __assert_tb(const char* function, const char* filename, unsigned int line, const char* expression);
-#ifdef __cplusplus
-}
-#endif // __cplusplus
-
 #ifndef ASSERT
 
-#include "config.h"           // for XAPIAND_ASSERTS
-
-#ifndef NDEBUG
-#ifndef XAPIAND_ASSERTS
-#define XAPIAND_ASSERTS 1
-#endif
-#endif
+#include "config.h"  // for XAPIAND_ASSERTS
 
 #ifdef XAPIAND_ASSERTS
-
-#include "likely.h"
-
-#if defined(__cplusplus)
-#include <cassert>
-#else
-#include <assert.h>
+#ifdef NDEBUG
+#undef NDEBUG
+#define NDEBUG_UNDEFINED 1
+#endif
 #endif
 
-#define ASSERT(e) \
-	((void) (likely(e) ? ((void)0) : __assert_tb(__func__, __FILE__, __LINE__, #e)))
+#include <assert.h>
+#define	ASSERT	assert
 
-#else // XAPIAND_ASSERTS
-
-#define	ASSERT(e)	((void)0)
-
-#endif // XAPIAND_ASSERTS
-
-#ifdef assert
-#undef assert
-#endif // assert
-#define assert ASSERT
+#ifdef NDEBUG_UNDEFINED
+#define NDEBUG 1
+#endif
 
 #endif // ASSERT

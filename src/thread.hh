@@ -59,7 +59,7 @@ const std::string& get_thread_name(std::thread::id thread_id);
 
 const std::string& get_thread_name();
 
-void sig_collect_callstack(int signum, siginfo_t* siginfo, void* ucontext);
+void collect_callstack_sig_handler(int signum);
 void collect_callstacks();
 void callstacks_snapshot();
 

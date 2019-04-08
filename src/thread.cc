@@ -36,7 +36,7 @@
 #include <unordered_map>         // for std::unordered_map
 #include <vector>                // for std::vector
 #include <unistd.h>              // for getpid
-#include <execinfo.h>            // for backtrace
+#include <dlfcn.h>               // for dlsym
 #ifdef HAVE_PTHREADS
 #include <pthread.h>             // for pthread_self
 #endif
@@ -46,15 +46,15 @@
 
 #include "error.hh"              // for error::name, error::description
 #include "log.h"                 // for L_WARNING_ONCE
-#include "traceback.h"           // for traceback
+#include "traceback.h"           // for backtrace, traceback
 
 
 static std::mutex thread_names_mutex;
 static std::unordered_map<std::thread::id, std::string> thread_names;
 static std::array<pthread_t, 1000> pthreads;
 static std::array<const char*, 1000> pthreads_names;
-static std::array<std::vector<void*>, 1000> callstacks;
-static std::array<std::vector<void*>, 1000> snapshot;
+static std::array<void**, 1000> callstacks;
+static std::array<void**, 1000> snapshots;
 static std::atomic_size_t pthreads_num;
 static std::atomic_size_t pthreads_busy;
 
@@ -136,16 +136,20 @@ get_thread_name()
 }
 
 
+////////////////////////////////////////////////////////////////////////////////
+
+
 void
-sig_collect_callstack(int /*signum*/, siginfo_t* /*siginfo*/, void* /*ucontext*/)
+collect_callstack_sig_handler(int /*signum*/)
 {
 	auto pthread = pthread_self();
 	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_num.load(); ++idx) {
 		if (pthreads[idx] == pthread) {
 			auto& callstack = callstacks[idx];
-			callstack.resize(128);
-			callstack.resize(backtrace(callstack.data(), callstack.size()));
-			callstack.shrink_to_fit();
+			if (callstack != nullptr) {
+				free(callstack);
+			}
+			callstack = backtrace();
 			pthreads_busy.fetch_sub(1);
 			return;
 		}
@@ -179,8 +183,12 @@ collect_callstacks()
 	} while (!pthreads_busy.compare_exchange_weak(zero, 1));
 
 	for (size_t idx = 1; idx < total; ++idx) {
-		if (snapshot[idx].size() <= 3 || callstacks[idx].size() <= 3 || snapshot[idx][3] != callstacks[idx][3]) {
-			print(traceback(pthreads_names[idx], "", idx, callstacks[idx], 3));
+		auto& callstack = callstacks[idx];
+		auto& snapshot = snapshots[idx];
+		size_t callstack_frames = static_cast<void**>(*callstack) - callstack;
+		size_t snapshot_frames = snapshot ? static_cast<void**>(*snapshot) - snapshot : 0;
+		if (snapshot_frames <= 3 || callstack_frames <= 3 || snapshot[3] != callstack[3]) {
+			print(traceback(pthreads_names[idx], "", idx, callstack), 3);
 		}
 	}
 
@@ -217,8 +225,29 @@ callstacks_snapshot()
 		} while (!pthreads_busy.compare_exchange_weak(zero, 1));
 
 		for (size_t idx = 0; idx < total; ++idx) {
-			if (snapshot[idx] != callstacks[idx]) {
-				snapshot[idx] = callstacks[idx];
+			auto& callstack = callstacks[idx];
+			auto& snapshot = snapshots[idx];
+			auto different = true;
+			size_t callstack_frames = static_cast<void**>(*callstack) - callstack;
+			if (snapshot) {
+				size_t snapshot_frames = static_cast<void**>(*snapshot) - snapshot;
+				if (snapshot_frames == callstack_frames) {
+					different = false;
+					for (size_t i = 0; i < callstack_frames; ++i) {
+						if (callstack[i + 1] != snapshot[i + 1]) {
+							different = true;
+							break;
+						}
+					}
+				}
+			}
+			if (different) {
+				if (snapshot) {
+					free(snapshot);
+				}
+				snapshot = (void**)malloc((callstack_frames + 1) * sizeof(void*));
+				memcpy(snapshot + 1, callstack + 1, callstack_frames * sizeof(void*));
+				snapshot[0] = &snapshot[callstack_frames];
 				retry = true;
 			}
 		}

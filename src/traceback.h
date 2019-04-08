@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,7 @@
 
 #include "config.h"           // for HAVE_EXECINFO_H
 
+#include <exception>          // for std::exception_ptr
 #include <string>             // for std::string
 #include <vector>             // for std::vector
 
@@ -33,7 +34,11 @@
 static inline int backtrace(void**, int) { return 0; }
 #endif
 
-#define TRACEBACK() ::traceback(__func__, __FILE__, __LINE__)
+void** backtrace();
+
+void** exception_callstack(std::exception_ptr& eptr);
 
 std::string traceback(const char* function, const char* filename, int line, int skip = 1);
-std::string traceback(const char* function, const char* filename, int line, const std::vector<void*>& callstack, int skip = 1);
+std::string traceback(const char* function, const char* filename, int line, void** callstack, int skip = 1);
+
+#define TRACEBACK() ::traceback(__func__, __FILE__, __LINE__)
