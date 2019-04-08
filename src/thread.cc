@@ -169,18 +169,15 @@ collect_callstack_sig_handler(int /*signum*/)
 void
 collect_callstacks()
 {
-	auto total = pthreads_num.load();
-	if (total > pthreads.size()) {
-		total = pthreads.size();
-	}
-
+	size_t total;
 	size_t zero;
 	do {
-		zero = 0;
 		sched_yield();
+		total = pthreads_num.load();
+		zero = 0;
 	} while (!pthreads_busy.compare_exchange_weak(zero, total));
 
-	for (size_t idx = 0; idx < total; ++idx) {
+	for (size_t idx = 0; idx < pthreads.size() && idx < total; ++idx) {
 		if (pthread_kill(pthreads[idx], SIGUSR2) != 0) {
 			pthreads_busy.fetch_sub(1);
 		}
@@ -191,7 +188,7 @@ collect_callstacks()
 		sched_yield();
 	} while (!pthreads_busy.compare_exchange_weak(zero, 1));
 
-	for (size_t idx = 1; idx < total; ++idx) {
+	for (size_t idx = 1; idx < pthreads.size() && idx < total; ++idx) {
 		auto& callstack = callstacks[idx];
 		auto& snapshot = snapshots[idx];
 		size_t callstack_frames = static_cast<void**>(*callstack) - callstack;
@@ -211,18 +208,16 @@ callstacks_snapshot()
 	bool retry;
 	do {
 		retry = false;
-		auto total = pthreads_num.load();
-		if (total > pthreads.size()) {
-			total = pthreads.size();
-		}
 
+		size_t total;
 		size_t zero;
 		do {
-			zero = 0;
 			sched_yield();
+			total = pthreads_num.load();
+			zero = 0;
 		} while (!pthreads_busy.compare_exchange_weak(zero, total));
 
-		for (size_t idx = 0; idx < total; ++idx) {
+		for (size_t idx = 0; idx < pthreads.size() && idx < total; ++idx) {
 			if (pthread_kill(pthreads[idx], SIGUSR2) != 0) {
 				pthreads_busy.fetch_sub(1);
 			}
@@ -233,7 +228,7 @@ callstacks_snapshot()
 			sched_yield();
 		} while (!pthreads_busy.compare_exchange_weak(zero, 1));
 
-		for (size_t idx = 0; idx < total; ++idx) {
+		for (size_t idx = 0; idx < pthreads.size() && idx < total; ++idx) {
 			auto& callstack = callstacks[idx];
 			auto& snapshot = snapshots[idx];
 			auto different = true;
