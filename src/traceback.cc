@@ -123,7 +123,7 @@ atos(const void* address)
 		write(fd, tmp, size);
 	}
 
-	const unsigned int MAXLINE = 1024;
+	const unsigned int MAXLINE = 4096;
 	char line[MAXLINE];
 	char c = '\0';
 	size_t nread = 0;
