@@ -247,9 +247,6 @@
 /* Enable tracebacks for exceptions. */
 #cmakedefine XAPIAND_TRACEBACKS @XAPIAND_TRACEBACKS@
 
-/* Enable debugging asserts. */
-#cmakedefine XAPIAND_ASSERTS @XAPIAND_ASSERTS@
-
 /* Enable tracked memory allocator for memory usage. */
 #cmakedefine XAPIAND_TRACKED_MEM @XAPIAND_TRACKED_MEM@
 
@@ -539,7 +536,9 @@
 /* #  undef WORDS_BIGENDIAN */
 
 /* Define if you want assertions (causes some slow-down) */
-/* #undef XAPIAN_ASSERTIONS */
+#ifndef NDEBUG
+# define XAPIAN_ASSERTIONS 1
+#endif
 
 /* Define if you want paranoid assertions (causes significant slow-down) */
 /* #undef XAPIAN_ASSERTIONS_PARANOID */

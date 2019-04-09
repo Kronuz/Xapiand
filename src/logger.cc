@@ -307,11 +307,9 @@ Logging::Logging(
 ) :
 	ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>(created_at),
 	thread_id(std::this_thread::get_id()),
-#if defined(XAPIAND_TRACEBACKS) || !defined(NDEBUG)
 	function(function),
 	filename(filename),
 	line(line),
-#endif
 	stack_level(0),
 	clears(clears),
 	str(std::move(str)),
@@ -605,7 +603,6 @@ Logging::operator()()
 			msg.append(") ");
 		}
 
-#ifndef NDEBUG
 		if (opts.log_location) {
 			msg.append(filename);
 			msg.push_back(':');
@@ -614,7 +611,6 @@ Logging::operator()()
 			msg.append(function);
 			msg.append(": ");
 		}
-#endif
 
 		msg.append(CLEAR_COLOR.c_str(), CLEAR_COLOR.size());
 	}
@@ -628,11 +624,6 @@ Logging::operator()()
 	std::string exception_description;
 	std::string exception;
 	if (eptr) {
-#if !defined(XAPIAND_TRACEBACKS) && defined(NDEBUG)
-		const char* function;
-		const char* filename;
-		int line;
-#endif
 		try {
 			std::rethrow_exception(eptr);
 		} catch (const BaseException& exc) {

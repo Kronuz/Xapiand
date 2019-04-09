@@ -407,14 +407,13 @@ parseOptions(int argc, char** argv)
 				case fnv1ah32::hash("thread-names"):
 					o.log_threads = true;
 					break;
-#ifndef NDEBUG
 				case fnv1ah32::hash("locations"):
 					o.log_location = true;
 					break;
-#endif
 			}
 		}
-#ifndef NDEBUG
+
+#ifdef DEBUG
 		if (!o.log_plainseconds && !o.log_milliseconds && !o.log_microseconds) {
 			o.log_microseconds = true;
 		}

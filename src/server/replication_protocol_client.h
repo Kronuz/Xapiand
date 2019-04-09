@@ -39,7 +39,7 @@
 
 
 // #define SAVE_LAST_MESSAGES
-#if !defined(NDEBUG) || defined(XAPIAND_TRACEBACKS)
+#if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
 #ifndef SAVE_LAST_MESSAGES
 #define SAVE_LAST_MESSAGES 1
 #endif

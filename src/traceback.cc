@@ -48,12 +48,6 @@
 #include "string.hh"                              // for string::format
 
 
-#ifndef NDEBUG
-#ifndef XAPIAND_TRACEBACKS
-#define XAPIAND_TRACEBACKS 1
-#endif
-#endif
-
 static std::atomic_size_t pthreads_req;
 static std::atomic_size_t pthreads_cnt;
 
@@ -418,7 +412,7 @@ exception_callstack(std::exception_ptr& eptr)
 	return *callstack;
 }
 
-#ifdef XAPIAND_TRACEBACKS
+#if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
 
 extern "C" {
 
@@ -604,7 +598,7 @@ dump_callstacks()
 		if (callstack[skip] != snapshot[skip]) {
 			++active;
 			ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " (" + RED + "active" + STEEL_BLUE +")"));
-#ifdef XAPIAND_TRACEBACKS
+#if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
 			ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
 #endif
 		}
