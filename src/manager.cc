@@ -381,9 +381,9 @@ XapiandManager::signal_sig_impl()
 		case SIGINFO:
 #endif
 #ifdef XAPIAND_CLUSTERING
-			print(STEEL_BLUE + "Threads:\n{}Workers:\n{}Databases:\n{}Nodes:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
 #else
-			print(STEEL_BLUE + "Threads:\n{}Workers:\n{}Databases:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases());
 #endif
 			break;
 	}
@@ -1950,12 +1950,12 @@ XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds t
 std::string
 XapiandManager::__repr__() const
 {
-	return string::format("<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
+	return string::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
 		NAMEOF_ENUM(_state.load()),
 		use_count(),
-		is_runner() ? " (runner)" : " (worker)",
-		is_running_loop() ? " (running loop)" : " (stopped loop)",
-		is_detaching() ? " (deteaching)" : "");
+		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
+		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
+		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "");
 }
 
 

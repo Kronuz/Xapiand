@@ -3498,17 +3498,17 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 std::string
 HttpClient::__repr__() const
 {
-	return string::format("<HttpClient {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
+	return string::format(STEEL_BLUE + "<HttpClient {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		use_count(),
 		sock,
-		is_runner() ? " (runner)" : " (worker)",
-		is_running_loop() ? " (running loop)" : " (stopped loop)",
-		is_detaching() ? " (deteaching)" : "",
-		is_idle() ? " (idle)" : "",
-		is_waiting() ? " (waiting)" : "",
-		is_running() ? " (running)" : "",
-		is_shutting_down() ? " (shutting down)" : "",
-		is_closed() ? " (closed)" : "");
+		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
+		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
+		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "",
+		is_idle() ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : "",
+		is_waiting() ? " " + WHITE + "(waiting)" + STEEL_BLUE : "",
+		is_running() ? " " + RED + "(running)" + STEEL_BLUE : "",
+		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
+		is_closed() ? " " + DARK_STEEL_BLUE + "(closed)" + STEEL_BLUE : "");
 }
 
 

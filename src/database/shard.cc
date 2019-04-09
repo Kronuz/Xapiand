@@ -1716,14 +1716,14 @@ Shard::to_string() const
 std::string
 Shard::__repr__() const
 {
-	return string::format("<Shard {} ({}){}{}{}{}{}{}{}>",
+	return string::format(STEEL_BLUE + "<Shard {} ({}){}{}{}{}{}{}{}>",
 		repr(to_string()),
 		readable_flags(flags),
-		is_writable() ? " (writable)" : "",
-		is_wal_active() ? " (active WAL)" : "",
-		is_local() ? " (local)" : "",
-		is_closed() ? " (closed)" : "",
-		is_modified() ? " (modified)" : "",
-		is_incomplete() ? " (incomplete)" : "",
-		is_busy() ? " (busy)" : "");
+		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "",
+		is_wal_active() ? " " + DARK_STEEL_BLUE + "(active WAL)" + STEEL_BLUE : "",
+		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
+		is_closed() ? " " + DARK_STEEL_BLUE + "(closed)" + STEEL_BLUE : "",
+		is_modified() ? " " + DARK_STEEL_BLUE + "(modified)" + STEEL_BLUE : "",
+		is_incomplete() ? " " + DARK_STEEL_BLUE + "(incomplete)" + STEEL_BLUE : "",
+		is_busy() ? " " + RED + "(busy)" + STEEL_BLUE : "");
 }

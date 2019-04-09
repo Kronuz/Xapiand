@@ -236,12 +236,12 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 std::string
 ReplicationProtocolServer::__repr__() const
 {
-	return string::format("<ReplicationProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
+	return string::format(STEEL_BLUE + "<ReplicationProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? replication.sock : sock,
-		is_runner() ? " (runner)" : " (worker)",
-		is_running_loop() ? " (running loop)" : " (stopped loop)",
-		is_detaching() ? " (deteaching)" : "");
+		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
+		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
+		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "");
 }
 
 #endif /* XAPIAND_CLUSTERING */

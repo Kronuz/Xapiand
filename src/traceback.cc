@@ -595,20 +595,22 @@ dump_callstacks()
 	std::string ret;
 	size_t skip = 4;
 	size_t idx = 0;
+	size_t active = 0;
 	for (; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
 		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
 		auto& callstack = *thread_info->callstack;
 		auto& snapshot = *thread_info->snapshot;
 		if (callstack[skip] != snapshot[skip]) {
-			ret.append(string::format("        <Thread {}: {} ({})>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? "idle" : "active"));
+			++active;
+			ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " (" + RED + "active" + STEEL_BLUE +")"));
 #ifdef XAPIAND_TRACEBACKS
-			ret.append(string::format(DEBUG_COL + "{}\n" + STEEL_BLUE, string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
+			ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
 #endif
 		}
 		skip = 0;
 	}
-	return string::format("    <Threads {{cnt:{}}}>\n", idx) + ret;
+	return string::format("    " + STEEL_BLUE + "<Threads {{total:{}, active:{}}}>\n", idx, active) + ret;
 }
 
 

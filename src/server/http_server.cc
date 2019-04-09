@@ -117,10 +117,10 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 std::string
 HttpServer::__repr__() const
 {
-	return string::format("<HttpServer {{cnt:{}, sock:{}}}{}{}{}>",
+	return string::format(STEEL_BLUE + "<HttpServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? http.sock : sock,
-		is_runner() ? " (runner)" : " (worker)",
-		is_running_loop() ? " (running loop)" : " (stopped loop)",
-		is_detaching() ? " (deteaching)" : "");
+		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
+		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
+		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "");
 }

@@ -466,11 +466,11 @@ ShardEndpoint::is_used() const
 std::string
 ShardEndpoint::__repr__() const
 {
-	return string::format("<ShardEndpoint {{refs:{}}} {}{}{}>",
+	return string::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {}{}{}>",
 		refs.load(),
 		repr(to_string()),
-		is_locked() ? " (locked)" : "",
-		is_finished() ? " (finished)" : "");
+		is_locked() ? " " + RED + "(locked)" + STEEL_BLUE : "",
+		is_finished() ? " " + ORANGE + "(finished)" + STEEL_BLUE : "");
 }
 
 
@@ -922,7 +922,7 @@ DatabasePool::count()
 std::string
 DatabasePool::__repr__() const
 {
-	return string::format("<DatabasePool {{locks:{}}}>",
+	return string::format(STEEL_BLUE + "<DatabasePool {{locks:{}}}>",
 		locks.load());
 }
 

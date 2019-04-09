@@ -189,7 +189,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 	// We first try to load schema from the LRU cache
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
-	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " (writable)" : "");
+	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "");
 	{
 		std::lock_guard<std::mutex> lk(local_mtx);
 		local_schema_ptr = local_schemas[local_schema_path].load();
