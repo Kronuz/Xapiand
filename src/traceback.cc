@@ -313,11 +313,11 @@ traceback(const char* function, const char* filename, int line, void** callstack
 		result.assign(std::to_string(frames - i - 1));
 		result.push_back(' ');
 
-		std::snprintf(tmp, sizeof(tmp), "[%p] ", address);
-		result.append(tmp);
 
 		auto address_string = atos(address);
 		if (address_string.size() > 2 && address_string.compare(0, 2, "0x") != 0) {
+			std::snprintf(tmp, sizeof(tmp), "%p ", address);
+			result.append(tmp);
 			result.append(address_string);
 		} else {
 			Dl_info info;
