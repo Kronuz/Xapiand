@@ -416,6 +416,9 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 		auto node = put.first;
 		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
 		if (put.second) {
+			// Replicate database from the other node
+			auto path = string::format(".xapiand/index/.__{}", node->idx);
+			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, path, Endpoint{path, node}, Endpoint{path});
 			L_INFO("Node {}{}" + INFO_COL + " joined the party on ip:{}, tcp:{} (http), tcp:{} (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
 		}
 	}
