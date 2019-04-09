@@ -287,7 +287,6 @@ PathParser::init(std::string_view p)
 						break;
 
 					case State::ID:
-					case State::SLF:
 					case State::SLB:
 					case State::SLB_SPACE_OR_COMMA:
 						assert(n0 >= n1);
@@ -300,6 +299,7 @@ PathParser::init(std::string_view p)
 						n0 = n1 - 1;
 						break;
 
+					case State::SLF:
 					case State::ID_SLC:
 						assert(n0 >= n1);
 						length = ns - n1 - 1;
@@ -307,12 +307,12 @@ PathParser::init(std::string_view p)
 							off_id = n1 + 1;
 							len_id = length;
 						}
-						cn = '\0';
 						length = n0 - ns + addin;
 						if (length != 0u) {
 							off_slc = ns + takeoff;
 							len_slc = length;
 						}
+						cn = '\0';
 						n0 = n1 - 1;
 						break;
 
