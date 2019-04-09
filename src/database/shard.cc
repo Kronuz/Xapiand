@@ -281,10 +281,15 @@ Shard::reopen_writable()
 		if (!node->is_active()) {
 			throw Xapian::NetworkError("Endpoint node is inactive");
 		}
-		if (node->remote_port == 0) {
+		auto port = node->remote_port;
+		if (port == 0) {
 			throw Xapian::NetworkError("Endpoint node without a valid port");
 		}
-		wsdb = Xapian::Remote::open_writable(node->host(), node->remote_port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
+		auto& host = node->host();
+		if (host.empty()) {
+			throw Xapian::NetworkError("Endpoint node without a valid host");
+		}
+		wsdb = Xapian::Remote::open_writable(host, port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -389,10 +394,15 @@ Shard::reopen_readable()
 		if (!node->is_active()) {
 			throw Xapian::NetworkError("Endpoint node is inactive");
 		}
-		if (node->remote_port == 0) {
+		auto port = node->remote_port;
+		if (port == 0) {
 			throw Xapian::NetworkError("Endpoint node without a valid port");
 		}
-		rsdb = Xapian::Remote::open(node->host(), node->remote_port, 10000, 10000, _flags, endpoint.path);
+		auto& host = node->host();
+		if (host.empty()) {
+			throw Xapian::NetworkError("Endpoint node without a valid host");
+		}
+		rsdb = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
