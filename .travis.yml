@@ -7,7 +7,7 @@ branches:
 matrix:
   include:
     - os: linux
-      dist: trusty
+      dist: xenial
       sudo: required
     - os: osx
       osx_image: xcode10.2
@@ -18,8 +18,8 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-trusty-7
-      - sourceline: 'deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-7 main'
+      - llvm-toolchain-xenial-7
+      - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main'
         key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
     packages:
       - clang-7
