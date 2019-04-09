@@ -380,12 +380,10 @@ XapiandManager::signal_sig_impl()
 #if defined(__APPLE__) || defined(__FreeBSD__)
 		case SIGINFO:
 #endif
-			collect_callstacks();
-
 #ifdef XAPIAND_CLUSTERING
-			print(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
+			print(STEEL_BLUE + "Threads:\n{}Workers:\n{}Databases:\n{}Nodes:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
 #else
-			print(STEEL_BLUE + "Workers:\n{}Databases:\n{}", dump_tree(), _database_pool->dump_databases());
+			print(STEEL_BLUE + "Threads:\n{}Workers:\n{}Databases:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases());
 #endif
 			break;
 	}

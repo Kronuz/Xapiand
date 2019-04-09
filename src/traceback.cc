@@ -45,7 +45,6 @@
 
 #include "atomic_shared_ptr.h"                    // for atomic_shared_ptr
 #include "likely.h"
-#include "log.h"                                  // for print
 #include "string.hh"                              // for string::format
 
 
@@ -560,8 +559,8 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 }
 
 
-void
-collect_callstacks()
+std::string
+dump_callstacks()
 {
 	size_t req = pthreads_req.fetch_add(1) + 1;
 
@@ -588,21 +587,28 @@ collect_callstacks()
 		sched_yield();
 	}
 
+
 	// print tracebacks:
 	// The first idx is main thread, skip 4 frames:
 	//     callstacks_snapshot -> setup_node_async_cb -> ev::base -> ev_invoke_pending
 	//     collect_callstacks -> signal_sig_impl -> ev::base -> ev_invoke_pending
+	std::string ret;
 	size_t skip = 4;
-	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+	size_t idx = 0;
+	for (; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
 		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
 		auto& callstack = *thread_info->callstack;
 		auto& snapshot = *thread_info->snapshot;
 		if (callstack[skip] != snapshot[skip]) {
-			print(traceback(thread_info->name, "", idx, callstack.get(), skip));
+			ret.append(string::format("        <Thread {}: {} ({})>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? "idle" : "active"));
+#ifdef XAPIAND_TRACEBACKS
+			ret.append(string::format(DEBUG_COL + "{}\n" + STEEL_BLUE, string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
+#endif
 		}
 		skip = 0;
 	}
+	return string::format("    <Threads {{cnt:{}}}>\n", idx) + ret;
 }
 
 

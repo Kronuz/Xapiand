@@ -41,7 +41,7 @@ void** backtrace();
 void init_thread_info(pthread_t pthread, const char* name);
 
 void collect_callstack_sig_handler(int signum, siginfo_t* info, void* ptr);
-void collect_callstacks();
+std::string dump_callstacks();
 void callstacks_snapshot();
 
 void** exception_callstack(std::exception_ptr& eptr);
