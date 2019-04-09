@@ -32,7 +32,7 @@
 #include <string>                           // for std::string
 #include <vector>                           // for std::vector
 
-#include "base_client.h"                    // for MetaBaseClient
+#include "base_client.h"                    // for BaseClient
 #include "endpoint.h"                       // for Endpoint
 #include "threadpool.hh"                    // for Task
 #include "xapian.h"
@@ -83,8 +83,8 @@ class lock_shard;
 
 
 // A single instance of a non-blocking Xapiand replication protocol handler
-class ReplicationProtocolClient : public MetaBaseClient<ReplicationProtocolClient> {
-	friend MetaBaseClient<ReplicationProtocolClient>;
+class ReplicationProtocolClient : public BaseClient<ReplicationProtocolClient> {
+	friend BaseClient<ReplicationProtocolClient>;
 
 	mutable std::mutex runner_mutex;
 

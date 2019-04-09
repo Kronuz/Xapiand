@@ -30,7 +30,7 @@
 #include <string>                             // for std::string
 #include <vector>                             // for std::vector
 
-#include "base_client.h"                      // for MetaBaseClient
+#include "base_client.h"                      // for BaseClient
 #include "endpoint.h"                         // for Endpoints
 #include "threadpool.hh"                      // for Task
 #include "xapian.h"
@@ -159,8 +159,8 @@ enum class RemoteReplyType {
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
-class RemoteProtocolClient : public MetaBaseClient<RemoteProtocolClient> {
-	friend MetaBaseClient<RemoteProtocolClient>;
+class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
+	friend BaseClient<RemoteProtocolClient>;
 
 	mutable std::mutex runner_mutex;
 

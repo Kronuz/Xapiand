@@ -193,6 +193,52 @@ bool can_preview(const ct_type_t& ct_type) {
 }
 
 
+/*
+ *  _   _ _   _
+ * | | | | |_| |_ _ __
+ * | |_| | __| __| '_ \
+ * |  _  | |_| |_| |_) |
+ * |_| |_|\__|\__| .__/
+ *               |_|
+ */
+
+template class BaseClient<HttpClient>;  // declare base class
+
+
+HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
+	: BaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_),
+	  new_request(std::make_shared<Request>(this))
+{
+	++XapiandManager::http_clients();
+
+	Metrics::metrics()
+		.xapiand_http_connections
+		.Increment();
+
+	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
+	new_request->begins = std::chrono::system_clock::now();
+
+	L_CONN("New Http Client, {} client(s) of a total of {} connected.", XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
+}
+
+
+HttpClient::~HttpClient() noexcept
+{
+	try {
+		if (XapiandManager::http_clients().fetch_sub(1) == 0) {
+			L_CRIT("Inconsistency in number of http clients");
+			sig_exit(-EX_SOFTWARE);
+		}
+
+		if (is_shutting_down() && !is_idle()) {
+			L_INFO("HTTP client killed!");
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in destructor");
+	}
+}
+
+
 std::string
 HttpClient::http_response(Request& request, enum http_status status, int mode, const std::string& body, const std::string& location, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
 	L_CALL("HttpClient::http_response()");
@@ -282,40 +328,6 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 }
 
 
-HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: MetaBaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_),
-	  new_request(std::make_shared<Request>(this))
-{
-	++XapiandManager::http_clients();
-
-	Metrics::metrics()
-		.xapiand_http_connections
-		.Increment();
-
-	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
-	new_request->begins = std::chrono::system_clock::now();
-
-	L_CONN("New Http Client, {} client(s) of a total of {} connected.", XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
-}
-
-
-HttpClient::~HttpClient() noexcept
-{
-	try {
-		if (XapiandManager::http_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of http clients");
-			sig_exit(-EX_SOFTWARE);
-		}
-
-		if (is_shutting_down() && !is_idle()) {
-			L_INFO("HTTP client killed!");
-		}
-	} catch (...) {
-		L_EXC("Unhandled exception in destructor");
-	}
-}
-
-
 template <typename Func>
 int
 HttpClient::handled_errors(Request& request, Func&& func)
@@ -370,7 +382,7 @@ HttpClient::destroy_impl()
 {
 	L_CALL("HttpClient::destroy_impl()");
 
-	MetaBaseClient<HttpClient>::destroy_impl();
+	BaseClient<HttpClient>::destroy_impl();
 
 	// HttpClient could be using indexer (which would block)
 	// if destroying is received, finish indexer:

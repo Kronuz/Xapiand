@@ -66,17 +66,6 @@
 // #define L_OBJ_END L_DELAYED_N_UNLOG
 
 
-/*  ____                      _       ____            _                  _
- * |  _ \ ___ _ __ ___   ___ | |_ ___|  _ \ _ __ ___ | |_ ___   ___ ___ | |
- * | |_) / _ \ '_ ` _ \ / _ \| __/ _ \ |_) | '__/ _ \| __/ _ \ / __/ _ \| |
- * |  _ <  __/ | | | | | (_) | ||  __/  __/| | | (_) | || (_) | (_| (_) | |
- * |_| \_\___|_| |_| |_|\___/ \__\___|_|   |_|  \___/ \__\___/ \___\___/|_|
- *
- * Based on xapian/xapian-core/net/remoteserver.cc @ 62d608e
- *
- */
-
-
 constexpr int DB_ACTION_MASK_ = 0x03;  // Xapian::DB_ACTION_MASK_
 
 
@@ -89,9 +78,20 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
 	return common;
 }
 
+/*  ____                      _       ____            _                  _
+ * |  _ \ ___ _ __ ___   ___ | |_ ___|  _ \ _ __ ___ | |_ ___   ___ ___ | |
+ * | |_) / _ \ '_ ` _ \ / _ \| __/ _ \ |_) | '__/ _ \| __/ _ \ / __/ _ \| |
+ * |  _ <  __/ | | | | | (_) | ||  __/  __/| | | (_) | || (_) | (_| (_) | |
+ * |_| \_\___|_| |_| |_|\___/ \__\___|_|   |_|  \___/ \__\___/ \___\___/|_|
+ *
+ * Based on xapian/xapian-core/net/remoteserver.cc @ 62d608e
+ */
+
+template class BaseClient<RemoteProtocolClient>;  // declare base class
+
 
 RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: MetaBaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
+	: BaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  flags(0),
 	  state(State::INIT_REMOTE),
 #ifdef SAVE_LAST_MESSAGES
@@ -1253,7 +1253,7 @@ RemoteProtocolClient::destroy_impl()
 {
 	L_CALL("RemoteProtocolClient::destroy_impl()");
 
-	MetaBaseClient<RemoteProtocolClient>::destroy_impl();
+	BaseClient<RemoteProtocolClient>::destroy_impl();
 
 	reset();
 }
@@ -1489,7 +1489,7 @@ RemoteProtocolClient::send_file(char type_as_char, int fd)
 	buf += type_as_char;
 	write(buf);
 
-	MetaBaseClient<RemoteProtocolClient>::send_file(fd);
+	BaseClient<RemoteProtocolClient>::send_file(fd);
 }
 
 

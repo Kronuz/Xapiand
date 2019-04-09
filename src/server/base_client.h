@@ -22,22 +22,17 @@
 
 #pragma once
 
-#include <atomic>                   // for std::atomic_bool
-#include <cassert>                  // for assert
-#include <errno.h>                  // for errno, ECONNRESET
+#include <atomic>                   // for std::atomic_bool, std::atomic_size_t
 #include <memory>                   // for std::shared_ptr, std::unique_ptr
 #include <string>                   // for std::string
+#include <string_view>              // for std::string_view
 #include <sys/types.h>              // for ssize_t
 
-#include "buffer.h"                 // for Buffer
 #include "client_compressor.h"      // for ClientLZ4Compressor, ClientLZ4Decompressor
+#include "buffer.h"                 // for Buffer
 #include "ev/ev++.h"                // for ev::async, ev::io, ev::loop_ref
-#include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for io::*
-#include "lz4/xxhash.h"             // for XXH32_state_t
-#include "log.h"                    // for L_CALL, L_ERR, L_EV_BEGIN, L_CONN
 #include "queue.h"                  // for Queue
-#include "readable_revents.hh"      // for readable_revents
 #include "worker.h"                 // for Worker
 
 
@@ -59,19 +54,12 @@ enum class MODE {
 };
 
 
+template <typename ClientImpl>
 class BaseClient : public Worker {
+	friend ClientLZ4Compressor<BaseClient<ClientImpl>>;
+	friend ClientLZ4Decompressor<BaseClient<ClientImpl>>;
+
 	std::mutex _mutex;
-
-public:
-	bool write(const char *buf, size_t buf_size);
-
-	bool write(std::string_view buf) {
-		return write(buf.data(), buf.size());
-	}
-
-	bool write_file(std::string_view path, bool unlink = false);
-
-	bool write_buffer(const std::shared_ptr<Buffer>& buffer);
 
 protected:
 	ev::io io_read;
@@ -99,10 +87,12 @@ protected:
 
 	queue::Queue<std::shared_ptr<Buffer>> write_queue;
 
+	std::unique_ptr<ClientLZ4Decompressor<BaseClient<ClientImpl>>> decompressor;
+
+	ClientImpl& client;
+
 	BaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
 	~BaseClient() noexcept;
-
-	void init(int sock_);
 
 	void write_start_async_cb(ev::async &watcher, int revents);
 	void read_start_async_cb(ev::async &watcher, int revents);
@@ -111,19 +101,11 @@ protected:
 	void start_impl() override;
 	void stop_impl() override;
 
-	// Socket is writable
-	void _io_cb_write(ev::io &watcher, int revents);
+	void shutdown_impl(long long asap, long long now) override;
 
-	void io_cb_write(ev::io &watcher, int revents) noexcept {
-		try {
-			_io_cb_write(watcher, revents);
-		} catch (...) {
-			L_EXC("ERROR: Client died with an unhandled exception");
-			stop();
-			destroy();
-			detach();
-		}
-	}
+	void io_cb_read(ev::io &watcher, int revents) noexcept;
+
+	void io_cb_write(ev::io &watcher, int revents) noexcept;
 
 	WR write_from_queue();
 	WR write_from_queue(int max);
@@ -147,228 +129,27 @@ protected:
 	bool is_closed() const {
 		return closed.load(std::memory_order_relaxed);
 	}
-};
 
+	bool is_idle();
 
-// The following is the CRTP for BaseClient
+	ssize_t on_read(const char* buf, ssize_t received);
 
-template <typename ClientImpl>
-class MetaBaseClient : public BaseClient {
-	friend ClientLZ4Compressor<MetaBaseClient<ClientImpl>>;
-	friend ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>;
+	void on_read_file(const char* buf, ssize_t received);
 
-protected:
-	std::unique_ptr<ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>> decompressor;
+	void on_read_file_done();
 
-	ClientImpl& client;
-
-	bool is_idle() {
-		return client.is_idle();
-	}
-
-	ssize_t on_read(const char* buf, ssize_t received) {
-		return client.on_read(buf, received);
-	}
-
-	void on_read_file(const char* buf, ssize_t received) {
-		client.on_read_file(buf, received);
-	}
-
-	void on_read_file_done() {
-		client.on_read_file_done();
-	}
-
-	MetaBaseClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_) :
-		BaseClient(parent_, ev_loop_, ev_flags_),
-		client(static_cast<ClientImpl&>(*this)) {}
-
-	// Receive message from client socket
-	void _io_cb_read([[maybe_unused]] ev::io &watcher, int revents) {
-		L_CALL("BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
-
-		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
-		L_EV_END("BaseClient::io_cb_read:END");
-
-		assert(sock == -1 || sock == watcher.fd);
-
-		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
-
-		if (closed) {
-			stop();
-			destroy();
-			detach();
-			return;
-		}
-
-		if ((revents & EV_ERROR) != 0) {
-			L_ERR("ERROR: got invalid event {{sock:{}}} - {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
-			stop();
-			destroy();
-			detach();
-			return;
-		}
-
-		char read_buffer[BUF_SIZE];
-		ssize_t received = io::read(watcher.fd, read_buffer, BUF_SIZE);
-
-		if (received < 0) {
-			if (io::ignored_errno(errno, true, true, false)) {
-				L_CONN("Ignored error: {{sock:{}}} - {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
-				return;
-			}
-
-			if (errno == ECONNRESET) {
-				L_CONN("Received ECONNRESET {{sock:{}}}!", watcher.fd);
-			} else {
-				L_ERR("ERROR: read error {{sock:{}}} - {}: {} ({})", watcher.fd, error::name(errno), errno, error::description(errno));
-			}
-			on_read(nullptr, received);
-			shutdown();
-			return;
-		}
-
-		if (received == 0) {
-			// The peer has closed its half side of the connection.
-			L_CONN("Received EOF {{sock:{}}}!", watcher.fd);
-			on_read(nullptr, received);
-			shutdown();
-			return;
-		}
-
-		const char* buf_data = read_buffer;
-		const char* buf_end = read_buffer + received;
-
-		total_received_bytes += received;
-		L_TCP_WIRE("{{sock:{}}} -->> {} ({} bytes)", watcher.fd, repr(buf_data, received, true, true, 500), received);
-
-		do {
-			if ((received > 0) && mode == MODE::READ_BUF) {
-				buf_data += on_read(buf_data, received);
-				received = buf_end - buf_data;
-			}
-
-			if ((received > 0) && mode == MODE::READ_FILE_TYPE) {
-				L_CONN("Receiving file {{sock:{}}}...", watcher.fd);
-				decompressor = std::make_unique<ClientLZ4Decompressor<MetaBaseClient<ClientImpl>>>(static_cast<MetaBaseClient<ClientImpl>&>(*this));
-				file_size_buffer.clear();
-				receive_checksum = false;
-				mode = MODE::READ_FILE;
-			}
-
-			if ((received > 0) && mode == MODE::READ_FILE) {
-				if (file_size == -1) {
-					try {
-						auto processed = -file_size_buffer.size();
-						file_size_buffer.append(buf_data, std::min(buf_data + 10, buf_end));  // serialized size is at most 10 bytes
-						const char* o = file_size_buffer.data();
-						const char* p = o;
-						const char* p_end = p + file_size_buffer.size();
-						file_size = unserialise_length(&p, p_end);
-						processed += p - o;
-						file_size_buffer.clear();
-						buf_data += processed;
-						received -= processed;
-					} catch (const Xapian::SerialisationError) {
-						break;
-					}
-
-					if (receive_checksum) {
-						receive_checksum = false;
-						if (!decompressor->verify(static_cast<uint32_t>(file_size))) {
-							L_ERR("Data is corrupt!");
-							return;
-						}
-						on_read_file_done();
-						mode = MODE::READ_BUF;
-						decompressor.reset();
-						continue;
-					}
-
-					block_size = file_size;
-					decompressor->clear();
-				}
-
-				const char *file_buf_to_write;
-				size_t block_size_to_write;
-				size_t buf_left_size = buf_end - buf_data;
-				if (block_size < buf_left_size) {
-					file_buf_to_write = buf_data;
-					block_size_to_write = block_size;
-					buf_data += block_size;
-					received = buf_left_size - block_size;
-				} else {
-					file_buf_to_write = buf_data;
-					block_size_to_write = buf_left_size;
-					buf_data = nullptr;
-					received = 0;
-				}
-
-				if (block_size_to_write) {
-					decompressor->append(file_buf_to_write, block_size_to_write);
-					block_size -= block_size_to_write;
-				}
-
-				if (file_size == 0) {
-					decompressor->clear();
-					decompressor->decompress();
-					receive_checksum = true;
-					file_size = -1;
-				} else if (block_size == 0) {
-					decompressor->decompress();
-					file_size = -1;
-				}
-			}
-
-			if (closed) {
-				detach();
-				return;
-			}
-		} while (received > 0);
-	}
-
-	void io_cb_read(ev::io &watcher, int revents) noexcept {
-		try {
-			_io_cb_read(watcher, revents);
-		} catch (...) {
-			L_EXC("ERROR: Client died with an unhandled exception");
-			stop();
-			destroy();
-			detach();
-		}
-	}
-
-	bool send_file(int fd, size_t offset = 0) {
-		L_CALL("BaseClient::send_file({}, {})", fd, offset);
-
-		ClientLZ4Compressor<MetaBaseClient<ClientImpl>> compressor(static_cast<MetaBaseClient<ClientImpl>&>(*this), fd, offset);
-		return (compressor.compress() != -1);
-	}
-
-	void shutdown_impl(long long asap, long long now) override {
-		L_CALL("HttpClient::shutdown_impl({}, {})", asap, now);
-
-		Worker::shutdown_impl(asap, now);
-
-		if (asap) {
-			shutting_down = true;
-			if (now != 0 || is_idle()) {
-				stop(false);
-				destroy(false);
-				detach();
-			}
-		} else {
-			if (is_idle()) {
-				stop(false);
-				destroy(false);
-				detach();
-			}
-		}
-	}
+	bool send_file(int fd, size_t offset = 0);
 
 public:
-	void init(int sock_) {
-		BaseClient::init(sock_);
-		io_read.set<MetaBaseClient<ClientImpl>, &MetaBaseClient<ClientImpl>::io_cb_read>(this);
-		io_read.set(sock, ev::READ);
+	void init(int sock_);
+
+	bool write(const char *buf, size_t buf_size);
+
+	bool write(std::string_view buf) {
+		return write(buf.data(), buf.size());
 	}
+
+	bool write_file(std::string_view path, bool unlink = false);
+
+	bool write_buffer(const std::shared_ptr<Buffer>& buffer);
 };

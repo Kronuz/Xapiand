@@ -75,9 +75,11 @@
  *           |_|
  */
 
+template class BaseClient<ReplicationProtocolClient>;  // declare base class
+
 
 ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: MetaBaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
+	: BaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  state(ReplicaState::INIT_REPLICATION_CLIENT),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
@@ -724,7 +726,7 @@ ReplicationProtocolClient::destroy_impl()
 {
 	L_CALL("ReplicationProtocolClient::destroy_impl()");
 
-	MetaBaseClient<ReplicationProtocolClient>::destroy_impl();
+	BaseClient<ReplicationProtocolClient>::destroy_impl();
 
 	reset();
 	lk_shard_ptr.reset();
@@ -983,7 +985,7 @@ ReplicationProtocolClient::send_file(char type_as_char, int fd)
 	buf += type_as_char;
 	write(buf);
 
-	MetaBaseClient<ReplicationProtocolClient>::send_file(fd);
+	BaseClient<ReplicationProtocolClient>::send_file(fd);
 }
 
 

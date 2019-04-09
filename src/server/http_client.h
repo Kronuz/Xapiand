@@ -35,7 +35,7 @@
 #include <utility>                          // for std::pair
 #include <vector>                           // for std::vector
 
-#include "base_client.h"                    // for MetaBaseClient
+#include "base_client.h"                    // for BaseClient
 #include "compressor_deflate.h"             // for DeflateCompressData
 #include "database/data.h"                  // for ct_type_t, accept_set_t
 #include "endpoint.h"                       // for Endpoints
@@ -258,8 +258,8 @@ public:
 
 
 // A single instance of a non-blocking Xapiand HTTP protocol handler.
-class HttpClient : public MetaBaseClient<HttpClient> {
-	friend MetaBaseClient<HttpClient>;
+class HttpClient : public BaseClient<HttpClient> {
+	friend BaseClient<HttpClient>;
 
 	template <typename Func>
 	int handled_errors(Request& request, Func&& func);

@@ -309,7 +309,7 @@ CHECK_MAX_SIZE(SMALL, (SoundexGerman))
 CHECK_MAX_SIZE(SMALL, (SoundexSpanish))
 
 // server/base_client.h
-CHECK_MAX_SIZE(SMALL, (MetaBaseClient<DummyClient>))
+CHECK_MAX_SIZE(SMALL, (BaseClient<DummyClient>))
 
 // server/buffer.h
 CHECK_MAX_SIZE(SMALL, (Buffer))
