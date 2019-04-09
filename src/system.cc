@@ -69,20 +69,31 @@
 #define STATE_HST 5
 
 
+std::size_t get_max_files_per_user()
+{
+	// The maximum number of open files per user id:
+	long max_files_per_user = ::sysconf(_SC_OPEN_MAX);
+	if (max_files_per_user == -1) {
+		L_WARNING("ERROR: Unable to get number of max files per user, assuming 1024: {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return 1024;
+	}
+	return max_files_per_user;
+}
+
+
 std::size_t get_max_files_per_proc()
 {
-	std::size_t rlimit_max_files;
+	auto max_files_per_proc = get_max_files_per_user();
+
 	struct rlimit rl;
-    if (::getrlimit(RLIMIT_NOFILE, &rl) == -1) {
-        rlimit_max_files = 2;
-    } else {
-        rlimit_max_files = static_cast<std::size_t>(rl.rlim_cur);
-    }
-	long sysconf_max_files = ::sysconf(_SC_OPEN_MAX);
-	if (sysconf_max_files == -1 || static_cast<std::size_t>(sysconf_max_files) < rlimit_max_files) {
-		return rlimit_max_files;
+	if (::getrlimit(RLIMIT_NOFILE, &rl) == -1) {
+		L_ERR("ERROR: Unable to obtain the current NOFILE limit, assuming {}: getrlimit(RLIMIT_NOFILE): {} ({}): {}", max_files_per_proc, error::name(errno), errno, error::description(errno));
+		return max_files_per_proc;
 	}
-	return sysconf_max_files;
+	if (rl.rlim_cur < max_files_per_proc) {
+		max_files_per_proc = static_cast<std::size_t>(rl.rlim_cur);
+	}
+	return max_files_per_proc;
 }
 
 
