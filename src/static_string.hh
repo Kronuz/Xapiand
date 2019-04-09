@@ -1,6 +1,6 @@
 /*
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2017 Andrzej Krzemienski.
- * Copyright (c) 2015-2018 Dubalu LLC
 
  * Boost Software License - Version 1.0 - August 17th, 2003
  *
@@ -38,6 +38,7 @@
 #include <utility>
 
 #include "cassert.h"          // for ASSERT
+#include "fmt/format.h"       // for fmt::formatter
 
 
 namespace static_string {
@@ -279,5 +280,13 @@ std::string operator+(const TL& l, const static_string<NR, TR>& r)
 }
 
 } // namespace static_string
+
+
+template <std::size_t N, typename T>
+struct fmt::formatter<static_string::static_string<N, T>> : fmt::formatter<std::string_view> {
+	auto format(const static_string::static_string<N, T>& val, format_context& ctx) {
+		return fmt::formatter<std::string_view>::format(std::string_view(val), ctx);
+	}
+};
 
 #endif // STATIC_STRING_HH
