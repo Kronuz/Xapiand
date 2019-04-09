@@ -553,6 +553,13 @@ PathParser::has_pth() noexcept
 		return off_cmd > (off + 1);
 	}
 
+	if (off_slc != nullptr) {
+		if (len_slc > 0 && *off_slc == '{') {
+			return off_slc > (off + 1);
+		}
+		return off_slc > (off + 2);
+	}
+
 	if (off_id != nullptr) {
 		return off_id > (off + 1);
 	}
