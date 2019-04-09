@@ -628,6 +628,11 @@ Logging::operator()()
 	std::string exception_description;
 	std::string exception;
 	if (eptr) {
+#if !defined(XAPIAND_TRACEBACKS) && defined(NDEBUG)
+		const char* function;
+		const char* filename;
+		int line;
+#endif
 		try {
 			std::rethrow_exception(eptr);
 		} catch (const BaseException& exc) {
