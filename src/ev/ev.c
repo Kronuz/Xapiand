@@ -1914,7 +1914,7 @@ ev_sleep (ev_tstamp delay) EV_THROW
       struct timespec ts;
 
       EV_TS_SET (ts, delay);
-      nanosleep (&ts, 0);
+      while (nanosleep(&ts, &ts) < 0 && errno == EINTR) { }
 #elif defined _WIN32
       Sleep ((unsigned long)(delay * 1e3));
 #else
