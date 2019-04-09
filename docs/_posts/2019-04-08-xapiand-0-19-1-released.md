@@ -10,17 +10,17 @@ Added fuzzy search and cjk support. Fixes a problem with searching ranges as
 IDs and schema now properly saves formatted dates.
 
 
-## Added
+### Added
 - Added CJK NGRAM and CJK words as parameters to 'text' datatype
 - Enable fuzzy searches in queries: use '~'. E.g. "unserten~3" would expand to "uncertain"
 
-## Changed
+### Changed
 - Ignore XAPIAN_* environment variables
 - INFO signal showing busy threads callstacks, when tracebacks are enabled
 - All exceptions now contain tracebacks, when tracebacks are enabled
 - Hash for resolving cluster node for indexes skipping slashes
 
-## Fixed
+### Fixed
 - Fix ranges in query
 - Fix restoring from an empty request
 - Formatting applied to saved dates

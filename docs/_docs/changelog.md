@@ -17,20 +17,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.19.2] - 2019-04-09
+{: #v0-19-2 }
+
+### Changed
+- Colorized INFO
+- Tracebacks with normalized address
+- Require CMake 3.12
+
+### Fixed
+- Use nanosleep instead of usleep and libev checking for EINTR
+- Fix warning about available files under OS X
+
+
+---
 ## [0.19.1] - 2019-04-08
 {: #v0-19-1 }
 
-## Added
+### Added
 - Added CJK NGRAM and CJK words as parameters to 'text' datatype
 - Enable fuzzy searches in queries: use '~'. E.g. "unserten~3" would expand to "uncertain"
 
-## Changed
+### Changed
 - Ignore XAPIAN_* environment variables
 - INFO signal showing busy threads callstacks, when tracebacks are enabled
 - All exceptions now contain tracebacks, when tracebacks are enabled
 - Hash for resolving cluster node for indexes skipping slashes
 
-## Fixed
+### Fixed
 - Fix ranges in query
 - Fix restoring from an empty request
 - Formatting applied to saved dates
@@ -41,10 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #v0-19-0 }
 
 
-## Changed
+### Changed
 - **BREAKING**: Remove support for \xHH in json
 
-## Fixed
+### Fixed
 - Fixed errors during heavy writes/reads
 - Fixed race condition in restore indexer
 
@@ -579,7 +593,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.1...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.2...HEAD
+[0.19.2]: https://github.com/Kronuz/Xapiand/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/Kronuz/Xapiand/compare/v0.19.0...v0.19.1
 [0.19.0]: https://github.com/Kronuz/Xapiand/compare/v0.18.1...v0.19.0
 [0.18.1]: https://github.com/Kronuz/Xapiand/compare/v0.18.0...v0.18.1

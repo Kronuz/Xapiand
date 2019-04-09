@@ -11,9 +11,9 @@ false DatabaseCorruptError errors, fixed. JSON produced \xHH codes which are
 not part of the JSON standard and some times had problems, removed feature.
 
 
-## Changed
+### Changed
 - **BREAKING**: Remove support for \xHH in json
 
-## Fixed
+### Fixed
 - Fixed errors during heavy writes/reads
 - Fixed race condition in restore indexer
