@@ -26,6 +26,7 @@
 
 #include <exception>          // for std::exception_ptr
 #include <string>             // for std::string
+#include <signal.h>           // for siginfo_t
 #include <vector>             // for std::vector
 #ifdef HAVE_PTHREADS
 #include <pthread.h>          // for pthread_t
