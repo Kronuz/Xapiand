@@ -154,6 +154,8 @@ ReplicationProtocolServer::trigger_replication_async_cb(ev::async&, [[maybe_unus
 void
 ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& args)
 {
+	L_CALL("ReplicationProtocolServer::trigger_replication({{src_endpoint:{}, dst_endpoint:{}}})", args.src_endpoint.to_string(), args.dst_endpoint.to_string());
+
 	if (args.src_endpoint.is_local()) {
 		assert(!args.cluster_database);
 		return;
@@ -200,14 +202,34 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	auto node = args.src_endpoint.node();
 	if (!node) {
 		if (args.cluster_database) {
-			L_CRIT("Cannot replicate cluster database (nonexistent node: {})", args.src_endpoint.node_name);
+			L_CRIT("Cannot replicate cluster database (Endpoint node is invalid: {})", args.src_endpoint.node_name);
 			sig_exit(-EX_SOFTWARE);
 		}
 		return;
 	}
-
-	int port = (node->replication_port == XAPIAND_REPLICATION_SERVERPORT) ? XAPIAND_REPLICATION_SERVERPORT : node->replication_port;
+	if (!node->is_active()) {
+		if (args.cluster_database) {
+			L_CRIT("Cannot replicate cluster database (Endpoint node is inactive: {})", args.src_endpoint.node_name);
+			sig_exit(-EX_SOFTWARE);
+		}
+		return;
+	}
+	int port = node->replication_port;
+	if (port == 0) {
+		if (args.cluster_database) {
+			L_CRIT("Cannot replicate cluster database (Endpoint node without a valid port: {})", args.src_endpoint.node_name);
+			sig_exit(-EX_SOFTWARE);
+		}
+		return;
+	}
 	auto& host = node->host();
+	if (host.empty()) {
+		if (args.cluster_database) {
+			L_CRIT("Cannot replicate cluster database (Endpoint node without a valid host: {})", args.src_endpoint.node_name);
+			sig_exit(-EX_SOFTWARE);
+		}
+		return;
+	}
 
 	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout, args.cluster_database);
 
