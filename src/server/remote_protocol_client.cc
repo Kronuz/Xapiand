@@ -1615,7 +1615,7 @@ RemoteProtocolClient::__repr__() const
 		is_waiting() ? " " + WHITE + "(waiting)" + STEEL_BLUE : "",
 		is_running() ? " " + RED + "(running)" + STEEL_BLUE : "",
 		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
-		is_closed() ? " " + STEEL_BLUE + "(closed)" + STEEL_BLUE : "");
+		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "");
 }
 
 #endif  /* XAPIAND_CLUSTERING */
