@@ -793,7 +793,7 @@ void server(std::chrono::time_point<std::chrono::system_clock> process_start) {
 		L_NOTICE("Xapiand is done with all work here. Daemon on process ID [{}] taking over!", getpid());
 	}
 
-	usleep(100000ULL);
+	nanosleep(100000000);  // sleep for 100 milliseconds
 
 	setup();
 

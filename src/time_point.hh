@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,18 @@
 
 #include <chrono>            // for std::chrono
 #include <cmath>             // for std::pow, std::floor, std::log10
-#include <unistd.h>          // for usleep
+#include <errno.h>           // for errno
+#include <time.h>            // for nanosleep
+
+
+inline void nanosleep(unsigned long long nsec) {
+	if (nsec > 0) {
+		struct timespec ts;
+		ts.tv_sec = static_cast<long>(nsec / 1000000000) * 1000000000;
+		ts.tv_nsec = static_cast<long>(nsec % 1000000000);
+		while (nanosleep(&ts, &ts) < 0 && errno == EINTR) { }
+	}
+}
 
 
 struct Clk {
@@ -32,7 +43,7 @@ unsigned long long mul;
 
 Clk() {
 	auto a = std::chrono::system_clock::now();
-	::usleep(5000);
+	nanosleep(5000000);  // sleep for 5 milliseconds
 	auto b = std::chrono::system_clock::now();
 	auto delta = *reinterpret_cast<unsigned long long*>(&b) - *reinterpret_cast<unsigned long long*>(&a);
 	mul = 1000000 / static_cast<unsigned long long>(std::pow(10, std::floor(std::log10(delta))));

@@ -36,7 +36,6 @@
 #include <memory>                                 // for std::make_shared
 #include <mutex>                                  // for std::mutex, std::lock_guard
 #include <unwind.h>                               // for _Unwind_Exception
-#include <unistd.h>                               // for usleep
 #if defined(__FreeBSD__)
 #include <ucontext.h>                             // for ucontext_t
 #else
@@ -44,8 +43,9 @@
 #endif
 
 #include "atomic_shared_ptr.h"                    // for atomic_shared_ptr
-#include "likely.h"
+#include "likely.h"                               // for likely/unlikely
 #include "string.hh"                              // for string::format
+#include "time_point.hh"                          // for wait
 
 
 static std::atomic_size_t pthreads_req;
@@ -677,7 +677,7 @@ callstacks_snapshot()
 		////////////////////////////////////////////////////////////////////////
 		// Final check, to try making sure snapshot is stable:
 
-		::usleep(10000);  // sleep for 10 milliseconds
+		nanosleep(10000000);  // sleep for 10 milliseconds
 
 		size_t req = pthreads_req.fetch_add(1) + 1;
 
