@@ -498,27 +498,34 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 	ucontext_t *uc = static_cast<ucontext_t *>(ptr);
 #if defined(__i386__)
 	#if defined(__FreeBSD__)
-		auto return_address = ((const frameinfo*)uc->uc_mcontext.mc_ebp)->return_address;
+		auto frame = uc ? ((const frameinfo*)uc->uc_mcontext.mc_ebp) : nullptr;
 	#elif defined(__linux__)
-		auto return_address = ((const frameinfo*)uc->uc_mcontext.gregs[REG_EBP])->return_address;
+		auto frame = uc ? ((const frameinfo*)uc->uc_mcontext.gregs[REG_EBP]) : nullptr;
 	#elif defined(__APPLE__)
-		auto return_address = ((const frameinfo*)uc->uc_mcontext->__ss.__ebp)->return_address;
+		auto frame = uc && uc->uc_mcontext ? ((const frameinfo*)uc->uc_mcontext->__ss.__ebp) : nullptr;
 	#else
 		#error Unsupported OS.
 	#endif
 #elif defined(__x86_64__)
 	#if defined(__FreeBSD__)
-		auto return_address = ((const frameinfo*)uc->uc_mcontext.mc_rbp)->return_address;
+		auto frame = uc ? ((const frameinfo*)uc->uc_mcontext.mc_rbp) : nullptr;
 	#elif defined(__linux__)
-		auto return_address = ((const frameinfo*)uc->uc_mcontext.gregs[REG_RBP])->return_address;
+		auto frame = uc ? ((const frameinfo*)uc->uc_mcontext.gregs[REG_RBP]) : nullptr;
 	#elif defined(__APPLE__)
-		auto return_address = ((const frameinfo*)uc->uc_mcontext->__ss.__rbp)->return_address;
+		auto frame = uc && uc->uc_mcontext ? ((const frameinfo*)uc->uc_mcontext->__ss.__rbp) : nullptr;
 	#else
 		#error Unsupported OS.
 	#endif
 #else
 	#error Unsupported architecture.
 #endif
+#ifdef __MACHINE_STACK_GROWS_UP
+	#define BELOW >
+#else
+	#define BELOW <
+#endif
+	void* stack = &stack;
+	auto return_address = frame && !(frame BELOW stack) ? frame->return_address : nullptr;
 
 	auto pthread = pthread_self();
 	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
