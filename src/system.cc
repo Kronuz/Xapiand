@@ -134,7 +134,7 @@ std::size_t get_open_files_per_proc()
 
 std::size_t get_open_files_system_wide()
 {
-	std::size_t max_files_per_proc = 0;
+	std::size_t open_files_system_wide = 0;
 
 #ifdef HAVE_SYS_SYSCTL_H
 #if defined(KERN_OPENFILES)
@@ -152,8 +152,8 @@ std::size_t get_open_files_system_wide()
 #endif
 #endif
 #ifdef _SYSCTL_NAME
-	auto max_files_per_proc_len = sizeof(max_files_per_proc);
-	if (sysctl(mib, mib_len, &max_files_per_proc, &max_files_per_proc_len, nullptr, 0) < 0) {
+	auto open_files_system_wide_len = sizeof(open_files_system_wide);
+	if (sysctl(mib, mib_len, &open_files_system_wide, &open_files_system_wide_len, nullptr, 0) < 0) {
 		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
@@ -170,12 +170,66 @@ std::size_t get_open_files_system_wide()
 		L_ERR("ERROR: Unable to read from /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
 	}
-	max_files_per_proc = atoi(line);
+	open_files_system_wide = atoi(line);
 #else
 	L_WARNING_ONCE("WARNING: No way of getting number of open files.");
 #endif
 
-	return max_files_per_proc;
+	return open_files_system_wide;
+}
+
+
+std::size_t get_max_files_system_wide()
+{
+	std::size_t max_files_system_wide = 0;
+
+#ifdef HAVE_SYS_SYSCTL_H
+#if defined(KERN_OPENFILES)
+#define _SYSCTL_NAME "kern.maxfiles"  // FreeBSD
+	int mib[] = {CTL_KERN, KERN_OPENFILES};
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
+#elif defined(__APPLE__)
+#define _SYSCTL_NAME "kern.maxfiles"  // Apple
+	int mib[CTL_MAXNAME + 2];
+	std::size_t mib_len = sizeof(mib) / sizeof(int);
+	if (sysctlnametomib(_SYSCTL_NAME, mib, &mib_len) < 0) {
+		L_ERR("ERROR: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return 0;
+	}
+#endif
+#endif
+#ifdef _SYSCTL_NAME
+	auto max_files_system_wide_len = sizeof(max_files_system_wide);
+	if (sysctl(mib, mib_len, &max_files_system_wide, &max_files_system_wide_len, nullptr, 0) < 0) {
+		L_ERR("ERROR: Unable to get number of open files: sysctl(" _SYSCTL_NAME "): {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return 0;
+	}
+#undef _SYSCTL_NAME
+#elif defined(__linux__)
+	int fd = io::open("/proc/sys/fs/file-nr", O_RDONLY);
+	if unlikely(fd == -1) {
+		L_ERR("ERROR: Unable to open /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return 0;
+	}
+	char line[100];
+	ssize_t n = io::read(fd, line, sizeof(line));
+	if unlikely(n == -1) {
+		L_ERR("ERROR: Unable to read from /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return 0;
+	}
+	char* field = line;
+	field = strchar(field, '\t');
+	if (field) field = strchar(field, '\t');
+	if (field) max_files_system_wide = atoi(field);
+	else {
+		L_ERR("ERROR: Unable to retrieve data from /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return 0;
+	}
+#else
+	L_WARNING_ONCE("WARNING: No way of getting number of open files.");
+#endif
+
+	return max_files_system_wide;
 }
 
 
