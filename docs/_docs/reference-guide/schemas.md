@@ -77,8 +77,11 @@ _This section is a **work in progress**..._
 
 ## [Foreign Schemas](foreign-schemas)
 
-{: .note .construction }
-_This section is a **work in progress**..._
+When explicitly used, Foreign Schemas can establish where the schema information
+will be stored. For example, when a set of indices all share the same schema
+it'd be beneficial to have a single shared schema. This can be accomplished by
+setting the foreign schema of all such indexes to point to a document containing
+the schema.
 
 
 {: .note .info }
