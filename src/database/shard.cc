@@ -1722,7 +1722,7 @@ Shard::__repr__() const
 		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "",
 		is_wal_active() ? " " + DARK_STEEL_BLUE + "(active WAL)" + STEEL_BLUE : "",
 		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
-		is_closed() ? " " + DARK_STEEL_BLUE + "(closed)" + STEEL_BLUE : "",
+		is_closed() ? " " + STEEL_BLUE + "(closed)" + STEEL_BLUE : "",
 		is_modified() ? " " + DARK_STEEL_BLUE + "(modified)" + STEEL_BLUE : "",
 		is_incomplete() ? " " + DARK_STEEL_BLUE + "(incomplete)" + STEEL_BLUE : "",
 		is_busy() ? " " + RED + "(busy)" + STEEL_BLUE : "");
