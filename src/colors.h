@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -220,6 +220,11 @@ static constexpr auto DARK_SLATE_GREY = rgb(47, 79, 79);
 #define L_UNINDENTED_DARK_SLATE_GREY(args...) L_UNINDENTED(LOG_NOTICE, DARK_SLATE_GREY, args)
 #define L_DARK_SLATE_GREY(args...) L(LOG_NOTICE, DARK_SLATE_GREY, args)
 #define L_STACKED_DARK_SLATE_GREY(args...) L_STACKED(LOG_NOTICE, DARK_SLATE_GREY, args)
+
+static constexpr auto DARK_STEEL_BLUE = rgb(49, 90, 125);
+#define L_UNINDENTED_DARK_STEEL_BLUE(args...) L_UNINDENTED(LOG_NOTICE, DARK_STEEL_BLUE, args)
+#define L_DARK_STEEL_BLUE(args...) L(LOG_NOTICE, DARK_STEEL_BLUE, args)
+#define L_STACKED_DARK_STEEL_BLUE(args...) L_STACKED(LOG_NOTICE, DARK_STEEL_BLUE, args)
 
 static constexpr auto DARK_TURQUOISE = rgb(0, 206, 209);
 #define L_UNINDENTED_DARK_TURQUOISE(args...) L_UNINDENTED(LOG_NOTICE, DARK_TURQUOISE, args)
