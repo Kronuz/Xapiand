@@ -240,12 +240,15 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
 	if (client_sock == -1) {
+		client->detach();
 		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database");
 			sig_exit(-EX_SOFTWARE);
 		}
 		return;
 	}
+
+	L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	L_CONN("Connected to {}! (in socket {})", repr(args.src_endpoint.to_string()), client_sock);
 	client->init(client_sock);

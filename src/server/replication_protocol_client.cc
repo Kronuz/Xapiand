@@ -175,8 +175,6 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 		});
 
 		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
-
-		L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	} catch (const Xapian::DatabaseNotAvailableError&) {
 		L_REPLICATION("Replication deferred: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
