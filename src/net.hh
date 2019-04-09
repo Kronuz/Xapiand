@@ -27,7 +27,6 @@
 #include <netinet/tcp.h>            // for TCP_NOPUSH
 #include <string>                   // for std::string
 
-#include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for io::setsockopt
 #include "log.h"                    // for L_ERR

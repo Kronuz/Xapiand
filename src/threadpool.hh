@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cassert>               // for assert
 #include <chrono>                // for std::chrono
 #include <cstddef>               // for std::size_t
 #include <functional>            // for std::function
@@ -31,7 +32,6 @@
 #include <vector>                // for std::vector
 
 #include "blocking_concurrent_queue.h"
-#include "cassert.h"             // for ASSERT
 #include "likely.h"              // for likely, unlikely
 #include "log.h"                 // for L_EXC
 #include "string.hh"             // for string::format
@@ -60,7 +60,7 @@ class PackagedTask : public std::packaged_task<Result> {
 
 	PackagedTask(const PackagedTask& /*unused*/) noexcept {
 		// Adding this borks the compile
-		ASSERT(false);  // but should never be called!
+		assert(false);  // but should never be called!
 	}
 
 	PackagedTask(PackagedTask&& other) noexcept = default;

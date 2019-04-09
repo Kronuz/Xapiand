@@ -22,10 +22,10 @@
 
 #pragma once
 
+#include <cassert>        // for assert
 #include <bitset>         // for std::bitset
 #include <utility>        // for std::make_pair
 
-#include "cassert.h"      // for ASSERT
 #include "hashes.hh"      // for xxh64::hash, fnv1ah64::hash
 
 
@@ -56,7 +56,7 @@ class BloomFilter {
 	std::bitset<m> bits;
 
 	auto hash(const char* data, size_t len, uint64_t salt) const {
-		ASSERT(salt);
+		assert(salt);
 		return std::make_pair(
 			xxh64::hash(data, len),
 			fnv1ah64::hash(data, len) * salt

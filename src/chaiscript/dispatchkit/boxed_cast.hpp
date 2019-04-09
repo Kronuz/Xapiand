@@ -11,7 +11,8 @@
 #ifndef CHAISCRIPT_BOXED_CAST_HPP_
 #define CHAISCRIPT_BOXED_CAST_HPP_
 
-#include "cassert.h"   // for ASSERT
+#include <cassert>
+
 #include "../chaiscript_defines.hpp"
 #include "bad_boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
@@ -71,7 +72,7 @@ namespace chaiscript
   /// Boxed_Value bv = chai.eval("`+`"); // Get the functor for the + operator which is built in 
   /// std::function<int (int, int)> f = chaiscript::boxed_cast<std::function<int (int, int)> >(bv);
   /// int i = f(2,3);
-  /// ASSERT(i == 5);
+  /// assert(i == 5);
   /// \endcode
   template<typename Type>
   decltype(auto) boxed_cast(const Boxed_Value &bv, const Type_Conversions_State *t_conversions = nullptr)

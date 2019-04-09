@@ -22,7 +22,7 @@
 
 #include "compressor_deflate.h"
 
-#include "cassert.h"             // for ASSERT
+#include <cassert>               // for assert
 
 
 std::string zerr(int ret) {
@@ -117,7 +117,7 @@ DeflateCompressData::next(const char* input, size_t input_size, int flush)
 std::string
 DeflateCompressData::next()
 {
-	ASSERT(cmpBuf);
+	assert(cmpBuf);
 
 	int flush;
 	if (data_offset > data_size) {
@@ -204,7 +204,7 @@ DeflateDecompressData::init()
 std::string
 DeflateDecompressData::next()
 {
-	ASSERT(buffer);
+	assert(buffer);
 
 	if (data_offset > data_size) {
 		state = DeflateState::END;
@@ -301,8 +301,8 @@ DeflateCompressFile::init()
 std::string
 DeflateCompressFile::next()
 {
-	ASSERT(cmpBuf);
-	ASSERT(buffer);
+	assert(cmpBuf);
+	assert(buffer);
 
 	auto inpBytes = static_cast<int>(io::read(fd, &buffer[0], DEFLATE_BLOCK_SIZE));
 	if (inpBytes <= 0) {
@@ -397,8 +397,8 @@ DeflateDecompressFile::init()
 std::string
 DeflateDecompressFile::next()
 {
-	ASSERT(cmpBuf);
-	ASSERT(buffer);
+	assert(cmpBuf);
+	assert(buffer);
 
 	int inpBytes = io::read(fd, &cmpBuf[0], DEFLATE_BLOCK_SIZE);
 	if (inpBytes <= 0) {

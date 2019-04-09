@@ -23,11 +23,11 @@
 #ifndef CPPCODEC_DETAIL_CODEC
 #define CPPCODEC_DETAIL_CODEC
 
+#include <cassert>     // for assert
 #include <stdint.h>
 #include <string>
 #include <vector>
 
-#include "cassert.h"   // for ASSERT
 #include "../data/access.hpp"
 #include "../data/raw_result_buffer.hpp"
 
@@ -172,7 +172,7 @@ inline void codec<CodecImpl>::encode(
 
     CodecImpl::encode(encoded_result, state, binary, binary_size);
     data::finish(encoded_result, state);
-    ASSERT(data::size(encoded_result) == encoded_buffer_size);
+    assert(data::size(encoded_result) == encoded_buffer_size);
 }
 
 template <typename CodecImpl>
@@ -268,7 +268,7 @@ inline void codec<CodecImpl>::decode(Result& binary_result, const char* encoded,
 
     CodecImpl::decode(binary_result, state, encoded, encoded_size);
     data::finish(binary_result, state);
-    ASSERT(data::size(binary_result) <= binary_buffer_size);
+    assert(data::size(binary_result) <= binary_buffer_size);
 }
 
 

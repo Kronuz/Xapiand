@@ -22,13 +22,13 @@
 
 #include "datetime.h"
 
+#include <cassert>                                // for assert
 #include <cctype>                                 // for std::isdigit
 #include <cmath>                                  // for ceil
 #include <exception>                              // for exception
 #include <stdexcept>                              // for invalid_argument, out_of_range
 #include <string_view>                            // for std::string_view
 
-#include "cassert.h"                              // for ASSERT
 #include "hashes.hh"                              // for fnv1ah32
 #include "log.h"                                  // for L_ERR
 #include "msgpack.h"                              // for MsgPack
@@ -979,7 +979,7 @@ Datetime::isleapRef_year(int tm_year)
 int
 _getDays_month(int year, int month)
 {
-	ASSERT(month > 0 && month <= 12);
+	assert(month > 0 && month <= 12);
 	auto leap = static_cast<int>(Datetime::isleapYear(year));
 	return days[leap][month - 1];
 }

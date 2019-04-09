@@ -23,12 +23,12 @@
 #pragma once
 
 #include <atomic>                 // for std::atomic_ullong
+#include <cassert>                // for assert
 #include <chrono>                 // for std::chrono
 #include <memory>
 #include <mutex>                  // for std::condition_variable, std::mutex
 #include <utility>                // for std::move
 
-#include "cassert.h"              // for ASSERT
 #include "log.h"                  // for L_*
 #include "stash.h"                // for StashValues, StashSlots, StashContext
 #include "thread.hh"              // for Thread
@@ -266,7 +266,7 @@ public:
 	void add(const TaskType& task) {
 		if (ending < 0) {
 			unsigned long long wakeup_time = task->wakeup_time;
-			ASSERT(wakeup_time != 0);
+			assert(wakeup_time != 0);
 
 			scheduler_queue.add(task, wakeup_time);
 

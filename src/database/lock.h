@@ -22,7 +22,8 @@
 
 #pragma once
 
-#include "cassert.h"            // for ASSERT
+#include <cassert>              // for assert
+
 #include "database/pool.h"      // for DatabasePool (database_pool)
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager
@@ -61,7 +62,7 @@ public:
 	const std::shared_ptr<Shard> lock(Args&&... args)
 	{
 		if (!_locked) {
-			ASSERT(_locks == 0);
+			assert(_locks == 0);
 			_locked = XapiandManager::database_pool()->checkout(endpoint, flags, std::forward<Args>(args)...);
 		}
 		++_locks;
@@ -71,20 +72,20 @@ public:
 	void unlock() noexcept
 	{
 		if (_locks > 0 && --_locks == 0) {
-			ASSERT(_locked);
+			assert(_locked);
 			XapiandManager::database_pool()->checkin(_locked);
 		}
 	}
 
 	Shard& operator*() const noexcept
 	{
-		ASSERT(_locked);
+		assert(_locked);
 		return *_locked;
 	}
 
 	Shard* operator->() const noexcept
 	{
-		ASSERT(_locked);
+		assert(_locked);
 		return _locked.get();
 	}
 

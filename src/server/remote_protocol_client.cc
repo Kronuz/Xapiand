@@ -22,6 +22,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <cassert>                            // for assert
 #include <errno.h>                            // for errno
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -1254,7 +1255,7 @@ RemoteProtocolClient::init_remote() noexcept
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
-	ASSERT(!running);
+	assert(!running);
 
 	// Setup state...
 	state = State::INIT_REMOTE;

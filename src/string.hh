@@ -31,7 +31,6 @@
 #include <type_traits>        // for std::forward
 #include <vector>             // for std::vector
 
-#include "cassert.h"          // for ASSERT
 #include "chars.hh"           // for chars::tolower
 #include "fmt/format.h"       // for fmt::format
 #include "log.h"              // for L_DEBUG_TRY

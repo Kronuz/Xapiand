@@ -22,9 +22,9 @@
 
 #include "url_parser.h"
 
+#include <cassert>                                // for assert
 #include <cstring>                                // for std::strncmp
 
-#include "cassert.h"                              // for ASSERT
 #include "chars.hh"                               // for chars::hexdec
 #include "repr.hh"                                // for repr
 #include "fs.hh"                                  // for normalize_path
@@ -290,7 +290,7 @@ PathParser::init(std::string_view p)
 					case State::SLF:
 					case State::SLB:
 					case State::SLB_SPACE_OR_COMMA:
-						ASSERT(n0 >= n1);
+						assert(n0 >= n1);
 						length = n0 - n1;
 						if (length != 0u) {
 							off_id = n1 + 1;
@@ -301,7 +301,7 @@ PathParser::init(std::string_view p)
 						break;
 
 					case State::ID_SLC:
-						ASSERT(n0 >= n1);
+						assert(n0 >= n1);
 						length = ns - n1 - 1;
 						if (length != 0u) {
 							off_id = n1 + 1;
@@ -500,14 +500,14 @@ PathParser::next()
 			case ',':
 				switch (state) {
 					case State::PTH:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;
 						off = ++n1;
 						return state;
 					case State::HST:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						if (length == 0u) {
 							return State::INVALID_HST;
@@ -524,7 +524,7 @@ PathParser::next()
 			case '@':
 				switch (state) {
 					case State::PTH:
-						ASSERT(n1 >= n0);
+						assert(n1 >= n0);
 						length = n1 - n0;
 						off_pth = n0;
 						len_pth = length;

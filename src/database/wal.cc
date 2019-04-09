@@ -25,12 +25,12 @@
 #if XAPIAND_DATABASE_WAL
 
 #include <array>                    // for std::array
+#include <cassert>                  // for assert
 #include <errno.h>                  // for errno
 #include <fcntl.h>                  // for O_CREAT, O_WRONLY, O_EXCL
 #include <limits>                   // for std::numeric_limits
 #include <utility>                  // for std::make_pair
 
-#include "cassert.h"                // for ASSERT
 #include "compressor_lz4.h"         // for compress_lz4, decompress_lz4
 #include "database/pool.h"          // for DatabasePool
 #include "database/shard.h"         // for Shard
@@ -81,7 +81,7 @@ void
 WalHeader::init(void* param, void* /*unused*/)
 {
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
-	ASSERT(wal);
+	assert(wal);
 
 	memcpy(&head.uuid[0], wal->get_uuid().get_bytes().data(), sizeof(head.uuid));
 	head.offset = STORAGE_START_BLOCK_OFFSET;
@@ -93,7 +93,7 @@ void
 WalHeader::validate(void* param, void* /*unused*/)
 {
 	const auto* wal = static_cast<const DatabaseWAL*>(param);
-	ASSERT(wal);
+	assert(wal);
 
 	if (wal->validate_uuid) {
 		UUID uuid(head.uuid);
@@ -741,7 +741,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 			slot = revision - header.head.revision;
 		}
 
-		ASSERT(slot >= 0 && slot < WAL_SLOTS);
+		assert(slot >= 0 && slot < WAL_SLOTS);
 		if (slot + 1 < WAL_SLOTS) {
 			if (header.slot[slot + 1] != 0) {
 				L_DEBUG("Slot {} already occupied for revision {}: {} volume {}", slot, revision, repr(base_path), header.head.revision);
@@ -1156,8 +1156,8 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 {
 	L_CALL("DatabaseWALWriter::write_remove_spelling()");
 
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
+	assert(shard.is_wal_active());
+	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
 	task.path = shard.endpoint.path;
@@ -1180,9 +1180,9 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 {
 	L_CALL("DatabaseWALWriter::write_commit()");
 
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
-	ASSERT(shard.db()->get_revision() != 0);
+	assert(shard.is_wal_active());
+	assert(shard.endpoint.is_local());
+	assert(shard.db()->get_revision() != 0);
 
 	DatabaseWALWriterTask task;
 	task.path = shard.endpoint.path;
@@ -1204,9 +1204,9 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 {
 	L_CALL("DatabaseWALWriter::write_replace_document()");
 
-	ASSERT(did != 0);
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
+	assert(did != 0);
+	assert(shard.is_wal_active());
+	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
 	task.path = shard.endpoint.path;
@@ -1229,9 +1229,9 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 {
 	L_CALL("DatabaseWALWriter::write_delete_document()");
 
-	ASSERT(did != 0);
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
+	assert(did != 0);
+	assert(shard.is_wal_active());
+	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
 	task.path = shard.endpoint.path;
@@ -1253,8 +1253,8 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 {
 	L_CALL("DatabaseWALWriter::write_set_metadata()");
 
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
+	assert(shard.is_wal_active());
+	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
 	task.path = shard.endpoint.path;
@@ -1277,8 +1277,8 @@ DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xap
 {
 	L_CALL("DatabaseWALWriter::write_add_spelling()");
 
-	ASSERT(shard.is_wal_active());
-	ASSERT(shard.endpoint.is_local());
+	assert(shard.is_wal_active());
+	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
 	task.path = shard.endpoint.path;

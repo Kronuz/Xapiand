@@ -178,7 +178,7 @@ void format_error_code(internal::buffer& out, int error_code,
   }
   w.write(ERROR_STR);
   w.write(error_code);
-  ASSERT(out.size() <= inline_buffer_size);
+  assert(out.size() <= inline_buffer_size);
 }
 
 void report_error(FormatFunc func, int error_code,
@@ -574,7 +574,7 @@ grisu2_format(Double value, buffer& buf, core_format_specs, int& exp) {
   upper = upper * cached_pow;  // \tilde{M}^+ in Grisu.
   --upper.f;                   // \tilde{M}^+ - 1 ulp -> M^+_{\downarrow}.
   fp one(1ull << -upper.e, upper.e);
-  ASSERT(-60 <= upper.e && upper.e <= -32);
+  assert(-60 <= upper.e && upper.e <= -32);
   // hi (p1 in Grisu) contains the most significant digits of scaled upper.
   // hi = floor(upper / one).
   uint32_t hi = static_cast<uint32_t>(upper.f >> -one.e);

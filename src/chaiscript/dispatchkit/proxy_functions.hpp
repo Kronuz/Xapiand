@@ -12,6 +12,7 @@
 #define CHAISCRIPT_PROXY_FUNCTIONS_HPP_
 
 
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -20,7 +21,6 @@
 #include <vector>
 #include <iterator>
 
-#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_value.hpp"
@@ -231,7 +231,7 @@ namespace chaiscript
         //! to the passed in values
         bool filter(const std::vector<Boxed_Value> &vals, const Type_Conversions_State &t_conversions) const
         {
-          ASSERT(m_arity == -1 || (m_arity > 0 && static_cast<int>(vals.size()) == m_arity));
+          assert(m_arity == -1 || (m_arity > 0 && static_cast<int>(vals.size()) == m_arity));
 
           if (m_arity < 0)
           {
@@ -354,7 +354,7 @@ namespace chaiscript
             m_param_types(std::move(t_param_types)),
             m_guard(std::move(t_guard)), m_parsenode(std::move(t_parsenode))
         {
-          // ASSERT(t_parsenode);
+          // assert(t_parsenode);
         }
 
 
@@ -525,7 +525,7 @@ namespace chaiscript
           : Proxy_Function_Base(build_param_type_info(t_f, t_args), (t_f->get_arity()<0?-1:static_cast<int>(build_param_type_info(t_f, t_args).size())-1)),
             m_f(t_f), m_args(t_args)
         {
-          ASSERT(m_f->get_arity() < 0 || m_f->get_arity() == static_cast<int>(m_args.size()));
+          assert(m_f->get_arity() < 0 || m_f->get_arity() == static_cast<int>(m_args.size()));
         }
 
         bool operator==(const Proxy_Function_Base &t_f) const override
@@ -581,12 +581,12 @@ namespace chaiscript
         static std::vector<Type_Info> build_param_type_info(const Const_Proxy_Function &t_f, 
             const std::vector<Boxed_Value> &t_args)
         {
-          ASSERT(t_f->get_arity() < 0 || t_f->get_arity() == static_cast<int>(t_args.size()));
+          assert(t_f->get_arity() < 0 || t_f->get_arity() == static_cast<int>(t_args.size()));
 
           if (t_f->get_arity() < 0) { return std::vector<Type_Info>(); }
 
           const auto types = t_f->get_param_types();
-          ASSERT(types.size() == t_args.size() + 1);
+          assert(types.size() == t_args.size() + 1);
 
           // this analysis warning is invalid in MSVC12 and doesn't exist in MSVC14
           std::vector<Type_Info> retval{types[0]};
@@ -683,7 +683,7 @@ namespace chaiscript
           : Assignable_Proxy_Function(detail::build_param_type_list(static_cast<Func *>(nullptr))),
             m_f(std::move(t_f)), m_shared_ptr_holder(std::move(t_ptr))
         {
-          ASSERT(!m_shared_ptr_holder || m_shared_ptr_holder.get() == &m_f.get());
+          assert(!m_shared_ptr_holder || m_shared_ptr_holder.get() == &m_f.get());
         }
 
         bool compare_types_with_cast(const std::vector<Boxed_Value> &vals, const Type_Conversions_State &t_conversions) const override
@@ -847,7 +847,7 @@ namespace chaiscript
 
           if (t_func->get_arity() == -1) { return false; }
 
-          ASSERT(plist.size() == types.size() - 1);
+          assert(plist.size() == types.size() - 1);
 
           return std::mismatch(plist.begin(), plist.end(),
                                types.begin()+1,

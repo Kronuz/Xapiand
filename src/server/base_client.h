@@ -23,13 +23,13 @@
 #pragma once
 
 #include <atomic>                   // for std::atomic_bool
+#include <cassert>                  // for assert
 #include <errno.h>                  // for errno, ECONNRESET
 #include <memory>                   // for std::shared_ptr, std::unique_ptr
 #include <string>                   // for std::string
 #include <sys/types.h>              // for ssize_t
 
 #include "buffer.h"                 // for Buffer
-#include "cassert.h"                // for ASSERT
 #include "client_compressor.h"      // for ClientLZ4Compressor, ClientLZ4Decompressor
 #include "ev/ev++.h"                // for ev::async, ev::io, ev::loop_ref
 #include "error.hh"                 // for error:name, error::description
@@ -189,7 +189,7 @@ protected:
 		L_EV_BEGIN("BaseClient::io_cb_read:BEGIN");
 		L_EV_END("BaseClient::io_cb_read:END");
 
-		ASSERT(sock == -1 || sock == watcher.fd);
+		assert(sock == -1 || sock == watcher.fd);
 
 		L_DEBUG_HOOK("BaseClient::io_cb_read", "BaseClient::io_cb_read(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 

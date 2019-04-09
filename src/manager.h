@@ -24,6 +24,7 @@
 
 #include "config.h"
 
+#include <cassert>                            // for assert
 #include <atomic>                             // for std::atomic, std::atomic_int
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
@@ -215,32 +216,32 @@ public:
 	}
 
 	static const auto& manager([[maybe_unused]] bool check = true) {
-		ASSERT(!check || _manager);
+		assert(!check || _manager);
 		return _manager;
 	}
 
 	static void reset() {
-		ASSERT(_manager);
+		assert(_manager);
 		_manager.reset();
 	}
 
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, const MsgPack* settings = nullptr) {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->resolve_index_nodes_impl(normalized_path, writable, settings);
 	}
 
 	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->resolve_index_endpoints_impl(endpoint, writable, primary, settings);
 	}
 
 	static void setup_node() {
-		ASSERT(_manager);
+		assert(_manager);
 		_manager->setup_node_impl();
 	}
 
 	static void new_leader() {
-		ASSERT(_manager);
+		assert(_manager);
 #ifdef XAPIAND_CLUSTERING
 		_manager->new_leader_impl();
 #endif
@@ -248,133 +249,133 @@ public:
 
 	static void renew_leader() {
 #ifdef XAPIAND_CLUSTERING
-		ASSERT(_manager);
+		assert(_manager);
 		_manager->renew_leader_impl();
 #endif
 	}
 
 	static void reset_state() {
 #ifdef XAPIAND_CLUSTERING
-		ASSERT(_manager);
+		assert(_manager);
 		_manager->reset_state_impl();
 #endif
 	}
 
 	static void join_cluster() {
 #ifdef XAPIAND_CLUSTERING
-		ASSERT(_manager);
+		assert(_manager);
 		_manager->join_cluster_impl();
 #endif
 	}
 
 	static std::string server_metrics() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->server_metrics_impl();
 	}
 
 	static void try_shutdown(bool always = false) {
-		ASSERT(_manager);
+		assert(_manager);
 		_manager->try_shutdown_impl(always);
 	}
 
 	static void set_cluster_database_ready() {
-		ASSERT(_manager);
+		assert(_manager);
 		_manager->set_cluster_database_ready_impl();
 	}
 
 	static auto& node_name() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->_node_name;
 	}
 
 	static auto& state() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->_state;
 	}
 
 	static bool exchange_state(State from, State to, std::chrono::milliseconds timeout = 0s, std::string_view format_timeout = "", std::string_view format_done = "");
 
 	static auto& total_clients() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->_total_clients;
 	}
 	static auto& http_clients() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->_http_clients;
 	}
 	static auto& remote_clients() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->_remote_clients;
 	}
 	static auto& replication_clients() {
-		ASSERT(_manager);
+		assert(_manager);
 		return _manager->_replication_clients;
 	}
 
 	static auto& database_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_database_pool);
+		assert(_manager);
+		assert(_manager->_database_pool);
 		return _manager->_database_pool;
 	}
 	static auto& http_client_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_http_client_pool);
+		assert(_manager);
+		assert(_manager->_http_client_pool);
 		return _manager->_http_client_pool;
 	}
 #ifdef XAPIAND_CLUSTERING
 	static auto& remote_client_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_remote_client_pool);
+		assert(_manager);
+		assert(_manager->_remote_client_pool);
 		return _manager->_remote_client_pool;
 	}
 	static auto& replication_client_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_replication_client_pool);
+		assert(_manager);
+		assert(_manager->_replication_client_pool);
 		return _manager->_replication_client_pool;
 	}
 	static auto& discovery() {
-		ASSERT(_manager);
-		ASSERT(_manager->_discovery);
+		assert(_manager);
+		assert(_manager->_discovery);
 		return _manager->_discovery;
 	}
 	static auto& remote() {
-		ASSERT(_manager);
-		ASSERT(_manager->_remote);
+		assert(_manager);
+		assert(_manager->_remote);
 		return _manager->_remote;
 	}
 	static auto& replication() {
-		ASSERT(_manager);
-		ASSERT(_manager->_replication);
+		assert(_manager);
+		assert(_manager->_replication);
 		return _manager->_replication;
 	}
 #endif
 
 	static auto& doc_preparer_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_doc_preparer_pool);
+		assert(_manager);
+		assert(_manager->_doc_preparer_pool);
 		return _manager->_doc_preparer_pool;
 	}
 
 	static auto& doc_indexer_pool() {
-		ASSERT(_manager);
-		ASSERT(_manager->_doc_indexer_pool);
+		assert(_manager);
+		assert(_manager->_doc_indexer_pool);
 		return _manager->_doc_indexer_pool;
 	}
 
 	static auto& http() {
-		ASSERT(_manager);
-		ASSERT(_manager->_http);
+		assert(_manager);
+		assert(_manager->_http);
 		return _manager->_http;
 	}
 
 	static auto& wal_writer() {
-		ASSERT(_manager);
-		ASSERT(_manager->_wal_writer);
+		assert(_manager);
+		assert(_manager->_wal_writer);
 		return _manager->_wal_writer;
 	}
 	static auto& schemas() {
-		ASSERT(_manager);
-		ASSERT(_manager->_schemas);
+		assert(_manager);
+		assert(_manager->_schemas);
 		return _manager->_schemas;
 	}
 };
@@ -384,7 +385,7 @@ void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
 inline auto& trigger_replication(bool create = true) {
 	static auto trigger_replication = create ? make_unique_debouncer<std::string, 1000, 100, 500, 5000, ThreadPolicyType::replication>("TR--", "TR{:02}", opts.num_replicators, trigger_replication_trigger) : nullptr;
-	ASSERT(!create || trigger_replication);
+	assert(!create || trigger_replication);
 	return trigger_replication;
 }
 #endif

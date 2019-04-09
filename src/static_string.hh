@@ -30,6 +30,7 @@
 #ifndef STATIC_STRING_HH
 #define STATIC_STRING_HH
 
+#include <cassert>            // for assert
 #include <cstddef>            // for std::size_t
 #include <iostream>
 #include <string>             // for std::string
@@ -37,7 +38,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "cassert.h"          // for ASSERT
 #include "fmt/format.h"       // for fmt::formatter
 
 
@@ -47,7 +47,7 @@ namespace static_string {
 #ifdef NDEBUG
 #   define constexpr_assert(CHECK) void(0)
 #else
-#   define constexpr_assert(CHECK) ((CHECK) ? void(0) : []{ASSERT(!#CHECK);}())
+#   define constexpr_assert(CHECK) ((CHECK) ? void(0) : []{assert(!#CHECK);}())
 #endif
 
 

@@ -24,10 +24,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <cassert>                          // for assert
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
-#include "cassert.h"                        // for ASSERT
 #include "database/utils.h"                 // for query_field_t
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
@@ -102,7 +102,7 @@ ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int re
 	L_EV_BEGIN("ReplicationProtocolServer::io_accept_cb:BEGIN");
 	L_EV_END("ReplicationProtocolServer::io_accept_cb:END");
 
-	ASSERT(sock == -1 || sock == watcher.fd);
+	assert(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
@@ -155,7 +155,7 @@ void
 ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& args)
 {
 	if (args.src_endpoint.is_local()) {
-		ASSERT(!args.cluster_database);
+		assert(!args.cluster_database);
 		return;
 	}
 
@@ -193,7 +193,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	}
 
 	if (!replicated) {
-		ASSERT(!args.cluster_database);
+		assert(!args.cluster_database);
 		return;
 	}
 

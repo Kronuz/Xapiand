@@ -24,6 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <cassert>                            // for assert
 #include <errno.h>                            // for errno
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -31,7 +32,6 @@
 #include <sysexits.h>
 #include <unistd.h>
 
-#include "cassert.h"                          // for ASSERT
 #include "database/lock.h"                    // for lock_shard
 #include "database/shard.h"                   // for Shard
 #include "database/wal.h"                     // for DatabaseWAL
@@ -462,17 +462,17 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 			}
 		}
 	} catch (const BaseException& exc) {
-		ASSERT(lk_shard_ptr);
+		assert(lk_shard_ptr);
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	} catch (const Xapian::DatabaseNotFoundError& exc) {
 	} catch (const Xapian::Error& exc) {
-		ASSERT(lk_shard_ptr);
+		assert(lk_shard_ptr);
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	} catch (const std::exception& exc) {
-		ASSERT(lk_shard_ptr);
+		assert(lk_shard_ptr);
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	} catch (...) {
-		ASSERT(lk_shard_ptr);
+		assert(lk_shard_ptr);
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	}
 
@@ -486,7 +486,7 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 {
 	std::string message;
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
 	auto db = shard->db();
 
@@ -510,7 +510,7 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 {
 	L_CALL("ReplicationProtocolClient::reply_end_of_changes(<message>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
 
 	L_REPLICATION("END_OF_CHANGES");
@@ -563,7 +563,7 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 {
 	L_CALL("ReplicationProtocolClient::reply_fail(<message>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 	L_REPLICATION("FAIL: {}", repr((*lk_shard_ptr)->endpoint.path));
 
 	reset();
@@ -580,7 +580,7 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_header(<message>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
 
 	const char *p = message.data();
@@ -614,9 +614,9 @@ ReplicationProtocolClient::reply_db_filename(const std::string& filename)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_filename(<filename>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 
-	ASSERT(!switch_shard_path.empty());
+	assert(!switch_shard_path.empty());
 
 	file_path = switch_shard_path + "/" + filename;
 
@@ -629,9 +629,9 @@ ReplicationProtocolClient::reply_db_filedata(const std::string& tmp_file)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_filedata(<tmp_file>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 
-	ASSERT(!switch_shard_path.empty());
+	assert(!switch_shard_path.empty());
 
 	if (::rename(tmp_file.c_str(), file_path.c_str()) == -1) {
 		L_ERR("Cannot rename temporary file {} to {}: {} ({}): {}", tmp_file, file_path, error::name(errno), errno, error::description(errno));
@@ -648,13 +648,13 @@ ReplicationProtocolClient::reply_db_footer(const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::reply_db_footer(<message>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 	size_t revision = unserialise_length(&p, p_end);
 
-	ASSERT(!switch_shard_path.empty());
+	assert(!switch_shard_path.empty());
 
 	if (revision != current_revision) {
 		delete_files(switch_shard_path.c_str());
@@ -670,7 +670,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 {
 	L_CALL("ReplicationProtocolClient::reply_changeset(<line>)");
 
-	ASSERT(lk_shard_ptr);
+	assert(lk_shard_ptr);
 	auto shard = lk_shard_ptr->locked();
 
 	bool switching = !switch_shard_path.empty();
@@ -724,7 +724,7 @@ ReplicationProtocolClient::init_replication() noexcept
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
-	ASSERT(!running);
+	assert(!running);
 
 	// Setup state...
 	state = ReplicaState::INIT_REPLICATION_SERVER;
@@ -743,7 +743,7 @@ ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const 
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
-	ASSERT(!running);
+	assert(!running);
 
 	// Setup state...
 	state = ReplicaState::INIT_REPLICATION_CLIENT;

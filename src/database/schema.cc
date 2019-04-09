@@ -23,6 +23,7 @@
 #include "database/schema.h"
 
 #include <algorithm>                              // for std::move
+#include <cassert>                                // for assert
 #include <cmath>                                  // for std::pow
 #include <cstdint>                                // for uint64_t
 #include <cstring>                                // for size_t, strlen
@@ -37,7 +38,6 @@
 #include <utility>
 
 #include "base_x.hh"                              // for Base64
-#include "cassert.h"                              // for ASSERT
 #include "cast.h"                                 // for Cast
 #include "cuuid/uuid.h"                           // for UUIDGenerator
 #include "database/handler.h"                     // for DatabaseHandler
@@ -3053,7 +3053,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
-	ASSERT(it != field_names.end());
+	assert(it != field_names.end());
 
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
@@ -3199,7 +3199,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
-	ASSERT(it != field_names.end());
+	assert(it != field_names.end());
 
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
@@ -3775,7 +3775,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
-	ASSERT(it != field_names.end());
+	assert(it != field_names.end());
 
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
@@ -3866,7 +3866,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
-	ASSERT(it != field_names.end());
+	assert(it != field_names.end());
 
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
@@ -4220,7 +4220,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
-	ASSERT(it != field_names.end());
+	assert(it != field_names.end());
 
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();
@@ -4309,7 +4309,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
 	auto it = field_names.begin();
-	ASSERT(it != field_names.end());
+	assert(it != field_names.end());
 
 	if (specification.flags.is_namespace) {
 		restart_namespace_specification();

@@ -26,11 +26,11 @@
 
 #pragma once
 
+#include <cassert> // for assert
 #include <cstddef> // For std::size_t
 #include <atomic>
 #include <type_traits> // For std::make_signed<T>
 
-#include "cassert.h" // for ASSERT
 
 // VS2012 doesn't support deleted functions.
 // In this case, we declare the function normally but don't define it. A link error will be generated if the function is called.
@@ -76,7 +76,7 @@ private:
 public:
 	Semaphore(int initialCount = 0)
 	{
-		ASSERT(initialCount >= 0);
+		assert(initialCount >= 0);
 		const long maxLong = 0x7fffffff;
 		m_hSema = CreateSemaphoreW(nullptr, initialCount, maxLong, nullptr);
 	}
@@ -125,7 +125,7 @@ private:
 public:
 	Semaphore(int initialCount = 0)
 	{
-		ASSERT(initialCount >= 0);
+		assert(initialCount >= 0);
 		semaphore_create(mach_task_self(), &m_sema, SYNC_POLICY_FIFO, initialCount);
 	}
 
@@ -190,7 +190,7 @@ private:
 public:
 	Semaphore(int initialCount = 0)
 	{
-		ASSERT(initialCount >= 0);
+		assert(initialCount >= 0);
 		sem_init(&m_sema, 0, initialCount);
 	}
 
@@ -318,7 +318,7 @@ private:
 
 	ssize_t waitManyWithPartialSpinning(ssize_t max, std::int64_t timeout_usecs = -1)
 	{
-		ASSERT(max > 0);
+		assert(max > 0);
 		ssize_t oldCount;
 		int spin = 10000;
 		while (--spin >= 0)
@@ -363,7 +363,7 @@ private:
 public:
 	LightweightSemaphore(ssize_t initialCount = 0) : m_count(initialCount)
 	{
-		ASSERT(initialCount >= 0);
+		assert(initialCount >= 0);
 	}
 
 	bool tryWait()
@@ -394,7 +394,7 @@ public:
 	// Acquires between 0 and (greedily) max, inclusive
 	ssize_t tryWaitMany(ssize_t max)
 	{
-		ASSERT(max >= 0);
+		assert(max >= 0);
 		ssize_t oldCount = m_count.load(std::memory_order_relaxed);
 		while (oldCount > 0)
 		{
@@ -408,7 +408,7 @@ public:
 	// Acquires at least one, and (greedily) at most max
 	ssize_t waitMany(ssize_t max, std::int64_t timeout_usecs)
 	{
-		ASSERT(max >= 0);
+		assert(max >= 0);
 		ssize_t result = tryWaitMany(max);
 		if (result == 0 && max > 0)
 			result = waitManyWithPartialSpinning(max, timeout_usecs);
@@ -418,13 +418,13 @@ public:
 	ssize_t waitMany(ssize_t max)
 	{
 		ssize_t result = waitMany(max, -1);
-		ASSERT(result > 0);
+		assert(result > 0);
 		return result;
 	}
 
 	void signal(ssize_t count = 1)
 	{
-		ASSERT(count >= 0);
+		assert(count >= 0);
 		ssize_t oldCount = m_count.fetch_add(count, std::memory_order_release);
 		ssize_t toRelease = -oldCount < count ? -oldCount : count;
 		if (toRelease > 0)

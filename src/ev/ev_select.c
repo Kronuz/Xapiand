@@ -65,9 +65,8 @@
 # define NFDBYTES (NFDBITS / 8)
 #endif
 
+#include <assert.h>
 #include <string.h>
-
-#include "cassert.h"   // for ASSERT
 
 static void
 select_modify (EV_P_ int fd, int oev, int nev)
@@ -84,7 +83,7 @@ select_modify (EV_P_ int fd, int oev, int nev)
     int handle = fd;
     #endif
 
-    ASSERT (("libev: fd >= FD_SETSIZE passed to fd_set-based select backend", fd < FD_SETSIZE));
+    assert (("libev: fd >= FD_SETSIZE passed to fd_set-based select backend", fd < FD_SETSIZE));
 
     /* FD_SET is broken on windows (it adds the fd to a set twice or more,
      * which eventually leads to overflows). Need to call it only on changes.

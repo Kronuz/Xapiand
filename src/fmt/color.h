@@ -348,15 +348,15 @@ class text_style {
     return static_cast<uint8_t>(ems) != 0;
   }
   FMT_CONSTEXPR internal::color_type get_foreground() const FMT_NOEXCEPT {
-    ASSERT(has_foreground() && "no foreground specified for this style");
+    assert(has_foreground() && "no foreground specified for this style");
     return foreground_color;
   }
   FMT_CONSTEXPR internal::color_type get_background() const FMT_NOEXCEPT {
-    ASSERT(has_background() && "no background specified for this style");
+    assert(has_background() && "no background specified for this style");
     return background_color;
   }
   FMT_CONSTEXPR emphasis get_emphasis() const FMT_NOEXCEPT {
-    ASSERT(has_emphasis() && "no emphasis specified for this style");
+    assert(has_emphasis() && "no emphasis specified for this style");
     return ems;
   }
 

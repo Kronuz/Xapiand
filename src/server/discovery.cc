@@ -24,10 +24,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <cassert>                          // for assert
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
-#include "cassert.h"                        // for ASSERT
 #include "color_tools.hh"                   // for color
 #include "cuuid/uuid.h"                     // for UUID
 #include "epoch.hh"                         // for epoch::now
@@ -224,7 +224,7 @@ Discovery::io_accept_cb([[maybe_unused]] ev::io &watcher, int revents)
 	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
 	L_EV_END("Discovery::io_accept_cb:END {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
 
-	ASSERT(sock == -1 || sock == watcher.fd);
+	assert(sock == -1 || sock == watcher.fd);
 
 	if (closed) {
 		return;
@@ -740,7 +740,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 						// increment lastApplied,
 						++raft_last_applied;
 						// apply raft_log[lastApplied] to state machine
-						ASSERT(raft_last_applied - 1 >= 0 && raft_last_applied - 1 < raft_log.size());
+						assert(raft_last_applied - 1 >= 0 && raft_last_applied - 1 < raft_log.size());
 						const auto& command = raft_log[raft_last_applied - 1].command;
 						_raft_apply(command);
 					}
@@ -1184,7 +1184,7 @@ Discovery::_raft_commit_log()
 					// increment lastApplied,
 					++raft_last_applied;
 					// apply raft_log[lastApplied] to state machine
-					ASSERT(raft_last_applied - 1 >= 0 && raft_last_applied - 1 < raft_log.size());
+					assert(raft_last_applied - 1 >= 0 && raft_last_applied - 1 < raft_log.size());
 					const auto& command = raft_log[raft_last_applied - 1].command;
 					_raft_apply(command);
 				}

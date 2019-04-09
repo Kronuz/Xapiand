@@ -19,10 +19,8 @@
 #include <vector>
 #include <cctype>
 #include <cstring>
+#include <cassert>
 
-
-
-#include "cassert.h"   // for ASSERT
 #include "../dispatchkit/boxed_value.hpp"
 #include "chaiscript_common.hpp"
 #include "chaiscript_optimizer.hpp"
@@ -2473,7 +2471,7 @@ namespace chaiscript
                   build_match<eval::Logical_Or_AST_Node<Tracer>>(prev_stack_top, oper);
                   break;
                 case(Operator_Precidence::Prefix) :
-                  ASSERT(false); // cannot reach here because of if() statement at the top
+                  assert(false); // cannot reach here because of if() statement at the top
                   break;
 
 //                default:

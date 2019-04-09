@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,13 @@
 
 #include "escape.hh"
 
-#include "cassert.h"             // for ASSERT
+#include <cassert>               // for assert
+
 #include "chars.hh"              // for chars::char_repr
 
 
 std::string escape(const void* p, size_t size, char quote) {
-	ASSERT(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
+	assert(quote == '\0' || quote == '\1' || quote == '\'' || quote == '"');
 	const auto* q = static_cast<const char *>(p);
 	const char *p_end = q + size;
 	size = size * 4 + 2;  // Consider "\xNN" and two quotes

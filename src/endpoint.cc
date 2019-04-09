@@ -26,7 +26,6 @@
 
 #include "config.h"         // for XAPIAND_*
 
-#include "cassert.h"        // for ASSERT
 #include "fs.hh"            // for normalize_path
 #include "node.h"           // for Node::
 #include "opts.h"           // for opts

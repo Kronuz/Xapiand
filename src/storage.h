@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include <cassert>               // for assert
 #include <chrono>                // for std::chrono
 #include <errno.h>               // for errno
 #include <limits>                // for std::numeric_limits
@@ -29,7 +30,6 @@
 #include <string_view>           // for std::string_view
 #include <unistd.h>
 
-#include "cassert.h"             // for ASSERT
 #include "compressor_lz4.h"      // for LZ4CompressFile, LZ4CompressData, LZ4...
 #include "debouncer.h"           // for make_debouncer
 #include "fs.hh"                 // for opendir, find_file_dir, closedir
@@ -153,7 +153,7 @@ inline auto& fsyncher(bool create = true) {
 			L_DEBUG("Async {} succeeded after {}", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end));
 		}
 	}) : nullptr;
-	ASSERT(!create || fsyncher);
+	assert(!create || fsyncher);
 	return fsyncher;
 }
 

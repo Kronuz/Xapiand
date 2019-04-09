@@ -24,11 +24,11 @@
 
 #include <algorithm>                        // for min, move
 #include <array>                            // for std::array
+#include <cassert>                          // for assert
 #include <cctype>                           // for tolower
 #include <exception>                        // for std::exception
 #include <utility>                          // for std::move
 
-#include "cassert.h"                        // for ASSERT
 #include "cast.h"                           // for Cast
 #include "chaipp/exception.h"               // for chaipp::Error
 #include "database/lock.h"                  // for lock_shard
@@ -239,7 +239,7 @@ public:
 	const Xapian::Database* lock(Args&&... args)
 	{
 		if (!database) {
-			ASSERT(locks == 0);
+			assert(locks == 0);
 			auto new_database = std::make_unique<Xapian::Database>();
 			shards = XapiandManager::database_pool()->checkout(db_handler.endpoints, db_handler.flags, std::forward<Args>(args)...);
 			try {
@@ -283,7 +283,7 @@ public:
 	void unlock() noexcept
 	{
 		if (locks > 0 && --locks == 0) {
-			ASSERT(database);
+			assert(database);
 			database.reset();
 			XapiandManager::database_pool()->checkin(shards);
 		}
@@ -291,19 +291,19 @@ public:
 
 	Xapian::Database& operator*() const noexcept
 	{
-		ASSERT(database);
+		assert(database);
 		return *database;
 	}
 
 	Xapian::Database* operator->() const noexcept
 	{
-		ASSERT(database);
+		assert(database);
 		return database.get();
 	}
 
 	const Xapian::Database* locked()
 	{
-		ASSERT(database);
+		assert(database);
 		return database.get();
 	}
 
@@ -1445,7 +1445,7 @@ DatabaseHandler::get_metadata_keys()
 {
 	L_CALL("DatabaseHandler::get_metadata_keys()");
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	std::vector<std::string> keys;
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
@@ -1483,8 +1483,8 @@ DatabaseHandler::get_metadata(const std::string& key)
 {
 	L_CALL("DatabaseHandler::get_metadata({})", repr(key));
 
-	ASSERT(!endpoints.empty());
-	ASSERT(!key.empty());
+	assert(!endpoints.empty());
+	assert(!key.empty());
 	std::string value;
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
@@ -1520,7 +1520,7 @@ DatabaseHandler::get_metadata(const std::string& key)
 std::string
 DatabaseHandler::get_metadata(std::string_view key)
 {
-	ASSERT(!key.empty());
+	assert(!key.empty());
 	return get_metadata(std::string(key));
 }
 
@@ -1530,8 +1530,8 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 {
 	L_CALL("DatabaseHandler::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit, wal);
 
-	ASSERT(!endpoints.empty());
-	ASSERT(!key.empty());
+	assert(!endpoints.empty());
+	assert(!key.empty());
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
 	for (auto& endpoint : endpoints) {
@@ -1562,7 +1562,7 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 void
 DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool commit, bool wal)
 {
-	ASSERT(!key.empty());
+	assert(!key.empty());
 	set_metadata(std::string(key), std::string(value), commit, wal);
 }
 
@@ -1612,11 +1612,11 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		ASSERT(term.size() > 2);
+		assert(term.size() > 2);
 		if (term[0] == 'Q' && term[1] == 'N') {
 			auto did_serialised = term.substr(2);
 			Xapian::docid did = sortable_unserialise(did_serialised);
@@ -1642,7 +1642,7 @@ DatabaseHandler::delete_document(Xapian::docid did, bool commit, bool wal, bool 
 {
 	L_CALL("DatabaseHandler::delete_document({}, {}, {}, {})", did, commit, wal, version);
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -1673,7 +1673,7 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 {
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = fnv1ah64::hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
@@ -1687,7 +1687,7 @@ DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, boo
 {
 	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = 0;
 	if (n_shards > 1) {
@@ -1722,7 +1722,7 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -1738,11 +1738,11 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 {
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = 0;
 	if (n_shards > 1) {
-		ASSERT(term.size() > 2);
+		assert(term.size() > 2);
 		if (term[0] == 'Q' && term[1] == 'N') {
 			auto did_serialised = term.substr(2);
 			Xapian::docid did = sortable_unserialise(did_serialised);
@@ -1873,7 +1873,7 @@ DatabaseHandler::get_database_info()
 {
 	L_CALL("DatabaseHandler::get_database_info()");
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	if (endpoints.size() == 1) {
 		auto& endpoint = endpoints[0];
 		lock_shard lk_shard(endpoint, flags);
@@ -1923,7 +1923,7 @@ DatabaseHandler::storage_get_stored(const Locator& locator, Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::storage_get_stored()");
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	auto& endpoint = endpoints[shard_num];
@@ -1938,7 +1938,7 @@ DatabaseHandler::commit(bool wal)
 {
 	L_CALL("DatabaseHandler::commit({})", wal);
 
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	bool ret = true;
 	auto valid = endpoints.size();
 	std::exception_ptr eptr;
@@ -2001,7 +2001,7 @@ DocPreparer::operator()()
 {
 	L_CALL("DocPreparer::operator()()");
 
-	ASSERT(indexer);
+	assert(indexer);
 	if (indexer->running.load(std::memory_order_acquire)) {
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
@@ -2293,7 +2293,7 @@ Document::serialise()
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -2344,7 +2344,7 @@ Document::get_value(Xapian::valueno slot)
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -2395,7 +2395,7 @@ Document::get_data()
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -2444,7 +2444,7 @@ Document::validate()
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -2494,7 +2494,7 @@ Document::get_terms()
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -2561,7 +2561,7 @@ Document::get_values()
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
@@ -2666,7 +2666,7 @@ Document::hash()
 
 	int flags = db_handler->flags;
 	auto& endpoints = db_handler->endpoints;
-	ASSERT(!endpoints.empty());
+	assert(!endpoints.empty());
 	size_t n_shards = endpoints.size();
 	size_t shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard

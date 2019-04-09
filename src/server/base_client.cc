@@ -22,6 +22,7 @@
 
 #include "base_client.h"
 
+#include <cassert>                  // for assert
 #include <errno.h>                  // for errno
 #include <memory>                   // for std::shared_ptr
 #include <sys/socket.h>             // for SHUT_RDWR
@@ -29,7 +30,6 @@
 #include <type_traits>              // for remove_reference<>::type
 #include <utility>                  // for std::move
 
-#include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
 #include "ev/ev++.h"                // for ::EV_ERROR, ::EV_READ, ::EV_WRITE
 #include "io.hh"                    // for io::read, io::close, io::lseek, io::write
@@ -335,7 +335,7 @@ BaseClient::_io_cb_write([[maybe_unused]] ev::io &watcher, int revents)
 	L_EV_BEGIN("BaseClient::io_cb_write:BEGIN");
 	L_EV_END("BaseClient::io_cb_write:END");
 
-	ASSERT(sock == -1 || sock == watcher.fd);
+	assert(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("BaseClient::io_cb_write", "BaseClient::io_cb_write(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 

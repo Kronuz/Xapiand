@@ -12,13 +12,13 @@
 #define CHAISCRIPT_COMMON_HPP_
 
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "../dispatchkit/boxed_value.hpp"
 #include "../dispatchkit/dispatchkit.hpp"
@@ -263,7 +263,7 @@ namespace chaiscript
           bool t_dot_notation,
           const chaiscript::detail::Dispatch_Engine &t_ss)
       {
-        ASSERT(t_func);
+        assert(t_func);
         int arity = t_func->get_arity();
         std::vector<Type_Info> types = t_func->get_param_types();
 
@@ -352,7 +352,7 @@ namespace chaiscript
         std::stringstream ss;
         if (t_functions.size() == 1)
         {
-          ASSERT(t_functions[0]);
+          assert(t_functions[0]);
           ss << "  Expected: " << format_types(t_functions[0], t_dot_notation, t_ss) << '\n';
         } else {
           ss << "  " << t_functions.size() << " overloads available:\n";

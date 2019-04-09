@@ -313,10 +313,10 @@ static const int LZ4_minLength = (MFLIMIT+1);
 *  Error detection
 **************************************/
 #if defined(LZ4_DEBUG) && (LZ4_DEBUG>=1)
-#  include "cassert.h"  // for ASSERT
+#  include <assert.h>
 #else
-#  ifndef ASSERT
-#    define ASSERT(condition) ((void)0)
+#  ifndef assert
+#    define assert(condition) ((void)0)
 #  endif
 #endif
 

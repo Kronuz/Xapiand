@@ -7,6 +7,7 @@
 #ifndef CHAISCRIPT_DYNAMIC_OBJECT_DETAIL_HPP_
 #define CHAISCRIPT_DYNAMIC_OBJECT_DETAIL_HPP_
 
+#include <cassert>
 #include <map>
 #include <memory>
 #include <string>
@@ -14,7 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "cassert.h"   // for ASSERT
 #include "../chaiscript_defines.hpp"
 #include "boxed_cast.hpp"
 #include "boxed_cast_helper.hpp"
@@ -50,7 +50,7 @@ namespace chaiscript
               m_type_name(std::move(t_type_name)), m_func(t_func), m_doti(user_type<Dynamic_Object>()),
               m_is_attribute(t_is_attribute)
           {
-            ASSERT( (t_func->get_arity() > 0 || t_func->get_arity() < 0)
+            assert( (t_func->get_arity() > 0 || t_func->get_arity() < 0)
                 && "Programming error, Dynamic_Object_Function must have at least one parameter (this)");
           }
 
@@ -63,7 +63,7 @@ namespace chaiscript
               m_type_name(std::move(t_type_name)), m_func(t_func), m_ti(t_ti.is_undef()?nullptr:new Type_Info(t_ti)), m_doti(user_type<Dynamic_Object>()),
               m_is_attribute(t_is_attribute)
           {
-            ASSERT( (t_func->get_arity() > 0 || t_func->get_arity() < 0)
+            assert( (t_func->get_arity() > 0 || t_func->get_arity() < 0)
                 && "Programming error, Dynamic_Object_Function must have at least one parameter (this)");
           }
 
@@ -120,8 +120,8 @@ namespace chaiscript
           {
             std::vector<Type_Info> types(t_inner_types);
 
-            ASSERT(types.size() > 1);
-            //ASSERT(types[1].bare_equal(user_type<Boxed_Value>()));
+            assert(types.size() > 1);
+            //assert(types[1].bare_equal(user_type<Boxed_Value>()));
             types[1] = t_objectti;
             return types;
           }
@@ -182,7 +182,7 @@ namespace chaiscript
             : Proxy_Function_Base(build_type_list(t_func->get_param_types()), t_func->get_arity() - 1),
               m_type_name(std::move(t_type_name)), m_func(t_func)
           {
-            ASSERT( (t_func->get_arity() > 0 || t_func->get_arity() < 0)
+            assert( (t_func->get_arity() > 0 || t_func->get_arity() < 0)
                 && "Programming error, Dynamic_Object_Function must have at least one parameter (this)");
           }
 

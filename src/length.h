@@ -1,4 +1,5 @@
 /*
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (C) 2006,2007,2008,2009,2010,2011,2012 Olly Betts
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,11 +23,11 @@
 
 #pragma once
 
-#include <stddef.h>               // for size_t, NULL
-#include <string>                 // for string
-#include <string_view>            // for std::string_view
+#include <cassert>               // for assert
+#include <stddef.h>              // for size_t, NULL
+#include <string>                // for string
+#include <string_view>           // for std::string_view
 
-#include "cassert.h"             // for ASSERT
 #include "exception.h"           // for MSG_SerialisationError, SerialisationError
 #include "likely.h"              // for likely, unlikely
 
@@ -105,8 +106,8 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 	static_assert(static_cast<T>(-1) > 0, "Type not unsigned");
 
 	const char * ptr = *p;
-	ASSERT(ptr);
-	ASSERT(ptr <= end);
+	assert(ptr);
+	assert(ptr <= end);
 
 	const char * start = ptr;
 

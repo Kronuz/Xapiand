@@ -23,6 +23,7 @@
 #include "udp.h"
 
 #include <arpa/inet.h>              // for inet_addr, htonl, htons
+#include <cassert>                  // for assert
 #include <cstring>                  // for memset
 #include <errno.h>                  // for errno
 #include <utility>
@@ -263,7 +264,7 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 
 			struct ip_mreq mreq = {};
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
-				ASSERT(hostname);
+				assert(hostname);
 				mreq.imr_multiaddr = reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr;
 				mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,11 @@
 
 #pragma once
 
+#include <cassert>             // for assert
 #include <cstddef>             // for std::size_t
 #include <string>              // for std::string
 #include <string_view>         // for std::string_view
 
-#include "cassert.h"           // for ASSERT
 #include "io.hh"               // for io::*
 
 //
@@ -125,7 +125,7 @@ public:
 	}
 
 	void remove_prefix(std::size_t n) {
-		ASSERT(n <= _data_view.size());
+		assert(n <= _data_view.size());
 		_data_view.remove_prefix(n);
 		pos += n;
 	}

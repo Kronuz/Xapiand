@@ -22,9 +22,9 @@
 
 #include "worker.h"
 
+#include <cassert>              // for assert
 #include <thread>
 
-#include "cassert.h"            // for ASSERT
 #include "epoch.hh"             // for epoch::now
 #include "log.h"                // for L_CALL
 #include "readable_revents.hh"  // for readable_revents
@@ -50,7 +50,7 @@ Worker::~Worker() noexcept
 		// destructor of any subclasses implementing either one of:
 		// shutdown_impl(), destroy_impl(), start_impl() or stop_impl().
 		// Otherwise the assert bellow will fire!
-		ASSERT(_deinited);  // Beware of the note above
+		assert(_deinited);  // Beware of the note above
 
 		deinit();
 	} catch (...) {
@@ -139,7 +139,7 @@ Worker::__detach(const std::shared_ptr<Worker>& child)
 {
 	L_CALL("Worker::__detach(<child>)", __repr__());
 
-	ASSERT(child);
+	assert(child);
 	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 	if (child->_iterator != _children.end()) {
 		child->_parent.reset();
@@ -156,10 +156,10 @@ Worker::__attach(const std::shared_ptr<Worker>& child)
 {
 	L_CALL("Worker::__attach(<child>)", __repr__());
 
-	ASSERT(child);
+	assert(child);
 	std::lock_guard<std::recursive_mutex> lk(child->_mtx);
 	if (child->_iterator == _children.end()) {
-		ASSERT(std::find(_children.begin(), _children.end(), child) == _children.end());
+		assert(std::find(_children.begin(), _children.end(), child) == _children.end());
 		child->_parent = shared_from_this();
 		auto it = _children.insert(_children.begin(), child);
 		child->_iterator = it;
@@ -552,7 +552,7 @@ Worker::run_loop()
 {
 	L_CALL("Worker::run_loop() {}", __repr__());
 
-	ASSERT(!is_running_loop());
+	assert(!is_running_loop());
 
 	if (!_runner.exchange(true)) {
 		ev_loop->run();

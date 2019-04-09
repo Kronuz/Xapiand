@@ -26,13 +26,13 @@ THE SOFTWARE.
 #ifndef __BASE_X__H_
 #define __BASE_X__H_
 
+#include <cassert>          // for assert
 #include <algorithm>        // for std::find_if, std::reverse
 #include <stdexcept>        // for std::invalid_argument
 #include <string>           // for std::string
 #include <string_view>      // for std::string_view
 #include <type_traits>      // for std::enable_if_t
 
-#include "cassert.h"        // for ASSERT
 #include "uinteger_t.hh"
 
 
@@ -85,7 +85,7 @@ public:
 		for (int cp = 0; cp < alphabet_base; ++cp) {
 			auto ch = alphabet[cp];
 			_chr[cp] = ch;
-			ASSERT(_ord[(unsigned char)ch] == alphabet_base);  // Duplicate character in the alphabet
+			assert(_ord[(unsigned char)ch] == alphabet_base);  // Duplicate character in the alphabet
 			_ord[(unsigned char)ch] = cp;
 			if (flags & BaseX::ignore_case) {
 				if (ch >= 'A' && ch <='Z') {
@@ -99,7 +99,7 @@ public:
 			auto ch = extended[i];
 			auto cp = alphabet_base + i;
 			_chr[cp] = ch;
-			ASSERT(_ord[(unsigned char)ch] == alphabet_base); // Duplicate character in the extended alphabet
+			assert(_ord[(unsigned char)ch] == alphabet_base); // Duplicate character in the extended alphabet
 			_ord[(unsigned char)ch] = cp;
 			if (flags & BaseX::ignore_case) {
 				if (ch >= 'A' && ch <='Z') {
@@ -114,7 +114,7 @@ public:
 			auto ch = translate[i];
 			auto ncp = _ord[(unsigned char)ch];
 			if (ncp >= alphabet_base) {
-				ASSERT(_ord[(unsigned char)ch] == alphabet_base); // Invalid translation character
+				assert(_ord[(unsigned char)ch] == alphabet_base); // Invalid translation character
 				_ord[(unsigned char)ch] = cp;
 				if (flags & BaseX::ignore_case) {
 					if (ch >= 'A' && ch <='Z') {

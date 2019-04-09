@@ -22,11 +22,11 @@
 
 #include "http_server.h"
 
+#include <cassert>                          // for assert
 #include <errno.h>                          // for errno
 #include <utility>
 
 #include "base_server.h"                    // for BaseServer
-#include "cassert.h"                        // for ASSERT
 #include "error.hh"                         // for error:name, error::description
 #include "ev/ev++.h"                        // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                           // for Http
@@ -95,7 +95,7 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 	L_EV_BEGIN("HttpServer::io_accept_cb:BEGIN");
 	L_EV_END("HttpServer::io_accept_cb:END");
 
-	ASSERT(sock == -1 || sock == watcher.fd);
+	assert(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("HttpServer::io_accept_cb", "HttpServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 

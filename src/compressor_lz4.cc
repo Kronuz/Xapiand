@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,10 @@
 
 #include "compressor_lz4.h"
 
+#include <cassert>               // for assert
 #include <cstdio>                // for SEEK_SET
 #include <cstring>               // for size_t, memcpy
 
-#include "cassert.h"             // for ASSERT
 #include "likely.h"              // for likely, unlikely
 
 
@@ -78,8 +78,8 @@ LZ4CompressData::init()
 std::string
 LZ4CompressData::next()
 {
-	ASSERT(cmpBuf);
-	ASSERT(buffer);
+	assert(cmpBuf);
+	assert(buffer);
 
 	if (data_offset >= data_size) {
 		return std::string();
@@ -152,8 +152,8 @@ LZ4DecompressData::init()
 std::string
 LZ4DecompressData::next()
 {
-	ASSERT(cmpBuf);
-	ASSERT(buffer);
+	assert(cmpBuf);
+	assert(buffer);
 
 	if (data_offset >= data_size) {
 		return std::string();
@@ -234,8 +234,8 @@ LZ4CompressFile::init()
 std::string
 LZ4CompressFile::next()
 {
-	ASSERT(cmpBuf);
-	ASSERT(buffer);
+	assert(cmpBuf);
+	assert(buffer);
 
 	char* const inpPtr = &buffer[_offset];
 
@@ -320,8 +320,8 @@ LZ4DecompressFile::init()
 std::string
 LZ4DecompressFile::next()
 {
-	ASSERT(cmpBuf);
-	ASSERT(buffer);
+	assert(cmpBuf);
+	assert(buffer);
 
 	if (data_offset == static_cast<size_t>(data_size)) {
 		if unlikely((data_size = io::read(fd, data, get_read_size())) < 0) {

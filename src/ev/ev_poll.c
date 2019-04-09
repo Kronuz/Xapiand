@@ -37,9 +37,8 @@
  * either the BSD or the GPL.
  */
 
+#include <assert.h>
 #include <poll.h>
-
-#include "cassert.h"  // for ASSERT
 
 inline_size
 void
@@ -70,7 +69,7 @@ poll_modify (EV_P_ int fd, int oev, int nev)
       polls [idx].fd = fd;
     }
 
-  ASSERT (polls [idx].fd == fd);
+  assert (polls [idx].fd == fd);
 
   if (nev)
     polls [idx].events =
@@ -110,7 +109,7 @@ poll_poll (EV_P_ ev_tstamp timeout)
   else
     for (p = polls; res; ++p)
       {
-        ASSERT (("libev: poll() returned illegal result, broken BSD kernel?", p < polls + pollcnt));
+        assert (("libev: poll() returned illegal result, broken BSD kernel?", p < polls + pollcnt));
 
         if (expect_false (p->revents)) /* this expect is debatable */
           {

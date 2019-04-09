@@ -47,7 +47,7 @@
 #  define LZ4HC_HEAPMODE 1
 #endif
 
-#include "cassert.h"   // for ASSERT
+#include <assert.h>
 
 /*===    Dependency    ===*/
 #define LZ4_HC_STATIC_LINKING_ONLY
@@ -371,7 +371,7 @@ LZ4_FORCE_INLINE int LZ4HC_encodeSequence (
     LZ4_writeLE16(*op, (U16)(*ip-match)); *op += 2;
 
     /* Encode MatchLength */
-    ASSERT(matchLength >= MINMATCH);
+    assert(matchLength >= MINMATCH);
     length = (size_t)(matchLength - MINMATCH);
     if ((limit) && (*op + (length >> 8) + (1 + LASTLITERALS) > oend)) return 1;   /* Check output limit */
     if (length >= ML_MASK) {
@@ -652,14 +652,14 @@ static int LZ4HC_compress_generic (
     ctx->end += *srcSizePtr;
     if (cLevel < 1) cLevel = LZ4HC_CLEVEL_DEFAULT;   /* note : convention is different from lz4frame, maybe something to review */
     cLevel = MIN(LZ4HC_CLEVEL_MAX, cLevel);
-    ASSERT(cLevel >= 0);
-    ASSERT(cLevel <= LZ4HC_CLEVEL_MAX);
+    assert(cLevel >= 0);
+    assert(cLevel <= LZ4HC_CLEVEL_MAX);
     {   cParams_t const cParam = clTable[cLevel];
         if (cParam.strat == lz4hc)
             return LZ4HC_compress_hashChain(ctx,
                                 src, dst, srcSizePtr, dstCapacity,
                                 cParam.nbSearches, limit);
-        ASSERT(cParam.strat == lz4opt);
+        assert(cParam.strat == lz4opt);
         return LZ4HC_compress_optimal(ctx,
                             src, dst, srcSizePtr, dstCapacity,
                             cParam.nbSearches, cParam.targetLength, limit,

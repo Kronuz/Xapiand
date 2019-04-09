@@ -24,6 +24,7 @@
 
 #include <algorithm>                             // for std::min, std::find_if
 #include <arpa/inet.h>                           // for inet_aton
+#include <cassert>                               // for assert
 #include <cctype>                                // for isspace
 #include <chrono>                                // for std::chrono, std::chrono::system_clock
 #include <cstdlib>                               // for size_t, exit
@@ -49,7 +50,6 @@
 #endif
 
 #include "allocator.h"                           // for allocator::total_allocated
-#include "cassert.h"                             // for ASSERT
 #include "color_tools.hh"                        // for color
 #include "database/cleanup.h"                    // for DatabaseCleanup
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
@@ -1408,7 +1408,7 @@ calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, si
 			for (size_t r = 0; r < num_replicas_plus_master; ++r) {
 				size_t idx = ((routing_key - s + r) % indexed_nodes) + 1;
 				auto node = Node::get_node(idx);
-				ASSERT(node);
+				assert(node);
 				replicas.push_back(node->name());
 			}
 			shards.push_back(std::move(replicas));
@@ -1747,7 +1747,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
 
 			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
-			ASSERT(!shards.empty());
+			assert(!shards.empty());
 
 			if (writable) {
 				try {
@@ -1762,7 +1762,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			lk.lock();
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
-				ASSERT(!replicas.empty());
+				assert(!replicas.empty());
 				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
 				std::vector<std::vector<std::string>> shard_shards;
 				shard_shards.push_back(replicas);
@@ -1931,7 +1931,7 @@ XapiandManager::server_metrics_impl()
 bool
 XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds timeout, std::string_view format_timeout, std::string_view format_done)
 {
-	ASSERT(_manager);
+	assert(_manager);
 	if (from != to) {
 		if (_manager->_state.compare_exchange_strong(from, to)) {
 			auto& log = _manager->log;

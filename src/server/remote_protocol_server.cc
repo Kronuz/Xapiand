@@ -24,12 +24,12 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <cassert>                          // for assert
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "remote_protocol.h"                // for RemoteProtocol
 #include "remote_protocol_client.h"         // for RemoteProtocolClient
-#include "cassert.h"                        // for ASSERT
 #include "endpoint.h"                       // for Endpoints
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
@@ -99,7 +99,7 @@ RemoteProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents
 	L_EV_BEGIN("RemoteProtocolServer::io_accept_cb:BEGIN");
 	L_EV_END("RemoteProtocolServer::io_accept_cb:END");
 
-	ASSERT(sock == -1 || sock == watcher.fd);
+	assert(sock == -1 || sock == watcher.fd);
 
 	L_DEBUG_HOOK("RemoteProtocolServer::io_accept_cb", "RemoteProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 

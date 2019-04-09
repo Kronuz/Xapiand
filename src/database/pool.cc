@@ -23,8 +23,8 @@
 #include "database/pool.h"
 
 #include <algorithm>              // for std::find, std::move
+#include <cassert>                // for assert
 
-#include "cassert.h"              // for ASSERT
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
@@ -89,14 +89,14 @@ public:
 
 	~ReferencedShardEndpoint() noexcept {
 		if (ptr) {
-			ASSERT(ptr->refs > 0);
+			assert(ptr->refs > 0);
 			--ptr->refs;
 		}
 	}
 
 	void reset() {
 		if (ptr) {
-			ASSERT(ptr->refs > 0);
+			assert(ptr->refs > 0);
 			--ptr->refs;
 			ptr = nullptr;
 		}
@@ -136,7 +136,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 
 ShardEndpoint::~ShardEndpoint()
 {
-	ASSERT(refs == 0);
+	assert(refs == 0);
 }
 
 
@@ -306,9 +306,9 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 {
 	L_CALL("ShardEndpoint::checkin({})", shard ? shard->__repr__() : "null");
 
-	ASSERT(shard);
-	ASSERT(shard->is_busy());
-	ASSERT(&shard->endpoint == this);
+	assert(shard);
+	assert(shard->is_busy());
+	assert(&shard->endpoint == this);
 
 	TaskQueue<void()> pending_callbacks;
 	{
@@ -536,7 +536,7 @@ DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
 {
 	L_CALL("DatabasePool::lock({}, {})", shard ? shard->__repr__() : "null", timeout);
 
-	ASSERT(shard);
+	assert(shard);
 
 	if (!shard->is_writable() || !shard->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
@@ -545,7 +545,7 @@ DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
 
 	++locks;  // This needs to be done before locking
 	if (shard->endpoint.locked.exchange(true)) {
-		ASSERT(locks > 0);
+		assert(locks > 0);
 		--locks;  // revert if failed.
 		L_DEBUG("ERROR: Exclusive lock can be granted only to non-locked databases");
 		THROW(Error, "Cannot grant exclusive lock shard");
@@ -583,7 +583,7 @@ DatabasePool::unlock(const std::shared_ptr<Shard>& shard)
 {
 	L_CALL("DatabasePool::unlock({})", shard ? shard->__repr__() : "null");
 
-	ASSERT(shard);
+	assert(shard);
 
 	if (!shard->is_writable() || !shard->is_local()) {
 		L_DEBUG("ERROR: Exclusive lock can be granted only for local writable databases");
@@ -595,7 +595,7 @@ DatabasePool::unlock(const std::shared_ptr<Shard>& shard)
 		THROW(Error, "Cannot release exclusive lock shard");
 	}
 
-	ASSERT(locks > 0);
+	assert(locks > 0);
 	--locks;
 
 	auto referenced_database_endpoint = get(shard->endpoint);
@@ -657,7 +657,7 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 
 	// Find or spawn the shard endpoint
 	auto it = find_and([&](const std::unique_ptr<ShardEndpoint>& database_endpoint) {
-		ASSERT(database_endpoint);
+		assert(database_endpoint);
 		database_endpoint->renew_time = std::chrono::system_clock::now();
 		return lru::GetAction::renew;
 	}, endpoint);
@@ -718,7 +718,7 @@ DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std:
 	L_CALL("DatabasePool::checkout({}, ({}), {})", repr(endpoint.to_string()), readable_flags(flags), timeout);
 
 	auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
-	ASSERT(shard);
+	assert(shard);
 
 	L_POOL_TIMED(200ms,
 		"Shard checkout is taking too long: {} ({})",
@@ -735,7 +735,7 @@ DatabasePool::checkin(std::shared_ptr<Shard>& shard)
 {
 	L_CALL("DatabasePool::checkin({})", shard ? shard->__repr__() : "null");
 
-	ASSERT(shard);
+	assert(shard);
 	shard->endpoint.checkin(shard);
 	shard.reset();
 }
@@ -756,7 +756,7 @@ DatabasePool::checkout(const Endpoints& endpoints, int flags, double timeout)
 	try {
 		for (auto& endpoint : endpoints) {
 			auto shard = spawn(endpoint)->checkout(flags, timeout);
-			ASSERT(shard);
+			assert(shard);
 			shards.emplace_back(std::move(shard));
 		}
 		return shards;
@@ -831,7 +831,7 @@ DatabasePool::cleanup(bool immediate)
 	std::unique_lock<std::mutex> lk(mtx);
 
 	const auto on_drop = [&](const std::unique_ptr<ShardEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
-		ASSERT(database_endpoint);
+		assert(database_endpoint);
 		if (size > max_size) {
 			if (immediate || database_endpoint->renew_time < now - 60s) {
 				ReferencedShardEndpoint referenced_database_endpoint(database_endpoint.get());

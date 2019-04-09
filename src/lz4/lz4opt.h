@@ -33,7 +33,7 @@
        - LZ4 public forum : https://groups.google.com/forum/#!forum/lz4c
 */
 
-#include "cassert.h"   // for ASSERT
+#include <assert.h>
 
 #define LZ4_OPT_NUM   (1<<12)
 
@@ -128,7 +128,7 @@ static int LZ4HC_compress_optimal (
     if (sufficient_len >= LZ4_OPT_NUM) sufficient_len = LZ4_OPT_NUM-1;
 
     /* Main Loop */
-    ASSERT(ip - anchor < LZ4_MAX_INPUT_SIZE);
+    assert(ip - anchor < LZ4_MAX_INPUT_SIZE);
     while (ip < mflimit) {
         int const llen = (int)(ip - anchor);
         int best_mlen, best_off;
@@ -162,7 +162,7 @@ static int LZ4HC_compress_optimal (
         {   int mlen = MINMATCH;
             int const matchML = firstMatch.len;   /* necessarily < sufficient_len < LZ4_OPT_NUM */
             int const offset = firstMatch.off;
-            ASSERT(matchML < LZ4_OPT_NUM);
+            assert(matchML < LZ4_OPT_NUM);
             for ( ; mlen <= matchML ; mlen++) {
                 int const cost = LZ4HC_sequencePrice(llen, mlen);
                 opt[mlen].mlen = mlen;
@@ -238,7 +238,7 @@ static int LZ4HC_compress_optimal (
             {   int const matchML = newMatch.len;
                 int ml = MINMATCH;
 
-                ASSERT(cur + newMatch.len < LZ4_OPT_NUM);
+                assert(cur + newMatch.len < LZ4_OPT_NUM);
                 for ( ; ml <= matchML ; ml++) {
                     int const pos = cur + ml;
                     int const offset = newMatch.off;
@@ -258,7 +258,7 @@ static int LZ4HC_compress_optimal (
                     if (pos > last_match_pos+TRAILING_LITERALS || price <= opt[pos].price) {
                         DEBUGLOG(7, "rPos:%3i => price:%3i (matchlen=%i)",
                                     pos, price, ml);
-                        ASSERT(pos < LZ4_OPT_NUM);
+                        assert(pos < LZ4_OPT_NUM);
                         if ( (ml == matchML)  /* last pos of last match */
                           && (last_match_pos < pos) )
                             last_match_pos = pos;
@@ -283,8 +283,8 @@ static int LZ4HC_compress_optimal (
         cur = last_match_pos - best_mlen;
 
 encode: /* cur, last_match_pos, best_mlen, best_off must be set */
-        ASSERT(cur < LZ4_OPT_NUM);
-        ASSERT(last_match_pos >= 1);  /* == 1 when only one candidate */
+        assert(cur < LZ4_OPT_NUM);
+        assert(last_match_pos >= 1);  /* == 1 when only one candidate */
         DEBUGLOG(6, "reverse traversal, looking for shortest path")
         DEBUGLOG(6, "last_match_pos = %i", last_match_pos);
         {   int candidate_pos = cur;
@@ -299,7 +299,7 @@ encode: /* cur, last_match_pos, best_mlen, best_off must be set */
                 selected_matchLength = next_matchLength;
                 selected_offset = next_offset;
                 if (next_matchLength > candidate_pos) break; /* last match elected, first match to encode */
-                ASSERT(next_matchLength > 0);  /* can be 1, means literal */
+                assert(next_matchLength > 0);  /* can be 1, means literal */
                 candidate_pos -= next_matchLength;
         }   }
 
@@ -310,8 +310,8 @@ encode: /* cur, last_match_pos, best_mlen, best_off must be set */
                 int const offset = opt[rPos].off;
                 if (ml == 1) { ip++; rPos++; continue; }  /* literal; note: can end up with several literals, in which case, skip them */
                 rPos += ml;
-                ASSERT(ml >= MINMATCH);
-                ASSERT((offset >= 1) && (offset <= MAX_DISTANCE));
+                assert(ml >= MINMATCH);
+                assert((offset >= 1) && (offset <= MAX_DISTANCE));
                 opSaved = op;
                 if ( LZ4HC_encodeSequence(&ip, &op, &anchor, ml, ip - offset, limit, oend) )   /* updates ip, op and anchor */
                     goto _dest_overflow;

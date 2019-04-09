@@ -24,12 +24,12 @@
 #include "cuuid/uuid.h"
 
 #include <algorithm>      // for std::copy_n
+#include <cassert>        // for assert
 #include <iomanip>        // for std::setw and std::setfill
 #include <random>         // for std::mt19937
 #include <sstream>        // for std::ostringstream
 #include <stdexcept>      // for std::bad_alloc
 
-#include "cassert.h"      // for ASSERT
 #include "repr.hh"        // for repr
 #include "endian.hh"      // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
 #include "exception.h"    // for THROW, SerialisationError, InvalidArgument
@@ -182,16 +182,16 @@ UUIDCondenser::serialise() const
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// v0:PPPPTTTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
 	// b0:                                              TTTTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSSSC
-		ASSERT(compact.padding0 == 0);
-		ASSERT(compact.padding1 == 0);
+		assert(compact.padding0 == 0);
+		assert(compact.padding1 == 0);
 		buf0 = (val0 >> PADDING_C1_BITS);
 		buf1 = (val0 << (64 - PADDING_C1_BITS)) | (val1 >> PADDING_C1_BITS) | 1;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
-		ASSERT(expanded.padding0 == 0);
-		ASSERT(expanded.padding1 == 0);
+		assert(expanded.padding0 == 0);
+		assert(expanded.padding1 == 0);
 		buf0 = (val0 >> PADDING_E1_BITS);
 		buf1 = (val0 << (64 - PADDING_E1_BITS)) | (val1 >> PADDING_E1_BITS);
 	}

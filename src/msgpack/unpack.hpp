@@ -10,7 +10,6 @@
 #ifndef MSGPACK_UNPACK_HPP
 #define MSGPACK_UNPACK_HPP
 
-#include "cassert.h"   // for ASSERT
 #include "versioning.hpp"
 #include "object.hpp"
 #include "zone.hpp"
@@ -18,6 +17,7 @@
 #include "cpp_config.hpp"
 #include "sysdep.h"
 
+#include <cassert>
 #include <memory>
 #include <stdexcept>
 
@@ -502,7 +502,7 @@ inline void context::check_ext_size<4>(std::size_t size) {
 
 inline int context::execute(const char* data, std::size_t len, std::size_t& off)
 {
-    ASSERT(len >= off);
+    assert(len >= off);
 
     m_start = data;
     m_current = data + off;

@@ -23,6 +23,7 @@
 #pragma once
 
 #include <algorithm>                              // for std::sort, std::sort_heap
+#include <cassert>                                // for assert
 #include <cstdint>                                // for int64_t, uint64_t
 #include <limits>                                 // for std::numeric_limits
 #include <map>                                    // for std::map
@@ -132,8 +133,8 @@ private:
 
 	struct CmpByFieldAsc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			ASSERT(a->second.value_ptr);
-			ASSERT(b->second.value_ptr);
+			assert(a->second.value_ptr);
+			assert(b->second.value_ptr);
 			if (*a->second.value_ptr != *b->second.value_ptr) {
 				return *a->second.value_ptr < *b->second.value_ptr;
 			}
@@ -146,8 +147,8 @@ private:
 
 	struct CmpByFieldDesc {
 		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
-			ASSERT(a->second.value_ptr);
-			ASSERT(b->second.value_ptr);
+			assert(a->second.value_ptr);
+			assert(b->second.value_ptr);
 			if (*a->second.value_ptr != *b->second.value_ptr) {
 				return *a->second.value_ptr > *b->second.value_ptr;
 			}

@@ -7,7 +7,6 @@
 #ifndef CHAISCRIPT_OPTIMIZER_HPP_
 #define CHAISCRIPT_OPTIMIZER_HPP_
 
-#include "cassert.h"   // for ASSERT
 #include "chaiscript_eval.hpp"
 
 
@@ -429,7 +428,7 @@ namespace chaiscript {
             
             return make_compiled_node(std::move(for_node), std::move(body_vector), 
                 [id, start_int, end_int](const std::vector<eval::AST_Node_Impl_Ptr<T>> &children, const chaiscript::detail::Dispatch_State &t_ss) {
-                  ASSERT(children.size() == 1);
+                  assert(children.size() == 1);
                   chaiscript::eval::detail::Scope_Push_Pop spp(t_ss);
 
                   int i = start_int;

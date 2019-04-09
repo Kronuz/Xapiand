@@ -24,6 +24,7 @@
 
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
 
+#include <cassert>                          // for assert
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
 #include <functional>                       // for std::function
@@ -203,7 +204,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 	std::string response_body;
 
 	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
-		ASSERT(request.response.status == static_cast<http_status>(0));
+		assert(request.response.status == static_cast<http_status>(0));
 		request.response.status = status;
 		auto http_major = request.parser.http_major;
 		auto http_minor = request.parser.http_minor;
@@ -218,7 +219,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 		}
 	}
 
-	ASSERT(request.response.status != static_cast<http_status>(0));
+	assert(request.response.status != static_cast<http_status>(0));
 
 	if ((mode & HTTP_HEADER_RESPONSE) != 0) {
 		headers += "Server: " + Package::STRING + eol;
@@ -1248,7 +1249,7 @@ HttpClient::operator()()
 		}
 
 		try {
-			ASSERT(request.view);
+			assert(request.view);
 			process(request);
 			request.begining = false;
 		} catch (...) {
@@ -1582,7 +1583,7 @@ HttpClient::update_document_view(Request& request)
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
 	auto document_id = request.path_parser.get_id();
-	ASSERT(!document_id.empty());
+	assert(!document_id.empty());
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -1671,7 +1672,7 @@ HttpClient::retrieve_metadata_view(Request& request)
 	}
 
 	auto key = request.path_parser.get_cmd();
-	ASSERT(!key.empty());
+	assert(!key.empty());
 	key.remove_prefix(1);
 
 	if (key.empty()) {
@@ -1735,7 +1736,7 @@ HttpClient::write_metadata_view(Request& request)
 	}
 
 	auto key = request.path_parser.get_cmd();
-	ASSERT(!key.empty());
+	assert(!key.empty());
 	key.remove_prefix(1);
 
 	if (key.empty() || key == "schema" || key == "wal" || key == "nodes" || key == "metrics") {
@@ -1957,7 +1958,7 @@ HttpClient::retrieve_database_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_database_view()");
 
-	ASSERT(request.path_parser.get_id().empty());
+	assert(request.path_parser.get_id().empty());
 
 	auto is_root = !request.path_parser.has_pth();
 
@@ -1999,7 +2000,7 @@ HttpClient::update_database_view(Request& request)
 {
 	L_CALL("HttpClient::update_database_view()");
 
-	ASSERT(request.path_parser.get_id().empty());
+	assert(request.path_parser.get_id().empty());
 
 	auto is_root = !request.path_parser.has_pth();
 
@@ -2110,7 +2111,7 @@ HttpClient::dump_document_view(Request& request)
 	}
 
 	auto document_id = request.path_parser.get_id();
-	ASSERT(!document_id.empty());
+	assert(!document_id.empty());
 
 	request.processing = std::chrono::system_clock::now();
 
@@ -3644,14 +3645,14 @@ Request::append(const char* at, size_t length)
 			break;
 
 		case Mode::STREAM:
-			ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+			assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
 
 			raw.append(std::string_view(at, length));
 			signal_pending = true;
 			break;
 
 		case Mode::STREAM_NDJSON:
-			ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+			assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
 
 			if (length) {
 				raw.append(std::string_view(at, length));
@@ -3694,7 +3695,7 @@ Request::append(const char* at, size_t length)
 			break;
 
 		case Mode::STREAM_MSGPACK:
-			ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+			assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
 
 			if (length) {
 				unpacker.reserve_buffer(length);
@@ -3739,8 +3740,8 @@ Request::next(std::string_view& str_view)
 {
 	L_CALL("Request::next(<&str_view>)");
 
-	ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
-	ASSERT(mode == Mode::STREAM);
+	assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+	assert(mode == Mode::STREAM);
 
 	if (raw_offset == raw.size()) {
 		return false;
@@ -3756,8 +3757,8 @@ Request::next_object(MsgPack& obj)
 {
 	L_CALL("Request::next_object(<&obj>)");
 
-	ASSERT((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
-	ASSERT(mode == Mode::STREAM_MSGPACK || mode == Mode::STREAM_NDJSON);
+	assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+	assert(mode == Mode::STREAM_MSGPACK || mode == Mode::STREAM_NDJSON);
 
 	std::lock_guard<std::mutex> lk(objects_mtx);
 	if (objects.empty()) {

@@ -22,10 +22,10 @@
 
 #include "string.hh"
 
+#include <cassert>            // for assert
 #include <cmath>              // for std::log, std::pow
 #include <vector>             // for std::vector
 
-#include "cassert.h"          // for ASSERT
 #include "colors.h"
 
 
@@ -51,9 +51,9 @@ public:
 		colors(std::move(colors_)),
 		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 0)))
 	{
-		ASSERT(scaling.size() == units.size());
-		ASSERT(colors.size() == units.size() + 1);
-		ASSERT(needle >= 0 && needle < units.size());
+		assert(scaling.size() == units.size());
+		assert(colors.size() == units.size() + 1);
+		assert(needle >= 0 && needle < units.size());
 		std::transform(scaling.begin(), scaling.end(), scaling.begin(), [&](long double s) {
 			return std::pow(base, s);
 		});

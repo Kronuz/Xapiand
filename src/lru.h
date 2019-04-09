@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  * Copyright (c) 2014 lamerman
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,13 +23,12 @@
 
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <list>
 #include <stdexcept>
 #include <unordered_map>
-
-#include "cassert.h"    // for ASSERT
 
 
 namespace lru {
@@ -66,7 +65,7 @@ public:
 	explicit LRU(size_t max_size=SIZE_MAX)
 		: _max_size(max_size)
 	{
-		ASSERT(_max_size != 0);
+		assert(_max_size != 0);
 	}
 
 	iterator begin() noexcept {

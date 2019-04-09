@@ -27,6 +27,7 @@
 #if XAPIAND_DATABASE_WAL
 
 #include <array>                            // for std::array
+#include <cassert>                          // for assert
 #include <chrono>                           // for std::chrono
 #include <memory>                           // for std::unique_ptr
 #include <string>                           // for std::string
@@ -34,7 +35,6 @@
 #include <unordered_map>                    // for std::unordered_map
 #include <utility>                          // for pair, make_pair
 
-#include "cassert.h"                        // for ASSERT
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
@@ -277,7 +277,7 @@ public:
 	DatabaseWALWriterTask& operator=(DatabaseWALWriterTask&&) = default;
 
 	void operator()(DatabaseWALWriterThread& thread) {
-		ASSERT(dispatcher);
+		assert(dispatcher);
 		(this->*(dispatcher))(thread);
 	}
 

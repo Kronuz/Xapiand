@@ -22,6 +22,7 @@
 
 #include "query_dsl.h"
 
+#include <cassert>                                // for assert
 #include <strings.h>                              // for strncasecmp
 #include <utility>
 
@@ -884,7 +885,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 								/* parentheses case Ej: ... a or (b or c) ...
 								   parentheses force to create a new expression
 								*/
-								ASSERT(stack_msgpack.size());
+								assert(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
 								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_OR);
@@ -928,7 +929,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 								/* parentheses case Ej: ... a and (b and c) ...
 								   parentheses force to create a new expression
 								*/
-								ASSERT(stack_msgpack.size());
+								assert(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
 								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND);
@@ -972,7 +973,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 								/* parentheses case Ej: ... a maybe (b maybe c) ...
 								   parentheses force to create a new expression
 								*/
-								ASSERT(stack_msgpack.size());
+								assert(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
 								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_AND_MAYBE);
@@ -1016,7 +1017,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 								/* parentheses case Ej: ... a xor (b xor c) ...
 								   parentheses force to create a new expression
 								*/
-								ASSERT(stack_msgpack.size());
+								assert(stack_msgpack.size());
 								stack_msgpack.push_back(ob2);
 								stack_msgpack.push_back(ob);
 								create_2exp_op_dsl(stack_msgpack, RESERVED_QUERYDSL_XOR);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>          // for assert
 #include <functional>
 #include <map>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "cassert.h"        // for ASSERT
 #include "check_names.h"
 #include "collectable.h"
 #include "metric.h"
@@ -49,7 +49,7 @@ template <typename T>
 Family<T>::Family(const std::string& name, const std::string& help,
                   const std::map<std::string, std::string>& constant_labels)
     : name_(name), help_(help), constant_labels_(constant_labels) {
-  ASSERT(CheckMetricName(name_));
+  assert(CheckMetricName(name_));
 }
 
 template <typename T>
@@ -59,7 +59,7 @@ T& Family<T>::Add(const std::map<std::string, std::string>& labels,
 #ifndef NDEBUG
   for (auto& label_pair : labels) {
     auto& label_name = label_pair.first;
-    ASSERT(CheckLabelName(label_name));
+    assert(CheckLabelName(label_name));
   }
 #endif
 
@@ -70,9 +70,9 @@ T& Family<T>::Add(const std::map<std::string, std::string>& labels,
   if (metrics_iter != metrics_.end()) {
 #ifndef NDEBUG
     auto labels_iter = labels_.find(hash);
-    ASSERT(labels_iter != labels_.end());
+    assert(labels_iter != labels_.end());
     const auto &old_labels = labels_iter->second;
-    ASSERT(labels == old_labels);
+    assert(labels == old_labels);
 #endif
     return *metrics_iter->second;
   } else {

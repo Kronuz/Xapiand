@@ -22,7 +22,8 @@
 
 #include "database/schemas_lru.h"
 
-#include "cassert.h"                              // for ASSERT
+#include <cassert>                                // for assert
+
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/utils.h"                       // for unsharded_path
 #include "log.h"                                  // for L_CALL
@@ -177,8 +178,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 {
 	L_CALL("SchemasLRU::_update(<db_handler>, {}, {})", new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr");
 
-	ASSERT(db_handler);
-	ASSERT(!db_handler->endpoints.empty());
+	assert(db_handler);
+	assert(!db_handler->endpoints.empty());
 
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -225,7 +226,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				if (exchanged) {
 					L_SCHEMA("{}" + GREEN + "Local Schema [{}] added new foreign link to the LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 				} else {
-					ASSERT(local_schema_ptr);
+					assert(local_schema_ptr);
 					if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
 						schema_ptr = local_schema_ptr;
 						L_SCHEMA("{}" + GREEN + "Local Schema [{}] couldn't add new foreign link but it already was the same foreign link in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
@@ -288,7 +289,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		} else {
 			// Read object couldn't be stored in cache,
 			// so we use the schema now currently in cache
-			ASSERT(local_schema_ptr);
+			assert(local_schema_ptr);
 			if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
 				schema_ptr = local_schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Local Schema [{}] already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
@@ -333,7 +334,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 					if (exchanged) {
 						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded and added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 					} else {
-						ASSERT(local_schema_ptr);
+						assert(local_schema_ptr);
 						if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
 							schema_ptr = local_schema_ptr;
 							L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded but already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
@@ -395,7 +396,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			if (exchanged) {
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 			} else {
-				ASSERT(foreign_schema_ptr);
+				assert(foreign_schema_ptr);
 				if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
 					schema_ptr = foreign_schema_ptr;
 					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] already had the same object in LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
@@ -461,7 +462,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			if (exchanged) {
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 			} else {
-				ASSERT(foreign_schema_ptr);
+				assert(foreign_schema_ptr);
 				if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
 					schema_ptr = foreign_schema_ptr;
 					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] couldn't be added but already was the same object in LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
@@ -533,7 +534,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				if (exchanged) {
 					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 				} else {
-					ASSERT(foreign_schema_ptr);
+					assert(foreign_schema_ptr);
 					if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
 						schema_ptr = foreign_schema_ptr;
 						L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
@@ -640,8 +641,8 @@ SchemasLRU::drop(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& ol
 {
 	L_CALL("SchemasLRU::delete(<db_handler>, <old_schema>)");
 
-	ASSERT(db_handler);
-	ASSERT(!db_handler->endpoints.empty());
+	assert(db_handler);
+	assert(!db_handler->endpoints.empty());
 
 	bool exchanged;
 	std::string foreign_uri, foreign_path, foreign_id;

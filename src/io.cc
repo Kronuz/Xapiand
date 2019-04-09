@@ -22,9 +22,9 @@
 
 #include "io.hh"
 
+#include <cassert>                  // for assert
 #include <errno.h>                  // for errno
 
-#include "cassert.h"                // for ASSERT
 #include "error.hh"                 // for error:name, error::description
 #include "exception.h"              // for traceback
 #include "likely.h"                 // for likely, unlikely
@@ -95,7 +95,7 @@ int open(const char* path, int oflag, int mode) {
 
 int close(int fd) {
 	// Make sure we don't ever close 0, 1 or 2 file descriptors
-	ASSERT(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
+	assert(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
 	if likely(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
 		CHECK_CLOSING(fd);
 		return ::close(fd);  // IMPORTANT: don't check EINTR (do not use RetryAfterSignal here)

@@ -23,9 +23,9 @@
 #include "database/shard.h"
 
 #include <algorithm>              // for std::move
+#include <cassert>                // for assert
 #include <sys/types.h>            // for uint32_t, uint8_t, ssize_t
 
-#include "cassert.h"              // for ASSERT
 #include "database/data.h"        // for Locator
 #include "database/flags.h"       // for readable_flags, DB_*
 #include "database/pool.h"        // for ShardEndpoint
@@ -168,7 +168,7 @@ void
 DataHeader::init(void* param, void* /*unused*/)
 {
 	auto shard = static_cast<Shard*>(param);
-	ASSERT(shard);
+	assert(shard);
 
 	head.magic = STORAGE_MAGIC;
 	strncpy(head.uuid, shard->db()->get_uuid().c_str(), sizeof(head.uuid));
@@ -264,7 +264,7 @@ Shard::reopen_writable()
 
 	auto new_database = std::make_unique<Xapian::WritableDatabase>();
 
-	ASSERT(!endpoint.empty());
+	assert(!endpoint.empty());
 	Xapian::WritableDatabase wsdb;
 	bool local = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
@@ -372,7 +372,7 @@ Shard::reopen_readable()
 
 	auto new_database = std::make_unique<Xapian::Database>();
 
-	ASSERT(!endpoint.empty());
+	assert(!endpoint.empty());
 	Xapian::Database rsdb;
 	bool local = false;
 #ifdef XAPIAND_CLUSTERING
@@ -521,7 +521,7 @@ Shard::reopen()
 		} catch (...) { reset(); throw; }
 	}
 
-	ASSERT(database);
+	assert(database);
 	L_DATABASE("Reopen: {}", __repr__());
 	return true;
 }
@@ -668,7 +668,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 {
 	L_CALL("Shard::commit({})", wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	if (!is_modified()) {
 		L_DATABASE("Commit on shard {} was discarded, because there are not changes", repr(endpoint.to_string()));
@@ -689,7 +689,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
-			ASSERT(!local || wdb->get_revision() == endpoint.local_revision.load());
+			assert(!local || wdb->get_revision() == endpoint.local_revision.load());
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
 				wdb->begin_transaction(true);
@@ -708,7 +708,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 					L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(endpoint.to_string()));
 					return false;
 				}
-				ASSERT(current_revision == prior_revision + 1);
+				assert(current_revision == prior_revision + 1);
 				L_DATABASE("Commit on shard {}: {} -> {}", repr(endpoint.to_string()), prior_revision, current_revision);
 				endpoint.local_revision = current_revision;
 			}
@@ -742,7 +742,7 @@ Shard::begin_transaction(bool flushed)
 {
 	L_CALL("Shard::begin_transaction({})", flushed);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	if (transaction == Transaction::none) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -759,7 +759,7 @@ Shard::commit_transaction()
 {
 	L_CALL("Shard::commit_transaction()");
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	if (transaction != Transaction::none) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -776,7 +776,7 @@ Shard::cancel_transaction()
 {
 	L_CALL("Shard::cancel_transaction()");
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	if (transaction != Transaction::none) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -793,7 +793,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 {
 	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -864,7 +864,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 {
 	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -948,8 +948,8 @@ Shard::storage_get_stored(const Locator& locator)
 {
 	L_CALL("Shard::storage_get_stored()");
 
-	ASSERT(locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored);
-	ASSERT(locator.volume != -1);
+	assert(locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored);
+	assert(locator.volume != -1);
 
 	if (storage) {
 		storage->open(string::format(DATA_STORAGE_PATH "{}", locator.volume));
@@ -970,7 +970,7 @@ Shard::storage_push_blobs(std::string&& doc_data)
 {
 	L_CALL("Shard::storage_push_blobs()");
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	std::pair<std::string, std::string> pushed;
 	if (doc_data.empty()) {
@@ -1028,7 +1028,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 {
 	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1110,7 +1110,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1200,7 +1200,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 {
 	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1231,7 +1231,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 			auto local = is_local();
 			if (local) {
 				std::string ver_prefix;
-				ASSERT(term.size() > 2);
+				assert(term.size() > 2);
 				if (term[0] == 'Q' && term[1] == 'N') {
 					const char *p = n_shards_ser.data();
 					const char *p_end = p + n_shards_ser.size();
@@ -1367,7 +1367,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 {
 	L_CALL("Shard::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1414,7 +1414,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 {
 	L_CALL("Shard::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1664,7 +1664,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 {
 	L_CALL("Shard::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
-	ASSERT(is_writable());
+	assert(is_writable());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
