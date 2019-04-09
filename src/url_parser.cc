@@ -63,7 +63,9 @@ urldecode(const void *p, size_t size, char plus, char amp, char colon, char eq, 
 				auto dec = chars::hexdec(&q);
 				if (dec < 256) {
 					// Reset c, try the special characters again
-					c = encoded ? encoded : dec;
+					c = (encoded && dec != '{' && dec != ',' && dec != '}')
+						? encoded
+						: dec;
 				}
 			}
 			[[fallthrough]];
