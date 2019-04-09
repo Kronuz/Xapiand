@@ -69,9 +69,9 @@ public:
 
 template <typename L>
 struct fmt::formatter<lazy_eval<L>> : fmt::formatter<typename lazy_eval<L>::type> {
-  auto format(const lazy_eval<L>& val, format_context& ctx) {
-    return fmt::formatter<typename lazy_eval<L>::type>::format(val(), ctx);
-  }
+	auto format(const lazy_eval<L>& val, format_context& ctx) {
+		return fmt::formatter<typename lazy_eval<L>::type>::format(val(), ctx);
+	}
 };
 
 
