@@ -881,10 +881,13 @@ XapiandManager::make_servers()
 	_database_cleanup->run();
 	_database_cleanup->start();
 
-	// Start updaters, committers and fsynchers.
-	db_updater();
+	// Start committers, fsynchers, database updaters and replicator triggers.
 	committer();
 	fsyncher();
+#ifdef XAPIAND_CLUSTERING
+	db_updater();
+	trigger_replication();
+#endif
 }
 
 
