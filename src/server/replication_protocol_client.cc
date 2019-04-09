@@ -103,6 +103,7 @@ ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 {
 	try {
 		reset();
+		lk_shard_ptr.reset();
 
 		if (XapiandManager::replication_clients().fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of replication clients");
@@ -566,9 +567,10 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 	assert(lk_shard_ptr);
 	L_REPLICATION("FAIL: {}", repr((*lk_shard_ptr)->endpoint.path));
 
-	reset();
-
 	L(LOG_DEBUG, rgb(190, 30, 10), "REPLY_FAIL {}: {}", repr((*lk_shard_ptr)->endpoint.path), msg);
+
+	reset();
+	lk_shard_ptr.reset();
 
 	close();
 	shutdown();
@@ -714,6 +716,18 @@ ReplicationProtocolClient::is_idle() const
 	L_CALL("ReplicationProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
 
 	return !is_waiting() && !is_running() && write_queue.empty() && !pending_messages();
+}
+
+
+void
+ReplicationProtocolClient::destroy_impl()
+{
+	L_CALL("ReplicationProtocolClient::destroy_impl()");
+
+	MetaBaseClient<ReplicationProtocolClient>::destroy_impl();
+
+	reset();
+	lk_shard_ptr.reset();
 }
 
 

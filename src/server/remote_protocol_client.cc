@@ -1248,6 +1248,17 @@ RemoteProtocolClient::is_idle() const
 }
 
 
+void
+RemoteProtocolClient::destroy_impl()
+{
+	L_CALL("RemoteProtocolClient::destroy_impl()");
+
+	MetaBaseClient<RemoteProtocolClient>::destroy_impl();
+
+	reset();
+}
+
+
 bool
 RemoteProtocolClient::init_remote() noexcept
 {

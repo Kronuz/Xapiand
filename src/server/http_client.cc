@@ -359,7 +359,7 @@ HttpClient::pending_requests() const
 bool
 HttpClient::is_idle() const
 {
-	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_requests:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_requests());
+	L_CALL("HttpClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_requests:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_requests());
 
 	return !is_waiting() && !is_running() && write_queue.empty() && !pending_requests();
 }
@@ -368,7 +368,7 @@ HttpClient::is_idle() const
 void
 HttpClient::destroy_impl()
 {
-	L_CALL("BaseClient::destroy_impl()");
+	L_CALL("HttpClient::destroy_impl()");
 
 	MetaBaseClient<HttpClient>::destroy_impl();
 
