@@ -385,23 +385,23 @@ void adjustOpenFilesLimit()
 	// Set the the max number of files:
 	// Increase if the current limit is not enough for our needs or
 	// decrease if the user requests it.
-	if ((opts.max_files != 0) || max_files_per_proc < max_files) {
-		bool increasing = max_files_per_proc < max_files;
+	if (opts.max_files != 0 || available_files < max_files) {
+		bool increasing = available_files < max_files;
 
 		const ssize_t step = 16;
 		int setrlimit_errno = 0;
 
 		// Try to set the file limit to match 'max_files' or at least to the higher value supported less than max_files.
 		ssize_t new_max_files = max_files;
-		while (new_max_files != max_files_per_proc) {
+		while (new_max_files != available_files) {
 			struct rlimit rl;
 			rl.rlim_cur = static_cast<rlim_t>(new_max_files);
 			rl.rlim_max = static_cast<rlim_t>(new_max_files);
 			if (setrlimit(RLIMIT_NOFILE, &rl) != -1) {
 				if (increasing) {
-					L_INFO("Increased maximum number of open files to {} (it was originally set to {})", new_max_files, (std::size_t)max_files_per_proc);
+					L_INFO("Increased maximum number of open files to {} (it was originally set to {})", new_max_files, (std::size_t)available_files);
 				} else {
-					L_INFO("Decresed maximum number of open files to {} (it was originally set to {})", new_max_files, (std::size_t)max_files_per_proc);
+					L_INFO("Decresed maximum number of open files to {} (it was originally set to {})", new_max_files, (std::size_t)available_files);
 				}
 				break;
 			}
@@ -410,7 +410,7 @@ void adjustOpenFilesLimit()
 			setrlimit_errno = errno;
 			if (!increasing || new_max_files < step) {
 				// Assume that the limit we get initially is still valid if our last try was even lower.
-				new_max_files = max_files_per_proc;
+				new_max_files = available_files;
 				break;
 			}
 			new_max_files -= step;
@@ -421,7 +421,7 @@ void adjustOpenFilesLimit()
 		}
 		max_files = new_max_files;
 	} else {
-		max_files = max_files_per_proc;
+		max_files = available_files;
 	}
 
 
