@@ -74,9 +74,3 @@ constexpr const char RESPONSE_CONTENT_TYPE[]                = "content_type";
 constexpr const char RESPONSE_VOLUME[]                      = "volume";
 constexpr const char RESPONSE_OFFSET[]                      = "offset";
 constexpr const char RESPONSE_SIZE[]                        = "size";
-
-constexpr const char RESPONSE_CLUSTER_NAME[]                = "cluster_name";
-constexpr const char RESPONSE_NODES[]                       = "nodes";
-constexpr const char RESPONSE_SERVER[]                      = "server";
-constexpr const char RESPONSE_URL[]                         = "url";
-constexpr const char RESPONSE_VERSIONS[]                    = "versions";

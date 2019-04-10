@@ -1344,20 +1344,20 @@ HttpClient::node_obj()
 
 	obj.update(MsgPack({
 #ifdef XAPIAND_CLUSTERING
-		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
+		{ "cluster_name", opts.cluster_name },
 #endif
-		{ RESPONSE_SERVER, {
-			{"name", Package::NAME},
-			{"url", Package::URL},
-			{"version", Package::VERSION},
-			{"revision", Package::REVISION},
-			{"hash", Package::HASH},
-			{"compiler", check_compiler()},
-			{"os", check_OS()},
-			{"arch", check_architecture()},
+		{ "server", {
+			{ "name", Package::NAME },
+			{ "url", Package::URL },
+			{ "issues", Package::BUGREPORT },
+			{ "version", Package::VERSION },
+			{ "revision", Package::REVISION },
+			{ "hash", Package::HASH },
+			{ "compiler", check_compiler() },
+			{ "os", check_OS() },
+			{ "arch", check_architecture() },
 		} },
-		{ RESPONSE_URL, Package::BUGREPORT },
-		{ RESPONSE_VERSIONS, {
+		{ "versions", {
 			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
 			{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
@@ -1405,7 +1405,7 @@ HttpClient::node_obj()
 			} },
 		} },
 #ifdef XAPIAND_CLUSTERING
-		{ RESPONSE_NODES, nodes },
+		{ "nodes", nodes },
 #endif
 	}));
 

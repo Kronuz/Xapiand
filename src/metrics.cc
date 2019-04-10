@@ -71,14 +71,15 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 			"Version string as reported by Xapiand",
 			constant_labels)
 		.Add({
-			{"name", Package::NAME},
-			{"url", Package::URL},
-			{"version", Package::VERSION},
-			{"revision", Package::REVISION},
-			{"hash", Package::HASH},
-			{"compiler", check_compiler()},
-			{"os", check_OS()},
-			{"arch", check_architecture()},
+			{ "name", Package::NAME },
+			{ "url", Package::URL },
+			{ "issues", Package::BUGREPORT },
+			{ "version", Package::VERSION },
+			{ "revision", Package::REVISION },
+			{ "hash", Package::HASH },
+			{ "compiler", check_compiler() },
+			{ "os", check_OS() },
+			{ "arch", check_architecture() },
 		})
 	},
 	xapiand_http_clients_running{
