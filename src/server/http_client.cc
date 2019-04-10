@@ -444,7 +444,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	}
 
 	L_HTTP_WIRE("HttpClient::on_read: {} bytes", received);
-	ssize_t parsed = http_parser_execute(&new_request->parser, &http_parser_settings, buf, received);
+	ssize_t parsed = http_parser_execute(&new_request->parser, &parser_settings, buf, received);
 	if (parsed != received) {
 		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
@@ -494,7 +494,7 @@ HttpClient::on_read_file_done()
 
 
 // HTTP parser callbacks.
-const http_parser_settings HttpClient::http_parser_settings = {
+const http_parser_settings HttpClient::parser_settings = {
 	HttpClient::message_begin_cb,
 	HttpClient::url_cb,
 	HttpClient::status_cb,

@@ -273,7 +273,7 @@ class HttpClient : public BaseClient<HttpClient> {
 	void on_read_file(const char* buf, ssize_t received);
 	void on_read_file_done();
 
-	static const http_parser_settings http_parser_settings;
+	static const http_parser_settings parser_settings;
 
 	mutable std::mutex runner_mutex;
 	std::shared_ptr<Request> new_request;
