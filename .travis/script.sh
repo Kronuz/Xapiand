@@ -40,7 +40,7 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 	PACKAGE_TYPE_EXT=$(echo $PACKAGE_TYPE | tr ':' '.')
 	PACKAGE_BOTTLE="xapiand-${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz"
 
-	if [ -z "${TRAVIS_TAG}" ]; then
+	if [ ! -z "${TRAVIS_TAG}" ]; then
 		# The building could have taken several minutes, so we reset the modified
 		# file, pull changes and modify again adding the new Bottle
 		git checkout Formula/xapiand.rb
