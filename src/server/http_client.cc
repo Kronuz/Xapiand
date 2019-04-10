@@ -75,6 +75,7 @@
 #include "response.h"                       // for RESPONSE_*
 #include "serialise.h"                      // for Serialise::boolean
 #include "string.hh"                        // for string::from_delta
+#include "system.hh"                        // for check_compiler, check_OS, check_architecture
 #include "xapian.h"                         // for Xapian::major_version, Xapian::minor_version
 
 
@@ -1345,7 +1346,16 @@ HttpClient::node_obj()
 #ifdef XAPIAND_CLUSTERING
 		{ RESPONSE_CLUSTER_NAME, opts.cluster_name },
 #endif
-		{ RESPONSE_SERVER, Package::STRING },
+		{ RESPONSE_SERVER, {
+			{"name", Package::NAME},
+			{"url", Package::URL},
+			{"version", Package::VERSION},
+			{"revision", Package::REVISION},
+			{"hash", Package::HASH},
+			{"compiler", check_compiler()},
+			{"os", check_OS()},
+			{"arch", check_architecture()},
+		} },
 		{ RESPONSE_URL, Package::BUGREPORT },
 		{ RESPONSE_VERSIONS, {
 			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
