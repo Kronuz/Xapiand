@@ -25,6 +25,7 @@
 #include <cassert>                            // for assert
 #include <errno.h>                            // for errno
 #include <fcntl.h>
+#include <limits.h>                           // for PATH_MAX
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sysexits.h>
@@ -1332,7 +1333,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), NAMEOF_ENUM(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
-				char path[PATH_MAX];
+				char path[PATH_MAX + 1];
 				if (temp_directory.empty()) {
 					if (temp_directory_template.empty()) {
 						temp_directory = "/tmp";

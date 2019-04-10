@@ -27,6 +27,7 @@
 #include <cassert>                            // for assert
 #include <errno.h>                            // for errno
 #include <fcntl.h>
+#include <limits.h>                           // for PATH_MAX
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sysexits.h>
@@ -593,7 +594,7 @@ ReplicationProtocolClient::reply_db_header(const std::string& message)
 
 	reset();
 
-	char path[PATH_MAX];
+	char path[PATH_MAX + 1];
 	strncpy(path, temp_directory_template.c_str(), PATH_MAX);
 	build_path_index(temp_directory_template);
 	if (io::mkdtemp(path) == nullptr) {
@@ -826,7 +827,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		L_REPLICA_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), NAMEOF_ENUM(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
-				char path[PATH_MAX];
+				char path[PATH_MAX + 1];
 				if (temp_directory.empty()) {
 					if (temp_directory_template.empty()) {
 						temp_directory = "/tmp";

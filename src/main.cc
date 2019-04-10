@@ -30,6 +30,7 @@
 #include <errno.h>                                // for errno
 #include <fcntl.h>                                // for O_RDWR, O_CREAT
 #include <grp.h>                                  // for getgrgid, group, getgrnam, gid_t
+#include <limits.h>                               // for PATH_MAX
 #include <memory>                                 // for std::make_unique
 #include <pwd.h>                                  // for passwd, getpwnam, getpwuid
 #include <signal.h>                               // for NSIG, sigaction, signal, SIG_IGN, SIGHUP
@@ -683,7 +684,7 @@ void usedir(std::string_view path, bool force) {
 		throw SystemExit(EX_OSFILE);
 	}
 
-	char buffer[PATH_MAX];
+	char buffer[PATH_MAX + 1];
 	if (getcwd(buffer, sizeof(buffer)) == nullptr) {
 		L_CRIT("Cannot get current working directory");
 		throw SystemExit(EX_OSFILE);

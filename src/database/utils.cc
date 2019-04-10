@@ -135,7 +135,7 @@ void json_load(rapidjson::Document& doc, std::string_view str)
 		constexpr size_t tabsize = 3;
 		std::string tabs(tabsize, ' ');
 		auto offset = parse_done.Offset();
-		char buffer[20];
+		char buffer[22];
 		auto a = str.substr(0, offset);
 		auto line = std::count(a.begin(), a.end(), '\n') + 1;
 		if (line > 1) {
