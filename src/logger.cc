@@ -524,13 +524,13 @@ Logging::operator()()
 			// No timestamp
 		} else if (opts.log_epoch) {
 			auto epoch = static_cast<int>(timestamp);
-			msg.append(std::string_view(rgb(94, 94, 94)));
+			msg.append(rgb(94, 94, 94));
 			msg.append(string::format("{:010}", epoch));
 			if (opts.log_microseconds) {
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.append(string::format("{:.6}", timestamp - epoch).erase(0, 1));
 			} else if (opts.log_milliseconds) {
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.append(string::format("{:.3}", timestamp - epoch).erase(0, 1));
 			} else if (opts.log_plainseconds) {
 					// Use plain seconds only
@@ -539,56 +539,56 @@ Logging::operator()()
 		} else {
 			auto tm = Datetime::to_tm_t(timestamp);
 			if (opts.log_iso8601) {
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:04}", tm.year));
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.push_back('-');
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.mon));
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.push_back('-');
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.day));
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.push_back(' ');
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.hour));
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.push_back(':');
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.min));
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.push_back(':');
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.sec));
 				if (opts.log_microseconds) {
-					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.append(rgb(60, 60, 60));
 					msg.append(string::format("{:.6}", tm.fsec).erase(0, 1));
 				} else if (opts.log_milliseconds) {
-					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.append(rgb(60, 60, 60));
 					msg.append(string::format("{:.3}", tm.fsec).erase(0, 1));
 				} else if (opts.log_plainseconds) {
 					// Use plain seconds only
 				}
 				msg.push_back(' ');
 			} else {
-				msg.append(std::string_view(rgb(60, 60, 60)));
+				msg.append(rgb(60, 60, 60));
 				msg.append(string::format("{:04}", tm.year));
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.mon));
-				msg.append(std::string_view(rgb(162, 162, 162)));
+				msg.append(rgb(162, 162, 162));
 				msg.append(string::format("{:02}", tm.day));
-				msg.append(std::string_view(rgb(230, 230, 230)));
+				msg.append(rgb(230, 230, 230));
 				msg.append(string::format("{:02}", tm.hour));
-				msg.append(std::string_view(rgb(162, 162, 162)));
+				msg.append(rgb(162, 162, 162));
 				msg.append(string::format("{:02}", tm.min));
-				msg.append(std::string_view(rgb(94, 94, 94)));
+				msg.append(rgb(94, 94, 94));
 				msg.append(string::format("{:02}", tm.sec));
 				if (opts.log_microseconds) {
-					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.append(rgb(60, 60, 60));
 					msg.append(string::format("{:.6}", tm.fsec).erase(0, 1));
 				} else if (opts.log_milliseconds) {
-					msg.append(std::string_view(rgb(60, 60, 60)));
+					msg.append(rgb(60, 60, 60));
 					msg.append(string::format("{:.3}", tm.fsec).erase(0, 1));
 				} else if (opts.log_plainseconds) {
 					// Use plain seconds only
