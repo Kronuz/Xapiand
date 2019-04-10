@@ -33,16 +33,16 @@ class Humanize {
 	long double base;
 	long double div;
 	std::vector<long double> scaling;
-	std::vector<std::string> units;
-	std::vector<std::string> colors;
+	std::vector<std::string_view> units;
+	std::vector<std::string_view> colors;
 	size_t needle;
 
 public:
 	Humanize(
 		long double base_,
 		std::vector<long double>&& scaling_,
-		std::vector<std::string>&& units_,
-		std::vector<std::string>&& colors_
+		std::vector<std::string_view>&& units_,
+		std::vector<std::string_view>&& colors_
 	) :
 		base(base_),
 		div(std::log(base)),
