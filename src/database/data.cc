@@ -188,6 +188,7 @@ Locator::data() const
 		return "";
 	}
 	switch (type) {
+		default:
 		case Type::inplace:
 		case Type::stored:
 			return raw;

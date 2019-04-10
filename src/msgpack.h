@@ -2728,6 +2728,7 @@ inline std::string MsgPack::as_str() const {
 			return "<" + to_string() + ">";
 		case Type::BIN:
 			return "<" + std::string(_const_body->_obj->via.str.ptr, _const_body->_obj->via.str.size) + ">";
+		default:
 		case Type::UNDEFINED:
 			return "<undefined>";
 	}

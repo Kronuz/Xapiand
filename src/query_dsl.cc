@@ -464,6 +464,7 @@ QueryDSL::get_acc_date_query(const required_spc_t& field_spc, std::string_view f
 
 	Datetime::tm_t tm = Datetime::DatetimeParser(obj);
 	switch (get_accuracy_datetime(field_accuracy.substr(1))) {
+		default:
 		case UnitTime::second: {
 			Datetime::tm_t _tm(tm.year, tm.mon, tm.day, tm.hour, tm.min, tm.sec);
 			return Xapian::Query(prefixed(Serialise::serialise(_tm), field_spc.prefix(), required_spc_t::get_ctype(FieldType::datetime)), wqf);

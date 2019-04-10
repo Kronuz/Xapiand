@@ -432,6 +432,7 @@ public:
 
 	MsgPack get_result() override {
 		switch (_sort) {
+			default:
 			case Sort::by_index:
 				return _get_result<CmpByIndex>();
 			case Sort::by_key_asc:
