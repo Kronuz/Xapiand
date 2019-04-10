@@ -39,8 +39,8 @@
 // #define L_ERRNO L_ORANGE_RED
 
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wgnu-statement-expression"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-statement-expression"
 
 namespace io {
 
@@ -397,4 +397,4 @@ int close(int fd) {
 }
 #endif
 
-#pragma GCC diagnostic pop
+#pragma clang diagnostic pop
