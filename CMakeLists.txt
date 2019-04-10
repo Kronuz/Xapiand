@@ -756,54 +756,70 @@ endif ()
 
 # Add compiler flags.
 add_required_cxx_compiler_flag("-std=c++17")
-
-add_cxx_compiler_flag("-fdiagnostics-color=always")
 add_cxx_compiler_flag("-fno-common")
 
 if (XAPIAND_LTO)
 	add_cxx_compiler_flag("-flto" RELEASE)
 endif ()
 
-add_cxx_compiler_flag("-Wall")
-add_cxx_compiler_flag("-Wextra")
-add_cxx_compiler_flag("-Wshadow")
-add_cxx_compiler_flag("-Wpointer-arith")
-add_cxx_compiler_flag("-Wformat-security")
-add_cxx_compiler_flag("-Wredundant-decls")
-add_cxx_compiler_flag("-Woverloaded-virtual")
-add_cxx_compiler_flag("-Wmissing-declarations")
-add_cxx_compiler_flag("-Wimplicit-fallthrough")
-add_cxx_compiler_flag("-Winit-self")
-add_cxx_compiler_flag("-Wcast-align")
-# add_cxx_compiler_flag("-Wundef")
-# add_cxx_compiler_flag("-Wcast-qual")
-# add_cxx_compiler_flag("-Wshorten-64-to-32") ##
-# add_cxx_compiler_flag("-Wfloat-equal") ##
-
-# Disable certain warnings.
-add_cxx_compiler_flag("-Wno-unknown-pragmas")
-add_cxx_compiler_flag("-Wno-variadic-macros")
-add_cxx_compiler_flag("-Wno-gnu-anonymous-struct")
-add_cxx_compiler_flag("-fno-gnu-keywords")
-
+# add_cxx_compiler_flag("-fno-gnu-keywords")
+add_cxx_compiler_flag("-fdiagnostics-color=always")
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+	#   ____ _
+	#  / ___| | __ _ _ __   __ _
+	# | |   | |/ _` | '_ \ / _` |
+	# | |___| | (_| | | | | (_| |
+	#  \____|_|\__,_|_| |_|\__, |
+	#                      |___/
 	message(STATUS "Compiler: Clang (${CMAKE_CXX_COMPILER_ID})")
+	add_cxx_compiler_flag("-Qunused-arguments")
+
 	add_cxx_compiler_flag("-pedantic")
 	add_cxx_compiler_flag("-pedantic-errors")
+
+	# Treat warnings as errors.
 	# add_cxx_compiler_flag("-Werror" RELEASE)
 	# add_cxx_compiler_flag("-Werror" MINSIZEREL)
+
+	# Enable warnings.
+	add_cxx_compiler_flag("-Wall")
+	add_cxx_compiler_flag("-Wextra")
+	add_cxx_compiler_flag("-Wshadow")
+	add_cxx_compiler_flag("-Wpointer-arith")
+	add_cxx_compiler_flag("-Wformat-security")
+	add_cxx_compiler_flag("-Wredundant-decls")
+	add_cxx_compiler_flag("-Woverloaded-virtual")
+	add_cxx_compiler_flag("-Wmissing-declarations")
+	add_cxx_compiler_flag("-Wimplicit-fallthrough")
+	add_cxx_compiler_flag("-Winit-self")
+	add_cxx_compiler_flag("-Wcast-align")
 	add_cxx_compiler_flag("-Wstrict-aliasing")
 	add_cxx_compiler_flag("-Wsuggest-final-types")
+	# add_cxx_compiler_flag("-Wundef") ##
+	# add_cxx_compiler_flag("-Wcast-qual") ##
+	# add_cxx_compiler_flag("-Wshorten-64-to-32") ##
+	# add_cxx_compiler_flag("-Wfloat-equal") ##
+
+	# Disable certain warnings.
+	add_cxx_compiler_flag("-Wno-unknown-pragmas")
+	add_cxx_compiler_flag("-Wno-variadic-macros")
+	add_cxx_compiler_flag("-Wno-gnu-anonymous-struct")
 	add_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments")
-	add_cxx_compiler_flag("-Qunused-arguments")
+
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+	#    ____  ____ ____
+	#  / ___|/ ___/ ___|
+	# | |  _| |  | |
+	# | |_| | |__| |___
+	# \____|\____\____|
+	#
 	message(STATUS "Compiler: GCC (${CMAKE_CXX_COMPILER_ID})")
-	add_cxx_compiler_flag("-Wno-shadow")
-elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
-	message(STATUS "Compiler: Intel C++ (${CMAKE_CXX_COMPILER_ID})")
-elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
-	message(STATUS "Compiler: Visual Studio C++ (${CMAKE_CXX_COMPILER_ID})")
+
+	# Disable certain warnings.
+	add_cxx_compiler_flag("-Wno-attributes")
+	add_cxx_compiler_flag("-Wno-subobject-linkage")
+
 else ()
 	message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 endif ()
