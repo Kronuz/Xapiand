@@ -105,7 +105,6 @@ public:
 	constexpr operator const char* () const { return _data; }
 	constexpr operator std::string_view() const { return std::string_view(_data, N); }
 	operator std::string() const { return std::string(_data, N); }
-
 };
 
 
@@ -285,7 +284,7 @@ std::string operator+(const TL& l, const static_string<NR, TR>& r)
 template <std::size_t N, typename T>
 struct fmt::formatter<static_string::static_string<N, T>> : fmt::formatter<std::string_view> {
 	auto format(const static_string::static_string<N, T>& val, format_context& ctx) {
-		return fmt::formatter<std::string_view>::format(std::string_view(val), ctx);
+		return fmt::formatter<std::string_view>::format(std::string_view(val.data(), val.size()), ctx);
 	}
 };
 
