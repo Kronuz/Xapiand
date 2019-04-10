@@ -16,8 +16,8 @@ Xapiand is written in C++17 and it has the following build requirements:
 
 * pkg-config
 * Ninja (optional)
-* Clang >= 5.0
-* CMake >= 3.5
+* Clang >= 5.0 or GCC >= 8.0
+* CMake >= 3.12
 * perl >= 5.6 (for a few building scripts)
 * Tcl >= 8.6  (to generate unicode/unicode-data.cc)
 
