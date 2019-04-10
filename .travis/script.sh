@@ -34,13 +34,15 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 
 	# Build the Bottle
 	HOMEBREW_PACKAGE_HASH=$PACKAGE_HASH brew install --build-bottle --verbose Kronuz/tap/xapiand
-	PACKAGE_BOTTLE_SHA256=$(brew bottle --no-rebuild Kronuz/tap/xapiand | grep sha256)
-	PACKAGE_BOTTLE_SHA256_NL=$(echo '\'; echo "$PACKAGE_BOTTLE_SHA256")
-	PACKAGE_TYPE=$(echo $PACKAGE_BOTTLE_SHA256 | awk '{ print $4 }')
-	PACKAGE_TYPE_EXT=$(echo $PACKAGE_TYPE | tr ':' '.')
-	PACKAGE_BOTTLE="xapiand-${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz"
 
 	if [ ! -z "${TRAVIS_TAG}" ]; then
+		# Bottle the Build
+		PACKAGE_BOTTLE_SHA256=$(brew bottle --no-rebuild Kronuz/tap/xapiand | grep sha256)
+		PACKAGE_BOTTLE_SHA256_NL=$(echo '\'; echo "$PACKAGE_BOTTLE_SHA256")
+		PACKAGE_TYPE=$(echo $PACKAGE_BOTTLE_SHA256 | awk '{ print $4 }')
+		PACKAGE_TYPE_EXT=$(echo $PACKAGE_TYPE | tr ':' '.')
+		PACKAGE_BOTTLE="xapiand-${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz"
+
 		# The building could have taken several minutes, so we reset the modified
 		# file, pull changes and modify again adding the new Bottle
 		git checkout Formula/xapiand.rb
