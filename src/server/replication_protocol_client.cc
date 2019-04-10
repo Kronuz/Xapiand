@@ -76,8 +76,6 @@
  *           |_|
  */
 
-template class BaseClient<ReplicationProtocolClient>;  // declare base class
-
 
 ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: BaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),

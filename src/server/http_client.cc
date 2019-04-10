@@ -202,8 +202,6 @@ bool can_preview(const ct_type_t& ct_type) {
  *               |_|
  */
 
-template class BaseClient<HttpClient>;  // declare base class
-
 
 HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
 	: BaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_),

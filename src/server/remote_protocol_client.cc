@@ -88,8 +88,6 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
  * Based on xapian/xapian-core/net/remoteserver.cc @ 62d608e
  */
 
-template class BaseClient<RemoteProtocolClient>;  // declare base class
-
 
 RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: BaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
