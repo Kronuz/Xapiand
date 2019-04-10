@@ -2,7 +2,8 @@
 title: Cluster
 ---
 
-The most basic kind of information you can get is the cluster information:
+The most basic kind of information you can get is the cluster information
+from the root index and the [Indices API]({{ '/docs/reference-guide/indices' | relative_url }}):
 
 {% capture req %}
 
@@ -19,16 +20,19 @@ The response contains:
 * `server`         - Server version string.
 * `versions`       - Versions of the internal libraries.
 * `options`        - Currently active options.
+* `nodes`          - List of cluster nodes.
 
 
 ## List Nodes
 
-You can list all nodes in the cluster by using the `:nodes` endpoint.
+You can explicitly list all nodes in the cluster by using the
+[Indices API]({{ '/docs/reference-guide/indices' | relative_url }}) and
+a [Drill Selector]({{ '/docs/exploration#drill-selector' | relative_url }}):
 
 {% capture req %}
 
 ```json
-GET /:nodes
+GET /.nodes
 ```
 {% endcapture %}
 {% include curl.html req=req %}
