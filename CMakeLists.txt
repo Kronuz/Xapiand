@@ -90,7 +90,8 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_CMAKE_BUILD_TYPE)
 
-set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
+# Setup CMAKE_CXX_FLAGS flags.
+set (CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG -fstack-protector-strong")
 if (XAPIAND_ASSERTS)
 	set (CMAKE_CXX_FLAGS_RELEASE "-O3")
 	set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
@@ -752,9 +753,6 @@ endif ()
 ########################################################################
 # Compiler Flags
 ########################################################################
-
-# Setup CMAKE_CXX_FLAGS Debug flags.
-set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -fstack-protector-strong")
 
 # Add compiler flags.
 add_required_cxx_compiler_flag("-std=c++17")
