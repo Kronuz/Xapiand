@@ -466,8 +466,14 @@ void __cxa_free_dependent_exception(void* thrown_object) noexcept
 	orig_cxa_free_dependent_exception(thrown_object);
 }
 
-typedef void (*cxa_throw_type)(void*, std::type_info*, void (*)(void*));
-void __cxa_throw(void* thrown_object, std::type_info* tinfo, void (*dest)(void*))
+// GCC's built-in protype for __cxa_throw uses 'void *', not 'std::type_info *'
+#ifdef __clang__
+typedef std::type_info __cxa_throw_type_info_t;
+#else
+typedef void __cxa_throw_type_info_t;
+#endif
+typedef void (*cxa_throw_type)(void*, __cxa_throw_type_info_t*, void (*)(void*));
+void __cxa_throw(void* thrown_object, __cxa_throw_type_info_t* tinfo, void (*dest)(void*))
 {
 	// save callstack for exception (at the start of the reserved memory)
 	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
