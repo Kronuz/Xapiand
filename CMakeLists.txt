@@ -24,6 +24,8 @@ cmake_minimum_required(VERSION 3.12)
 project(xapiand C CXX)
 cmake_policy(SET CMP0074 NEW)
 
+message(STATUS "CMake v${CMAKE_VERSION}")
+
 # Make sure we can import out CMake functions
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -240,7 +242,6 @@ if (HAVE_FLAG_STDLIB_LIBCPP)
 		else ()
 			set (HAVE_LIBCPPABI 0)
 			set (LIBCPP_LIBRARIES "")
-			set (LIBCPPABI_LIBRARIES "")
 		endif ()
 	else ()
 		set (HAVE_LIBCPP 0)
