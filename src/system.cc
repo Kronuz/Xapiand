@@ -229,9 +229,9 @@ std::size_t get_max_files_system_wide()
 		return 0;
 	}
 	char* field = line;
-	field = strchar(field, '\t');
-	if (field) field = strchar(field, '\t');
-	if (field) max_files_system_wide = atoi(field);
+	field = strchr(field, '\t');
+	if (field) field = strchr(field + 1, '\t');
+	if (field) max_files_system_wide = atoi(field + 1);
 	else {
 		L_ERR("ERROR: Unable to retrieve data from /proc/sys/fs/file-nr: {} ({}): {}", error::name(errno), errno, error::description(errno));
 		return 0;
