@@ -1,10 +1,6 @@
 #!/bin/sh
 set -eux
 
-if [ -z "${TRAVIS_TAG}" ]; then
-	exit 0
-fi
-
 if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 	# Under OSX, build a bottle:
 	set -o pipefail
@@ -44,29 +40,30 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 	PACKAGE_TYPE_EXT=$(echo $PACKAGE_TYPE | tr ':' '.')
 	PACKAGE_BOTTLE="xapiand-${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz"
 
-	# The building could have taken several minutes, so we reset the modified
-	# file, pull changes and modify again adding the new Bottle
-	git checkout Formula/xapiand.rb
-	git pull
-	sed -i '' "s#^  url .*#  url \"${PACKAGE_URL}\"#" Formula/xapiand.rb
-	sed -i '' "s#^  sha256 .*#  sha256 \"${PACKAGE_SHA256}\"#" Formula/xapiand.rb
-	grep -v $PACKAGE_TYPE Formula/xapiand.rb > Formula/xapiand.rb.tmp
-	sed "s#^    cellar :any#    cellar :any${PACKAGE_BOTTLE_SHA256_NL}#" Formula/xapiand.rb.tmp > Formula/xapiand.rb
-	rm -f Formula/xapiand.rb.tmp
+	if [ -z "${TRAVIS_TAG}" ]; then
+		# The building could have taken several minutes, so we reset the modified
+		# file, pull changes and modify again adding the new Bottle
+		git checkout Formula/xapiand.rb
+		git pull
+		sed -i '' "s#^  url .*#  url \"${PACKAGE_URL}\"#" Formula/xapiand.rb
+		sed -i '' "s#^  sha256 .*#  sha256 \"${PACKAGE_SHA256}\"#" Formula/xapiand.rb
+		grep -v $PACKAGE_TYPE Formula/xapiand.rb > Formula/xapiand.rb.tmp
+		sed "s#^    cellar :any#    cellar :any${PACKAGE_BOTTLE_SHA256_NL}#" Formula/xapiand.rb.tmp > Formula/xapiand.rb
+		rm -f Formula/xapiand.rb.tmp
 
-	# Commit and push the Formula
-	git add -u
-	git commit --message "Xapiand updated to v${PACKAGE_VERSION} via Travis build ${TRAVIS_BUILD_NUMBER}"
-	git push --quiet origin master
+		# Commit and push the Formula
+		git add -u
+		git commit --message "Xapiand updated to v${PACKAGE_VERSION} via Travis build ${TRAVIS_BUILD_NUMBER}"
+		git push --quiet origin master
 
-	# Add, commit and push Bottle
-	git fetch --depth 1 origin gh-pages:gh-pages
-	git checkout gh-pages
-	mv "xapiand--${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz" "${PACKAGE_BOTTLE}"
-	git add "${PACKAGE_BOTTLE}"
-	git commit --message "${PACKAGE_BOTTLE}"
-	git push --quiet origin gh-pages
-
+		# Add, commit and push Bottle
+		git fetch --depth 1 origin gh-pages:gh-pages
+		git checkout gh-pages
+		mv "xapiand--${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz" "${PACKAGE_BOTTLE}"
+		git add "${PACKAGE_BOTTLE}"
+		git commit --message "${PACKAGE_BOTTLE}"
+		git push --quiet origin gh-pages
+	fi
 else
 	# Everywhere else build as usual:
 	mkdir -p build
