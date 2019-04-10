@@ -1111,6 +1111,26 @@ endforeach ()
 
 
 ########################################################################
+
+# Fix error: '_Atomic' does not name a type (GCC under macOS)
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+	check_cxx_source_runs("
+	#include <stdatomic.h>
+	int main() {
+	#ifndef _Atomic
+		return 1;
+	#else
+		return 0;
+	#endif
+	}
+	}" ATOMIC_AVAILABLE)
+	if (NOT ATOMIC_AVAILABLE)
+		set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_Atomic=volatile")
+	endif ()
+endif ()
+
+
+########################################################################
 # sparsehash Flags
 ########################################################################
 
