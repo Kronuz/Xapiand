@@ -39,6 +39,7 @@
 #include "io.hh"                    // for io::*
 #include "log.h"                    // for L_ERR, L_WARNING, L_INFO
 #include "likely.h"                 // for likely, unlikely
+#include "string.hh"                // for string::format
 
 
 #ifndef OPEN_MAX
@@ -246,13 +247,13 @@ std::size_t get_max_files_system_wide()
 
 std::string check_compiler() {
 #ifdef _MSC_VER
-	return "Visual Studio";
+	return string::format("Visual Studio {}", _MSC_VER);
 #elif __clang__
-	return "clang";
+    return string::format("Clang v{}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif __GNUC__
-	return "gcc";
+    return string::format("GCC v{}.{}.{}", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
-	return "Unknown compiler";
+	return "Unknown Compiler";
 #endif
 }
 
@@ -286,6 +287,6 @@ std::string check_architecture() {
 #elif __aarch64__
 	return "aarch64";
 #else
-	return "Unknown architecture";
+	return "Unknown Architecture";
 #endif
 }
