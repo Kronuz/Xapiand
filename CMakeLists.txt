@@ -20,11 +20,11 @@
 # THE SOFTWARE.
 #
 
+message(STATUS "CMake v${CMAKE_VERSION}")
+
 cmake_minimum_required(VERSION 3.12)
 project(xapiand C CXX)
 cmake_policy(SET CMP0074 NEW)
-
-message(STATUS "CMake v${CMAKE_VERSION}")
 
 # Make sure we can import out CMake functions
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
