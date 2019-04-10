@@ -154,9 +154,9 @@ public:
 	Response();
 
 	Response(const Response&) = delete;
-	Response(Response&&) = default;
+	Response(Response&&) = delete;
 	Response& operator=(const Response&) = delete;
-	Response& operator=(Response&&) = default;
+	Response& operator=(Response&&) = delete;
 
 	std::string to_text(bool decode);
 };
@@ -238,9 +238,9 @@ public:
 	~Request() noexcept;
 
 	Request(const Request&) = delete;
-	Request(Request&&) = default;
+	Request(Request&&) = delete;
 	Request& operator=(const Request&) = delete;
-	Request& operator=(Request&&) = default;
+	Request& operator=(Request&&) = delete;
 
 	bool append(const char* at, size_t length);
 
