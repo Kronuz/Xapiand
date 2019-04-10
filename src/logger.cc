@@ -66,15 +66,15 @@ std::vector<std::unique_ptr<Logger>> Logging::handlers;
 
 #define MAX_PRIORITY (LOG_DEBUG + 1)
 static const std::string priorities[MAX_PRIORITY + 1] = {
-	EMERG_COL   + "█" + CLEAR_COLOR, // LOG_EMERG    0 = System is unusable
-	ALERT_COL   + "▉" + CLEAR_COLOR, // LOG_ALERT    1 = Action must be taken immediately
-	CRIT_COL    + "▊" + CLEAR_COLOR, // LOG_CRIT     2 = Critical conditions
-	ERR_COL     + "▋" + CLEAR_COLOR, // LOG_ERR      3 = Error conditions
-	WARNING_COL + "▌" + CLEAR_COLOR, // LOG_WARNING  4 = Warning conditions
-	NOTICE_COL  + "▍" + CLEAR_COLOR, // LOG_NOTICE   5 = Normal but significant condition
-	INFO_COL    + "▎" + CLEAR_COLOR, // LOG_INFO     6 = Informational
-	DEBUG_COL   + "▏" + CLEAR_COLOR, // LOG_DEBUG    7 = Debug-level messages
-	NO_COLOR,                        // VERBOSE    > 7 = Verbose messages
+	std::string(EMERG_COL   + "█" + CLEAR_COLOR), // LOG_EMERG    0 = System is unusable
+	std::string(ALERT_COL   + "▉" + CLEAR_COLOR), // LOG_ALERT    1 = Action must be taken immediately
+	std::string(CRIT_COL    + "▊" + CLEAR_COLOR), // LOG_CRIT     2 = Critical conditions
+	std::string(ERR_COL     + "▋" + CLEAR_COLOR), // LOG_ERR      3 = Error conditions
+	std::string(WARNING_COL + "▌" + CLEAR_COLOR), // LOG_WARNING  4 = Warning conditions
+	std::string(NOTICE_COL  + "▍" + CLEAR_COLOR), // LOG_NOTICE   5 = Normal but significant condition
+	std::string(INFO_COL    + "▎" + CLEAR_COLOR), // LOG_INFO     6 = Informational
+	std::string(DEBUG_COL   + "▏" + CLEAR_COLOR), // LOG_DEBUG    7 = Debug-level messages
+	std::string(NO_COLOR),                        // VERBOSE    > 7 = Verbose messages
 };
 
 
