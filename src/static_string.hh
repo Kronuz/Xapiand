@@ -104,7 +104,6 @@ public:
 
 	constexpr operator const char* () const { return _data; }
 	constexpr operator std::string_view() const { return std::string_view(_data, N); }
-	operator std::string() const { return std::string(_data, N); }
 };
 
 
@@ -206,7 +205,6 @@ public:
 
 	constexpr operator const char* () const { return _data; }
 	constexpr operator std::string_view() const { return std::string_view(_data, N); }
-	operator std::string() const { return std::string(_data, N); }
 };
 
 
