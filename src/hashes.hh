@@ -285,12 +285,78 @@ using djb2h32 = djb2h<std::uint32_t, 33, 5381>;  // the one implemented everywhe
 using djb2h64 = djb2h<std::uint64_t, 63, 174440041L>;  // (h << 6) - h <-- mul should? be prime 61 or 67
 
 
+// Integer Mixers
+// [https://gist.github.com/badboy/6267743]
+
+struct mixer {
+	template <typename T>
+	constexpr static uint64_t mix64(T val) {
+		static_assert(sizeof(T) <= sizeof(uint64_t), "");
+		uint64_t key = static_cast<uint64_t>(val);
+		key = (~key) + (key << 21); // key = (key << 21) - key - 1;
+		key = key ^ (key >> 24);
+		key = key * 265; // key = (key + (key << 3)) + (key << 8);
+		key = key ^ (key >> 14);
+		key = key * 21; // key = (key + (key << 2)) + (key << 4);
+		key = key ^ (key >> 28);
+		key = key + (key << 31);
+		return key;
+	}
+
+	constexpr static uint64_t mix(unsigned long long key) {
+		return mix64(key);
+	}
+	constexpr static uint64_t mix(long long key) {
+		return mix64(key);
+	}
+	constexpr static uint64_t mix(unsigned long key) {
+		return mix64(key);
+	}
+	constexpr static uint64_t mix(long key) {
+		return mix64(key);
+	}
+
+	template <typename T>
+	constexpr static uint32_t mix32(T val) {
+		static_assert(sizeof(T) <= sizeof(uint32_t), "");
+		uint32_t key = static_cast<uint32_t>(val);
+		key = (~key) + (key << 15); // key = (key << 15) - key - 1;
+		key = key ^ (key >> 12);
+		key = key + (key << 2);
+		key = key ^ (key >> 4);
+		key = key * 2057; // key = (key + (key << 3)) + (key << 11);
+		key = key ^ (key >> 16);
+		return key;
+	}
+	constexpr static uint32_t mix(unsigned int key) {
+		return mix32(key);
+	}
+	constexpr static uint32_t mix(int key) {
+		return mix32(key);
+	}
+	constexpr static uint32_t mix(unsigned short key) {
+		return mix32(key);
+	}
+	constexpr static uint32_t mix(short key) {
+		return mix32(key);
+	}
+	constexpr static uint32_t mix(unsigned char key) {
+		return mix32(key);
+	}
+	constexpr static uint32_t mix(char key) {
+		return mix32(key);
+	}
+};
+
+
 //
 
 #define hh(s) fnv1ah32::hash(s)
 #define hhl(s) fnv1ah32ci::hash(s)
-#define fhh(s) find(fnv1ah32::hash(s))
-#define fhhl(s) find(fnv1ah32ci::hash(s))
+#define fhh(s) find(hh(s))
+#define fhhl(s) find(hhl(s))
+#define hmix(n) mixer::mix(n)
+#define fhmix(n) find(hmix(n))
 
 
 //
