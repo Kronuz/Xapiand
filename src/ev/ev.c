@@ -40,9 +40,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcomment"
 #pragma GCC diagnostic ignored "-Wunused-value"
-#pragma GCC diagnostic ignored "-Wextern-initializer"
-#pragma GCC diagnostic ignored "-Wbitwise-op-parentheses"
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wextern-initializer"
+#pragma clang diagnostic ignored "-Wbitwise-op-parentheses"
 
 /* this big block deduces configuration from config.h */
 #ifndef EV_STANDALONE
@@ -5151,5 +5152,6 @@ ev_walk (EV_P_ int types, void (*cb)(EV_P_ int type, void *w)) EV_THROW
 #if EV_MULTIPLICITY
   #include "ev_wrap.h"
 #endif
+#pragma clang diagnostic pop
 #pragma GCC diagnostic pop
 
