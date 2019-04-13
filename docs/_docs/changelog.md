@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #unreleased }
 
 
+---
+## [0.19.3] - 2019-04-12
+{: #v0-19-3 }
+
+### Added
+- GCC 7 and GCC 8 support (and libstdc++)
+
+### Changed
+- Refactored pfh module
+- Using ENUM() with minimal perfect hash functions (improves performance)
+
 
 ---
 ## [0.19.2] - 2019-04-09
