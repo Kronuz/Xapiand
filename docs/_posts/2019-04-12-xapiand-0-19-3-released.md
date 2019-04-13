@@ -6,7 +6,7 @@ version: 0.19.3
 categories: [release]
 ---
 
-Added support for GCC 7 and GCC 8.
+Added support for GCC 7 and GCC 8 and upgraded xapian-core.
 
 
 ### Added
@@ -15,3 +15,4 @@ Added support for GCC 7 and GCC 8.
 ### Changed
 - Refactored pfh module
 - Using ENUM() with minimal perfect hash functions (improves performance)
+- Upgraded xapian-core to latest 1.5 (git@84ccecdfb8938b4011aac0bf9539c139204acd22)

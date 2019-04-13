@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.19.4] - 2019-04-13
+{: #v0-19-4 }
+
+### Fixed
+- Compilation using cmake 3.5 (use static libraries instead of object libraries)
+- Regression which slowed down bulk indexing
+
+
+---
 ## [0.19.3] - 2019-04-12
 {: #v0-19-3 }
 
@@ -25,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Refactored pfh module
 - Using ENUM() with minimal perfect hash functions (improves performance)
+- Upgraded xapian-core to latest 1.5 (git@84ccecdfb8938b4011aac0bf9539c139204acd22)
 
 
 ---
@@ -604,7 +614,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.3...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.4...HEAD
+[0.19.4]: https://github.com/Kronuz/Xapiand/compare/v0.19.3...v0.19.4
 [0.19.3]: https://github.com/Kronuz/Xapiand/compare/v0.19.2...v0.19.3
 [0.19.2]: https://github.com/Kronuz/Xapiand/compare/v0.19.1...v0.19.2
 [0.19.1]: https://github.com/Kronuz/Xapiand/compare/v0.19.0...v0.19.1
