@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.19.5] - 2019-04-13
+{: #v0-19-5 }
+
+### Fixed
+- Throttling of commits (exception was being thrown)
+
+
+---
 ## [0.19.4] - 2019-04-13
 {: #v0-19-4 }
 
@@ -614,7 +622,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.4...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.5...HEAD
+[0.19.5]: https://github.com/Kronuz/Xapiand/compare/v0.19.4...v0.19.5
 [0.19.4]: https://github.com/Kronuz/Xapiand/compare/v0.19.3...v0.19.4
 [0.19.3]: https://github.com/Kronuz/Xapiand/compare/v0.19.2...v0.19.3
 [0.19.2]: https://github.com/Kronuz/Xapiand/compare/v0.19.1...v0.19.2
