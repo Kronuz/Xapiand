@@ -55,6 +55,14 @@
 
 namespace CJK {
 
+/** Should we use the CJK n-gram code?
+ *
+ *  The first time this is called it reads the environment variable
+ *  XAPIAN_CJK_NGRAM and returns true if it is set to a non-empty value.
+ *  Subsequent calls cache and return the same value.
+ */
+bool is_cjk_enabled();
+
 bool codepoint_is_cjk(unsigned codepoint);
 
 bool codepoint_is_cjk_wordchar(unsigned codepoint);

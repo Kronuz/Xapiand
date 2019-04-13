@@ -42,7 +42,6 @@ Document::Internal::ensure_terms_fetched() const
 	return;
 
     terms.reset(new map<string, TermInfo>());
-    _terms.reset(new unordered_map<string, map<string, TermInfo>::iterator>());
     termlist_size = 0;
     if (!database.get())
 	return;
@@ -50,11 +49,10 @@ Document::Internal::ensure_terms_fetched() const
     unique_ptr<TermList> t(database->open_term_list(did));
     while (t->next(), !t->at_end()) {
 	++termlist_size;
-	auto termname = t->get_termname();
-	auto&& r = terms->emplace(make_pair(termname,
-					    TermInfo(t->get_wdf())));
-	_terms->emplace(std::make_pair(termname, r.first));
-	TermInfo& term = r.first->second;
+	auto&& r = terms->emplace_hint(terms->end(),
+				       t->get_termname(),
+				       TermInfo(t->get_wdf()));
+	TermInfo& term = r->second;
 	unique_ptr<PositionList> p(t->positionlist_begin());
 	while (p->next()) {
 	    term.append_position(p->get_position());
