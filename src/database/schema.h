@@ -36,7 +36,7 @@
 #include <vector>                                 // for std::vector
 
 #include "database/utils.h"
-#include "enum.h"                                 // for ENUM
+#include "enum.h"                                 // for ENUM_CLASS
 #include "geospatial/htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack
@@ -46,7 +46,7 @@
 #include "xapian.h"                               // for Xapian::QueryParser
 
 
-ENUM(TypeIndex, uint8_t,
+ENUM_CLASS(TypeIndex, uint8_t,
 	NONE                      = 0,                              // 0000  Bits for  "none"
 	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
 	FIELD_VALUES              = 0b0010,                         // 0010  Bit for   "field_values"
@@ -67,7 +67,7 @@ ENUM(TypeIndex, uint8_t,
 )
 
 
-ENUM(UUIDFieldIndex, uint8_t,
+ENUM_CLASS(UUIDFieldIndex, uint8_t,
 	uuid        = 0b0001,  // Indexin using the field name.
 	uuid_field  = 0b0010,  // Indexing using the meta name.
 	both        = 0b0011,  // Indexing using field_uuid and uuid.
@@ -75,7 +75,7 @@ ENUM(UUIDFieldIndex, uint8_t,
 )
 
 
-ENUM(StopStrategy, uint8_t,
+ENUM_CLASS(StopStrategy, uint8_t,
 	stop_none,
 	stop_all,
 	stop_stemmed,
@@ -83,7 +83,7 @@ ENUM(StopStrategy, uint8_t,
 )
 
 
-ENUM(StemStrategy, uint8_t,
+ENUM_CLASS(StemStrategy, uint8_t,
 	stem_none,
 	stem_some,
 	stem_all,
@@ -92,7 +92,7 @@ ENUM(StemStrategy, uint8_t,
 )
 
 
-ENUM(UnitTime, uint64_t,
+ENUM_CLASS(UnitTime, uint64_t,
 	second     = 1,                     // 1                  60
 	minute     = second * 60,           // 60                 60
 	hour       = minute * 60,           // 3600               24
@@ -189,7 +189,7 @@ constexpr uint8_t UUID_CHAR          = 'U';
 constexpr uint8_t SCRIPT_CHAR        = 'X';
 constexpr uint8_t TIME_CHAR          = 'Z';
 
-ENUM(FieldType, uint8_t,
+ENUM_CLASS(FieldType, uint8_t,
 	empty         = EMPTY_CHAR,
 
 	array         = ARRAY_CHAR,

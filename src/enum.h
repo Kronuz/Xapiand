@@ -1334,14 +1334,14 @@ constexpr inline T enum_type(std::string_view);
 		} \
 	}
 
-#define ENUM(Enum, Underlying, ...) \
+#define ENUM_CLASS(Enum, Underlying, ...) \
 	enum class Enum : Underlying { \
 		_ENUM_MAP(_ENUM_TO_SINGLE_EXPRESSION, Enum, __VA_ARGS__) \
 	}; \
 	_ENUM_IMPL(Enum, Underlying, __VA_ARGS__)
 
 
-#define ENUM_C(Enum, ...) \
+#define ENUM(Enum, ...) \
 	extern "C" { \
 	enum Enum { \
 		_ENUM_MAP(_ENUM_TO_SINGLE_EXPRESSION, Enum, __VA_ARGS__) \
@@ -1351,7 +1351,7 @@ constexpr inline T enum_type(std::string_view);
 
 #else // __cplusplus
 
-#define ENUM_C(Enum, ...) \
+#define ENUM(Enum, ...) \
 	enum Enum { \
 		_ENUM_MAP(_ENUM_TO_SINGLE_EXPRESSION, Enum, __VA_ARGS__) \
 	};

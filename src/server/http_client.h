@@ -121,7 +121,7 @@ public:
 };
 
 
-ENUM(Encoding, int,
+ENUM_CLASS(Encoding, int,
 	none,
 	gzip,
 	deflate,
@@ -162,7 +162,7 @@ public:
 };
 
 
-ENUM(RequestMode, int,
+ENUM_CLASS(RequestMode, int,
 	FULL,
 	STREAM,
 	STREAM_NDJSON,

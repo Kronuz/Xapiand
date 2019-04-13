@@ -26,14 +26,14 @@
 
 #include "database/utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
-#include "enum.h"                // for ENUM
+#include "enum.h"                // for ENUM_CLASS
 #include "reserved/schema.h"     // for RESERVED_CHAI
 #include "reserved/types.h"      // for RESERVED_BOOLEAN, ...
 
 
 enum class FieldType : uint8_t;
 
-ENUM(CastHashType, uint32_t,
+ENUM_CLASS(CastHashType, uint32_t,
 	INTEGER,
 	POSITIVE,
 	FLOAT,

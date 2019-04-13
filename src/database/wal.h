@@ -38,7 +38,7 @@
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
-#include "enum.h"                           // for ENUM
+#include "enum.h"                           // for ENUM_CLASS
 #include "lru.h"                            // for lru::LRU
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
@@ -111,7 +111,7 @@ struct WalBinFooter {
 #pragma pack(pop)
 
 
-ENUM(DatabaseWALType, uint8_t,
+ENUM_CLASS(DatabaseWALType, uint8_t,
 	COMMIT,
 	REPLACE_DOCUMENT,
 	DELETE_DOCUMENT,

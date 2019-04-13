@@ -92,7 +92,7 @@
 #define HTTP_SINGLE_STATUS(num, name, string) HTTP_STATUS_##name = num,
 #define HTTP_TO_STATUS() HTTP_STATUS_MAP(HTTP_SINGLE_STATUS)
 
-ENUM_C(http_status,
+ENUM(http_status,
   HTTP_TO_STATUS()
 )
 
@@ -138,12 +138,12 @@ ENUM_C(http_status,
 #define HTTP_SINGLE_METHOD(num, name, string) HTTP_##name = num,
 #define HTTP_TO_METHOD() HTTP_METHOD_MAP(HTTP_SINGLE_METHOD)
 
-ENUM_C(http_method,
+ENUM(http_method,
   HTTP_TO_METHOD()
 )
 
 
-ENUM_C(http_parser_type,
+ENUM(http_parser_type,
 	HTTP_REQUEST,
 	HTTP_RESPONSE,
 	HTTP_BOTH
@@ -151,7 +151,7 @@ ENUM_C(http_parser_type,
 
 
 /* Flag values for http_parser.flags field */
-ENUM_C(flags,
+ENUM(flags,
     F_CHUNKED               = 1 << 0
   , F_CONNECTION_KEEP_ALIVE = 1 << 1
   , F_CONNECTION_CLOSE      = 1 << 2
@@ -217,12 +217,12 @@ ENUM_C(flags,
 #define HTTP_SINGLE_ERRNO(n, s) HPE_##n,
 #define HTTP_TO_ERRNO() HTTP_ERRNO_MAP(HTTP_SINGLE_ERRNO)
 
-ENUM_C(http_errno,
+ENUM(http_errno,
   HTTP_TO_ERRNO()
 )
 
 
-ENUM_C(state,
+ENUM(state,
     s_dead = 1 /* important that this is > 0 */
 
   , s_start_req_or_res
@@ -303,7 +303,7 @@ ENUM_C(state,
 )
 
 
-ENUM_C(header_states,
+ENUM(header_states,
     h_general = 0
   , h_C
   , h_CO
@@ -333,7 +333,7 @@ ENUM_C(header_states,
   , h_connection_upgrade
 )
 
-ENUM_C(http_host_state,
+ENUM(http_host_state,
     s_http_host_dead = 1
   , s_http_userinfo_start
   , s_http_userinfo

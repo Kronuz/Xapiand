@@ -34,7 +34,7 @@
 
 #include "concurrent_queue.h"               // for ConcurrentQueue
 #include "debouncer.h"                      // for make_debouncer
-#include "enum.h"                           // for ENUM
+#include "enum.h"                           // for ENUM_CLASS
 #include "node.h"                           // for Node
 #include "opts.h"                           // for opts::*
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
@@ -66,14 +66,14 @@ struct RaftLogEntry {
 };
 
 
-ENUM(DiscoveryRole, int,
+ENUM_CLASS(DiscoveryRole, int,
 	RAFT_FOLLOWER,
 	RAFT_CANDIDATE,
 	RAFT_LEADER
 )
 
 
-ENUM(DiscoveryMessage, int,
+ENUM_CLASS(DiscoveryMessage, int,
 	CLUSTER_HELLO,                // New node saying hello
 	CLUSTER_WAVE,                 // Nodes telling the client they do agree with the new node's name
 	CLUSTER_SNEER,                // Nodes telling the client they don't agree with the new node's name

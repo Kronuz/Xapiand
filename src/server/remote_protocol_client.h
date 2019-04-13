@@ -31,7 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_client.h"                      // for BaseClient
-#include "enum.h"                             // for ENUM
+#include "enum.h"                             // for ENUM_CLASS
 #include "endpoint.h"                         // for Endpoints
 #include "threadpool.hh"                      // for Task
 #include "xapian.h"
@@ -84,13 +84,13 @@
 class lock_shard;
 
 
-ENUM(State, int,
+ENUM_CLASS(State, int,
 	INIT_REMOTE,
 	REMOTE_SERVER
 )
 
 
-ENUM(RemoteMessageType, int,
+ENUM_CLASS(RemoteMessageType, int,
 	MSG_ALLTERMS,               // All Terms
 	MSG_COLLFREQ,               // Get Collection Frequency
 	MSG_DOCUMENT,               // Get Document
@@ -128,7 +128,7 @@ ENUM(RemoteMessageType, int,
 )
 
 
-ENUM(RemoteReplyType, int,
+ENUM_CLASS(RemoteReplyType, int,
 	REPLY_UPDATE,               // Updated database stats
 	REPLY_EXCEPTION,            // Exception
 	REPLY_DONE,                 // Done sending list

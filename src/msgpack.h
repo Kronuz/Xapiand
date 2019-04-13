@@ -33,7 +33,7 @@
 #include <unordered_map>         // for std::unordered_map
 
 #include "atomic_shared_ptr.h"
-#include "enum.h"                // for ENUM
+#include "enum.h"                // for ENUM_CLASS
 #include "exception.h"
 #include "msgpack.hpp"
 #include "strict_stox.hh"
@@ -60,7 +60,7 @@ constexpr uint8_t MSGPACK_UNDEFINED       = MSGPACK_EXT_BEGIN;
 static const char* undefined = "\0";
 
 
-ENUM(MsgPackType, uint8_t,
+ENUM_CLASS(MsgPackType, uint8_t,
 	NIL                 = msgpack::type::NIL,               //0x00
 	BOOLEAN             = msgpack::type::BOOLEAN,           //0x01
 	POSITIVE_INTEGER    = msgpack::type::POSITIVE_INTEGER,  //0x02

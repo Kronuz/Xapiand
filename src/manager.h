@@ -35,7 +35,7 @@
 #include "base_x.hh"                          // for Base62
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
-#include "enum.h"                             // for ENUM
+#include "enum.h"                             // for ENUM_CLASS
 #include "ev/ev++.h"                          // for ev::loop_ref
 #include "length.h"                           // for serialise_length
 #include "opts.h"                             // for opts::*
@@ -83,7 +83,7 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 }
 
 
-ENUM(XapiandManagerState, int,
+ENUM_CLASS(XapiandManagerState, int,
 	BAD,
 	READY,
 	SETUP,
