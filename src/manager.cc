@@ -1962,9 +1962,11 @@ XapiandManager::__repr__() const
 
 
 #ifdef XAPIAND_CLUSTERING
+
 void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
 	XapiandManager::replication()->trigger_replication({src_endpoint, dst_endpoint, false});
 }
+
 #endif

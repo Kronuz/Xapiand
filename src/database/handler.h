@@ -25,6 +25,7 @@
 #include "config.h"
 
 #include <cassert>                           // for assert
+#include <chrono>                            // for std::chrono
 #include <condition_variable>                // for std::condition_variable
 #include <memory>                            // for std::shared_ptr, std::make_shared
 #include <stddef.h>                          // for size_t
@@ -422,7 +423,7 @@ void committer_commit(std::weak_ptr<Shard> weak_shard);
 
 
 inline auto& committer(bool create = true) {
-	static auto committer = create ? make_unique_debouncer<Endpoint, 1000, 100, 500, 5000, ThreadPolicyType::committers>("AC--", "AC{:02}", opts.num_committers, committer_commit) : nullptr;
+	static auto committer = create ? make_unique_debouncer<Endpoint, ThreadPolicyType::committers>("AC--", "AC{:02}", opts.num_committers, committer_commit, std::chrono::milliseconds(1000), std::chrono::milliseconds(100), std::chrono::milliseconds(500), std::chrono::milliseconds(5000)) : nullptr;
 	assert(!create || committer);
 	return committer;
 }

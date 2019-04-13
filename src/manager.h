@@ -25,6 +25,7 @@
 #include "config.h"
 
 #include <cassert>                            // for assert
+#include <chrono>                             // for std::chrono
 #include <atomic>                             // for std::atomic, std::atomic_int
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
@@ -384,12 +385,15 @@ public:
 	}
 };
 
+
 #ifdef XAPIAND_CLUSTERING
+
 void trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint);
 
 inline auto& trigger_replication(bool create = true) {
-	static auto trigger_replication = create ? make_unique_debouncer<std::string, 1000, 100, 500, 5000, ThreadPolicyType::replication>("TR--", "TR{:02}", opts.num_replicators, trigger_replication_trigger) : nullptr;
+	static auto trigger_replication = create ? make_unique_debouncer<std::string, ThreadPolicyType::replication>("TR--", "TR{:02}", opts.num_replicators, trigger_replication_trigger, std::chrono::milliseconds(1000), std::chrono::milliseconds(100), std::chrono::milliseconds(500), std::chrono::milliseconds(5000)) : nullptr;
 	assert(!create || trigger_replication);
 	return trigger_replication;
 }
+
 #endif

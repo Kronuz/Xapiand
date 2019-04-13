@@ -27,6 +27,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include <cassert>                          // for assert
+#include <chrono>                           // for std::chrono
 #include <string>                           // for std::string
 #include <unordered_map>                    // for std::unordered_map
 #include <vector>                           // for std::vector
@@ -201,7 +202,7 @@ public:
 void db_updater_send(std::string path);
 
 inline auto& db_updater(bool create = true) {
-	static auto db_updater = create ? make_unique_debouncer<std::string, 1000, 100, 500, 5000, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updater_send) : nullptr;
+	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updater_send, std::chrono::milliseconds(1000), std::chrono::milliseconds(100), std::chrono::milliseconds(500), std::chrono::milliseconds(5000)) : nullptr;
 	assert(!create || db_updater);
 	return db_updater;
 }
