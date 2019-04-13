@@ -98,8 +98,23 @@ extern struct opts_t {
 	double random_errors_db = 0;
 	double random_errors_io = 0;
 	double random_errors_net = 0;
+	unsigned long long committer_throttle_time = 0;
+	unsigned long long committer_debounce_timeout = 1000;
+	unsigned long long committer_debounce_busy_timeout = 1000;
+	unsigned long long committer_debounce_force_timeout = 1000;
+	unsigned long long fsyncher_throttle_time = 0;
+	unsigned long long fsyncher_debounce_timeout = 500;
+	unsigned long long fsyncher_debounce_busy_timeout = 500;
+	unsigned long long fsyncher_debounce_force_timeout = 500;
+	unsigned long long db_updater_throttle_time = 0;
+	unsigned long long db_updater_debounce_timeout = 1000;
+	unsigned long long db_updater_debounce_busy_timeout = 1000;
+	unsigned long long db_updater_debounce_force_timeout = 1000;
+	unsigned long long trigger_replication_throttle_time = 0;
+	unsigned long long trigger_replication_debounce_timeout = 1000;
+	unsigned long long trigger_replication_debounce_busy_timeout = 1000;
+	unsigned long long trigger_replication_debounce_force_timeout = 1000;
 } opts;
-
 
 const char* ev_backend(unsigned int backend);
 

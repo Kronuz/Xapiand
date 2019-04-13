@@ -552,5 +552,25 @@ parseOptions(int argc, char** argv)
 		std::exit(EX_USAGE);
 	}
 
+	o.committer_throttle_time = 1000;
+	o.committer_debounce_timeout = 500;
+	o.committer_debounce_busy_timeout = 500;
+	o.committer_debounce_force_timeout = 3000;
+
+	o.fsyncher_throttle_time = 1000;
+	o.fsyncher_debounce_timeout = 500;
+	o.fsyncher_debounce_busy_timeout = 500;
+	o.fsyncher_debounce_force_timeout = 3000;
+
+	o.db_updater_throttle_time = 1000;
+	o.db_updater_debounce_timeout = 100;
+	o.db_updater_debounce_busy_timeout = 500;
+	o.db_updater_debounce_force_timeout = 5000;
+
+	o.trigger_replication_throttle_time = 1000;
+	o.trigger_replication_debounce_timeout = 100;
+	o.trigger_replication_debounce_busy_timeout = 500;
+	o.trigger_replication_debounce_force_timeout = 5000;
+
 	return o;
 }

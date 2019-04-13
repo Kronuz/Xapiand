@@ -152,7 +152,7 @@ inline auto& fsyncher(bool create = true) {
 		} else {
 			L_DEBUG("Async {} succeeded after {}", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end));
 		}
-	}, std::chrono::milliseconds(1000), std::chrono::milliseconds(500), std::chrono::milliseconds(500), std::chrono::milliseconds(3000)) : nullptr;
+	}, std::chrono::milliseconds(opts.fsyncher_throttle_time), std::chrono::milliseconds(opts.fsyncher_debounce_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_busy_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_force_timeout)) : nullptr;
 	assert(!create || fsyncher);
 	return fsyncher;
 }

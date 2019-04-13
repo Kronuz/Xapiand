@@ -202,7 +202,7 @@ public:
 void db_updater_send(std::string path);
 
 inline auto& db_updater(bool create = true) {
-	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updater_send, std::chrono::milliseconds(1000), std::chrono::milliseconds(100), std::chrono::milliseconds(500), std::chrono::milliseconds(5000)) : nullptr;
+	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updater_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_force_timeout)) : nullptr;
 	assert(!create || db_updater);
 	return db_updater;
 }
