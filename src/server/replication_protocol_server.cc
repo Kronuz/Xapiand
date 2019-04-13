@@ -43,6 +43,8 @@
  // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
+// #undef L_REPLICATION
+// #define L_REPLICATION L_ROSY_BROWN
 // #undef L_EV
 // #define L_EV L_MEDIUM_PURPLE
 
@@ -248,7 +250,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		return;
 	}
 
-	L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+	L_REPLICATION("Replication initialized: {} -->  {}", repr(args.src_endpoint.to_string()), repr(args.dst_endpoint.to_string()));
 
 	L_CONN("Connected to {}! (in socket {})", repr(args.src_endpoint.to_string()), client_sock);
 	client->init(client_sock);
