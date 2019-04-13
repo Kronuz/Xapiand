@@ -373,7 +373,8 @@ Cast::ewkt(const MsgPack& obj)
 Cast::HashType
 Cast::get_hash_type(std::string_view cast_word)
 {
-	return enum_type<HashType>(cast_word);
+	static const auto _ = cast_hash;
+	return static_cast<HashType>(_.fhh(cast_word));
 }
 
 
@@ -383,31 +384,31 @@ Cast::get_field_type(std::string_view cast_word)
 	if (cast_word.empty() || cast_word[0] != reserved__) {
 		THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
-	switch (enum_find<HashType>(cast_word)) {
-		case enum_find<HashType>("INTEGER"):           return FieldType::integer;
-		case enum_find<HashType>("POSITIVE"):          return FieldType::positive;
-		case enum_find<HashType>("FLOAT"):             return FieldType::floating;
-		case enum_find<HashType>("BOOLEAN"):           return FieldType::boolean;
-		case enum_find<HashType>("KEYWORD"):           return FieldType::keyword;
-		case enum_find<HashType>("TEXT"):              return FieldType::text;
-		case enum_find<HashType>("STRING"):            return FieldType::string;
-		case enum_find<HashType>("UUID"):              return FieldType::uuid;
-		case enum_find<HashType>("DATETIME"):          return FieldType::datetime;
-		case enum_find<HashType>("TIME"):              return FieldType::time;
-		case enum_find<HashType>("TIMEDELTA"):         return FieldType::timedelta;
-		case enum_find<HashType>("EWKT"):              return FieldType::geo;
-		case enum_find<HashType>("POINT"):             return FieldType::geo;
-		case enum_find<HashType>("CIRCLE"):            return FieldType::geo;
-		case enum_find<HashType>("CONVEX"):            return FieldType::geo;
-		case enum_find<HashType>("POLYGON"):           return FieldType::geo;
-		case enum_find<HashType>("CHULL"):             return FieldType::geo;
-		case enum_find<HashType>("MULTIPOINT"):        return FieldType::geo;
-		case enum_find<HashType>("MULTICIRCLE"):       return FieldType::geo;
-		case enum_find<HashType>("MULTIPOLYGON"):      return FieldType::geo;
-		case enum_find<HashType>("MULTICHULL"):        return FieldType::geo;
-		case enum_find<HashType>("GEO_COLLECTION"):    return FieldType::geo;
-		case enum_find<HashType>("GEO_INTERSECTION"):  return FieldType::geo;
-		case enum_find<HashType>("CHAI"):              return FieldType::script;
+	switch (get_hash_type(cast_word)) {
+		case HashType::INTEGER:           return FieldType::integer;
+		case HashType::POSITIVE:          return FieldType::positive;
+		case HashType::FLOAT:             return FieldType::floating;
+		case HashType::BOOLEAN:           return FieldType::boolean;
+		case HashType::KEYWORD:           return FieldType::keyword;
+		case HashType::TEXT:              return FieldType::text;
+		case HashType::STRING:            return FieldType::string;
+		case HashType::UUID:              return FieldType::uuid;
+		case HashType::DATETIME:          return FieldType::datetime;
+		case HashType::TIME:              return FieldType::time;
+		case HashType::TIMEDELTA:         return FieldType::timedelta;
+		case HashType::EWKT:              return FieldType::geo;
+		case HashType::POINT:             return FieldType::geo;
+		case HashType::CIRCLE:            return FieldType::geo;
+		case HashType::CONVEX:            return FieldType::geo;
+		case HashType::POLYGON:           return FieldType::geo;
+		case HashType::CHULL:             return FieldType::geo;
+		case HashType::MULTIPOINT:        return FieldType::geo;
+		case HashType::MULTICIRCLE:       return FieldType::geo;
+		case HashType::MULTIPOLYGON:      return FieldType::geo;
+		case HashType::MULTICHULL:        return FieldType::geo;
+		case HashType::GEO_COLLECTION:    return FieldType::geo;
+		case HashType::GEO_INTERSECTION:  return FieldType::geo;
+		case HashType::CHAI:              return FieldType::script;
 		default:
 			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
