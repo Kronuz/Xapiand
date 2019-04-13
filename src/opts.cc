@@ -552,10 +552,10 @@ parseOptions(int argc, char** argv)
 		std::exit(EX_USAGE);
 	}
 
-	o.committer_throttle_time = 1000;
-	o.committer_debounce_timeout = 500;
-	o.committer_debounce_busy_timeout = 500;
-	o.committer_debounce_force_timeout = 3000;
+	o.committer_throttle_time = 0;
+	o.committer_debounce_timeout = 1000;
+	o.committer_debounce_busy_timeout = 3000;
+	o.committer_debounce_force_timeout = 9000;
 
 	o.fsyncher_throttle_time = 1000;
 	o.fsyncher_debounce_timeout = 500;
