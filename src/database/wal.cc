@@ -43,7 +43,6 @@
 #include "manager.h"                // for XapiandManager
 #include "metrics.h"                // for Metrics::metrics
 #include "msgpack.h"                // for MsgPack
-#include "nameof.hh"                // for NAMEOF_ENUM
 #include "opts.h"                   // for opts::*
 #include "repr.hh"                  // for repr
 #include "server/discovery.h"       // for db_updater
@@ -554,14 +553,14 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 	auto revision = unserialise_length(&p, p_end);
 	auto type = static_cast<Type>(unserialise_length(&p, p_end));
 
-	L_REPLICATION("EXECUTE LINE: {} ({})", revision, NAMEOF_ENUM(type));
+	L_REPLICATION("EXECUTE LINE: {} ({})", revision, enum_name(type));
 
 	if (revision != db_revision) {
 		if (!unsafe) {
-			L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, NAMEOF_ENUM(type));
+			L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
 			THROW(StorageCorruptVolume, "WAL revision mismatch!");
 		}
-		// L_WARNING("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, NAMEOF_ENUM(type));
+		// L_WARNING("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
 	}
 
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
@@ -699,7 +698,7 @@ DatabaseWAL::init_database()
 void
 DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, [[maybe_unused]] bool send_update)
 {
-	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", repr(uuid.to_string()), revision, NAMEOF_ENUM(type), send_update);
+	L_CALL("DatabaseWAL::write_line({}, {}, Type::{}, <data>, {})", repr(uuid.to_string()), revision, enum_name(type), send_update);
 
 	_uuid = uuid;
 	_uuid_le = UUID(uuid.get_bytes(), true);
@@ -712,7 +711,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		line.append(serialise_length(toUType(type)));
 		line.append(compress_lz4(data));
 
-		L_DATABASE_WAL("{} on {}: '{}'", NAMEOF_ENUM(type), base_path, repr(line, quote));
+		L_DATABASE_WAL("{} on {}: '{}'", enum_name(type), base_path, repr(line, quote));
 
 		if (closed()) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);

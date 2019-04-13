@@ -42,7 +42,6 @@
 #include "length.h"                           // for serialise_length, unserialise_length
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics
-#include "nameof.hh"                          // for NAMEOF_ENUM
 #include "tcp.h"                              // for TCP::connect
 #include "random.hh"                          // for random_int
 #include "repr.hh"                            // for repr
@@ -188,9 +187,9 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 void
 ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", enum_name(type));
 
-	L_REPLICA_PROTO("<< send_message ({}): {}", NAMEOF_ENUM(type), repr(message));
+	L_REPLICA_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
 
 	send_message(toUType(type), message);
 }
@@ -199,9 +198,9 @@ ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::st
 void
 ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
 {
-	L_CALL("ReplicationProtocolClient::send_file({}, <fd>)", NAMEOF_ENUM(type));
+	L_CALL("ReplicationProtocolClient::send_file({}, <fd>)", enum_name(type));
 
-	L_REPLICA_PROTO("<< send_file ({}): {}", NAMEOF_ENUM(type), fd);
+	L_REPLICA_PROTO("<< send_file ({}): {}", enum_name(type), fd);
 
 	send_file(toUType(type), fd);
 }
@@ -210,10 +209,10 @@ ReplicationProtocolClient::send_file(ReplicationReplyType type, int fd)
 void
 ReplicationProtocolClient::replication_server(ReplicationMessageType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::replication_server({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("ReplicationProtocolClient::replication_server({}, <message>)", enum_name(type));
 
-	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {{type:{}}}", NAMEOF_ENUM(type));
-	L_OBJ_END("ReplicationProtocolClient::replication_server:END {{type:{}}}", NAMEOF_ENUM(type));
+	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {{type:{}}}", enum_name(type));
+	L_OBJ_END("ReplicationProtocolClient::replication_server:END {{type:{}}}", enum_name(type));
 
 	try {
 		switch (type) {
@@ -421,10 +420,10 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 void
 ReplicationProtocolClient::replication_client(ReplicationReplyType type, const std::string& message)
 {
-	L_CALL("ReplicationProtocolClient::replication_client({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("ReplicationProtocolClient::replication_client({}, <message>)", enum_name(type));
 
-	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {{type:{}}}", NAMEOF_ENUM(type));
-	L_OBJ_END("ReplicationProtocolClient::replication_client:END {{type:{}}}", NAMEOF_ENUM(type));
+	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {{type:{}}}", enum_name(type));
+	L_OBJ_END("ReplicationProtocolClient::replication_client:END {{type:{}}}", enum_name(type));
 
 	try {
 		switch (type) {
@@ -782,7 +781,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		if (received < 0) {
 			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
 			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("Replication Protocol {} connection closed unexpectedly: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+				L_NOTICE("Replication Protocol {} connection closed unexpectedly: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 				close();
 				return received;
 			}
@@ -791,19 +790,19 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There was still a request in progress: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There was still a request in progress: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 			close();
 			return received;
 		}
 
 		if (!write_queue.empty()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There is still pending data: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There is still pending data: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 			close();
 			return received;
 		}
 
 		if (pending_messages()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There are still pending messages: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			L_NOTICE("Replication Protocol {} closed unexpectedly: There are still pending messages: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 			close();
 			return received;
 		}
@@ -822,7 +821,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		L_REPLICA_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), NAMEOF_ENUM(state));
+		L_REPLICA_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), enum_name(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
 				char path[PATH_MAX + 1];
@@ -1027,7 +1026,7 @@ ReplicationProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_REPLICA_PROTO(">> get_message[REPLICATION_SERVER] ({}): {}", NAMEOF_ENUM(type), repr(message));
+					L_REPLICA_PROTO(">> get_message[REPLICATION_SERVER] ({}): {}", enum_name(type), repr(message));
 					replication_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -1059,7 +1058,7 @@ ReplicationProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_REPLICA_PROTO(">> get_message[REPLICATION_CLIENT] ({}): {}", NAMEOF_ENUM(type), repr(message));
+					L_REPLICA_PROTO(">> get_message[REPLICATION_CLIENT] ({}): {}", enum_name(type), repr(message));
 					replication_client(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -1122,21 +1121,21 @@ ReplicationProtocolClient::__repr__() const
 			case ReplicaState::INIT_REPLICATION_CLIENT:
 			case ReplicaState::REPLICATION_CLIENT:
 				return string::format("{}) ({}<->{}",
-					NAMEOF_ENUM(st),
-					NAMEOF_ENUM(static_cast<ReplicationReplyType>(received)),
-					NAMEOF_ENUM(static_cast<ReplicationMessageType>(sent)));
+					enum_name(st),
+					enum_name(static_cast<ReplicationReplyType>(received)),
+					enum_name(static_cast<ReplicationMessageType>(sent)));
 			case ReplicaState::INIT_REPLICATION_SERVER:
 			case ReplicaState::REPLICATION_SERVER:
 				return string::format("{}) ({}<->{}",
-					NAMEOF_ENUM(st),
-					NAMEOF_ENUM(static_cast<ReplicationMessageType>(received)),
-					NAMEOF_ENUM(static_cast<ReplicationReplyType>(sent)));
+					enum_name(st),
+					enum_name(static_cast<ReplicationMessageType>(received)),
+					enum_name(static_cast<ReplicationReplyType>(sent)));
 			default:
 				return "";
 		}
 	})();
 #else
-	const auto& state_repr = NAMEOF_ENUM(state.load(std::memory_order_relaxed));
+	const auto& state_repr = enum_name(state.load(std::memory_order_relaxed));
 #endif
 	return string::format(STEEL_BLUE + "<ReplicationProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,

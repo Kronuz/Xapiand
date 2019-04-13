@@ -23,7 +23,6 @@
 #include "cast.h"
 
 #include "database/schema.h"
-#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "string.hh"                              // for string::format
 
 
@@ -106,12 +105,12 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			if (obj.is_map()) {
 				return obj;
 			}
-			THROW(CastError, "Type {} cannot be cast to script", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to script", enum_name(obj.get_type()));
 		case FieldType::geo:
 			if (obj.is_map() || obj.is_string()) {
 				return obj;
 			}
-			THROW(CastError, "Type {} cannot be cast to geo", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to geo", enum_name(obj.get_type()));
 		case FieldType::empty:
 			if (obj.is_string()) {
 				{
@@ -142,7 +141,7 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			}
 			[[fallthrough]];
 		default:
-			THROW(CastError, "Type {} cannot be cast", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast", enum_name(obj.get_type()));
 	}
 }
 
@@ -161,14 +160,14 @@ Cast::integer(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoll(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to integer", NAMEOF_ENUM(obj.get_type()));
+				THROW(CastError, "Value {} cannot be cast to integer", enum_name(obj.get_type()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<int64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to integer", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to integer", enum_name(obj.get_type()));
 	}
 }
 
@@ -187,14 +186,14 @@ Cast::positive(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stoull(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to positive", NAMEOF_ENUM(obj.get_type()));
+				THROW(CastError, "Value {} cannot be cast to positive", enum_name(obj.get_type()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<uint64_t>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to positive", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to positive", enum_name(obj.get_type()));
 	}
 }
 
@@ -213,14 +212,14 @@ Cast::floating(const MsgPack& obj)
 			int errno_save;
 			auto r = strict_stod(&errno_save, obj.str_view());
 			if (errno_save != 0) {
-				THROW(CastError, "Value {} cannot be cast to float", NAMEOF_ENUM(obj.get_type()));
+				THROW(CastError, "Value {} cannot be cast to float", enum_name(obj.get_type()));
 			}
 			return r;
 		}
 		case MsgPack::Type::BOOLEAN:
 			return static_cast<double>(obj.boolean());
 		default:
-			THROW(CastError, "Type {} cannot be cast to float", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to float", enum_name(obj.get_type()));
 	}
 }
 
@@ -300,7 +299,7 @@ Cast::boolean(const MsgPack& obj)
 		case MsgPack::Type::BOOLEAN:
 			return obj.boolean();
 		default:
-			THROW(CastError, "Type {} cannot be cast to boolean", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to boolean", enum_name(obj.get_type()));
 	}
 }
 
@@ -311,7 +310,7 @@ Cast::uuid(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type {} cannot be cast to uuid", NAMEOF_ENUM(obj.get_type()));
+	THROW(CastError, "Type {} cannot be cast to uuid", enum_name(obj.get_type()));
 }
 
 
@@ -326,7 +325,7 @@ Cast::datetime(const MsgPack& obj)
 		case MsgPack::Type::MAP:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to datetime", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to datetime", enum_name(obj.get_type()));
 	}
 }
 
@@ -341,7 +340,7 @@ Cast::time(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to time", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to time", enum_name(obj.get_type()));
 	}
 }
 
@@ -356,7 +355,7 @@ Cast::timedelta(const MsgPack& obj)
 		case MsgPack::Type::STR:
 			return obj;
 		default:
-			THROW(CastError, "Type {} cannot be cast to timedelta", NAMEOF_ENUM(obj.get_type()));
+			THROW(CastError, "Type {} cannot be cast to timedelta", enum_name(obj.get_type()));
 	}
 }
 
@@ -367,16 +366,14 @@ Cast::ewkt(const MsgPack& obj)
 	if (obj.is_string()) {
 		return obj.str();
 	}
-	THROW(CastError, "Type {} cannot be cast to ewkt", NAMEOF_ENUM(obj.get_type()));
+	THROW(CastError, "Type {} cannot be cast to ewkt", enum_name(obj.get_type()));
 }
 
 
 Cast::HashType
 Cast::get_hash_type(std::string_view cast_word)
 {
-	static const auto _ = cast_hash;
-
-	return static_cast<HashType>(_.fhh(cast_word));
+	return enum_type<HashType>(cast_word);
 }
 
 
@@ -386,31 +383,31 @@ Cast::get_field_type(std::string_view cast_word)
 	if (cast_word.empty() || cast_word[0] != reserved__) {
 		THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}
-	switch (get_hash_type(cast_word)) {
-		case HashType::INTEGER:           return FieldType::integer;
-		case HashType::POSITIVE:          return FieldType::positive;
-		case HashType::FLOAT:             return FieldType::floating;
-		case HashType::BOOLEAN:           return FieldType::boolean;
-		case HashType::KEYWORD:           return FieldType::keyword;
-		case HashType::TEXT:              return FieldType::text;
-		case HashType::STRING:            return FieldType::string;
-		case HashType::UUID:              return FieldType::uuid;
-		case HashType::DATETIME:          return FieldType::datetime;
-		case HashType::TIME:              return FieldType::time;
-		case HashType::TIMEDELTA:         return FieldType::timedelta;
-		case HashType::EWKT:              return FieldType::geo;
-		case HashType::POINT:             return FieldType::geo;
-		case HashType::CIRCLE:            return FieldType::geo;
-		case HashType::CONVEX:            return FieldType::geo;
-		case HashType::POLYGON:           return FieldType::geo;
-		case HashType::CHULL:             return FieldType::geo;
-		case HashType::MULTIPOINT:        return FieldType::geo;
-		case HashType::MULTICIRCLE:       return FieldType::geo;
-		case HashType::MULTIPOLYGON:      return FieldType::geo;
-		case HashType::MULTICHULL:        return FieldType::geo;
-		case HashType::GEO_COLLECTION:    return FieldType::geo;
-		case HashType::GEO_INTERSECTION:  return FieldType::geo;
-		case HashType::CHAI:              return FieldType::script;
+	switch (enum_find<HashType>(cast_word)) {
+		case enum_find<HashType>("INTEGER"):           return FieldType::integer;
+		case enum_find<HashType>("POSITIVE"):          return FieldType::positive;
+		case enum_find<HashType>("FLOAT"):             return FieldType::floating;
+		case enum_find<HashType>("BOOLEAN"):           return FieldType::boolean;
+		case enum_find<HashType>("KEYWORD"):           return FieldType::keyword;
+		case enum_find<HashType>("TEXT"):              return FieldType::text;
+		case enum_find<HashType>("STRING"):            return FieldType::string;
+		case enum_find<HashType>("UUID"):              return FieldType::uuid;
+		case enum_find<HashType>("DATETIME"):          return FieldType::datetime;
+		case enum_find<HashType>("TIME"):              return FieldType::time;
+		case enum_find<HashType>("TIMEDELTA"):         return FieldType::timedelta;
+		case enum_find<HashType>("EWKT"):              return FieldType::geo;
+		case enum_find<HashType>("POINT"):             return FieldType::geo;
+		case enum_find<HashType>("CIRCLE"):            return FieldType::geo;
+		case enum_find<HashType>("CONVEX"):            return FieldType::geo;
+		case enum_find<HashType>("POLYGON"):           return FieldType::geo;
+		case enum_find<HashType>("CHULL"):             return FieldType::geo;
+		case enum_find<HashType>("MULTIPOINT"):        return FieldType::geo;
+		case enum_find<HashType>("MULTICIRCLE"):       return FieldType::geo;
+		case enum_find<HashType>("MULTIPOLYGON"):      return FieldType::geo;
+		case enum_find<HashType>("MULTICHULL"):        return FieldType::geo;
+		case enum_find<HashType>("GEO_COLLECTION"):    return FieldType::geo;
+		case enum_find<HashType>("GEO_INTERSECTION"):  return FieldType::geo;
+		case enum_find<HashType>("CHAI"):              return FieldType::script;
 		default:
 			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}

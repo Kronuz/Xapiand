@@ -26,58 +26,48 @@
 
 #include "database/utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
-#include "hashes.hh"             // for fnv1ah32
-#include "phf.hh"                // for phf
+#include "enum.h"                // for ENUM
 #include "reserved/schema.h"     // for RESERVED_CHAI
 #include "reserved/types.h"      // for RESERVED_BOOLEAN, ...
 
 
 enum class FieldType : uint8_t;
 
+ENUM(CastHashType, uint32_t,
+	INTEGER,
+	POSITIVE,
+	FLOAT,
+	BOOLEAN,
+	KEYWORD,
+	TEXT,
+	STRING,
+	UUID,
+	DATE,
+	DATETIME,
+	TIME,
+	TIMEDELTA,
+	EWKT,
+	POINT,
+	CIRCLE,
+	CONVEX,
+	POLYGON,
+	CHULL,
+	MULTIPOINT,
+	MULTICIRCLE,
+	MULTICONVEX,
+	MULTIPOLYGON,
+	MULTICHULL,
+	GEO_COLLECTION,
+	GEO_INTERSECTION,
+	CHAI
+)
+
 namespace Cast {
-	#define HASH_OPTIONS() \
-		OPTION(INTEGER) \
-		OPTION(POSITIVE) \
-		OPTION(FLOAT) \
-		OPTION(BOOLEAN) \
-		OPTION(KEYWORD) \
-		OPTION(TEXT) \
-		OPTION(STRING) \
-		OPTION(UUID) \
-		OPTION(DATE) \
-		OPTION(DATETIME) \
-		OPTION(TIME) \
-		OPTION(TIMEDELTA) \
-		OPTION(EWKT) \
-		OPTION(POINT) \
-		OPTION(CIRCLE) \
-		OPTION(CONVEX) \
-		OPTION(POLYGON) \
-		OPTION(CHULL) \
-		OPTION(MULTIPOINT) \
-		OPTION(MULTICIRCLE) \
-		OPTION(MULTICONVEX) \
-		OPTION(MULTIPOLYGON) \
-		OPTION(MULTICHULL) \
-		OPTION(GEO_COLLECTION) \
-		OPTION(GEO_INTERSECTION) \
-		OPTION(CHAI)
-
-	constexpr static auto cast_hash = phf::make_phf({
-		#define OPTION(name) hh(RESERVED_##name),
-		HASH_OPTIONS()
-		#undef OPTION
-	});
-
-	enum class HashType : uint32_t {
-		#define OPTION(name) name = cast_hash.fhh(RESERVED_##name),
-		HASH_OPTIONS()
-		#undef OPTION
-	};
-
 	/*
 	 * Functions for doing cast between types.
 	 */
+
+	using HashType = ::CastHashType;
 
 	MsgPack cast(const MsgPack& obj);
 	MsgPack cast(FieldType type, const MsgPack& obj);

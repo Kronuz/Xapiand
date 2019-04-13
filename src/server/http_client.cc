@@ -63,7 +63,6 @@
 #include "msgpack.h"                        // for MsgPack, msgpack::object
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
 #include "node.h"                           // for Node::local_node, Node::leader_node
-#include "nameof.hh"                        // for NAMEOF_ENUM
 #include "opts.h"                           // for opts::*
 #include "package.h"                        // for Package::*
 #include "phf.hh"                           // for phf::*
@@ -619,7 +618,7 @@ HttpClient::on_message_begin([[maybe_unused]] http_parser* parser)
 {
 	L_CALL("HttpClient::on_message_begin(<parser>)");
 
-	L_HTTP_PROTO("on_message_begin {{state:{}, header_state:{}}}", NAMEOF_ENUM(HTTP_PARSER_STATE(parser)), NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)));
+	L_HTTP_PROTO("on_message_begin {{state:{}, header_state:{}}}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)));
 
 	waiting = true;
 	new_request->begins = std::chrono::system_clock::now();
@@ -635,7 +634,7 @@ HttpClient::on_url(http_parser* parser, const char* at, size_t length)
 {
 	L_CALL("HttpClient::on_url(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_url {{state:{}, header_state:{}}}: {}", NAMEOF_ENUM(HTTP_PARSER_STATE(parser)), NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
+	L_HTTP_PROTO("on_url {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
 	new_request->method = HTTP_PARSER_METHOD(parser);
 
@@ -649,7 +648,7 @@ HttpClient::on_status([[maybe_unused]] http_parser* parser, [[maybe_unused]] con
 {
 	L_CALL("HttpClient::on_status(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_status {{state:{}, header_state:{}}}: {}", NAMEOF_ENUM(HTTP_PARSER_STATE(parser)), NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
+	L_HTTP_PROTO("on_status {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
 	return 0;
 }
@@ -659,7 +658,7 @@ HttpClient::on_header_field([[maybe_unused]] http_parser* parser, const char* at
 {
 	L_CALL("HttpClient::on_header_field(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_header_field {{state:{}, header_state:{}}}: {}", NAMEOF_ENUM(HTTP_PARSER_STATE(parser)), NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
+	L_HTTP_PROTO("on_header_field {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
 	new_request->_header_name = std::string(at, length);
 
@@ -671,7 +670,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 {
 	L_CALL("HttpClient::on_header_value(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_header_value {{state:{}, header_state:{}}}: {}", NAMEOF_ENUM(HTTP_PARSER_STATE(parser)), NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
+	L_HTTP_PROTO("on_header_value {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
 	auto _header_value = std::string_view(at, length);
 	if (Logging::log_level >= LOG_DEBUG) {
@@ -801,8 +800,8 @@ HttpClient::on_headers_complete([[maybe_unused]] http_parser* parser)
 	L_CALL("HttpClient::on_headers_complete(<parser>)");
 
 	L_HTTP_PROTO("on_headers_complete {{state:{}, header_state:{}, flags:[{}]}}",
-		NAMEOF_ENUM(HTTP_PARSER_STATE(parser)),
-		NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)),
+		enum_name(HTTP_PARSER_STATE(parser)),
+		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser));
 
 	// Prepare the request view
@@ -831,8 +830,8 @@ HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t
 	L_CALL("HttpClient::on_body(<parser>, <at>, {})", length);
 
 	L_HTTP_PROTO("on_body {{state:{}, header_state:{}, flags:[{}]}}: {}",
-		NAMEOF_ENUM(HTTP_PARSER_STATE(parser)),
-		NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)),
+		enum_name(HTTP_PARSER_STATE(parser)),
+		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser),
 		repr(at, length));
 
@@ -865,8 +864,8 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 	L_CALL("HttpClient::on_message_complete(<parser>)");
 
 	L_HTTP_PROTO("on_message_complete {{state:{}, header_state:{}, flags:[{}]}}",
-		NAMEOF_ENUM(HTTP_PARSER_STATE(parser)),
-		NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)),
+		enum_name(HTTP_PARSER_STATE(parser)),
+		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser));
 
 	if (Logging::log_level > LOG_DEBUG) {
@@ -913,8 +912,8 @@ HttpClient::on_chunk_header([[maybe_unused]] http_parser* parser)
 	L_CALL("HttpClient::on_chunk_header(<parser>)");
 
 	L_HTTP_PROTO("on_chunk_header {{state:{}, header_state:{}, flags:[{}]}}",
-		NAMEOF_ENUM(HTTP_PARSER_STATE(parser)),
-		NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)),
+		enum_name(HTTP_PARSER_STATE(parser)),
+		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser));
 
 	return 0;
@@ -926,8 +925,8 @@ HttpClient::on_chunk_complete([[maybe_unused]] http_parser* parser)
 	L_CALL("HttpClient::on_chunk_complete(<parser>)");
 
 	L_HTTP_PROTO("on_chunk_complete {{state:{}, header_state:{}, flags:[{}]}}",
-		NAMEOF_ENUM(HTTP_PARSER_STATE(parser)),
-		NAMEOF_ENUM(HTTP_PARSER_HEADER_STATE(parser)),
+		enum_name(HTTP_PARSER_STATE(parser)),
+		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser));
 
 	return 0;

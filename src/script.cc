@@ -29,8 +29,6 @@
 #include "hash/md5.h"
 #include "reserved/schema.h"
 #include "serialise.h"
-#include "hashes.hh"                              // for fnv1ah32
-#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "phf.hh"                                 // for phf
 
 
@@ -166,10 +164,10 @@ Script::get_types(bool strict) const
 {
 	if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		if (!body.empty()) {
-			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::foreign), RESERVED_BODY);
+			THROW(ClientError, "For type {}, '{}' should not be defined", enum_name(FieldType::foreign), RESERVED_BODY);
 		}
 		if (!name.empty()) {
-			THROW(ClientError, "For type {}, '{}' should not be defined", NAMEOF_ENUM(FieldType::foreign), RESERVED_NAME);
+			THROW(ClientError, "For type {}, '{}' should not be defined", enum_name(FieldType::foreign), RESERVED_NAME);
 		}
 		if (!value.empty() && !endpoint.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
@@ -180,10 +178,10 @@ Script::get_types(bool strict) const
 		}
 		_sep_types[SPC_CONCRETE_TYPE] = FieldType::script;
 		if (_sep_types[SPC_CONCRETE_TYPE] != FieldType::script) {
-			THROW(ClientError, "Only type {} is allowed in '{}'", NAMEOF_ENUM(FieldType::script), RESERVED_SCRIPT);
+			THROW(ClientError, "Only type {} is allowed in '{}'", enum_name(FieldType::script), RESERVED_SCRIPT);
 		}
 		if (!endpoint.empty()) {
-			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, NAMEOF_ENUM(FieldType::foreign));
+			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, enum_name(FieldType::foreign));
 		}
 		if (!value.empty() && !body.empty() && !name.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);

@@ -70,7 +70,6 @@
 #include "metrics.h"                             // for Metrics::metrics
 #include "msgpack.h"                             // for MsgPack, object::object
 #include "namegen.h"                             // for name_generator
-#include "nameof.hh"                             // for NAMEOF_ENUM
 #include "net.hh"                                // for inet_ntop
 #include "package.h"                             // for Package
 #include "readable_revents.hh"                   // for readable_revents
@@ -1954,7 +1953,7 @@ std::string
 XapiandManager::__repr__() const
 {
 	return string::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
-		NAMEOF_ENUM(_state.load()),
+		enum_name(_state.load()),
 		use_count(),
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
 		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,

@@ -40,7 +40,6 @@
 #include "length.h"                           // for serialise_length
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics
-#include "nameof.hh"                          // for NAMEOF_ENUM
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
@@ -150,9 +149,9 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 void
 RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& message)
 {
-	L_CALL("RemoteProtocolClient::send_message({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("RemoteProtocolClient::send_message({}, <message>)", enum_name(type));
 
-	L_BINARY_PROTO("<< send_message ({}): {}", NAMEOF_ENUM(type), repr(message));
+	L_BINARY_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
 
 	send_message(toUType(type), message);
 }
@@ -161,10 +160,10 @@ RemoteProtocolClient::send_message(RemoteReplyType type, const std::string& mess
 void
 RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &message)
 {
-	L_CALL("RemoteProtocolClient::remote_server({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("RemoteProtocolClient::remote_server({}, <message>)", enum_name(type));
 
-	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", NAMEOF_ENUM(type));
-	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", NAMEOF_ENUM(type));
+	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", enum_name(type));
+	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", enum_name(type));
 
 	try {
 		switch (type) {
@@ -1288,7 +1287,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		if (received < 0) {
 			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
 			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("Remote Protocol {} connection closed unexpectedly: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+				L_NOTICE("Remote Protocol {} connection closed unexpectedly: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 				close();
 				return received;
 			}
@@ -1297,19 +1296,19 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There was still a request in progress: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There was still a request in progress: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 			close();
 			return received;
 		}
 
 		if (!write_queue.empty()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There is still pending data: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There is still pending data: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 			close();
 			return received;
 		}
 
 		if (pending_messages()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There are still pending messages: {}", NAMEOF_ENUM(state.load(std::memory_order_relaxed)), reason);
+			L_NOTICE("Remote Protocol {} closed unexpectedly: There are still pending messages: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 			close();
 			return received;
 		}
@@ -1328,7 +1327,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		const char *p_end = p + buffer.size();
 
 		char type = *p++;
-		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), NAMEOF_ENUM(state));
+		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), enum_name(state));
 		switch (type) {
 			case FILE_FOLLOWS: {
 				char path[PATH_MAX + 1];
@@ -1530,7 +1529,7 @@ RemoteProtocolClient::operator()()
 				lk.unlock();
 				try {
 
-					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] ({}): {}", NAMEOF_ENUM(type), repr(message));
+					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] ({}): {}", enum_name(type), repr(message));
 					remote_server(type, message);
 
 					auto sent = total_sent_bytes.exchange(0);
@@ -1593,15 +1592,15 @@ RemoteProtocolClient::__repr__() const
 			case State::INIT_REMOTE:
 			case State::REMOTE_SERVER:
 				return string::format("{}) ({}<->{}",
-					NAMEOF_ENUM(st),
-					NAMEOF_ENUM(static_cast<RemoteMessageType>(received)),
-					NAMEOF_ENUM(static_cast<RemoteReplyType>(sent)));
+					enum_name(st),
+					enum_name(static_cast<RemoteMessageType>(received)),
+					enum_name(static_cast<RemoteReplyType>(sent)));
 			default:
 				return "";
 		}
 	})();
 #else
-	const auto& state_repr = NAMEOF_ENUM(state.load(std::memory_order_relaxed));
+	const auto& state_repr = enum_name(state.load(std::memory_order_relaxed));
 #endif
 	return string::format(STEEL_BLUE + "<RemoteProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,

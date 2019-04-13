@@ -34,7 +34,6 @@
 #include "error.hh"                         // for error:name, error::description
 #include "manager.h"                        // for XapiandManager, XapiandManager::State
 #include "namegen.h"                        // for name_generator
-#include "nameof.hh"                        // for NAMEOF_ENUM
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
 #include "random.hh"                        // for random_int
@@ -209,9 +208,9 @@ Discovery::operator()()
 void
 Discovery::send_message(Message type, const std::string& message)
 {
-	L_CALL("Discovery::send_message({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("Discovery::send_message({}, <message>)", enum_name(type));
 
-	L_DISCOVERY_PROTO("<< send_message ({}): {}", NAMEOF_ENUM(type), repr(message));
+	L_DISCOVERY_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
 	UDP::send_message(toUType(type), message);
 }
 
@@ -221,8 +220,8 @@ Discovery::io_accept_cb([[maybe_unused]] ev::io &watcher, int revents)
 {
 	L_CALL("Discovery::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
 
-	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
-	L_EV_END("Discovery::io_accept_cb:END {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::io_accept_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_END("Discovery::io_accept_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
 	assert(sock == -1 || sock == watcher.fd);
 
@@ -246,7 +245,7 @@ Discovery::io_accept_cb([[maybe_unused]] ev::io &watcher, int revents)
 					break;  // no message
 				}
 				Message type = static_cast<Message>(raw_type);
-				L_DISCOVERY_PROTO(">> get_message ({}): {}", NAMEOF_ENUM(type), repr(message));
+				L_DISCOVERY_PROTO(">> get_message ({}): {}", enum_name(type), repr(message));
 				discovery_server(type, message);
 			} catch (...) {
 				L_EXC("ERROR: Unhandled exception in discovery_server");
@@ -260,10 +259,10 @@ Discovery::io_accept_cb([[maybe_unused]] ev::io &watcher, int revents)
 void
 Discovery::discovery_server(Message type, const std::string& message)
 {
-	L_CALL("Discovery::discovery_server({}, <message>)", NAMEOF_ENUM(type));
+	L_CALL("Discovery::discovery_server({}, <message>)", enum_name(type));
 
-	L_EV_BEGIN("Discovery::discovery_server:BEGIN {{state:{}, type:{}}}", NAMEOF_ENUM(XapiandManager::state()), NAMEOF_ENUM(type));
-	L_EV_END("Discovery::discovery_server:END {{state:{}, type:{}}}", NAMEOF_ENUM(XapiandManager::state()), NAMEOF_ENUM(type));
+	L_EV_BEGIN("Discovery::discovery_server:BEGIN {{state:{}, type:{}}}", enum_name(XapiandManager::state()), enum_name(type));
+	L_EV_END("Discovery::discovery_server:END {{state:{}, type:{}}}", enum_name(XapiandManager::state()), enum_name(type));
 
 	switch (type) {
 		case Message::CLUSTER_HELLO:
@@ -313,13 +312,13 @@ Discovery::discovery_server(Message type, const std::string& message)
 void
 Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_hello({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_hello({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", NAMEOF_ENUM(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
 
 
 	auto local_node = Node::local_node();
@@ -338,13 +337,13 @@ Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& messa
 void
 Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_wave({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_wave({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", NAMEOF_ENUM(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
@@ -359,7 +358,7 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
 		// (prevent it from switching to slow waiting)
 		if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
-			// L_DEBUG("State changed: {} -> {}", NAMEOF_ENUM(state), NAMEOF_ENUM(XapiandManager::state().load()));
+			// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 		}
 	}
 }
@@ -368,7 +367,7 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 void
 Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_sneer({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_sneer({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::RESET &&
 		XapiandManager::state() != XapiandManager::State::WAITING &&
@@ -381,7 +380,7 @@ Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& messa
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", NAMEOF_ENUM(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
 
 	auto local_node = Node::local_node();
 	if (remote_node == *local_node) {
@@ -401,13 +400,13 @@ Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& messa
 void
 Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_enter({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_enter({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", NAMEOF_ENUM(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
@@ -428,7 +427,7 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 void
 Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::cluster_bye({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::cluster_bye({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
@@ -440,7 +439,7 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", NAMEOF_ENUM(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
 
 	Node::drop_node(remote_node.name());
 
@@ -461,12 +460,12 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 void
 Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_request_vote({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_request_vote({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -476,7 +475,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", NAMEOF_ENUM(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
 		return;
 	}
 
@@ -493,7 +492,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", NAMEOF_ENUM(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	auto granted = false;
 	if (term == raft_current_term) {
@@ -542,7 +541,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 void
 Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_request_vote_response({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_request_vote_response({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (raft_role != Role::RAFT_CANDIDATE) {
 		return;
@@ -551,7 +550,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -561,7 +560,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", NAMEOF_ENUM(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
 		return;
 	}
 
@@ -580,7 +579,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", NAMEOF_ENUM(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
 		if (Node::is_superset(local_node, node)) {
@@ -616,7 +615,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 
 					// First time we elect a leader's, we setup node
 					if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
-						// L_DEBUG("Role changed: {} -> {}", NAMEOF_ENUM(state), NAMEOF_ENUM(XapiandManager::state().load()));
+						// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 						XapiandManager::setup_node();
 					}
 				}
@@ -629,12 +628,12 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 void
 Discovery::raft_append_entries(Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_append_entries({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_append_entries({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -644,7 +643,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", NAMEOF_ENUM(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
 		return;
 	}
 
@@ -671,7 +670,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> {} [from {}]{}", NAMEOF_ENUM(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	size_t next_index;
 	size_t match_index;
@@ -753,7 +752,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			if (leader_commit == raft_commit_index) {
 				// First time we reach leader's commit, we setup node
 				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
-					// L_DEBUG("Role changed: {} -> {}", NAMEOF_ENUM(state), NAMEOF_ENUM(XapiandManager::state().load()));
+					// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 					XapiandManager::setup_node();
 				}
 			}
@@ -771,7 +770,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		response_type = Message::RAFT_HEARTBEAT_RESPONSE;
 	}
 	L_RAFT("   << {} {{node:{}, term:{}, success:{}}}",
-		NAMEOF_ENUM(response_type), local_node->name(), term, success);
+		enum_name(response_type), local_node->name(), term, success);
 	send_message(response_type,
 		local_node->serialise() +
 		serialise_length(term) +
@@ -793,12 +792,12 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 void
 Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_append_entries_response({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_append_entries_response({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -808,7 +807,7 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", NAMEOF_ENUM(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
 		return;
 	}
 
@@ -829,7 +828,7 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", NAMEOF_ENUM(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
 		bool success = unserialise_length(&p, p_end);
@@ -867,12 +866,12 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 void
 Discovery::raft_add_command([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::raft_add_command({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_add_command({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -882,7 +881,7 @@ Discovery::raft_add_command([[maybe_unused]] Message type, const std::string& me
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", NAMEOF_ENUM(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
 		return;
 	}
 
@@ -898,7 +897,7 @@ Discovery::raft_add_command([[maybe_unused]] Message type, const std::string& me
 void
 Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 {
-	L_CALL("Discovery::db_updated({}, <message>) {{state:{}}}", NAMEOF_ENUM(type), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::db_updated({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
 	if (XapiandManager::state() != XapiandManager::State::READY) {
 		return;
@@ -916,7 +915,7 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 	}
 
 	auto path = std::string(p, p_end);
-	L_DISCOVERY(">> {} [from {}]: {}", NAMEOF_ENUM(type), remote_node.name(), repr(path));
+	L_DISCOVERY(">> {} [from {}]: {}", enum_name(type), remote_node.name(), repr(path));
 
 	auto node = Node::touch_node(remote_node, false).first;
 	if (node) {
@@ -937,10 +936,10 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 {
 	auto state = XapiandManager::state().load();
 
-	L_CALL("Discovery::cluster_discovery_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), NAMEOF_ENUM(state));
+	L_CALL("Discovery::cluster_discovery_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), enum_name(state));
 
-	L_EV_BEGIN("Discovery::cluster_discovery_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(state));
-	L_EV_END("Discovery::cluster_discovery_cb:END {{state:{}}}", NAMEOF_ENUM(state));
+	L_EV_BEGIN("Discovery::cluster_discovery_cb:BEGIN {{state:{}}}", enum_name(state));
+	L_EV_END("Discovery::cluster_discovery_cb:END {{state:{}}}", enum_name(state));
 
 	switch (state) {
 		case XapiandManager::State::RESET: {
@@ -961,7 +960,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 
 			local_node = Node::local_node();
 			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
-				// L_DEBUG("State changed: {} -> {}", NAMEOF_ENUM(state), NAMEOF_ENUM(XapiandManager::state().load()));
+				// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 				L_INFO("Advertising as {}{}" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
 				send_message(Message::CLUSTER_HELLO, local_node->serialise());
 			}
@@ -976,7 +975,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 			L_EV("Reset discovery's cluster_discovery event ({})", cluster_discovery.repeat);
 
 			if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
-				// L_DEBUG("State changed: {} -> {}", NAMEOF_ENUM(state), NAMEOF_ENUM(XapiandManager::state().load()));
+				// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 			}
 			break;
 		}
@@ -985,7 +984,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 			L_EV("Stop discovery's cluster_discovery event");
 
 			if (XapiandManager::exchange_state(XapiandManager::State::WAITING_MORE, XapiandManager::State::JOINING, 3s, "Joining cluster is taking too long...", "Joining cluster is finally done!")) {
-				// L_DEBUG("State changed: {} -> {}", NAMEOF_ENUM(state), NAMEOF_ENUM(XapiandManager::state().load()));
+				// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 				XapiandManager::join_cluster();
 			}
 			break;
@@ -1000,7 +999,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 void
 Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int revents)
 {
-	L_CALL("Discovery::raft_leader_election_timeout_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), NAMEOF_ENUM(XapiandManager::state().load()));
+	L_CALL("Discovery::raft_leader_election_timeout_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), enum_name(XapiandManager::state().load()));
 
 	L_EV_BEGIN("Discovery::raft_leader_election_timeout_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_election_timeout_cb:END");
@@ -1008,7 +1007,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT("   << LEADER_ELECTION (invalid state: {})", NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT("   << LEADER_ELECTION (invalid state: {})", enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -1027,7 +1026,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 void
 Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 {
-	// L_CALL("Discovery::raft_leader_heartbeat_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), NAMEOF_ENUM(XapiandManager::state().load()));
+	// L_CALL("Discovery::raft_leader_heartbeat_cb(<watcher>, {:#x} ({})) {{state:{}}}", revents, readable_revents(revents), enum_name(XapiandManager::state().load()));
 
 	L_EV_BEGIN("Discovery::raft_leader_heartbeat_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_heartbeat_cb:END");
@@ -1035,7 +1034,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT("   << HEARTBEAT (invalid state: {})", NAMEOF_ENUM(XapiandManager::state().load()));
+		L_RAFT("   << HEARTBEAT (invalid state: {})", enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -1221,7 +1220,7 @@ Discovery::_raft_request_vote(bool immediate)
 
 		auto local_node = Node::local_node();
 		L_RAFT("   << REQUEST_VOTE {{ node:{}, term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, active_nodes:{}, leader:{} }}",
-			local_node->name(), raft_current_term, last_log_term, last_log_index, NAMEOF_ENUM(raft_role), raft_leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
+			local_node->name(), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
 			serialise_length(raft_current_term) +
@@ -1252,8 +1251,8 @@ Discovery::raft_request_vote_async_cb(ev::async&, [[maybe_unused]] int revents)
 {
 	L_CALL("Discovery::raft_request_vote_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::raft_request_vote_async_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
-	L_EV_END("Discovery::raft_request_vote_async_cb:END {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::raft_request_vote_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_END("Discovery::raft_request_vote_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
 	_raft_request_vote(false);
 }
@@ -1291,8 +1290,8 @@ Discovery::raft_add_command_async_cb(ev::async&, [[maybe_unused]] int revents)
 {
 	L_CALL("Discovery::raft_add_command_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::raft_add_command_async_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
-	L_EV_END("Discovery::raft_add_command_async_cb:END {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::raft_add_command_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_END("Discovery::raft_add_command_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
 	std::string command;
 	while (raft_add_command_args.try_dequeue(command)) {
@@ -1329,8 +1328,8 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 {
 	L_CALL("Discovery::cluster_enter_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::cluster_enter_async_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
-	L_EV_END("Discovery::cluster_enter_async_cb:END {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::cluster_enter_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_END("Discovery::cluster_enter_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
 	auto local_node = Node::local_node();
 	send_message(Message::CLUSTER_ENTER, local_node->serialise());
@@ -1351,8 +1350,8 @@ Discovery::db_update_send_async_cb(ev::async&, [[maybe_unused]] int revents)
 {
 	L_CALL("Discovery::db_update_send_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
-	L_EV_END("Discovery::db_update_send_async_cb:END {{state:{}}}", NAMEOF_ENUM(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_END("Discovery::db_update_send_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
 	std::string path;
 	while (db_update_send_args.try_dequeue(path)) {
@@ -1376,7 +1375,7 @@ std::string
 Discovery::__repr__() const
 {
 	return string::format(STEEL_BLUE + "<Discovery ({}) {{cnt:{}, sock:{}}}{}{}{}>",
-		NAMEOF_ENUM(raft_role),
+		enum_name(raft_role),
 		use_count(),
 		sock,
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,

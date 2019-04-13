@@ -38,6 +38,7 @@
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
+#include "enum.h"                           // for ENUM
 #include "lru.h"                            // for lru::LRU
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
@@ -110,6 +111,17 @@ struct WalBinFooter {
 #pragma pack(pop)
 
 
+ENUM(DatabaseWALType, uint8_t,
+	COMMIT,
+	REPLACE_DOCUMENT,
+	DELETE_DOCUMENT,
+	SET_METADATA,
+	ADD_SPELLING,
+	REMOVE_SPELLING,
+	MAX
+)
+
+
 class DatabaseWAL : Storage<WalHeader, WalBinHeader, WalBinFooter> {
 	class iterator;
 
@@ -130,15 +142,7 @@ public:
 	static constexpr Xapian::rev max_rev = std::numeric_limits<Xapian::rev>::max() - 1;
 	static constexpr uint32_t max_slot = std::numeric_limits<uint32_t>::max();
 
-	enum class Type : uint8_t {
-		COMMIT,
-		REPLACE_DOCUMENT,
-		DELETE_DOCUMENT,
-		SET_METADATA,
-		ADD_SPELLING,
-		REMOVE_SPELLING,
-		MAX,
-	};
+	using Type = DatabaseWALType;
 
 	UUID _uuid;
 	UUID _uuid_le;

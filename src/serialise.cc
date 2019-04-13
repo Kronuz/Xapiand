@@ -35,7 +35,6 @@
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
-#include "nameof.hh"                                  // for NAMEOF_ENUM
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
 #include "repr.hh"                                    // for repr
@@ -157,7 +156,7 @@ Serialise::MsgPack(const required_spc_t& field_spc, const class MsgPack& field_v
 		case MsgPack::Type::MAP:
 			return object(field_spc, field_value);
 		default:
-			THROW(SerialisationError, "msgpack::type {} is not supported", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "msgpack::type {} is not supported", enum_name(field_value.get_type()));
 	}
 }
 
@@ -306,7 +305,7 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 		case FieldType::uuid:
 			return uuid(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not string", NAMEOF_ENUM(field_spc.get_type()));
+			THROW(SerialisationError, "Type: {} is not string", enum_name(field_spc.get_type()));
 	}
 }
 
@@ -337,10 +336,10 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 				case FieldType::string:
 					return Datetime::iso8601(Datetime::DatetimeParser(field_value));
 				default:
-					THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.get_type()));
+					THROW(SerialisationError, "Type: {} is not a datetime", enum_name(field_value.get_type()));
 			}
 		default:
-			THROW(SerialisationError, "Type: {} is not a datetime", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Type: {} is not a datetime", enum_name(field_value.get_type()));
 	}
 }
 
@@ -358,7 +357,7 @@ Serialise::time(const required_spc_t& field_spc, const class MsgPack& field_valu
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {} is not a time", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Type: {} is not a time", enum_name(field_value.get_type()));
 	}
 }
 
@@ -376,7 +375,7 @@ Serialise::timedelta(const required_spc_t& field_spc, const class MsgPack& field
 		case MsgPack::Type::STR:
 			return string(field_spc, field_value.str_view());
 		default:
-			THROW(SerialisationError, "Type: {} is not a timedelta", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Type: {} is not a timedelta", enum_name(field_value.get_type()));
 	}
 }
 
@@ -395,7 +394,7 @@ Serialise::floating(FieldType field_type, long double field_value)
 		case FieldType::floating:
 			return floating(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not a float", NAMEOF_ENUM(field_type));
+			THROW(SerialisationError, "Type: {} is not a float", enum_name(field_type));
 	}
 }
 
@@ -406,7 +405,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 	switch (field_type) {
 		case FieldType::positive:
 			if (field_value < 0) {
-				THROW(SerialisationError, "Type: {} must be a positive number [{}]", NAMEOF_ENUM(field_type), field_value);
+				THROW(SerialisationError, "Type: {} must be a positive number [{}]", enum_name(field_type), field_value);
 			}
 			return positive(field_value);
 		case FieldType::date:
@@ -421,7 +420,7 @@ Serialise::integer(FieldType field_type, int64_t field_value)
 		case FieldType::integer:
 			return integer(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not a integer [{}]", NAMEOF_ENUM(field_type), field_value);
+			THROW(SerialisationError, "Type: {} is not a integer [{}]", enum_name(field_type), field_value);
 	}
 }
 
@@ -444,7 +443,7 @@ Serialise::positive(FieldType field_type, uint64_t field_value)
 		case FieldType::positive:
 			return positive(field_value);
 		default:
-			THROW(SerialisationError, "Type: {} is not a positive integer [{}]", NAMEOF_ENUM(field_type), field_value);
+			THROW(SerialisationError, "Type: {} is not a positive integer [{}]", enum_name(field_type), field_value);
 	}
 }
 
@@ -456,7 +455,7 @@ Serialise::boolean(FieldType field_type, bool field_value)
 		return boolean(field_value);
 	}
 
-	THROW(SerialisationError, "Type: {} is not boolean", NAMEOF_ENUM(field_type));
+	THROW(SerialisationError, "Type: {} is not boolean", enum_name(field_type));
 }
 
 
@@ -467,7 +466,7 @@ Serialise::geospatial(FieldType field_type, const class MsgPack& field_value)
 		return geospatial(field_value);
 	}
 
-	THROW(SerialisationError, "Type: {} is not geospatial", NAMEOF_ENUM(field_type));
+	THROW(SerialisationError, "Type: {} is not geospatial", enum_name(field_type));
 }
 
 
@@ -524,7 +523,7 @@ Serialise::time(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::time_to_double(Datetime::TimeParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: {} is not time", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Type: {} is not time", enum_name(field_value.get_type()));
 	}
 }
 
@@ -571,7 +570,7 @@ Serialise::timedelta(const class MsgPack& field_value, double& t_val)
 			t_val = Datetime::timedelta_to_double(Datetime::TimedeltaParser(field_value.str_view()));
 			return timestamp(t_val);
 		default:
-			THROW(SerialisationError, "Type: {} is not timedelta", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Type: {} is not timedelta", enum_name(field_value.get_type()));
 	}
 }
 
@@ -919,7 +918,7 @@ Serialise::guess_type(const class MsgPack& field_value)
 		}
 
 		default:
-			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Unexpected type {}", enum_name(field_value.get_type()));
 	}
 }
 
@@ -1044,7 +1043,7 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 		}
 
 		default:
-			THROW(SerialisationError, "Unexpected type {}", NAMEOF_ENUM(field_value.get_type()));
+			THROW(SerialisationError, "Unexpected type {}", enum_name(field_value.get_type()));
 	}
 }
 

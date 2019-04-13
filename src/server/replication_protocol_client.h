@@ -34,6 +34,7 @@
 
 #include "base_client.h"                    // for BaseClient
 #include "endpoint.h"                       // for Endpoint
+#include "enum.h"                           // for ENUM
 #include "threadpool.hh"                    // for Task
 #include "xapian.h"
 
@@ -49,21 +50,21 @@
 #define FILE_FOLLOWS '\xfd'
 
 
-enum class ReplicaState {
+ENUM(ReplicaState, int,
 	INIT_REPLICATION_CLIENT,
 	INIT_REPLICATION_SERVER,
 	REPLICATION_CLIENT,
-	REPLICATION_SERVER,
-};
+	REPLICATION_SERVER
+)
 
 
-enum class ReplicationMessageType {
+ENUM(ReplicationMessageType, int,
 	MSG_GET_CHANGESETS,
 	MSG_MAX
-};
+)
 
 
-enum class ReplicationReplyType {
+ENUM(ReplicationReplyType, int,
 	REPLY_WELCOME,              // Welcome message (same as Remote Protocol's REPLY_UPDATE)
 	REPLY_EXCEPTION,            // Exception
 	REPLY_END_OF_CHANGES,       // No more changes to transfer
@@ -74,7 +75,7 @@ enum class ReplicationReplyType {
 	REPLY_DB_FOOTER,            // End of a whole DB copy
 	REPLY_CHANGESET,            // A changeset file is being sent
 	REPLY_MAX
-};
+)
 
 
 class Shard;

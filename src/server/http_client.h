@@ -121,13 +121,13 @@ public:
 };
 
 
-enum class Encoding {
+ENUM(Encoding, int,
 	none,
 	gzip,
 	deflate,
 	identity,
-	unknown,
-};
+	unknown
+)
 
 
 class Request;
@@ -162,18 +162,23 @@ public:
 };
 
 
+ENUM(RequestMode, int,
+	FULL,
+	STREAM,
+	STREAM_NDJSON,
+	STREAM_MSGPACK
+)
+
+
 class Request {
 	MsgPack _decoded_body;
 
 	MsgPack decode(std::string_view body);
 
 public:
-	enum class Mode {
-		FULL,
-		STREAM,
-		STREAM_NDJSON,
-		STREAM_MSGPACK,
-	} mode;
+	using Mode = RequestMode;
+
+	Mode mode;
 
 	Response response;
 

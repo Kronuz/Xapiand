@@ -36,6 +36,7 @@
 #include <vector>                                 // for std::vector
 
 #include "database/utils.h"
+#include "enum.h"                                 // for ENUM
 #include "geospatial/htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack
@@ -45,7 +46,7 @@
 #include "xapian.h"                               // for Xapian::QueryParser
 
 
-enum class TypeIndex : uint8_t {
+ENUM(TypeIndex, uint8_t,
 	NONE                      = 0,                              // 0000  Bits for  "none"
 	FIELD_TERMS               = 0b0001,                         // 0001  Bit for   "field_terms"
 	FIELD_VALUES              = 0b0010,                         // 0010  Bit for   "field_values"
@@ -62,36 +63,36 @@ enum class TypeIndex : uint8_t {
 	GLOBAL_ALL_FIELD_TERMS    = GLOBAL_ALL    | FIELD_TERMS,    // 1101  Bits for  "global_all,field_terms" *
 	GLOBAL_ALL_FIELD_VALUES   = GLOBAL_ALL    | FIELD_VALUES,   // 1110  Bits for  "global_all,field_values" *
 	ALL                       = GLOBAL_ALL    | FIELD_ALL,      // 1111  Bits for  "all"
-	INVALID                   = static_cast<uint8_t>(-1),
-};
+	INVALID                   = static_cast<uint8_t>(-1)
+)
 
 
-enum class UUIDFieldIndex : uint8_t {
+ENUM(UUIDFieldIndex, uint8_t,
 	uuid        = 0b0001,  // Indexin using the field name.
 	uuid_field  = 0b0010,  // Indexing using the meta name.
 	both        = 0b0011,  // Indexing using field_uuid and uuid.
-	INVALID     = static_cast<uint8_t>(-1),
-};
+	INVALID     = static_cast<uint8_t>(-1)
+)
 
 
-enum class StopStrategy : uint8_t {
+ENUM(StopStrategy, uint8_t,
 	stop_none,
 	stop_all,
 	stop_stemmed,
-	INVALID    = static_cast<uint8_t>(-1),
-};
+	INVALID    = static_cast<uint8_t>(-1)
+)
 
 
-enum class StemStrategy : uint8_t {
+ENUM(StemStrategy, uint8_t,
 	stem_none,
 	stem_some,
 	stem_all,
 	stem_all_z,
-	INVALID    = static_cast<uint8_t>(-1),
-};
+	INVALID    = static_cast<uint8_t>(-1)
+)
 
 
-enum class UnitTime : uint64_t {
+ENUM(UnitTime, uint64_t,
 	second     = 1,                     // 1                  60
 	minute     = second * 60,           // 60                 60
 	hour       = minute * 60,           // 3600               24
@@ -101,8 +102,8 @@ enum class UnitTime : uint64_t {
 	decade     = year * 10,             // 315360000          10
 	century    = year * 100,            // 3153600000         10
 	millennium = year * 1000,           // 31536000000        8
-	INVALID    = static_cast<uint64_t>(-1),
-};
+	INVALID    = static_cast<uint64_t>(-1)
+)
 
 
 constexpr StopStrategy DEFAULT_STOP_STRATEGY      = StopStrategy::stop_stemmed;
@@ -188,7 +189,7 @@ constexpr uint8_t UUID_CHAR          = 'U';
 constexpr uint8_t SCRIPT_CHAR        = 'X';
 constexpr uint8_t TIME_CHAR          = 'Z';
 
-enum class FieldType : uint8_t {
+ENUM(FieldType, uint8_t,
 	empty         = EMPTY_CHAR,
 
 	array         = ARRAY_CHAR,
@@ -208,8 +209,8 @@ enum class FieldType : uint8_t {
 	text          = TEXT_CHAR,
 	time          = TIME_CHAR,
 	timedelta     = TIMEDELTA_CHAR,
-	uuid          = UUID_CHAR,
-};
+	uuid          = UUID_CHAR
+)
 
 
 inline constexpr Xapian::TermGenerator::stop_strategy getGeneratorStopStrategy(StopStrategy stop_strategy) {

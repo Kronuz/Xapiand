@@ -48,7 +48,6 @@
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
-#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "opts.h"                                 // for opts::*
 #include "reserved/schema.h"                      // for RESERVED_
 #include "script.h"                               // for Script
@@ -536,42 +535,6 @@ static const std::string str_set_stem_strategy(string::join<std::string>({
 	"stem_all_z",
 	"all_z",
 }, ", ", " or "));
-
-static inline StemStrategy
-_get_stem_strategy(std::string_view str_stem_strategy)
-{
-	constexpr static auto _ = phf::make_phf({
-		hhl("stem_none"),
-		hhl("none"),
-		hhl("stem_some"),
-		hhl("some"),
-		hhl("stem_all"),
-		hhl("all"),
-		hhl("stem_all_z"),
-		hhl("all_z"),
-	});
-
-	switch (_.fhhl(str_stem_strategy)) {
-		case _.fhhl("stem_none"):
-			return  StemStrategy::stem_none;
-		case _.fhhl("none"):
-			return  StemStrategy::stem_none;
-		case _.fhhl("stem_some"):
-			return  StemStrategy::stem_some;
-		case _.fhhl("some"):
-			return  StemStrategy::stem_some;
-		case _.fhhl("stem_all"):
-			return  StemStrategy::stem_all;
-		case _.fhhl("all"):
-			return  StemStrategy::stem_all;
-		case _.fhhl("stem_all_z"):
-			return  StemStrategy::stem_all_z;
-		case _.fhhl("all_z"):
-			return  StemStrategy::stem_all_z;
-		default:
-			return StemStrategy::INVALID;
-	}
-}
 
 
 static const std::string str_set_index_uuid_field(string::join<std::string>({
@@ -1638,19 +1601,19 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		default: {
 			std::string result;
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-				result += NAMEOF_ENUM(sep_types[SPC_FOREIGN_TYPE]);
+				result += enum_name(sep_types[SPC_FOREIGN_TYPE]);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] == FieldType::object) {
 				if (!result.empty()) { result += "/"; }
-				result += NAMEOF_ENUM(sep_types[SPC_OBJECT_TYPE]);
+				result += enum_name(sep_types[SPC_OBJECT_TYPE]);
 			}
 			if (sep_types[SPC_ARRAY_TYPE] == FieldType::array) {
 				if (!result.empty()) { result += "/"; }
-				result += NAMEOF_ENUM(sep_types[SPC_ARRAY_TYPE]);
+				result += enum_name(sep_types[SPC_ARRAY_TYPE]);
 			}
 			if (sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 				if (!result.empty()) { result += "/"; }
-				result += NAMEOF_ENUM(sep_types[SPC_CONCRETE_TYPE]);
+				result += enum_name(sep_types[SPC_CONCRETE_TYPE]);
 			}
 			THROW(ClientError, "{} not supported.", repr(result), RESERVED_TYPE);
 		}
@@ -2188,8 +2151,8 @@ required_spc_t::to_obj() const
 	}
 
 	obj["language"] = language;
-	obj["stop_strategy"] = NAMEOF_ENUM(stop_strategy);
-	obj["stem_strategy"] = NAMEOF_ENUM(stem_strategy);
+	obj["stop_strategy"] = enum_name(stop_strategy);
+	obj["stem_strategy"] = enum_name(stem_strategy);
 	obj["stem_language"] = stem_language;
 
 	obj["error"] = error;
@@ -2983,7 +2946,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			mut_object = db_handler.call_script(object, term_id, *specification.script, data);
 			if (mut_object != nullptr) {
 				if (!mut_object->is_map()) {
-					THROW(ClientError, "Script must return an object, it returned {}", NAMEOF_ENUM(mut_object->get_type()));
+					THROW(ClientError, "Script must return an object, it returned {}", enum_name(mut_object->get_type()));
 				}
 				// Rebuild fields with new values.
 				fields.clear();
@@ -4969,7 +4932,7 @@ Schema::validate_required_namespace_data()
 			break;
 
 		default:
-			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 }
 
@@ -5052,11 +5015,11 @@ Schema::validate_required_data(MsgPack& mut_properties)
 							try {
 								set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 							} catch (const std::out_of_range&) {
-								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 							}
 						}
 					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 					}
 				} else {
 					set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
@@ -5075,7 +5038,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 							set_acc.insert(_accuracy.u64());
 						}
 					} catch (const msgpack::type_error&) {
-						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
 				} else {
 					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
@@ -5096,14 +5059,14 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			if (!specification.language.empty()) {
 				mut_properties[RESERVED_LANGUAGE] = specification.language;
-				mut_properties[RESERVED_STOP_STRATEGY] = NAMEOF_ENUM(specification.stop_strategy);
+				mut_properties[RESERVED_STOP_STRATEGY] = enum_name(specification.stop_strategy);
 			}
 			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
 				specification.stem_language = specification.aux_language;
 			}
 			if (!specification.stem_language.empty()) {
 				mut_properties[RESERVED_STEM_LANGUAGE] = specification.stem_language;
-				mut_properties[RESERVED_STEM_STRATEGY] = NAMEOF_ENUM(specification.stem_strategy);
+				mut_properties[RESERVED_STEM_STRATEGY] = enum_name(specification.stem_strategy);
 			}
 
 			specification.flags.concrete = true;
@@ -5146,7 +5109,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			break;
 
 		default:
-			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 
 	// If field is namespace fallback to index anything but values.
@@ -5894,7 +5857,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::string:
@@ -5913,7 +5876,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::boolean: {
@@ -6137,7 +6100,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::string:
@@ -6157,7 +6120,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} catch (const msgpack::type_error&) {
-				THROW(ClientError, "Format invalid for {} type: {}", NAMEOF_ENUM(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::boolean: {
@@ -7414,7 +7377,7 @@ Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
 
 	try {
 		if (prop_stem_strategy.is_string()) {
-			specification.stem_strategy = _get_stem_strategy(prop_stem_strategy.str_view());
+			specification.stem_strategy = enum_type<StemStrategy>(prop_stem_strategy.str_view());
 			if (specification.stem_strategy == StemStrategy::INVALID) {
 				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STEM_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_stem_strategy);
 			}
@@ -8295,7 +8258,7 @@ Schema::process_stem_strategy(std::string_view prop_name, const MsgPack& doc_ste
 
 	try {
 		auto str_stem_strategy = doc_stem_strategy.str_view();
-		specification.stem_strategy = _get_stem_strategy(str_stem_strategy);
+		specification.stem_strategy = enum_type<StemStrategy>(str_stem_strategy);
 		if (specification.stem_strategy == StemStrategy::INVALID) {
 			THROW(ClientError, "{} can be in {} ({} not supported)", repr(prop_name), str_set_stem_strategy, repr(str_stem_strategy));
 		}
@@ -8802,7 +8765,7 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 			const auto _stop_strategy = string::lower(doc_stop_strategy.str_view());
-			const auto stop_strategy = NAMEOF_ENUM(specification.stop_strategy);
+			const auto stop_strategy = enum_name(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), stop_strategy, _stop_strategy, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
@@ -8824,7 +8787,7 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc
 	try {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 			const auto _stem_strategy = string::lower(doc_stem_strategy.str_view());
-			const auto stem_strategy = NAMEOF_ENUM(specification.stem_strategy);
+			const auto stem_strategy = enum_name(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(stem_strategy), repr(_stem_strategy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
@@ -8872,7 +8835,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 		} else {
 			++init_pos;
 		}
-		const auto str_type = NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]);
+		const auto str_type = enum_name(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
 			auto str_concretr_type = _str_type.substr(init_pos);
 			if ((str_concretr_type != "term" || str_type != "keyword") && (str_concretr_type != "keyword" || str_type != "term")) {  // FIXME: remove legacy term
@@ -8963,11 +8926,11 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						try {
 							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
 						} catch (const std::out_of_range&) {
-							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 						}
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -8989,7 +8952,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 						set_acc.insert(_accuracy.u64());
 					}
 				} catch (const msgpack::type_error&) {
-					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
@@ -9004,7 +8967,7 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 				return;
 			}
 			default:
-				THROW(ClientError, "{} is not allowed in {} type fields", repr(prop_name), NAMEOF_ENUM(specification.sep_types[SPC_CONCRETE_TYPE]));
+				THROW(ClientError, "{} is not allowed in {} type fields", repr(prop_name), enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be array", repr(prop_name));
@@ -9796,7 +9759,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					if (!res.stem_language.empty()) {
 						auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
 						if (stem_strategy_it != it_e) {
-							res.stem_strategy = _get_stem_strategy(stem_strategy_it.value().str_view());
+							res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
 						}
 					}
 					break;
@@ -9856,7 +9819,7 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 					if (!res.stem_language.empty()) {
 						auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
 						if (stem_strategy_it != it_e) {
-							res.stem_strategy = _get_stem_strategy(stem_strategy_it.value().str_view());
+							res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
 						}
 					}
 					break;
@@ -9961,7 +9924,7 @@ Schema::get_slot_field(std::string_view field_name) const
 				if (!res.stem_language.empty()) {
 					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
 					if (stem_strategy_it != it_e) {
-						res.stem_strategy = _get_stem_strategy(stem_strategy_it.value().str_view());
+						res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
 					}
 				}
 				break;

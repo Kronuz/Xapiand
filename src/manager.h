@@ -34,6 +34,7 @@
 #include "base_x.hh"                          // for Base62
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
+#include "enum.h"                             // for ENUM
 #include "ev/ev++.h"                          // for ev::loop_ref
 #include "length.h"                           // for serialise_length
 #include "opts.h"                             // for opts::*
@@ -81,6 +82,17 @@ inline uint64_t unserialise_node_id(std::string_view node_id_str) {
 }
 
 
+ENUM(XapiandManagerState, int,
+	BAD,
+	READY,
+	SETUP,
+	JOINING,
+	WAITING_MORE,
+	WAITING,
+	RESET
+)
+
+
 class XapiandManager : public Worker  {
 	friend Worker;
 
@@ -103,15 +115,7 @@ class XapiandManager : public Worker  {
 	void make_servers();
 
 public:
-	enum class State {
-		BAD,
-		READY,
-		SETUP,
-		JOINING,
-		WAITING_MORE,
-		WAITING,
-		RESET,
-	};
+	using State = XapiandManagerState;
 
 private:
 	static std::shared_ptr<XapiandManager> _manager;

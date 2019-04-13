@@ -33,6 +33,7 @@
 
 #include "concurrent_queue.h"               // for ConcurrentQueue
 #include "debouncer.h"                      // for make_debouncer
+#include "enum.h"                           // for ENUM
 #include "node.h"                           // for Node
 #include "opts.h"                           // for opts::*
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
@@ -63,31 +64,37 @@ struct RaftLogEntry {
 	std::string command;
 };
 
+
+ENUM(DiscoveryRole, int,
+	RAFT_FOLLOWER,
+	RAFT_CANDIDATE,
+	RAFT_LEADER
+)
+
+
+ENUM(DiscoveryMessage, int,
+	CLUSTER_HELLO,                // New node saying hello
+	CLUSTER_WAVE,                 // Nodes telling the client they do agree with the new node's name
+	CLUSTER_SNEER,                // Nodes telling the client they don't agree with the new node's name
+	CLUSTER_ENTER,                // Node enters the room
+	CLUSTER_BYE,                  // Node says goodbye
+	RAFT_HEARTBEAT,               // same as RAFT_APPEND_ENTRIES
+	RAFT_HEARTBEAT_RESPONSE,      // same as RAFT_APPEND_ENTRIES_RESPONSE
+	RAFT_APPEND_ENTRIES,          // Node saying hello when it become leader
+	RAFT_APPEND_ENTRIES_RESPONSE, // Request information from leader
+	RAFT_REQUEST_VOTE,            // Invoked by candidates to gather votes
+	RAFT_REQUEST_VOTE_RESPONSE,   // Gather votes
+	RAFT_ADD_COMMAND,             //
+	DB_UPDATED,                   //
+	MAX                           //
+)
+
+
 // Discovery for nodes and databases
 class Discovery : public UDP, public Worker, public Thread<Discovery, ThreadPolicyType::regular> {
 public:
-	enum class Role {
-		RAFT_FOLLOWER,
-		RAFT_CANDIDATE,
-		RAFT_LEADER,
-	};
-
-	enum class Message {
-		CLUSTER_HELLO,                // New node saying hello
-		CLUSTER_WAVE,                 // Nodes telling the client they do agree with the new node's name
-		CLUSTER_SNEER,                // Nodes telling the client they don't agree with the new node's name
-		CLUSTER_ENTER,                // Node enters the room
-		CLUSTER_BYE,                  // Node says goodbye
-		RAFT_HEARTBEAT,               // same as RAFT_APPEND_ENTRIES
-		RAFT_HEARTBEAT_RESPONSE,      // same as RAFT_APPEND_ENTRIES_RESPONSE
-		RAFT_APPEND_ENTRIES,          // Node saying hello when it become leader
-		RAFT_APPEND_ENTRIES_RESPONSE, // Request information from leader
-		RAFT_REQUEST_VOTE,            // Invoked by candidates to gather votes
-		RAFT_REQUEST_VOTE_RESPONSE,   // Gather votes
-		RAFT_ADD_COMMAND,             //
-		DB_UPDATED,                   //
-		MAX,                          //
-	};
+	using Role = DiscoveryRole;
+	using Message = DiscoveryMessage;
 
 private:
 	ev::io io;

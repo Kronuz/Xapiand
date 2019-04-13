@@ -41,7 +41,6 @@
 #include "multivalue/generate_terms.h"            // for GenerateTerms
 #include "multivalue/geospatialrange.h"           // for GeoSpatialRange
 #include "multivalue/range.h"                     // for MultipleValueRange
-#include "nameof.hh"                              // for NAMEOF_ENUM
 #include "repr.hh"                                // for repr
 #include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_*
 #include "reserved/types.h"                       // for RESERVED_POSITIVE,...
@@ -590,7 +589,7 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 		case FieldType::geo:
 			return get_acc_geo_query(field_spc, field_accuracy, obj, default_op, wqf, flags);
 		default:
-			THROW(Error, "Type: {} does not handle accuracy terms", NAMEOF_ENUM(field_spc.get_type()));
+			THROW(Error, "Type: {} does not handle accuracy terms", enum_name(field_spc.get_type()));
 	}
 }
 

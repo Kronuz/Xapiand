@@ -31,6 +31,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_client.h"                      // for BaseClient
+#include "enum.h"                             // for ENUM
 #include "endpoint.h"                         // for Endpoints
 #include "threadpool.hh"                      // for Task
 #include "xapian.h"
@@ -83,13 +84,13 @@
 class lock_shard;
 
 
-enum class State {
+ENUM(State, int,
 	INIT_REMOTE,
-	REMOTE_SERVER,
-};
+	REMOTE_SERVER
+)
 
 
-enum class RemoteMessageType {
+ENUM(RemoteMessageType, int,
 	MSG_ALLTERMS,               // All Terms
 	MSG_COLLFREQ,               // Get Collection Frequency
 	MSG_DOCUMENT,               // Get Document
@@ -124,10 +125,10 @@ enum class RemoteMessageType {
 	MSG_POSITIONLISTCOUNT,      // Get PositionList length
 	MSG_READACCESS,             // Select current database
 	MSG_MAX
-};
+)
 
 
-enum class RemoteReplyType {
+ENUM(RemoteReplyType, int,
 	REPLY_UPDATE,               // Updated database stats
 	REPLY_EXCEPTION,            // Exception
 	REPLY_DONE,                 // Done sending list
@@ -155,7 +156,7 @@ enum class RemoteReplyType {
 	REPLY_REMOVESPELLING,       // Remove a spelling
 	REPLY_TERMLIST0,            // Header for get Termlist
 	REPLY_MAX
-};
+)
 
 
 // A single instance of a non-blocking Xapiand binary protocol handler
