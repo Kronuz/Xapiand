@@ -39,7 +39,7 @@
 // which is much faster ~ 5.24591s -> 0.861319s
 template <std::size_t max_size = 1000>
 class SimpleStopper : public Xapian::Stopper {
-	phf::phf<phf::fast_phf, std::uint32_t, max_size> stop_words;
+	phf::phf<std::uint32_t, max_size> stop_words;
 
 public:
 	SimpleStopper() { }
