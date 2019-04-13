@@ -150,7 +150,7 @@ template <typename Key, typename Func, typename Tuple, ThreadPolicyType thread_p
 inline void
 Debouncer<Key, Func, Tuple, thread_policy>::throttle(const Key& key)
 {
-	if (throttle_time > debounce_timeout) {
+	if (throttle_time <= debounce_timeout) {
 		// No throttler, just release:
 		release(key);
 	} else {
@@ -165,6 +165,9 @@ Debouncer<Key, Func, Tuple, thread_policy>::throttle(const Key& key)
 
 			status->max_wakeup_time = 0;  // flag status as throttler
 
+			if (status->task) {
+				status->task->clear();
+			}
 			task = std::make_shared<DebouncerTask<Key, Func, Tuple, thread_policy>>(*this, key);
 			task->wakeup_time = time_point_to_ullong(now + throttle_time);
 			status->task = task;
