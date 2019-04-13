@@ -3525,7 +3525,7 @@ HttpClient::__repr__() const
 		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
 		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "",
 		is_idle() ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : "",
-		is_waiting() ? " " + WHITE + "(waiting)" + STEEL_BLUE : "",
+		is_waiting() ? " " + LIGHT_STEEL_BLUE + "(waiting)" + STEEL_BLUE : "",
 		is_running() ? " " + RED + "(running)" + STEEL_BLUE : "",
 		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
 		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "");

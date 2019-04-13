@@ -43,7 +43,7 @@
 	for (const auto& _ : _nodes) { \
 		L_SLATE_GREY("    nodes[{}] -> {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}", \
 			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->remote_port, _.second->replication_port, _.second->touched.load(std::memory_order_relaxed), \
-			Node::is_active(_.second) ? " " + WHITE + "(active)" + STEEL_BLUE : "", \
+			Node::is_active(_.second) ? " " + LIGHT_STEEL_BLUE + "(active)" + STEEL_BLUE : "", \
 			Node::is_local(_.second) ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "", \
 			Node::is_leader(_.second) ? " " + DARK_STEEL_BLUE + "(leader)" + STEEL_BLUE : ""); \
 	}
