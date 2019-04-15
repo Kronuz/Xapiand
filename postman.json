@@ -797,6 +797,175 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Tutorials",
+      "item": [
+        {
+          "name": "Spatial Search Tutorial",
+          "item": [
+            {
+              "name": "Load sample data",
+              "request": {
+                "method": "RESTORE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-ndjson",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "cities",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "file",
+                  "file": {
+                    "src": "docs/assets/cities.ndjson"
+                  }
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.processed).to.be.an('number')",
+                      "    pm.expect(jsonData.indexed).to.be.an('number')",
+                      "    pm.expect(jsonData.total).to.be.an('number')",
+                      "    pm.expect(jsonData.items).to.be.an('array')",
+                      "});",
+                      "pm.test(\"restore received all\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.total).to.be.eql(1000)",
+                      "});",
+                      "pm.test(\"restore processed all\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.processed).to.eql(1000)",
+                      "});",
+                      "pm.test(\"restore indexed all\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.indexed).to.be.eql(1000)",
+                      "    pm.expect(jsonData.items.length).to.eql(1000);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Search near El Cerrito",
+          "request": {
+            "method": "SEARCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "cities",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "volatile",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_query\": {\n    \"population\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 100000\n        }\n      }\n    },\n    \"location\": {\n      \"_in\": {\n        \"_circle\": {\n          \"_latitude\": 37.9180233,\n          \"_longitude\": -122.3198401,\n          \"_radius\": 20000\n        }\n      }\n    }\n  },\n  \"_selector\": \"city\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"response is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.hits).to.eql(['Richmond','Berkeley','Oakland','San Francisco','Vallejo']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search near El Cerrito from San Francisco",
+          "request": {
+            "method": "SEARCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "cities",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "volatile",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_query\": {\n    \"population\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 100000\n        }\n      }\n    },\n    \"location\": {\n      \"_in\": {\n        \"_circle\": {\n          \"_latitude\": 37.9180233,\n          \"_longitude\": -122.3198401,\n          \"_radius\": 20000\n        }\n      }\n    }\n  },\n  \"_sort\": {\n    \"location\": {\n      \"_order\": \"asc\",\n      \"_value\": {\n        \"_point\": {\n          \"_latitude\": 37.7576171,\n          \"_longitude\": -122.5776844,\n        }\n      }\n    }\n  },\n  \"_selector\": \"city\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"response is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.hits).to.eql(['San Francisco','Oakland','Richmond','Berkeley','Vallejo']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
