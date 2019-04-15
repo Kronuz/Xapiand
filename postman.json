@@ -864,104 +864,104 @@
                   }
                 }
               ]
-            }
-          ]
-        },
-        {
-          "name": "Search near El Cerrito",
-          "request": {
-            "method": "SEARCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "host": [
-                "{{domain}}"
-              ],
-              "path": [
-                "cities",
-                ""
-              ],
-              "query": [
+            },
+            {
+              "name": "Search near El Cerrito",
+              "request": {
+                "method": "SEARCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "cities",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"_query\": {\n    \"population\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 100000\n        }\n      }\n    },\n    \"location\": {\n      \"_in\": {\n        \"_circle\": {\n          \"_latitude\": 37.9180233,\n          \"_longitude\": -122.3198401,\n          \"_radius\": 20000\n        }\n      }\n    }\n  },\n  \"_selector\": \"city\"\n}"
+                }
+              },
+              "event": [
                 {
-                  "key": "volatile",
-                  "value": null
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.hits).to.eql(['Richmond','Berkeley','Oakland','San Francisco','Vallejo']);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
               ]
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"_query\": {\n    \"population\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 100000\n        }\n      }\n    },\n    \"location\": {\n      \"_in\": {\n        \"_circle\": {\n          \"_latitude\": 37.9180233,\n          \"_longitude\": -122.3198401,\n          \"_radius\": 20000\n        }\n      }\n    }\n  },\n  \"_selector\": \"city\"\n}"
-            }
-          },
-          "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"response is ok\", function() {",
-                  "    pm.response.to.be.ok;",
-                  "});",
-                  "pm.test(\"response is valid\", function() {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.hits).to.eql(['Richmond','Berkeley','Oakland','San Francisco','Vallejo']);",
-                  "});"
+              "name": "Search near El Cerrito from San Francisco",
+              "request": {
+                "method": "SEARCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
                 ],
-                "type": "text/javascript"
-              }
-            }
-          ]
-        },
-        {
-          "name": "Search near El Cerrito from San Francisco",
-          "request": {
-            "method": "SEARCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "host": [
-                "{{domain}}"
-              ],
-              "path": [
-                "cities",
-                ""
-              ],
-              "query": [
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "cities",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"_query\": {\n    \"population\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 100000\n        }\n      }\n    },\n    \"location\": {\n      \"_in\": {\n        \"_circle\": {\n          \"_latitude\": 37.9180233,\n          \"_longitude\": -122.3198401,\n          \"_radius\": 20000\n        }\n      }\n    }\n  },\n  \"_sort\": {\n    \"location\": {\n      \"_order\": \"asc\",\n      \"_value\": {\n        \"_point\": {\n          \"_latitude\": 37.7576171,\n          \"_longitude\": -122.5776844,\n        }\n      }\n    }\n  },\n  \"_selector\": \"city\"\n}"
+                }
+              },
+              "event": [
                 {
-                  "key": "volatile",
-                  "value": null
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.hits).to.eql(['San Francisco','Oakland','Richmond','Berkeley','Vallejo']);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
               ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"_query\": {\n    \"population\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 100000\n        }\n      }\n    },\n    \"location\": {\n      \"_in\": {\n        \"_circle\": {\n          \"_latitude\": 37.9180233,\n          \"_longitude\": -122.3198401,\n          \"_radius\": 20000\n        }\n      }\n    }\n  },\n  \"_sort\": {\n    \"location\": {\n      \"_order\": \"asc\",\n      \"_value\": {\n        \"_point\": {\n          \"_latitude\": 37.7576171,\n          \"_longitude\": -122.5776844,\n        }\n      }\n    }\n  },\n  \"_selector\": \"city\"\n}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"response is ok\", function() {",
-                  "    pm.response.to.be.ok;",
-                  "});",
-                  "pm.test(\"response is valid\", function() {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.hits).to.eql(['San Francisco','Oakland','Richmond','Berkeley','Vallejo']);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
             }
           ]
         }
