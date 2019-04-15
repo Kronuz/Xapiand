@@ -121,8 +121,8 @@ struct Generator {
         }
     }
 
-    bool handleAlias(Handler& handler, yaml_event_t event) {
-        const char* anchor = (char*)event.data.alias.anchor;
+    bool handleAlias(Handler& handler, yaml_event_t _event) {
+        const char* anchor = (char*)_event.data.alias.anchor;
         JsonPointer* pointer = nullptr;
         for (auto it = anchors.rbegin(); it != anchors.rend(); it++) {
             if (it->name == anchor) {
@@ -132,7 +132,7 @@ struct Generator {
         }
         if (!pointer) {
             // This means we tried to find an anchor that was never defined.
-            *errorLine = event.start_mark.line;
+            *errorLine = _event.start_mark.line;
             *errorMessage = aliasErrorString;
             return false;
         }
@@ -245,11 +245,11 @@ struct Generator {
         return ok;
     }
 
-    bool parseScalar(Handler& handler, yaml_event_t event) {
+    bool parseScalar(Handler& handler, yaml_event_t _event) {
 
-        const char* tag = (char*)event.data.scalar.tag;
-        const char* value = (char*)event.data.scalar.value;
-        size_t length = event.data.scalar.length;
+        const char* tag = (char*)_event.data.scalar.tag;
+        const char* value = (char*)_event.data.scalar.value;
+        size_t length = _event.data.scalar.length;
         bool parsed = false;
         bool ok = true;
 
@@ -268,13 +268,13 @@ struct Generator {
             }
             if (!parsed) {
                 *errorMessage = tagErrorString;
-                *errorLine = event.start_mark.line;
+                *errorLine = _event.start_mark.line;
                 ok = false;
             }
             return ok;
         }
 
-        if (event.data.scalar.style != YAML_PLAIN_SCALAR_STYLE) {
+        if (_event.data.scalar.style != YAML_PLAIN_SCALAR_STYLE) {
             // See [1] below.
             return handler.String(value, length, true);
         }
@@ -405,15 +405,15 @@ struct Generator {
     }
 
     #if Y2J_DEBUG
-    void printEvent(yaml_event_t& event) {
+    void printEvent(yaml_event_t& _event) {
         static int indent = 0;
-        if (event.type == YAML_DOCUMENT_START_EVENT) { indent = 0; }
-        if (event.type == YAML_SEQUENCE_END_EVENT || event.type == YAML_MAPPING_END_EVENT) { indent -= 2; }
+        if (_event.type == YAML_DOCUMENT_START_EVENT) { indent = 0; }
+        if (_event.type == YAML_SEQUENCE_END_EVENT || _event.type == YAML_MAPPING_END_EVENT) { indent -= 2; }
         printf("%*s", indent, "");
         if (complexKeyDepth > 0) {
             printf("?\n");
         } else {
-            switch (event.type) {
+            switch (_event.type) {
             case YAML_NO_EVENT: printf("No event!\n"); break;
             case YAML_STREAM_START_EVENT: printf("Start Stream\n"); break;
             case YAML_STREAM_END_EVENT: printf("End Stream\n"); break;
@@ -423,11 +423,11 @@ struct Generator {
             case YAML_SEQUENCE_END_EVENT: printf("] (members: %lu)\n", getSeqLength()); break;
             case YAML_MAPPING_START_EVENT: printf("{\n"); break;
             case YAML_MAPPING_END_EVENT: printf("} (members: %lu)\n", getMapLength()); break;
-            case YAML_ALIAS_EVENT: printf("Alias (anchor %s)\n", event.data.alias.anchor); break;
-            case YAML_SCALAR_EVENT: printf(entryIsMapKey() ? "\"%s\":\n" : "\"%s\"\n", event.data.scalar.value); break;
+            case YAML_ALIAS_EVENT: printf("Alias (anchor %s)\n", _event.data.alias.anchor); break;
+            case YAML_SCALAR_EVENT: printf(entryIsMapKey() ? "\"%s\":\n" : "\"%s\"\n", _event.data.scalar.value); break;
             }
         }
-        if (event.type == YAML_SEQUENCE_START_EVENT || event.type == YAML_MAPPING_START_EVENT) { indent += 2; }
+        if (_event.type == YAML_SEQUENCE_START_EVENT || _event.type == YAML_MAPPING_START_EVENT) { indent += 2; }
     }
     #endif
 };
