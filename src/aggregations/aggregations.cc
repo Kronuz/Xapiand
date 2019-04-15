@@ -22,6 +22,7 @@
 
 #include "aggregations.h"
 
+#include <cassert>                          // for assert
 #include <stdexcept>                        // for out_of_range
 
 #include "bucket.h"                         // for FilterAggregation, Histog...
@@ -49,6 +50,8 @@ Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& 
 	  slot{0.0},
 	  idx{0}
 {
+	assert(context.is_map());
+
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_AGGS_COUNT),
 		// hh(RESERVED_AGGS_CARDINALITY),
