@@ -2,6 +2,7 @@
   {
     "city": "South San Francisco",
     "state": "California",
+    "_id": 1,
     "location": {
       "_point": {
         "_longitude": -122.4077498,
@@ -13,6 +14,7 @@
   {
     "city": "Aliso Viejo",
     "state": "California",
+    "_id": 2,
     "location": {
       "_point": {
         "_longitude": -117.7256083,
@@ -24,6 +26,7 @@
   {
     "city": "Rapid City",
     "state": "South Dakota",
+    "_id": 3,
     "location": {
       "_point": {
         "_longitude": -103.2310149,
@@ -35,6 +38,7 @@
   {
     "city": "Coon Rapids",
     "state": "Minnesota",
+    "_id": 4,
     "location": {
       "_point": {
         "_longitude": -93.3030063,
@@ -46,6 +50,7 @@
   {
     "city": "Malden",
     "state": "Massachusetts",
+    "_id": 5,
     "location": {
       "_point": {
         "_longitude": -71.066163,
@@ -57,6 +62,7 @@
   {
     "city": "Noblesville",
     "state": "Indiana",
+    "_id": 6,
     "location": {
       "_point": {
         "_longitude": -86.0085955,
@@ -68,6 +74,7 @@
   {
     "city": "Delray Beach",
     "state": "Florida",
+    "_id": 7,
     "location": {
       "_point": {
         "_longitude": -80.0728201,
@@ -79,6 +86,7 @@
   {
     "city": "Wellington",
     "state": "Florida",
+    "_id": 8,
     "location": {
       "_point": {
         "_longitude": -80.2683571,
@@ -90,6 +98,7 @@
   {
     "city": "Florissant",
     "state": "Missouri",
+    "_id": 9,
     "location": {
       "_point": {
         "_longitude": -90.322614,
@@ -101,6 +110,7 @@
   {
     "city": "Youngstown",
     "state": "Ohio",
+    "_id": 10,
     "location": {
       "_point": {
         "_longitude": -80.6495194,
@@ -112,6 +122,7 @@
   {
     "city": "Newport Beach",
     "state": "California",
+    "_id": 11,
     "location": {
       "_point": {
         "_longitude": -117.9289469,
@@ -123,6 +134,7 @@
   {
     "city": "Bloomington",
     "state": "Illinois",
+    "_id": 12,
     "location": {
       "_point": {
         "_longitude": -88.9936873,
@@ -134,6 +146,7 @@
   {
     "city": "Menifee",
     "state": "California",
+    "_id": 13,
     "location": {
       "_point": {
         "_longitude": -117.185294,
@@ -145,6 +158,7 @@
   {
     "city": "Lynchburg",
     "state": "Virginia",
+    "_id": 14,
     "location": {
       "_point": {
         "_longitude": -79.1422464,
@@ -156,6 +170,7 @@
   {
     "city": "Loveland",
     "state": "Colorado",
+    "_id": 15,
     "location": {
       "_point": {
         "_longitude": -105.0749801,
@@ -167,6 +182,7 @@
   {
     "city": "St. Joseph",
     "state": "Missouri",
+    "_id": 16,
     "location": {
       "_point": {
         "_longitude": -94.846681,
@@ -178,6 +194,7 @@
   {
     "city": "Folsom",
     "state": "California",
+    "_id": 17,
     "location": {
       "_point": {
         "_longitude": -121.1760583,
@@ -189,6 +206,7 @@
   {
     "city": "Decatur",
     "state": "Illinois",
+    "_id": 18,
     "location": {
       "_point": {
         "_longitude": -88.9548001,
@@ -200,6 +218,7 @@
   {
     "city": "Napa",
     "state": "California",
+    "_id": 19,
     "location": {
       "_point": {
         "_longitude": -122.286865,
@@ -211,6 +230,7 @@
   {
     "city": "Allen",
     "state": "Texas",
+    "_id": 20,
     "location": {
       "_point": {
         "_longitude": -96.6705503,
@@ -222,6 +242,7 @@
   {
     "city": "Goose Creek",
     "state": "South Carolina",
+    "_id": 21,
     "location": {
       "_point": {
         "_longitude": -80.0325867,
@@ -233,6 +254,7 @@
   {
     "city": "Carpentersville",
     "state": "Illinois",
+    "_id": 22,
     "location": {
       "_point": {
         "_longitude": -88.2578582,
@@ -244,6 +266,7 @@
   {
     "city": "Bell Gardens",
     "state": "California",
+    "_id": 23,
     "location": {
       "_point": {
         "_longitude": -118.1514588,
@@ -255,6 +278,7 @@
   {
     "city": "Woonsocket",
     "state": "Rhode Island",
+    "_id": 24,
     "location": {
       "_point": {
         "_longitude": -71.5147839,
@@ -266,6 +290,7 @@
   {
     "city": "Maplewood",
     "state": "Minnesota",
+    "_id": 25,
     "location": {
       "_point": {
         "_longitude": -92.9952153,
@@ -277,6 +302,7 @@
   {
     "city": "Annapolis",
     "state": "Maryland",
+    "_id": 26,
     "location": {
       "_point": {
         "_longitude": -76.4921829,
@@ -288,6 +314,7 @@
   {
     "city": "Madison",
     "state": "Alabama",
+    "_id": 27,
     "location": {
       "_point": {
         "_longitude": -86.7483318,
@@ -299,6 +326,7 @@
   {
     "city": "Riverton",
     "state": "Utah",
+    "_id": 28,
     "location": {
       "_point": {
         "_longitude": -111.9391023,
@@ -310,6 +338,7 @@
   {
     "city": "San Francisco",
     "state": "California",
+    "_id": 29,
     "location": {
       "_point": {
         "_longitude": -122.4194155,
@@ -321,6 +350,7 @@
   {
     "city": "Providence",
     "state": "Rhode Island",
+    "_id": 30,
     "location": {
       "_point": {
         "_longitude": -71.4128343,
@@ -332,6 +362,7 @@
   {
     "city": "San Mateo",
     "state": "California",
+    "_id": 31,
     "location": {
       "_point": {
         "_longitude": -122.3255254,
@@ -343,6 +374,7 @@
   {
     "city": "Corpus Christi",
     "state": "Texas",
+    "_id": 32,
     "location": {
       "_point": {
         "_longitude": -97.396381,
@@ -354,6 +386,7 @@
   {
     "city": "Yakima",
     "state": "Washington",
+    "_id": 33,
     "location": {
       "_point": {
         "_longitude": -120.5058987,
@@ -365,6 +398,7 @@
   {
     "city": "Miramar",
     "state": "Florida",
+    "_id": 34,
     "location": {
       "_point": {
         "_longitude": -80.3035602,
@@ -376,6 +410,7 @@
   {
     "city": "Orlando",
     "state": "Florida",
+    "_id": 35,
     "location": {
       "_point": {
         "_longitude": -81.3792365,
@@ -387,6 +422,7 @@
   {
     "city": "Tucson",
     "state": "Arizona",
+    "_id": 36,
     "location": {
       "_point": {
         "_longitude": -110.926479,
@@ -398,6 +434,7 @@
   {
     "city": "Dayton",
     "state": "Ohio",
+    "_id": 37,
     "location": {
       "_point": {
         "_longitude": -84.1916069,
@@ -409,6 +446,7 @@
   {
     "city": "Chapel Hill",
     "state": "North Carolina",
+    "_id": 38,
     "location": {
       "_point": {
         "_longitude": -79.0558445,
@@ -420,6 +458,7 @@
   {
     "city": "Redondo Beach",
     "state": "California",
+    "_id": 39,
     "location": {
       "_point": {
         "_longitude": -118.3884078,
@@ -431,6 +470,7 @@
   {
     "city": "Gulfport",
     "state": "Mississippi",
+    "_id": 40,
     "location": {
       "_point": {
         "_longitude": -89.0928155,
@@ -442,6 +482,7 @@
   {
     "city": "Schenectady",
     "state": "New York",
+    "_id": 41,
     "location": {
       "_point": {
         "_longitude": -73.9395687,
@@ -453,6 +494,7 @@
   {
     "city": "Plymouth",
     "state": "Minnesota",
+    "_id": 42,
     "location": {
       "_point": {
         "_longitude": -93.4555093,
@@ -464,6 +506,7 @@
   {
     "city": "Tracy",
     "state": "California",
+    "_id": 43,
     "location": {
       "_point": {
         "_longitude": -121.4252227,
@@ -475,6 +518,7 @@
   {
     "city": "Franklin",
     "state": "Tennessee",
+    "_id": 44,
     "location": {
       "_point": {
         "_longitude": -86.8688899,
@@ -486,6 +530,7 @@
   {
     "city": "Medford",
     "state": "Oregon",
+    "_id": 45,
     "location": {
       "_point": {
         "_longitude": -122.8755949,
@@ -497,6 +542,7 @@
   {
     "city": "Bowie",
     "state": "Maryland",
+    "_id": 46,
     "location": {
       "_point": {
         "_longitude": -76.7791365,
@@ -508,6 +554,7 @@
   {
     "city": "Casper",
     "state": "Wyoming",
+    "_id": 47,
     "location": {
       "_point": {
         "_longitude": -106.313081,
@@ -519,6 +566,7 @@
   {
     "city": "Prescott Valley",
     "state": "Arizona",
+    "_id": 48,
     "location": {
       "_point": {
         "_longitude": -112.315721,
@@ -530,6 +578,7 @@
   {
     "city": "Commerce City",
     "state": "Colorado",
+    "_id": 49,
     "location": {
       "_point": {
         "_longitude": -104.9338675,
@@ -541,6 +590,7 @@
   {
     "city": "Bullhead City",
     "state": "Arizona",
+    "_id": 50,
     "location": {
       "_point": {
         "_longitude": -114.5285981,
@@ -552,6 +602,7 @@
   {
     "city": "Lawrence",
     "state": "Indiana",
+    "_id": 51,
     "location": {
       "_point": {
         "_longitude": -86.0252612,
@@ -563,6 +614,7 @@
   {
     "city": "Enid",
     "state": "Oklahoma",
+    "_id": 52,
     "location": {
       "_point": {
         "_longitude": -97.8783911,
@@ -574,6 +626,7 @@
   {
     "city": "Bedford",
     "state": "Texas",
+    "_id": 53,
     "location": {
       "_point": {
         "_longitude": -97.1430671,
@@ -585,6 +638,7 @@
   {
     "city": "Long Beach",
     "state": "California",
+    "_id": 54,
     "location": {
       "_point": {
         "_longitude": -118.1937395,
@@ -596,6 +650,7 @@
   {
     "city": "Murfreesboro",
     "state": "Tennessee",
+    "_id": 55,
     "location": {
       "_point": {
         "_longitude": -86.39027,
@@ -607,6 +662,7 @@
   {
     "city": "San Jose",
     "state": "California",
+    "_id": 56,
     "location": {
       "_point": {
         "_longitude": -121.8863286,
@@ -618,6 +674,7 @@
   {
     "city": "Fontana",
     "state": "California",
+    "_id": 57,
     "location": {
       "_point": {
         "_longitude": -117.435048,
@@ -629,6 +686,7 @@
   {
     "city": "South Bend",
     "state": "Indiana",
+    "_id": 58,
     "location": {
       "_point": {
         "_longitude": -86.2519898,
@@ -640,6 +698,7 @@
   {
     "city": "Aurora",
     "state": "Colorado",
+    "_id": 59,
     "location": {
       "_point": {
         "_longitude": -104.8319195,
@@ -651,6 +710,7 @@
   {
     "city": "Edmond",
     "state": "Oklahoma",
+    "_id": 60,
     "location": {
       "_point": {
         "_longitude": -97.4780954,
@@ -662,6 +722,7 @@
   {
     "city": "Mobile",
     "state": "Alabama",
+    "_id": 61,
     "location": {
       "_point": {
         "_longitude": -88.0398912,
@@ -673,6 +734,7 @@
   {
     "city": "Midland",
     "state": "Texas",
+    "_id": 62,
     "location": {
       "_point": {
         "_longitude": -102.0779146,
@@ -684,6 +746,7 @@
   {
     "city": "Springfield",
     "state": "Massachusetts",
+    "_id": 63,
     "location": {
       "_point": {
         "_longitude": -72.589811,
@@ -695,6 +758,7 @@
   {
     "city": "Fort Collins",
     "state": "Colorado",
+    "_id": 64,
     "location": {
       "_point": {
         "_longitude": -105.084423,
@@ -706,6 +770,7 @@
   {
     "city": "Little Rock",
     "state": "Arkansas",
+    "_id": 65,
     "location": {
       "_point": {
         "_longitude": -92.2895948,
@@ -717,6 +782,7 @@
   {
     "city": "Denver",
     "state": "Colorado",
+    "_id": 66,
     "location": {
       "_point": {
         "_longitude": -104.990251,
@@ -728,6 +794,7 @@
   {
     "city": "Hialeah",
     "state": "Florida",
+    "_id": 67,
     "location": {
       "_point": {
         "_longitude": -80.2781057,
@@ -739,6 +806,7 @@
   {
     "city": "New York",
     "state": "New York",
+    "_id": 68,
     "location": {
       "_point": {
         "_longitude": -74.0059413,
@@ -750,6 +818,7 @@
   {
     "city": "Des Moines",
     "state": "Iowa",
+    "_id": 69,
     "location": {
       "_point": {
         "_longitude": -93.6091064,
@@ -761,6 +830,7 @@
   {
     "city": "El Paso",
     "state": "Texas",
+    "_id": 70,
     "location": {
       "_point": {
         "_longitude": -106.4424559,
@@ -772,6 +842,7 @@
   {
     "city": "Houston",
     "state": "Texas",
+    "_id": 71,
     "location": {
       "_point": {
         "_longitude": -95.3698028,
@@ -783,6 +854,7 @@
   {
     "city": "Wilmington",
     "state": "North Carolina",
+    "_id": 72,
     "location": {
       "_point": {
         "_longitude": -77.9447102,
@@ -794,6 +866,7 @@
   {
     "city": "New Bedford",
     "state": "Massachusetts",
+    "_id": 73,
     "location": {
       "_point": {
         "_longitude": -70.934205,
@@ -805,6 +878,7 @@
   {
     "city": "Las Cruces",
     "state": "New Mexico",
+    "_id": 74,
     "location": {
       "_point": {
         "_longitude": -106.7636538,
@@ -816,6 +890,7 @@
   {
     "city": "Simi Valley",
     "state": "California",
+    "_id": 75,
     "location": {
       "_point": {
         "_longitude": -118.781482,
@@ -827,6 +902,7 @@
   {
     "city": "Temecula",
     "state": "California",
+    "_id": 76,
     "location": {
       "_point": {
         "_longitude": -117.1483648,
@@ -838,6 +914,7 @@
   {
     "city": "Ann Arbor",
     "state": "Michigan",
+    "_id": 77,
     "location": {
       "_point": {
         "_longitude": -83.7430378,
@@ -849,6 +926,7 @@
   {
     "city": "Round Rock",
     "state": "Texas",
+    "_id": 78,
     "location": {
       "_point": {
         "_longitude": -97.678896,
@@ -860,6 +938,7 @@
   {
     "city": "Topeka",
     "state": "Kansas",
+    "_id": 79,
     "location": {
       "_point": {
         "_longitude": -95.6890185,
@@ -871,6 +950,7 @@
   {
     "city": "Beaumont",
     "state": "Texas",
+    "_id": 80,
     "location": {
       "_point": {
         "_longitude": -94.1265562,
@@ -882,6 +962,7 @@
   {
     "city": "Frisco",
     "state": "Texas",
+    "_id": 81,
     "location": {
       "_point": {
         "_longitude": -96.8236116,
@@ -893,6 +974,7 @@
   {
     "city": "Haverhill",
     "state": "Massachusetts",
+    "_id": 82,
     "location": {
       "_point": {
         "_longitude": -71.0772796,
@@ -904,6 +986,7 @@
   {
     "city": "San Leandro",
     "state": "California",
+    "_id": 83,
     "location": {
       "_point": {
         "_longitude": -122.1560768,
@@ -915,6 +998,7 @@
   {
     "city": "Chino Hills",
     "state": "California",
+    "_id": 84,
     "location": {
       "_point": {
         "_longitude": -117.7325848,
@@ -926,6 +1010,7 @@
   {
     "city": "Yuba City",
     "state": "California",
+    "_id": 85,
     "location": {
       "_point": {
         "_longitude": -121.6169108,
@@ -937,6 +1022,7 @@
   {
     "city": "San Ramon",
     "state": "California",
+    "_id": 86,
     "location": {
       "_point": {
         "_longitude": -121.9780153,
@@ -948,6 +1034,7 @@
   {
     "city": "Danbury",
     "state": "Connecticut",
+    "_id": 87,
     "location": {
       "_point": {
         "_longitude": -73.4540111,
@@ -959,6 +1046,7 @@
   {
     "city": "Chico",
     "state": "California",
+    "_id": 88,
     "location": {
       "_point": {
         "_longitude": -121.8374777,
@@ -970,6 +1058,7 @@
   {
     "city": "Weston",
     "state": "Florida",
+    "_id": 89,
     "location": {
       "_point": {
         "_longitude": -80.3997748,
@@ -981,6 +1070,7 @@
   {
     "city": "Troy",
     "state": "Michigan",
+    "_id": 90,
     "location": {
       "_point": {
         "_longitude": -83.1497751,
@@ -992,6 +1082,7 @@
   {
     "city": "Rancho Palos Verdes",
     "state": "California",
+    "_id": 91,
     "location": {
       "_point": {
         "_longitude": -118.3870173,
@@ -1003,6 +1094,7 @@
   {
     "city": "East Lansing",
     "state": "Michigan",
+    "_id": 92,
     "location": {
       "_point": {
         "_longitude": -84.4838654,
@@ -1014,6 +1106,7 @@
   {
     "city": "Calexico",
     "state": "California",
+    "_id": 93,
     "location": {
       "_point": {
         "_longitude": -115.4988834,
@@ -1025,6 +1118,7 @@
   {
     "city": "Burnsville",
     "state": "Minnesota",
+    "_id": 94,
     "location": {
       "_point": {
         "_longitude": -93.2777226,
@@ -1036,6 +1130,7 @@
   {
     "city": "Rosemead",
     "state": "California",
+    "_id": 95,
     "location": {
       "_point": {
         "_longitude": -118.072846,
@@ -1047,6 +1142,7 @@
   {
     "city": "Shelton",
     "state": "Connecticut",
+    "_id": 96,
     "location": {
       "_point": {
         "_longitude": -73.0931641,
@@ -1058,6 +1154,7 @@
   {
     "city": "Shakopee",
     "state": "Minnesota",
+    "_id": 97,
     "location": {
       "_point": {
         "_longitude": -93.5272861,
@@ -1069,6 +1166,7 @@
   {
     "city": "Redmond",
     "state": "Washington",
+    "_id": 98,
     "location": {
       "_point": {
         "_longitude": -122.121512,
@@ -1080,6 +1178,7 @@
   {
     "city": "Poway",
     "state": "California",
+    "_id": 99,
     "location": {
       "_point": {
         "_longitude": -117.0358646,
@@ -1091,6 +1190,7 @@
   {
     "city": "Cedar Falls",
     "state": "Iowa",
+    "_id": 100,
     "location": {
       "_point": {
         "_longitude": -92.4453161,
@@ -1102,6 +1202,7 @@
   {
     "city": "Calumet City",
     "state": "Illinois",
+    "_id": 101,
     "location": {
       "_point": {
         "_longitude": -87.5294871,
@@ -1113,6 +1214,7 @@
   {
     "city": "Keizer",
     "state": "Oregon",
+    "_id": 102,
     "location": {
       "_point": {
         "_longitude": -123.0262077,
@@ -1124,6 +1226,7 @@
   {
     "city": "Marysville",
     "state": "Washington",
+    "_id": 103,
     "location": {
       "_point": {
         "_longitude": -122.1770818,
@@ -1135,6 +1238,7 @@
   {
     "city": "Southaven",
     "state": "Mississippi",
+    "_id": 104,
     "location": {
       "_point": {
         "_longitude": -90.0125913,
@@ -1146,6 +1250,7 @@
   {
     "city": "Brentwood",
     "state": "California",
+    "_id": 105,
     "location": {
       "_point": {
         "_longitude": -121.6957863,
@@ -1157,6 +1262,7 @@
   {
     "city": "Redlands",
     "state": "California",
+    "_id": 106,
     "location": {
       "_point": {
         "_longitude": -117.1825381,
@@ -1168,6 +1274,7 @@
   {
     "city": "New Rochelle",
     "state": "New York",
+    "_id": 107,
     "location": {
       "_point": {
         "_longitude": -73.7823549,
@@ -1179,6 +1286,7 @@
   {
     "city": "Perris",
     "state": "California",
+    "_id": 108,
     "location": {
       "_point": {
         "_longitude": -117.2286478,
@@ -1190,6 +1298,7 @@
   {
     "city": "Davis",
     "state": "California",
+    "_id": 109,
     "location": {
       "_point": {
         "_longitude": -121.7405167,
@@ -1201,6 +1310,7 @@
   {
     "city": "Chino",
     "state": "California",
+    "_id": 110,
     "location": {
       "_point": {
         "_longitude": -117.688944,
@@ -1212,6 +1322,7 @@
   {
     "city": "Duluth",
     "state": "Minnesota",
+    "_id": 111,
     "location": {
       "_point": {
         "_longitude": -92.1004852,
@@ -1223,6 +1334,7 @@
   {
     "city": "West Covina",
     "state": "California",
+    "_id": 112,
     "location": {
       "_point": {
         "_longitude": -117.9389526,
@@ -1234,6 +1346,7 @@
   {
     "city": "Oklahoma City",
     "state": "Oklahoma",
+    "_id": 113,
     "location": {
       "_point": {
         "_longitude": -97.5164276,
@@ -1245,6 +1358,7 @@
   {
     "city": "Stockton",
     "state": "California",
+    "_id": 114,
     "location": {
       "_point": {
         "_longitude": -121.2907796,
@@ -1256,6 +1370,7 @@
   {
     "city": "Santa Ana",
     "state": "California",
+    "_id": 115,
     "location": {
       "_point": {
         "_longitude": -117.8678338,
@@ -1267,6 +1382,7 @@
   {
     "city": "Jacksonville",
     "state": "Florida",
+    "_id": 116,
     "location": {
       "_point": {
         "_longitude": -81.655651,
@@ -1278,6 +1394,7 @@
   {
     "city": "Springfield",
     "state": "Illinois",
+    "_id": 117,
     "location": {
       "_point": {
         "_longitude": -89.6501481,
@@ -1289,6 +1406,7 @@
   {
     "city": "Ontario",
     "state": "California",
+    "_id": 118,
     "location": {
       "_point": {
         "_longitude": -117.6508876,
@@ -1300,6 +1418,7 @@
   {
     "city": "Vallejo",
     "state": "California",
+    "_id": 119,
     "location": {
       "_point": {
         "_longitude": -122.2566367,
@@ -1311,6 +1430,7 @@
   {
     "city": "Cleveland",
     "state": "Ohio",
+    "_id": 120,
     "location": {
       "_point": {
         "_longitude": -81.6943605,
@@ -1322,6 +1442,7 @@
   {
     "city": "Atlantic City",
     "state": "New Jersey",
+    "_id": 121,
     "location": {
       "_point": {
         "_longitude": -74.4229266,
@@ -1333,6 +1454,7 @@
   {
     "city": "Germantown",
     "state": "Tennessee",
+    "_id": 122,
     "location": {
       "_point": {
         "_longitude": -89.8100858,
@@ -1344,6 +1466,7 @@
   {
     "city": "Pinellas Park",
     "state": "Florida",
+    "_id": 123,
     "location": {
       "_point": {
         "_longitude": -82.6995443,
@@ -1355,6 +1478,7 @@
   {
     "city": "Campbell",
     "state": "California",
+    "_id": 124,
     "location": {
       "_point": {
         "_longitude": -121.9499568,
@@ -1366,6 +1490,7 @@
   {
     "city": "La Mirada",
     "state": "California",
+    "_id": 125,
     "location": {
       "_point": {
         "_longitude": -118.0120086,
@@ -1377,6 +1502,7 @@
   {
     "city": "Hanover Park",
     "state": "Illinois",
+    "_id": 126,
     "location": {
       "_point": {
         "_longitude": -88.1450735,
@@ -1388,6 +1514,7 @@
   {
     "city": "Bonita Springs",
     "state": "Florida",
+    "_id": 127,
     "location": {
       "_point": {
         "_longitude": -81.7786972,
@@ -1399,6 +1526,7 @@
   {
     "city": "Oro Valley",
     "state": "Arizona",
+    "_id": 128,
     "location": {
       "_point": {
         "_longitude": -110.966488,
@@ -1410,6 +1538,7 @@
   {
     "city": "Bozeman",
     "state": "Montana",
+    "_id": 129,
     "location": {
       "_point": {
         "_longitude": -111.0429339,
@@ -1421,6 +1550,7 @@
   {
     "city": "Smyrna",
     "state": "Tennessee",
+    "_id": 130,
     "location": {
       "_point": {
         "_longitude": -86.5186045,
@@ -1432,6 +1562,7 @@
   {
     "city": "Spartanburg",
     "state": "South Carolina",
+    "_id": 131,
     "location": {
       "_point": {
         "_longitude": -81.9320482,
@@ -1443,6 +1574,7 @@
   {
     "city": "Hattiesburg",
     "state": "Mississippi",
+    "_id": 132,
     "location": {
       "_point": {
         "_longitude": -89.2903392,
@@ -1454,6 +1586,7 @@
   {
     "city": "Gaithersburg",
     "state": "Maryland",
+    "_id": 133,
     "location": {
       "_point": {
         "_longitude": -77.2013705,
@@ -1465,6 +1598,7 @@
   {
     "city": "Maple Grove",
     "state": "Minnesota",
+    "_id": 134,
     "location": {
       "_point": {
         "_longitude": -93.4557877,
@@ -1476,6 +1610,7 @@
   {
     "city": "White Plains",
     "state": "New York",
+    "_id": 135,
     "location": {
       "_point": {
         "_longitude": -73.7629097,
@@ -1487,6 +1622,7 @@
   {
     "city": "Schaumburg",
     "state": "Illinois",
+    "_id": 136,
     "location": {
       "_point": {
         "_longitude": -88.0834059,
@@ -1498,6 +1634,7 @@
   {
     "city": "Kirkland",
     "state": "Washington",
+    "_id": 137,
     "location": {
       "_point": {
         "_longitude": -122.2087353,
@@ -1509,6 +1646,7 @@
   {
     "city": "Scranton",
     "state": "Pennsylvania",
+    "_id": 138,
     "location": {
       "_point": {
         "_longitude": -75.6624122,
@@ -1520,6 +1658,7 @@
   {
     "city": "Royal Oak",
     "state": "Michigan",
+    "_id": 139,
     "location": {
       "_point": {
         "_longitude": -83.1446485,
@@ -1531,6 +1670,7 @@
   {
     "city": "Idaho Falls",
     "state": "Idaho",
+    "_id": 140,
     "location": {
       "_point": {
         "_longitude": -112.0339645,
@@ -1542,6 +1682,7 @@
   {
     "city": "Missoula",
     "state": "Montana",
+    "_id": 141,
     "location": {
       "_point": {
         "_longitude": -113.996586,
@@ -1553,6 +1694,7 @@
   {
     "city": "Rowlett",
     "state": "Texas",
+    "_id": 142,
     "location": {
       "_point": {
         "_longitude": -96.56388,
@@ -1564,6 +1706,7 @@
   {
     "city": "Fountain Valley",
     "state": "California",
+    "_id": 143,
     "location": {
       "_point": {
         "_longitude": -117.9536697,
@@ -1575,6 +1718,7 @@
   {
     "city": "North Miami Beach",
     "state": "Florida",
+    "_id": 144,
     "location": {
       "_point": {
         "_longitude": -80.1625463,
@@ -1586,6 +1730,7 @@
   {
     "city": "Huber Heights",
     "state": "Ohio",
+    "_id": 145,
     "location": {
       "_point": {
         "_longitude": -84.1246608,
@@ -1597,6 +1742,7 @@
   {
     "city": "Nashua",
     "state": "New Hampshire",
+    "_id": 146,
     "location": {
       "_point": {
         "_longitude": -71.467566,
@@ -1608,6 +1754,7 @@
   {
     "city": "Bellevue",
     "state": "Washington",
+    "_id": 147,
     "location": {
       "_point": {
         "_longitude": -122.2006786,
@@ -1619,6 +1766,7 @@
   {
     "city": "Clovis",
     "state": "California",
+    "_id": 148,
     "location": {
       "_point": {
         "_longitude": -119.7029194,
@@ -1630,6 +1778,7 @@
   {
     "city": "Vista",
     "state": "California",
+    "_id": 149,
     "location": {
       "_point": {
         "_longitude": -117.2425355,
@@ -1641,6 +1790,7 @@
   {
     "city": "Kansas City",
     "state": "Kansas",
+    "_id": 150,
     "location": {
       "_point": {
         "_longitude": -94.6274636,
@@ -1652,6 +1802,7 @@
   {
     "city": "Yonkers",
     "state": "New York",
+    "_id": 151,
     "location": {
       "_point": {
         "_longitude": -73.8987469,
@@ -1663,6 +1814,7 @@
   {
     "city": "Norman",
     "state": "Oklahoma",
+    "_id": 152,
     "location": {
       "_point": {
         "_longitude": -97.4394777,
@@ -1674,6 +1826,7 @@
   {
     "city": "Pearland",
     "state": "Texas",
+    "_id": 153,
     "location": {
       "_point": {
         "_longitude": -95.2860474,
@@ -1685,6 +1838,7 @@
   {
     "city": "Warren",
     "state": "Michigan",
+    "_id": 154,
     "location": {
       "_point": {
         "_longitude": -83.0146526,
@@ -1696,6 +1850,7 @@
   {
     "city": "Macon",
     "state": "Georgia",
+    "_id": 155,
     "location": {
       "_point": {
         "_longitude": -83.6324022,
@@ -1707,6 +1862,7 @@
   {
     "city": "Moreno Valley",
     "state": "California",
+    "_id": 156,
     "location": {
       "_point": {
         "_longitude": -117.2296717,
@@ -1718,6 +1874,7 @@
   {
     "city": "Cambridge",
     "state": "Massachusetts",
+    "_id": 157,
     "location": {
       "_point": {
         "_longitude": -71.1097335,
@@ -1729,6 +1886,7 @@
   {
     "city": "New Brunswick",
     "state": "New Jersey",
+    "_id": 158,
     "location": {
       "_point": {
         "_longitude": -74.4518188,
@@ -1740,6 +1898,7 @@
   {
     "city": "Roseville",
     "state": "California",
+    "_id": 159,
     "location": {
       "_point": {
         "_longitude": -121.2880059,
@@ -1751,6 +1910,7 @@
   {
     "city": "Perth Amboy",
     "state": "New Jersey",
+    "_id": 160,
     "location": {
       "_point": {
         "_longitude": -74.2654234,
@@ -1762,6 +1922,7 @@
   {
     "city": "Minnetonka",
     "state": "Minnesota",
+    "_id": 161,
     "location": {
       "_point": {
         "_longitude": -93.4687489,
@@ -1773,6 +1934,7 @@
   {
     "city": "Arcadia",
     "state": "California",
+    "_id": 162,
     "location": {
       "_point": {
         "_longitude": -118.0353449,
@@ -1784,6 +1946,7 @@
   {
     "city": "Roswell",
     "state": "New Mexico",
+    "_id": 163,
     "location": {
       "_point": {
         "_longitude": -104.5230242,
@@ -1795,6 +1958,7 @@
   {
     "city": "Kettering",
     "state": "Ohio",
+    "_id": 164,
     "location": {
       "_point": {
         "_longitude": -84.1688274,
@@ -1806,6 +1970,7 @@
   {
     "city": "Draper",
     "state": "Utah",
+    "_id": 165,
     "location": {
       "_point": {
         "_longitude": -111.8638226,
@@ -1817,6 +1982,7 @@
   {
     "city": "Worcester",
     "state": "Massachusetts",
+    "_id": 166,
     "location": {
       "_point": {
         "_longitude": -71.8022934,
@@ -1828,6 +1994,7 @@
   {
     "city": "Columbia",
     "state": "South Carolina",
+    "_id": 167,
     "location": {
       "_point": {
         "_longitude": -81.0348144,
@@ -1839,6 +2006,7 @@
   {
     "city": "Montgomery",
     "state": "Alabama",
+    "_id": 168,
     "location": {
       "_point": {
         "_longitude": -86.2999689,
@@ -1850,6 +2018,7 @@
   {
     "city": "Norfolk",
     "state": "Virginia",
+    "_id": 169,
     "location": {
       "_point": {
         "_longitude": -76.2858726,
@@ -1861,6 +2030,7 @@
   {
     "city": "Cincinnati",
     "state": "Ohio",
+    "_id": 170,
     "location": {
       "_point": {
         "_longitude": -84.5120196,
@@ -1872,6 +2042,7 @@
   {
     "city": "Gilbert",
     "state": "Arizona",
+    "_id": 171,
     "location": {
       "_point": {
         "_longitude": -111.789027,
@@ -1883,6 +2054,7 @@
   {
     "city": "Eugene",
     "state": "Oregon",
+    "_id": 172,
     "location": {
       "_point": {
         "_longitude": -123.0867536,
@@ -1894,6 +2066,7 @@
   {
     "city": "Mesa",
     "state": "Arizona",
+    "_id": 173,
     "location": {
       "_point": {
         "_longitude": -111.8314724,
@@ -1905,6 +2078,7 @@
   {
     "city": "Akron",
     "state": "Ohio",
+    "_id": 174,
     "location": {
       "_point": {
         "_longitude": -81.5190053,
@@ -1916,6 +2090,7 @@
   {
     "city": "Charlottesville",
     "state": "Virginia",
+    "_id": 175,
     "location": {
       "_point": {
         "_longitude": -78.4766781,
@@ -1927,6 +2102,7 @@
   {
     "city": "Peabody",
     "state": "Massachusetts",
+    "_id": 176,
     "location": {
       "_point": {
         "_longitude": -70.9286609,
@@ -1938,6 +2114,7 @@
   {
     "city": "Collierville",
     "state": "Tennessee",
+    "_id": 177,
     "location": {
       "_point": {
         "_longitude": -89.6645266,
@@ -1949,6 +2126,7 @@
   {
     "city": "Grand Island",
     "state": "Nebraska",
+    "_id": 178,
     "location": {
       "_point": {
         "_longitude": -98.3420118,
@@ -1960,6 +2138,7 @@
   {
     "city": "Castle Rock",
     "state": "Colorado",
+    "_id": 179,
     "location": {
       "_point": {
         "_longitude": -104.8560902,
@@ -1971,6 +2150,7 @@
   {
     "city": "Altoona",
     "state": "Pennsylvania",
+    "_id": 180,
     "location": {
       "_point": {
         "_longitude": -78.3947359,
@@ -1982,6 +2162,7 @@
   {
     "city": "Hempstead",
     "state": "New York",
+    "_id": 181,
     "location": {
       "_point": {
         "_longitude": -73.6187397,
@@ -1993,6 +2174,7 @@
   {
     "city": "Colton",
     "state": "California",
+    "_id": 182,
     "location": {
       "_point": {
         "_longitude": -117.3136547,
@@ -2004,6 +2186,7 @@
   {
     "city": "Coral Gables",
     "state": "Florida",
+    "_id": 183,
     "location": {
       "_point": {
         "_longitude": -80.2683838,
@@ -2015,6 +2198,7 @@
   {
     "city": "Logan",
     "state": "Utah",
+    "_id": 184,
     "location": {
       "_point": {
         "_longitude": -111.8338359,
@@ -2026,6 +2210,7 @@
   {
     "city": "Fitchburg",
     "state": "Massachusetts",
+    "_id": 185,
     "location": {
       "_point": {
         "_longitude": -71.8022955,
@@ -2037,6 +2222,7 @@
   {
     "city": "Jefferson City",
     "state": "Missouri",
+    "_id": 186,
     "location": {
       "_point": {
         "_longitude": -92.1735164,
@@ -2048,6 +2234,7 @@
   {
     "city": "Cape Girardeau",
     "state": "Missouri",
+    "_id": 187,
     "location": {
       "_point": {
         "_longitude": -89.5181476,
@@ -2059,6 +2246,7 @@
   {
     "city": "Lincoln Park",
     "state": "Michigan",
+    "_id": 188,
     "location": {
       "_point": {
         "_longitude": -83.1785361,
@@ -2070,6 +2258,7 @@
   {
     "city": "Woburn",
     "state": "Massachusetts",
+    "_id": 189,
     "location": {
       "_point": {
         "_longitude": -71.1522765,
@@ -2081,6 +2270,7 @@
   {
     "city": "Hagerstown",
     "state": "Maryland",
+    "_id": 190,
     "location": {
       "_point": {
         "_longitude": -77.7199932,
@@ -2092,6 +2282,7 @@
   {
     "city": "Titusville",
     "state": "Florida",
+    "_id": 191,
     "location": {
       "_point": {
         "_longitude": -80.8075537,
@@ -2103,6 +2294,7 @@
   {
     "city": "Allentown",
     "state": "Pennsylvania",
+    "_id": 192,
     "location": {
       "_point": {
         "_longitude": -75.4901833,
@@ -2114,6 +2306,7 @@
   {
     "city": "Waterbury",
     "state": "Connecticut",
+    "_id": 193,
     "location": {
       "_point": {
         "_longitude": -73.0514965,
@@ -2125,6 +2318,7 @@
   {
     "city": "Whittier",
     "state": "California",
+    "_id": 194,
     "location": {
       "_point": {
         "_longitude": -118.032844,
@@ -2136,6 +2330,7 @@
   {
     "city": "Camden",
     "state": "New Jersey",
+    "_id": 195,
     "location": {
       "_point": {
         "_longitude": -75.1196199,
@@ -2147,6 +2342,7 @@
   {
     "city": "Erie",
     "state": "Pennsylvania",
+    "_id": 196,
     "location": {
       "_point": {
         "_longitude": -80.085059,
@@ -2158,6 +2354,7 @@
   {
     "city": "Roanoke",
     "state": "Virginia",
+    "_id": 197,
     "location": {
       "_point": {
         "_longitude": -79.9414266,
@@ -2169,6 +2366,7 @@
   {
     "city": "St. George",
     "state": "Utah",
+    "_id": 198,
     "location": {
       "_point": {
         "_longitude": -113.5684164,
@@ -2180,6 +2378,7 @@
   {
     "city": "Edinburg",
     "state": "Texas",
+    "_id": 199,
     "location": {
       "_point": {
         "_longitude": -98.1633432,
@@ -2191,6 +2390,7 @@
   {
     "city": "Bend",
     "state": "Oregon",
+    "_id": 200,
     "location": {
       "_point": {
         "_longitude": -121.3153096,
@@ -2202,6 +2402,7 @@
   {
     "city": "Nampa",
     "state": "Idaho",
+    "_id": 201,
     "location": {
       "_point": {
         "_longitude": -116.5634624,
@@ -2213,6 +2414,7 @@
   {
     "city": "Laguna Niguel",
     "state": "California",
+    "_id": 202,
     "location": {
       "_point": {
         "_longitude": -117.7075526,
@@ -2224,6 +2426,7 @@
   {
     "city": "Apple Valley",
     "state": "California",
+    "_id": 203,
     "location": {
       "_point": {
         "_longitude": -117.1858759,
@@ -2235,6 +2438,7 @@
   {
     "city": "Montebello",
     "state": "California",
+    "_id": 204,
     "location": {
       "_point": {
         "_longitude": -118.1137535,
@@ -2246,6 +2450,7 @@
   {
     "city": "Frederick",
     "state": "Maryland",
+    "_id": 205,
     "location": {
       "_point": {
         "_longitude": -77.4105409,
@@ -2257,6 +2462,7 @@
   {
     "city": "Valdosta",
     "state": "Georgia",
+    "_id": 206,
     "location": {
       "_point": {
         "_longitude": -83.2784851,
@@ -2268,6 +2474,7 @@
   {
     "city": "Sanford",
     "state": "Florida",
+    "_id": 207,
     "location": {
       "_point": {
         "_longitude": -81.269453,
@@ -2279,6 +2486,7 @@
   {
     "city": "Dothan",
     "state": "Alabama",
+    "_id": 208,
     "location": {
       "_point": {
         "_longitude": -85.3904888,
@@ -2290,6 +2498,7 @@
   {
     "city": "Auburn",
     "state": "Alabama",
+    "_id": 209,
     "location": {
       "_point": {
         "_longitude": -85.4807825,
@@ -2301,6 +2510,7 @@
   {
     "city": "Hilton Head Island",
     "state": "South Carolina",
+    "_id": 210,
     "location": {
       "_point": {
         "_longitude": -80.752608,
@@ -2312,6 +2522,7 @@
   {
     "city": "Lake Havasu City",
     "state": "Arizona",
+    "_id": 211,
     "location": {
       "_point": {
         "_longitude": -114.3224548,
@@ -2323,6 +2534,7 @@
   {
     "city": "Palm Desert",
     "state": "California",
+    "_id": 212,
     "location": {
       "_point": {
         "_longitude": -116.3744556,
@@ -2334,6 +2546,7 @@
   {
     "city": "Waltham",
     "state": "Massachusetts",
+    "_id": 213,
     "location": {
       "_point": {
         "_longitude": -71.2356113,
@@ -2345,6 +2558,7 @@
   {
     "city": "Coeur d'Alene",
     "state": "Idaho",
+    "_id": 214,
     "location": {
       "_point": {
         "_longitude": -116.7804664,
@@ -2356,6 +2570,7 @@
   {
     "city": "St. Peters",
     "state": "Missouri",
+    "_id": 215,
     "location": {
       "_point": {
         "_longitude": -90.6298922,
@@ -2367,6 +2582,7 @@
   {
     "city": "Santee",
     "state": "California",
+    "_id": 216,
     "location": {
       "_point": {
         "_longitude": -116.9739167,
@@ -2378,6 +2594,7 @@
   {
     "city": "Homestead",
     "state": "Florida",
+    "_id": 217,
     "location": {
       "_point": {
         "_longitude": -80.4775569,
@@ -2389,6 +2606,7 @@
   {
     "city": "Eagan",
     "state": "Minnesota",
+    "_id": 218,
     "location": {
       "_point": {
         "_longitude": -93.1668858,
@@ -2400,6 +2618,7 @@
   {
     "city": "Ames",
     "state": "Iowa",
+    "_id": 219,
     "location": {
       "_point": {
         "_longitude": -93.62,
@@ -2411,6 +2630,7 @@
   {
     "city": "Friendswood",
     "state": "Texas",
+    "_id": 220,
     "location": {
       "_point": {
         "_longitude": -95.2010447,
@@ -2422,6 +2642,7 @@
   {
     "city": "Wheeling",
     "state": "Illinois",
+    "_id": 221,
     "location": {
       "_point": {
         "_longitude": -87.9289591,
@@ -2433,6 +2654,7 @@
   {
     "city": "Wausau",
     "state": "Wisconsin",
+    "_id": 222,
     "location": {
       "_point": {
         "_longitude": -89.6301221,
@@ -2444,6 +2666,7 @@
   {
     "city": "Mount Pleasant",
     "state": "South Carolina",
+    "_id": 223,
     "location": {
       "_point": {
         "_longitude": -79.8284258,
@@ -2455,6 +2678,7 @@
   {
     "city": "Spokane Valley",
     "state": "Washington",
+    "_id": 224,
     "location": {
       "_point": {
         "_longitude": -117.2393748,
@@ -2466,6 +2690,7 @@
   {
     "city": "North Little Rock",
     "state": "Arkansas",
+    "_id": 225,
     "location": {
       "_point": {
         "_longitude": -92.2670941,
@@ -2477,6 +2702,7 @@
   {
     "city": "Pleasanton",
     "state": "California",
+    "_id": 226,
     "location": {
       "_point": {
         "_longitude": -121.8746789,
@@ -2488,6 +2714,7 @@
   {
     "city": "Union City",
     "state": "New Jersey",
+    "_id": 227,
     "location": {
       "_point": {
         "_longitude": -74.2631635,
@@ -2499,6 +2726,7 @@
   {
     "city": "Merced",
     "state": "California",
+    "_id": 228,
     "location": {
       "_point": {
         "_longitude": -120.4829677,
@@ -2510,6 +2738,7 @@
   {
     "city": "Fort Myers",
     "state": "Florida",
+    "_id": 229,
     "location": {
       "_point": {
         "_longitude": -81.8723084,
@@ -2521,6 +2750,7 @@
   {
     "city": "Livonia",
     "state": "Michigan",
+    "_id": 230,
     "location": {
       "_point": {
         "_longitude": -83.3527097,
@@ -2532,6 +2762,7 @@
   {
     "city": "Longview",
     "state": "Texas",
+    "_id": 231,
     "location": {
       "_point": {
         "_longitude": -94.7404891,
@@ -2543,6 +2774,7 @@
   {
     "city": "Raleigh",
     "state": "North Carolina",
+    "_id": 232,
     "location": {
       "_point": {
         "_longitude": -78.6381787,
@@ -2554,6 +2786,7 @@
   {
     "city": "El Monte",
     "state": "California",
+    "_id": 233,
     "location": {
       "_point": {
         "_longitude": -118.0275667,
@@ -2565,6 +2798,7 @@
   {
     "city": "Milwaukee",
     "state": "Wisconsin",
+    "_id": 234,
     "location": {
       "_point": {
         "_longitude": -87.9064736,
@@ -2576,6 +2810,7 @@
   {
     "city": "Irvine",
     "state": "California",
+    "_id": 235,
     "location": {
       "_point": {
         "_longitude": -117.7946942,
@@ -2587,6 +2822,7 @@
   {
     "city": "Chandler",
     "state": "Arizona",
+    "_id": 236,
     "location": {
       "_point": {
         "_longitude": -111.8412502,
@@ -2598,6 +2834,7 @@
   {
     "city": "Surprise",
     "state": "Arizona",
+    "_id": 237,
     "location": {
       "_point": {
         "_longitude": -112.3679279,
@@ -2609,6 +2846,7 @@
   {
     "city": "Columbus",
     "state": "Georgia",
+    "_id": 238,
     "location": {
       "_point": {
         "_longitude": -84.9877094,
@@ -2620,6 +2858,7 @@
   {
     "city": "Reno",
     "state": "Nevada",
+    "_id": 239,
     "location": {
       "_point": {
         "_longitude": -119.8138027,
@@ -2631,6 +2870,7 @@
   {
     "city": "Toledo",
     "state": "Ohio",
+    "_id": 240,
     "location": {
       "_point": {
         "_longitude": -83.555212,
@@ -2642,6 +2882,7 @@
   {
     "city": "Washington",
     "state": "District of Columbia",
+    "_id": 241,
     "location": {
       "_point": {
         "_longitude": -77.0368707,
@@ -2653,6 +2894,7 @@
   {
     "city": "Rancho Cucamonga",
     "state": "California",
+    "_id": 242,
     "location": {
       "_point": {
         "_longitude": -117.5931084,
@@ -2664,6 +2906,7 @@
   {
     "city": "Everett",
     "state": "Washington",
+    "_id": 243,
     "location": {
       "_point": {
         "_longitude": -122.2020794,
@@ -2675,6 +2918,7 @@
   {
     "city": "Glendale",
     "state": "California",
+    "_id": 244,
     "location": {
       "_point": {
         "_longitude": -118.255075,
@@ -2686,6 +2930,7 @@
   {
     "city": "Orange",
     "state": "California",
+    "_id": 245,
     "location": {
       "_point": {
         "_longitude": -117.8531119,
@@ -2697,6 +2942,7 @@
   {
     "city": "Columbia",
     "state": "Missouri",
+    "_id": 246,
     "location": {
       "_point": {
         "_longitude": -92.3340724,
@@ -2708,6 +2954,7 @@
   {
     "city": "Buffalo",
     "state": "New York",
+    "_id": 247,
     "location": {
       "_point": {
         "_longitude": -78.8783689,
@@ -2719,6 +2966,7 @@
   {
     "city": "Fort Worth",
     "state": "Texas",
+    "_id": 248,
     "location": {
       "_point": {
         "_longitude": -97.3307658,
@@ -2730,6 +2978,7 @@
   {
     "city": "Abilene",
     "state": "Texas",
+    "_id": 249,
     "location": {
       "_point": {
         "_longitude": -99.7331439,
@@ -2741,6 +2990,7 @@
   {
     "city": "Greenville",
     "state": "North Carolina",
+    "_id": 250,
     "location": {
       "_point": {
         "_longitude": -77.3663538,
@@ -2752,6 +3002,7 @@
   {
     "city": "Yorba Linda",
     "state": "California",
+    "_id": 251,
     "location": {
       "_point": {
         "_longitude": -117.8131125,
@@ -2763,6 +3014,7 @@
   {
     "city": "Newton",
     "state": "Massachusetts",
+    "_id": 252,
     "location": {
       "_point": {
         "_longitude": -71.2092214,
@@ -2774,6 +3026,7 @@
   {
     "city": "East Orange",
     "state": "New Jersey",
+    "_id": 253,
     "location": {
       "_point": {
         "_longitude": -74.2048677,
@@ -2785,6 +3038,7 @@
   {
     "city": "Norwalk",
     "state": "Connecticut",
+    "_id": 254,
     "location": {
       "_point": {
         "_longitude": -73.4081575,
@@ -2796,6 +3050,7 @@
   {
     "city": "Auburn",
     "state": "Washington",
+    "_id": 255,
     "location": {
       "_point": {
         "_longitude": -122.2284532,
@@ -2807,6 +3062,7 @@
   {
     "city": "Carson",
     "state": "California",
+    "_id": 256,
     "location": {
       "_point": {
         "_longitude": -118.281693,
@@ -2818,6 +3074,7 @@
   {
     "city": "Racine",
     "state": "Wisconsin",
+    "_id": 257,
     "location": {
       "_point": {
         "_longitude": -87.7828523,
@@ -2829,6 +3086,7 @@
   {
     "city": "Tamarac",
     "state": "Florida",
+    "_id": 258,
     "location": {
       "_point": {
         "_longitude": -80.2497707,
@@ -2840,6 +3098,7 @@
   {
     "city": "Carmel",
     "state": "Indiana",
+    "_id": 259,
     "location": {
       "_point": {
         "_longitude": -86.1180435,
@@ -2851,6 +3110,7 @@
   {
     "city": "Greenville",
     "state": "South Carolina",
+    "_id": 260,
     "location": {
       "_point": {
         "_longitude": -82.3940104,
@@ -2862,6 +3122,7 @@
   {
     "city": "Tinley Park",
     "state": "Illinois",
+    "_id": 261,
     "location": {
       "_point": {
         "_longitude": -87.7932939,
@@ -2873,6 +3134,7 @@
   {
     "city": "Meriden",
     "state": "Connecticut",
+    "_id": 262,
     "location": {
       "_point": {
         "_longitude": -72.8070435,
@@ -2884,6 +3146,7 @@
   {
     "city": "Gardena",
     "state": "California",
+    "_id": 263,
     "location": {
       "_point": {
         "_longitude": -118.3089624,
@@ -2895,6 +3158,7 @@
   {
     "city": "North Miami",
     "state": "Florida",
+    "_id": 264,
     "location": {
       "_point": {
         "_longitude": -80.1867138,
@@ -2906,6 +3170,7 @@
   {
     "city": "Bellevue",
     "state": "Nebraska",
+    "_id": 265,
     "location": {
       "_point": {
         "_longitude": -95.9145568,
@@ -2917,6 +3182,7 @@
   {
     "city": "Kentwood",
     "state": "Michigan",
+    "_id": 266,
     "location": {
       "_point": {
         "_longitude": -85.6447492,
@@ -2928,6 +3194,7 @@
   {
     "city": "Wheaton",
     "state": "Illinois",
+    "_id": 267,
     "location": {
       "_point": {
         "_longitude": -88.1070127,
@@ -2939,6 +3206,7 @@
   {
     "city": "Portage",
     "state": "Michigan",
+    "_id": 268,
     "location": {
       "_point": {
         "_longitude": -85.5800022,
@@ -2950,6 +3218,7 @@
   {
     "city": "Middletown",
     "state": "Ohio",
+    "_id": 269,
     "location": {
       "_point": {
         "_longitude": -84.3982763,
@@ -2961,6 +3230,7 @@
   {
     "city": "Westfield",
     "state": "Massachusetts",
+    "_id": 270,
     "location": {
       "_point": {
         "_longitude": -72.749538,
@@ -2972,6 +3242,7 @@
   {
     "city": "Sumter",
     "state": "South Carolina",
+    "_id": 271,
     "location": {
       "_point": {
         "_longitude": -80.3414693,
@@ -2983,6 +3254,7 @@
   {
     "city": "Brookfield",
     "state": "Wisconsin",
+    "_id": 272,
     "location": {
       "_point": {
         "_longitude": -88.1064787,
@@ -2994,6 +3266,7 @@
   {
     "city": "Streamwood",
     "state": "Illinois",
+    "_id": 273,
     "location": {
       "_point": {
         "_longitude": -88.1784085,
@@ -3005,6 +3278,7 @@
   {
     "city": "New Berlin",
     "state": "Wisconsin",
+    "_id": 274,
     "location": {
       "_point": {
         "_longitude": -88.1084224,
@@ -3016,6 +3290,7 @@
   {
     "city": "Manassas",
     "state": "Virginia",
+    "_id": 275,
     "location": {
       "_point": {
         "_longitude": -77.4752667,
@@ -3027,6 +3302,7 @@
   {
     "city": "Rockwall",
     "state": "Texas",
+    "_id": 276,
     "location": {
       "_point": {
         "_longitude": -96.4597089,
@@ -3038,6 +3314,7 @@
   {
     "city": "North Charleston",
     "state": "South Carolina",
+    "_id": 277,
     "location": {
       "_point": {
         "_longitude": -79.9748103,
@@ -3049,6 +3326,7 @@
   {
     "city": "Costa Mesa",
     "state": "California",
+    "_id": 278,
     "location": {
       "_point": {
         "_longitude": -117.9186689,
@@ -3060,6 +3338,7 @@
   {
     "city": "Vacaville",
     "state": "California",
+    "_id": 279,
     "location": {
       "_point": {
         "_longitude": -121.9877444,
@@ -3071,6 +3350,7 @@
   {
     "city": "Pembroke Pines",
     "state": "Florida",
+    "_id": 280,
     "location": {
       "_point": {
         "_longitude": -80.2962555,
@@ -3082,6 +3362,7 @@
   {
     "city": "Evansville",
     "state": "Indiana",
+    "_id": 281,
     "location": {
       "_point": {
         "_longitude": -87.5710898,
@@ -3093,6 +3374,7 @@
   {
     "city": "Louisville",
     "state": "Kentucky",
+    "_id": 282,
     "location": {
       "_point": {
         "_longitude": -85.7584557,
@@ -3104,6 +3386,7 @@
   {
     "city": "Arvada",
     "state": "Colorado",
+    "_id": 283,
     "location": {
       "_point": {
         "_longitude": -105.0874842,
@@ -3115,6 +3398,7 @@
   {
     "city": "Elgin",
     "state": "Illinois",
+    "_id": 284,
     "location": {
       "_point": {
         "_longitude": -88.2825668,
@@ -3126,6 +3410,7 @@
   {
     "city": "Plano",
     "state": "Texas",
+    "_id": 285,
     "location": {
       "_point": {
         "_longitude": -96.6988856,
@@ -3137,6 +3422,7 @@
   {
     "city": "Huntersville",
     "state": "North Carolina",
+    "_id": 286,
     "location": {
       "_point": {
         "_longitude": -80.8428504,
@@ -3148,6 +3434,7 @@
   {
     "city": "St. Clair Shores",
     "state": "Michigan",
+    "_id": 287,
     "location": {
       "_point": {
         "_longitude": -82.8963604,
@@ -3159,6 +3446,7 @@
   {
     "city": "Walnut Creek",
     "state": "California",
+    "_id": 288,
     "location": {
       "_point": {
         "_longitude": -122.0651819,
@@ -3170,6 +3458,7 @@
   {
     "city": "Santa Monica",
     "state": "California",
+    "_id": 289,
     "location": {
       "_point": {
         "_longitude": -118.4911912,
@@ -3181,6 +3470,7 @@
   {
     "city": "Alhambra",
     "state": "California",
+    "_id": 290,
     "location": {
       "_point": {
         "_longitude": -118.1270146,
@@ -3192,6 +3482,7 @@
   {
     "city": "Southfield",
     "state": "Michigan",
+    "_id": 291,
     "location": {
       "_point": {
         "_longitude": -83.2218731,
@@ -3203,6 +3494,7 @@
   {
     "city": "Mishawaka",
     "state": "Indiana",
+    "_id": 292,
     "location": {
       "_point": {
         "_longitude": -86.1586156,
@@ -3214,6 +3506,7 @@
   {
     "city": "Tustin",
     "state": "California",
+    "_id": 293,
     "location": {
       "_point": {
         "_longitude": -117.826166,
@@ -3225,6 +3518,7 @@
   {
     "city": "Suffolk",
     "state": "Virginia",
+    "_id": 294,
     "location": {
       "_point": {
         "_longitude": -76.5835621,
@@ -3236,6 +3530,7 @@
   {
     "city": "Pocatello",
     "state": "Idaho",
+    "_id": 295,
     "location": {
       "_point": {
         "_longitude": -112.4455344,
@@ -3247,6 +3542,7 @@
   {
     "city": "Pacifica",
     "state": "California",
+    "_id": 296,
     "location": {
       "_point": {
         "_longitude": -122.4869194,
@@ -3258,6 +3554,7 @@
   {
     "city": "Beverly",
     "state": "Massachusetts",
+    "_id": 297,
     "location": {
       "_point": {
         "_longitude": -70.880049,
@@ -3269,6 +3566,7 @@
   {
     "city": "Sierra Vista",
     "state": "Arizona",
+    "_id": 298,
     "location": {
       "_point": {
         "_longitude": -110.2772856,
@@ -3280,6 +3578,7 @@
   {
     "city": "Norwich",
     "state": "Connecticut",
+    "_id": 299,
     "location": {
       "_point": {
         "_longitude": -72.0759105,
@@ -3291,6 +3590,7 @@
   {
     "city": "Biloxi",
     "state": "Mississippi",
+    "_id": 300,
     "location": {
       "_point": {
         "_longitude": -88.8853078,
@@ -3302,6 +3602,7 @@
   {
     "city": "Urbana",
     "state": "Illinois",
+    "_id": 301,
     "location": {
       "_point": {
         "_longitude": -88.2072697,
@@ -3313,6 +3614,7 @@
   {
     "city": "Garden Grove",
     "state": "California",
+    "_id": 302,
     "location": {
       "_point": {
         "_longitude": -117.9414477,
@@ -3324,6 +3626,7 @@
   {
     "city": "Santa Maria",
     "state": "California",
+    "_id": 303,
     "location": {
       "_point": {
         "_longitude": -120.4357191,
@@ -3335,6 +3638,7 @@
   {
     "city": "Newport News",
     "state": "Virginia",
+    "_id": 304,
     "location": {
       "_point": {
         "_longitude": -76.4730122,
@@ -3346,6 +3650,7 @@
   {
     "city": "Chesapeake",
     "state": "Virginia",
+    "_id": 305,
     "location": {
       "_point": {
         "_longitude": -76.2874927,
@@ -3357,6 +3662,7 @@
   {
     "city": "Grand Prairie",
     "state": "Texas",
+    "_id": 306,
     "location": {
       "_point": {
         "_longitude": -96.9977846,
@@ -3368,6 +3674,7 @@
   {
     "city": "Glendale",
     "state": "Arizona",
+    "_id": 307,
     "location": {
       "_point": {
         "_longitude": -112.1859866,
@@ -3379,6 +3686,7 @@
   {
     "city": "Newark",
     "state": "New Jersey",
+    "_id": 308,
     "location": {
       "_point": {
         "_longitude": -74.1723667,
@@ -3390,6 +3698,7 @@
   {
     "city": "Richardson",
     "state": "Texas",
+    "_id": 309,
     "location": {
       "_point": {
         "_longitude": -96.7298519,
@@ -3401,6 +3710,7 @@
   {
     "city": "Tampa",
     "state": "Florida",
+    "_id": 310,
     "location": {
       "_point": {
         "_longitude": -82.4571776,
@@ -3412,6 +3722,7 @@
   {
     "city": "North Richland Hills",
     "state": "Texas",
+    "_id": 311,
     "location": {
       "_point": {
         "_longitude": -97.2289029,
@@ -3423,6 +3734,7 @@
   {
     "city": "Rochester Hills",
     "state": "Michigan",
+    "_id": 312,
     "location": {
       "_point": {
         "_longitude": -83.1499322,
@@ -3434,6 +3746,7 @@
   {
     "city": "Springdale",
     "state": "Arkansas",
+    "_id": 313,
     "location": {
       "_point": {
         "_longitude": -94.1288141,
@@ -3445,6 +3758,7 @@
   {
     "city": "Longmont",
     "state": "Colorado",
+    "_id": 314,
     "location": {
       "_point": {
         "_longitude": -105.1019275,
@@ -3456,6 +3770,7 @@
   {
     "city": "Portsmouth",
     "state": "Virginia",
+    "_id": 315,
     "location": {
       "_point": {
         "_longitude": -76.2982742,
@@ -3467,6 +3782,7 @@
   {
     "city": "Lynwood",
     "state": "California",
+    "_id": 316,
     "location": {
       "_point": {
         "_longitude": -118.2114603,
@@ -3478,6 +3794,7 @@
   {
     "city": "Renton",
     "state": "Washington",
+    "_id": 317,
     "location": {
       "_point": {
         "_longitude": -122.2170661,
@@ -3489,6 +3806,7 @@
   {
     "city": "Upland",
     "state": "California",
+    "_id": 318,
     "location": {
       "_point": {
         "_longitude": -117.6483876,
@@ -3500,6 +3818,7 @@
   {
     "city": "Hammond",
     "state": "Indiana",
+    "_id": 319,
     "location": {
       "_point": {
         "_longitude": -87.5000412,
@@ -3511,6 +3830,7 @@
   {
     "city": "Buffalo Grove",
     "state": "Illinois",
+    "_id": 320,
     "location": {
       "_point": {
         "_longitude": -87.9631308,
@@ -3522,6 +3842,7 @@
   {
     "city": "Crystal Lake",
     "state": "Illinois",
+    "_id": 321,
     "location": {
       "_point": {
         "_longitude": -88.3161965,
@@ -3533,6 +3854,7 @@
   {
     "city": "Alexandria",
     "state": "Louisiana",
+    "_id": 322,
     "location": {
       "_point": {
         "_longitude": -92.4451371,
@@ -3544,6 +3866,7 @@
   {
     "city": "Danville",
     "state": "California",
+    "_id": 323,
     "location": {
       "_point": {
         "_longitude": -121.9999606,
@@ -3555,6 +3878,7 @@
   {
     "city": "Brentwood",
     "state": "Tennessee",
+    "_id": 324,
     "location": {
       "_point": {
         "_longitude": -86.7827772,
@@ -3566,6 +3890,7 @@
   {
     "city": "Danville",
     "state": "Virginia",
+    "_id": 325,
     "location": {
       "_point": {
         "_longitude": -79.3950228,
@@ -3577,6 +3902,7 @@
   {
     "city": "Sheboygan",
     "state": "Wisconsin",
+    "_id": 326,
     "location": {
       "_point": {
         "_longitude": -87.71453,
@@ -3588,6 +3914,7 @@
   {
     "city": "Lacey",
     "state": "Washington",
+    "_id": 327,
     "location": {
       "_point": {
         "_longitude": -122.8231915,
@@ -3599,6 +3926,7 @@
   {
     "city": "DeKalb",
     "state": "Illinois",
+    "_id": 328,
     "location": {
       "_point": {
         "_longitude": -88.7503647,
@@ -3610,6 +3938,7 @@
   {
     "city": "Midland",
     "state": "Michigan",
+    "_id": 329,
     "location": {
       "_point": {
         "_longitude": -84.2472116,
@@ -3621,6 +3950,7 @@
   {
     "city": "Watsonville",
     "state": "California",
+    "_id": 330,
     "location": {
       "_point": {
         "_longitude": -121.7568946,
@@ -3632,6 +3962,7 @@
   {
     "city": "Bossier City",
     "state": "Louisiana",
+    "_id": 331,
     "location": {
       "_point": {
         "_longitude": -93.7321228,
@@ -3643,6 +3974,7 @@
   {
     "city": "Woodland",
     "state": "California",
+    "_id": 332,
     "location": {
       "_point": {
         "_longitude": -121.7732971,
@@ -3654,6 +3986,7 @@
   {
     "city": "Coconut Creek",
     "state": "Florida",
+    "_id": 333,
     "location": {
       "_point": {
         "_longitude": -80.1789351,
@@ -3665,6 +3998,7 @@
   {
     "city": "Revere",
     "state": "Massachusetts",
+    "_id": 334,
     "location": {
       "_point": {
         "_longitude": -71.0119948,
@@ -3676,6 +4010,7 @@
   {
     "city": "La Mesa",
     "state": "California",
+    "_id": 335,
     "location": {
       "_point": {
         "_longitude": -117.0230839,
@@ -3687,6 +4022,7 @@
   {
     "city": "San Marcos",
     "state": "Texas",
+    "_id": 336,
     "location": {
       "_point": {
         "_longitude": -97.9413941,
@@ -3698,6 +4034,7 @@
   {
     "city": "Blaine",
     "state": "Minnesota",
+    "_id": 337,
     "location": {
       "_point": {
         "_longitude": -93.2349489,
@@ -3709,6 +4046,7 @@
   {
     "city": "Cedar Park",
     "state": "Texas",
+    "_id": 338,
     "location": {
       "_point": {
         "_longitude": -97.8202888,
@@ -3720,6 +4058,7 @@
   {
     "city": "Euless",
     "state": "Texas",
+    "_id": 339,
     "location": {
       "_point": {
         "_longitude": -97.0819541,
@@ -3731,6 +4070,7 @@
   {
     "city": "La Quinta",
     "state": "California",
+    "_id": 340,
     "location": {
       "_point": {
         "_longitude": -116.3100095,
@@ -3742,6 +4082,7 @@
   {
     "city": "Bremerton",
     "state": "Washington",
+    "_id": 341,
     "location": {
       "_point": {
         "_longitude": -122.6329356,
@@ -3753,6 +4094,7 @@
   {
     "city": "Northglenn",
     "state": "Colorado",
+    "_id": 342,
     "location": {
       "_point": {
         "_longitude": -104.9811468,
@@ -3764,6 +4106,7 @@
   {
     "city": "Stanton",
     "state": "California",
+    "_id": 343,
     "location": {
       "_point": {
         "_longitude": -117.9931165,
@@ -3775,6 +4118,7 @@
   {
     "city": "Lima",
     "state": "Ohio",
+    "_id": 344,
     "location": {
       "_point": {
         "_longitude": -84.1052256,
@@ -3786,6 +4130,7 @@
   {
     "city": "Summerville",
     "state": "South Carolina",
+    "_id": 345,
     "location": {
       "_point": {
         "_longitude": -80.1756481,
@@ -3797,6 +4142,7 @@
   {
     "city": "Wilkes-Barre",
     "state": "Pennsylvania",
+    "_id": 346,
     "location": {
       "_point": {
         "_longitude": -75.8813075,
@@ -3808,6 +4154,7 @@
   {
     "city": "Harrisburg",
     "state": "Pennsylvania",
+    "_id": 347,
     "location": {
       "_point": {
         "_longitude": -76.8867008,
@@ -3819,6 +4166,7 @@
   {
     "city": "Charleston",
     "state": "West Virginia",
+    "_id": 348,
     "location": {
       "_point": {
         "_longitude": -81.6326234,
@@ -3830,6 +4178,7 @@
   {
     "city": "Apex",
     "state": "North Carolina",
+    "_id": 349,
     "location": {
       "_point": {
         "_longitude": -78.8502856,
@@ -3841,6 +4190,7 @@
   {
     "city": "Bradenton",
     "state": "Florida",
+    "_id": 350,
     "location": {
       "_point": {
         "_longitude": -82.5748194,
@@ -3852,6 +4202,7 @@
   {
     "city": "Beloit",
     "state": "Wisconsin",
+    "_id": 351,
     "location": {
       "_point": {
         "_longitude": -89.0317765,
@@ -3863,6 +4214,7 @@
   {
     "city": "Coppell",
     "state": "Texas",
+    "_id": 352,
     "location": {
       "_point": {
         "_longitude": -97.0150078,
@@ -3874,6 +4226,7 @@
   {
     "city": "Lakewood",
     "state": "Ohio",
+    "_id": 353,
     "location": {
       "_point": {
         "_longitude": -81.7981908,
@@ -3885,6 +4238,7 @@
   {
     "city": "Dublin",
     "state": "Ohio",
+    "_id": 354,
     "location": {
       "_point": {
         "_longitude": -83.1140771,
@@ -3896,6 +4250,7 @@
   {
     "city": "Sacramento",
     "state": "California",
+    "_id": 355,
     "location": {
       "_point": {
         "_longitude": -121.4943996,
@@ -3907,6 +4262,7 @@
   {
     "city": "Westminster",
     "state": "Colorado",
+    "_id": 356,
     "location": {
       "_point": {
         "_longitude": -105.0372046,
@@ -3918,6 +4274,7 @@
   {
     "city": "Carlsbad",
     "state": "California",
+    "_id": 357,
     "location": {
       "_point": {
         "_longitude": -117.3505939,
@@ -3929,6 +4286,7 @@
   {
     "city": "Sandy Springs",
     "state": "Georgia",
+    "_id": 358,
     "location": {
       "_point": {
         "_longitude": -84.3733147,
@@ -3940,6 +4298,7 @@
   {
     "city": "Centennial",
     "state": "Colorado",
+    "_id": 359,
     "location": {
       "_point": {
         "_longitude": -104.8771726,
@@ -3951,6 +4310,7 @@
   {
     "city": "Oxnard",
     "state": "California",
+    "_id": 360,
     "location": {
       "_point": {
         "_longitude": -119.1770516,
@@ -3962,6 +4322,7 @@
   {
     "city": "Richmond",
     "state": "Virginia",
+    "_id": 361,
     "location": {
       "_point": {
         "_longitude": -77.4360481,
@@ -3973,6 +4334,7 @@
   {
     "city": "Hillsboro",
     "state": "Oregon",
+    "_id": 362,
     "location": {
       "_point": {
         "_longitude": -122.989827,
@@ -3984,6 +4346,7 @@
   {
     "city": "Davenport",
     "state": "Iowa",
+    "_id": 363,
     "location": {
       "_point": {
         "_longitude": -90.5776367,
@@ -3995,6 +4358,7 @@
   {
     "city": "Odessa",
     "state": "Texas",
+    "_id": 364,
     "location": {
       "_point": {
         "_longitude": -102.3676431,
@@ -4006,6 +4370,7 @@
   {
     "city": "Arlington Heights",
     "state": "Illinois",
+    "_id": 365,
     "location": {
       "_point": {
         "_longitude": -87.9806265,
@@ -4017,6 +4382,7 @@
   {
     "city": "Reading",
     "state": "Pennsylvania",
+    "_id": 366,
     "location": {
       "_point": {
         "_longitude": -75.9268747,
@@ -4028,6 +4394,7 @@
   {
     "city": "Turlock",
     "state": "California",
+    "_id": 367,
     "location": {
       "_point": {
         "_longitude": -120.8465941,
@@ -4039,6 +4406,7 @@
   {
     "city": "Fort Smith",
     "state": "Arkansas",
+    "_id": 368,
     "location": {
       "_point": {
         "_longitude": -94.3985475,
@@ -4050,6 +4418,7 @@
   {
     "city": "Champaign",
     "state": "Illinois",
+    "_id": 369,
     "location": {
       "_point": {
         "_longitude": -88.2433829,
@@ -4061,6 +4430,7 @@
   {
     "city": "Jonesboro",
     "state": "Arkansas",
+    "_id": 370,
     "location": {
       "_point": {
         "_longitude": -90.704279,
@@ -4072,6 +4442,7 @@
   {
     "city": "Appleton",
     "state": "Wisconsin",
+    "_id": 371,
     "location": {
       "_point": {
         "_longitude": -88.4153847,
@@ -4083,6 +4454,7 @@
   {
     "city": "Clifton",
     "state": "New Jersey",
+    "_id": 372,
     "location": {
       "_point": {
         "_longitude": -74.1637553,
@@ -4094,6 +4466,7 @@
   {
     "city": "Hemet",
     "state": "California",
+    "_id": 373,
     "location": {
       "_point": {
         "_longitude": -116.9719684,
@@ -4105,6 +4478,7 @@
   {
     "city": "Sioux City",
     "state": "Iowa",
+    "_id": 374,
     "location": {
       "_point": {
         "_longitude": -96.4003069,
@@ -4116,6 +4490,7 @@
   {
     "city": "Porterville",
     "state": "California",
+    "_id": 375,
     "location": {
       "_point": {
         "_longitude": -119.0167679,
@@ -4127,6 +4502,7 @@
   {
     "city": "Camarillo",
     "state": "California",
+    "_id": 376,
     "location": {
       "_point": {
         "_longitude": -119.0376023,
@@ -4138,6 +4514,7 @@
   {
     "city": "Encinitas",
     "state": "California",
+    "_id": 377,
     "location": {
       "_point": {
         "_longitude": -117.2919818,
@@ -4149,6 +4526,7 @@
   {
     "city": "Delano",
     "state": "California",
+    "_id": 378,
     "location": {
       "_point": {
         "_longitude": -119.2470536,
@@ -4160,6 +4538,7 @@
   {
     "city": "St. Cloud",
     "state": "Minnesota",
+    "_id": 379,
     "location": {
       "_point": {
         "_longitude": -94.1632404,
@@ -4171,6 +4550,7 @@
   {
     "city": "Anderson",
     "state": "Indiana",
+    "_id": 380,
     "location": {
       "_point": {
         "_longitude": -85.6802541,
@@ -4182,6 +4562,7 @@
   {
     "city": "Harlingen",
     "state": "Texas",
+    "_id": 381,
     "location": {
       "_point": {
         "_longitude": -97.6961026,
@@ -4193,6 +4574,7 @@
   {
     "city": "Shawnee",
     "state": "Kansas",
+    "_id": 382,
     "location": {
       "_point": {
         "_longitude": -94.7151865,
@@ -4204,6 +4586,7 @@
   {
     "city": "Moore",
     "state": "Oklahoma",
+    "_id": 383,
     "location": {
       "_point": {
         "_longitude": -97.4867028,
@@ -4215,6 +4598,7 @@
   {
     "city": "Kokomo",
     "state": "Indiana",
+    "_id": 384,
     "location": {
       "_point": {
         "_longitude": -86.1336033,
@@ -4226,6 +4610,7 @@
   {
     "city": "East Providence",
     "state": "Rhode Island",
+    "_id": 385,
     "location": {
       "_point": {
         "_longitude": -71.3700545,
@@ -4237,6 +4622,7 @@
   {
     "city": "San Jacinto",
     "state": "California",
+    "_id": 386,
     "location": {
       "_point": {
         "_longitude": -116.958635,
@@ -4248,6 +4634,7 @@
   {
     "city": "Stillwater",
     "state": "Oklahoma",
+    "_id": 387,
     "location": {
       "_point": {
         "_longitude": -97.0583681,
@@ -4259,6 +4646,7 @@
   {
     "city": "Oakland Park",
     "state": "Florida",
+    "_id": 388,
     "location": {
       "_point": {
         "_longitude": -80.1319893,
@@ -4270,6 +4658,7 @@
   {
     "city": "Littleton",
     "state": "Colorado",
+    "_id": 389,
     "location": {
       "_point": {
         "_longitude": -105.0166498,
@@ -4281,6 +4670,7 @@
   {
     "city": "Lompoc",
     "state": "California",
+    "_id": 390,
     "location": {
       "_point": {
         "_longitude": -120.4579409,
@@ -4292,6 +4682,7 @@
   {
     "city": "Hutchinson",
     "state": "Kansas",
+    "_id": 391,
     "location": {
       "_point": {
         "_longitude": -97.9297743,
@@ -4303,6 +4694,7 @@
   {
     "city": "Texas City",
     "state": "Texas",
+    "_id": 392,
     "location": {
       "_point": {
         "_longitude": -94.9027002,
@@ -4314,6 +4706,7 @@
   {
     "city": "Urbandale",
     "state": "Iowa",
+    "_id": 393,
     "location": {
       "_point": {
         "_longitude": -93.7121656,
@@ -4325,6 +4718,7 @@
   {
     "city": "Mentor",
     "state": "Ohio",
+    "_id": 394,
     "location": {
       "_point": {
         "_longitude": -81.339552,
@@ -4336,6 +4730,7 @@
   {
     "city": "Beaumont",
     "state": "California",
+    "_id": 395,
     "location": {
       "_point": {
         "_longitude": -116.977248,
@@ -4347,6 +4742,7 @@
   {
     "city": "Prescott",
     "state": "Arizona",
+    "_id": 396,
     "location": {
       "_point": {
         "_longitude": -112.4685025,
@@ -4358,6 +4754,7 @@
   {
     "city": "Muskegon",
     "state": "Michigan",
+    "_id": 397,
     "location": {
       "_point": {
         "_longitude": -86.2483921,
@@ -4369,6 +4766,7 @@
   {
     "city": "St. Cloud",
     "state": "Florida",
+    "_id": 398,
     "location": {
       "_point": {
         "_longitude": -81.2811801,
@@ -4380,6 +4778,7 @@
   {
     "city": "Spanish Fork",
     "state": "Utah",
+    "_id": 399,
     "location": {
       "_point": {
         "_longitude": -111.654923,
@@ -4391,6 +4790,7 @@
   {
     "city": "Lancaster",
     "state": "Texas",
+    "_id": 400,
     "location": {
       "_point": {
         "_longitude": -96.7561082,
@@ -4402,6 +4802,7 @@
   {
     "city": "Marana",
     "state": "Arizona",
+    "_id": 401,
     "location": {
       "_point": {
         "_longitude": -111.2224422,
@@ -4413,6 +4814,7 @@
   {
     "city": "High Point",
     "state": "North Carolina",
+    "_id": 402,
     "location": {
       "_point": {
         "_longitude": -80.0053176,
@@ -4424,6 +4826,7 @@
   {
     "city": "Brockton",
     "state": "Massachusetts",
+    "_id": 403,
     "location": {
       "_point": {
         "_longitude": -71.0183787,
@@ -4435,6 +4838,7 @@
   {
     "city": "Livermore",
     "state": "California",
+    "_id": 404,
     "location": {
       "_point": {
         "_longitude": -121.7680088,
@@ -4446,6 +4850,7 @@
   {
     "city": "Fairfield",
     "state": "California",
+    "_id": 405,
     "location": {
       "_point": {
         "_longitude": -122.0399663,
@@ -4457,6 +4862,7 @@
   {
     "city": "Rialto",
     "state": "California",
+    "_id": 406,
     "location": {
       "_point": {
         "_longitude": -117.3703235,
@@ -4468,6 +4874,7 @@
   {
     "city": "Plantation",
     "state": "Florida",
+    "_id": 407,
     "location": {
       "_point": {
         "_longitude": -80.2331036,
@@ -4479,6 +4886,7 @@
   {
     "city": "Fargo",
     "state": "North Dakota",
+    "_id": 408,
     "location": {
       "_point": {
         "_longitude": -96.7898034,
@@ -4490,6 +4898,7 @@
   {
     "city": "Avondale",
     "state": "Arizona",
+    "_id": 409,
     "location": {
       "_point": {
         "_longitude": -112.3496021,
@@ -4501,6 +4910,7 @@
   {
     "city": "Goodyear",
     "state": "Arizona",
+    "_id": 410,
     "location": {
       "_point": {
         "_longitude": -112.3576567,
@@ -4512,6 +4922,7 @@
   {
     "city": "Boca Raton",
     "state": "Florida",
+    "_id": 411,
     "location": {
       "_point": {
         "_longitude": -80.1289321,
@@ -4523,6 +4934,7 @@
   {
     "city": "Huntington Park",
     "state": "California",
+    "_id": 412,
     "location": {
       "_point": {
         "_longitude": -118.2250725,
@@ -4534,6 +4946,7 @@
   {
     "city": "Eden Prairie",
     "state": "Minnesota",
+    "_id": 413,
     "location": {
       "_point": {
         "_longitude": -93.470786,
@@ -4545,6 +4958,7 @@
   {
     "city": "Blue Springs",
     "state": "Missouri",
+    "_id": 414,
     "location": {
       "_point": {
         "_longitude": -94.2816148,
@@ -4556,6 +4970,7 @@
   {
     "city": "West Allis",
     "state": "Wisconsin",
+    "_id": 415,
     "location": {
       "_point": {
         "_longitude": -88.0070315,
@@ -4567,6 +4982,7 @@
   {
     "city": "Mount Vernon",
     "state": "New York",
+    "_id": 416,
     "location": {
       "_point": {
         "_longitude": -73.8370786,
@@ -4578,6 +4994,7 @@
   {
     "city": "Euclid",
     "state": "Ohio",
+    "_id": 417,
     "location": {
       "_point": {
         "_longitude": -81.5267873,
@@ -4589,6 +5006,7 @@
   {
     "city": "Canton",
     "state": "Ohio",
+    "_id": 418,
     "location": {
       "_point": {
         "_longitude": -81.378447,
@@ -4600,6 +5018,7 @@
   {
     "city": "Brookhaven",
     "state": "Georgia",
+    "_id": 419,
     "location": {
       "_point": {
         "_longitude": -84.3365917,
@@ -4611,6 +5030,7 @@
   {
     "city": "Elizabeth",
     "state": "New Jersey",
+    "_id": 420,
     "location": {
       "_point": {
         "_longitude": -74.2107006,
@@ -4622,6 +5042,7 @@
   {
     "city": "Thornton",
     "state": "Colorado",
+    "_id": 421,
     "location": {
       "_point": {
         "_longitude": -104.9719243,
@@ -4633,6 +5054,7 @@
   {
     "city": "Indianapolis",
     "state": "Indiana",
+    "_id": 422,
     "location": {
       "_point": {
         "_longitude": -86.158068,
@@ -4644,6 +5066,7 @@
   {
     "city": "Paterson",
     "state": "New Jersey",
+    "_id": 423,
     "location": {
       "_point": {
         "_longitude": -74.171811,
@@ -4655,6 +5078,7 @@
   {
     "city": "Anchorage",
     "state": "Alaska",
+    "_id": 424,
     "location": {
       "_point": {
         "_longitude": -149.9002778,
@@ -4666,6 +5090,7 @@
   {
     "city": "Peoria",
     "state": "Arizona",
+    "_id": 425,
     "location": {
       "_point": {
         "_longitude": -112.2373779,
@@ -4677,6 +5102,7 @@
   {
     "city": "Peoria",
     "state": "Illinois",
+    "_id": 426,
     "location": {
       "_point": {
         "_longitude": -89.5889864,
@@ -4688,6 +5114,7 @@
   {
     "city": "Denton",
     "state": "Texas",
+    "_id": 427,
     "location": {
       "_point": {
         "_longitude": -97.1330683,
@@ -4699,6 +5126,7 @@
   {
     "city": "Salem",
     "state": "Oregon",
+    "_id": 428,
     "location": {
       "_point": {
         "_longitude": -123.0350963,
@@ -4710,6 +5138,7 @@
   {
     "city": "San Buenaventura (Ventura)",
     "state": "California",
+    "_id": 429,
     "location": {
       "_point": {
         "_longitude": -119.2290316,
@@ -4721,6 +5150,7 @@
   {
     "city": "Colorado Springs",
     "state": "Colorado",
+    "_id": 430,
     "location": {
       "_point": {
         "_longitude": -104.8213634,
@@ -4732,6 +5162,7 @@
   {
     "city": "Charleston",
     "state": "South Carolina",
+    "_id": 431,
     "location": {
       "_point": {
         "_longitude": -79.9310512,
@@ -4743,6 +5174,7 @@
   {
     "city": "Lancaster",
     "state": "California",
+    "_id": 432,
     "location": {
       "_point": {
         "_longitude": -118.1541632,
@@ -4754,6 +5186,7 @@
   {
     "city": "Tallahassee",
     "state": "Florida",
+    "_id": 433,
     "location": {
       "_point": {
         "_longitude": -84.2807329,
@@ -4765,6 +5198,7 @@
   {
     "city": "Lafayette",
     "state": "Louisiana",
+    "_id": 434,
     "location": {
       "_point": {
         "_longitude": -92.0198427,
@@ -4776,6 +5210,7 @@
   {
     "city": "Boise City",
     "state": "Idaho",
+    "_id": 435,
     "location": {
       "_point": {
         "_longitude": -116.2146068,
@@ -4787,6 +5222,7 @@
   {
     "city": "Tempe",
     "state": "Arizona",
+    "_id": 436,
     "location": {
       "_point": {
         "_longitude": -111.9400054,
@@ -4798,6 +5234,7 @@
   {
     "city": "Omaha",
     "state": "Nebraska",
+    "_id": 437,
     "location": {
       "_point": {
         "_longitude": -95.9979883,
@@ -4809,6 +5246,7 @@
   {
     "city": "New Britain",
     "state": "Connecticut",
+    "_id": 438,
     "location": {
       "_point": {
         "_longitude": -72.7795419,
@@ -4820,6 +5258,7 @@
   {
     "city": "Boynton Beach",
     "state": "Florida",
+    "_id": 439,
     "location": {
       "_point": {
         "_longitude": -80.0905465,
@@ -4831,6 +5270,7 @@
   {
     "city": "College Station",
     "state": "Texas",
+    "_id": 440,
     "location": {
       "_point": {
         "_longitude": -96.3344068,
@@ -4842,6 +5282,7 @@
   {
     "city": "Wilmington",
     "state": "Delaware",
+    "_id": 441,
     "location": {
       "_point": {
         "_longitude": -75.5397878,
@@ -4853,6 +5294,7 @@
   {
     "city": "Redding",
     "state": "California",
+    "_id": 442,
     "location": {
       "_point": {
         "_longitude": -122.3916754,
@@ -4864,6 +5306,7 @@
   {
     "city": "Greeley",
     "state": "Colorado",
+    "_id": 443,
     "location": {
       "_point": {
         "_longitude": -104.7091322,
@@ -4875,6 +5318,7 @@
   {
     "city": "Passaic",
     "state": "New Jersey",
+    "_id": 444,
     "location": {
       "_point": {
         "_longitude": -74.1284764,
@@ -4886,6 +5330,7 @@
   {
     "city": "Wyoming",
     "state": "Michigan",
+    "_id": 445,
     "location": {
       "_point": {
         "_longitude": -85.7053085,
@@ -4897,6 +5342,7 @@
   {
     "city": "Sugar Land",
     "state": "Texas",
+    "_id": 446,
     "location": {
       "_point": {
         "_longitude": -95.6349463,
@@ -4908,6 +5354,7 @@
   {
     "city": "Bryan",
     "state": "Texas",
+    "_id": 447,
     "location": {
       "_point": {
         "_longitude": -96.3699632,
@@ -4919,6 +5366,7 @@
   {
     "city": "Pflugerville",
     "state": "Texas",
+    "_id": 448,
     "location": {
       "_point": {
         "_longitude": -97.6200043,
@@ -4930,6 +5378,7 @@
   {
     "city": "West Des Moines",
     "state": "Iowa",
+    "_id": 449,
     "location": {
       "_point": {
         "_longitude": -93.711332,
@@ -4941,6 +5390,7 @@
   {
     "city": "Dublin",
     "state": "California",
+    "_id": 450,
     "location": {
       "_point": {
         "_longitude": -121.9357918,
@@ -4952,6 +5402,7 @@
   {
     "city": "Hoboken",
     "state": "New Jersey",
+    "_id": 451,
     "location": {
       "_point": {
         "_longitude": -74.0323626,
@@ -4963,6 +5414,7 @@
   {
     "city": "Kissimmee",
     "state": "Florida",
+    "_id": 452,
     "location": {
       "_point": {
         "_longitude": -81.407571,
@@ -4974,6 +5426,7 @@
   {
     "city": "Pensacola",
     "state": "Florida",
+    "_id": 453,
     "location": {
       "_point": {
         "_longitude": -87.2169149,
@@ -4985,6 +5438,7 @@
   {
     "city": "Elkhart",
     "state": "Indiana",
+    "_id": 454,
     "location": {
       "_point": {
         "_longitude": -85.9766671,
@@ -4996,6 +5450,7 @@
   {
     "city": "Conroe",
     "state": "Texas",
+    "_id": 455,
     "location": {
       "_point": {
         "_longitude": -95.4560512,
@@ -5007,6 +5462,7 @@
   {
     "city": "Lorain",
     "state": "Ohio",
+    "_id": 456,
     "location": {
       "_point": {
         "_longitude": -82.1823746,
@@ -5018,6 +5474,7 @@
   {
     "city": "Apache Junction",
     "state": "Arizona",
+    "_id": 457,
     "location": {
       "_point": {
         "_longitude": -111.5495777,
@@ -5029,6 +5486,7 @@
   {
     "city": "Blacksburg",
     "state": "Virginia",
+    "_id": 458,
     "location": {
       "_point": {
         "_longitude": -80.4139393,
@@ -5040,6 +5498,7 @@
   {
     "city": "Roseville",
     "state": "Michigan",
+    "_id": 459,
     "location": {
       "_point": {
         "_longitude": -82.9371409,
@@ -5051,6 +5510,7 @@
   {
     "city": "Saginaw",
     "state": "Michigan",
+    "_id": 460,
     "location": {
       "_point": {
         "_longitude": -83.9508068,
@@ -5062,6 +5522,7 @@
   {
     "city": "Texarkana",
     "state": "Texas",
+    "_id": 461,
     "location": {
       "_point": {
         "_longitude": -94.0476882,
@@ -5073,6 +5534,7 @@
   {
     "city": "Hurst",
     "state": "Texas",
+    "_id": 462,
     "location": {
       "_point": {
         "_longitude": -97.1705678,
@@ -5084,6 +5546,7 @@
   {
     "city": "Lexington-Fayette",
     "state": "Kentucky",
+    "_id": 463,
     "location": {
       "_point": {
         "_longitude": -84.5037164,
@@ -5095,6 +5558,7 @@
   {
     "city": "Baton Rouge",
     "state": "Louisiana",
+    "_id": 464,
     "location": {
       "_point": {
         "_longitude": -91.1403196,
@@ -5106,6 +5570,7 @@
   {
     "city": "Escondido",
     "state": "California",
+    "_id": 465,
     "location": {
       "_point": {
         "_longitude": -117.086421,
@@ -5117,6 +5582,7 @@
   {
     "city": "Modesto",
     "state": "California",
+    "_id": 466,
     "location": {
       "_point": {
         "_longitude": -120.9968782,
@@ -5128,6 +5594,7 @@
   {
     "city": "Fremont",
     "state": "California",
+    "_id": 467,
     "location": {
       "_point": {
         "_longitude": -121.9885719,
@@ -5139,6 +5606,7 @@
   {
     "city": "Lakewood",
     "state": "Colorado",
+    "_id": 468,
     "location": {
       "_point": {
         "_longitude": -105.0813734,
@@ -5150,6 +5618,7 @@
   {
     "city": "Cape Coral",
     "state": "Florida",
+    "_id": 469,
     "location": {
       "_point": {
         "_longitude": -81.9495331,
@@ -5161,6 +5630,7 @@
   {
     "city": "San Antonio",
     "state": "Texas",
+    "_id": 470,
     "location": {
       "_point": {
         "_longitude": -98.4936282,
@@ -5172,6 +5642,7 @@
   {
     "city": "Henderson",
     "state": "Nevada",
+    "_id": 471,
     "location": {
       "_point": {
         "_longitude": -114.9817213,
@@ -5183,6 +5654,7 @@
   {
     "city": "Rancho Santa Margarita",
     "state": "California",
+    "_id": 472,
     "location": {
       "_point": {
         "_longitude": -117.603104,
@@ -5194,6 +5666,7 @@
   {
     "city": "Kannapolis",
     "state": "North Carolina",
+    "_id": 473,
     "location": {
       "_point": {
         "_longitude": -80.6217341,
@@ -5205,6 +5678,7 @@
   {
     "city": "Mount Prospect",
     "state": "Illinois",
+    "_id": 474,
     "location": {
       "_point": {
         "_longitude": -87.9372908,
@@ -5216,6 +5690,7 @@
   {
     "city": "Cupertino",
     "state": "California",
+    "_id": 475,
     "location": {
       "_point": {
         "_longitude": -122.0321823,
@@ -5227,6 +5702,7 @@
   {
     "city": "Battle Creek",
     "state": "Michigan",
+    "_id": 476,
     "location": {
       "_point": {
         "_longitude": -85.1797142,
@@ -5238,6 +5714,7 @@
   {
     "city": "Minot",
     "state": "North Dakota",
+    "_id": 477,
     "location": {
       "_point": {
         "_longitude": -101.2922906,
@@ -5249,6 +5726,7 @@
   {
     "city": "Covina",
     "state": "California",
+    "_id": 478,
     "location": {
       "_point": {
         "_longitude": -117.8903397,
@@ -5260,6 +5738,7 @@
   {
     "city": "Taylorsville",
     "state": "Utah",
+    "_id": 479,
     "location": {
       "_point": {
         "_longitude": -111.9388258,
@@ -5271,6 +5750,7 @@
   {
     "city": "Manhattan",
     "state": "Kansas",
+    "_id": 480,
     "location": {
       "_point": {
         "_longitude": -96.5716694,
@@ -5282,6 +5762,7 @@
   {
     "city": "Galveston",
     "state": "Texas",
+    "_id": 481,
     "location": {
       "_point": {
         "_longitude": -94.7976958,
@@ -5293,6 +5774,7 @@
   {
     "city": "Fall River",
     "state": "Massachusetts",
+    "_id": 482,
     "location": {
       "_point": {
         "_longitude": -71.1550451,
@@ -5304,6 +5786,7 @@
   {
     "city": "Bristol",
     "state": "Connecticut",
+    "_id": 483,
     "location": {
       "_point": {
         "_longitude": -72.9492703,
@@ -5315,6 +5798,7 @@
   {
     "city": "Bayonne",
     "state": "New Jersey",
+    "_id": 484,
     "location": {
       "_point": {
         "_longitude": -74.1143091,
@@ -5326,6 +5810,7 @@
   {
     "city": "Dearborn",
     "state": "Michigan",
+    "_id": 485,
     "location": {
       "_point": {
         "_longitude": -83.1763145,
@@ -5337,6 +5822,7 @@
   {
     "city": "Hamilton",
     "state": "Ohio",
+    "_id": 486,
     "location": {
       "_point": {
         "_longitude": -84.5613355,
@@ -5348,6 +5834,7 @@
   {
     "city": "Davie",
     "state": "Florida",
+    "_id": 487,
     "location": {
       "_point": {
         "_longitude": -80.2521157,
@@ -5359,6 +5846,7 @@
   {
     "city": "McAllen",
     "state": "Texas",
+    "_id": 488,
     "location": {
       "_point": {
         "_longitude": -98.2300124,
@@ -5370,6 +5858,7 @@
   {
     "city": "Portland",
     "state": "Maine",
+    "_id": 489,
     "location": {
       "_point": {
         "_longitude": -70.2553259,
@@ -5381,6 +5870,7 @@
   {
     "city": "Utica",
     "state": "New York",
+    "_id": 490,
     "location": {
       "_point": {
         "_longitude": -75.232664,
@@ -5392,6 +5882,7 @@
   {
     "city": "Tyler",
     "state": "Texas",
+    "_id": 491,
     "location": {
       "_point": {
         "_longitude": -95.3010624,
@@ -5403,6 +5894,7 @@
   {
     "city": "Winter Garden",
     "state": "Florida",
+    "_id": 492,
     "location": {
       "_point": {
         "_longitude": -81.5861847,
@@ -5414,6 +5906,7 @@
   {
     "city": "Charlotte",
     "state": "North Carolina",
+    "_id": 493,
     "location": {
       "_point": {
         "_longitude": -80.8431267,
@@ -5425,6 +5918,7 @@
   {
     "city": "Independence",
     "state": "Missouri",
+    "_id": 494,
     "location": {
       "_point": {
         "_longitude": -94.4155068,
@@ -5436,6 +5930,7 @@
   {
     "city": "Stamford",
     "state": "Connecticut",
+    "_id": 495,
     "location": {
       "_point": {
         "_longitude": -73.5387341,
@@ -5447,6 +5942,7 @@
   {
     "city": "Hartford",
     "state": "Connecticut",
+    "_id": 496,
     "location": {
       "_point": {
         "_longitude": -72.6850932,
@@ -5458,6 +5954,7 @@
   {
     "city": "Grand Rapids",
     "state": "Michigan",
+    "_id": 497,
     "location": {
       "_point": {
         "_longitude": -85.6680863,
@@ -5469,6 +5966,7 @@
   {
     "city": "Huntsville",
     "state": "Alabama",
+    "_id": 498,
     "location": {
       "_point": {
         "_longitude": -86.5861037,
@@ -5480,6 +5978,7 @@
   {
     "city": "Brownsville",
     "state": "Texas",
+    "_id": 499,
     "location": {
       "_point": {
         "_longitude": -97.4974838,
@@ -5491,6 +5990,7 @@
   {
     "city": "Corona",
     "state": "California",
+    "_id": 500,
     "location": {
       "_point": {
         "_longitude": -117.5664384,
@@ -5502,6 +6002,7 @@
   {
     "city": "Waco",
     "state": "Texas",
+    "_id": 501,
     "location": {
       "_point": {
         "_longitude": -97.1466695,
@@ -5513,6 +6014,7 @@
   {
     "city": "Pittsfield",
     "state": "Massachusetts",
+    "_id": 502,
     "location": {
       "_point": {
         "_longitude": -73.2453824,
@@ -5524,6 +6026,7 @@
   {
     "city": "Palm Springs",
     "state": "California",
+    "_id": 503,
     "location": {
       "_point": {
         "_longitude": -116.5452921,
@@ -5535,6 +6038,7 @@
   {
     "city": "Paramount",
     "state": "California",
+    "_id": 504,
     "location": {
       "_point": {
         "_longitude": -118.1597911,
@@ -5546,6 +6050,7 @@
   {
     "city": "Cleveland Heights",
     "state": "Ohio",
+    "_id": 505,
     "location": {
       "_point": {
         "_longitude": -81.556235,
@@ -5557,6 +6062,7 @@
   {
     "city": "Gilroy",
     "state": "California",
+    "_id": 506,
     "location": {
       "_point": {
         "_longitude": -121.5682751,
@@ -5568,6 +6074,7 @@
   {
     "city": "Greenwood",
     "state": "Indiana",
+    "_id": 507,
     "location": {
       "_point": {
         "_longitude": -86.1066526,
@@ -5579,6 +6086,7 @@
   {
     "city": "Oak Park",
     "state": "Illinois",
+    "_id": 508,
     "location": {
       "_point": {
         "_longitude": -87.7845025,
@@ -5590,6 +6098,7 @@
   {
     "city": "Sarasota",
     "state": "Florida",
+    "_id": 509,
     "location": {
       "_point": {
         "_longitude": -82.5306527,
@@ -5601,6 +6110,7 @@
   {
     "city": "Monroe",
     "state": "Louisiana",
+    "_id": 510,
     "location": {
       "_point": {
         "_longitude": -92.1193012,
@@ -5612,6 +6122,7 @@
   {
     "city": "Manchester",
     "state": "New Hampshire",
+    "_id": 511,
     "location": {
       "_point": {
         "_longitude": -71.4547891,
@@ -5623,6 +6134,7 @@
   {
     "city": "Brooklyn Park",
     "state": "Minnesota",
+    "_id": 512,
     "location": {
       "_point": {
         "_longitude": -93.3563405,
@@ -5634,6 +6146,7 @@
   {
     "city": "Buena Park",
     "state": "California",
+    "_id": 513,
     "location": {
       "_point": {
         "_longitude": -117.9981181,
@@ -5645,6 +6158,7 @@
   {
     "city": "Norwalk",
     "state": "California",
+    "_id": 514,
     "location": {
       "_point": {
         "_longitude": -118.081733,
@@ -5656,6 +6170,7 @@
   {
     "city": "Bloomington",
     "state": "Indiana",
+    "_id": 515,
     "location": {
       "_point": {
         "_longitude": -86.5263857,
@@ -5667,6 +6182,7 @@
   {
     "city": "Pueblo",
     "state": "Colorado",
+    "_id": 516,
     "location": {
       "_point": {
         "_longitude": -104.6091409,
@@ -5678,6 +6194,7 @@
   {
     "city": "Westland",
     "state": "Michigan",
+    "_id": 517,
     "location": {
       "_point": {
         "_longitude": -83.400211,
@@ -5689,6 +6206,7 @@
   {
     "city": "Lansing",
     "state": "Michigan",
+    "_id": 518,
     "location": {
       "_point": {
         "_longitude": -84.5555347,
@@ -5700,6 +6218,7 @@
   {
     "city": "Gresham",
     "state": "Oregon",
+    "_id": 519,
     "location": {
       "_point": {
         "_longitude": -122.4302013,
@@ -5711,6 +6230,7 @@
   {
     "city": "Jurupa Valley",
     "state": "California",
+    "_id": 520,
     "location": {
       "_point": {
         "_longitude": -117.4854802,
@@ -5722,6 +6242,7 @@
   {
     "city": "West Haven",
     "state": "Connecticut",
+    "_id": 521,
     "location": {
       "_point": {
         "_longitude": -72.9469711,
@@ -5733,6 +6254,7 @@
   {
     "city": "Bellflower",
     "state": "California",
+    "_id": 522,
     "location": {
       "_point": {
         "_longitude": -118.1170117,
@@ -5744,6 +6266,7 @@
   {
     "city": "Orland Park",
     "state": "Illinois",
+    "_id": 523,
     "location": {
       "_point": {
         "_longitude": -87.8539425,
@@ -5755,6 +6278,7 @@
   {
     "city": "Rocklin",
     "state": "California",
+    "_id": 524,
     "location": {
       "_point": {
         "_longitude": -121.2357828,
@@ -5766,6 +6290,7 @@
   {
     "city": "Tulare",
     "state": "California",
+    "_id": 525,
     "location": {
       "_point": {
         "_longitude": -119.3473379,
@@ -5777,6 +6302,7 @@
   {
     "city": "Owensboro",
     "state": "Kentucky",
+    "_id": 526,
     "location": {
       "_point": {
         "_longitude": -87.1111676,
@@ -5788,6 +6314,7 @@
   {
     "city": "Lauderhill",
     "state": "Florida",
+    "_id": 527,
     "location": {
       "_point": {
         "_longitude": -80.2133808,
@@ -5799,6 +6326,7 @@
   {
     "city": "Flower Mound",
     "state": "Texas",
+    "_id": 528,
     "location": {
       "_point": {
         "_longitude": -97.0969552,
@@ -5810,6 +6338,7 @@
   {
     "city": "Marietta",
     "state": "Georgia",
+    "_id": 529,
     "location": {
       "_point": {
         "_longitude": -84.5499327,
@@ -5821,6 +6350,7 @@
   {
     "city": "Florence",
     "state": "South Carolina",
+    "_id": 530,
     "location": {
       "_point": {
         "_longitude": -79.7625625,
@@ -5832,6 +6362,7 @@
   {
     "city": "Chelsea",
     "state": "Massachusetts",
+    "_id": 531,
     "location": {
       "_point": {
         "_longitude": -71.0328284,
@@ -5843,6 +6374,7 @@
   {
     "city": "San Bruno",
     "state": "California",
+    "_id": 532,
     "location": {
       "_point": {
         "_longitude": -122.4110835,
@@ -5854,6 +6386,7 @@
   {
     "city": "Belleville",
     "state": "Illinois",
+    "_id": 533,
     "location": {
       "_point": {
         "_longitude": -89.9839935,
@@ -5865,6 +6398,7 @@
   {
     "city": "San Bernardino",
     "state": "California",
+    "_id": 534,
     "location": {
       "_point": {
         "_longitude": -117.2897652,
@@ -5876,6 +6410,7 @@
   {
     "city": "Chula Vista",
     "state": "California",
+    "_id": 535,
     "location": {
       "_point": {
         "_longitude": -117.0841955,
@@ -5887,6 +6422,7 @@
   {
     "city": "Virginia Beach",
     "state": "Virginia",
+    "_id": 536,
     "location": {
       "_point": {
         "_longitude": -75.977985,
@@ -5898,6 +6434,7 @@
   {
     "city": "San Diego",
     "state": "California",
+    "_id": 537,
     "location": {
       "_point": {
         "_longitude": -117.1610838,
@@ -5909,6 +6446,7 @@
   {
     "city": "Minneapolis",
     "state": "Minnesota",
+    "_id": 538,
     "location": {
       "_point": {
         "_longitude": -93.2650108,
@@ -5920,6 +6458,7 @@
   {
     "city": "Salinas",
     "state": "California",
+    "_id": 539,
     "location": {
       "_point": {
         "_longitude": -121.6555013,
@@ -5931,6 +6470,7 @@
   {
     "city": "Mesquite",
     "state": "Texas",
+    "_id": 540,
     "location": {
       "_point": {
         "_longitude": -96.5991593,
@@ -5942,6 +6482,7 @@
   {
     "city": "McKinney",
     "state": "Texas",
+    "_id": 541,
     "location": {
       "_point": {
         "_longitude": -96.6397822,
@@ -5953,6 +6494,7 @@
   {
     "city": "Killeen",
     "state": "Texas",
+    "_id": 542,
     "location": {
       "_point": {
         "_longitude": -97.7277959,
@@ -5964,6 +6506,7 @@
   {
     "city": "Bloomington",
     "state": "Minnesota",
+    "_id": 543,
     "location": {
       "_point": {
         "_longitude": -93.2982799,
@@ -5975,6 +6518,7 @@
   {
     "city": "Lee's Summit",
     "state": "Missouri",
+    "_id": 544,
     "location": {
       "_point": {
         "_longitude": -94.3821724,
@@ -5986,6 +6530,7 @@
   {
     "city": "Cranston",
     "state": "Rhode Island",
+    "_id": 545,
     "location": {
       "_point": {
         "_longitude": -71.4372796,
@@ -5997,6 +6542,7 @@
   {
     "city": "Berkeley",
     "state": "California",
+    "_id": 546,
     "location": {
       "_point": {
         "_longitude": -122.272747,
@@ -6008,6 +6554,7 @@
   {
     "city": "Coral Springs",
     "state": "Florida",
+    "_id": 547,
     "location": {
       "_point": {
         "_longitude": -80.2706044,
@@ -6019,6 +6566,7 @@
   {
     "city": "Bartlett",
     "state": "Tennessee",
+    "_id": 548,
     "location": {
       "_point": {
         "_longitude": -89.8739753,
@@ -6030,6 +6578,7 @@
   {
     "city": "Vineland",
     "state": "New Jersey",
+    "_id": 549,
     "location": {
       "_point": {
         "_longitude": -75.0259637,
@@ -6041,6 +6590,7 @@
   {
     "city": "Green Bay",
     "state": "Wisconsin",
+    "_id": 550,
     "location": {
       "_point": {
         "_longitude": -88.019826,
@@ -6052,6 +6602,7 @@
   {
     "city": "Jupiter",
     "state": "Florida",
+    "_id": 551,
     "location": {
       "_point": {
         "_longitude": -80.0942087,
@@ -6063,6 +6614,7 @@
   {
     "city": "Yuma",
     "state": "Arizona",
+    "_id": 552,
     "location": {
       "_point": {
         "_longitude": -114.6276916,
@@ -6074,6 +6626,7 @@
   {
     "city": "Hendersonville",
     "state": "Tennessee",
+    "_id": 553,
     "location": {
       "_point": {
         "_longitude": -86.6199957,
@@ -6085,6 +6638,7 @@
   {
     "city": "Highland",
     "state": "California",
+    "_id": 554,
     "location": {
       "_point": {
         "_longitude": -117.2086513,
@@ -6096,6 +6650,7 @@
   {
     "city": "El Centro",
     "state": "California",
+    "_id": 555,
     "location": {
       "_point": {
         "_longitude": -115.5630514,
@@ -6107,6 +6662,7 @@
   {
     "city": "Parker",
     "state": "Colorado",
+    "_id": 556,
     "location": {
       "_point": {
         "_longitude": -104.7613633,
@@ -6118,6 +6674,7 @@
   {
     "city": "Moline",
     "state": "Illinois",
+    "_id": 557,
     "location": {
       "_point": {
         "_longitude": -90.5151342,
@@ -6129,6 +6686,7 @@
   {
     "city": "Grapevine",
     "state": "Texas",
+    "_id": 558,
     "location": {
       "_point": {
         "_longitude": -97.0780654,
@@ -6140,6 +6698,7 @@
   {
     "city": "Salina",
     "state": "Kansas",
+    "_id": 559,
     "location": {
       "_point": {
         "_longitude": -97.6114237,
@@ -6151,6 +6710,7 @@
   {
     "city": "Newark",
     "state": "Ohio",
+    "_id": 560,
     "location": {
       "_point": {
         "_longitude": -82.4012642,
@@ -6162,6 +6722,7 @@
   {
     "city": "Rohnert Park",
     "state": "California",
+    "_id": 561,
     "location": {
       "_point": {
         "_longitude": -122.7010984,
@@ -6173,6 +6734,7 @@
   {
     "city": "Martinez",
     "state": "California",
+    "_id": 562,
     "location": {
       "_point": {
         "_longitude": -122.1341321,
@@ -6184,6 +6746,7 @@
   {
     "city": "Rock Island",
     "state": "Illinois",
+    "_id": 563,
     "location": {
       "_point": {
         "_longitude": -90.5787476,
@@ -6195,6 +6758,7 @@
   {
     "city": "Meridian",
     "state": "Mississippi",
+    "_id": 564,
     "location": {
       "_point": {
         "_longitude": -88.703656,
@@ -6206,6 +6770,7 @@
   {
     "city": "Cleveland",
     "state": "Tennessee",
+    "_id": 565,
     "location": {
       "_point": {
         "_longitude": -84.8766115,
@@ -6217,6 +6782,7 @@
   {
     "city": "The Colony",
     "state": "Texas",
+    "_id": 566,
     "location": {
       "_point": {
         "_longitude": -96.8928309,
@@ -6228,6 +6794,7 @@
   {
     "city": "Somerville",
     "state": "Massachusetts",
+    "_id": 567,
     "location": {
       "_point": {
         "_longitude": -71.0994968,
@@ -6239,6 +6806,7 @@
   {
     "city": "Santa Clara",
     "state": "California",
+    "_id": 568,
     "location": {
       "_point": {
         "_longitude": -121.9552356,
@@ -6250,6 +6818,7 @@
   {
     "city": "West Palm Beach",
     "state": "Florida",
+    "_id": 569,
     "location": {
       "_point": {
         "_longitude": -80.0533746,
@@ -6261,6 +6830,7 @@
   {
     "city": "Miami Gardens",
     "state": "Florida",
+    "_id": 570,
     "location": {
       "_point": {
         "_longitude": -80.2456045,
@@ -6272,6 +6842,7 @@
   {
     "city": "Wichita Falls",
     "state": "Texas",
+    "_id": 571,
     "location": {
       "_point": {
         "_longitude": -98.4933873,
@@ -6283,6 +6854,7 @@
   {
     "city": "Lafayette",
     "state": "Indiana",
+    "_id": 572,
     "location": {
       "_point": {
         "_longitude": -86.8752869,
@@ -6294,6 +6866,7 @@
   {
     "city": "Evanston",
     "state": "Illinois",
+    "_id": 573,
     "location": {
       "_point": {
         "_longitude": -87.6876969,
@@ -6305,6 +6878,7 @@
   {
     "city": "Beaverton",
     "state": "Oregon",
+    "_id": 574,
     "location": {
       "_point": {
         "_longitude": -122.8037102,
@@ -6316,6 +6890,7 @@
   {
     "city": "Flint",
     "state": "Michigan",
+    "_id": 575,
     "location": {
       "_point": {
         "_longitude": -83.6874562,
@@ -6327,6 +6902,7 @@
   {
     "city": "Largo",
     "state": "Florida",
+    "_id": 576,
     "location": {
       "_point": {
         "_longitude": -82.7873244,
@@ -6338,6 +6914,7 @@
   {
     "city": "Burlington",
     "state": "North Carolina",
+    "_id": 577,
     "location": {
       "_point": {
         "_longitude": -79.4377991,
@@ -6349,6 +6926,7 @@
   {
     "city": "Huntington",
     "state": "West Virginia",
+    "_id": 578,
     "location": {
       "_point": {
         "_longitude": -82.445154,
@@ -6360,6 +6938,7 @@
   {
     "city": "Pittsburg",
     "state": "California",
+    "_id": 579,
     "location": {
       "_point": {
         "_longitude": -121.8846806,
@@ -6371,6 +6950,7 @@
   {
     "city": "Midwest City",
     "state": "Oklahoma",
+    "_id": 580,
     "location": {
       "_point": {
         "_longitude": -97.3967019,
@@ -6382,6 +6962,7 @@
   {
     "city": "Kingsport",
     "state": "Tennessee",
+    "_id": 581,
     "location": {
       "_point": {
         "_longitude": -82.5618186,
@@ -6393,6 +6974,7 @@
   {
     "city": "Kenner",
     "state": "Louisiana",
+    "_id": 582,
     "location": {
       "_point": {
         "_longitude": -90.2417434,
@@ -6404,6 +6986,7 @@
   {
     "city": "Lodi",
     "state": "California",
+    "_id": 583,
     "location": {
       "_point": {
         "_longitude": -121.2722194,
@@ -6415,6 +6998,7 @@
   {
     "city": "Edina",
     "state": "Minnesota",
+    "_id": 584,
     "location": {
       "_point": {
         "_longitude": -93.3499489,
@@ -6426,6 +7010,7 @@
   {
     "city": "Carol Stream",
     "state": "Illinois",
+    "_id": 585,
     "location": {
       "_point": {
         "_longitude": -88.1347927,
@@ -6437,6 +7022,7 @@
   {
     "city": "Clovis",
     "state": "New Mexico",
+    "_id": 586,
     "location": {
       "_point": {
         "_longitude": -103.2052272,
@@ -6448,6 +7034,7 @@
   {
     "city": "Ocoee",
     "state": "Florida",
+    "_id": 587,
     "location": {
       "_point": {
         "_longitude": -81.5439619,
@@ -6459,6 +7046,7 @@
   {
     "city": "Findlay",
     "state": "Ohio",
+    "_id": 588,
     "location": {
       "_point": {
         "_longitude": -83.6499321,
@@ -6470,6 +7058,7 @@
   {
     "city": "Roy",
     "state": "Utah",
+    "_id": 589,
     "location": {
       "_point": {
         "_longitude": -112.0263313,
@@ -6481,6 +7070,7 @@
   {
     "city": "Peachtree Corners",
     "state": "Georgia",
+    "_id": 590,
     "location": {
       "_point": {
         "_longitude": -84.2214551,
@@ -6492,6 +7082,7 @@
   {
     "city": "Thousand Oaks",
     "state": "California",
+    "_id": 591,
     "location": {
       "_point": {
         "_longitude": -118.8375937,
@@ -6503,6 +7094,7 @@
   {
     "city": "Los Angeles",
     "state": "California",
+    "_id": 592,
     "location": {
       "_point": {
         "_longitude": -118.2436849,
@@ -6514,6 +7106,7 @@
   {
     "city": "Jersey City",
     "state": "New Jersey",
+    "_id": 593,
     "location": {
       "_point": {
         "_longitude": -74.0776417,
@@ -6525,6 +7118,7 @@
   {
     "city": "Santa Rosa",
     "state": "California",
+    "_id": 594,
     "location": {
       "_point": {
         "_longitude": -122.7140548,
@@ -6536,6 +7130,7 @@
   {
     "city": "Spokane",
     "state": "Washington",
+    "_id": 595,
     "location": {
       "_point": {
         "_longitude": -117.4260466,
@@ -6547,6 +7142,7 @@
   {
     "city": "Baltimore",
     "state": "Maryland",
+    "_id": 596,
     "location": {
       "_point": {
         "_longitude": -76.6121893,
@@ -6558,6 +7154,7 @@
   {
     "city": "Oakland",
     "state": "California",
+    "_id": 597,
     "location": {
       "_point": {
         "_longitude": -122.2711137,
@@ -6569,6 +7166,7 @@
   {
     "city": "Fresno",
     "state": "California",
+    "_id": 598,
     "location": {
       "_point": {
         "_longitude": -119.7725868,
@@ -6580,6 +7178,7 @@
   {
     "city": "St. Paul",
     "state": "Minnesota",
+    "_id": 599,
     "location": {
       "_point": {
         "_longitude": -93.0899578,
@@ -6591,6 +7190,7 @@
   {
     "city": "Victorville",
     "state": "California",
+    "_id": 600,
     "location": {
       "_point": {
         "_longitude": -117.2927641,
@@ -6602,6 +7202,7 @@
   {
     "city": "Fort Lauderdale",
     "state": "Florida",
+    "_id": 601,
     "location": {
       "_point": {
         "_longitude": -80.1373174,
@@ -6613,6 +7214,7 @@
   {
     "city": "Springfield",
     "state": "Missouri",
+    "_id": 602,
     "location": {
       "_point": {
         "_longitude": -93.2922989,
@@ -6624,6 +7226,7 @@
   {
     "city": "Chicago",
     "state": "Illinois",
+    "_id": 603,
     "location": {
       "_point": {
         "_longitude": -87.6297982,
@@ -6635,6 +7238,7 @@
   {
     "city": "Detroit",
     "state": "Michigan",
+    "_id": 604,
     "location": {
       "_point": {
         "_longitude": -83.0457538,
@@ -6646,6 +7250,7 @@
   {
     "city": "Joliet",
     "state": "Illinois",
+    "_id": 605,
     "location": {
       "_point": {
         "_longitude": -88.0817251,
@@ -6657,6 +7262,7 @@
   {
     "city": "Olathe",
     "state": "Kansas",
+    "_id": 606,
     "location": {
       "_point": {
         "_longitude": -94.8191285,
@@ -6668,6 +7274,7 @@
   {
     "city": "Laredo",
     "state": "Texas",
+    "_id": 607,
     "location": {
       "_point": {
         "_longitude": -99.4803241,
@@ -6679,6 +7286,7 @@
   {
     "city": "Garland",
     "state": "Texas",
+    "_id": 608,
     "location": {
       "_point": {
         "_longitude": -96.6388833,
@@ -6690,6 +7298,7 @@
   {
     "city": "Kennewick",
     "state": "Washington",
+    "_id": 609,
     "location": {
       "_point": {
         "_longitude": -119.1372338,
@@ -6701,6 +7310,7 @@
   {
     "city": "Richmond",
     "state": "California",
+    "_id": 610,
     "location": {
       "_point": {
         "_longitude": -122.3477486,
@@ -6712,6 +7322,7 @@
   {
     "city": "Warner Robins",
     "state": "Georgia",
+    "_id": 611,
     "location": {
       "_point": {
         "_longitude": -83.624201,
@@ -6723,6 +7334,7 @@
   {
     "city": "Palm Coast",
     "state": "Florida",
+    "_id": 612,
     "location": {
       "_point": {
         "_longitude": -81.2078699,
@@ -6734,6 +7346,7 @@
   {
     "city": "Johns Creek",
     "state": "Georgia",
+    "_id": 613,
     "location": {
       "_point": {
         "_longitude": -84.198579,
@@ -6745,6 +7358,7 @@
   {
     "city": "Billings",
     "state": "Montana",
+    "_id": 614,
     "location": {
       "_point": {
         "_longitude": -108.5006904,
@@ -6756,6 +7370,7 @@
   {
     "city": "Melbourne",
     "state": "Florida",
+    "_id": 615,
     "location": {
       "_point": {
         "_longitude": -80.6081089,
@@ -6767,6 +7382,7 @@
   {
     "city": "Deltona",
     "state": "Florida",
+    "_id": 616,
     "location": {
       "_point": {
         "_longitude": -81.2636738,
@@ -6778,6 +7394,7 @@
   {
     "city": "Gary",
     "state": "Indiana",
+    "_id": 617,
     "location": {
       "_point": {
         "_longitude": -87.3464271,
@@ -6789,6 +7406,7 @@
   {
     "city": "Sandy",
     "state": "Utah",
+    "_id": 618,
     "location": {
       "_point": {
         "_longitude": -111.8389726,
@@ -6800,6 +7418,7 @@
   {
     "city": "Rock Hill",
     "state": "South Carolina",
+    "_id": 619,
     "location": {
       "_point": {
         "_longitude": -81.0250784,
@@ -6811,6 +7430,7 @@
   {
     "city": "Bismarck",
     "state": "North Dakota",
+    "_id": 620,
     "location": {
       "_point": {
         "_longitude": -100.7837392,
@@ -6822,6 +7442,7 @@
   {
     "city": "Casa Grande",
     "state": "Arizona",
+    "_id": 621,
     "location": {
       "_point": {
         "_longitude": -111.7573521,
@@ -6833,6 +7454,7 @@
   {
     "city": "Wauwatosa",
     "state": "Wisconsin",
+    "_id": 622,
     "location": {
       "_point": {
         "_longitude": -88.0075875,
@@ -6844,6 +7466,7 @@
   {
     "city": "Carson City",
     "state": "Nevada",
+    "_id": 623,
     "location": {
       "_point": {
         "_longitude": -119.7674034,
@@ -6855,6 +7478,7 @@
   {
     "city": "Azusa",
     "state": "California",
+    "_id": 624,
     "location": {
       "_point": {
         "_longitude": -117.9075627,
@@ -6866,6 +7490,7 @@
   {
     "city": "Missouri City",
     "state": "Texas",
+    "_id": 625,
     "location": {
       "_point": {
         "_longitude": -95.5377215,
@@ -6877,6 +7502,7 @@
   {
     "city": "Waterloo",
     "state": "Iowa",
+    "_id": 626,
     "location": {
       "_point": {
         "_longitude": -92.3425775,
@@ -6888,6 +7514,7 @@
   {
     "city": "Troy",
     "state": "New York",
+    "_id": 627,
     "location": {
       "_point": {
         "_longitude": -73.6917851,
@@ -6899,6 +7526,7 @@
   {
     "city": "Morgan Hill",
     "state": "California",
+    "_id": 628,
     "location": {
       "_point": {
         "_longitude": -121.6543901,
@@ -6910,6 +7538,7 @@
   {
     "city": "Binghamton",
     "state": "New York",
+    "_id": 629,
     "location": {
       "_point": {
         "_longitude": -75.9179738,
@@ -6921,6 +7550,7 @@
   {
     "city": "Salem",
     "state": "Massachusetts",
+    "_id": 630,
     "location": {
       "_point": {
         "_longitude": -70.8967155,
@@ -6932,6 +7562,7 @@
   {
     "city": "Muskogee",
     "state": "Oklahoma",
+    "_id": 631,
     "location": {
       "_point": {
         "_longitude": -95.3696909,
@@ -6943,6 +7574,7 @@
   {
     "city": "Pine Bluff",
     "state": "Arkansas",
+    "_id": 632,
     "location": {
       "_point": {
         "_longitude": -92.0031955,
@@ -6954,6 +7586,7 @@
   {
     "city": "Freeport",
     "state": "New York",
+    "_id": 633,
     "location": {
       "_point": {
         "_longitude": -73.5831835,
@@ -6965,6 +7598,7 @@
   {
     "city": "Lombard",
     "state": "Illinois",
+    "_id": 634,
     "location": {
       "_point": {
         "_longitude": -88.0078435,
@@ -6976,6 +7610,7 @@
   {
     "city": "Fairfield",
     "state": "Ohio",
+    "_id": 635,
     "location": {
       "_point": {
         "_longitude": -84.5603187,
@@ -6987,6 +7622,7 @@
   {
     "city": "Federal Way",
     "state": "Washington",
+    "_id": 636,
     "location": {
       "_point": {
         "_longitude": -122.3126222,
@@ -6998,6 +7634,7 @@
   {
     "city": "Lowell",
     "state": "Massachusetts",
+    "_id": 637,
     "location": {
       "_point": {
         "_longitude": -71.3161718,
@@ -7009,6 +7646,7 @@
   {
     "city": "Concord",
     "state": "North Carolina",
+    "_id": 638,
     "location": {
       "_point": {
         "_longitude": -80.579511,
@@ -7020,6 +7658,7 @@
   {
     "city": "Broken Arrow",
     "state": "Oklahoma",
+    "_id": 639,
     "location": {
       "_point": {
         "_longitude": -95.7974526,
@@ -7031,6 +7670,7 @@
   {
     "city": "Clearwater",
     "state": "Florida",
+    "_id": 640,
     "location": {
       "_point": {
         "_longitude": -82.8001026,
@@ -7042,6 +7682,7 @@
   {
     "city": "Boulder",
     "state": "Colorado",
+    "_id": 641,
     "location": {
       "_point": {
         "_longitude": -105.2705456,
@@ -7053,6 +7694,7 @@
   {
     "city": "Kent",
     "state": "Washington",
+    "_id": 642,
     "location": {
       "_point": {
         "_longitude": -122.2348431,
@@ -7064,6 +7706,7 @@
   {
     "city": "West Jordan",
     "state": "Utah",
+    "_id": 643,
     "location": {
       "_point": {
         "_longitude": -111.9391031,
@@ -7075,6 +7718,7 @@
   {
     "city": "Meridian",
     "state": "Idaho",
+    "_id": 644,
     "location": {
       "_point": {
         "_longitude": -116.3915131,
@@ -7086,6 +7730,7 @@
   {
     "city": "Iowa City",
     "state": "Iowa",
+    "_id": 645,
     "location": {
       "_point": {
         "_longitude": -91.5301683,
@@ -7097,6 +7742,7 @@
   {
     "city": "Rancho Cordova",
     "state": "California",
+    "_id": 646,
     "location": {
       "_point": {
         "_longitude": -121.302728,
@@ -7108,6 +7754,7 @@
   {
     "city": "Dearborn Heights",
     "state": "Michigan",
+    "_id": 647,
     "location": {
       "_point": {
         "_longitude": -83.2732627,
@@ -7119,6 +7766,7 @@
   {
     "city": "San Clemente",
     "state": "California",
+    "_id": 648,
     "location": {
       "_point": {
         "_longitude": -117.6119925,
@@ -7130,6 +7778,7 @@
   {
     "city": "Plainfield",
     "state": "New Jersey",
+    "_id": 649,
     "location": {
       "_point": {
         "_longitude": -74.4073736,
@@ -7141,6 +7790,7 @@
   {
     "city": "Yucaipa",
     "state": "California",
+    "_id": 650,
     "location": {
       "_point": {
         "_longitude": -117.0430865,
@@ -7152,6 +7802,7 @@
   {
     "city": "Buckeye",
     "state": "Arizona",
+    "_id": 651,
     "location": {
       "_point": {
         "_longitude": -112.5837766,
@@ -7163,6 +7814,7 @@
   {
     "city": "Smyrna",
     "state": "Georgia",
+    "_id": 652,
     "location": {
       "_point": {
         "_longitude": -84.5143761,
@@ -7174,6 +7826,7 @@
   {
     "city": "Dubuque",
     "state": "Iowa",
+    "_id": 653,
     "location": {
       "_point": {
         "_longitude": -90.6645718,
@@ -7185,6 +7838,7 @@
   {
     "city": "Pittsburgh",
     "state": "Pennsylvania",
+    "_id": 654,
     "location": {
       "_point": {
         "_longitude": -79.9958864,
@@ -7196,6 +7850,7 @@
   {
     "city": "Bridgeport",
     "state": "Connecticut",
+    "_id": 655,
     "location": {
       "_point": {
         "_longitude": -73.1951767,
@@ -7207,6 +7862,7 @@
   {
     "city": "New Haven",
     "state": "Connecticut",
+    "_id": 656,
     "location": {
       "_point": {
         "_longitude": -72.9278835,
@@ -7218,6 +7874,7 @@
   {
     "city": "Nashville",
     "state": "Tennessee",
+    "_id": 657,
     "location": {
       "_point": {
         "_longitude": -86.7816016,
@@ -7229,6 +7886,7 @@
   {
     "city": "Anaheim",
     "state": "California",
+    "_id": 658,
     "location": {
       "_point": {
         "_longitude": -117.9145036,
@@ -7240,6 +7898,7 @@
   {
     "city": "St. Louis",
     "state": "Missouri",
+    "_id": 659,
     "location": {
       "_point": {
         "_longitude": -90.1994042,
@@ -7251,6 +7910,7 @@
   {
     "city": "Syracuse",
     "state": "New York",
+    "_id": 660,
     "location": {
       "_point": {
         "_longitude": -76.1474244,
@@ -7262,6 +7922,7 @@
   {
     "city": "Honolulu",
     "state": "Hawaii",
+    "_id": 661,
     "location": {
       "_point": {
         "_longitude": -157.8583333,
@@ -7273,6 +7934,7 @@
   {
     "city": "Aurora",
     "state": "Illinois",
+    "_id": 662,
     "location": {
       "_point": {
         "_longitude": -88.3200715,
@@ -7284,6 +7946,7 @@
   {
     "city": "St. Louis Park",
     "state": "Minnesota",
+    "_id": 663,
     "location": {
       "_point": {
         "_longitude": -93.3702186,
@@ -7295,6 +7958,7 @@
   {
     "city": "Apple Valley",
     "state": "Minnesota",
+    "_id": 664,
     "location": {
       "_point": {
         "_longitude": -93.21772,
@@ -7306,6 +7970,7 @@
   {
     "city": "Edmonds",
     "state": "Washington",
+    "_id": 665,
     "location": {
       "_point": {
         "_longitude": -122.3773552,
@@ -7317,6 +7982,7 @@
   {
     "city": "Leesburg",
     "state": "Virginia",
+    "_id": 666,
     "location": {
       "_point": {
         "_longitude": -77.5636015,
@@ -7328,6 +7994,7 @@
   {
     "city": "Cutler Bay",
     "state": "Florida",
+    "_id": 667,
     "location": {
       "_point": {
         "_longitude": -80.3468593,
@@ -7339,6 +8006,7 @@
   {
     "city": "Haltom City",
     "state": "Texas",
+    "_id": 668,
     "location": {
       "_point": {
         "_longitude": -97.2691817,
@@ -7350,6 +8018,7 @@
   {
     "city": "Brea",
     "state": "California",
+    "_id": 669,
     "location": {
       "_point": {
         "_longitude": -117.9000604,
@@ -7361,6 +8030,7 @@
   {
     "city": "Apopka",
     "state": "Florida",
+    "_id": 670,
     "location": {
       "_point": {
         "_longitude": -81.5322149,
@@ -7372,6 +8042,7 @@
   {
     "city": "Florence",
     "state": "Alabama",
+    "_id": 671,
     "location": {
       "_point": {
         "_longitude": -87.677251,
@@ -7383,6 +8054,7 @@
   {
     "city": "Doral",
     "state": "Florida",
+    "_id": 672,
     "location": {
       "_point": {
         "_longitude": -80.3553302,
@@ -7394,6 +8066,7 @@
   {
     "city": "Phenix City",
     "state": "Alabama",
+    "_id": 673,
     "location": {
       "_point": {
         "_longitude": -85.0007653,
@@ -7405,6 +8078,7 @@
   {
     "city": "Duncanville",
     "state": "Texas",
+    "_id": 674,
     "location": {
       "_point": {
         "_longitude": -96.9083366,
@@ -7416,6 +8090,7 @@
   {
     "city": "Philadelphia",
     "state": "Pennsylvania",
+    "_id": 675,
     "location": {
       "_point": {
         "_longitude": -75.1652215,
@@ -7427,6 +8102,7 @@
   {
     "city": "Greensboro",
     "state": "North Carolina",
+    "_id": 676,
     "location": {
       "_point": {
         "_longitude": -79.7919754,
@@ -7438,6 +8114,7 @@
   {
     "city": "Westminster",
     "state": "California",
+    "_id": 677,
     "location": {
       "_point": {
         "_longitude": -117.9939921,
@@ -7449,6 +8126,7 @@
   {
     "city": "San Marcos",
     "state": "California",
+    "_id": 678,
     "location": {
       "_point": {
         "_longitude": -117.1661449,
@@ -7460,6 +8138,7 @@
   {
     "city": "Clarksville",
     "state": "Tennessee",
+    "_id": 679,
     "location": {
       "_point": {
         "_longitude": -87.3594528,
@@ -7471,6 +8150,7 @@
   {
     "city": "Downey",
     "state": "California",
+    "_id": 680,
     "location": {
       "_point": {
         "_longitude": -118.1331593,
@@ -7482,6 +8162,7 @@
   {
     "city": "Lynn",
     "state": "Massachusetts",
+    "_id": 681,
     "location": {
       "_point": {
         "_longitude": -70.9494938,
@@ -7493,6 +8174,7 @@
   {
     "city": "Lakeland",
     "state": "Florida",
+    "_id": 682,
     "location": {
       "_point": {
         "_longitude": -81.9498042,
@@ -7504,6 +8186,7 @@
   {
     "city": "Cicero",
     "state": "Illinois",
+    "_id": 683,
     "location": {
       "_point": {
         "_longitude": -87.7539448,
@@ -7515,6 +8198,7 @@
   {
     "city": "Rocky Mount",
     "state": "North Carolina",
+    "_id": 684,
     "location": {
       "_point": {
         "_longitude": -77.7905339,
@@ -7526,6 +8210,7 @@
   {
     "city": "Grand Forks",
     "state": "North Dakota",
+    "_id": 685,
     "location": {
       "_point": {
         "_longitude": -97.0328547,
@@ -7537,6 +8222,7 @@
   {
     "city": "Chesterfield",
     "state": "Missouri",
+    "_id": 686,
     "location": {
       "_point": {
         "_longitude": -90.5770675,
@@ -7548,6 +8234,7 @@
   {
     "city": "Hackensack",
     "state": "New Jersey",
+    "_id": 687,
     "location": {
       "_point": {
         "_longitude": -74.0434736,
@@ -7559,6 +8246,7 @@
   {
     "city": "Valley Stream",
     "state": "New York",
+    "_id": 688,
     "location": {
       "_point": {
         "_longitude": -73.7084645,
@@ -7570,6 +8258,7 @@
   {
     "city": "Port Orange",
     "state": "Florida",
+    "_id": 689,
     "location": {
       "_point": {
         "_longitude": -80.9956105,
@@ -7581,6 +8270,7 @@
   {
     "city": "Greenacres",
     "state": "Florida",
+    "_id": 690,
     "location": {
       "_point": {
         "_longitude": -80.1353896,
@@ -7592,6 +8282,7 @@
   {
     "city": "York",
     "state": "Pennsylvania",
+    "_id": 691,
     "location": {
       "_point": {
         "_longitude": -76.727745,
@@ -7603,6 +8294,7 @@
   {
     "city": "Berwyn",
     "state": "Illinois",
+    "_id": 692,
     "location": {
       "_point": {
         "_longitude": -87.7936685,
@@ -7614,6 +8306,7 @@
   {
     "city": "Lancaster",
     "state": "Ohio",
+    "_id": 693,
     "location": {
       "_point": {
         "_longitude": -82.5993294,
@@ -7625,6 +8318,7 @@
   {
     "city": "Bellingham",
     "state": "Washington",
+    "_id": 694,
     "location": {
       "_point": {
         "_longitude": -122.4781473,
@@ -7636,6 +8330,7 @@
   {
     "city": "Lakewood",
     "state": "California",
+    "_id": 695,
     "location": {
       "_point": {
         "_longitude": -118.1339563,
@@ -7647,6 +8342,7 @@
   {
     "city": "Milpitas",
     "state": "California",
+    "_id": 696,
     "location": {
       "_point": {
         "_longitude": -121.8995741,
@@ -7658,6 +8354,7 @@
   {
     "city": "Des Plaines",
     "state": "Illinois",
+    "_id": 697,
     "location": {
       "_point": {
         "_longitude": -87.8833991,
@@ -7669,6 +8366,7 @@
   {
     "city": "Woodbury",
     "state": "Minnesota",
+    "_id": 698,
     "location": {
       "_point": {
         "_longitude": -92.9593797,
@@ -7680,6 +8378,7 @@
   {
     "city": "Terre Haute",
     "state": "Indiana",
+    "_id": 699,
     "location": {
       "_point": {
         "_longitude": -87.4139092,
@@ -7691,6 +8390,7 @@
   {
     "city": "Pasco",
     "state": "Washington",
+    "_id": 700,
     "location": {
       "_point": {
         "_longitude": -119.1005657,
@@ -7702,6 +8402,7 @@
   {
     "city": "Pontiac",
     "state": "Michigan",
+    "_id": 701,
     "location": {
       "_point": {
         "_longitude": -83.2910468,
@@ -7713,6 +8414,7 @@
   {
     "city": "Pharr",
     "state": "Texas",
+    "_id": 702,
     "location": {
       "_point": {
         "_longitude": -98.1836216,
@@ -7724,6 +8426,7 @@
   {
     "city": "Temple",
     "state": "Texas",
+    "_id": 703,
     "location": {
       "_point": {
         "_longitude": -97.342782,
@@ -7735,6 +8438,7 @@
   {
     "city": "Westerville",
     "state": "Ohio",
+    "_id": 704,
     "location": {
       "_point": {
         "_longitude": -82.9290696,
@@ -7746,6 +8450,7 @@
   {
     "city": "Dover",
     "state": "Delaware",
+    "_id": 705,
     "location": {
       "_point": {
         "_longitude": -75.5243682,
@@ -7757,6 +8462,7 @@
   {
     "city": "Augusta-Richmond County",
     "state": "Georgia",
+    "_id": 706,
     "location": {
       "_point": {
         "_longitude": -82.0105148,
@@ -7768,6 +8474,7 @@
   {
     "city": "Fayetteville",
     "state": "North Carolina",
+    "_id": 707,
     "location": {
       "_point": {
         "_longitude": -78.8783585,
@@ -7779,6 +8486,7 @@
   {
     "city": "Albuquerque",
     "state": "New Mexico",
+    "_id": 708,
     "location": {
       "_point": {
         "_longitude": -106.6055534,
@@ -7790,6 +8498,7 @@
   {
     "city": "Torrance",
     "state": "California",
+    "_id": 709,
     "location": {
       "_point": {
         "_longitude": -118.3406288,
@@ -7801,6 +8510,7 @@
   {
     "city": "Naperville",
     "state": "Illinois",
+    "_id": 710,
     "location": {
       "_point": {
         "_longitude": -88.1535352,
@@ -7812,6 +8522,7 @@
   {
     "city": "Knoxville",
     "state": "Tennessee",
+    "_id": 711,
     "location": {
       "_point": {
         "_longitude": -83.9207392,
@@ -7823,6 +8534,7 @@
   {
     "city": "Rockford",
     "state": "Illinois",
+    "_id": 712,
     "location": {
       "_point": {
         "_longitude": -89.0939952,
@@ -7834,6 +8546,7 @@
   {
     "city": "Hollywood",
     "state": "Florida",
+    "_id": 713,
     "location": {
       "_point": {
         "_longitude": -80.1494901,
@@ -7845,6 +8558,7 @@
   {
     "city": "Madison",
     "state": "Wisconsin",
+    "_id": 714,
     "location": {
       "_point": {
         "_longitude": -89.4012302,
@@ -7856,6 +8570,7 @@
   {
     "city": "Athens-Clarke County",
     "state": "Georgia",
+    "_id": 715,
     "location": {
       "_point": {
         "_longitude": -83.357567,
@@ -7867,6 +8582,7 @@
   {
     "city": "Mountain View",
     "state": "California",
+    "_id": 716,
     "location": {
       "_point": {
         "_longitude": -122.0838511,
@@ -7878,6 +8594,7 @@
   {
     "city": "South Gate",
     "state": "California",
+    "_id": 717,
     "location": {
       "_point": {
         "_longitude": -118.2120161,
@@ -7889,6 +8606,7 @@
   {
     "city": "El Cajon",
     "state": "California",
+    "_id": 718,
     "location": {
       "_point": {
         "_longitude": -116.9625269,
@@ -7900,6 +8618,7 @@
   {
     "city": "Gainesville",
     "state": "Florida",
+    "_id": 719,
     "location": {
       "_point": {
         "_longitude": -82.3248262,
@@ -7911,6 +8630,7 @@
   {
     "city": "Visalia",
     "state": "California",
+    "_id": 720,
     "location": {
       "_point": {
         "_longitude": -119.2920585,
@@ -7922,6 +8642,7 @@
   {
     "city": "Kalamazoo",
     "state": "Michigan",
+    "_id": 721,
     "location": {
       "_point": {
         "_longitude": -85.5872286,
@@ -7933,6 +8654,7 @@
   {
     "city": "Palm Bay",
     "state": "Florida",
+    "_id": 722,
     "location": {
       "_point": {
         "_longitude": -80.5886646,
@@ -7944,6 +8666,7 @@
   {
     "city": "Lawton",
     "state": "Oklahoma",
+    "_id": 723,
     "location": {
       "_point": {
         "_longitude": -98.3959291,
@@ -7955,6 +8678,7 @@
   {
     "city": "Albany",
     "state": "Georgia",
+    "_id": 724,
     "location": {
       "_point": {
         "_longitude": -84.155741,
@@ -7966,6 +8690,7 @@
   {
     "city": "Lake Elsinore",
     "state": "California",
+    "_id": 725,
     "location": {
       "_point": {
         "_longitude": -117.3272615,
@@ -7977,6 +8702,7 @@
   {
     "city": "Broomfield",
     "state": "Colorado",
+    "_id": 726,
     "location": {
       "_point": {
         "_longitude": -105.0866504,
@@ -7988,6 +8714,7 @@
   {
     "city": "Great Falls",
     "state": "Montana",
+    "_id": 727,
     "location": {
       "_point": {
         "_longitude": -111.2833449,
@@ -7999,6 +8726,7 @@
   {
     "city": "Eau Claire",
     "state": "Wisconsin",
+    "_id": 728,
     "location": {
       "_point": {
         "_longitude": -91.4984941,
@@ -8010,6 +8738,7 @@
   {
     "city": "Santa Fe",
     "state": "New Mexico",
+    "_id": 729,
     "location": {
       "_point": {
         "_longitude": -105.937799,
@@ -8021,6 +8750,7 @@
   {
     "city": "Rogers",
     "state": "Arkansas",
+    "_id": 730,
     "location": {
       "_point": {
         "_longitude": -94.1185366,
@@ -8032,6 +8762,7 @@
   {
     "city": "Mansfield",
     "state": "Texas",
+    "_id": 731,
     "location": {
       "_point": {
         "_longitude": -97.1416768,
@@ -8043,6 +8774,7 @@
   {
     "city": "Victoria",
     "state": "Texas",
+    "_id": 732,
     "location": {
       "_point": {
         "_longitude": -97.0035982,
@@ -8054,6 +8786,7 @@
   {
     "city": "West Sacramento",
     "state": "California",
+    "_id": 733,
     "location": {
       "_point": {
         "_longitude": -121.530234,
@@ -8065,6 +8798,7 @@
   {
     "city": "Attleboro",
     "state": "Massachusetts",
+    "_id": 734,
     "location": {
       "_point": {
         "_longitude": -71.2856082,
@@ -8076,6 +8810,7 @@
   {
     "city": "Sammamish",
     "state": "Washington",
+    "_id": 735,
     "location": {
       "_point": {
         "_longitude": -122.0355736,
@@ -8087,6 +8822,7 @@
   {
     "city": "Coachella",
     "state": "California",
+    "_id": 736,
     "location": {
       "_point": {
         "_longitude": -116.173894,
@@ -8098,6 +8834,7 @@
   {
     "city": "Wilson",
     "state": "North Carolina",
+    "_id": 737,
     "location": {
       "_point": {
         "_longitude": -77.9155395,
@@ -8109,6 +8846,7 @@
   {
     "city": "Sayreville",
     "state": "New Jersey",
+    "_id": 738,
     "location": {
       "_point": {
         "_longitude": -74.360846,
@@ -8120,6 +8858,7 @@
   {
     "city": "La Crosse",
     "state": "Wisconsin",
+    "_id": 739,
     "location": {
       "_point": {
         "_longitude": -91.2395807,
@@ -8131,6 +8870,7 @@
   {
     "city": "Maricopa",
     "state": "Arizona",
+    "_id": 740,
     "location": {
       "_point": {
         "_longitude": -112.0476423,
@@ -8142,6 +8882,7 @@
   {
     "city": "Tigard",
     "state": "Oregon",
+    "_id": 741,
     "location": {
       "_point": {
         "_longitude": -122.7714861,
@@ -8153,6 +8894,7 @@
   {
     "city": "Wylie",
     "state": "Texas",
+    "_id": 742,
     "location": {
       "_point": {
         "_longitude": -96.5388789,
@@ -8164,6 +8906,7 @@
   {
     "city": "Marlborough",
     "state": "Massachusetts",
+    "_id": 743,
     "location": {
       "_point": {
         "_longitude": -71.5522874,
@@ -8175,6 +8918,7 @@
   {
     "city": "Fond du Lac",
     "state": "Wisconsin",
+    "_id": 744,
     "location": {
       "_point": {
         "_longitude": -88.4470508,
@@ -8186,6 +8930,7 @@
   {
     "city": "Bentonville",
     "state": "Arkansas",
+    "_id": 745,
     "location": {
       "_point": {
         "_longitude": -94.2088172,
@@ -8197,6 +8942,7 @@
   {
     "city": "Moorhead",
     "state": "Minnesota",
+    "_id": 746,
     "location": {
       "_point": {
         "_longitude": -96.7678039,
@@ -8208,6 +8954,7 @@
   {
     "city": "Panama City",
     "state": "Florida",
+    "_id": 747,
     "location": {
       "_point": {
         "_longitude": -85.6602058,
@@ -8219,6 +8966,7 @@
   {
     "city": "Santa Clarita",
     "state": "California",
+    "_id": 748,
     "location": {
       "_point": {
         "_longitude": -118.542586,
@@ -8230,6 +8978,7 @@
   {
     "city": "New Orleans",
     "state": "Louisiana",
+    "_id": 749,
     "location": {
       "_point": {
         "_longitude": -90.0715323,
@@ -8241,6 +8990,7 @@
   {
     "city": "Oceanside",
     "state": "California",
+    "_id": 750,
     "location": {
       "_point": {
         "_longitude": -117.3794834,
@@ -8252,6 +9002,7 @@
   {
     "city": "Durham",
     "state": "North Carolina",
+    "_id": 751,
     "location": {
       "_point": {
         "_longitude": -78.898619,
@@ -8263,6 +9014,7 @@
   {
     "city": "Rochester",
     "state": "New York",
+    "_id": 752,
     "location": {
       "_point": {
         "_longitude": -77.6109219,
@@ -8274,6 +9026,7 @@
   {
     "city": "St. Petersburg",
     "state": "Florida",
+    "_id": 753,
     "location": {
       "_point": {
         "_longitude": -82.64,
@@ -8285,6 +9038,7 @@
   {
     "city": "Amarillo",
     "state": "Texas",
+    "_id": 754,
     "location": {
       "_point": {
         "_longitude": -101.8312969,
@@ -8296,6 +9050,7 @@
   {
     "city": "Lubbock",
     "state": "Texas",
+    "_id": 755,
     "location": {
       "_point": {
         "_longitude": -101.8551665,
@@ -8307,6 +9062,7 @@
   {
     "city": "Wichita",
     "state": "Kansas",
+    "_id": 756,
     "location": {
       "_point": {
         "_longitude": -97.336111,
@@ -8318,6 +9074,7 @@
   {
     "city": "Cathedral City",
     "state": "California",
+    "_id": 757,
     "location": {
       "_point": {
         "_longitude": -116.4668036,
@@ -8329,6 +9086,7 @@
   {
     "city": "Palm Beach Gardens",
     "state": "Florida",
+    "_id": 758,
     "location": {
       "_point": {
         "_longitude": -80.1386547,
@@ -8340,6 +9098,7 @@
   {
     "city": "Placentia",
     "state": "California",
+    "_id": 759,
     "location": {
       "_point": {
         "_longitude": -117.8703363,
@@ -8351,6 +9110,7 @@
   {
     "city": "Taunton",
     "state": "Massachusetts",
+    "_id": 760,
     "location": {
       "_point": {
         "_longitude": -71.0897674,
@@ -8362,6 +9122,7 @@
   {
     "city": "Lakewood",
     "state": "Washington",
+    "_id": 761,
     "location": {
       "_point": {
         "_longitude": -122.518458,
@@ -8373,6 +9134,7 @@
   {
     "city": "Lakeville",
     "state": "Minnesota",
+    "_id": 762,
     "location": {
       "_point": {
         "_longitude": -93.24272,
@@ -8384,6 +9146,7 @@
   {
     "city": "Oak Lawn",
     "state": "Illinois",
+    "_id": 763,
     "location": {
       "_point": {
         "_longitude": -87.7479528,
@@ -8395,6 +9158,7 @@
   {
     "city": "Joplin",
     "state": "Missouri",
+    "_id": 764,
     "location": {
       "_point": {
         "_longitude": -94.513281,
@@ -8406,6 +9170,7 @@
   {
     "city": "DeSoto",
     "state": "Texas",
+    "_id": 765,
     "location": {
       "_point": {
         "_longitude": -96.8570738,
@@ -8417,6 +9182,7 @@
   {
     "city": "Elyria",
     "state": "Ohio",
+    "_id": 766,
     "location": {
       "_point": {
         "_longitude": -82.1076486,
@@ -8428,6 +9194,7 @@
   {
     "city": "Barnstable Town",
     "state": "Massachusetts",
+    "_id": 767,
     "location": {
       "_point": {
         "_longitude": -70.3002024,
@@ -8439,6 +9206,7 @@
   {
     "city": "Altamonte Springs",
     "state": "Florida",
+    "_id": 768,
     "location": {
       "_point": {
         "_longitude": -81.3656242,
@@ -8450,6 +9218,7 @@
   {
     "city": "Downers Grove",
     "state": "Illinois",
+    "_id": 769,
     "location": {
       "_point": {
         "_longitude": -88.0111746,
@@ -8461,6 +9230,7 @@
   {
     "city": "Newark",
     "state": "California",
+    "_id": 770,
     "location": {
       "_point": {
         "_longitude": -122.0402399,
@@ -8472,6 +9242,7 @@
   {
     "city": "Elmhurst",
     "state": "Illinois",
+    "_id": 771,
     "location": {
       "_point": {
         "_longitude": -87.9403418,
@@ -8483,6 +9254,7 @@
   {
     "city": "Aventura",
     "state": "Florida",
+    "_id": 772,
     "location": {
       "_point": {
         "_longitude": -80.1392121,
@@ -8494,6 +9266,7 @@
   {
     "city": "Beavercreek",
     "state": "Ohio",
+    "_id": 773,
     "location": {
       "_point": {
         "_longitude": -84.0632685,
@@ -8505,6 +9278,7 @@
   {
     "city": "Weslaco",
     "state": "Texas",
+    "_id": 774,
     "location": {
       "_point": {
         "_longitude": -97.9908366,
@@ -8516,6 +9290,7 @@
   {
     "city": "Murray",
     "state": "Utah",
+    "_id": 775,
     "location": {
       "_point": {
         "_longitude": -111.8879909,
@@ -8527,6 +9302,7 @@
   {
     "city": "National City",
     "state": "California",
+    "_id": 776,
     "location": {
       "_point": {
         "_longitude": -117.0991967,
@@ -8538,6 +9314,7 @@
   {
     "city": "Sioux Falls",
     "state": "South Dakota",
+    "_id": 777,
     "location": {
       "_point": {
         "_longitude": -96.7311034,
@@ -8549,6 +9326,7 @@
   {
     "city": "Lake Forest",
     "state": "California",
+    "_id": 778,
     "location": {
       "_point": {
         "_longitude": -117.689218,
@@ -8560,6 +9338,7 @@
   {
     "city": "Pawtucket",
     "state": "Rhode Island",
+    "_id": 779,
     "location": {
       "_point": {
         "_longitude": -71.3825558,
@@ -8571,6 +9350,7 @@
   {
     "city": "Hayward",
     "state": "California",
+    "_id": 780,
     "location": {
       "_point": {
         "_longitude": -122.0807964,
@@ -8582,6 +9362,7 @@
   {
     "city": "Alameda",
     "state": "California",
+    "_id": 781,
     "location": {
       "_point": {
         "_longitude": -122.2416355,
@@ -8593,6 +9374,7 @@
   {
     "city": "New Braunfels",
     "state": "Texas",
+    "_id": 782,
     "location": {
       "_point": {
         "_longitude": -98.1244531,
@@ -8604,6 +9386,7 @@
   {
     "city": "Indio",
     "state": "California",
+    "_id": 783,
     "location": {
       "_point": {
         "_longitude": -116.2155619,
@@ -8615,6 +9398,7 @@
   {
     "city": "League City",
     "state": "Texas",
+    "_id": 784,
     "location": {
       "_point": {
         "_longitude": -95.0949303,
@@ -8626,6 +9410,7 @@
   {
     "city": "Carrollton",
     "state": "Texas",
+    "_id": 785,
     "location": {
       "_point": {
         "_longitude": -96.8899636,
@@ -8637,6 +9422,7 @@
   {
     "city": "Culver City",
     "state": "California",
+    "_id": 786,
     "location": {
       "_point": {
         "_longitude": -118.3964665,
@@ -8648,6 +9434,7 @@
   {
     "city": "Montclair",
     "state": "California",
+    "_id": 787,
     "location": {
       "_point": {
         "_longitude": -117.6897776,
@@ -8659,6 +9446,7 @@
   {
     "city": "Plainfield",
     "state": "Illinois",
+    "_id": 788,
     "location": {
       "_point": {
         "_longitude": -88.2120315,
@@ -8670,6 +9458,7 @@
   {
     "city": "Milford",
     "state": "Connecticut",
+    "_id": 789,
     "location": {
       "_point": {
         "_longitude": -73.064036,
@@ -8681,6 +9470,7 @@
   {
     "city": "Columbus",
     "state": "Indiana",
+    "_id": 790,
     "location": {
       "_point": {
         "_longitude": -85.9213796,
@@ -8692,6 +9482,7 @@
   {
     "city": "Caldwell",
     "state": "Idaho",
+    "_id": 791,
     "location": {
       "_point": {
         "_longitude": -116.6873596,
@@ -8703,6 +9494,7 @@
   {
     "city": "Bountiful",
     "state": "Utah",
+    "_id": 792,
     "location": {
       "_point": {
         "_longitude": -111.880771,
@@ -8714,6 +9506,7 @@
   {
     "city": "Riverside",
     "state": "California",
+    "_id": 793,
     "location": {
       "_point": {
         "_longitude": -117.3961564,
@@ -8725,6 +9518,7 @@
   {
     "city": "Scottsdale",
     "state": "Arizona",
+    "_id": 794,
     "location": {
       "_point": {
         "_longitude": -111.9260519,
@@ -8736,6 +9530,7 @@
   {
     "city": "Birmingham",
     "state": "Alabama",
+    "_id": 795,
     "location": {
       "_point": {
         "_longitude": -86.80249,
@@ -8747,6 +9542,7 @@
   {
     "city": "Memphis",
     "state": "Tennessee",
+    "_id": 796,
     "location": {
       "_point": {
         "_longitude": -90.0489801,
@@ -8758,6 +9554,7 @@
   {
     "city": "Fort Wayne",
     "state": "Indiana",
+    "_id": 797,
     "location": {
       "_point": {
         "_longitude": -85.1393513,
@@ -8769,6 +9566,7 @@
   {
     "city": "Portland",
     "state": "Oregon",
+    "_id": 798,
     "location": {
       "_point": {
         "_longitude": -122.6764816,
@@ -8780,6 +9578,7 @@
   {
     "city": "Columbus",
     "state": "Ohio",
+    "_id": 799,
     "location": {
       "_point": {
         "_longitude": -82.9987942,
@@ -8791,6 +9590,7 @@
   {
     "city": "Irving",
     "state": "Texas",
+    "_id": 800,
     "location": {
       "_point": {
         "_longitude": -96.9488945,
@@ -8802,6 +9602,7 @@
   {
     "city": "Austin",
     "state": "Texas",
+    "_id": 801,
     "location": {
       "_point": {
         "_longitude": -97.7430608,
@@ -8813,6 +9614,7 @@
   {
     "city": "Santa Barbara",
     "state": "California",
+    "_id": 802,
     "location": {
       "_point": {
         "_longitude": -119.6981901,
@@ -8824,6 +9626,7 @@
   {
     "city": "Fayetteville",
     "state": "Arkansas",
+    "_id": 803,
     "location": {
       "_point": {
         "_longitude": -94.1574263,
@@ -8835,6 +9638,7 @@
   {
     "city": "Palmdale",
     "state": "California",
+    "_id": 804,
     "location": {
       "_point": {
         "_longitude": -118.1164613,
@@ -8846,6 +9650,7 @@
   {
     "city": "Salt Lake City",
     "state": "Utah",
+    "_id": 805,
     "location": {
       "_point": {
         "_longitude": -111.8910474,
@@ -8857,6 +9662,7 @@
   {
     "city": "Concord",
     "state": "California",
+    "_id": 806,
     "location": {
       "_point": {
         "_longitude": -122.0310733,
@@ -8868,6 +9674,7 @@
   {
     "city": "Manteca",
     "state": "California",
+    "_id": 807,
     "location": {
       "_point": {
         "_longitude": -121.2160526,
@@ -8879,6 +9686,7 @@
   {
     "city": "Alexandria",
     "state": "Virginia",
+    "_id": 808,
     "location": {
       "_point": {
         "_longitude": -77.0469214,
@@ -8890,6 +9698,7 @@
   {
     "city": "Palatine",
     "state": "Illinois",
+    "_id": 809,
     "location": {
       "_point": {
         "_longitude": -88.03424,
@@ -8901,6 +9710,7 @@
   {
     "city": "Baytown",
     "state": "Texas",
+    "_id": 810,
     "location": {
       "_point": {
         "_longitude": -94.9774274,
@@ -8912,6 +9722,7 @@
   {
     "city": "Provo",
     "state": "Utah",
+    "_id": 811,
     "location": {
       "_point": {
         "_longitude": -111.6585337,
@@ -8923,6 +9734,7 @@
   {
     "city": "Hoffman Estates",
     "state": "Illinois",
+    "_id": 812,
     "location": {
       "_point": {
         "_longitude": -88.1227199,
@@ -8934,6 +9746,7 @@
   {
     "city": "Diamond Bar",
     "state": "California",
+    "_id": 813,
     "location": {
       "_point": {
         "_longitude": -117.8103367,
@@ -8945,6 +9758,7 @@
   {
     "city": "Johnson City",
     "state": "Tennessee",
+    "_id": 814,
     "location": {
       "_point": {
         "_longitude": -82.3534727,
@@ -8956,6 +9770,7 @@
   {
     "city": "San Rafael",
     "state": "California",
+    "_id": 815,
     "location": {
       "_point": {
         "_longitude": -122.5310874,
@@ -8967,6 +9782,7 @@
   {
     "city": "Shoreline",
     "state": "Washington",
+    "_id": 816,
     "location": {
       "_point": {
         "_longitude": -122.3415178,
@@ -8978,6 +9794,7 @@
   {
     "city": "Novato",
     "state": "California",
+    "_id": 817,
     "location": {
       "_point": {
         "_longitude": -122.5697032,
@@ -8989,6 +9806,7 @@
   {
     "city": "South Jordan",
     "state": "Utah",
+    "_id": 818,
     "location": {
       "_point": {
         "_longitude": -111.929658,
@@ -9000,6 +9818,7 @@
   {
     "city": "Margate",
     "state": "Florida",
+    "_id": 819,
     "location": {
       "_point": {
         "_longitude": -80.206436,
@@ -9011,6 +9830,7 @@
   {
     "city": "Lancaster",
     "state": "Pennsylvania",
+    "_id": 820,
     "location": {
       "_point": {
         "_longitude": -76.3055144,
@@ -9022,6 +9842,7 @@
   {
     "city": "Methuen",
     "state": "Massachusetts",
+    "_id": 821,
     "location": {
       "_point": {
         "_longitude": -71.1908924,
@@ -9033,6 +9854,7 @@
   {
     "city": "Fort Pierce",
     "state": "Florida",
+    "_id": 822,
     "location": {
       "_point": {
         "_longitude": -80.3256056,
@@ -9044,6 +9866,7 @@
   {
     "city": "Council Bluffs",
     "state": "Iowa",
+    "_id": 823,
     "location": {
       "_point": {
         "_longitude": -95.8608333,
@@ -9055,6 +9878,7 @@
   {
     "city": "Burien",
     "state": "Washington",
+    "_id": 824,
     "location": {
       "_point": {
         "_longitude": -122.3467918,
@@ -9066,6 +9890,7 @@
   {
     "city": "North Port",
     "state": "Florida",
+    "_id": 825,
     "location": {
       "_point": {
         "_longitude": -82.2359254,
@@ -9077,6 +9902,7 @@
   {
     "city": "Decatur",
     "state": "Alabama",
+    "_id": 826,
     "location": {
       "_point": {
         "_longitude": -86.9833417,
@@ -9088,6 +9914,7 @@
   {
     "city": "Albany",
     "state": "Oregon",
+    "_id": 827,
     "location": {
       "_point": {
         "_longitude": -123.1059282,
@@ -9099,6 +9926,7 @@
   {
     "city": "Novi",
     "state": "Michigan",
+    "_id": 828,
     "location": {
       "_point": {
         "_longitude": -83.4754913,
@@ -9110,6 +9938,7 @@
   {
     "city": "Layton",
     "state": "Utah",
+    "_id": 829,
     "location": {
       "_point": {
         "_longitude": -111.9710529,
@@ -9121,6 +9950,7 @@
   {
     "city": "Leominster",
     "state": "Massachusetts",
+    "_id": 830,
     "location": {
       "_point": {
         "_longitude": -71.759794,
@@ -9132,6 +9962,7 @@
   {
     "city": "North Lauderdale",
     "state": "Florida",
+    "_id": 831,
     "location": {
       "_point": {
         "_longitude": -80.2258811,
@@ -9143,6 +9974,7 @@
   {
     "city": "San Gabriel",
     "state": "California",
+    "_id": 832,
     "location": {
       "_point": {
         "_longitude": -118.1058333,
@@ -9154,6 +9986,7 @@
   {
     "city": "Greenfield",
     "state": "Wisconsin",
+    "_id": 833,
     "location": {
       "_point": {
         "_longitude": -88.0125865,
@@ -9165,6 +9998,7 @@
   {
     "city": "Addison",
     "state": "Illinois",
+    "_id": 834,
     "location": {
       "_point": {
         "_longitude": -87.9889556,
@@ -9176,6 +10010,7 @@
   {
     "city": "Winston-Salem",
     "state": "North Carolina",
+    "_id": 835,
     "location": {
       "_point": {
         "_longitude": -80.244216,
@@ -9187,6 +10022,7 @@
   {
     "city": "North Las Vegas",
     "state": "Nevada",
+    "_id": 836,
     "location": {
       "_point": {
         "_longitude": -115.1175013,
@@ -9198,6 +10034,7 @@
   {
     "city": "West Valley City",
     "state": "Utah",
+    "_id": 837,
     "location": {
       "_point": {
         "_longitude": -112.0010501,
@@ -9209,6 +10046,7 @@
   {
     "city": "Chattanooga",
     "state": "Tennessee",
+    "_id": 838,
     "location": {
       "_point": {
         "_longitude": -85.3096801,
@@ -9220,6 +10058,7 @@
   {
     "city": "Seattle",
     "state": "Washington",
+    "_id": 839,
     "location": {
       "_point": {
         "_longitude": -122.3320708,
@@ -9231,6 +10070,7 @@
   {
     "city": "Las Vegas",
     "state": "Nevada",
+    "_id": 840,
     "location": {
       "_point": {
         "_longitude": -115.1398296,
@@ -9242,6 +10082,7 @@
   {
     "city": "Atlanta",
     "state": "Georgia",
+    "_id": 841,
     "location": {
       "_point": {
         "_longitude": -84.3879824,
@@ -9253,6 +10094,7 @@
   {
     "city": "Pasadena",
     "state": "Texas",
+    "_id": 842,
     "location": {
       "_point": {
         "_longitude": -95.2091006,
@@ -9264,6 +10106,7 @@
   {
     "city": "Dallas",
     "state": "Texas",
+    "_id": 843,
     "location": {
       "_point": {
         "_longitude": -96.7969879,
@@ -9275,6 +10118,7 @@
   {
     "city": "Jacksonville",
     "state": "North Carolina",
+    "_id": 844,
     "location": {
       "_point": {
         "_longitude": -77.4302414,
@@ -9286,6 +10130,7 @@
   {
     "city": "Janesville",
     "state": "Wisconsin",
+    "_id": 845,
     "location": {
       "_point": {
         "_longitude": -89.0187222,
@@ -9297,6 +10142,7 @@
   {
     "city": "Warwick",
     "state": "Rhode Island",
+    "_id": 846,
     "location": {
       "_point": {
         "_longitude": -71.4161671,
@@ -9308,6 +10154,7 @@
   {
     "city": "St. Charles",
     "state": "Missouri",
+    "_id": 847,
     "location": {
       "_point": {
         "_longitude": -90.4974359,
@@ -9319,6 +10166,7 @@
   {
     "city": "Antioch",
     "state": "California",
+    "_id": 848,
     "location": {
       "_point": {
         "_longitude": -121.805789,
@@ -9330,6 +10178,7 @@
   {
     "city": "Alpharetta",
     "state": "Georgia",
+    "_id": 849,
     "location": {
       "_point": {
         "_longitude": -84.2940899,
@@ -9341,6 +10190,7 @@
   {
     "city": "Waukegan",
     "state": "Illinois",
+    "_id": 850,
     "location": {
       "_point": {
         "_longitude": -87.8447938,
@@ -9352,6 +10202,7 @@
   {
     "city": "O'Fallon",
     "state": "Missouri",
+    "_id": 851,
     "location": {
       "_point": {
         "_longitude": -90.6998477,
@@ -9363,6 +10214,7 @@
   {
     "city": "Bakersfield",
     "state": "California",
+    "_id": 852,
     "location": {
       "_point": {
         "_longitude": -119.0187125,
@@ -9374,6 +10226,7 @@
   {
     "city": "Overland Park",
     "state": "Kansas",
+    "_id": 853,
     "location": {
       "_point": {
         "_longitude": -94.6707917,
@@ -9385,6 +10238,7 @@
   {
     "city": "Sunnyvale",
     "state": "California",
+    "_id": 854,
     "location": {
       "_point": {
         "_longitude": -122.0363496,
@@ -9396,6 +10250,7 @@
   {
     "city": "Jackson",
     "state": "Mississippi",
+    "_id": 855,
     "location": {
       "_point": {
         "_longitude": -90.1848103,
@@ -9407,6 +10262,7 @@
   {
     "city": "Phoenix",
     "state": "Arizona",
+    "_id": 856,
     "location": {
       "_point": {
         "_longitude": -112.0740373,
@@ -9418,6 +10274,7 @@
   {
     "city": "Cary",
     "state": "North Carolina",
+    "_id": 857,
     "location": {
       "_point": {
         "_longitude": -78.7811169,
@@ -9429,6 +10286,7 @@
   {
     "city": "Pomona",
     "state": "California",
+    "_id": 858,
     "location": {
       "_point": {
         "_longitude": -117.7499909,
@@ -9440,6 +10298,7 @@
   {
     "city": "Savannah",
     "state": "Georgia",
+    "_id": 859,
     "location": {
       "_point": {
         "_longitude": -81.0998342,
@@ -9451,6 +10310,7 @@
   {
     "city": "Miami",
     "state": "Florida",
+    "_id": 860,
     "location": {
       "_point": {
         "_longitude": -80.1917902,
@@ -9462,6 +10322,7 @@
   {
     "city": "West New York",
     "state": "New Jersey",
+    "_id": 861,
     "location": {
       "_point": {
         "_longitude": -74.0143064,
@@ -9473,6 +10334,7 @@
   {
     "city": "Jeffersonville",
     "state": "Indiana",
+    "_id": 862,
     "location": {
       "_point": {
         "_longitude": -85.7371847,
@@ -9484,6 +10346,7 @@
   {
     "city": "Niagara Falls",
     "state": "New York",
+    "_id": 863,
     "location": {
       "_point": {
         "_longitude": -79.0377388,
@@ -9495,6 +10358,7 @@
   {
     "city": "Everett",
     "state": "Massachusetts",
+    "_id": 864,
     "location": {
       "_point": {
         "_longitude": -71.0536625,
@@ -9506,6 +10370,7 @@
   {
     "city": "Covington",
     "state": "Kentucky",
+    "_id": 865,
     "location": {
       "_point": {
         "_longitude": -84.5085536,
@@ -9517,6 +10382,7 @@
   {
     "city": "Bartlett",
     "state": "Illinois",
+    "_id": 866,
     "location": {
       "_point": {
         "_longitude": -88.1856301,
@@ -9528,6 +10394,7 @@
   {
     "city": "Corvallis",
     "state": "Oregon",
+    "_id": 867,
     "location": {
       "_point": {
         "_longitude": -123.2620435,
@@ -9539,6 +10406,7 @@
   {
     "city": "Linden",
     "state": "New Jersey",
+    "_id": 868,
     "location": {
       "_point": {
         "_longitude": -74.2445902,
@@ -9550,6 +10418,7 @@
   {
     "city": "Cedar Hill",
     "state": "Texas",
+    "_id": 869,
     "location": {
       "_point": {
         "_longitude": -96.9561152,
@@ -9561,6 +10430,7 @@
   {
     "city": "Eastvale",
     "state": "California",
+    "_id": 870,
     "location": {
       "_point": {
         "_longitude": -117.5848025,
@@ -9572,6 +10442,7 @@
   {
     "city": "Chicopee",
     "state": "Massachusetts",
+    "_id": 871,
     "location": {
       "_point": {
         "_longitude": -72.6078672,
@@ -9583,6 +10454,7 @@
   {
     "city": "Santa Cruz",
     "state": "California",
+    "_id": 872,
     "location": {
       "_point": {
         "_longitude": -122.0307963,
@@ -9594,6 +10466,7 @@
   {
     "city": "Medford",
     "state": "Massachusetts",
+    "_id": 873,
     "location": {
       "_point": {
         "_longitude": -71.1061639,
@@ -9605,6 +10478,7 @@
   {
     "city": "Bowling Green",
     "state": "Kentucky",
+    "_id": 874,
     "location": {
       "_point": {
         "_longitude": -86.4808043,
@@ -9616,6 +10490,7 @@
   {
     "city": "La Habra",
     "state": "California",
+    "_id": 875,
     "location": {
       "_point": {
         "_longitude": -117.9461734,
@@ -9627,6 +10502,7 @@
   {
     "city": "Waukesha",
     "state": "Wisconsin",
+    "_id": 876,
     "location": {
       "_point": {
         "_longitude": -88.2314813,
@@ -9638,6 +10514,7 @@
   {
     "city": "Flagstaff",
     "state": "Arizona",
+    "_id": 877,
     "location": {
       "_point": {
         "_longitude": -111.651302,
@@ -9649,6 +10526,7 @@
   {
     "city": "Rockville",
     "state": "Maryland",
+    "_id": 878,
     "location": {
       "_point": {
         "_longitude": -77.1527578,
@@ -9660,6 +10538,7 @@
   {
     "city": "Ocala",
     "state": "Florida",
+    "_id": 879,
     "location": {
       "_point": {
         "_longitude": -82.1400923,
@@ -9671,6 +10550,7 @@
   {
     "city": "Weymouth Town",
     "state": "Massachusetts",
+    "_id": 880,
     "location": {
       "_point": {
         "_longitude": -70.9410356,
@@ -9682,6 +10562,7 @@
   {
     "city": "Asheville",
     "state": "North Carolina",
+    "_id": 881,
     "location": {
       "_point": {
         "_longitude": -82.5514869,
@@ -9693,6 +10574,7 @@
   {
     "city": "Gastonia",
     "state": "North Carolina",
+    "_id": 882,
     "location": {
       "_point": {
         "_longitude": -81.1873005,
@@ -9704,6 +10586,7 @@
   {
     "city": "Rio Rancho",
     "state": "New Mexico",
+    "_id": 883,
     "location": {
       "_point": {
         "_longitude": -106.6630437,
@@ -9715,6 +10598,7 @@
   {
     "city": "Bolingbrook",
     "state": "Illinois",
+    "_id": 884,
     "location": {
       "_point": {
         "_longitude": -88.0683955,
@@ -9726,6 +10610,7 @@
   {
     "city": "Hesperia",
     "state": "California",
+    "_id": 885,
     "location": {
       "_point": {
         "_longitude": -117.3008784,
@@ -9737,6 +10622,7 @@
   {
     "city": "Burbank",
     "state": "California",
+    "_id": 886,
     "location": {
       "_point": {
         "_longitude": -118.3089661,
@@ -9748,6 +10634,7 @@
   {
     "city": "Compton",
     "state": "California",
+    "_id": 887,
     "location": {
       "_point": {
         "_longitude": -118.2200712,
@@ -9759,6 +10646,7 @@
   {
     "city": "Hampton",
     "state": "Virginia",
+    "_id": 888,
     "location": {
       "_point": {
         "_longitude": -76.3452218,
@@ -9770,6 +10658,7 @@
   {
     "city": "Roswell",
     "state": "Georgia",
+    "_id": 889,
     "location": {
       "_point": {
         "_longitude": -84.3615555,
@@ -9781,6 +10670,7 @@
   {
     "city": "Albany",
     "state": "New York",
+    "_id": 890,
     "location": {
       "_point": {
         "_longitude": -73.7562317,
@@ -9792,6 +10682,7 @@
   {
     "city": "Holyoke",
     "state": "Massachusetts",
+    "_id": 891,
     "location": {
       "_point": {
         "_longitude": -72.6162009,
@@ -9803,6 +10694,7 @@
   {
     "city": "Puyallup",
     "state": "Washington",
+    "_id": 892,
     "location": {
       "_point": {
         "_longitude": -122.2928974,
@@ -9814,6 +10706,7 @@
   {
     "city": "Park Ridge",
     "state": "Illinois",
+    "_id": 893,
     "location": {
       "_point": {
         "_longitude": -87.8406192,
@@ -9825,6 +10718,7 @@
   {
     "city": "Grove City",
     "state": "Ohio",
+    "_id": 894,
     "location": {
       "_point": {
         "_longitude": -83.0929644,
@@ -9836,6 +10730,7 @@
   {
     "city": "Warren",
     "state": "Ohio",
+    "_id": 895,
     "location": {
       "_point": {
         "_longitude": -80.8184166,
@@ -9847,6 +10742,7 @@
   {
     "city": "Sterling Heights",
     "state": "Michigan",
+    "_id": 896,
     "location": {
       "_point": {
         "_longitude": -83.0302033,
@@ -9858,6 +10754,7 @@
   {
     "city": "Elk Grove",
     "state": "California",
+    "_id": 897,
     "location": {
       "_point": {
         "_longitude": -121.3716178,
@@ -9869,6 +10766,7 @@
   {
     "city": "Daly City",
     "state": "California",
+    "_id": 898,
     "location": {
       "_point": {
         "_longitude": -122.4702079,
@@ -9880,6 +10778,7 @@
   {
     "city": "Fullerton",
     "state": "California",
+    "_id": 899,
     "location": {
       "_point": {
         "_longitude": -117.9242966,
@@ -9891,6 +10790,7 @@
   {
     "city": "Shreveport",
     "state": "Louisiana",
+    "_id": 900,
     "location": {
       "_point": {
         "_longitude": -93.7501789,
@@ -9902,6 +10802,7 @@
   {
     "city": "Vancouver",
     "state": "Washington",
+    "_id": 901,
     "location": {
       "_point": {
         "_longitude": -122.6614861,
@@ -9913,6 +10814,7 @@
   {
     "city": "Lincoln",
     "state": "Nebraska",
+    "_id": 902,
     "location": {
       "_point": {
         "_longitude": -96.6851982,
@@ -9924,6 +10826,7 @@
   {
     "city": "Arlington",
     "state": "Texas",
+    "_id": 903,
     "location": {
       "_point": {
         "_longitude": -97.1080656,
@@ -9935,6 +10838,7 @@
   {
     "city": "Tulsa",
     "state": "Oklahoma",
+    "_id": 904,
     "location": {
       "_point": {
         "_longitude": -95.992775,
@@ -9946,6 +10850,7 @@
   {
     "city": "Citrus Heights",
     "state": "California",
+    "_id": 905,
     "location": {
       "_point": {
         "_longitude": -121.2810611,
@@ -9957,6 +10862,7 @@
   {
     "city": "Redwood City",
     "state": "California",
+    "_id": 906,
     "location": {
       "_point": {
         "_longitude": -122.2363548,
@@ -9968,6 +10874,7 @@
   {
     "city": "Lake Charles",
     "state": "Louisiana",
+    "_id": 907,
     "location": {
       "_point": {
         "_longitude": -93.2173758,
@@ -9979,6 +10886,7 @@
   {
     "city": "Deerfield Beach",
     "state": "Florida",
+    "_id": 908,
     "location": {
       "_point": {
         "_longitude": -80.0997657,
@@ -9990,6 +10898,7 @@
   {
     "city": "Tuscaloosa",
     "state": "Alabama",
+    "_id": 909,
     "location": {
       "_point": {
         "_longitude": -87.5691735,
@@ -10001,6 +10910,7 @@
   {
     "city": "Trenton",
     "state": "New Jersey",
+    "_id": 910,
     "location": {
       "_point": {
         "_longitude": -74.7429384,
@@ -10012,6 +10922,7 @@
   {
     "city": "Kenosha",
     "state": "Wisconsin",
+    "_id": 911,
     "location": {
       "_point": {
         "_longitude": -87.8211854,
@@ -10023,6 +10934,7 @@
   {
     "city": "Lewisville",
     "state": "Texas",
+    "_id": 912,
     "location": {
       "_point": {
         "_longitude": -96.994174,
@@ -10034,6 +10946,7 @@
   {
     "city": "Fishers",
     "state": "Indiana",
+    "_id": 913,
     "location": {
       "_point": {
         "_longitude": -86.01335,
@@ -10045,6 +10958,7 @@
   {
     "city": "Ogden",
     "state": "Utah",
+    "_id": 914,
     "location": {
       "_point": {
         "_longitude": -111.9738304,
@@ -10056,6 +10970,7 @@
   {
     "city": "Monterey Park",
     "state": "California",
+    "_id": 915,
     "location": {
       "_point": {
         "_longitude": -118.1228476,
@@ -10067,6 +10982,7 @@
   {
     "city": "Harrisonburg",
     "state": "Virginia",
+    "_id": 916,
     "location": {
       "_point": {
         "_longitude": -78.8689155,
@@ -10078,6 +10994,7 @@
   {
     "city": "Daytona Beach",
     "state": "Florida",
+    "_id": 917,
     "location": {
       "_point": {
         "_longitude": -81.0228331,
@@ -10089,6 +11006,7 @@
   {
     "city": "Richland",
     "state": "Washington",
+    "_id": 918,
     "location": {
       "_point": {
         "_longitude": -119.2844621,
@@ -10100,6 +11018,7 @@
   {
     "city": "Oshkosh",
     "state": "Wisconsin",
+    "_id": 919,
     "location": {
       "_point": {
         "_longitude": -88.5426136,
@@ -10111,6 +11030,7 @@
   {
     "city": "Cheyenne",
     "state": "Wyoming",
+    "_id": 920,
     "location": {
       "_point": {
         "_longitude": -104.8202462,
@@ -10122,6 +11042,7 @@
   {
     "city": "Georgetown",
     "state": "Texas",
+    "_id": 921,
     "location": {
       "_point": {
         "_longitude": -97.6779842,
@@ -10133,6 +11054,7 @@
   {
     "city": "Normal",
     "state": "Illinois",
+    "_id": 922,
     "location": {
       "_point": {
         "_longitude": -88.9906312,
@@ -10144,6 +11066,7 @@
   {
     "city": "Conway",
     "state": "Arkansas",
+    "_id": 923,
     "location": {
       "_point": {
         "_longitude": -92.4421011,
@@ -10155,6 +11078,7 @@
   {
     "city": "Ankeny",
     "state": "Iowa",
+    "_id": 924,
     "location": {
       "_point": {
         "_longitude": -93.6001278,
@@ -10166,6 +11090,7 @@
   {
     "city": "State College",
     "state": "Pennsylvania",
+    "_id": 925,
     "location": {
       "_point": {
         "_longitude": -77.8600012,
@@ -10177,6 +11102,7 @@
   {
     "city": "Hickory",
     "state": "North Carolina",
+    "_id": 926,
     "location": {
       "_point": {
         "_longitude": -81.3444573,
@@ -10188,6 +11114,7 @@
   {
     "city": "Farmington",
     "state": "New Mexico",
+    "_id": 927,
     "location": {
       "_point": {
         "_longitude": -108.2186856,
@@ -10199,6 +11126,7 @@
   {
     "city": "Oakley",
     "state": "California",
+    "_id": 928,
     "location": {
       "_point": {
         "_longitude": -121.7124536,
@@ -10210,6 +11138,7 @@
   {
     "city": "Huntsville",
     "state": "Texas",
+    "_id": 929,
     "location": {
       "_point": {
         "_longitude": -95.5507771,
@@ -10221,6 +11150,7 @@
   {
     "city": "Dunwoody",
     "state": "Georgia",
+    "_id": 930,
     "location": {
       "_point": {
         "_longitude": -84.3346473,
@@ -10232,6 +11162,7 @@
   {
     "city": "Mission Viejo",
     "state": "California",
+    "_id": 931,
     "location": {
       "_point": {
         "_longitude": -117.6719953,
@@ -10243,6 +11174,7 @@
   {
     "city": "Inglewood",
     "state": "California",
+    "_id": 932,
     "location": {
       "_point": {
         "_longitude": -118.3531311,
@@ -10254,6 +11186,7 @@
   {
     "city": "Port St. Lucie",
     "state": "Florida",
+    "_id": 933,
     "location": {
       "_point": {
         "_longitude": -80.3582261,
@@ -10265,6 +11198,7 @@
   {
     "city": "Murrieta",
     "state": "California",
+    "_id": 934,
     "location": {
       "_point": {
         "_longitude": -117.2139232,
@@ -10276,6 +11210,7 @@
   {
     "city": "Pasadena",
     "state": "California",
+    "_id": 935,
     "location": {
       "_point": {
         "_longitude": -118.1445155,
@@ -10287,6 +11222,7 @@
   {
     "city": "Boston",
     "state": "Massachusetts",
+    "_id": 936,
     "location": {
       "_point": {
         "_longitude": -71.0588801,
@@ -10298,6 +11234,7 @@
   {
     "city": "Kansas City",
     "state": "Missouri",
+    "_id": 937,
     "location": {
       "_point": {
         "_longitude": -94.5785667,
@@ -10309,6 +11246,7 @@
   {
     "city": "Tacoma",
     "state": "Washington",
+    "_id": 938,
     "location": {
       "_point": {
         "_longitude": -122.4442906,
@@ -10320,6 +11258,7 @@
   {
     "city": "Cedar Rapids",
     "state": "Iowa",
+    "_id": 939,
     "location": {
       "_point": {
         "_longitude": -91.6656232,
@@ -10331,6 +11270,7 @@
   {
     "city": "Farmington Hills",
     "state": "Michigan",
+    "_id": 940,
     "location": {
       "_point": {
         "_longitude": -83.3677168,
@@ -10342,6 +11282,7 @@
   {
     "city": "Baldwin Park",
     "state": "California",
+    "_id": 941,
     "location": {
       "_point": {
         "_longitude": -117.9608978,
@@ -10353,6 +11294,7 @@
   {
     "city": "Lawrence",
     "state": "Massachusetts",
+    "_id": 942,
     "location": {
       "_point": {
         "_longitude": -71.1631137,
@@ -10364,6 +11306,7 @@
   {
     "city": "Union City",
     "state": "California",
+    "_id": 943,
     "location": {
       "_point": {
         "_longitude": -122.0438298,
@@ -10375,6 +11318,7 @@
   {
     "city": "Hawthorne",
     "state": "California",
+    "_id": 944,
     "location": {
       "_point": {
         "_longitude": -118.3525748,
@@ -10386,6 +11330,7 @@
   {
     "city": "Miami Beach",
     "state": "Florida",
+    "_id": 945,
     "location": {
       "_point": {
         "_longitude": -80.1300455,
@@ -10397,6 +11342,7 @@
   {
     "city": "Sparks",
     "state": "Nevada",
+    "_id": 946,
     "location": {
       "_point": {
         "_longitude": -119.7526886,
@@ -10408,6 +11354,7 @@
   {
     "city": "Mission",
     "state": "Texas",
+    "_id": 947,
     "location": {
       "_point": {
         "_longitude": -98.3252932,
@@ -10419,6 +11366,7 @@
   {
     "city": "Orem",
     "state": "Utah",
+    "_id": 948,
     "location": {
       "_point": {
         "_longitude": -111.6946475,
@@ -10430,6 +11378,7 @@
   {
     "city": "Pico Rivera",
     "state": "California",
+    "_id": 949,
     "location": {
       "_point": {
         "_longitude": -118.096735,
@@ -10441,6 +11390,7 @@
   {
     "city": "Cerritos",
     "state": "California",
+    "_id": 950,
     "location": {
       "_point": {
         "_longitude": -118.0647871,
@@ -10452,6 +11402,7 @@
   {
     "city": "Palo Alto",
     "state": "California",
+    "_id": 951,
     "location": {
       "_point": {
         "_longitude": -122.1430195,
@@ -10463,6 +11414,7 @@
   {
     "city": "Hanford",
     "state": "California",
+    "_id": 952,
     "location": {
       "_point": {
         "_longitude": -119.6456844,
@@ -10474,6 +11426,7 @@
   {
     "city": "Cypress",
     "state": "California",
+    "_id": 953,
     "location": {
       "_point": {
         "_longitude": -118.0372852,
@@ -10485,6 +11438,7 @@
   {
     "city": "Cuyahoga Falls",
     "state": "Ohio",
+    "_id": 954,
     "location": {
       "_point": {
         "_longitude": -81.4845585,
@@ -10496,6 +11450,7 @@
   {
     "city": "Jackson",
     "state": "Tennessee",
+    "_id": 955,
     "location": {
       "_point": {
         "_longitude": -88.8139469,
@@ -10507,6 +11462,7 @@
   {
     "city": "Port Arthur",
     "state": "Texas",
+    "_id": 956,
     "location": {
       "_point": {
         "_longitude": -93.939947,
@@ -10518,6 +11474,7 @@
   {
     "city": "Skokie",
     "state": "Illinois",
+    "_id": 957,
     "location": {
       "_point": {
         "_longitude": -87.7416246,
@@ -10529,6 +11486,7 @@
   {
     "city": "Hallandale Beach",
     "state": "Florida",
+    "_id": 958,
     "location": {
       "_point": {
         "_longitude": -80.148379,
@@ -10540,6 +11498,7 @@
   {
     "city": "Middletown",
     "state": "Connecticut",
+    "_id": 959,
     "location": {
       "_point": {
         "_longitude": -72.6506488,
@@ -10551,6 +11510,7 @@
   {
     "city": "Monrovia",
     "state": "California",
+    "_id": 960,
     "location": {
       "_point": {
         "_longitude": -118.0019482,
@@ -10562,6 +11522,7 @@
   {
     "city": "Romeoville",
     "state": "Illinois",
+    "_id": 961,
     "location": {
       "_point": {
         "_longitude": -88.0895061,
@@ -10573,6 +11534,7 @@
   {
     "city": "Ormond Beach",
     "state": "Florida",
+    "_id": 962,
     "location": {
       "_point": {
         "_longitude": -81.0558894,
@@ -10584,6 +11546,7 @@
   {
     "city": "Glenview",
     "state": "Illinois",
+    "_id": 963,
     "location": {
       "_point": {
         "_longitude": -87.7878408,
@@ -10595,6 +11558,7 @@
   {
     "city": "Kearny",
     "state": "New Jersey",
+    "_id": 964,
     "location": {
       "_point": {
         "_longitude": -74.1454214,
@@ -10606,6 +11570,7 @@
   {
     "city": "Strongsville",
     "state": "Ohio",
+    "_id": 965,
     "location": {
       "_point": {
         "_longitude": -81.83569,
@@ -10617,6 +11582,7 @@
   {
     "city": "Mansfield",
     "state": "Ohio",
+    "_id": 966,
     "location": {
       "_point": {
         "_longitude": -82.5154471,
@@ -10628,6 +11594,7 @@
   {
     "city": "San Luis Obispo",
     "state": "California",
+    "_id": 967,
     "location": {
       "_point": {
         "_longitude": -120.6596156,
@@ -10639,6 +11606,7 @@
   {
     "city": "Concord",
     "state": "New Hampshire",
+    "_id": 968,
     "location": {
       "_point": {
         "_longitude": -71.5375718,
@@ -10650,6 +11618,7 @@
   {
     "city": "Glendora",
     "state": "California",
+    "_id": 969,
     "location": {
       "_point": {
         "_longitude": -117.865339,
@@ -10661,6 +11630,7 @@
   {
     "city": "Lincoln",
     "state": "California",
+    "_id": 970,
     "location": {
       "_point": {
         "_longitude": -121.2930079,
@@ -10672,6 +11642,7 @@
   {
     "city": "Olympia",
     "state": "Washington",
+    "_id": 971,
     "location": {
       "_point": {
         "_longitude": -122.9006951,
@@ -10683,6 +11654,7 @@
   {
     "city": "Ceres",
     "state": "California",
+    "_id": 972,
     "location": {
       "_point": {
         "_longitude": -120.9577098,
@@ -10694,6 +11666,7 @@
   {
     "city": "Burlington",
     "state": "Vermont",
+    "_id": 973,
     "location": {
       "_point": {
         "_longitude": -73.212072,
@@ -10705,6 +11678,7 @@
   {
     "city": "Twin Falls",
     "state": "Idaho",
+    "_id": 974,
     "location": {
       "_point": {
         "_longitude": -114.4608711,
@@ -10716,6 +11690,7 @@
   {
     "city": "Lenexa",
     "state": "Kansas",
+    "_id": 975,
     "location": {
       "_point": {
         "_longitude": -94.7335709,
@@ -10727,6 +11702,7 @@
   {
     "city": "Keller",
     "state": "Texas",
+    "_id": 976,
     "location": {
       "_point": {
         "_longitude": -97.229298,
@@ -10738,6 +11714,7 @@
   {
     "city": "La Puente",
     "state": "California",
+    "_id": 977,
     "location": {
       "_point": {
         "_longitude": -117.9495083,
@@ -10749,6 +11726,7 @@
   {
     "city": "Lake Oswego",
     "state": "Oregon",
+    "_id": 978,
     "location": {
       "_point": {
         "_longitude": -122.6706498,
@@ -10760,6 +11738,7 @@
   {
     "city": "Mankato",
     "state": "Minnesota",
+    "_id": 979,
     "location": {
       "_point": {
         "_longitude": -93.9993996,
@@ -10771,6 +11750,7 @@
   {
     "city": "Quincy",
     "state": "Illinois",
+    "_id": 980,
     "location": {
       "_point": {
         "_longitude": -91.4098726,
@@ -10782,6 +11762,7 @@
   {
     "city": "Burleson",
     "state": "Texas",
+    "_id": 981,
     "location": {
       "_point": {
         "_longitude": -97.3208492,
@@ -10793,6 +11774,7 @@
   {
     "city": "Sherman",
     "state": "Texas",
+    "_id": 982,
     "location": {
       "_point": {
         "_longitude": -96.6088805,
@@ -10804,6 +11786,7 @@
   {
     "city": "Huntington Beach",
     "state": "California",
+    "_id": 983,
     "location": {
       "_point": {
         "_longitude": -117.9992265,
@@ -10815,6 +11798,7 @@
   {
     "city": "Pompano Beach",
     "state": "Florida",
+    "_id": 984,
     "location": {
       "_point": {
         "_longitude": -80.1247667,
@@ -10826,6 +11810,7 @@
   {
     "city": "Quincy",
     "state": "Massachusetts",
+    "_id": 985,
     "location": {
       "_point": {
         "_longitude": -71.0022705,
@@ -10837,6 +11822,7 @@
   {
     "city": "Rochester",
     "state": "Minnesota",
+    "_id": 986,
     "location": {
       "_point": {
         "_longitude": -92.4801989,
@@ -10848,6 +11834,7 @@
   {
     "city": "San Angelo",
     "state": "Texas",
+    "_id": 987,
     "location": {
       "_point": {
         "_longitude": -100.4370375,
@@ -10859,6 +11846,7 @@
   {
     "city": "Lawrence",
     "state": "Kansas",
+    "_id": 988,
     "location": {
       "_point": {
         "_longitude": -95.2352501,
@@ -10870,6 +11858,7 @@
   {
     "city": "Sunrise",
     "state": "Florida",
+    "_id": 989,
     "location": {
       "_point": {
         "_longitude": -80.256595,
@@ -10881,6 +11870,7 @@
   {
     "city": "Hoover",
     "state": "Alabama",
+    "_id": 990,
     "location": {
       "_point": {
         "_longitude": -86.8113781,
@@ -10892,6 +11882,7 @@
   {
     "city": "Parma",
     "state": "Ohio",
+    "_id": 991,
     "location": {
       "_point": {
         "_longitude": -81.7229086,
@@ -10903,6 +11894,7 @@
   {
     "city": "Grand Junction",
     "state": "Colorado",
+    "_id": 992,
     "location": {
       "_point": {
         "_longitude": -108.5506486,
@@ -10914,6 +11906,7 @@
   {
     "city": "Bethlehem",
     "state": "Pennsylvania",
+    "_id": 993,
     "location": {
       "_point": {
         "_longitude": -75.3704579,
@@ -10925,6 +11918,7 @@
   {
     "city": "Petaluma",
     "state": "California",
+    "_id": 994,
     "location": {
       "_point": {
         "_longitude": -122.6366524,
@@ -10936,6 +11930,7 @@
   {
     "city": "Springfield",
     "state": "Oregon",
+    "_id": 995,
     "location": {
       "_point": {
         "_longitude": -123.0220289,
@@ -10947,6 +11942,7 @@
   {
     "city": "Madera",
     "state": "California",
+    "_id": 996,
     "location": {
       "_point": {
         "_longitude": -120.0607176,
@@ -10958,6 +11954,7 @@
   {
     "city": "Springfield",
     "state": "Ohio",
+    "_id": 997,
     "location": {
       "_point": {
         "_longitude": -83.8088171,
@@ -10969,6 +11966,7 @@
   {
     "city": "Taylor",
     "state": "Michigan",
+    "_id": 998,
     "location": {
       "_point": {
         "_longitude": -83.2696509,
@@ -10980,6 +11978,7 @@
   {
     "city": "Muncie",
     "state": "Indiana",
+    "_id": 999,
     "location": {
       "_point": {
         "_longitude": -85.3863599,
@@ -10991,6 +11990,7 @@
   {
     "city": "Lehi",
     "state": "Utah",
+    "_id": 1000,
     "location": {
       "_point": {
         "_longitude": -111.8507662,
