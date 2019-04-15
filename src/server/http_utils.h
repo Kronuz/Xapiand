@@ -51,12 +51,12 @@ catch_http_errors(Func&& func)
 	} catch (const MissingTypeError& exc) {
 		http_errors.error_code = HTTP_STATUS_PRECONDITION_FAILED;
 		http_errors.error = exc.what();
-	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DocNotFoundError& exc) {
 		http_errors.error_code = HTTP_STATUS_NOT_FOUND;
-		http_errors.error = http_status_str(http_errors.error_code);
-	} catch (const Xapian::DatabaseNotFoundError&) {
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
+	} catch (const Xapian::DatabaseNotFoundError& exc) {
 		http_errors.error_code = HTTP_STATUS_NOT_FOUND;
-		http_errors.error = http_status_str(http_errors.error_code);
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
 	} catch (const Xapian::DocVersionConflictError& exc) {
 		http_errors.error_code = HTTP_STATUS_CONFLICT;
 		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.get_msg();
