@@ -1,5 +1,5 @@
 #include "y2j.h"
-#include "yaml.h"
+#include "yaml/yaml.h"
 #include "rapidjson/pointer.h"
 #include "rapidjson/stringbuffer.h"
 #include <cassert>
