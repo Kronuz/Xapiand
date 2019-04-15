@@ -64,7 +64,11 @@ if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
 		mv "xapiand--${PACKAGE_VERSION}${PACKAGE_TYPE_EXT}.bottle.tar.gz" "${PACKAGE_BOTTLE}"
 		git add "${PACKAGE_BOTTLE}"
 		git commit --message "${PACKAGE_BOTTLE}"
-		git push --quiet origin gh-pages
+		if ! git push --quiet origin gh-pages; then
+			git fetch --depth 1 origin gh-pages:gh-pages
+			git rebase origin/gh-pages
+			git push
+		fi
 	fi
 else
 	# Everywhere else build as usual:
