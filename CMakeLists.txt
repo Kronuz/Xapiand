@@ -22,12 +22,10 @@
 
 message(STATUS "CMake v${CMAKE_VERSION}")
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 project(xapiand C CXX)
 
-if (POLICY CMP0074)
-  cmake_policy(SET CMP0074 NEW)
-endif ()
+cmake_policy(SET CMP0074 NEW)
 
 # Make sure we can import out CMake functions
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
@@ -515,7 +513,7 @@ list(APPEND XAPIAN_SRC_LIST ${XAPIAN_H_LIST})
 list(APPEND XAPIAN_SRC_LIST ${LANGUAGES_SRC_LIST})
 list(APPEND XAPIAN_SRC_LIST ${UNICODE_SRC_LIST})
 list(APPEND XAPIAN_SRC_LIST ${QUERYPARSER_SRC_LIST})
-add_library(XAPIAN_OBJ STATIC ${XAPIAN_SRC_LIST})
+add_library(XAPIAN_OBJ OBJECT ${XAPIAN_SRC_LIST})
 
 target_include_directories(XAPIAN_OBJ PUBLIC
 	${ZLIB_INCLUDE_DIRS}
@@ -538,7 +536,7 @@ file(GLOB BOOLEAN_PARSER_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h*"
 )
 list(APPEND BOOLEAN_PARSER_SRC_LIST ${XAPIAN_H_LIST})
-add_library(BOOLEAN_PARSER_OBJ STATIC ${BOOLEAN_PARSER_SRC_LIST})
+add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 
 ########################################################################
@@ -557,7 +555,7 @@ list(REMOVE_ITEM LIBEV_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c"
 )
 list(APPEND LIBEV_SRC_LIST ${XAPIAN_H_LIST})
-add_library(LIBEV_OBJ STATIC ${LIBEV_SRC_LIST})
+add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 
 
 ########################################################################
@@ -568,7 +566,7 @@ file(GLOB LZ4_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h*"
 )
 list(APPEND LZ4_SRC_LIST ${XAPIAN_H_LIST})
-add_library(LZ4_OBJ STATIC ${LZ4_SRC_LIST})
+add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
 ########################################################################
@@ -579,7 +577,7 @@ file(GLOB CUUID_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h*"
 )
 list(APPEND CUUID_SRC_LIST ${XAPIAN_H_LIST})
-add_library(CUUID_OBJ STATIC ${CUUID_SRC_LIST})
+add_library(CUUID_OBJ OBJECT ${CUUID_SRC_LIST})
 
 target_include_directories(CUUID_OBJ PUBLIC
 	${UUID_INCLUDE_DIRS}
@@ -598,7 +596,7 @@ file(GLOB PROMETHEUS_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h*"
 )
 list(APPEND PROMETHEUS_SRC_LIST ${XAPIAN_H_LIST})
-add_library(PROMETHEUS_OBJ STATIC ${PROMETHEUS_SRC_LIST})
+add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
 
 
 ########################################################################
@@ -609,7 +607,7 @@ file(GLOB YAML_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/yaml/*.c*" "${PROJECT_SOURCE_DIR}/src/yaml/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/y2j/*.c*" "${PROJECT_SOURCE_DIR}/src/y2j/*.h*"
 )
-add_library(YAML_OBJ STATIC ${YAML_SRC_LIST})
+add_library(YAML_OBJ OBJECT ${YAML_SRC_LIST})
 
 
 ########################################################################
@@ -619,7 +617,7 @@ add_library(YAML_OBJ STATIC ${YAML_SRC_LIST})
 file(GLOB FMT_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/fmt/*.c*" "${PROJECT_SOURCE_DIR}/src/fmt/*.h*"
 )
-add_library(FMT_OBJ STATIC ${FMT_SRC_LIST})
+add_library(FMT_OBJ OBJECT ${FMT_SRC_LIST})
 
 
 ########################################################################
@@ -628,7 +626,7 @@ add_library(FMT_OBJ STATIC ${FMT_SRC_LIST})
 
 list(APPEND XAPIAND_PACKAGE_SRC_LIST "${PROJECT_SOURCE_DIR}/src/package.cc")
 list(APPEND XAPIAND_PACKAGE_SRC_LIST ${XAPIAN_H_LIST})
-add_library(XAPIAND_PACKAGE_OBJ STATIC ${XAPIAND_PACKAGE_SRC_LIST})
+add_library(XAPIAND_PACKAGE_OBJ OBJECT ${XAPIAND_PACKAGE_SRC_LIST})
 
 
 ########################################################################
@@ -652,7 +650,7 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/package.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
-add_library(XAPIAND_OBJ STATIC ${XAPIAND_SRC_LIST})
+add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC
 	${ZLIB_INCLUDE_DIRS}
