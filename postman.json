@@ -1,0 +1,661 @@
+{
+  "info": {
+    "_postman_id": "8b7eeaae-2166-42a1-8e5f-480dd4ddfe3a",
+    "name": "Xapiand",
+    "description": "Xapiand is A Modern Highly Available Distributed RESTful Search and Storage Engine built for the Cloud and with Data Locality in mind.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Quick Start",
+      "item": [
+        {
+          "name": "Data Manipulation",
+          "item": [
+            {
+              "name": "Index",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    "John"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Doe\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Index",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    "John"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Index",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    "John"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Jane Doe\",\n  \"age\": 20\n}"
+                }
+              }
+            },
+            {
+              "name": "Index",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Richard Roe\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Index",
+              "request": {
+                "method": "UPDATE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    "John"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"gender\": \"male\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is merged\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.name).to.be.an('string')",
+                      "    pm.expect(jsonData.gender).to.be.eql('male')",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Index",
+              "request": {
+                "method": "UPDATE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    "John"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Johnny Doe\",\n  \"age\": 17\n}"
+                }
+              }
+            },
+            {
+              "name": "Index",
+              "request": {
+                "method": "UPDATE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "twitter",
+                    "user",
+                    "John"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"_script\": \"_doc.age = _old_doc.age + 5\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is merged\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.gender).to.be.an('string')",
+                      "    pm.expect(jsonData.name).to.be.eql('John Doe')",
+                      "});",
+                      "pm.test(\"response with script applied\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.age).to.be.eql(22)",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ],
+          "_postman_isSubFolder": true
+        },
+        {
+          "name": "Data Exploration",
+          "item": [
+            {
+              "name": "Load sample data",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.processed).to.be.an('number')",
+                      "    pm.expect(jsonData.indexed).to.be.an('number')",
+                      "    pm.expect(jsonData.total).to.be.an('number')",
+                      "    pm.expect(jsonData.items).to.be.an('array')",
+                      "});",
+                      "pm.test(\"restore received all\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.total).to.be.eql(1000)",
+                      "});",
+                      "pm.test(\"restore processed all\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.processed).to.eql(1000)",
+                      "});",
+                      "pm.test(\"restore indexed all\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.indexed).to.be.eql(1000)",
+                      "    pm.expect(jsonData.items.length).to.eql(1000);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "RESTORE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/x-ndjson",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "bank",
+                    ""
+                  ]
+                },
+                "body": {
+                  "mode": "file",
+                  "file": {
+                    "src": "docs/assets/accounts.ndjson"
+                  }
+                }
+              }
+            }
+          ],
+          "_postman_isSubFolder": true
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Store API",
+          "item": [
+            {
+              "name": "Store PNG",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "STORE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "image/png",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "assets",
+                    "Lenna"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "file",
+                  "file": {
+                    "src": "docs/assets/Lenna.png"
+                  }
+                }
+              }
+            },
+            {
+              "name": "Store PDF (Using Content-Type)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "STORE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/pdf",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "assets",
+                    "Lenna"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "file",
+                  "file": {
+                    "src": "docs/assets/Lenna.pdf"
+                  }
+                }
+              }
+            },
+            {
+              "name": "Store JPG (Using .jpg selector)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "STORE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "image/jpeg",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "assets",
+                    "Lenna.jpg"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "file",
+                  "file": {
+                    "src": "docs/assets/Lenna.jpg"
+                  }
+                }
+              }
+            },
+            {
+              "name": "Retrieve PDF (Using Accept)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/pdf",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "assets",
+                    "Lenna"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response content type is PDF\", function() {",
+                      "    pm.response.to.be.header('Content-Type', 'application/pdf');",
+                      "});",
+                      "pm.test(\"response is stored PDF\", function() {",
+                      "    pm.expect(pm.response.stream.length).to.eql(692615);",
+                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.eql('66bb6df2255f34e2be54344047dad389a94be873e53a0b4c46817a3ecaeb6a61')",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Retrieve PNG (Using .png selector)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "*",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "assets",
+                    "Lenna.png"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response content type is PNG\", function() {",
+                      "    pm.response.to.be.header('Content-Type', 'image/png');",
+                      "});",
+                      "pm.test(\"response is stored PNG\", function() {",
+                      "    pm.expect(pm.response.stream.length).to.eql(473831);",
+                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.eql('7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f')",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Retrieve JPG (Last stored)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "*",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "assets",
+                    "Lenna"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response content type is JPG\", function() {",
+                      "    pm.response.to.be.header('Content-Type', 'image/jpeg');",
+                      "});",
+                      "pm.test(\"response is stored JPG\", function() {",
+                      "    pm.expect(pm.response.stream.length).to.eql(570958);",
+                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.eql('820eae76e4639a059a1bc799763ad82961ffbc8d41b58920a3f7ac622455ed46')",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "domain",
+      "value": "localhost:8880",
+      "type": "string"
+    }
+  ]
+}
