@@ -2253,6 +2253,9 @@ HttpClient::restore_database_view(Request& request)
 		}
 	} else {
 		auto& docs = request.decoded_body();
+		if (!docs.is_array()) {
+			THROW(ClientError, "Invalid request body");
+		}
 		for (auto& obj : docs) {
 			if (!request.indexer) {
 				MsgPack* settings = nullptr;
@@ -2529,6 +2532,9 @@ HttpClient::search_view(Request& request)
 			mset = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
+			if (!decoded_body.is_map()) {
+				THROW(ClientError, "Invalid request body");
+			}
 
 			AggregationMatchSpy aggs(decoded_body, db_handler.get_schema());
 
@@ -2664,6 +2670,9 @@ HttpClient::count_view(Request& request)
 			mset = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
+			if (!decoded_body.is_map()) {
+				THROW(ClientError, "Invalid request body");
+			}
 			mset = db_handler.get_mset(query_field, &decoded_body, nullptr);
 		}
 	} catch (const Xapian::DatabaseNotFoundError&) {
