@@ -19,7 +19,6 @@ RUN set -ex \
   && apk add icu libuuid \
   && apk add --no-cache --virtual .build-deps \
     git \
-    gcc \
     g++ \
     zlib-dev \
     # Xapian specific:
