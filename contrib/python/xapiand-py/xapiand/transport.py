@@ -289,12 +289,10 @@ class Transport(object):
             underlying :class:`~xapiand.Connection` class for serialization
         :arg body: body of the request, will be serializes using serializer and
             passed to the connection
-        :arg directory: treat resource as a directory (add trailing slash)
         """
         headers = kwargs.get('headers')
         params = kwargs.get('params')
         body = kwargs.get('body')
-        directory = kwargs.get('directory')
 
         if body is not None:
             body = self.serializer.dumps(body)
@@ -320,8 +318,6 @@ class Transport(object):
                 ignore = (ignore, )
 
         url = make_path(path)
-        if directory:
-            url += '/'
 
         for attempt in range(1, self.max_retries + 1):
             connection = self.get_connection(method=method, path=path, headers=headers, params=params)

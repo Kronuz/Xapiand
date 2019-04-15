@@ -66,9 +66,12 @@ def make_path(parts):
     Convert lists nad tuples to comma separated values.
     """
     #TODO: maybe only allow some parts to be lists/tuples ?
-    return '/' + '/'.join(
+    path = '/' + '/'.join(
         # preserve ',' and '*' in url for nicer URLs in logs
         quote_plus(_escape(p), b',*') for p in parts if p not in SKIP_IN_PATH)
+    if parts[-1] in SKIP_IN_PATH:
+        path += '/'
+    return path
 
 
 # parameters that apply to all methods
