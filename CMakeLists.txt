@@ -602,6 +602,17 @@ add_library(PROMETHEUS_OBJ STATIC ${PROMETHEUS_SRC_LIST})
 
 
 ########################################################################
+# yaml library target
+########################################################################
+
+file(GLOB YAML_SRC_LIST
+	"${PROJECT_SOURCE_DIR}/src/yaml/*.c*" "${PROJECT_SOURCE_DIR}/src/yaml/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/y2j/*.c*" "${PROJECT_SOURCE_DIR}/src/y2j/*.h*"
+)
+add_library(YAML_OBJ STATIC ${YAML_SRC_LIST})
+
+
+########################################################################
 # Xapiand package configuration target
 ########################################################################
 
@@ -674,6 +685,7 @@ target_link_libraries(${PROJECT_NAME}
 	LZ4_OBJ
 	CUUID_OBJ
 	PROMETHEUS_OBJ
+	YAML_OBJ
 	FMT_OBJ
 )
 
@@ -1287,6 +1299,7 @@ if (BUILD_TESTS)
 				LZ4_OBJ
 				CUUID_OBJ
 				PROMETHEUS_OBJ
+				YAML_OBJ
 				FMT_OBJ
 			)
 
