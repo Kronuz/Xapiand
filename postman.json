@@ -1,6 +1,5 @@
 {
   "info": {
-    "_postman_id": "8b7eeaae-2166-42a1-8e5f-480dd4ddfe3a",
     "name": "Xapiand",
     "description": "Xapiand is A Modern Highly Available Distributed RESTful Search and Storage Engine built for the Cloud and with Data Locality in mind.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -283,8 +282,7 @@
                 }
               ]
             }
-          ],
-          "_postman_isSubFolder": true
+          ]
         },
         {
           "name": "Data Exploration",
@@ -452,8 +450,7 @@
                 }
               ]
             }
-          ],
-          "_postman_isSubFolder": true
+          ]
         }
       ]
     },
