@@ -42,6 +42,7 @@
 #include "rapidjson/error/error.h"                   // for ParseResult
 #include "serialise.h"                               // for Serialise
 #include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
+#include "y2j/y2j.h"                                 // for y2j::yamlParseBytes
 
 
 std::string prefixed(std::string_view term, std::string_view field_prefix, char field_type)
@@ -163,6 +164,17 @@ void json_load(rapidjson::Document& doc, std::string_view str)
 			++p;
 		}
 		THROW(ClientError, "JSON parse error at line {}, col: {} : {}\n{}", line, col, GetParseError_En(parse_done.Code()), snippet);
+	}
+}
+
+
+void yaml_load(rapidjson::Document& doc, std::string_view str)
+{
+	const char* errorMessage = nullptr;
+	size_t errorLine = 0;
+	doc = y2j::yamlParseBytes(str.data(), str.size(), &errorMessage, &errorLine);
+	if (errorMessage) {
+		THROW(ClientError, "JSON parse error at line {} : {}", errorLine, errorMessage);
 	}
 }
 

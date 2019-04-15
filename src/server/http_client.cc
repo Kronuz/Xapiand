@@ -1614,7 +1614,7 @@ HttpClient::update_document_view(Request& request)
 		indexed = db_handler.patch(document_id, query_field.version, decoded_body, query_field.commit);
 	} else if (request.method == HTTP_STORE) {
 		operation = "store";
-		indexed = db_handler.update(document_id, query_field.version, true, decoded_body, query_field.commit, request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = db_handler.update(document_id, query_field.version, true, decoded_body, query_field.commit, request.ct_type == json_type || request.ct_type == x_json_type || request.ct_type == yaml_type || request.ct_type == x_yaml_type || request.ct_type == msgpack_type || request.ct_type == x_msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
 		indexed = db_handler.update(document_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type);
@@ -3225,9 +3225,19 @@ HttpClient::resolve_ct_type(Request& request, ct_type_t ct_type)
 {
 	L_CALL("HttpClient::resolve_ct_type({})", repr(ct_type.to_string()));
 
-	if (ct_type == json_type || ct_type == msgpack_type || ct_type == x_msgpack_type) {
+	if (
+		ct_type == json_type || ct_type == x_json_type ||
+		ct_type == yaml_type || ct_type == x_yaml_type ||
+		ct_type == msgpack_type || ct_type == x_msgpack_type
+	) {
 		if (is_acceptable_type(get_acceptable_type(request, json_type), json_type) != nullptr) {
 			ct_type = json_type;
+		} else if (is_acceptable_type(get_acceptable_type(request, x_json_type), json_type) != nullptr) {
+			ct_type = x_json_type;
+		} else if (is_acceptable_type(get_acceptable_type(request, yaml_type), yaml_type) != nullptr) {
+			ct_type = yaml_type;
+		} else if (is_acceptable_type(get_acceptable_type(request, x_yaml_type), yaml_type) != nullptr) {
+			ct_type = x_yaml_type;
 		} else if (is_acceptable_type(get_acceptable_type(request, msgpack_type), msgpack_type) != nullptr) {
 			ct_type = msgpack_type;
 		} else if (is_acceptable_type(get_acceptable_type(request, x_msgpack_type), x_msgpack_type) != nullptr) {
@@ -3236,7 +3246,11 @@ HttpClient::resolve_ct_type(Request& request, ct_type_t ct_type)
 	}
 
 	std::vector<ct_type_t> ct_types;
-	if (ct_type == json_type || ct_type == msgpack_type || ct_type == x_msgpack_type) {
+	if (
+		ct_type == json_type || ct_type == x_json_type ||
+		ct_type == yaml_type || ct_type == x_yaml_type ||
+		ct_type == msgpack_type || ct_type == x_msgpack_type
+	) {
 		ct_types = msgpack_serializers;
 	} else {
 		ct_types.push_back(std::move(ct_type));
@@ -3323,6 +3337,15 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 	if (is_acceptable_type(ct_type, json_type) != nullptr) {
 		return std::make_pair(obj.to_string(indent), json_type.to_string() + "; charset=utf-8");
 	}
+	if (is_acceptable_type(ct_type, x_json_type) != nullptr) {
+		return std::make_pair(obj.to_string(indent), x_json_type.to_string() + "; charset=utf-8");
+	}
+	if (is_acceptable_type(ct_type, yaml_type) != nullptr) {
+		return std::make_pair(obj.to_string(indent), yaml_type.to_string() + "; charset=utf-8");
+	}
+	if (is_acceptable_type(ct_type, x_yaml_type) != nullptr) {
+		return std::make_pair(obj.to_string(indent), x_yaml_type.to_string() + "; charset=utf-8");
+	}
 	if (is_acceptable_type(ct_type, msgpack_type) != nullptr) {
 		return std::make_pair(obj.serialise(), msgpack_type.to_string() + "; charset=utf-8");
 	}
@@ -3360,7 +3383,12 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 	}
 
 	std::vector<ct_type_t> ct_types;
-	if (request.ct_type == json_type || request.ct_type == msgpack_type || request.ct_type.empty()) {
+	if (
+		request.ct_type == json_type || request.ct_type == x_json_type ||
+		request.ct_type == yaml_type || request.ct_type == x_yaml_type ||
+		request.ct_type == msgpack_type || request.ct_type == x_msgpack_type ||
+		request.ct_type.empty()
+	) {
 		ct_types = msgpack_serializers;
 	} else {
 		ct_types.push_back(request.ct_type);
@@ -3371,6 +3399,12 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
 		if (Logging::log_level >= LOG_DEBUG && request.response.size <= 1024 * 10) {
 			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
+			} else if (is_acceptable_type(accepted_type, x_json_type) != nullptr) {
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
+			} else if (is_acceptable_type(accepted_type, yaml_type) != nullptr) {
+				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
+			} else if (is_acceptable_type(accepted_type, x_yaml_type) != nullptr) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
@@ -3592,6 +3626,9 @@ Request::decode(std::string_view body)
 
 	constexpr static auto _ = phf::make_phf({
 		hhl(JSON_CONTENT_TYPE),
+		hhl(X_JSON_CONTENT_TYPE),
+		hhl(YAML_CONTENT_TYPE),
+		hhl(X_YAML_CONTENT_TYPE),
 		hhl(MSGPACK_CONTENT_TYPE),
 		hhl(X_MSGPACK_CONTENT_TYPE),
 		hhl(NDJSON_CONTENT_TYPE),
@@ -3610,9 +3647,16 @@ Request::decode(std::string_view body)
 			ct_type = json_type;
 			return decoded;
 		case _.fhhl(JSON_CONTENT_TYPE):
+		case _.fhhl(X_JSON_CONTENT_TYPE):
 			json_load(rdoc, body);
 			decoded = MsgPack(rdoc);
 			ct_type = json_type;
+			return decoded;
+		case _.fhhl(YAML_CONTENT_TYPE):
+		case _.fhhl(X_YAML_CONTENT_TYPE):
+			yaml_load(rdoc, body);
+			decoded = MsgPack(rdoc);
+			ct_type = yaml_type;
 			return decoded;
 		case _.fhhl(MSGPACK_CONTENT_TYPE):
 		case _.fhhl(X_MSGPACK_CONTENT_TYPE):
@@ -4019,7 +4063,14 @@ Request::to_text(bool decode)
 				request_text += "<body " + string::from_bytes(raw.size()) + ">";
 			} else {
 				auto& decoded = decoded_body();
-				if (ct_type == json_type || ct_type == msgpack_type) {
+				if (
+					ct_type == json_type ||
+					ct_type == x_json_type ||
+					ct_type == yaml_type ||
+					ct_type == x_yaml_type ||
+					ct_type == msgpack_type ||
+					ct_type == x_msgpack_type
+				) {
 					request_text += decoded.to_string(DEFAULT_INDENTATION);
 				} else {
 					request_text += "<body " + string::from_bytes(raw.size()) + ">";
