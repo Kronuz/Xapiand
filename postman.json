@@ -398,6 +398,55 @@
               ]
             },
             {
+              "name": "Search ordered by balance",
+              "request": {
+                "method": "SEARCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "bank",
+                    ".balance"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"_query\": \"*\",\n  \"_sort\": { \"balance\": { \"_order\": \"desc\" } }\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.hits).to.eql([12699.46,10857.55,10819.51,10729.87,10663.25,10643.84,10513.99,10448.36,10087.41,10073.05]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
               "name": "Search filtered balance",
               "request": {
                 "method": "COUNT",
