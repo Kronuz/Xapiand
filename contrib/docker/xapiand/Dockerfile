@@ -13,13 +13,16 @@
 # docker push dubalu/xapiand:$(docker run --rm dubalu/xapiand:latest --version)
 # docker push dubalu/xapiand:latest
 
-FROM dubalu/clang as builder
+FROM alpine:3.9 as builder
 
-RUN apk add libuuid \
+RUN set -ex \
+  && apk add icu libuuid \
   && apk add --no-cache --virtual .build-deps \
     git \
+    gcc \
     zlib-dev \
     # Xapian specific:
+    icu-dev \
     perl \
     tcl \
     # Xapiand specific:
@@ -27,7 +30,7 @@ RUN apk add libuuid \
     cmake \
     util-linux-dev
 
-# Build Xapiand using clang (from Kronuz git repo using layer cache buster)
+# Build Xapiand (from Kronuz git repo using layer cache buster)
 ADD https://api.github.com/repos/Kronuz/Xapiand/git/refs/heads/master xapiand-version.json
 RUN CONFIG="\
     -DCMAKE_INSTALL_PREFIX:PATH=/usr \
@@ -40,18 +43,17 @@ RUN CONFIG="\
   && ninja install
 
 RUN rm -rf /usr/src/Xapiand \
-  && apk del .build-deps \
-  && apk del build-clang
+  && apk del .build-deps
 
 # Xapiand image
-FROM alpine:3.8
+FROM alpine:3.9
 
 MAINTAINER Kronuz
 
 COPY --from=builder /usr /usr
 COPY ./entrypoint.sh /
 
-RUN apk add libuuid \
+RUN apk add icu libuuid \
   && mkdir -p /var/db \
   && addgroup -S xapiand \
   && adduser -D -S -h /var/db/xapiand -s /sbin/nologin -G xapiand xapiand \
