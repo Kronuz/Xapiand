@@ -1,6 +1,6 @@
 #include "version.h"
 
-#include <yaml.h>
+#include "yaml.h"
 
 #include <assert.h>
 #include <limits.h>
