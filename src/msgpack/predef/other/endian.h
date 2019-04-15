@@ -138,7 +138,7 @@ information and acquired knowledge:
  */
 #if !MSGPACK_ENDIAN_BIG_BYTE && !MSGPACK_ENDIAN_BIG_WORD && \
     !MSGPACK_ENDIAN_LITTLE_BYTE && !MSGPACK_ENDIAN_LITTLE_WORD
-#include "architecture.h"
+#include "../architecture.h"
 #   if MSGPACK_ARCH_M68K || \
         MSGPACK_ARCH_PARISK || \
         MSGPACK_ARCH_SPARC || \
