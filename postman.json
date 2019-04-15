@@ -354,6 +354,13 @@
               "name": "Search ordered by accountNumber",
               "request": {
                 "method": "SEARCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
                 "url": {
                   "host": [
                     "{{domain}}"
@@ -363,6 +370,10 @@
                     ".accountNumber"
                   ],
                   "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    },
                     {
                       "key": "sort",
                       "value": "accountNumber"
@@ -381,6 +392,59 @@
                       "pm.test(\"response is valid\", function() {",
                       "    var jsonData = pm.response.json();",
                       "    pm.expect(jsonData.hits).to.eql([100123,100481,101121,101253,101294,103213,103486,103710,104419,107465]);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Search filtered balance",
+              "request": {
+                "method": "COUNT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "bank",
+                    ".balance"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    },
+                    {
+                      "key": "limit",
+                      "value": 1000
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"_query\": {\n    \"balance\": {\n      \"_in\": {\n        \"_range\": {\n          \"_from\": 2000,\n          \"_to\": 3000\n        }\n      }\n    }\n  }\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"response is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.total).to.eql(286);",
                       "});"
                     ],
                     "type": "text/javascript"
