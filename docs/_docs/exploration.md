@@ -290,7 +290,11 @@ SEARCH /bank/
 
 {
   "_query": "*",
-  "_sort": { "balance": { "_order": "desc" } }
+  "_sort": {
+    "balance": {
+      "_order": "desc"
+    }
+  }
 }
 ```
 {% endcapture %}
