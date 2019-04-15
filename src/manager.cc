@@ -851,8 +851,8 @@ XapiandManager::make_servers()
 			}
 			_replication_server_pool->enqueue(std::move(_replication_server));
 		}
-#endif
 	}
+#endif
 
 	// Setup local node ports.
 	auto node_copy = std::make_unique<Node>(*local_node);

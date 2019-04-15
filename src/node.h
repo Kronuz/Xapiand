@@ -314,7 +314,6 @@ private:
 	static std::atomic_size_t _active_nodes;
 	static std::atomic_size_t _indexed_nodes;
 
-#ifdef XAPIAND_CLUSTERING
 	static std::mutex _nodes_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<const Node>> _nodes;
 	static std::vector<std::shared_ptr<const Node>> _nodes_indexed;
@@ -343,5 +342,4 @@ public:
 	static std::vector<std::shared_ptr<const Node>> nodes();
 
 	static std::string dump_nodes(int level = 1);
-#endif
 };

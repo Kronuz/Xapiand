@@ -120,7 +120,7 @@ Node::__repr__() const
 		is_leader() ? " " + DARK_STEEL_BLUE + "(leader)" + STEEL_BLUE : "");
 }
 
-#ifdef XAPIAND_CLUSTERING
+
 std::string
 Node::dump_nodes(int level)
 {
@@ -139,7 +139,6 @@ Node::dump_nodes(int level)
 
 	return ret;
 }
-#endif
 
 
 atomic_shared_ptr<const Node> Node::_local_node{std::make_shared<const Node>()};
@@ -147,6 +146,15 @@ atomic_shared_ptr<const Node> Node::_leader_node{std::make_shared<const Node>()}
 
 
 #ifndef XAPIAND_CLUSTERING
+
+std::mutex Node::_nodes_mtx;
+std::unordered_map<std::string, std::shared_ptr<const Node>> Node::_nodes;
+std::vector<std::shared_ptr<const Node>> Node::_nodes_indexed;
+
+std::atomic_size_t Node::_total_nodes;
+std::atomic_size_t Node::_active_nodes;
+std::atomic_size_t Node::_indexed_nodes;
+
 
 std::shared_ptr<const Node>
 Node::local_node(std::shared_ptr<const Node> node)
@@ -177,47 +185,6 @@ std::vector<std::shared_ptr<const Node>> Node::_nodes_indexed;
 std::atomic_size_t Node::_total_nodes;
 std::atomic_size_t Node::_active_nodes;
 std::atomic_size_t Node::_indexed_nodes;
-
-
-inline void
-Node::_update_nodes(const std::shared_ptr<const Node>& node)
-{
-	auto local_node_ = _local_node.load(std::memory_order_relaxed);
-	if (node != local_node_) {
-		if (node->lower_name() == local_node_->lower_name()) {
-			if (node->idx != local_node_->idx) {
-				set_as_title(node);
-			}
-			_local_node.store(node, std::memory_order_relaxed);
-		}
-	}
-
-	auto leader_node_ = _leader_node.load(std::memory_order_relaxed);
-	if (node != leader_node_) {
-		if (node->lower_name() == leader_node_->lower_name()) {
-			_leader_node.store(node, std::memory_order_relaxed);
-		}
-	}
-
-	size_t cnt = 0;
-	_nodes_indexed.clear();
-	for (const auto& node_pair : _nodes) {
-		const auto& node_ref = node_pair.second;
-		if (is_active(node_ref)) {
-			++cnt;
-		}
-		auto idx_ = node_ref->idx;
-		if (idx_) {
-			if (_nodes_indexed.size() < idx_) {
-				_nodes_indexed.resize(idx_);
-			}
-			_nodes_indexed[idx_ - 1] = node_ref;
-		}
-	}
-	_active_nodes.store(cnt, std::memory_order_relaxed);
-	_total_nodes.store(_nodes.size(), std::memory_order_relaxed);
-	_indexed_nodes.store(_nodes_indexed.size(), std::memory_order_relaxed);
-}
 
 
 std::shared_ptr<const Node>
@@ -300,6 +267,48 @@ Node::leader_node(std::shared_ptr<const Node> node)
 	}
 	return _leader_node.load(std::memory_order_relaxed);
 }
+#endif
+
+
+inline void
+Node::_update_nodes(const std::shared_ptr<const Node>& node)
+{
+	auto local_node_ = _local_node.load(std::memory_order_relaxed);
+	if (node != local_node_) {
+		if (node->lower_name() == local_node_->lower_name()) {
+			if (node->idx != local_node_->idx) {
+				set_as_title(node);
+			}
+			_local_node.store(node, std::memory_order_relaxed);
+		}
+	}
+
+	auto leader_node_ = _leader_node.load(std::memory_order_relaxed);
+	if (node != leader_node_) {
+		if (node->lower_name() == leader_node_->lower_name()) {
+			_leader_node.store(node, std::memory_order_relaxed);
+		}
+	}
+
+	size_t cnt = 0;
+	_nodes_indexed.clear();
+	for (const auto& node_pair : _nodes) {
+		const auto& node_ref = node_pair.second;
+		if (is_active(node_ref)) {
+			++cnt;
+		}
+		auto idx_ = node_ref->idx;
+		if (idx_) {
+			if (_nodes_indexed.size() < idx_) {
+				_nodes_indexed.resize(idx_);
+			}
+			_nodes_indexed[idx_ - 1] = node_ref;
+		}
+	}
+	_active_nodes.store(cnt, std::memory_order_relaxed);
+	_total_nodes.store(_nodes.size(), std::memory_order_relaxed);
+	_indexed_nodes.store(_nodes_indexed.size(), std::memory_order_relaxed);
+}
 
 
 std::shared_ptr<const Node>
@@ -356,11 +365,13 @@ Node::touch_node(const Node& node, bool activate)
 		if (Node::is_superset(node_ref, node)) {
 			auto modified = false;
 			if (
-				(!node_ref->idx && node.idx) ||
-				(!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr) ||
-				(!node_ref->http_port && node.http_port) ||
-				(!node_ref->remote_port && node.remote_port) ||
-				(!node_ref->replication_port && node.replication_port)
+				(!node_ref->idx && node.idx)
+				|| (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr)
+				|| (!node_ref->http_port && node.http_port)
+#ifdef XAPIAND_CLUSTERING
+				|| (!node_ref->remote_port && node.remote_port)
+				|| (!node_ref->replication_port && node.replication_port)
+#endif
 			) {
 				auto node_ref_copy = std::make_unique<Node>(*node_ref);
 				if (!node_ref->idx && node.idx) {
@@ -380,12 +391,14 @@ Node::touch_node(const Node& node, bool activate)
 				if (!node_ref->http_port && node.http_port) {
 					node_ref_copy->http_port = node.http_port;
 				}
+#ifdef XAPIAND_CLUSTERING
 				if (!node_ref->remote_port && node.remote_port) {
 					node_ref_copy->remote_port = node.remote_port;
 				}
 				if (!node_ref->replication_port && node.replication_port) {
 					node_ref_copy->replication_port = node.replication_port;
 				}
+#endif
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 				_update_nodes(node_ref);
 				modified = true;
@@ -442,8 +455,10 @@ Node::drop_node(std::string_view _node_name)
 		node_ref_copy->_addr = sockaddr_in{};
 		node_ref_copy->_host.clear();
 		node_ref_copy->http_port = 0;
+#ifdef XAPIAND_CLUSTERING
 		node_ref_copy->remote_port = 0;
 		node_ref_copy->replication_port = 0;
+#endif
 		node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
 		_update_nodes(node_ref);
 	}
@@ -485,8 +500,6 @@ Node::nodes()
 
 	return nodes;
 }
-
-#endif
 
 
 color

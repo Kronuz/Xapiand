@@ -447,13 +447,13 @@ parseOptions(int argc, char** argv)
 #ifdef XAPIAND_CLUSTERING
 		o.num_shards = num_shards.getValue();
 		o.num_replicas = num_replicas.getValue();
+		o.num_replicators = fallback(num_replicators.getValue(), std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors))));
+		o.num_discoverers = fallback(num_discoverers.getValue(), std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors))));
 #endif
 		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors))));
 		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors))));
 		o.num_committers = fallback(num_committers.getValue(), std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors))));
 		o.num_fsynchers = fallback(num_fsynchers.getValue(), std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors))));
-		o.num_replicators = fallback(num_replicators.getValue(), std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors))));
-		o.num_discoverers = fallback(num_discoverers.getValue(), std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors))));
 
 		o.max_clients = max_clients.getValue();
 		o.max_database_readers = max_database_readers.getValue();

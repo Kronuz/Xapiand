@@ -691,5 +691,8 @@ BaseClient<ClientImpl>::shutdown_impl(long long asap, long long now)
 // The following are only here so BaseClient
 // implementation for each clients is compiled:
 template class BaseClient<HttpClient>;
+
+#ifdef XAPIAND_CLUSTERING
 template class BaseClient<RemoteProtocolClient>;
 template class BaseClient<ReplicationProtocolClient>;
+#endif
