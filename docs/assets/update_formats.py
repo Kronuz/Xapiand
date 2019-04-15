@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 
 def main():
-    if sys.argv != 2:
+    if len(sys.argv) != 2:
         print("usage: {} <file.json>".format(sys.argv[0]))
         sys.exit(64)
     name, ext = os.path.splitext(sys.argv[1])
