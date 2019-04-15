@@ -20,6 +20,7 @@ RUN set -ex \
   && apk add --no-cache --virtual .build-deps \
     git \
     gcc \
+    g++ \
     zlib-dev \
     # Xapian specific:
     icu-dev \
