@@ -14,8 +14,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+
+---
+## [0.19.7] - 2019-04-15
+{: #v0-19-7 }
+
 ### Added
 - Experimental parsing of YAML
+- Postman collection for testing documentation requests
+
+### Changed
+- Require CMake 3.12 (again)
+- Docker image using Alpine 3.9, GCC 8 and ICU
+
+### Fixed
+- Check for requests with invalid body
+- Compilation with cluster disabled
 
 
 ---
@@ -633,7 +647,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.6...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.7...HEAD
+[0.19.7]: https://github.com/Kronuz/Xapiand/compare/v0.19.6...v0.19.7
 [0.19.6]: https://github.com/Kronuz/Xapiand/compare/v0.19.5...v0.19.6
 [0.19.5]: https://github.com/Kronuz/Xapiand/compare/v0.19.4...v0.19.5
 [0.19.4]: https://github.com/Kronuz/Xapiand/compare/v0.19.3...v0.19.4
