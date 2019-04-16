@@ -44,6 +44,7 @@
 #endif
 
 #include "atomic_shared_ptr.h"                    // for atomic_shared_ptr
+#include "error.hh"                               // for error::name
 #include "likely.h"                               // for likely/unlikely
 #include "string.hh"                              // for string::format
 #include "time_point.hh"                          // for wait
@@ -126,6 +127,7 @@ public:
 struct ThreadInfo {
 	pthread_t pthread;
 	const char* name;
+	std::atomic_int errnum;
 	std::shared_ptr<Callstack> callstack;
 	std::shared_ptr<Callstack> snapshot;
 	size_t req;
@@ -133,6 +135,7 @@ struct ThreadInfo {
 	ThreadInfo(pthread_t pthread, const char* name) :
 		pthread(pthread),
 		name(name),
+		errnum(0),
 		callstack(std::make_shared<Callstack>(nullptr)),
 		snapshot(std::make_shared<Callstack>(nullptr)),
 		req(pthreads_req.load(std::memory_order_acquire)) {}
@@ -140,13 +143,10 @@ struct ThreadInfo {
 	ThreadInfo(const ThreadInfo& other) :
 		pthread(other.pthread),
 		name(other.name),
+		errnum(other.errnum.load(std::memory_order_relaxed)),
 		callstack(other.callstack),
 		snapshot(other.snapshot),
 		req(pthreads_req.load(std::memory_order_acquire)) {}
-
-	~ThreadInfo() {
-
-	}
 };
 
 
@@ -582,7 +582,7 @@ dump_callstacks()
 		std::shared_ptr<ThreadInfo> thread_info;
 		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
 		if (thread_info) {
-			pthread_kill(thread_info->pthread, SIGUSR2);
+			thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 		}
 	}
 
@@ -615,12 +615,13 @@ dump_callstacks()
 		std::shared_ptr<ThreadInfo> thread_info;
 		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
 		if (thread_info) {
+			auto errnum = thread_info->errnum.load(std::memory_order_relaxed);
 			if (thread_info->callstack && thread_info->snapshot) {
 				auto& callstack = *thread_info->callstack;
 				auto& snapshot = *thread_info->snapshot;
 				if (snapshot.empty() || callstack.empty()) {
 					++active;
-					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, snapshot.empty() ? " " + DARK_STEEL_BLUE + "(no snapshot)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(no callstack)" + STEEL_BLUE));
+					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, snapshot.empty() ? " " + DARK_STEEL_BLUE + "(no snapshot)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(no callstack)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 					if (!callstack.empty()) {
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
 						ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
@@ -628,13 +629,13 @@ dump_callstacks()
 					}
 				} else if (callstack[skip] != snapshot[skip]) {
 					++active;
-					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " (" + RED + "active" + STEEL_BLUE +")"));
+					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " " + DARK_ORANGE + "(active)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
 					ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
 #endif
 				}
 			} else {
-				ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, LIGHT_STEEL_BLUE + "(uninitialized)" + STEEL_BLUE));
+				ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, LIGHT_STEEL_BLUE + "(uninitialized)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 			}
 		} else {
 			ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}>\n", idx, "???"));
@@ -666,13 +667,13 @@ callstacks_snapshot()
 						auto& callstack = *thread_info->callstack;
 						auto& snapshot = *thread_info->snapshot;
 						if (callstack.empty() || callstack != snapshot) {
-							pthread_kill(thread_info->pthread, SIGUSR2);
+							thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 						} else {
 							auto new_info = std::make_shared<ThreadInfo>(*thread_info);
 							pthreads[idx].store(new_info);
 						}
 					} else {
-						pthread_kill(thread_info->pthread, SIGUSR2);
+						thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 					}
 				}
 			}
@@ -742,7 +743,7 @@ callstacks_snapshot()
 			std::shared_ptr<ThreadInfo> thread_info;
 			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
 			if (thread_info) {
-				pthread_kill(thread_info->pthread, SIGUSR2);
+				thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 			}
 		}
 
