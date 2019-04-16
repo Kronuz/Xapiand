@@ -27,6 +27,7 @@
 #include <array>                                  // for std::array
 #include <atomic>                                 // for std::atomic_size
 #include <cassert>                                // for std::array
+#include <chrono>                                 // for std::chrono
 #include <cstdlib>                                // for std::free, std::exit
 #include <cstdio>                                 // for std::perror, std::snprintf, std::fprintf
 #include <cstring>                                // for std::memset
@@ -72,6 +73,11 @@ public:
 
 	size_t size() const {
 		return callstack ? static_cast<void**>(*callstack) - callstack : 0;
+	}
+
+	bool empty() const {
+		return callstack ? static_cast<void**>(*callstack) == callstack : true;
+
 	}
 
 	void** get() const {
@@ -536,8 +542,8 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 	auto pthread = pthread_self();
 	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
-		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-		if (thread_info->pthread == pthread) {
+		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { };
+		if (thread_info && thread_info->pthread == pthread) {
 			auto callstack = backtrace();
 			if (callstack) {
 				size_t frames = static_cast<void**>(*callstack) - callstack;
@@ -574,8 +580,10 @@ dump_callstacks()
 	// request all threads to collect their callstack
 	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
-		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-		pthread_kill(thread_info->pthread, SIGUSR2);
+		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+		if (thread_info) {
+			pthread_kill(thread_info->pthread, SIGUSR2);
+		}
 	}
 
 	// try waiting for callstacks
@@ -583,8 +591,8 @@ dump_callstacks()
 		size_t ok = 0;
 		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 			std::shared_ptr<ThreadInfo> thread_info;
-			while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-			if (thread_info->req >= req) {
+			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+			if (thread_info && thread_info->req >= req) {
 				++ok;
 			}
 		}
@@ -605,15 +613,31 @@ dump_callstacks()
 	size_t active = 0;
 	for (; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
-		while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-		auto& callstack = *thread_info->callstack;
-		auto& snapshot = *thread_info->snapshot;
-		if (callstack[skip] != snapshot[skip]) {
-			++active;
-			ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " (" + RED + "active" + STEEL_BLUE +")"));
+		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+		if (thread_info) {
+			if (thread_info->callstack && thread_info->snapshot) {
+				auto& callstack = *thread_info->callstack;
+				auto& snapshot = *thread_info->snapshot;
+				if (snapshot.empty() || callstack.empty()) {
+					++active;
+					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, snapshot.empty() ? " " + DARK_STEEL_BLUE + "(no snapshot)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(no callstack)" + STEEL_BLUE));
+					if (!callstack.empty()) {
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
-			ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
+						ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
 #endif
+					}
+				} else if (callstack[skip] != snapshot[skip]) {
+					++active;
+					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " (" + RED + "active" + STEEL_BLUE +")"));
+#if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
+					ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
+#endif
+				}
+			} else {
+				ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}>\n", idx, thread_info->name, LIGHT_STEEL_BLUE + "(uninitialized)" + STEEL_BLUE));
+			}
+		} else {
+			ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}>\n", idx, "???"));
 		}
 		skip = 0;
 	}
@@ -627,20 +651,29 @@ callstacks_snapshot()
 	// Try to get a stable snapshot of callbacks for all threads.
 
 	for (int t = 10; t >= 0; --t) {
-		do {
+		bool retry = true;
+		auto start = std::chrono::system_clock::now();
+		auto end = start;
+		while (retry && std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() < 100) {
 			size_t req = pthreads_req.fetch_add(1) + 1;
 
 			// request all threads to collect their callstack
 			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 				std::shared_ptr<ThreadInfo> thread_info;
-				while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-				auto& callstack = *thread_info->callstack;
-				auto& snapshot = *thread_info->snapshot;
-				if (!callstack.size() || callstack != snapshot) {
-					pthread_kill(thread_info->pthread, SIGUSR2);
-				} else {
-					auto new_info = std::make_shared<ThreadInfo>(*thread_info);
-					pthreads[idx].store(new_info);
+				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+				if (thread_info) {
+					if (thread_info->callstack && thread_info->snapshot) {
+						auto& callstack = *thread_info->callstack;
+						auto& snapshot = *thread_info->snapshot;
+						if (callstack.empty() || callstack != snapshot) {
+							pthread_kill(thread_info->pthread, SIGUSR2);
+						} else {
+							auto new_info = std::make_shared<ThreadInfo>(*thread_info);
+							pthreads[idx].store(new_info);
+						}
+					} else {
+						pthread_kill(thread_info->pthread, SIGUSR2);
+					}
 				}
 			}
 
@@ -649,8 +682,8 @@ callstacks_snapshot()
 				size_t ok = 0;
 				for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 					std::shared_ptr<ThreadInfo> thread_info;
-					while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-					if (thread_info->req >= req) {
+					for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+					if (thread_info && thread_info->req >= req) {
 						++ok;
 					}
 				}
@@ -660,30 +693,40 @@ callstacks_snapshot()
 				sched_yield();
 			}
 
-			auto retry = false;
-
 			// save snapshots:
+			retry = false;
 			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 				std::shared_ptr<ThreadInfo> thread_info;
-				while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-				auto& callstack = *thread_info->callstack;
-				auto& snapshot = *thread_info->snapshot;
-				if (!callstack.size() || callstack != snapshot) {
-					auto new_info = std::make_shared<ThreadInfo>(*thread_info);
-					new_info->snapshot = std::make_shared<Callstack>(callstack);
-					pthreads[idx].store(new_info);
+				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+				if (thread_info) {
+					if (thread_info->callstack && thread_info->snapshot) {
+						auto& callstack = *thread_info->callstack;
+						auto& snapshot = *thread_info->snapshot;
+						if (callstack.empty()) {
+							retry = true;
+						} else if (callstack != snapshot) {
+							auto new_info = std::make_shared<ThreadInfo>(*thread_info);
+							new_info->snapshot = std::make_shared<Callstack>(callstack);
+							pthreads[idx].store(new_info);
+							retry = true;
+						}
+					} else {
+						retry = true;
+					}
+				} else {
 					retry = true;
 				}
 			}
 
-			if (!retry) {
-				break;
-			}
-
 			sched_yield();
-		} while (true);
+
+			end = std::chrono::system_clock::now();
+		}
 
 		if (t == 0) {
+			if (retry) {
+				L_WARNING("Cannot take a snapshot of callbacks");
+			}
 			break;
 		}
 
@@ -697,8 +740,10 @@ callstacks_snapshot()
 		// request all threads to collect their callstack
 		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 			std::shared_ptr<ThreadInfo> thread_info;
-			while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-			pthread_kill(thread_info->pthread, SIGUSR2);
+			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+			if (thread_info) {
+				pthread_kill(thread_info->pthread, SIGUSR2);
+			}
 		}
 
 		// try waiting for callstacks
@@ -706,8 +751,8 @@ callstacks_snapshot()
 			size_t ok = 0;
 			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 				std::shared_ptr<ThreadInfo> thread_info;
-				while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-				if (thread_info->req >= req) {
+				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+				if (thread_info && thread_info->req >= req) {
 					++ok;
 				}
 			}
@@ -720,13 +765,17 @@ callstacks_snapshot()
 		// check snapshots, invalidate if any is different:
 		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 			std::shared_ptr<ThreadInfo> thread_info;
-			while (!(thread_info = pthreads[idx].load(std::memory_order_acquire))) {};
-			auto& callstack = *thread_info->callstack;
-			auto& snapshot = *thread_info->snapshot;
-			if (callstack[0] != snapshot[0]) {
-				auto new_info = std::make_shared<ThreadInfo>(*thread_info);
-				new_info->callstack = std::make_shared<Callstack>(nullptr);
-				pthreads[idx].store(new_info);
+			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+			if (thread_info) {
+				if (thread_info->callstack && thread_info->snapshot) {
+					auto& callstack = *thread_info->callstack;
+					auto& snapshot = *thread_info->snapshot;
+					if (callstack[0] != snapshot[0]) {
+						auto new_info = std::make_shared<ThreadInfo>(*thread_info);
+						new_info->callstack = std::make_shared<Callstack>(nullptr);
+						pthreads[idx].store(new_info);
+					}
+				}
 			}
 		}
 	}

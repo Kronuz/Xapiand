@@ -82,7 +82,7 @@
 #include "storage.h"                             // for Storage
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
-#include "thread.hh"                             // for collect_callstacks
+#include "thread.hh"                             // for callstacks_snapshot, dump_callstacks
 
 #ifdef XAPIAND_CLUSTERING
 #include "server/remote_protocol.h"              // for RemoteProtocol
