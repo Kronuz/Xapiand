@@ -273,8 +273,8 @@ std::string operator+(const static_string<NL, TL>& l, const TR& r)
 template <std::size_t NR, typename TL, typename TR>
 std::string operator+(const TL& l, const static_string<NR, TR>& r)
 {
-	std::string result(r.data(), r.size());
-	result.append(l);
+	std::string result(l);
+	result.append(std::string(r.data(), r.size()));
 	return result;
 }
 
