@@ -998,7 +998,7 @@ DatabaseHandler::restore_documents(int fd)
 
 	SHA256 sha256;
 	msgpack::unpacker unpacker;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, false, false);
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, false, false, true);
 	try {
 		while (true) {
 			if (XapiandManager::manager()->is_detaching()) {
@@ -2084,6 +2084,7 @@ DocIndexer::operator()()
 	L_CALL("DocIndexer::operator()()");
 
 	DatabaseHandler db_handler(endpoints, flags);
+
 	bool ready_ = false;
 	while (running.load(std::memory_order_acquire)) {
 		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
@@ -2188,6 +2189,10 @@ DocIndexer::operator()()
 				limit.signal(limit_signal);
 			}
 		}
+	}
+
+	if (commit) {
+		db_handler.commit();
 	}
 
 	running.store(false, std::memory_order_release);

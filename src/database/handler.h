@@ -317,6 +317,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	bool echo;
 	bool comments;
+	bool commit;
 
 	std::atomic_size_t _processed;
 	std::atomic_size_t _indexed;
@@ -332,7 +333,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt;
 
-	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments) :
+	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, bool commit) :
 		finished{false},
 		running{false},
 		ready{false},
@@ -340,6 +341,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 		flags{flags},
 		echo{echo},
 		comments{comments},
+		commit{commit},
 		_processed{0},
 		_indexed{0},
 		_total{0},

@@ -2240,14 +2240,14 @@ HttpClient::restore_database_view(Request& request)
 						settings = &settings_it.value();
 					}
 				}
-				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
+				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 				if (resolve_index_endpoints(request, query_field, settings) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
 				request.processing = std::chrono::system_clock::now();
 
-				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments);
+				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
 			}
 			request.indexer->prepare(std::move(obj));
 		}
@@ -2265,14 +2265,14 @@ HttpClient::restore_database_view(Request& request)
 						settings = &settings_it.value();
 					}
 				}
-				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
+				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 				if (resolve_index_endpoints(request, query_field, settings) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
 				request.processing = std::chrono::system_clock::now();
 
-				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments);
+				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
 			}
 			request.indexer->prepare(std::move(obj));
 		}
