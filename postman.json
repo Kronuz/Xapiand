@@ -305,6 +305,12 @@
                   "path": [
                     "bank",
                     ""
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
                   ]
                 },
                 "body": {
@@ -822,6 +828,12 @@
                   "path": [
                     "cities",
                     ""
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    }
                   ]
                 },
                 "body": {
