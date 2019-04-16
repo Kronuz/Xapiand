@@ -78,7 +78,7 @@
 
 ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: BaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
-	  state(ReplicaState::INIT_REPLICATION_CLIENT),
+	  state(ReplicationState::INIT_REPLICATION_CLIENT),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
 	  last_message_sent('\xff'),
@@ -739,7 +739,7 @@ ReplicationProtocolClient::init_replication() noexcept
 	assert(!running);
 
 	// Setup state...
-	state = ReplicaState::INIT_REPLICATION_SERVER;
+	state = ReplicationState::INIT_REPLICATION_SERVER;
 
 	// And start a runner.
 	running = true;
@@ -758,7 +758,7 @@ ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const 
 	assert(!running);
 
 	// Setup state...
-	state = ReplicaState::INIT_REPLICATION_CLIENT;
+	state = ReplicationState::INIT_REPLICATION_CLIENT;
 
 	if (init_replication_protocol(src_endpoint, dst_endpoint)) {
 		// And start a runner.
@@ -995,8 +995,8 @@ ReplicationProtocolClient::operator()()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	switch (state) {
-		case ReplicaState::INIT_REPLICATION_SERVER:
-			state = ReplicaState::REPLICATION_SERVER;
+		case ReplicationState::INIT_REPLICATION_SERVER:
+			state = ReplicationState::REPLICATION_SERVER;
 			lk.unlock();
 			try {
 				send_message(static_cast<char>(ReplicationReplyType::REPLY_WELCOME), "");
@@ -1011,8 +1011,8 @@ ReplicationProtocolClient::operator()()
 			}
 			lk.lock();
 			break;
-		case ReplicaState::INIT_REPLICATION_CLIENT:
-			state = ReplicaState::REPLICATION_CLIENT;
+		case ReplicationState::INIT_REPLICATION_CLIENT:
+			state = ReplicationState::REPLICATION_CLIENT;
 			[[fallthrough]];
 		default:
 			break;
@@ -1020,7 +1020,7 @@ ReplicationProtocolClient::operator()()
 
 	while (!messages.empty() && !closed) {
 		switch (state) {
-			case ReplicaState::REPLICATION_SERVER: {
+			case ReplicationState::REPLICATION_SERVER: {
 				std::string message;
 				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
 				lk.unlock();
@@ -1052,7 +1052,7 @@ ReplicationProtocolClient::operator()()
 				break;
 			}
 
-			case ReplicaState::REPLICATION_CLIENT: {
+			case ReplicationState::REPLICATION_CLIENT: {
 				std::string message;
 				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
 				lk.unlock();
@@ -1118,14 +1118,14 @@ ReplicationProtocolClient::__repr__() const
 		auto sent = last_message_sent.load(std::memory_order_relaxed);
 		auto st = state.load(std::memory_order_relaxed);
 		switch (st) {
-			case ReplicaState::INIT_REPLICATION_CLIENT:
-			case ReplicaState::REPLICATION_CLIENT:
+			case ReplicationState::INIT_REPLICATION_CLIENT:
+			case ReplicationState::REPLICATION_CLIENT:
 				return string::format("{}) ({}<->{}",
 					enum_name(st),
 					enum_name(static_cast<ReplicationReplyType>(received)),
 					enum_name(static_cast<ReplicationMessageType>(sent)));
-			case ReplicaState::INIT_REPLICATION_SERVER:
-			case ReplicaState::REPLICATION_SERVER:
+			case ReplicationState::INIT_REPLICATION_SERVER:
+			case ReplicationState::REPLICATION_SERVER:
 				return string::format("{}) ({}<->{}",
 					enum_name(st),
 					enum_name(static_cast<ReplicationMessageType>(received)),

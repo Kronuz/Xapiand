@@ -84,7 +84,7 @@
 class lock_shard;
 
 
-ENUM_CLASS(State, int,
+ENUM_CLASS(RemoteState, int,
 	INIT_REMOTE,
 	REMOTE_SERVER
 )
@@ -168,7 +168,7 @@ class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
 	int flags;
 	Endpoint endpoint;
 
-	std::atomic<State> state;
+	std::atomic<RemoteState> state;
 
 #ifdef SAVE_LAST_MESSAGES
 	std::atomic_char last_message_received;

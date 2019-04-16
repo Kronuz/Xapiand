@@ -50,7 +50,7 @@
 #define FILE_FOLLOWS '\xfd'
 
 
-ENUM_CLASS(ReplicaState, int,
+ENUM_CLASS(ReplicationState, int,
 	INIT_REPLICATION_CLIENT,
 	INIT_REPLICATION_SERVER,
 	REPLICATION_CLIENT,
@@ -89,7 +89,7 @@ class ReplicationProtocolClient : public BaseClient<ReplicationProtocolClient> {
 
 	mutable std::mutex runner_mutex;
 
-	std::atomic<ReplicaState> state;
+	std::atomic<ReplicationState> state;
 
 #ifdef SAVE_LAST_MESSAGES
 	std::atomic_char last_message_received;

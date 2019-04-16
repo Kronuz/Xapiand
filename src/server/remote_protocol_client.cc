@@ -91,7 +91,7 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
 RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
 	: BaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  flags(0),
-	  state(State::INIT_REMOTE),
+	  state(RemoteState::INIT_REMOTE),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
 	  last_message_sent('\xff'),
@@ -1267,7 +1267,7 @@ RemoteProtocolClient::init_remote() noexcept
 	assert(!running);
 
 	// Setup state...
-	state = State::INIT_REMOTE;
+	state = RemoteState::INIT_REMOTE;
 
 	// And start a runner.
 	running = true;
@@ -1501,8 +1501,8 @@ RemoteProtocolClient::operator()()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 
 	switch (state) {
-		case State::INIT_REMOTE:
-			state = State::REMOTE_SERVER;
+		case RemoteState::INIT_REMOTE:
+			state = RemoteState::REMOTE_SERVER;
 			lk.unlock();
 			try {
 				msg_update(std::string());
@@ -1523,7 +1523,7 @@ RemoteProtocolClient::operator()()
 
 	while (!messages.empty() && !closed) {
 		switch (state) {
-			case State::REMOTE_SERVER: {
+			case RemoteState::REMOTE_SERVER: {
 				std::string message;
 				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
 				lk.unlock();
@@ -1589,8 +1589,8 @@ RemoteProtocolClient::__repr__() const
 		auto sent = last_message_sent.load(std::memory_order_relaxed);
 		auto st = state.load(std::memory_order_relaxed);
 		switch (st) {
-			case State::INIT_REMOTE:
-			case State::REMOTE_SERVER:
+			case RemoteState::INIT_REMOTE:
+			case RemoteState::REMOTE_SERVER:
 				return string::format("{}) ({}<->{}",
 					enum_name(st),
 					enum_name(static_cast<RemoteMessageType>(received)),
