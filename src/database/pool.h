@@ -25,7 +25,7 @@
 #include "config.h"             // for XAPIAND_REMOTE_SERVERPORT
 
 #include <atomic>               // for std::atomic_bool
-#include <chrono>               // for std::chrono, std::chrono::system_clock
+#include <chrono>               // for std::chrono, std::chrono::steady_clock
 #include <cstring>              // for size_t
 #include <list>                 // for std::list
 #include <memory>               // for std::shared_ptr
@@ -77,7 +77,7 @@ class ShardEndpoint : public Endpoint
 
 	std::atomic_bool locked;
 	std::atomic<Xapian::rev> local_revision;
-	std::chrono::time_point<std::chrono::system_clock> renew_time;
+	std::chrono::time_point<std::chrono::steady_clock> renew_time;
 
 	std::shared_ptr<Shard> writable;
 	std::list<std::shared_ptr<Shard>> readables;
@@ -90,8 +90,8 @@ class ShardEndpoint : public Endpoint
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
-	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
-	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk);
 
 public:
 	ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
@@ -179,10 +179,10 @@ public:
 
 	void finish();
 
-	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup);
+	bool join(const std::chrono::time_point<std::chrono::steady_clock>& wakeup);
 
 	bool join(std::chrono::milliseconds timeout = 60s) {
-		return join(std::chrono::system_clock::now() + timeout);
+		return join(std::chrono::steady_clock::now() + timeout);
 	}
 
 	void cleanup(bool immediate = false);

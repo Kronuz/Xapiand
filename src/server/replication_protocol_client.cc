@@ -263,7 +263,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	L_REPLICATION("GET_CHANGESETS");
 
 	size_t _total_sent_bytes = total_sent_bytes;
-	auto begins = std::chrono::system_clock::now();
+	auto begins = std::chrono::steady_clock::now();
 
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -275,7 +275,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	if (endpoint_path.empty()) {
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
 
-		auto ends = std::chrono::system_clock::now();
+		auto ends = std::chrono::steady_clock::now();
 		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 		L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 		return;
@@ -357,7 +357,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				if (whole_db_copies_left == 0) {
 					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
 
-					auto ends = std::chrono::system_clock::now();
+					auto ends = std::chrono::steady_clock::now();
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 					L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
 					return;
@@ -407,7 +407,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
 
-	auto ends = std::chrono::system_clock::now();
+	auto ends = std::chrono::steady_clock::now();
 	_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 	if (from_revision == to_revision) {
 		L(LOG_DEBUG, rgba(116, 100, 77, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT EMPTY {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));

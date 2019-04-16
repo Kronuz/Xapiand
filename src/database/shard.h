@@ -62,7 +62,7 @@ public:
 	};
 
 private:
-	std::chrono::system_clock::time_point reopen_time;
+	std::chrono::steady_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 
 	std::atomic_bool busy;

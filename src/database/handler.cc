@@ -2703,7 +2703,7 @@ Document::hash()
 void
 committer_commit(std::weak_ptr<Shard> weak_shard) {
 	if (auto shard = weak_shard.lock()) {
-		auto start = std::chrono::system_clock::now();
+		auto start = std::chrono::steady_clock::now();
 
 		std::string error;
 
@@ -2716,7 +2716,7 @@ committer_commit(std::weak_ptr<Shard> weak_shard) {
 			error = exc.get_description();
 		}
 
-		auto end = std::chrono::system_clock::now();
+		auto end = std::chrono::steady_clock::now();
 
 		if (error.empty()) {
 			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), string::from_delta(start, end));

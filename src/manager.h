@@ -98,7 +98,7 @@ class XapiandManager : public Worker  {
 	friend Worker;
 
 	XapiandManager();
-	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_ = std::chrono::system_clock::now());
+	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::steady_clock> process_start_ = std::chrono::steady_clock::now());
 	~XapiandManager() noexcept;
 
 	std::pair<struct sockaddr_in, std::string> host_address();
@@ -159,7 +159,7 @@ private:
 	std::atomic<State> _state;
 	std::string _node_name;
 	int _new_cluster;
-	std::chrono::time_point<std::chrono::system_clock> _process_start;
+	std::chrono::time_point<std::chrono::steady_clock> _process_start;
 
 	ev::async signal_sig_async;
 	ev::async setup_node_async;

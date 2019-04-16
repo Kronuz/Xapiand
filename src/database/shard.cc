@@ -214,7 +214,7 @@ DataStorage::open(std::string_view relative_path)
  *
  */
 Shard::Shard(ShardEndpoint& endpoint_, int flags_)
-	: reopen_time(std::chrono::system_clock::now()),
+	: reopen_time(std::chrono::steady_clock::now()),
 	  reopen_revision(0),
 	  busy(false),
 	  _local(false),
@@ -335,7 +335,7 @@ Shard::reopen_writable()
 #endif  // XAPIAND_DATA_STORAGE
 
 	database = std::move(new_database);
-	reopen_time = std::chrono::system_clock::now();
+	reopen_time = std::chrono::steady_clock::now();
 
 #ifdef XAPIAND_DATABASE_WAL
 	// If reopen_revision is not available WAL work as a log for the operations
@@ -469,7 +469,7 @@ Shard::reopen_readable()
 #endif  // XAPIAND_DATA_STORAGE
 
 	database = std::move(new_database);
-	reopen_time = std::chrono::system_clock::now();
+	reopen_time = std::chrono::steady_clock::now();
 	// Ends Readable DB
 	////////////////////////////////////////////////////////////////
 

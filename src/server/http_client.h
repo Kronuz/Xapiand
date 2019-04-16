@@ -24,7 +24,7 @@
 
 #include "config.h"                         // for XAPIAND_DATABASE_WAL
 
-#include <chrono>                           // for std::chrono, std::chrono::system_clock, std::chrono::time_point
+#include <chrono>                           // for std::chrono, std::chrono::steady_clock, std::chrono::time_point
 #include <deque>                            // for std::deque
 #include <memory>                           // for shared_ptr
 #include <mutex>                            // for std::mutex, std::lock_guard
@@ -230,11 +230,11 @@ public:
 
 	std::shared_ptr<Logging> log;
 
-	std::chrono::time_point<std::chrono::system_clock> begins;
-	std::chrono::time_point<std::chrono::system_clock> received;
-	std::chrono::time_point<std::chrono::system_clock> processing;
-	std::chrono::time_point<std::chrono::system_clock> ready;
-	std::chrono::time_point<std::chrono::system_clock> ends;
+	std::chrono::time_point<std::chrono::steady_clock> begins;
+	std::chrono::time_point<std::chrono::steady_clock> received;
+	std::chrono::time_point<std::chrono::steady_clock> processing;
+	std::chrono::time_point<std::chrono::steady_clock> ready;
+	std::chrono::time_point<std::chrono::steady_clock> ends;
 
 	std::shared_ptr<DocIndexer> indexer;
 

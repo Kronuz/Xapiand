@@ -328,6 +328,10 @@ std::string from_bytes(size_t bytes, const char* prefix = "", bool colored = fal
 std::string from_small_time(long double seconds, const char* prefix = "", bool colored = false);
 std::string from_time(long double seconds, const char* prefix = "", bool colored = false);
 std::string from_delta(long double nanoseconds, const char* prefix = "", bool colored = false);
-std::string from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, const char* prefix = "", bool colored = false);
+
+template <typename T>
+std::string from_delta(const std::chrono::time_point<T>& start, const std::chrono::time_point<T>& end, const char* prefix = "", bool colored = false) {
+	return from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), prefix, colored);
+}
 
 } // namespace string

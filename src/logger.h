@@ -24,7 +24,7 @@
 
 #include <algorithm>          // for move
 #include <atomic>             // for atomic_bool, atomic, atomic_int
-#include <chrono>             // for system_clock, time_point, duration, millise...
+#include <chrono>             // for steady_clock, time_point, duration, millise...
 #include <condition_variable> // for condition_variable
 #include <memory>             // for shared_ptr, enable_shared_from_this, unique...
 #include <mutex>              // for condition_variable, mutex
@@ -109,6 +109,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	uint64_t once;
 	int priority;
 	std::atomic_ullong cleaned_at;
+	std::chrono::time_point<std::chrono::system_clock> timestamp;
 
 	const char* unlog_function;
 	const char* unlog_filename;
@@ -122,7 +123,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	Logging& operator=(const Logging&) = delete;
 
 	static Log add(
-		const std::chrono::time_point<std::chrono::system_clock>& wakeup,
+		const std::chrono::time_point<std::chrono::steady_clock>& wakeup,
 		const char* function,
 		const char* filename,
 		int line,
@@ -134,7 +135,8 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 		bool stacked,
 		uint64_t once,
 		int priority,
-		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
+		const std::chrono::time_point<std::chrono::steady_clock>& created_at = std::chrono::steady_clock::now(),
+		const std::chrono::time_point<std::chrono::system_clock>& timestamp = std::chrono::system_clock::now()
 	);
 
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
@@ -158,7 +160,8 @@ public:
 		bool stacked,
 		uint64_t once,
 		int priority,
-		const std::chrono::time_point<std::chrono::system_clock>& created_at = std::chrono::system_clock::now()
+		const std::chrono::time_point<std::chrono::steady_clock>& created_at = std::chrono::steady_clock::now(),
+		const std::chrono::time_point<std::chrono::system_clock>& timestamp = std::chrono::system_clock::now()
 	);
 	~Logging() noexcept;
 
@@ -184,7 +187,7 @@ public:
 	static void reset();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::format_args args);
-	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 	template <typename... Args>
 	void unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {

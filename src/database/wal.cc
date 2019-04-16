@@ -60,7 +60,7 @@
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
 // #undef L_DATABASE_NOW
-// #define L_DATABASE_NOW(name) auto name = std::chrono::system_clock::now()
+// #define L_DATABASE_NOW(name) auto name = std::chrono::steady_clock::now()
 
 
 #define WAL_STORAGE_PATH "wal."
@@ -995,7 +995,7 @@ DatabaseWALWriter::join(std::chrono::milliseconds timeout)
 	}
 	auto single_timeout = timeout / threadpool_workers;
 	for (auto& _thread : _threads) {
-		auto wakeup = std::chrono::system_clock::now() + single_timeout;
+		auto wakeup = std::chrono::steady_clock::now() + single_timeout;
 		if (!_thread.join(wakeup)) {
 			ret = false;
 		}

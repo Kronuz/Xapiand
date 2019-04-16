@@ -23,7 +23,7 @@
 #pragma once
 
 #include <atomic>             // for std::atomic
-#include <chrono>             // for system_clock, time_point, duration, millise...
+#include <chrono>             // for steady_clock, time_point, duration, millise...
 #include <exception>          // for std::exception_ptr, std::current_exception
 #include <string_view>        // for std::string_view
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
@@ -88,18 +88,18 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+Log vlog(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 
 template <typename... Args>
-inline Log log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+inline Log log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
 	return vlog(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
 }
 
 
 template <typename T, typename R, typename... Args>
 inline Log log(bool clears, std::chrono::duration<T, R> timeout, bool async, bool info, bool stacked, uint64_t once, int priority, Args&&... args) {
-	return log(clears, std::chrono::system_clock::now() + timeout, async, info, stacked, once, priority, std::forward<Args>(args)...);
+	return log(clears, std::chrono::steady_clock::now() + timeout, async, info, stacked, once, priority, std::forward<Args>(args)...);
 }
 
 
@@ -180,13 +180,13 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 #define L_INFO(...) LOG(true, 0, LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE(...) LOG(true, 0, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
 #define L_NOTICE_ONCE(...) LOG(true, 1, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
-#define L_NOTICE_ONCE_PER_MINUTE(...) LOG(true, std::chrono::duration_cast<std::chrono::minutes>(std::chrono::system_clock::now().time_since_epoch()).count(), LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
+#define L_NOTICE_ONCE_PER_MINUTE(...) LOG(true, std::chrono::duration_cast<std::chrono::minutes>(std::chrono::steady_clock::now().time_since_epoch()).count(), LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
 #define L_WARNING(...) LOG(true, 0, LOG_WARNING, WARNING_COL, __VA_ARGS__)
 #define L_WARNING_ONCE(...) LOG(true, 1, LOG_WARNING, WARNING_COL, __VA_ARGS__)
-#define L_WARNING_ONCE_PER_MINUTE(...) LOG(true, std::chrono::duration_cast<std::chrono::minutes>(std::chrono::system_clock::now().time_since_epoch()).count(), LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_WARNING_ONCE_PER_MINUTE(...) LOG(true, std::chrono::duration_cast<std::chrono::minutes>(std::chrono::steady_clock::now().time_since_epoch()).count(), LOG_WARNING, WARNING_COL, __VA_ARGS__)
 #define L_ERR(...) LOG(true, 0, LOG_ERR, ERR_COL, __VA_ARGS__)
 #define L_ERR_ONCE(...) LOG(true, 1, LOG_ERR, ERR_COL, __VA_ARGS__)
-#define L_ERR_ONCE_PER_MINUTE(...) LOG(true, std::chrono::duration_cast<std::chrono::minutes>(std::chrono::system_clock::now().time_since_epoch()).count(), LOG_ERR, ERR_COL, __VA_ARGS__)
+#define L_ERR_ONCE_PER_MINUTE(...) LOG(true, std::chrono::duration_cast<std::chrono::minutes>(std::chrono::steady_clock::now().time_since_epoch()).count(), LOG_ERR, ERR_COL, __VA_ARGS__)
 #define L_CRIT(...) LOG(true, 0, LOG_CRIT, CRIT_COL, __VA_ARGS__)
 #define L_ALERT(...) LOG(true, 0, LOG_ALERT, ALERT_COL, __VA_ARGS__)
 #define L_EMERG(...) LOG(true, 0, LOG_EMERG, EMERG_COL, __VA_ARGS__)
@@ -215,7 +215,7 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 #ifdef DEBUG
 #define L_DEBUG(...) L(LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
 #define L_DEBUG_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
-#define L_DEBUG_NOW(name) auto name = std::chrono::system_clock::now()
+#define L_DEBUG_NOW(name) auto name = std::chrono::steady_clock::now()
 #define L_TIMED _L_TIMED
 #define L_TIMED_VAR _L_TIMED_VAR
 #else

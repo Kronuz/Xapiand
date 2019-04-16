@@ -73,7 +73,7 @@ namespace queue {
 			};
 			if (timeout) {
 				if (timeout > 0.0) {
-					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
+					auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
 					if (!_state->_push_cond.wait_until(lk, timeout_tp, push_wait_pred)) {
 						return false;
 					}
@@ -100,7 +100,7 @@ namespace queue {
 			};
 			if (timeout) {
 				if (timeout > 0.0) {
-					auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
+					auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
 					if (!_state->_pop_cond.wait_until(lk, timeout_tp, pop_wait_pred)) {
 						return false;
 					}

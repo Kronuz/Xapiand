@@ -158,7 +158,7 @@ Debouncer<Key, Func, Tuple, thread_policy>::throttle(const Key& key)
 		std::shared_ptr<DebouncerTask<Key, Func, Tuple, thread_policy>> task;
 
 		{
-			auto now = std::chrono::system_clock::now();
+			auto now = std::chrono::steady_clock::now();
 
 			std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
 			auto status = &statuses.at(key);
@@ -201,7 +201,7 @@ Debouncer<Key, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::millis
 	{
 		unsigned long long next_wakeup_time;
 
-		auto now = std::chrono::system_clock::now();
+		auto now = std::chrono::steady_clock::now();
 
 		std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
 		auto it = statuses.find(key);

@@ -135,13 +135,13 @@ public:
 
 inline auto& fsyncher(bool create = true) {
 	static auto fsyncher = create ? make_unique_debouncer<int, ThreadPolicyType::fsynchers>("FS--", "FS{:02}", opts.num_fsynchers, [] (int fd, bool full_fsync) {
-		auto start = std::chrono::system_clock::now();
+		auto start = std::chrono::steady_clock::now();
 
 		int err = full_fsync
 			? io::unchecked_full_fsync(fd)
 			: io::unchecked_fsync(fd);
 
-		auto end = std::chrono::system_clock::now();
+		auto end = std::chrono::steady_clock::now();
 
 		if (err == -1) {
 			if (errno == EBADF || errno == EINVAL) {

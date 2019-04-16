@@ -35,8 +35,6 @@
 #define ALERT_COL rgb(238,82,83)
 #define EMERG_COL rgb(238,82,83)
 
-#define L_INIT auto start = std::chrono::system_clock::now
-
 #ifdef DEBUG
 #define L_OBJ_BEGIN L_DELAYED_1000
 #define L_OBJ_END L_DELAYED_N_UNLOG

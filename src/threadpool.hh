@@ -241,7 +241,7 @@ public:
 		}
 		auto single_timeout = timeout / threadpool_workers;
 		for (auto& _thread : _threads) {
-			auto wakeup = std::chrono::system_clock::now() + single_timeout;
+			auto wakeup = std::chrono::steady_clock::now() + single_timeout;
 			if (!_thread.join(wakeup)) {
 				ret = false;
 			}

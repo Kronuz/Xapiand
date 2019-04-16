@@ -84,7 +84,7 @@ public:
 		};
 		if (timeout_usecs) {
 			if (timeout_usecs > 0) {
-				auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout_usecs / 1e6);
+				auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout_usecs / 1e6);
 				if (!cond.wait_until(lk, timeout_tp, wait_pred)) {
 					return false;
 				}

@@ -42,9 +42,9 @@ struct Clk {
 unsigned long long mul;
 
 Clk() {
-	auto a = std::chrono::system_clock::now();
+	auto a = std::chrono::steady_clock::now();
 	nanosleep(5000000);  // sleep for 5 milliseconds
-	auto b = std::chrono::system_clock::now();
+	auto b = std::chrono::steady_clock::now();
 	auto delta = *reinterpret_cast<unsigned long long*>(&b) - *reinterpret_cast<unsigned long long*>(&a);
 	mul = 1000000 / static_cast<unsigned long long>(std::pow(10, std::floor(std::log10(delta))));
 }
@@ -54,7 +54,7 @@ unsigned long long time_point_to_ullong(std::chrono::time_point<T> t) const {
 	return *reinterpret_cast<unsigned long long*>(&t) * mul;
 }
 
-template <typename T=std::chrono::system_clock>
+template <typename T = std::chrono::steady_clock>
 std::chrono::time_point<T> time_point_from_ullong(unsigned long long t) const {
 	t /= mul;
 	return *reinterpret_cast<std::chrono::time_point<T>*>(&t);
@@ -74,7 +74,7 @@ time_point_to_ullong(std::chrono::time_point<T> t) {
 }
 
 
-template <typename T=std::chrono::system_clock>
+template <typename T = std::chrono::steady_clock>
 inline std::chrono::time_point<T>
 time_point_from_ullong(unsigned long long t) {
 	return Clk::clk().time_point_from_ullong<T>(t);

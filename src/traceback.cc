@@ -653,7 +653,7 @@ callstacks_snapshot()
 
 	for (int t = 10; t >= 0; --t) {
 		bool retry = true;
-		auto start = std::chrono::system_clock::now();
+		auto start = std::chrono::steady_clock::now();
 		auto end = start;
 		while (retry && std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() < 100) {
 			size_t req = pthreads_req.fetch_add(1) + 1;
@@ -721,7 +721,7 @@ callstacks_snapshot()
 
 			sched_yield();
 
-			end = std::chrono::system_clock::now();
+			end = std::chrono::steady_clock::now();
 		}
 
 		if (t == 0) {

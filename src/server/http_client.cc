@@ -214,7 +214,7 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 		.Increment();
 
 	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
-	new_request->begins = std::chrono::system_clock::now();
+	new_request->begins = std::chrono::steady_clock::now();
 
 	L_CONN("New Http Client, {} client(s) of a total of {} connected.", XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
 }
@@ -272,7 +272,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 		// 	headers += "Database: " + endpoints.to_string() + eol;
 		// }
 
-		request.ends = std::chrono::system_clock::now();
+		request.ends = std::chrono::steady_clock::now();
 
 		if (request.human) {
 			headers += string::format("Response-Time: {}", string::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count())) + eol;
@@ -405,7 +405,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		if (received < 0) {
 			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
 			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("HTTP client connection closed unexpectedly after {}: {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), reason);
+				L_NOTICE("HTTP client connection closed unexpectedly after {}: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 				close();
 				return received;
 			}
@@ -415,25 +415,25 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 		auto state = HTTP_PARSER_STATE(&new_request->parser);
 		if (state != s_start_req) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), state, reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), state, reason);
 			close();
 			return received;
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There was still a request in progress: {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There was still a request in progress: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 			close();
 			return received;
 		}
 
 		if (!write_queue.empty()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There is still pending data: {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There is still pending data: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 			close();
 			return received;
 		}
 
 		if (pending_requests()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests: {}", string::from_delta(new_request->begins, std::chrono::system_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 			close();
 			return received;
 		}
@@ -621,7 +621,7 @@ HttpClient::on_message_begin([[maybe_unused]] http_parser* parser)
 	L_HTTP_PROTO("on_message_begin {{state:{}, header_state:{}}}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)));
 
 	waiting = true;
-	new_request->begins = std::chrono::system_clock::now();
+	new_request->begins = std::chrono::steady_clock::now();
 	L_TIMED_VAR(new_request->log, 10s,
 		"Request taking too long...",
 		"Request took too long!");
@@ -943,7 +943,7 @@ HttpClient::prepare()
 		"Response took too long: {}",
 		request.head());
 
-	new_request->received = std::chrono::system_clock::now();
+	new_request->received = std::chrono::steady_clock::now();
 
 	if (new_request->parser.http_major == 0 || (new_request->parser.http_major == 1 && new_request->parser.http_minor == 0)) {
 		new_request->closing = true;
@@ -1420,7 +1420,7 @@ HttpClient::metrics_view(Request& request)
 	auto query_field = query_field_maker(request, 0);
 	resolve_index_endpoints(request, query_field);
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
 	write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size()));
@@ -1435,13 +1435,13 @@ HttpClient::document_exists_view(Request& request)
 	auto query_field = query_field_maker(request, 0);
 	resolve_index_endpoints(request, query_field);
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
 
 	db_handler.get_document(request.path_parser.get_id()).validate();
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK);
 }
@@ -1459,12 +1459,12 @@ HttpClient::delete_document_view(Request& request)
 
 	std::string document_id(request.path_parser.get_id());
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
 	db_handler.delete_document(document_id, query_field.commit);
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
 
@@ -1504,12 +1504,12 @@ HttpClient::write_document_view(Request& request)
 
 	auto document_id = request.path_parser.get_id();
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto indexed = db_handler.index(document_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type);
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	std::string location;
 
@@ -1604,7 +1604,7 @@ HttpClient::update_document_view(Request& request)
 	auto document_id = request.path_parser.get_id();
 	assert(!document_id.empty());
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	std::string operation;
 	DataType indexed;
@@ -1620,7 +1620,7 @@ HttpClient::update_document_view(Request& request)
 		indexed = db_handler.update(document_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type);
 	}
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
 		auto did = indexed.first;
@@ -1679,7 +1679,7 @@ HttpClient::retrieve_metadata_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	MsgPack response_obj;
 
@@ -1711,7 +1711,7 @@ HttpClient::retrieve_metadata_view(Request& request)
 		}
 	}
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	if (!selector.empty()) {
 		response_obj = response_obj.select(selector);
@@ -1745,7 +1745,7 @@ HttpClient::write_metadata_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
@@ -1764,7 +1764,7 @@ HttpClient::write_metadata_view(Request& request)
 
 	db_handler.set_metadata(key, decoded_body.serialise());
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
 		write_http_response(request, HTTP_STATUS_OK, selector.empty() ? decoded_body : decoded_body.select(selector));
@@ -1816,7 +1816,7 @@ HttpClient::info_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
@@ -1837,7 +1837,7 @@ HttpClient::info_view(Request& request)
 		response_obj = db_handler.get_database_info();
 	}
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	if (!selector.empty()) {
 		response_obj = response_obj.select(selector);
@@ -1867,13 +1867,13 @@ HttpClient::database_exists_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_OPEN);
 
 	db_handler.reopen();  // Ensure it can be opened.
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK);
 }
@@ -1988,7 +1988,7 @@ HttpClient::retrieve_database_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	auto obj = retrieve_database(query_field, is_root);
 
@@ -1996,7 +1996,7 @@ HttpClient::retrieve_database_view(Request& request)
 		obj = obj.select(selector);
 	}
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
@@ -2040,7 +2040,7 @@ HttpClient::update_database_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
@@ -2054,7 +2054,7 @@ HttpClient::update_database_view(Request& request)
 
 	db_handler.reopen();  // Ensure touch.
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
 		auto obj = retrieve_database(query_field, is_root);
@@ -2097,13 +2097,13 @@ HttpClient::commit_database_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	resolve_index_endpoints(request, query_field);
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 
 	db_handler.commit();  // Ensure touch.
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK);
 
@@ -2132,13 +2132,13 @@ HttpClient::dump_document_view(Request& request)
 	auto document_id = request.path_parser.get_id();
 	assert(!document_id.empty());
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
 
 	auto obj = db_handler.dump_document(document_id);
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
@@ -2164,7 +2164,7 @@ HttpClient::dump_database_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
 
@@ -2197,7 +2197,7 @@ HttpClient::dump_database_view(Request& request)
 			throw;
 		}
 
-		request.ready = std::chrono::system_clock::now();
+		request.ready = std::chrono::steady_clock::now();
 
 		size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
 		io::close(file_descriptor);
@@ -2208,7 +2208,7 @@ HttpClient::dump_database_view(Request& request)
 
 	auto docs = db_handler.dump_documents();
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, docs);
 
@@ -2245,7 +2245,7 @@ HttpClient::restore_database_view(Request& request)
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
-				request.processing = std::chrono::system_clock::now();
+				request.processing = std::chrono::steady_clock::now();
 
 				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
 			}
@@ -2270,7 +2270,7 @@ HttpClient::restore_database_view(Request& request)
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
-				request.processing = std::chrono::system_clock::now();
+				request.processing = std::chrono::steady_clock::now();
 
 				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
 			}
@@ -2283,7 +2283,7 @@ HttpClient::restore_database_view(Request& request)
 			request.indexer->wait();
 		}
 
-		request.ready = std::chrono::system_clock::now();
+		request.ready = std::chrono::steady_clock::now();
 		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 
 		MsgPack response_obj = {
@@ -2325,7 +2325,7 @@ HttpClient::wal_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler{endpoints};
 
@@ -2333,7 +2333,7 @@ HttpClient::wal_view(Request& request)
 	bool unserialised = request.query_parser.next("raw") == -1;
 	auto obj = db_handler.repr_wal(0, std::numeric_limits<Xapian::rev>::max(), unserialised);
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
@@ -2360,13 +2360,13 @@ HttpClient::check_database_view(Request& request)
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler{endpoints};
 
 	auto status = db_handler.check();
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, status);
 
@@ -2396,7 +2396,7 @@ HttpClient::retrieve_document_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	// Open database
 	DatabaseHandler db_handler;
@@ -2457,7 +2457,7 @@ HttpClient::retrieve_document_view(Request& request)
 			obj = obj.select(selector);
 		}
 
-		request.ready = std::chrono::system_clock::now();
+		request.ready = std::chrono::steady_clock::now();
 
 		write_http_response(request, HTTP_STATUS_OK, obj);
 	} else {
@@ -2473,7 +2473,7 @@ HttpClient::retrieve_document_view(Request& request)
 		}
 #endif
 
-		request.ready = std::chrono::system_clock::now();
+		request.ready = std::chrono::steady_clock::now();
 
 		request.response.ct_type = ct_type;
 		if (request.type_encoding != Encoding::none) {
@@ -2517,7 +2517,7 @@ HttpClient::search_view(Request& request)
 	MSet mset{};
 	MsgPack aggregations;
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	// Open database
 	DatabaseHandler db_handler;
@@ -2613,7 +2613,7 @@ HttpClient::search_view(Request& request)
 		hits.append(hit_obj);
 	}
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 	L_TIME("Searching took {}", string::from_delta(took));
 
@@ -2655,7 +2655,7 @@ HttpClient::count_view(Request& request)
 
 	MSet mset{};
 
-	request.processing = std::chrono::system_clock::now();
+	request.processing = std::chrono::steady_clock::now();
 
 	// Open database
 	DatabaseHandler db_handler;
@@ -2683,7 +2683,7 @@ HttpClient::count_view(Request& request)
 	MsgPack obj;
 	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
 
-	request.ready = std::chrono::system_clock::now();
+	request.ready = std::chrono::steady_clock::now();
 
 	write_http_response(request, HTTP_STATUS_OK, obj);
 }
@@ -3155,7 +3155,7 @@ HttpClient::end_http_request(Request& request)
 {
 	L_CALL("HttpClient::end_http_request()");
 
-	request.ends = std::chrono::system_clock::now();
+	request.ends = std::chrono::steady_clock::now();
 	request.atom_ending = true;
 	request.atom_ended = true;
 	waiting = false;
@@ -3592,7 +3592,7 @@ Request::Request(HttpClient* client)
 	  indented{-1},
 	  expect_100{false},
 	  closing{false},
-	  begins{std::chrono::system_clock::now()}
+	  begins{std::chrono::steady_clock::now()}
 {
 	parser.data = client;
 	http_parser_init(&parser, HTTP_REQUEST);

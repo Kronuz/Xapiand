@@ -125,7 +125,7 @@ public:
 		}
 	}
 
-	bool join(const std::chrono::time_point<std::chrono::system_clock>& wakeup) {
+	bool join(const std::chrono::time_point<std::chrono::steady_clock>& wakeup) {
 		if (!_joined && _running) {
 			std::future_status status;
 			do {
@@ -146,6 +146,6 @@ public:
 	}
 
 	bool join(std::chrono::milliseconds timeout = 60s) {
-		return join(std::chrono::system_clock::now() + timeout);
+		return join(std::chrono::steady_clock::now() + timeout);
 	}
 };

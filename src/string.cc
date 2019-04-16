@@ -149,8 +149,3 @@ static inline std::string _from_delta(long double nanoseconds, const char* prefi
 std::string string::from_delta(long double nanoseconds, const char* prefix, bool colored) {
 	return _from_delta(nanoseconds, prefix, colored);
 }
-
-
-std::string string::from_delta(const std::chrono::time_point<std::chrono::system_clock>& start, const std::chrono::time_point<std::chrono::system_clock>& end, const char* prefix, bool colored) {
-	return _from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), prefix, colored);
-}

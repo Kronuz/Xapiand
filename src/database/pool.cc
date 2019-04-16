@@ -128,7 +128,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 	finished(false),
 	locked(false),
 	local_revision(0),
-	renew_time(std::chrono::system_clock::now()),
+	renew_time(std::chrono::steady_clock::now()),
 	readables_available(0)
 {
 }
@@ -141,7 +141,7 @@ ShardEndpoint::~ShardEndpoint()
 
 
 std::shared_ptr<Shard>&
-ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
+ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("ShardEndpoint::_writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
@@ -187,7 +187,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 
 
 std::shared_ptr<Shard>&
-ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::system_clock>& now, std::unique_lock<std::mutex>& lk)
+ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("ShardEndpoint::_readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
@@ -252,7 +252,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 {
 	L_CALL("ShardEndpoint::checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
-	auto now = std::chrono::system_clock::now();
+	auto now = std::chrono::steady_clock::now();
 
 	std::unique_lock<std::mutex> lk(mtx);
 
@@ -264,7 +264,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 		try {
 			// Reopening of old/outdated (readable) databases:
 			bool reopen = false;
-			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - shard->reopen_time).count();
+			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - shard->reopen_time).count();
 			if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
 				L_DATABASE("Shard is just too old, reopen");
 				reopen = true;
@@ -564,7 +564,7 @@ DatabasePool::lock(const std::shared_ptr<Shard>& shard, double timeout)
 		return is_ready;
 	};
 	if (timeout > 0.0) {
-		auto timeout_tp = std::chrono::system_clock::now() + std::chrono::duration<double>(timeout);
+		auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
 		if (!shard->endpoint.lockable_cond.wait_until(lk, timeout_tp, is_ready_to_lock)) {
 			throw Xapian::DatabaseNotAvailableError("Cannot grant exclusive lock shard");
 		}
@@ -658,7 +658,7 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 	// Find or spawn the shard endpoint
 	auto it = find_and([&](const std::unique_ptr<ShardEndpoint>& database_endpoint) {
 		assert(database_endpoint);
-		database_endpoint->renew_time = std::chrono::system_clock::now();
+		database_endpoint->renew_time = std::chrono::steady_clock::now();
 		return lru::GetAction::renew;
 	}, endpoint);
 	if (it == end()) {
@@ -800,7 +800,7 @@ DatabasePool::finish()
 
 
 bool
-DatabasePool::join(const std::chrono::time_point<std::chrono::system_clock>& wakeup)
+DatabasePool::join(const std::chrono::time_point<std::chrono::steady_clock>& wakeup)
 {
 	L_CALL("DatabasePool::join(<timeout>)");
 
@@ -826,7 +826,7 @@ DatabasePool::cleanup(bool immediate)
 {
 	L_CALL("DatabasePool::cleanup()");
 
-	auto now = std::chrono::system_clock::now();
+	auto now = std::chrono::steady_clock::now();
 
 	std::unique_lock<std::mutex> lk(mtx);
 

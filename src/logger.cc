@@ -148,7 +148,7 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::format_args
 
 
 Log
-vlog(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+vlog(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, args);
 }
@@ -303,7 +303,8 @@ Logging::Logging(
 	bool stacked,
 	uint64_t once,
 	int priority,
-	const std::chrono::time_point<std::chrono::system_clock>& created_at
+	const std::chrono::time_point<std::chrono::steady_clock>& created_at,
+	const std::chrono::time_point<std::chrono::system_clock>& timestamp
 ) :
 	ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>(created_at),
 	thread_id(std::this_thread::get_id()),
@@ -319,7 +320,8 @@ Logging::Logging(
 	stacked(stacked),
 	once(once),
 	priority(priority),
-	cleaned_at(0)
+	cleaned_at(0),
+	timestamp(timestamp)
 {
 	if (stacked) {
 		std::lock_guard<std::mutex> lk(stack_mtx);
@@ -366,7 +368,7 @@ Logging::clean()
 		}
 	}
 
-	auto now = std::chrono::system_clock::now();
+	auto now = std::chrono::steady_clock::now();
 
 	unsigned long long c = 0;
 	if (cleaned_at.compare_exchange_strong(c, time_point_to_ullong(now))) {
@@ -390,7 +392,8 @@ Logging::clean()
 				stacked,
 				once,
 				unlog_priority,
-				time_point_from_ullong(created_at)
+				time_point_from_ullong(created_at),
+				timestamp
 			);
 		}
 	}
@@ -518,26 +521,26 @@ Logging::operator()()
 	std::string msg;
 
 	if (info && priority <= LOG_DEBUG) {
-		auto timestamp = Datetime::timestamp(time_point_from_ullong(created_at));
+		auto seconds = Datetime::timestamp(timestamp);
 
 		if (opts.log_timeless) {
 			// No timestamp
 		} else if (opts.log_epoch) {
-			auto epoch = static_cast<int>(timestamp);
+			auto epoch = static_cast<int>(seconds);
 			msg.append(std::string(rgb(94, 94, 94)));
 			msg.append(string::format("{:010}", epoch));
 			if (opts.log_microseconds) {
 				msg.append(std::string(rgb(60, 60, 60)));
-				msg.append(string::format("{:.6}", timestamp - epoch).erase(0, 1));
+				msg.append(string::format("{:.6}", seconds - epoch).erase(0, 1));
 			} else if (opts.log_milliseconds) {
 				msg.append(std::string(rgb(60, 60, 60)));
-				msg.append(string::format("{:.3}", timestamp - epoch).erase(0, 1));
+				msg.append(string::format("{:.3}", seconds - epoch).erase(0, 1));
 			} else if (opts.log_plainseconds) {
 					// Use plain seconds only
 			}
 			msg.push_back(' ');
 		} else {
-			auto tm = Datetime::to_tm_t(timestamp);
+			auto tm = Datetime::to_tm_t(seconds);
 			if (opts.log_iso8601) {
 				msg.append(std::string(rgb(94, 94, 94)));
 				msg.append(std::string(string::format("{:04}", tm.year)));
@@ -711,7 +714,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
@@ -729,7 +732,7 @@ Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::system_c
 
 Log
 Logging::add(
-	const std::chrono::time_point<std::chrono::system_clock>& wakeup,
+	const std::chrono::time_point<std::chrono::steady_clock>& wakeup,
 	const char* function,
 	const char* filename,
 	int line,
@@ -741,7 +744,8 @@ Logging::add(
 	bool stacked,
 	uint64_t once,
 	int priority,
-	const std::chrono::time_point<std::chrono::system_clock>& created_at
+	const std::chrono::time_point<std::chrono::steady_clock>& created_at,
+	const std::chrono::time_point<std::chrono::system_clock>& timestamp
 ) {
 	auto l_ptr = std::make_shared<Logging>(
 		function,
@@ -755,10 +759,11 @@ Logging::add(
 		stacked,
 		once,
 		priority,
-		created_at
+		created_at,
+		timestamp
 	);
 
-	if (async || wakeup > std::chrono::system_clock::now()) {
+	if (async || wakeup > std::chrono::steady_clock::now()) {
 		// asynchronous logs
 		scheduler().add(l_ptr, wakeup);
 	} else {

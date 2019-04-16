@@ -26,7 +26,7 @@
 #include <arpa/inet.h>                           // for inet_aton
 #include <cassert>                               // for assert
 #include <cctype>                                // for isspace
-#include <chrono>                                // for std::chrono, std::chrono::system_clock
+#include <chrono>                                // for std::chrono, std::chrono::steady_clock
 #include <cstdlib>                               // for size_t, exit
 #include <errno.h>                               // for errno
 #include <exception>                             // for exception
@@ -169,13 +169,13 @@ XapiandManager::XapiandManager()
 	  _state(State::RESET),
 	  _node_name(opts.node_name),
 	  _new_cluster(0),
-	  _process_start(std::chrono::system_clock::now()),
+	  _process_start(std::chrono::steady_clock::now()),
 	  atom_sig(0)
 {
 }
 
 
-XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::system_clock> process_start_)
+XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::steady_clock> process_start_)
 	: Worker(std::weak_ptr<Worker>{}, ev_loop_, ev_flags_),
 	  _total_clients(0),
 	  _http_clients(0),
@@ -1862,7 +1862,7 @@ XapiandManager::server_metrics_impl()
 
 	auto& metrics = Metrics::metrics();
 
-	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - _process_start).count());
+	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - _process_start).count());
 
 	// http client tasks:
 	metrics.xapiand_http_clients_running.Set(_http_client_pool->running_size());

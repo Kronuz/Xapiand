@@ -33,6 +33,7 @@
 
 #include "exception.h"     // for ClientError
 
+
 constexpr int DATETIME_EPOCH            = 1970;
 constexpr int DATETIME_START_YEAR       = 1900;
 constexpr int DATETIME_EPOCH_ORD        = 719163;  /* toordinal(DATETIME_EPOCH, 1, 1) */
