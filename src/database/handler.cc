@@ -746,25 +746,6 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 }
 
 
-void
-DatabaseHandler::delete_schema()
-{
-	L_CALL("DatabaseHandler::delete_schema()");
-
-	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
-		schema = get_schema();
-		auto old_schema = schema->get_const_schema();
-		L_INDEX("Schema to delete: {}", repr(schema->to_string()));
-		if (XapiandManager::schemas()->drop(this, old_schema)) {
-			break;
-		}
-		if (t == 0) {
-			THROW(Error, "Cannot delete schema, too many retries");
-		}
-	}
-}
-
-
 Xapian::RSet
 DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 {

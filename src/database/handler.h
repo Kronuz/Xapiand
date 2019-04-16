@@ -220,7 +220,6 @@ public:
 	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
-	void delete_schema();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_all_mset(const std::string& term = "", Xapian::docid initial = 0, size_t limit = -1);
