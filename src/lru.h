@@ -24,6 +24,7 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <list>
@@ -48,24 +49,31 @@ enum class GetAction : uint8_t {
 };
 
 
+constexpr const auto AGE_MAX = std::chrono::hours(8000000);
+
+
 template <typename Key, typename T>
 class LRU {
 protected:
 	using list_t = std::list<std::pair<Key, T>>;
-	using map_t = std::unordered_map<Key, typename list_t::iterator>;
+	using map_t = std::unordered_map<Key, std::pair<std::chrono::time_point<std::chrono::steady_clock>, typename list_t::iterator>>;
+
 
 	list_t _items_list;
 	map_t _items_map;
 	size_t _max_size;
+	std::chrono::milliseconds _max_age;
 
 public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
 
-	explicit LRU(size_t max_size = SIZE_MAX)
-		: _max_size(max_size)
+	explicit LRU(size_t max_size = SIZE_MAX, std::chrono::milliseconds max_age = AGE_MAX) :
+		_max_size(max_size),
+		_max_age(max_age)
 	{
 		assert(_max_size != 0);
+		assert(_max_age != std::chrono::milliseconds(0));
 	}
 
 	iterator begin() noexcept {
@@ -95,10 +103,14 @@ public:
 	template <typename K>
 	iterator find(const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
-		auto it = m_it->second;
+		auto it = m_it->second.second;
 		_items_list.splice(_items_list.begin(), _items_list, it);
 		return it;
 	}
@@ -106,24 +118,33 @@ public:
 	template <typename K>
 	const_iterator find(const K& key) const {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.cend()) {
 			return _items_list.cend();
 		}
-		return m_it->second;
+		return m_it->second.second;
+	}
+
+	void erase(iterator it) {
+		_items_map.erase(it->first);
+		_items_list.erase(it);
 	}
 
 	void erase(const_iterator it) {
 		_items_map.erase(it->first);
-		_items_list.erase(it->second);
+		_items_list.erase(it);
 	}
 
 	template <typename K>
 	size_t erase(const K& key) {
 		auto m_it = _items_map.find(key);
 		if (m_it != _items_map.end()) {
-			_items_list.erase(m_it->second);
+			bool ret = m_it->second.first > std::chrono::steady_clock::now() ? 0 : 1;
+			_items_list.erase(m_it->second.second);
 			_items_map.erase(m_it);
-			return 1;
+			return ret;
 		}
 		return 0;
 	}
@@ -152,7 +173,7 @@ public:
 		trim();
 		_items_list.push_front(std::forward<P>(p));
 		auto it = _items_list.begin();
-		bool created = _items_map.emplace(it->first, it).second;
+		bool created = _items_map.emplace(it->first, std::make_pair(std::chrono::steady_clock::now() + _max_age, it)).second;
 		return std::make_pair(it, created);
 	}
 
@@ -163,7 +184,7 @@ public:
 		_items_list.push_back(std::forward<P>(p));
 		auto last = _items_list.rbegin();
 		auto it = (++last).base();
-		bool created = _items_map.emplace(it->first, it).second;
+		bool created = _items_map.emplace(it->first, std::make_pair(std::chrono::steady_clock::now() + _max_age, it)).second;
 		return std::make_pair(it, created);
 	}
 
@@ -189,55 +210,78 @@ public:
 	template <typename K>
 	T& at(const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at(m_it->second);
+		return at(m_it->second.second);
 	}
 
 	template <typename K>
 	const T& at(const K& key) const {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at(m_it->second);
+		return at(m_it->second.second);
 	}
 
 	template <typename K>
 	T& get(const K& key, T& default_) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return emplace(key, default_).first->second;
 		}
-		return at(m_it->second);
+		return at(m_it->second.second);
 	}
 
 	template <typename K, typename... Args>
 	T& get(const K& key, Args&&... args) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return emplace(key, T(std::forward<Args>(args)...)).first->second;
 		}
-		return at(m_it->second);
+		return at(m_it->second.second);
 	}
 
 	template <typename K>
 	T& get_back(const K& key, T& default_) {
 		auto m_it = _items_map.find(key);
-		if (m_it == _items_map.end()) {
-			return emplace_back(key, default_).first->second;
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
 		}
-		return at(m_it->second);
+		if (m_it == _items_map.end()) {
+			return emplace_back(key, default_).first->second.second;
+		}
+		return at(m_it->second.second);
 	}
 
 	template <typename K, typename... Args>
 	T& get_back(const K& key, Args&&... args) {
 		auto m_it = _items_map.find(key);
-		if (m_it == _items_map.end()) {
-			return emplace_back(key, T(std::forward<Args>(args)...)).first->second;
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
 		}
-		return at(m_it->second);
+		if (m_it == _items_map.end()) {
+			return emplace_back(key, T(std::forward<Args>(args)...)).first->second.second;
+		}
+		return at(m_it->second.second);
 	}
 
 	template <typename K>
@@ -247,7 +291,11 @@ public:
 
 	template <typename K>
 	bool exists(const K& key) const {
-		return _items_map.find(key) != _items_map.end();
+		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			m_it = _items_map.end();
+		}
+		return m_it != _items_map.end();
 	}
 
 	void clear() noexcept {
@@ -300,7 +348,7 @@ public:
 		trim(on_drop, _items_map.size() + 1);
 		_items_list.push_front(std::forward<P>(p));
 		auto it = _items_list.begin();
-		bool created = _items_map.emplace(it->first, it).second;
+		bool created = _items_map.emplace(it->first, std::make_pair(std::chrono::steady_clock::now() + _max_age, it)).second;
 		return std::make_pair(it, created);
 	}
 
@@ -311,7 +359,7 @@ public:
 		_items_list.push_back(std::forward<P>(p));
 		auto last = _items_list.rbegin();
 		auto it = (++last).base();
-		bool created = _items_map.emplace(it->first, it).second;
+		bool created = _items_map.emplace(it->first, std::make_pair(std::chrono::steady_clock::now() + _max_age, it)).second;
 		return std::make_pair(it, created);
 	}
 
@@ -328,10 +376,14 @@ public:
 	template <typename OnGet, typename K>
 	iterator find_and(const OnGet& on_get, const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
-		auto it = m_it->second;
+		auto it = m_it->second.second;
 		T& ref = it->second;
 		switch (on_get(ref)) {
 			case GetAction::leave:
@@ -346,30 +398,39 @@ public:
 	template <typename K>
 	iterator find_and_leave(const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
-		auto it = m_it->second;
-		return it;
+		return m_it->second.second;
 	}
 
 	template <typename K>
 	const_iterator find_and_leave(const K& key) const {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
-		auto it = m_it->second;
-		return it;
+		return m_it->second.second;
 	}
 
 	template <typename K>
 	iterator find_and_renew(const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			return _items_list.end();
 		}
-		auto it = m_it->second;
+		auto it = m_it->second.second;
 		_items_list.splice(_items_list.begin(), _items_list, it);
 		return it;
 	}
@@ -406,42 +467,61 @@ public:
 	template <typename K, typename OnGet>
 	T& at_and(const OnGet& on_get, const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at_and(on_get, m_it->second);
+		return at_and(on_get, m_it->second.second);
 	}
 
 	template <typename K>
 	T& at_and_leave(const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at_and_leave(m_it->second);
+		return at_and_leave(m_it->second.second);
 	}
 
 	template <typename K>
 	const T& at_and_leave(const K& key) const {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at_and_leave(m_it->second);
+		return at_and_leave(m_it->second.second);
 	}
 
 	template <typename K>
 	T& at_and_renew(const K& key) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			throw std::out_of_range("There is no such key in cache");
 		}
-		return at_and_renew(m_it->second);
+		return at_and_renew(m_it->second.second);
 	}
 
 	template <typename OnGet, typename OnDrop, typename K>
 	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, T& default_) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_and(on_drop, key, default_).first->second;
 			switch (on_get(ref)) {
@@ -452,12 +532,16 @@ public:
 			}
 			return ref;
 		}
-		return at_and(on_get, m_it->second);
+		return at_and(on_get, m_it->second.second);
 	}
 
 	template <typename OnGet, typename OnDrop, typename K, typename... Args>
 	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, Args&&... args) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
 			switch (on_get(ref)) {
@@ -468,12 +552,16 @@ public:
 			}
 			return ref;
 		}
-		return at_and(on_get, m_it->second);
+		return at_and(on_get, m_it->second.second);
 	}
 
 	template <typename OnGet, typename OnDrop, typename K>
 	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, T& default_) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_back_and(on_drop, key, default_).first->second;
 			switch (on_get(ref)) {
@@ -484,12 +572,16 @@ public:
 			}
 			return ref;
 		}
-		return at_and(on_get, m_it->second);
+		return at_and(on_get, m_it->second.second);
 	}
 
 	template <typename OnGet, typename OnDrop, typename K, typename... Args>
 	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, Args&&... args) {
 		auto m_it = _items_map.find(key);
+		if (m_it != _items_map.end() && _max_age != AGE_MAX && m_it->second.first > std::chrono::steady_clock::now()) {
+			erase(m_it->second.second);
+			m_it = _items_map.end();
+		}
 		if (m_it == _items_map.end()) {
 			T& ref = emplace_back_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
 			switch (on_get(ref)) {
@@ -500,7 +592,7 @@ public:
 			}
 			return ref;
 		}
-		return at_and(on_get, m_it->second);
+		return at_and(on_get, m_it->second.second);
 	}
 };
 
