@@ -62,7 +62,7 @@ public:
 	using iterator = typename list_t::iterator;
 	using const_iterator = typename list_t::const_iterator;
 
-	explicit LRU(size_t max_size=SIZE_MAX)
+	explicit LRU(size_t max_size = SIZE_MAX)
 		: _max_size(max_size)
 	{
 		assert(_max_size != 0);
@@ -128,17 +128,22 @@ public:
 		return 0;
 	}
 
-	void trim() {
-		if (_max_size != SIZE_MAX) {
-			auto size = _items_map.size() + 1;
-			auto last = _items_list.rbegin();
-			for (size_t i = _items_map.size(); i != 0 && last != _items_list.rend() && size > _max_size; --i) {
-				auto it = (++last).base();
+	void trim(size_t size) {
+		auto last = --_items_list.end();
+		for (size_t i = _items_list.size(); i != 0; --i) {
+			auto it = last--;
+			if (size > _max_size) {
 				--size;
 				_items_map.erase(it->first);
 				_items_list.erase(it);
+			} else {
+				return;
 			}
 		}
+	}
+
+	void trim() {
+		trim(_items_map.size());
 	}
 
 	template <typename P>
@@ -264,24 +269,22 @@ public:
 
 	template <typename OnDrop>
 	void trim(const OnDrop& on_drop, size_t size) {
-		if (_max_size != SIZE_MAX) {
-			auto last = --_items_list.end();
-			for (size_t i = _items_list.size(); i != 0; --i) {
-				auto it = last--;
-				switch (on_drop(it->second, size, _max_size)) {
-					case DropAction::evict:
-						--size;
-						_items_map.erase(it->first);
-						_items_list.erase(it);
-						break;
-					case DropAction::renew:
-						_items_list.splice(_items_list.begin(), _items_list, it);
-						break;
-					case DropAction::leave:
-						break;
-					case DropAction::stop:
-						return;
-				}
+		auto last = --_items_list.end();
+		for (size_t i = _items_list.size(); i != 0; --i) {
+			auto it = last--;
+			switch (on_drop(it->second, size, _max_size)) {
+				case DropAction::evict:
+					--size;
+					_items_map.erase(it->first);
+					_items_list.erase(it);
+					break;
+				case DropAction::renew:
+					_items_list.splice(_items_list.begin(), _items_list, it);
+					break;
+				case DropAction::leave:
+					break;
+				case DropAction::stop:
+					return;
 			}
 		}
 	}
