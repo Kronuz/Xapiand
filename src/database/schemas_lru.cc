@@ -23,6 +23,7 @@
 #include "database/schemas_lru.h"
 
 #include <cassert>                                // for assert
+#include <chrono>                                 // for std::chrono_literals
 
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/utils.h"                       // for unsharded_path
@@ -43,6 +44,8 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_SCHEMA
 // #define L_SCHEMA L_STACKED_GREY
+
+using namespace std::chrono_literals;
 
 
 static const std::string reserved_schema(RESERVED_SCHEMA);
@@ -167,8 +170,8 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 
 
 SchemasLRU::SchemasLRU(ssize_t max_size) :
-	local_schemas(max_size),
-	foreign_schemas(max_size)
+	local_schemas(max_size, 10s),
+	foreign_schemas(max_size, 10s)
 {
 }
 
