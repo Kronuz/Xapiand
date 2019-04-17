@@ -637,3 +637,58 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	}
 	return true;
 }
+
+
+std::string
+SchemasLRU::__repr__() const
+{
+	size_t local_schemas_size;
+	{
+		std::lock_guard<std::mutex> lk(local_mtx);
+		local_schemas_size = local_schemas.size();
+	}
+
+	size_t foreign_schemas_size;
+	{
+		std::lock_guard<std::mutex> lk(foreign_mtx);
+		foreign_schemas_size = foreign_schemas.size();
+	}
+
+	return string::format(STEEL_BLUE + "<SchemasLRU {{local:{}, foreign:{}}}>",
+		local_schemas_size, foreign_schemas_size);
+}
+
+
+std::string
+SchemasLRU::dump_schemas(int level) const
+{
+	std::string indent;
+	for (int l = 0; l < level; ++l) {
+		indent += "    ";
+	}
+
+	std::string ret;
+	ret += indent;
+	ret += __repr__();
+	ret.push_back('\n');
+
+	{
+		std::lock_guard<std::mutex> lk(local_mtx);
+		for (auto& schema : local_schemas) {
+			ret += indent + indent;
+			ret += string::format("<LocalSchema {}>", repr(schema.first));
+			ret.push_back('\n');
+		}
+	}
+
+	{
+		std::lock_guard<std::mutex> lk(foreign_mtx);
+		for (auto& schema : foreign_schemas) {
+			ret += indent + indent;
+			ret += string::format("<ForeignSchema {}>", repr(schema.first));
+			ret.push_back('\n');
+		}
+	}
+
+	return ret;
+}

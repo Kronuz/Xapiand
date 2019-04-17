@@ -380,9 +380,9 @@ XapiandManager::signal_sig_impl()
 		case SIGINFO:
 #endif
 #ifdef XAPIAND_CLUSTERING
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), _schemas->dump_schemas(), Node::dump_nodes());
 #else
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), _schemas->dump_schemas());
 #endif
 			break;
 	}
