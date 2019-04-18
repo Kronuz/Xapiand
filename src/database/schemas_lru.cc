@@ -85,7 +85,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
 	}
 	if (!context->insert(path).second) {
-		if (path == ".xapiand/index") {
+		if (path == ".xapiand/indices") {
 			// Return default .xapiand/index (chicken and egg problem)
 			return {
 				{ RESERVED_RECURSE, false },
@@ -146,7 +146,7 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 		THROW(ClientError, "Maximum recursion reached: {}", endpoint.to_string());
 	}
 	if (!context->insert(path).second) {
-		if (path == ".xapiand/index") {
+		if (path == ".xapiand/indices") {
 			// Ignore .xapiand/index (chicken and egg problem)
 			return;
 		}
@@ -262,11 +262,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
-			} else if (local_schema_path != ".xapiand") {
+			} else if (local_schema_path != ".xapiand/nodes") {
 				// Implement foreign schemas in .xapiand/index by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_ENDPOINT, string::format(".xapiand/index/{}", string::replace(local_schema_path, "/", "%2F")) },
+					{ RESERVED_ENDPOINT, string::format(".xapiand/indices/{}", string::replace(local_schema_path, "/", "%2F")) },
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());

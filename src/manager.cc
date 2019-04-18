@@ -530,7 +530,7 @@ XapiandManager::init()
 	// If restoring documents, fill all the nodes from the cluster database:
 	if (snooping) {
 		try {
-			DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand"}});
+			DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand/nodes"}});
 			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 				auto mset = db_handler.get_all_mset();
 				const auto m_e = mset.end();
@@ -661,7 +661,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{".xapiand", leader_node};
+	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
 	bool found = false;
 	try {
 		if (is_leader) {
@@ -730,7 +730,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (!is_leader) {
 			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
-			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand"}, true});
+			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
 		} else {
 			load_nodes();
 			set_cluster_database_ready_impl();
@@ -739,7 +739,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Request updates from indexes databases
 		for (auto& node : Node::nodes()) {
 			if (node->idx && !node->is_local()) {
-				auto index = string::format(".xapiand/index/.__{}", node->idx);
+				auto index = string::format(".xapiand/indices/.__{}", node->idx);
 				Endpoint endpoint{index};
 				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
@@ -1357,7 +1357,7 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	Endpoint cluster_endpoint{".xapiand"};
+	Endpoint cluster_endpoint{".xapiand/nodes"};
 	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_all_mset();
 	const auto m_e = mset.end();
@@ -1428,7 +1428,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 	auto idx = replicas.front();  // The very first node is the shard master
 	auto node = Node::get_node(idx);
 	if (node && node->is_active()) {
-		Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
+		Endpoint endpoint{string::format(".xapiand/indices/.__{}", node->idx), node};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		db_handler.update(normalized_path, 0, false, {
 			{ ID_FIELD_NAME, {
@@ -1468,7 +1468,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			auto& main_master_name = replicas.front();  // The very first node is the main master
 			auto node = Node::get_node(main_master_name);
 			if (node && node->is_active()) {
-				Endpoint endpoint{string::format(".xapiand/index/.__{}", node->idx), node};
+				Endpoint endpoint{string::format(".xapiand/indices/.__{}", node->idx), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				db_handler.update(normalized_path, 0, false, {
 					{ ID_FIELD_NAME, {
@@ -1549,7 +1549,7 @@ load_shards(const std::string& normalized_path)
 	Endpoints index_endpoints;
 	for (auto& node : nodes) {
 		if (node->idx) {
-			index_endpoints.add(Endpoint{string::format(".xapiand/index/.__{}", node->idx)});
+			index_endpoints.add(Endpoint{string::format(".xapiand/indices/.__{}", node->idx)});
 		}
 	}
 
@@ -1642,7 +1642,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		if (normalized_path == ".xapiand") {
+		if (normalized_path == ".xapiand/nodes") {
 			// Cluster database is always in the master
 			std::vector<std::shared_ptr<const Node>> node_replicas;
 			node_replicas.push_back(Node::leader_node());
@@ -1651,7 +1651,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			return nodes;
 		}
 
-		if (normalized_path == ".xapiand/index") {
+		if (normalized_path == ".xapiand/indices") {
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
 					std::vector<std::shared_ptr<const Node>> node_replicas;
@@ -1663,7 +1663,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			return nodes;
 		}
 
-		if (string::startswith(normalized_path, ".xapiand/index/.__")) {
+		if (string::startswith(normalized_path, ".xapiand/indices/.__")) {
 			// Index databases are always in their specified node
 			std::vector<std::shared_ptr<const Node>> node_replicas;
 			int errno_save;
@@ -1825,8 +1825,8 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 	}
 
 	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, settings);
-	int n_shards = endpoint.path == ".xapiand/index"
-		? 0  // unknown number of shards for .xapiand/index, always use .__ notation
+	int n_shards = endpoint.path == ".xapiand/indices"
+		? 0  // unknown number of shards for .xapiand/indices, always use .__ notation
 		: nodes.size();
 	size_t shard_num = 0;
 	for (const auto& shard_nodes : nodes) {

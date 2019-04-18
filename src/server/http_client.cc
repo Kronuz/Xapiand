@@ -1311,7 +1311,7 @@ HttpClient::node_obj()
 
 	endpoints.clear();
 	auto leader_node = Node::leader_node();
-	endpoints.add(Endpoint{".xapiand", leader_node});
+	endpoints.add(Endpoint{".xapiand/nodes", leader_node});
 
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
 
@@ -1909,10 +1909,10 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 		}
 	}
 
-	// Get index settings (from .xapiand/index)
+	// Get index settings (from .xapiand/indices)
 	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path));
 	endpoints = XapiandManager::resolve_index_endpoints(
-		Endpoint{".xapiand/index"},
+		Endpoint{".xapiand/indices"},
 		false,
 		query_field.primary);
 
@@ -2854,7 +2854,7 @@ HttpClient::expand_paths(Request& request)
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					index_endpoints.add(Endpoint{string::format(".xapiand/{}", node->lower_name())});
+					index_endpoints.add(Endpoint{string::format(".xapiand/nodes/{}", node->lower_name())});
 				}
 			}
 			DatabaseHandler db_handler;
