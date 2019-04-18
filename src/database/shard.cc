@@ -1735,5 +1735,5 @@ Shard::__repr__() const
 		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "",
 		is_modified() ? " " + LIGHT_STEEL_BLUE + "(modified)" + STEEL_BLUE : "",
 		is_incomplete() ? " " + DARK_STEEL_BLUE + "(incomplete)" + STEEL_BLUE : "",
-		is_busy() ? " " + RED + "(busy)" + STEEL_BLUE : "");
+		is_busy() ? " " + DARK_ORANGE + "(busy)" + STEEL_BLUE : "");
 }

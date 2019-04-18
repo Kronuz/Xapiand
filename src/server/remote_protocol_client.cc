@@ -1611,7 +1611,7 @@ RemoteProtocolClient::__repr__() const
 		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "",
 		is_idle() ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : "",
 		is_waiting() ? " " + LIGHT_STEEL_BLUE + "(waiting)" + STEEL_BLUE : "",
-		is_running() ? " " + RED + "(running)" + STEEL_BLUE : "",
+		is_running() ? " " + DARK_ORANGE + "(running)" + STEEL_BLUE : "",
 		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
 		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "");
 }
