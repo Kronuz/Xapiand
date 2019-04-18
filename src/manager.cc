@@ -65,7 +65,7 @@
 #include "io.hh"                                 // for io::*
 #include "length.h"                              // for serialise_length
 #include "log.h"                                 // for L_CALL, L_DEBUG
-#include "lru.h"                                 // for LRU
+#include "lru.h"                                 // for lru::lru
 #include "memory_stats.h"                        // for get_total_ram, get_total_virtual_memor...
 #include "metrics.h"                             // for Metrics::metrics
 #include "msgpack.h"                             // for MsgPack, object::object
@@ -1677,7 +1677,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		}
 
 		static std::mutex resolve_index_lru_mtx;
-		static lru::LRU<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
+		static lru::lru<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
 
 		std::vector<std::vector<std::string>> shards;
 

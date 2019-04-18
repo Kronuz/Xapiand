@@ -510,7 +510,7 @@ ShardEndpoint::dump_databases(int level) const
  */
 
 DatabasePool::DatabasePool(size_t database_pool_size, size_t max_database_readers) :
-	LRU(database_pool_size),
+	lru::lru(database_pool_size),
 	locks(0),
 	max_database_readers(max_database_readers)
 {
@@ -524,8 +524,8 @@ DatabasePool::endpoints() const
 
 	std::lock_guard<std::mutex> lk(mtx);
 	database_endpoints.reserve(size());
-	for (auto& database_endpoint : *this) {
-		database_endpoints.emplace_back(database_endpoint.second.get());
+	for (auto& endpoint_database_endpoint : *this) {
+		database_endpoints.emplace_back(endpoint_database_endpoint.second.get());
 	}
 	return database_endpoints;
 }
@@ -656,13 +656,13 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 	ShardEndpoint* database_endpoint;
 
 	// Find or spawn the shard endpoint
-	auto it = find_and([&](const std::unique_ptr<ShardEndpoint>& database_endpoint) {
-		assert(database_endpoint);
-		database_endpoint->renew_time = std::chrono::steady_clock::now();
+	auto it = find_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool, bool) {
+		assert(endpoint_database_endpoint.second);
+		endpoint_database_endpoint.second->renew_time = std::chrono::steady_clock::now();
 		return lru::GetAction::renew;
 	}, endpoint);
 	if (it == end()) {
-		auto emplaced = emplace_and([&](const std::unique_ptr<ShardEndpoint>&, ssize_t, ssize_t) {
+		auto emplaced = emplace_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>&, bool, bool) {
 			return lru::DropAction::stop;
 		}, endpoint, std::make_unique<ShardEndpoint>(*this, endpoint));
 		database_endpoint = emplaced.first->second.get();
@@ -793,8 +793,8 @@ DatabasePool::finish()
 
 	std::lock_guard<std::mutex> lk(mtx);
 
-	for (auto& database_endpoint : *this) {
-		database_endpoint.second->finish();
+	for (auto& endpoint_database_endpoint : *this) {
+		endpoint_database_endpoint.second->finish();
 	}
 }
 
@@ -830,42 +830,41 @@ DatabasePool::cleanup(bool immediate)
 
 	std::unique_lock<std::mutex> lk(mtx);
 
-	const auto on_drop = [&](const std::unique_ptr<ShardEndpoint>& database_endpoint, ssize_t size, ssize_t max_size) {
-		assert(database_endpoint);
-		if (size > max_size) {
-			if (immediate || database_endpoint->renew_time < now - 60s) {
-				ReferencedShardEndpoint referenced_database_endpoint(database_endpoint.get());
+	trim_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool overflowed, bool) {
+		assert(endpoint_database_endpoint.second);
+		if (overflowed) {
+			if (immediate || endpoint_database_endpoint.second->renew_time < now - 60s) {
+				ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
 				lk.unlock();
 				referenced_database_endpoint->clear();
 				lk.lock();
 				referenced_database_endpoint.reset();
-				if (database_endpoint->is_used()) {
-					L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
+				if (endpoint_database_endpoint.second->is_used()) {
+					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return lru::DropAction::leave;
 				}
-				L_DATABASE("Evict endpoint from full LRU: {}", repr(database_endpoint->to_string()));
+				L_DATABASE("Evict endpoint from full LRU: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return lru::DropAction::evict;
 			}
-			L_DATABASE("Leave recently used endpoint: {}", repr(database_endpoint->to_string()));
+			L_DATABASE("Leave recently used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 			return lru::DropAction::leave;
 		}
-		if (immediate || database_endpoint->renew_time < now - 3600s) {
-			ReferencedShardEndpoint referenced_database_endpoint(database_endpoint.get());
+		if (immediate || endpoint_database_endpoint.second->renew_time < now - 3600s) {
+			ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
 			lk.unlock();
 			referenced_database_endpoint->clear();
 			lk.lock();
 			referenced_database_endpoint.reset();
-			if (database_endpoint->is_used()) {
-				L_DATABASE("Leave used endpoint: {}", repr(database_endpoint->to_string()));
+			if (endpoint_database_endpoint.second->is_used()) {
+				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return lru::DropAction::leave;
 			}
-			L_DATABASE("Evict endpoint: {}", repr(database_endpoint->to_string()));
+			L_DATABASE("Evict endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 			return lru::DropAction::evict;
 		}
-		L_DATABASE("Stop at endpoint: {}", repr(database_endpoint->to_string()));
+		L_DATABASE("Stop at endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 		return lru::DropAction::stop;
-	};
-	trim(on_drop);
+	});
 }
 
 
@@ -891,14 +890,14 @@ DatabasePool::clear()
 	// Now lock to double-check and really clear the LRU:
 	std::lock_guard<std::mutex> lk(mtx);
 
-	for (auto& database_endpoint : *this) {
-		auto count = database_endpoint.second->count();
+	for (auto& endpoint_database_endpoint : *this) {
+		auto count = endpoint_database_endpoint.second->count();
 		if (count.first || count.second) {
 			return false;
 		}
 	}
 
-	LRU::clear();
+	lru::lru::clear();
 	return true;
 }
 

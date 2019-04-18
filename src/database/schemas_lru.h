@@ -40,10 +40,10 @@ class DatabaseHandler;
 
 class SchemasLRU {
 	mutable std::mutex local_mtx;
-	lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> local_schemas;
+	lru::aging_lru<std::string, atomic_shared_ptr<const MsgPack>> local_schemas;
 
 	mutable std::mutex foreign_mtx;
-	lru::LRU<std::string, atomic_shared_ptr<const MsgPack>> foreign_schemas;
+	lru::aging_lru<std::string, atomic_shared_ptr<const MsgPack>> foreign_schemas;
 
 	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string> _update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable);
 

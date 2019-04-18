@@ -39,7 +39,7 @@
 #include "cuuid/uuid.h"                     // for UUID
 #include "endpoint.h"                       // for Endpoint
 #include "enum.h"                           // for ENUM_CLASS
-#include "lru.h"                            // for lru::LRU
+#include "lru.h"                            // for lru::lru
 #include "storage.h"                        // for Storage, STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
 #include "xapian.h"                         // for Xapian::docid, Xapian::termcount, Xapian::Document
@@ -298,7 +298,7 @@ class DatabaseWALWriterThread : public Thread<DatabaseWALWriterThread, ThreadPol
 	std::string _name;
 	BlockingConcurrentQueue<DatabaseWALWriterTask> _queue;
 
-	lru::LRU<std::string, std::unique_ptr<DatabaseWAL>> lru;
+	lru::lru<std::string, std::unique_ptr<DatabaseWAL>> lru;
 
 public:
 	DatabaseWALWriterThread() noexcept;

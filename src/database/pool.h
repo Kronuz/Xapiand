@@ -132,7 +132,7 @@ public:
  *
  */
 
-class DatabasePool : lru::LRU<Endpoint, std::unique_ptr<ShardEndpoint>> {
+class DatabasePool : lru::lru<Endpoint, std::unique_ptr<ShardEndpoint>> {
 	friend ShardEndpoint;
 
 	mutable std::mutex mtx;

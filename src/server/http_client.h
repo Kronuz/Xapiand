@@ -42,7 +42,7 @@
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
 #include "lightweight_semaphore.h"          // for LightweightSemaphore
-#include "lru.h"                            // for LRU
+#include "lru.h"                            // for lru::lru
 #include "msgpack.h"                        // for MsgPack
 #include "phf.hh"                           // for phf::make_phf
 #include "url_parser.h"                     // for PathParser, QueryParser
@@ -64,17 +64,17 @@ struct query_field_t;
 #define HTTP_OPTIONS_RESPONSE           (1 << 6)
 
 
-class AcceptLRU : private lru::LRU<std::string, accept_set_t> {
+class AcceptLRU : private lru::lru<std::string, accept_set_t> {
 	std::mutex qmtx;
 
 public:
 	AcceptLRU()
-		: LRU<std::string, accept_set_t>(100) { }
+		: lru::lru<std::string, accept_set_t>(100) { }
 
 	std::pair<bool, accept_set_t> lookup(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		auto it = LRU::find(key);
-		if (it == LRU::end()) {
+		auto it = lru::lru::find(key);
+		if (it == lru::lru::end()) {
 			return std::make_pair(false, accept_set_t{});
 		}
 		return std::make_pair(true, it->second);
@@ -82,7 +82,7 @@ public:
 
 	auto emplace(std::string key, accept_set_t set) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::emplace(key, set);
+		return lru::lru::emplace(key, set);
 	}
 };
 
@@ -98,17 +98,17 @@ struct AcceptEncoding {
 using accept_encoding_set_t = std::set<AcceptEncoding, accept_preference_comp<AcceptEncoding>>;
 
 
-class AcceptEncodingLRU : private lru::LRU<std::string, accept_encoding_set_t> {
+class AcceptEncodingLRU : private lru::lru<std::string, accept_encoding_set_t> {
 	std::mutex qmtx;
 
 public:
 	AcceptEncodingLRU()
-	: LRU<std::string, accept_encoding_set_t>(100) { }
+	: lru::lru<std::string, accept_encoding_set_t>(100) { }
 
 	std::pair<bool, accept_encoding_set_t> lookup(std::string key) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		auto it = LRU::find(key);
-		if (it == LRU::end()) {
+		auto it = lru::lru::find(key);
+		if (it == lru::lru::end()) {
 			return std::make_pair(false, accept_encoding_set_t{});
 		}
 		return std::make_pair(true, it->second);
@@ -116,7 +116,7 @@ public:
 
 	auto emplace(std::string key, accept_encoding_set_t set) {
 		std::lock_guard<std::mutex> lk(qmtx);
-		return LRU::emplace(key, set);
+		return lru::lru::emplace(key, set);
 	}
 };
 

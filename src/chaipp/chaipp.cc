@@ -30,7 +30,7 @@
 #include "database/handler.h"                     // for DatabaseHandler
 #include "exception.h"                            // for chaipp::Error
 #include "log.h"                                  // for L_EXC
-#include "lru.h"                                  // for lru::LRU
+#include "lru.h"                                  // for lru::lru
 #include "manager.h"                              // for XapiandManager::*
 #include "module.h"                               // for chaipp::Module
 #include "msgpack.h"                              // for MsgPack
@@ -41,10 +41,10 @@ namespace chaipp {
 
 namespace internal {
 
-class ScriptLRU : public lru::LRU<std::string, std::shared_ptr<Processor>> {
+class ScriptLRU : public lru::lru<std::string, std::shared_ptr<Processor>> {
 public:
-	explicit ScriptLRU(ssize_t max_size)
-		: LRU(max_size) { }
+	explicit ScriptLRU(ssize_t max_size) :
+		lru::lru(max_size) { }
 };
 
 
