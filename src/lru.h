@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2015-2019 Dubalu LLC
- * Copyright (c) 2014 lamerman
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,326 +22,525 @@
 
 #pragma once
 
-#include <cassert>
-#include <chrono>
-#include <cstddef>
-#include <cstdint>
-#include <list>
-#include <stdexcept>
-#include <unordered_map>
+#include <cassert>                                // for assert
+#include <chrono>                                 // for std::chrono
+#include <functional>                             // for std::equal_to, std::hash
+#include <limits>                                 // for std::numeric_limits
+#include <memory>                                 // for std::allocator
+#include <stdexcept>                              // for std::out_of_range
+#include <type_traits>                            // for std::enable_if_t
+#include <unordered_map>                          // for std::unordered_map
 
 
 namespace lru {
 
+namespace detail {
 
-enum class DropAction : uint8_t {
-	leave,
-	renew,
-	evict,
-	stop,
+
+struct aging
+{
+	std::chrono::time_point<std::chrono::steady_clock> now;
 };
 
 
-enum class GetAction : uint8_t {
-	leave,
-	renew,
+struct iterate_by_age {};
+
+template <typename T, typename Node, typename BaseNode, typename Mode = void>
+class iterator : public aging, public std::iterator<std::bidirectional_iterator_tag, T>
+{
+	BaseNode* _node;
+
+public:
+	using mode = Mode;
+
+	iterator(BaseNode* node) : _node(node) { }
+
+	T& operator*() const noexcept {
+		return static_cast<Node*>(_node)->data;
+	}
+
+	T* operator->() const noexcept {
+		return &static_cast<Node*>(_node)->data;
+	}
+
+	bool operator==(const iterator& rhs) const noexcept {
+		return _node == rhs._node;
+	}
+
+	bool operator!=(const iterator& rhs) const noexcept {
+		return _node != rhs._node;
+	}
+
+	iterator& operator++() noexcept {
+		_node = _node->template next<mode>(this);
+		return *this;
+	}
+
+	iterator& operator--() noexcept {
+		_node = _node->template prev<mode>(this);
+		return *this;
+	}
+
+	iterator operator++(int) noexcept {
+		iterator tmp(_node);
+		_node = _node->template next<mode>(this);
+		return tmp;
+	}
+
+	iterator operator--(int) noexcept {
+		iterator tmp(_node);
+		_node = _node->template prev<mode>(this);
+		return tmp;
+	}
+
+	BaseNode* node() const noexcept{
+		return _node;
+	}
+};
+
+}  // namespace detail
+
+
+struct base_node
+{
+	base_node* _next;
+	base_node* _prev;
+
+	base_node() :
+		_next(this),
+		_prev(this) { }
+
+	bool expired(std::chrono::time_point<std::chrono::steady_clock>) const noexcept {
+		return false;
+	}
+
+	bool expired() const noexcept {
+		return false;
+	}
+
+	void unlink() noexcept {
+		_prev->_next = _next;
+		_next->_prev = _prev;
+	}
+
+	void link(base_node* node) noexcept {
+		node->_prev = _prev;
+		node->_next = this;
+		_prev->_next = node;
+		_prev = node;
+	}
+
+	void link(base_node* node, std::chrono::milliseconds) noexcept {
+		link(node);
+	}
+
+	void renew(base_node* node) noexcept {
+		node->unlink();
+		link(node);
+	}
+
+	template <typename>
+	base_node* next(void*) const noexcept {
+		return _next;
+	}
+
+	template <typename>
+	base_node* prev(void*) const noexcept {
+		return _prev;
+	}
+
+	void clear() noexcept {
+		_prev = _next = this;
+	}
 };
 
 
-constexpr const auto AGE_MAX = std::chrono::hours(8000000);
+struct aging_base_node : public base_node
+{
+	std::chrono::time_point<std::chrono::steady_clock> expiration;
+
+	aging_base_node* _next_by_age;
+	aging_base_node* _prev_by_age;
+
+	aging_base_node() :
+		expiration{std::chrono::steady_clock::time_point::max()},
+		_next_by_age{this},
+		_prev_by_age{this} { }
+
+	bool expired(std::chrono::time_point<std::chrono::steady_clock> now) const noexcept {
+		return now > expiration;
+	}
+
+	bool expired() const noexcept {
+		return expired(std::chrono::steady_clock::now());
+	}
+
+	void unlink() noexcept {
+		base_node::unlink();
+
+		_prev_by_age->_next_by_age = _next_by_age;
+		_next_by_age->_prev_by_age = _prev_by_age;
+	}
+
+	void link(aging_base_node* node, std::chrono::milliseconds timeout) noexcept {
+		if (timeout == std::chrono::milliseconds{0}) {
+			node->expiration = std::chrono::steady_clock::time_point::max();
+		} else {
+			node->expiration = std::chrono::steady_clock::now() + timeout;
+		}
+
+		base_node::link(node, timeout);
+
+		node->_prev_by_age = _prev_by_age;
+		node->_next_by_age = this;
+		_prev_by_age->_next_by_age = node;
+		_prev_by_age = node;
+	}
+
+	template <typename>
+	aging_base_node* next(void* ptr) const noexcept {
+		auto age = static_cast<detail::aging*>(ptr);
+		if (age->now == std::chrono::time_point<std::chrono::steady_clock>{}) {
+			age->now = std::chrono::steady_clock::now();
+		}
+		auto ret = static_cast<aging_base_node*>(_next);
+		while (ret->expired(age->now)) ret = static_cast<aging_base_node*>(ret->_next);
+		return ret;
+	}
+
+	template <typename>
+	aging_base_node* prev(void* ptr) const noexcept {
+		auto age = static_cast<detail::aging*>(ptr);
+		if (age->now == std::chrono::time_point<std::chrono::steady_clock>{}) {
+			age->now = std::chrono::steady_clock::now();
+		}
+		auto ret = static_cast<aging_base_node*>(_prev);
+		while (ret->expired(age->now)) ret = static_cast<aging_base_node*>(ret->_prev);
+		return ret;
+	}
+
+	template <>
+	aging_base_node* next<detail::iterate_by_age>(void*) const noexcept {
+		return _next_by_age;
+	}
+
+	template <>
+	aging_base_node* prev<detail::iterate_by_age>(void*) const noexcept {
+		return _prev_by_age;
+	}
+
+	void clear() noexcept {
+		base_node::clear();
+		_prev_by_age = _next_by_age = this;
+	}
+};
 
 
-template <typename Key, typename T>
-class LRU {
-protected:
-	using lru_list_t = std::list<std::pair<Key, T>>;
-	struct item_t {
-		Key key;
-		typename lru_list_t::iterator lru_it;
-		std::chrono::time_point<std::chrono::steady_clock> expiration;
-	};
-	using aged_list_t = std::list<item_t>;
-	struct map_item_t {
-		typename lru_list_t::iterator lru_it;
-		typename aged_list_t::iterator aged_it;
-		std::chrono::time_point<std::chrono::steady_clock> expiration;
-	};
-	using map_t = std::unordered_map<Key, map_item_t>;
+template <typename Type, typename BaseNodeType>
+struct node : BaseNodeType
+{
+	using type = Type;
+	using base_node_type = BaseNodeType;
+
+	Type data;
+
+	template <typename... Args>
+	node(Args&&... args) :
+		data(std::forward<Args>(args)...) { }
+};
 
 
-	lru_list_t _lru_list;
-	aged_list_t _aged_list;
-	map_t _map;
+enum class DropAction {
+	leave,    // leave alone
+	renew,    // renew item
+	relink,   // renew item + reset timeout
+	evict,    // remove item
+	stop,     // stop any loops as soon as possible
+};
+
+
+enum class GetAction {
+	leave,    // leave alone
+	renew,    // renew item
+	relink,   // renew item + reset timeout
+	evict,    // remove item
+};
+
+
+template <typename Key, typename T,
+	typename Hash = std::hash<Key>,
+	typename KeyEqual = std::equal_to<Key>,
+	typename Node = node<std::pair<const Key, T>, base_node>,
+	typename Allocator = std::allocator<std::pair<const Key, Node>>>
+class lru
+{
+	std::unordered_map<Key, Node, Hash, KeyEqual, Allocator> _map;
+
 	size_t _max_size;
 	std::chrono::milliseconds _max_age;
 
+	typename Node::base_node_type _end;
+
 public:
-	using iterator = typename lru_list_t::iterator;
-	using const_iterator = typename lru_list_t::const_iterator;
+	typedef Key key_type;
+	typedef T mapped_type;
+	typedef std::pair<const key_type, mapped_type> value_type;
+	typedef detail::iterator<std::pair<const Key, T>, Node, typename Node::base_node_type> iterator;
+	typedef detail::iterator<const std::pair<const Key, T>, const Node, const typename Node::base_node_type> const_iterator;
+	typedef detail::iterator<std::pair<const Key, T>, Node, typename Node::base_node_type, detail::iterate_by_age> iterator_by_age;
+	typedef detail::iterator<const std::pair<const Key, T>, const Node, const typename Node::base_node_type, detail::iterate_by_age> const_iterator_by_age;
 
-	explicit LRU(size_t max_size = SIZE_MAX, std::chrono::milliseconds max_age = AGE_MAX) :
-		_max_size(max_size),
-		_max_age(max_age)
+	using GetAction = GetAction;
+	using DropAction = DropAction;
+
+	lru(size_t max_size = std::numeric_limits<size_t>::max(), std::chrono::milliseconds max_age = std::chrono::milliseconds{0}) :
+		_max_size{max_size},
+		_max_age{max_age}
 	{
-		assert(_max_size != 0);
-		assert(_max_age != std::chrono::milliseconds(0));
-	}
-
-	iterator begin() noexcept {
-		return _lru_list.begin();
-	}
-
-	const_iterator begin() const noexcept {
-		return _lru_list.begin();
-	}
-
-	const_iterator cbegin() const noexcept {
-		return _lru_list.cbegin();
-	}
-
-	iterator end() noexcept {
-		return _lru_list.end();
-	}
-
-	const_iterator end() const noexcept {
-		return _lru_list.end();
-	}
-
-	const_iterator cend() const noexcept {
-		return _lru_list.cend();
-	}
-
-	template <typename K>
-	iterator find(const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
+		if (typeid(typename Node::base_node_type) != typeid(aging_base_node)) {
+			assert(_max_age == std::chrono::milliseconds{0});
 		}
+	}
+
+	template <typename OnDrop, typename P>
+	std::pair<iterator, bool> emplace_and(const OnDrop& on_drop, P&& pair) {
+		trim_and(on_drop);
+		Node* node;
+		bool created = true;
+		auto map_it = _map.find(pair.first);
 		if (map_it == _map.end()) {
-			return _lru_list.end();
-		}
-		auto it = map_it->second.lru_it;
-		_lru_list.splice(_lru_list.begin(), _lru_list, it);
-		return it;
-	}
-
-	template <typename K>
-	const_iterator find(const K& key) const {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			map_it = _map.end();
-		}
-		if (map_it == _map.cend()) {
-			return _lru_list.cend();
-		}
-		return map_it->second.lru_it;
-	}
-
-	void erase(const_iterator it) {
-		erase(_map.find(it->first));
-	}
-
-	size_t erase(typename aged_list_t::const_iterator aged_it) {
-		if (aged_it != _aged_list.end()) {
-			bool ret = aged_it->expiration > std::chrono::steady_clock::now() ? 0 : 1;
-			_map.erase(aged_it->lru_it->first);
-			_lru_list.erase(aged_it->lru_it);
-			_aged_list.erase(aged_it);
-			return ret;
-		}
-		return 0;
-	}
-
-	size_t erase(typename map_t::const_iterator map_it) {
-		if (map_it != _map.end()) {
-			bool ret = map_it->second.expiration > std::chrono::steady_clock::now() ? 0 : 1;
-			_lru_list.erase(map_it->second.lru_it);
-			_aged_list.erase(map_it->second.aged_it);
-			_map.erase(map_it);
-			return ret;
-		}
-		return 0;
-	}
-
-	size_t erase(const Key& key) {
-		return erase(_map.find(key));
-	}
-
-	void _trim_aged(size_t& size) {
-		auto now = std::chrono::steady_clock::now();
-		auto last = --_aged_list.end();
-		for (size_t i = _aged_list.size(); i != 0; --i) {
-			auto aged_it = last--;
-			if (aged_it->expiration > now) {
-				--size;
-				erase(aged_it);
+			map_it = _map.emplace(pair.first, std::forward<P>(pair)).first;
+			node = &map_it->second;
+			_end.link(node, _max_age);
+		} else {
+			node = &map_it->second;
+			if (node->expired()) {
+				node->unlink();
+				_map.erase(map_it++);
+				map_it = _map.emplace_hint(map_it, pair.first, std::forward<P>(pair));
+				node = &map_it->second;
+				_end.link(node, _max_age);
 			} else {
-				break;
+				_end.renew(node);
+				created = false;
 			}
 		}
+		return std::make_pair(iterator(node), created);
 	}
 
-	void _trim_lru(size_t& size) {
-		auto last = --_lru_list.end();
-		for (size_t i = _lru_list.size(); i != 0; --i) {
-			auto it = last--;
-			if (size > _max_size) {
-				--size;
-				erase(it);
-			} else {
-				return;
-			}
-		}
-	}
-
-	void trim(size_t size) {
-		if (_max_age != AGE_MAX) {
-			_trim_aged(size);
-		}
-		if (_max_size != SIZE_MAX) {
-			_trim_lru(size);
-		}
-	}
-
-	void trim() {
-		trim(_map.size());
-	}
-
-	template <typename P>
-	std::pair<iterator, bool> insert(P&& p) {
-		erase(p.first);
-		trim();
-		_lru_list.push_front(std::forward<P>(p));
-		auto it = _lru_list.begin();
-		auto expiration = _max_age != AGE_MAX ? std::chrono::steady_clock::now() + _max_age : std::chrono::time_point<std::chrono::steady_clock>{};
-		_aged_list.push_front({
-			it->first,
-			it,
-			expiration,
-		});
-		bool created = _map.emplace(it->first, map_item_t{
-			it,
-			_aged_list.begin(),
-			expiration,
-		}).second;
-		return std::make_pair(it, created);
-	}
-
-	template <typename P>
-	std::pair<iterator, bool> insert_back(P&& p) {
-		erase(p.first);
-		trim();
-		_lru_list.push_back(std::forward<P>(p));
-		auto it = --_lru_list.end();
-		auto expiration = _max_age != AGE_MAX ? std::chrono::steady_clock::now() + _max_age : std::chrono::time_point<std::chrono::steady_clock>{};
-		_aged_list.push_front({
-			it->first,
-			it,
-			expiration,
-		});
-		bool created = _map.emplace(it->first, map_item_t{
-			it,
-			_aged_list.begin(),
-			expiration,
-		}).second;
-		return std::make_pair(it, created);
+	template <typename OnDrop, typename... Args>
+	std::pair<iterator, bool> emplace_and(const OnDrop& on_drop, Args&&... args) {
+		return emplace_and(on_drop, std::make_pair(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	std::pair<iterator, bool> emplace(Args&&... args) {
-		return insert(std::make_pair(std::forward<Args>(args)...));
+		return emplace_and([](const value_type&, bool overflowed, bool expired) {
+			if (overflowed || expired) {
+				return DropAction::evict;
+			}
+			return DropAction::stop;
+		}, std::forward<Args>(args)...);
 	}
 
-	template <typename... Args>
-	std::pair<iterator, bool> emplace_back(Args&&... args) {
-		return insert_back(std::make_pair(std::forward<Args>(args)...));
+	template <typename OnDrop>
+	std::pair<iterator, bool> insert_and(const OnDrop& on_drop, const value_type& value) {
+		return emplace_and(on_drop, value);
 	}
 
-	T& at(iterator it) {
-		_lru_list.splice(_lru_list.begin(), _lru_list, it);
-		return it->second;
+	template <typename OnDrop>
+	std::pair<iterator, bool> insert_and(const OnDrop& on_drop, value_type&& value) {
+		return emplace_and(on_drop, std::move(value));
 	}
 
-	const T& at(const_iterator it) const {
+	template <typename OnDrop, typename P, typename = typename std::enable_if_t<std::is_constructible<value_type, P>::value>>
+	std::pair<iterator, bool> insert_and(const OnDrop& on_drop, P&& value) {
+		return emplace_and(on_drop, std::forward<P>(value));
+	}
+
+	std::pair<iterator, bool> insert(const value_type& value) {
+		return emplace(value);
+	}
+
+	std::pair<iterator, bool> insert(value_type&& value) {
+		return emplace(std::move(value));
+	}
+
+	template <typename P, typename = typename std::enable_if_t<std::is_constructible<value_type, P>::value>>
+	std::pair<iterator, bool> insert(P&& value) {
+		return emplace(std::forward<P>(value));
+	}
+
+	template <typename OnGet, typename K>
+	iterator find_and(const OnGet& on_get, const K& key) {
+		auto map_it = _map.find(key);
+		if (map_it == _map.end()) {
+			return end();
+		}
+		auto node = &map_it->second;
+		switch (on_get(node->data, _map.size() > _max_size, node->expired())) {
+			case GetAction::leave:
+				break;
+			case GetAction::renew:
+				_end.renew(node);
+				break;
+			case GetAction::relink:
+				node->unlink();
+				_end.link(node, _max_age);
+				break;
+			case GetAction::evict:
+				node->unlink();
+				_map.erase(map_it);
+				return end();
+		}
+		return iterator(node);
+	}
+
+	template <typename K>
+	iterator find_and_leave(const K& key) {
+		return find_and([](const value_type&, bool, bool) {
+			return GetAction::leave;
+		}, key);
+	}
+
+	template <typename K>
+	iterator find_and_renew(const K& key) {
+		return find_and([](const value_type&, bool, bool) {
+			return GetAction::renew;
+		}, key);
+	}
+
+	template <typename K>
+	iterator find_and_relink(const K& key) {
+		return find_and([](const value_type&, bool, bool) {
+			return GetAction::relink;
+		}, key);
+	}
+
+	template <typename K>
+	iterator find(const K& key) {
+		return find_and([](const value_type&, bool, bool expired) {
+			if (expired) {
+				return GetAction::evict;
+			}
+			return GetAction::renew;
+		}, key);
+	}
+
+	template <typename OnGet, typename K>
+	const_iterator find_and(const OnGet& on_get, const K& key) const {
+		auto map_it = _map.find(key);
+		if (map_it == _map.cend()) {
+			return cend();
+		}
+		auto node = &map_it->second;
+		switch (on_get(node->data, _map.size() > _max_size, node->expired())) {
+			case GetAction::leave:
+			case GetAction::renew:
+			case GetAction::relink:
+				break;
+			case GetAction::evict:
+				return cend();
+		}
+		return const_iterator(node);
+	}
+
+	template <typename K>
+	const_iterator find_and_leave(const K& key) const {
+		return find_and([](const value_type&, bool, bool) {
+			return GetAction::leave;
+		}, key);
+	}
+
+	template <typename K>
+	const_iterator find(const K& key) const {
+		return find_and([](const value_type&, bool, bool) {
+			return GetAction::leave;
+		}, key);
+	}
+
+	template <typename OnGet, typename K>
+	T& at_and(const OnGet& on_get, const K& key) {
+		auto it = find_and(on_get, key);
+		if (it == end()) {
+			throw std::out_of_range("lru::at: key not found");
+		}
 		return it->second;
 	}
 
 	template <typename K>
 	T& at(const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
+		auto it = find(key);
+		if (it == end()) {
+			throw std::out_of_range("lru::at: key not found");
 		}
-		if (map_it == _map.end()) {
-			throw std::out_of_range("There is no such key in cache");
+		return it->second;
+	}
+
+	template <typename OnGet, typename K>
+	T& at_and(const OnGet& on_get, const K& key) const {
+		auto it = find_and(on_get, key);
+		if (it == end()) {
+			throw std::out_of_range("lru::at: key not found");
 		}
-		return at(map_it->second.lru_it);
+		return it->second;
 	}
 
 	template <typename K>
-	const T& at(const K& key) const {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			map_it = _map.end();
+	T& at(const K& key) const {
+		auto it = find(key);
+		if (it == end()) {
+			throw std::out_of_range("lru::at: key not found");
 		}
-		if (map_it == _map.end()) {
-			throw std::out_of_range("There is no such key in cache");
+		return it->second;
+	}
+
+	template <typename OnGet, typename OnDrop, typename K>
+	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, T&& default_) {
+		auto it = find_and(on_get, key);
+		if (it == end()) {
+			it = emplace_and(on_drop, key, std::forward<T>(default_)).first;
 		}
-		return at(map_it->second.lru_it);
+		return it->second;
+	}
+
+	template <typename OnGet, typename OnDrop, typename K, typename... Args>
+	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, Args&&... args) {
+		auto it = find_and(on_get, key);
+		if (it == end()) {
+			it = emplace_and(on_drop, key, T(std::forward<Args>(args)...));
+		}
+		return it->second;
 	}
 
 	template <typename K>
-	T& get(const K& key, T& default_) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return emplace(key, default_).first->second;
-		}
-		return at(map_it->second.lru_it);
+	T& get(const K& key, T&& default_) {
+		return get_and([](const value_type&, bool, bool expired) {
+			if (expired) {
+				return GetAction::evict;
+			}
+			return GetAction::renew;
+		}, [](const value_type&, bool overflowed, bool expired) {
+			if (overflowed || expired) {
+				return DropAction::evict;
+			}
+			return DropAction::stop;
+		}, key, std::forward<T>(default_));
 	}
 
 	template <typename K, typename... Args>
 	T& get(const K& key, Args&&... args) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return emplace(key, T(std::forward<Args>(args)...)).first->second;
-		}
-		return at(map_it->second.lru_it);
-	}
-
-	template <typename K>
-	T& get_back(const K& key, T& default_) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return emplace_back(key, default_).first->second.second;
-		}
-		return at(map_it->second.lru_it);
-	}
-
-	template <typename K, typename... Args>
-	T& get_back(const K& key, Args&&... args) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return emplace_back(key, T(std::forward<Args>(args)...)).first->second.second;
-		}
-		return at(map_it->second.lru_it);
+		return get_and([](const value_type&, bool, bool expired) {
+			if (expired) {
+				return GetAction::evict;
+			}
+			return GetAction::renew;
+		}, [](const value_type&, bool overflowed, bool expired) {
+			if (overflowed || expired) {
+				return DropAction::evict;
+			}
+			return DropAction::stop;
+		}, key, T(std::forward<Args>(args)...));
 	}
 
 	template <typename K>
@@ -350,365 +548,142 @@ public:
 		return get(key);
 	}
 
-	template <typename K>
-	bool exists(const K& key) const {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			map_it = _map.end();
+	size_t erase(iterator it) {
+		_map.erase(it->first);
+	}
+
+	size_t erase(const_iterator it) {
+		_map.erase(it->first);
+	}
+
+	size_t erase(const Key& key) {
+		return erase(find(key));
+	}
+
+	template <typename OnDrop>
+	void trim_and(const OnDrop& on_drop) {
+		auto now = std::chrono::steady_clock::now();
+		auto size = _map.size();
+
+		if (_max_age != std::chrono::milliseconds{0}) {
+			auto it = iterator_by_age(&_end);
+			auto it_end = it++;
+			while (it != it_end) {
+				auto current = it++;
+				auto node = current.node();
+				switch (on_drop(*current, size > _max_size, node->expired(now))) {
+					case DropAction::leave:
+						break;
+					case DropAction::renew:
+						_end.renew(node);
+						break;
+					case DropAction::relink:
+						node->unlink();
+						_end.link(node, _max_age);
+						break;
+					case DropAction::evict:
+						node->unlink();
+						_map.erase(current->first);
+						--size;
+						break;
+					case DropAction::stop:
+						it = it_end;
+						break;
+				}
+			}
 		}
-		return map_it != _map.end();
+
+		if (_max_size != std::numeric_limits<size_t>::max()) {
+			auto it = iterator(&_end);
+			auto it_end = it++;
+			while (it != it_end) {
+				auto current = it++;
+				auto node = current.node();
+				switch (on_drop(*current, size > _max_size, node->expired(now))) {
+					case DropAction::leave:
+						break;
+					case DropAction::renew:
+						_end.renew(node);
+						break;
+					case DropAction::relink:
+						node->unlink();
+						_end.link(node, _max_age);
+						break;
+					case DropAction::evict:
+						node->unlink();
+						_map.erase(current->first);
+						--size;
+						break;
+					case DropAction::stop:
+						it = it_end;
+						break;
+				}
+			}
+		}
+	}
+
+	void trim() {
+		trim_and([](const value_type&, bool overflowed, bool expired) {
+			if (overflowed || expired) {
+				return DropAction::evict;
+			}
+			return DropAction::stop;
+		});
+	}
+
+	const_iterator cbegin() const noexcept {
+		return ++const_iterator(&_end);
+	}
+
+	const_iterator cend() const noexcept {
+		return const_iterator(&_end);
+	}
+
+	iterator begin() noexcept {
+		return ++iterator(&_end);
+	}
+
+	iterator end() noexcept {
+		return iterator(&_end);
+	}
+
+	const_iterator begin() const noexcept {
+		return cbegin();
+	}
+
+	const_iterator end() const noexcept {
+		return cend();
 	}
 
 	void clear() noexcept {
+		_end.clear();
 		_map.clear();
-		_lru_list.clear();
 	}
 
-	bool empty() const noexcept {
-		return _map.empty();
+	template <typename K>
+	bool exists(const K& key) const {
+		return find(key) != end();
 	}
 
 	size_t size() const noexcept {
 		return _map.size();
 	}
 
+	bool empty() const noexcept {
+		return _map.empty();
+	}
+
 	size_t max_size() const noexcept {
-		return (_max_size == SIZE_MAX) ? _map.max_size() : _max_size;
-	}
-
-	template <typename OnDrop>
-	void _trim_aged(const OnDrop& on_drop, size_t& size) {
-		auto now = std::chrono::steady_clock::now();
-		auto last = --_aged_list.end();
-		for (size_t i = _aged_list.size(); i != 0; --i) {
-			auto aged_it = last--;
-			if (aged_it->expiration > now) {
-				switch (on_drop(aged_it->lru_it->second, size, _max_size)) {
-					case DropAction::evict:
-						--size;
-						erase(aged_it);
-						break;
-					case DropAction::renew:
-						_lru_list.splice(_lru_list.begin(), _lru_list, aged_it->lru_it);
-						break;
-					case DropAction::leave:
-						break;
-					case DropAction::stop:
-						return;
-				}
-			} else {
-				return;
-			}
-		}
-	}
-
-	template <typename OnDrop>
-	void _trim_lru(const OnDrop& on_drop, size_t& size) {
-		auto last = --_lru_list.end();
-		for (size_t i = _lru_list.size(); i != 0; --i) {
-			auto it = last--;
-			switch (on_drop(it->second, size, _max_size)) {
-				case DropAction::evict:
-					--size;
-					erase(it);
-					break;
-				case DropAction::renew:
-					_lru_list.splice(_lru_list.begin(), _lru_list, it);
-					break;
-				case DropAction::leave:
-					break;
-				case DropAction::stop:
-					return;
-			}
-		}
-	}
-
-	template <typename OnDrop>
-	void trim(const OnDrop& on_drop, size_t size) {
-		if (_max_age != AGE_MAX) {
-			_trim_aged(on_drop, size);
-		}
-		if (_max_size != SIZE_MAX) {
-			_trim_lru(on_drop, size);
-		}
-	}
-
-	template <typename OnDrop>
-	void trim(const OnDrop& on_drop) {
-		trim(on_drop, _map.size());
-	}
-
-	template <typename OnDrop, typename P>
-	std::pair<iterator, bool> insert_and(const OnDrop& on_drop, P&& p) {
-		erase(p.first);
-		trim(on_drop, _map.size() + 1);
-		_lru_list.push_front(std::forward<P>(p));
-		auto it = _lru_list.begin();
-		auto expiration = _max_age != AGE_MAX ? std::chrono::steady_clock::now() + _max_age : std::chrono::time_point<std::chrono::steady_clock>{};
-		_aged_list.push_front({
-			it->first,
-			it,
-			expiration,
-		});
-		bool created = _map.emplace(it->first, map_item_t{
-			it,
-			_aged_list.begin(),
-			expiration,
-		}).second;
-		return std::make_pair(it, created);
-	}
-
-	template <typename OnDrop, typename P>
-	std::pair<iterator, bool> insert_back_and(const OnDrop& on_drop, P&& p) {
-		erase(p.first);
-		trim(on_drop, _map.size() + 1);
-		_lru_list.push_back(std::forward<P>(p));
-		auto it = --_lru_list.end();
-		auto expiration = _max_age != AGE_MAX ? std::chrono::steady_clock::now() + _max_age : std::chrono::time_point<std::chrono::steady_clock>{};
-		_aged_list.push_front({
-			it->first,
-			it,
-			expiration,
-		});
-		bool created = _map.emplace(it->first, map_item_t{
-			it,
-			_aged_list.begin(),
-			expiration,
-		}).second;
-		return std::make_pair(it, created);
-	}
-
-	template <typename OnDrop, typename... Args>
-	std::pair<iterator, bool> emplace_and(OnDrop&& on_drop, Args&&... args) {
-		return insert_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
-	}
-
-	template <typename OnDrop, typename... Args>
-	std::pair<iterator, bool> emplace_back_and(OnDrop&& on_drop, Args&&... args) {
-		return insert_back_and(std::forward<OnDrop>(on_drop), std::make_pair(std::forward<Args>(args)...));
-	}
-
-	template <typename OnGet, typename K>
-	iterator find_and(const OnGet& on_get, const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return _lru_list.end();
-		}
-		auto it = map_it->second.lru_it;
-		T& ref = it->second;
-		switch (on_get(ref)) {
-			case GetAction::leave:
-				break;
-			case GetAction::renew:
-				_lru_list.splice(_lru_list.begin(), _lru_list, it);
-				break;
-		}
-		return it;
-	}
-
-	template <typename K>
-	iterator find_and_leave(const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return _lru_list.end();
-		}
-		return map_it->second.lru_it;
-	}
-
-	template <typename K>
-	const_iterator find_and_leave(const K& key) const {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return _lru_list.end();
-		}
-		return map_it->second.lru_it;
-	}
-
-	template <typename K>
-	iterator find_and_renew(const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			return _lru_list.end();
-		}
-		auto it = map_it->second.lru_it;
-		_lru_list.splice(_lru_list.begin(), _lru_list, it);
-		return it;
-	}
-
-	template <typename OnGet>
-	T& at_and(const OnGet& on_get, iterator it) {
-		T& ref = it->second;
-		switch (on_get(ref)) {
-			case GetAction::leave:
-				break;
-			case GetAction::renew:
-				_lru_list.splice(_lru_list.begin(), _lru_list, it);
-				break;
-		}
-		return ref;
-	}
-
-	T& at_and_leave(iterator it) {
-		T& ref = it->second;
-		return ref;
-	}
-
-	const T& at_and_leave(iterator it) const {
-		T& ref = it->second;
-		return ref;
-	}
-
-	T& at_and_renew(iterator it) {
-		T& ref = it->second;
-		_lru_list.splice(_lru_list.begin(), _lru_list, it);
-		return ref;
-	}
-
-	template <typename K, typename OnGet>
-	T& at_and(const OnGet& on_get, const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			throw std::out_of_range("There is no such key in cache");
-		}
-		return at_and(on_get, map_it->second.lru_it);
-	}
-
-	template <typename K>
-	T& at_and_leave(const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			throw std::out_of_range("There is no such key in cache");
-		}
-		return at_and_leave(map_it->second.lru_it);
-	}
-
-	template <typename K>
-	const T& at_and_leave(const K& key) const {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			throw std::out_of_range("There is no such key in cache");
-		}
-		return at_and_leave(map_it->second.lru_it);
-	}
-
-	template <typename K>
-	T& at_and_renew(const K& key) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			throw std::out_of_range("There is no such key in cache");
-		}
-		return at_and_renew(map_it->second.lru_it);
-	}
-
-	template <typename OnGet, typename OnDrop, typename K>
-	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, T& default_) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			T& ref = emplace_and(on_drop, key, default_).first->second;
-			switch (on_get(ref)) {
-				case GetAction::leave:
-					break;
-				case GetAction::renew:
-					break;
-			}
-			return ref;
-		}
-		return at_and(on_get, map_it->second.lru_it);
-	}
-
-	template <typename OnGet, typename OnDrop, typename K, typename... Args>
-	T& get_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, Args&&... args) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			T& ref = emplace_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
-			switch (on_get(ref)) {
-				case GetAction::leave:
-					break;
-				case GetAction::renew:
-					break;
-			}
-			return ref;
-		}
-		return at_and(on_get, map_it->second.lru_it);
-	}
-
-	template <typename OnGet, typename OnDrop, typename K>
-	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, T& default_) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			T& ref = emplace_back_and(on_drop, key, default_).first->second;
-			switch (on_get(ref)) {
-				case GetAction::leave:
-					break;
-				case GetAction::renew:
-					break;
-			}
-			return ref;
-		}
-		return at_and(on_get, map_it->second.lru_it);
-	}
-
-	template <typename OnGet, typename OnDrop, typename K, typename... Args>
-	T& get_back_and(const OnGet& on_get, const OnDrop& on_drop, const K& key, Args&&... args) {
-		auto map_it = _map.find(key);
-		if (map_it != _map.end() && _max_age != AGE_MAX && map_it->second.expiration > std::chrono::steady_clock::now()) {
-			erase(map_it);
-			map_it = _map.end();
-		}
-		if (map_it == _map.end()) {
-			T& ref = emplace_back_and(on_drop, key, T(std::forward<Args>(args)...)).first->second;
-			switch (on_get(ref)) {
-				case GetAction::leave:
-					break;
-				case GetAction::renew:
-					break;
-			}
-			return ref;
-		}
-		return at_and(on_get, map_it->second.lru_it);
+		return (_max_size != std::numeric_limits<size_t>::max()) ? _max_size : _map.max_size();
 	}
 };
 
-}
+
+template <typename Key, typename T,
+	typename Hash = std::hash<Key>,
+	typename KeyEqual = std::equal_to<Key>,
+	typename Node = node<std::pair<const Key, T>, aging_base_node>,
+	typename Allocator = std::allocator<std::pair<const Key, Node>>>
+using aging_lru = lru<Key, T, Hash, KeyEqual, Node, Allocator>;
+
+}  // namespace lru
