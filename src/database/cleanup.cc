@@ -25,6 +25,7 @@
 #include "log.h"                              // for L_CALL
 #include "manager.h"                          // for XapiandManager
 #include "database/pool.h"                    // for DatabasePool (database_pool)
+#include "database/schemas_lru.h"             // for SchemasLRU (schemas)
 
 
 DatabaseCleanup::DatabaseCleanup(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_) :
@@ -98,6 +99,8 @@ DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, [[maybe_unused]] int revents)
 	L_CALL("DatabaseCleanup::cleanup_cb(<timer>, {:#04x} ({}))", revents, readable_revents(revents));
 
 	XapiandManager::database_pool()->cleanup();
+
+	XapiandManager::schemas()->cleanup();
 }
 
 

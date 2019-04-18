@@ -54,6 +54,8 @@ public:
 
 	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
 
+	void cleanup();
+
 	std::string __repr__() const;
 
 	std::string dump_schemas(int level = 1) const;

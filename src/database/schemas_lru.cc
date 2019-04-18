@@ -639,6 +639,23 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 }
 
 
+void
+SchemasLRU::cleanup()
+{
+	L_CALL("SchemasLRU::cleanup()");
+
+	{
+		std::lock_guard<std::mutex> lk(local_mtx);
+		local_schemas.trim();
+	}
+
+	{
+		std::lock_guard<std::mutex> lk(foreign_mtx);
+		foreign_schemas.trim();
+	}
+}
+
+
 std::string
 SchemasLRU::__repr__() const
 {
