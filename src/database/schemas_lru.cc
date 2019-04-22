@@ -658,6 +658,23 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 
 
 void
+SchemasLRU::updated(const std::string& uri, Xapian::rev version)
+{
+	L_CALL("SchemasLRU::updated({}, {})", repr(uri), version);
+
+	std::lock_guard<std::mutex> lk(versions_mtx);
+	auto it = versions.find_and_relink(uri);
+	if (it == versions.end()) {
+		versions.emplace(uri, version);
+	} else {
+		it->second = version;
+	}
+
+	L_RED("Schema updated: {} at {}", uri, version);
+}
+
+
+void
 SchemasLRU::cleanup()
 {
 	L_CALL("SchemasLRU::cleanup()");
@@ -670,6 +687,11 @@ SchemasLRU::cleanup()
 	{
 		std::lock_guard<std::mutex> lk(foreign_mtx);
 		foreign_schemas.trim();
+	}
+
+	{
+		std::lock_guard<std::mutex> lk(versions_mtx);
+		versions.trim();
 	}
 }
 

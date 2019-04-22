@@ -30,6 +30,7 @@
 
 #include "color_tools.hh"                   // for color
 #include "cuuid/uuid.h"                     // for UUID
+#include "database/schemas_lru.h"           // for SchemasLRU
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
 #include "manager.h"                        // for XapiandManager, XapiandManager::State
@@ -959,9 +960,9 @@ Discovery::schema_updated([[maybe_unused]] Message type, const std::string& mess
 
 	Xapian::rev version = unserialise_length(&p, p_end);
 
-	auto path = std::string_view(p, p_end - p);
+	auto uri = std::string(p, p_end - p);
 
-	L_RED("Schema updated: {} at {}", path, version);
+	XapiandManager::schemas()->updated(uri, version);
 }
 
 

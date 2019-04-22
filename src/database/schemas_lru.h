@@ -46,6 +46,9 @@ class SchemasLRU {
 	mutable std::mutex foreign_mtx;
 	lru::aging_lru<std::string, std::shared_ptr<const MsgPack>> foreign_schemas;
 
+	mutable std::mutex versions_mtx;
+	lru::aging_lru<std::string, Xapian::rev> versions;
+
 	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string> _update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable);
 
 public:
@@ -54,6 +57,8 @@ public:
 	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj);
 
 	bool set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old_schema, const std::shared_ptr<const MsgPack>& new_schema);
+
+	void updated(const std::string& uri, Xapian::rev version);
 
 	void cleanup();
 
