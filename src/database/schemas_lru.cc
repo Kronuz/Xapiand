@@ -24,6 +24,7 @@
 
 #include <cassert>                                // for assert
 #include <chrono>                                 // for std::chrono_literals
+#include <limits>                                 // for std::numeric_limits
 
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/utils.h"                       // for unsharded_path
@@ -178,8 +179,8 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 
 
 SchemasLRU::SchemasLRU(ssize_t max_size) :
-	local_schemas(max_size, 10s),
-	foreign_schemas(max_size, 10s)
+	schemas(max_size, 10s),
+	versions(std::numeric_limits<size_t>::max(), 3600s)
 {
 }
 
@@ -199,11 +200,12 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 
 	// We first try to load schema from the LRU cache
 	std::shared_ptr<const MsgPack> local_schema_ptr;
-	const auto local_schema_path = std::string(unsharded_path(db_handler->endpoints[0].path));  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
+	const auto endpoints_path = unsharded_path(db_handler->endpoints[0].path);
+	const auto local_schema_path = std::string(endpoints_path) + "/";  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "");
 	{
-		std::lock_guard<std::mutex> lk(local_mtx);
-		local_schema_ptr = local_schemas[local_schema_path];
+		std::lock_guard<std::mutex> lk(schemas_mtx);
+		local_schema_ptr = schemas[local_schema_path];
 	}
 
 	if (new_schema) {
@@ -230,8 +232,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			} else {
 				schema_ptr->lock();
 				assert(schema_ptr);
-				std::lock_guard<std::mutex> lk(local_mtx);
-				auto& schema = local_schemas[local_schema_path];
+				std::lock_guard<std::mutex> lk(schemas_mtx);
+				auto& schema = schemas[local_schema_path];
 				if (!schema || schema == local_schema_ptr) {
 					schema = schema_ptr;
 					L_SCHEMA("{}" + GREEN + "Local Schema [{}] added new foreign link to the LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
@@ -270,11 +272,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
-			} else if (local_schema_path != ".xapiand/nodes") {
+			} else if (endpoints_path != ".xapiand/nodes") {
 				// Implement foreign schemas in .xapiand/index by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_ENDPOINT, string::format(".xapiand/indices/{}", string::replace(local_schema_path, "/", "%2F")) },
+					{ RESERVED_ENDPOINT, string::format(".xapiand/indices/{}", string::replace(endpoints_path, "/", "%2F")) },
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
@@ -292,8 +294,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 		}
 		assert(schema_ptr);
-		std::lock_guard<std::mutex> lk(local_mtx);
-		auto& schema = local_schemas[local_schema_path];
+		std::lock_guard<std::mutex> lk(schemas_mtx);
+		auto& schema = schemas[local_schema_path];
 		if (!schema || schema == local_schema_ptr) {
 			schema = schema_ptr;
 			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
@@ -340,8 +342,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 					schema_ptr->lock();
 					schema_ptr->set_flags(1);
 					assert(schema_ptr);
-					std::lock_guard<std::mutex> lk(local_mtx);
-					auto& schema = local_schemas[local_schema_path];
+					std::lock_guard<std::mutex> lk(schemas_mtx);
+					auto& schema = schemas[local_schema_path];
 					if (!schema || schema == local_schema_ptr) {
 						schema = schema_ptr;
 						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded and added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
@@ -367,8 +369,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			if (local_schema_ptr && (schema_ptr != local_schema_ptr && *schema_ptr != *local_schema_ptr)) {
 				// On error, try reverting
 				assert(local_schema_ptr);
-				std::lock_guard<std::mutex> lk(local_mtx);
-				auto& schema = local_schemas[local_schema_path];
+				std::lock_guard<std::mutex> lk(schemas_mtx);
+				auto& schema = schemas[local_schema_path];
 				if (!schema || schema == schema_ptr) {
 					schema = local_schema_ptr;
 					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata couldn't be written, and was reverted: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), schema_ptr->to_string(), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr");
@@ -393,8 +395,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		// FOREIGN Schema, get from the cache or load from `foreign_path/foreign_id` endpoint:
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
-			std::lock_guard<std::mutex> lk(foreign_mtx);
-			foreign_schema_ptr = foreign_schemas[foreign_uri];
+			std::lock_guard<std::mutex> lk(schemas_mtx);
+			foreign_schema_ptr = schemas[foreign_uri];
 		}
 		if (foreign_schema_ptr && (!new_schema || *new_schema == *foreign_schema_ptr)) {
 			// Same Foreign Schema was in the cache
@@ -404,8 +406,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try using new schema", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,");
 			schema_ptr = new_schema;
 			assert(schema_ptr);
-			std::lock_guard<std::mutex> lk(foreign_mtx);
-			auto& schema = foreign_schemas[foreign_uri];
+			std::lock_guard<std::mutex> lk(schemas_mtx);
+			auto& schema = schemas[foreign_uri];
 			if (!schema || schema == foreign_schema_ptr) {
 				schema = schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
@@ -472,8 +474,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				}
 			}
 			assert(schema_ptr);
-			std::lock_guard<std::mutex> lk(foreign_mtx);
-			auto& schema = foreign_schemas[foreign_uri];
+			std::lock_guard<std::mutex> lk(schemas_mtx);
+			auto& schema = schemas[foreign_uri];
 			if (!schema || schema == foreign_schema_ptr) {
 				schema = schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
@@ -547,8 +549,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 					}
 				}
 				assert(schema_ptr);
-				std::lock_guard<std::mutex> lk(foreign_mtx);
-				auto& schema = foreign_schemas[foreign_uri];
+				std::lock_guard<std::mutex> lk(schemas_mtx);
+				auto& schema = schemas[foreign_uri];
 				if (!schema || schema == foreign_schema_ptr) {
 					schema = schema_ptr;
 					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
@@ -568,8 +570,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				if (foreign_schema_ptr != schema_ptr) {
 					// On error, try reverting
 					assert(foreign_schema_ptr);
-					std::lock_guard<std::mutex> lk(foreign_mtx);
-					auto& schema = foreign_schemas[foreign_uri];
+					std::lock_guard<std::mutex> lk(schemas_mtx);
+					auto& schema = schemas[foreign_uri];
 					if (!schema || schema == schema_ptr) {
 						schema = foreign_schema_ptr;
 						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and was reverted: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->to_string(), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr");
@@ -680,13 +682,8 @@ SchemasLRU::cleanup()
 	L_CALL("SchemasLRU::cleanup()");
 
 	{
-		std::lock_guard<std::mutex> lk(local_mtx);
-		local_schemas.trim();
-	}
-
-	{
-		std::lock_guard<std::mutex> lk(foreign_mtx);
-		foreign_schemas.trim();
+		std::lock_guard<std::mutex> lk(schemas_mtx);
+		schemas.trim();
 	}
 
 	{
@@ -699,20 +696,7 @@ SchemasLRU::cleanup()
 std::string
 SchemasLRU::__repr__() const
 {
-	size_t local_schemas_size;
-	{
-		std::lock_guard<std::mutex> lk(local_mtx);
-		local_schemas_size = local_schemas.size();
-	}
-
-	size_t foreign_schemas_size;
-	{
-		std::lock_guard<std::mutex> lk(foreign_mtx);
-		foreign_schemas_size = foreign_schemas.size();
-	}
-
-	return string::format(STEEL_BLUE + "<SchemasLRU {{local:{}, foreign:{}}}>",
-		local_schemas_size, foreign_schemas_size);
+	return string::format(STEEL_BLUE + "<SchemasLRU>");
 }
 
 
@@ -730,19 +714,10 @@ SchemasLRU::dump_schemas(int level) const
 	ret.push_back('\n');
 
 	{
-		std::lock_guard<std::mutex> lk(local_mtx);
-		for (auto& schema : local_schemas) {
+		std::lock_guard<std::mutex> lk(schemas_mtx);
+		for (auto& schema : schemas) {
 			ret += indent + indent;
-			ret += string::format("<LocalSchema {}>", repr(schema.first));
-			ret.push_back('\n');
-		}
-	}
-
-	{
-		std::lock_guard<std::mutex> lk(foreign_mtx);
-		for (auto& schema : foreign_schemas) {
-			ret += indent + indent;
-			ret += string::format("<ForeignSchema {}>", repr(schema.first));
+			ret += string::format("<Schema {}>", repr(schema.first));
 			ret.push_back('\n');
 		}
 	}

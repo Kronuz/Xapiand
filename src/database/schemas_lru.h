@@ -40,11 +40,8 @@ class DatabaseHandler;
 
 
 class SchemasLRU {
-	mutable std::mutex local_mtx;
-	lru::aging_lru<std::string, std::shared_ptr<const MsgPack>> local_schemas;
-
-	mutable std::mutex foreign_mtx;
-	lru::aging_lru<std::string, std::shared_ptr<const MsgPack>> foreign_schemas;
+	mutable std::mutex schemas_mtx;
+	lru::aging_lru<std::string, std::shared_ptr<const MsgPack>> schemas;
 
 	mutable std::mutex versions_mtx;
 	lru::aging_lru<std::string, Xapian::rev> versions;
