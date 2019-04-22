@@ -885,6 +885,7 @@ XapiandManager::make_servers()
 	fsyncher();
 #ifdef XAPIAND_CLUSTERING
 	db_updater();
+	schema_updater();
 	trigger_replication();
 #endif
 }

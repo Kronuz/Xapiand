@@ -770,7 +770,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		if (!opts.solo) {
 			// On COMMIT, let the updaters do their job
 			if (send_update) {
-				db_updater()->debounce(base_path, base_path);
+				db_updater()->debounce(base_path, revision + 1, base_path);
 			}
 		}
 #endif

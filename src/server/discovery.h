@@ -29,6 +29,7 @@
 #include <cassert>                          // for assert
 #include <chrono>                           // for std::chrono
 #include <string>                           // for std::string
+#include <string_view>                      // for std::string_view
 #include <unordered_map>                    // for std::unordered_map
 #include <vector>                           // for std::vector
 
@@ -40,6 +41,7 @@
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
 #include "udp.h"                            // for UDP
 #include "worker.h"                         // for Worker
+#include "xapian.h"                         // for Xapian::rev
 
 
 // Values in seconds
@@ -87,6 +89,7 @@ ENUM_CLASS(DiscoveryMessage, int,
 	RAFT_REQUEST_VOTE_RESPONSE,   // Gather votes
 	RAFT_ADD_COMMAND,             //
 	DB_UPDATED,                   //
+	SCHEMA_UPDATED,               //
 	MAX                           //
 )
 
@@ -112,7 +115,7 @@ private:
 	ev::async raft_add_command_async;
 	ConcurrentQueue<std::string> raft_add_command_args;
 
-	ev::async db_update_send_async;
+	ev::async message_send_async;
 
 	Role raft_role;
 	size_t raft_votes_granted;
@@ -128,12 +131,12 @@ private:
 	std::unordered_map<std::string, size_t> raft_next_indexes;
 	std::unordered_map<std::string, size_t> raft_match_indexes;
 
-	ConcurrentQueue<std::string> db_update_send_args;
+	ConcurrentQueue<std::pair<Message, std::string>> message_send_args;
 
 	void cluster_enter_async_cb(ev::async& watcher, int revents);
 
-	void _db_update_send(const std::string& path);
-	void db_update_send_async_cb(ev::async& watcher, int revents);
+	void _message_send(Message type, const std::string& path);
+	void message_send_async_cb(ev::async& watcher, int revents);
 
 	void send_message(Message type, const std::string& message);
 	void io_accept_cb(ev::io& watcher, int revents);
@@ -150,6 +153,7 @@ private:
 	void raft_append_entries_response(Message type, const std::string& message);
 	void raft_add_command(Message type, const std::string& message);
 	void db_updated(Message type, const std::string& message);
+	void schema_updated(Message type, const std::string& message);
 
 	void cluster_discovery_cb(ev::timer& watcher, int revents);
 
@@ -192,19 +196,28 @@ public:
 	void cluster_enter();
 	void raft_add_command(const std::string& command);
 	void raft_request_vote();
-	void db_update_send(const std::string& path);
+	void db_updated_send(Xapian::rev revision, std::string_view path);
+	void schema_updated_send(Xapian::rev revision, std::string_view path);
 
 	std::string __repr__() const override;
 
 	std::string getDescription() const;
 };
 
-void db_updater_send(std::string path);
+void db_updated_send(Xapian::rev revision, std::string path);
 
 inline auto& db_updater(bool create = true) {
-	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updater_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_force_timeout)) : nullptr;
+	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_force_timeout)) : nullptr;
 	assert(!create || db_updater);
 	return db_updater;
+}
+
+void schema_updated_send(Xapian::rev revision, std::string path);
+
+inline auto& schema_updater(bool create = true) {
+	static auto schema_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, schema_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_force_timeout)) : nullptr;
+	assert(!create || schema_updater);
+	return schema_updater;
 }
 
 #endif

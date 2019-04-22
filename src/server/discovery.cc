@@ -72,7 +72,7 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_leader_heartbeat(*ev_loop),
 	  raft_request_vote_async(*ev_loop),
 	  raft_add_command_async(*ev_loop),
-	  db_update_send_async(*ev_loop),
+	  message_send_async(*ev_loop),
 	  raft_role(Role::RAFT_FOLLOWER),
 	  raft_votes_granted(0),
 	  raft_votes_denied(0),
@@ -99,9 +99,9 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	raft_add_command_async.start();
 	L_EV("Start discovery's async raft_add_command signal event");
 
-	db_update_send_async.set<Discovery, &Discovery::db_update_send_async_cb>(this);
-	db_update_send_async.start();
-	L_EV("Start discovery's async db_update_send signal event");
+	message_send_async.set<Discovery, &Discovery::message_send_async_cb>(this);
+	message_send_async.start();
+	L_EV("Start discovery's async db_updated_send signal event");
 }
 
 
@@ -299,6 +299,9 @@ Discovery::discovery_server(Message type, const std::string& message)
 			return;
 		case Message::DB_UPDATED:
 			db_updated(type, message);
+			return;
+		case Message::SCHEMA_UPDATED:
+			schema_updated(type, message);
 			return;
 		default: {
 			std::string errmsg("Unexpected message type ");
@@ -914,7 +917,9 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 		return;
 	}
 
-	auto path = std::string(p, p_end);
+	unserialise_length(&p, p_end);  // revision ignored
+
+	auto path = std::string_view(p, p_end - p);
 	L_DISCOVERY(">> {} [from {}]: {}", enum_name(type), remote_node.name(), repr(path));
 
 	auto node = Node::touch_node(remote_node, false).first;
@@ -928,6 +933,35 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, local_endpoint.path, remote_endpoint, local_endpoint);
 		}
 	}
+}
+
+
+
+void
+Discovery::schema_updated([[maybe_unused]] Message type, const std::string& message)
+{
+	L_CALL("Discovery::schema_updated({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
+
+	if (XapiandManager::state() != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = Node::unserialise(&p, p_end);
+
+	auto local_node = Node::local_node();
+	if (Node::is_superset(local_node, remote_node)) {
+		// It's just me, do nothing!
+		return;
+	}
+
+	Xapian::rev version = unserialise_length(&p, p_end);
+
+	auto path = std::string_view(p, p_end - p);
+
+	L_RED("Schema updated: {} at {}", path, version);
 }
 
 
@@ -1312,14 +1346,16 @@ Discovery::raft_add_command(const std::string& command)
 
 
 void
-Discovery::_db_update_send(const std::string& path)
+Discovery::_message_send(Message type, const std::string& message)
 {
-	auto local_node = Node::local_node();
-	send_message(Message::DB_UPDATED,
-		local_node->serialise() +   // The node where the index is at
-		path);  // The path of the index
+	assert(type == Message::DB_UPDATED || type == Message::SCHEMA_UPDATED);
 
-	L_DEBUG("Sending database updated signal for {}", repr(path));
+	auto local_node = Node::local_node();
+	send_message(type,
+		local_node->serialise() +   // The node where the index is at
+		message);
+
+	L_DEBUG("Sending {} message: {}", enum_name(type), repr(message));
 }
 
 
@@ -1346,28 +1382,45 @@ Discovery::cluster_enter()
 
 
 void
-Discovery::db_update_send_async_cb(ev::async&, [[maybe_unused]] int revents)
+Discovery::message_send_async_cb(ev::async&, [[maybe_unused]] int revents)
 {
-	L_CALL("Discovery::db_update_send_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+	L_CALL("Discovery::message_send_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	L_EV_BEGIN("Discovery::db_update_send_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
-	L_EV_END("Discovery::db_update_send_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_BEGIN("Discovery::message_send_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
+	L_EV_END("Discovery::message_send_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
-	std::string path;
-	while (db_update_send_args.try_dequeue(path)) {
-		_db_update_send(path);
+	std::pair<Message, std::string> message;
+	while (message_send_args.try_dequeue(message)) {
+		_message_send(message.first, message.second);
 	}
 }
 
 
 void
-Discovery::db_update_send(const std::string& path)
+Discovery::db_updated_send(Xapian::rev revision, std::string_view path)
 {
-	L_CALL("Discovery::db_update_send({})", repr(path));
+	L_CALL("Discovery::db_updated_send({}, {})", revision, repr(path));
 
-	db_update_send_args.enqueue(path);
+	auto message = serialise_length(revision);
+	message.append(path);
 
-	db_update_send_async.send();
+	message_send_args.enqueue(std::make_pair(Message::DB_UPDATED, message));
+
+	message_send_async.send();
+}
+
+
+void
+Discovery::schema_updated_send(Xapian::rev revision, std::string_view path)
+{
+	L_CALL("Discovery::schema_updated_send({}, {})", revision, repr(path));
+
+	auto message = serialise_length(revision);
+	message.append(path);
+
+	message_send_args.enqueue(std::make_pair(Message::SCHEMA_UPDATED, message));
+
+	message_send_async.send();
 }
 
 
@@ -1394,9 +1447,15 @@ Discovery::getDescription() const
 
 
 void
-db_updater_send(std::string path)
+db_updated_send(Xapian::rev revision, std::string path)
 {
-	XapiandManager::discovery()->db_update_send(path);
+	XapiandManager::discovery()->db_updated_send(revision, path);
+}
+
+void
+schema_updated_send(Xapian::rev revision, std::string path)
+{
+	XapiandManager::discovery()->schema_updated_send(revision, path);
 }
 
 #endif
