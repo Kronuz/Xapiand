@@ -23,6 +23,18 @@ Xapiand is written in C++17 and it has the following build requirements:
 
 
 ---
+### Dependencies
+
+Xapiand it makes use a quite few libraries: libev, Chaiscript, Xapian, LZ4,
+but most of them are all included in the codebase. The only external
+dependencies needed for building it are:
+
+* zlib
+* libpthread (internally used by the Standard C++ thread library)
+* ICU >= 54.1 (optional)
+
+
+---
 #### macOS
 
 To install the requirements under macOS you need:
@@ -37,8 +49,8 @@ to build:
 
 ```sh
 # Install command tools using:
-sudo xcode-select --install
-sudo open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
+~/ $ sudo xcode-select --install
+~/ $ sudo open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg
 ```
 
 ##### 2. [Install Homebrew](https://docs.brew.sh/Installation){:target="_blank"}
@@ -51,19 +63,8 @@ sudo open /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_mac
 ~/ $ brew install ninja
 ~/ $ brew install pkg-config
 ~/ $ brew install cmake
+~/ $ brew install icu
 ```
-
-
----
-### Dependencies
-
-Xapiand it makes use a quite few libraries: libev, Chaiscript, Xapian, LZ4,
-but most of them are all included in the codebase. The only external
-dependencies needed for building it are:
-
-* zlib
-* libpthread (internally used by the Standard C++ thread library)
-* ICU 54.1 (optional)
 
 
 ---
