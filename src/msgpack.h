@@ -456,8 +456,8 @@ public:
 	const std::shared_ptr<const Data> get_data() const;
 	void clear_data() const;
 
-	int get_flags() const;
-	int set_flags(int flags) const;
+	unsigned long long get_flags() const;
+	unsigned long long set_flags(unsigned long long flags) const;
 
 	friend msgpack::adaptor::convert<MsgPack>;
 	friend msgpack::adaptor::pack<MsgPack>;
@@ -589,7 +589,7 @@ struct MsgPack::Body {
 	std::vector<MsgPack> array;
 
 	mutable atomic_shared_ptr<const Data> _data;
-	mutable std::atomic_int _flags;
+	mutable std::atomic<unsigned long long> _flags;
 
 	std::atomic_bool _lock;
 	bool _initialized;
@@ -3173,12 +3173,12 @@ inline void MsgPack::clear_data() const {
 }
 
 
-inline int MsgPack::get_flags() const {
+inline unsigned long long MsgPack::get_flags() const {
 	return _body->_flags.load();
 }
 
 
-inline int MsgPack::set_flags(int flags) const {
+inline unsigned long long MsgPack::set_flags(unsigned long long flags) const {
 	return _body->_flags.exchange(flags);
 }
 
