@@ -24,7 +24,6 @@
 
 #include <cassert>                                // for assert
 #include <chrono>                                 // for std::chrono_literals
-#include <limits>                                 // for std::numeric_limits
 
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/utils.h"                       // for unsharded_path
@@ -179,8 +178,8 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 
 
 SchemasLRU::SchemasLRU(ssize_t max_size) :
-	schemas(max_size, 10s),
-	versions(std::numeric_limits<size_t>::max(), 3600s)
+	schemas(max_size, 3600s),
+	versions(0, 3600s)
 {
 }
 
