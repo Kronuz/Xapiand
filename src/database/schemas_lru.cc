@@ -187,7 +187,6 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
 
-	bool exchanged;
 	bool failure = false;
 
 	// We first try to load schema from the LRU cache
@@ -196,7 +195,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "");
 	{
 		std::lock_guard<std::mutex> lk(local_mtx);
-		local_schema_ptr = local_schemas[local_schema_path].load();
+		local_schema_ptr = local_schemas[local_schema_path];
 	}
 
 	if (new_schema) {
@@ -222,16 +221,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				L_SCHEMA("{}" + GREEN + "Local Schema [{}] already had the same foreign link in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			} else {
 				schema_ptr->lock();
-				{
-					assert(schema_ptr);
-					std::lock_guard<std::mutex> lk(local_mtx);
-					do {
-						exchanged = local_schemas[local_schema_path].compare_exchange_weak(local_schema_ptr, schema_ptr);
-					} while (!exchanged && !local_schema_ptr);
-				}
-				if (exchanged) {
+				assert(schema_ptr);
+				std::lock_guard<std::mutex> lk(local_mtx);
+				auto& schema = local_schemas[local_schema_path];
+				if (!schema || schema == local_schema_ptr) {
+					schema = schema_ptr;
 					L_SCHEMA("{}" + GREEN + "Local Schema [{}] added new foreign link to the LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 				} else {
+					local_schema_ptr = schema;
 					assert(local_schema_ptr);
 					if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
 						schema_ptr = local_schema_ptr;
@@ -286,16 +283,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			schema_ptr->set_flags(1);
 			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was loaded from metadata: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 		}
-		{
-			assert(schema_ptr);
-			std::lock_guard<std::mutex> lk(local_mtx);
-			do {
-				exchanged = local_schemas[local_schema_path].compare_exchange_weak(local_schema_ptr, schema_ptr);
-			} while (!exchanged && !local_schema_ptr);
-		}
-		if (exchanged) {
+		assert(schema_ptr);
+		std::lock_guard<std::mutex> lk(local_mtx);
+		auto& schema = local_schemas[local_schema_path];
+		if (!schema || schema == local_schema_ptr) {
+			schema = schema_ptr;
 			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 		} else {
+			local_schema_ptr = schema;
 			// Read object couldn't be stored in cache,
 			// so we use the schema now currently in cache
 			assert(local_schema_ptr);
@@ -336,16 +331,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
 					schema_ptr->lock();
 					schema_ptr->set_flags(1);
-					{
-						assert(schema_ptr);
-						std::lock_guard<std::mutex> lk(local_mtx);
-						do {
-							exchanged = local_schemas[local_schema_path].compare_exchange_weak(local_schema_ptr, schema_ptr);
-						} while (!exchanged && !local_schema_ptr);
-					}
-					if (exchanged) {
+					assert(schema_ptr);
+					std::lock_guard<std::mutex> lk(local_mtx);
+					auto& schema = local_schemas[local_schema_path];
+					if (!schema || schema == local_schema_ptr) {
+						schema = schema_ptr;
 						L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded and added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 					} else {
+						local_schema_ptr = schema;
 						assert(local_schema_ptr);
 						if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
 							schema_ptr = local_schema_ptr;
@@ -365,16 +358,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		} catch (...) {
 			if (local_schema_ptr && (schema_ptr != local_schema_ptr && *schema_ptr != *local_schema_ptr)) {
 				// On error, try reverting
-				{
-					assert(local_schema_ptr);
-					std::lock_guard<std::mutex> lk(local_mtx);
-					do {
-						exchanged = local_schemas[local_schema_path].compare_exchange_weak(schema_ptr, local_schema_ptr);
-					} while (!exchanged && !schema_ptr);
-				}
-				if (exchanged) {
+				assert(local_schema_ptr);
+				std::lock_guard<std::mutex> lk(local_mtx);
+				auto& schema = local_schemas[local_schema_path];
+				if (!schema || schema == schema_ptr) {
+					schema = local_schema_ptr;
 					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata couldn't be written, and was reverted: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), schema_ptr->to_string(), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr");
 				} else {
+					schema_ptr = schema;
 					L_SCHEMA("{}" + RED + "Local Schema [{}] metadata couldn't be written, and couldn't be reverted: " + DIM_GREY + "{} " + LIGHT_GREY + "==>" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? local_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 				}
 			} else {
@@ -395,7 +386,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		std::shared_ptr<const MsgPack> foreign_schema_ptr;
 		{
 			std::lock_guard<std::mutex> lk(foreign_mtx);
-			foreign_schema_ptr = foreign_schemas[foreign_uri].load();
+			foreign_schema_ptr = foreign_schemas[foreign_uri];
 		}
 		if (foreign_schema_ptr && (!new_schema || *new_schema == *foreign_schema_ptr)) {
 			// Same Foreign Schema was in the cache
@@ -404,16 +395,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		} else if (new_schema) {
 			L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try using new schema", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,");
 			schema_ptr = new_schema;
-			{
-				assert(schema_ptr);
-				std::lock_guard<std::mutex> lk(foreign_mtx);
-				do {
-					exchanged = foreign_schemas[foreign_uri].compare_exchange_weak(foreign_schema_ptr, schema_ptr);
-				} while (!exchanged && !foreign_schema_ptr);
-			}
-			if (exchanged) {
+			assert(schema_ptr);
+			std::lock_guard<std::mutex> lk(foreign_mtx);
+			auto& schema = foreign_schemas[foreign_uri];
+			if (!schema || schema == foreign_schema_ptr) {
+				schema = schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 			} else {
+				foreign_schema_ptr = schema;
 				assert(foreign_schema_ptr);
 				if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
 					schema_ptr = foreign_schema_ptr;
@@ -473,16 +462,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 					schema_ptr = initial_schema_ptr;
 				}
 			}
-			{
-				assert(schema_ptr);
-				std::lock_guard<std::mutex> lk(foreign_mtx);
-				do {
-					exchanged = foreign_schemas[foreign_uri].compare_exchange_weak(foreign_schema_ptr, schema_ptr);
-				} while (!exchanged && !foreign_schema_ptr);
-			}
-			if (exchanged) {
+			assert(schema_ptr);
+			std::lock_guard<std::mutex> lk(foreign_mtx);
+			auto& schema = foreign_schemas[foreign_uri];
+			if (!schema || schema == foreign_schema_ptr) {
+				schema = schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 			} else {
+				foreign_schema_ptr = schema;
 				assert(foreign_schema_ptr);
 				if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
 					schema_ptr = foreign_schema_ptr;
@@ -548,16 +535,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 						schema_ptr = initial_schema_ptr;
 					}
 				}
-				{
-					assert(schema_ptr);
-					std::lock_guard<std::mutex> lk(foreign_mtx);
-					do {
-						exchanged = foreign_schemas[foreign_uri].compare_exchange_weak(foreign_schema_ptr, schema_ptr);
-					} while (!exchanged && !foreign_schema_ptr);
-				}
-				if (exchanged) {
+				assert(schema_ptr);
+				std::lock_guard<std::mutex> lk(foreign_mtx);
+				auto& schema = foreign_schemas[foreign_uri];
+				if (!schema || schema == foreign_schema_ptr) {
+					schema = schema_ptr;
 					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 				} else {
+					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
 					if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
 						schema_ptr = foreign_schema_ptr;
@@ -571,16 +556,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			} catch (...) {
 				if (foreign_schema_ptr != schema_ptr) {
 					// On error, try reverting
-					{
-						assert(foreign_schema_ptr);
-						std::lock_guard<std::mutex> lk(foreign_mtx);
-						do {
-							exchanged = foreign_schemas[foreign_uri].compare_exchange_weak(schema_ptr, foreign_schema_ptr);
-						} while (!exchanged && !schema_ptr);
-					}
-					if (exchanged) {
+					assert(foreign_schema_ptr);
+					std::lock_guard<std::mutex> lk(foreign_mtx);
+					auto& schema = foreign_schemas[foreign_uri];
+					if (!schema || schema == schema_ptr) {
+						schema = foreign_schema_ptr;
 						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and was reverted: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->to_string(), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr");
 					} else {
+						schema_ptr = schema;
 						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved, and couldn't be reverted: " + DIM_GREY + "{} " + LIGHT_GREY + "==>" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? foreign_schema_ptr->to_string() : "nullptr", schema_ptr->to_string());
 					}
 				} else {
