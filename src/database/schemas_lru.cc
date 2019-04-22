@@ -201,7 +201,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 	std::shared_ptr<const MsgPack> local_schema_ptr;
 	const auto endpoints_path = unsharded_path(db_handler->endpoints[0].path);
 	const auto local_schema_path = std::string(endpoints_path) + "/";  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
-	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "");
+	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " (writable)" : "");
 	{
 		std::lock_guard<std::mutex> lk(schemas_mtx);
 		local_schema_ptr = schemas[local_schema_path];
