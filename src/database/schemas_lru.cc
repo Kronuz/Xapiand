@@ -184,7 +184,7 @@ SchemasLRU::SchemasLRU(ssize_t max_size) :
 }
 
 
-std::tuple<bool, std::shared_ptr<const MsgPack>, std::string>
+std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>
 SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable)
 {
 	L_CALL("SchemasLRU::_update(<db_handler>, {}, {})", new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr");
@@ -584,7 +584,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		}
 	}
 
-	return std::make_tuple(failure, std::move(schema_ptr), std::move(foreign_uri));
+	return std::make_tuple(failure, std::move(schema_ptr), std::move(local_schema_path), std::move(foreign_uri));
 }
 
 
@@ -606,7 +606,61 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 
 	auto up = _update("GET: ", db_handler, nullptr, schema_obj, false);
 	auto schema_ptr = std::get<1>(up);
-	auto foreign_uri = std::get<2>(up);
+	auto local_schema_path = std::get<2>(up);
+	auto foreign_uri = std::get<3>(up);
+
+	// The versions LRU contains versions of schemas received as notices
+	// from other nodes. In the event such version exists and is newer
+	// than the currently loaded version of the schema, we try to reload
+	// the new schema or otherwise lower the schema's lifespan in the LRU.
+	auto& path = foreign_uri.empty() ? local_schema_path : foreign_uri;
+	bool outdated;
+	{
+		std::lock_guard<std::mutex> lk(versions_mtx);
+		auto it = versions.find(path);
+		outdated = it != versions.end() && it->second > schema_ptr->get_flags();
+	}
+	if (outdated) {
+		// If the schema was flagged as outdated (newer version exists), try
+		// erasing the schema, retry _update, and re-check outdated status.
+		bool retry = false;
+		{
+			std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
+			auto it = schemas.find(path);
+			if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
+				it.relink(0s);
+				retry = true;
+			}
+		}
+		if (retry) {
+			DatabaseHandler _db_handler(db_handler->endpoints, DB_WRITABLE);
+			up = _update("GET: ", &_db_handler, nullptr, schema_obj, false);
+			schema_ptr = std::get<1>(up);
+			local_schema_path = std::get<2>(up);
+			foreign_uri = std::get<3>(up);
+			auto& path_ = foreign_uri.empty() ? local_schema_path : foreign_uri;
+			{
+				std::lock_guard<std::mutex> lk(versions_mtx);
+				auto it = versions.find(path_);
+				outdated = it != versions.end() && it->second > schema_ptr->get_flags();
+			}
+			if (outdated) {
+				// Still outdated, relink with a shorter lifespan (10s)
+				std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
+				auto it = schemas.find(path_);
+				if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
+					it.relink(10s);
+				}
+				L_SCHEMA(RED + "Schema {} is outdated!", repr(path_));
+			} else {
+				L_SCHEMA(GREEN + "Schema {} was outdated!", repr(path_));
+			}
+		} else {
+			L_SCHEMA(MAGENTA + "Schema {} is still outdated!", repr(path));
+		}
+	} else {
+		L_SCHEMA(GREEN + "Schema {} is current!", repr(path));
+	}
 
 	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
@@ -716,7 +770,7 @@ SchemasLRU::dump_schemas(int level) const
 		for (auto& schema : schemas) {
 			std::string outdated;
 			auto it = versions.find(schema.first);
-			if (it != versions.end() && schema.second->get_flags() < it->second) {
+			if (it != versions.end() && it->second > schema.second->get_flags()) {
 				outdated = " " + LIGHT_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
 			}
 			ret += indent + indent;
