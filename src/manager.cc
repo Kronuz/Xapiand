@@ -1512,7 +1512,7 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 
 	try {
 		DatabaseHandler db_handler(index_endpoints);
-		auto document = db_handler.get_document(normalized_path);
+		auto document = db_handler.find_document(normalized_path);
 		auto obj = document.get_obj();
 		auto it = obj.find("replicas");
 		if (it != obj.end()) {
@@ -1555,7 +1555,7 @@ load_shards(const std::string& normalized_path)
 
 	try {
 		DatabaseHandler db_handler(index_endpoints);
-		auto document = db_handler.get_document(normalized_path);
+		auto document = db_handler.find_document(normalized_path);
 		auto obj = document.get_obj();
 		auto it = obj.find("number_of_shards");
 		if (it != obj.end()) {
