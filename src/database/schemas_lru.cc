@@ -129,6 +129,36 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		Schema::check<Error>(o, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
 		return std::make_pair(version, o);
+	} catch (const Xapian::DocNotFoundError&) {
+		context->erase(path);
+		if (path == ".xapiand/indices") {
+			// Return default .xapiand/index (basic schema already known)
+			return std::make_pair(0, MsgPack({
+				{ RESERVED_RECURSE, false },
+				{ SCHEMA_FIELD_NAME, {
+					{ ID_FIELD_NAME, {
+						{ RESERVED_STORE, false },
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+				} },
+			}));
+		}
+		throw;
+	} catch (const Xapian::DatabaseNotFoundError&) {
+		context->erase(path);
+		if (path == ".xapiand/indices") {
+			// Return default .xapiand/index (basic schema already known)
+			return std::make_pair(0, MsgPack({
+				{ RESERVED_RECURSE, false },
+				{ SCHEMA_FIELD_NAME, {
+					{ ID_FIELD_NAME, {
+						{ RESERVED_STORE, false },
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+				} },
+			}));
+		}
+		throw;
 	} catch (...) {
 		context->erase(path);
 		throw;
@@ -170,6 +200,20 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 		auto version_ser = document.get_value(DB_SLOT_VERSION);
 		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
 		return version;
+	} catch (const Xapian::DocNotFoundError&) {
+		if (path == ".xapiand/indices") {
+			// Ignore .xapiand/index (basic schema already known)
+			return 0;
+		}
+		context->erase(path);
+		throw;
+	} catch (const Xapian::DatabaseNotFoundError&) {
+		if (path == ".xapiand/indices") {
+			// Ignore .xapiand/index (basic schema already known)
+			return 0;
+		}
+		context->erase(path);
+		throw;
 	} catch (...) {
 		context->erase(path);
 		throw;
