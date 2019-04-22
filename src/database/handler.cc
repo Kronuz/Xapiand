@@ -1609,11 +1609,11 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
+	assert(!endpoints.empty());
+
 	Xapian::docid did = 0;
 
-	assert(!endpoints.empty());
-	assert(term.size() > 2);
-	if (term[0] == 'Q' && term[1] == 'N') {
+	if (term.size() > 2 && term[0] == 'Q' && term[1] == 'N') {
 		auto did_serialised = term.substr(2);
 		did = sortable_unserialise(did_serialised);
 		return did;
