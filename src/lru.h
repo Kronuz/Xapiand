@@ -219,21 +219,23 @@ struct aging_base_node : public base_node
 		return ret;
 	}
 
-	template <>
-	aging_base_node* next<detail::iterate_by_age>(void*) const noexcept {
-		return _next_by_age;
-	}
-
-	template <>
-	aging_base_node* prev<detail::iterate_by_age>(void*) const noexcept {
-		return _prev_by_age;
-	}
-
 	void clear() noexcept {
 		base_node::clear();
 		_prev_by_age = _next_by_age = this;
 	}
 };
+
+
+template <>
+inline aging_base_node* aging_base_node::next<detail::iterate_by_age>(void*) const noexcept {
+	return _next_by_age;
+}
+
+
+template <>
+inline aging_base_node* aging_base_node::prev<detail::iterate_by_age>(void*) const noexcept {
+	return _prev_by_age;
+}
 
 
 template <typename Type, typename BaseNodeType>
