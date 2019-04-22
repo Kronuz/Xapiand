@@ -561,7 +561,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 			Data data;
 			Xapian::docid did = 0;
 			try {
-				did = find_docid_term(term_id);
+				did = get_docid_term(term_id);
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 
@@ -619,7 +619,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 			Data data;
 			Xapian::docid did = 0;
 			try {
-				auto current_document = find_document_term(term_id);
+				auto current_document = get_document_term(term_id);
 				did = current_document.get_docid();
 				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
 			} catch (const Xapian::DocNotFoundError&) {
@@ -663,7 +663,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 			Data data;
 			Xapian::docid did = 0;
 			try {
-				auto current_document = find_document_term(term_id);
+				auto current_document = get_document_term(term_id);
 				did = current_document.get_docid();
 				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
 			} catch (const Xapian::DocNotFoundError&) {
@@ -1555,85 +1555,6 @@ DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool
 
 
 Document
-DatabaseHandler::find_document(std::string_view document_id)
-{
-	L_CALL("DatabaseHandler::find_document((std::string){})", repr(document_id));
-
-	auto did = to_docid(document_id);
-	if (did != 0u) {
-		return get_document(did);
-	}
-
-	const auto term_id = get_prefixed_term_id(document_id);
-	did = find_docid_term(term_id);
-	return Document(did, this);
-}
-
-
-Document
-DatabaseHandler::find_document_term(const std::string& term_id)
-{
-	L_CALL("DatabaseHandler::find_document_term({})", repr(term_id));
-
-	auto did = find_docid_term(term_id);
-	return Document(did, this);
-}
-
-
-Xapian::docid
-DatabaseHandler::find_docid(std::string_view document_id)
-{
-	L_CALL("DatabaseHandler::find_docid({})", repr(document_id));
-
-	auto did = to_docid(document_id);
-	if (did != 0u) {
-		return did;
-	}
-
-	const auto term_id = get_prefixed_term_id(document_id);
-	return find_docid_term(term_id);
-}
-
-
-Xapian::docid
-DatabaseHandler::find_docid_term(const std::string& term)
-{
-	L_CALL("DatabaseHandler::find_docid_term({})", repr(term));
-
-	Xapian::docid did = 0;
-
-	lock_database lk_db(*this);
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto rdb = lk_db.locked();
-			auto it = rdb->postlist_begin(term);
-			if (it == rdb->postlist_end(term)) {
-				throw Xapian::DocNotFoundError("Document not found");
-			}
-			did = *it;
-			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError& exc) {
-			lk_db.do_close();
-			if (exc.get_msg() == "Database has been closed") {
-				if (t == 0) { throw; }
-			} else {
-				throw;
-			}
-		}
-		lk_db.reopen();
-	}
-
-	return did;
-}
-
-
-Document
 DatabaseHandler::get_document(Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::get_document((Xapian::docid){})", did);
@@ -1688,27 +1609,43 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
+	Xapian::docid did = 0;
+
 	assert(!endpoints.empty());
-	size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
-	if (n_shards > 1) {
-		assert(term.size() > 2);
-		if (term[0] == 'Q' && term[1] == 'N') {
-			auto did_serialised = term.substr(2);
-			Xapian::docid did = sortable_unserialise(did_serialised);
-			if (did == 0u) {
-				return did;
-			} else {
-				shard_num = (did - 1) % n_shards;  // docid in the multi-db to shard number
-			}
-		} else {
-			shard_num = fnv1ah64::hash(term) % n_shards;
-		}
+	assert(term.size() > 2);
+	if (term[0] == 'Q' && term[1] == 'N') {
+		auto did_serialised = term.substr(2);
+		did = sortable_unserialise(did_serialised);
+		return did;
 	}
-	auto& endpoint = endpoints[shard_num];
-	lock_shard lk_shard(endpoint, flags);
-	auto shard_did = lk_shard->get_docid_term(term);
-	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+
+	lock_database lk_db(*this);
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			auto rdb = lk_db.locked();
+			auto it = rdb->postlist_begin(term);
+			if (it == rdb->postlist_end(term)) {
+				throw Xapian::DocNotFoundError("Document not found");
+			}
+			did = *it;
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError& exc) {
+			lk_db.do_close();
+			if (exc.get_msg() == "Database has been closed") {
+				if (t == 0) { throw; }
+			} else {
+				throw;
+			}
+		}
+		lk_db.reopen();
+	}
+
 	return did;
 }
 
@@ -1750,6 +1687,17 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 	L_CALL("DatabaseHandler::delete_document_term({})", repr(term));
 
 	assert(!endpoints.empty());
+
+	Xapian::docid did = 0;
+	try {
+		did = get_docid_term(term);
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+
+	if (did != 0u) {
+		return delete_document(did, commit, wal, version);
+	}
+
 	size_t n_shards = endpoints.size();
 	size_t shard_num = fnv1ah64::hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
@@ -1785,6 +1733,7 @@ DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, boo
 			}
 		}
 	}
+
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
 	auto shard_did = lk_shard->add_document(std::move(doc), commit, wal, version);
@@ -1848,10 +1797,21 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 			shard_num = fnv1ah64::hash(term) % n_shards;
 		}
 	}
+
+	Xapian::docid did = 0;
+	try {
+		did = get_docid_term(term);
+	} catch (const Xapian::DocNotFoundError&) {
+	} catch (const Xapian::DatabaseNotFoundError&) {}
+
+	if (did != 0u) {
+		return replace_document(did, std::move(doc), commit, wal, version);
+	}
+
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
 	auto shard_did = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
-	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+	did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
 	return did;
 }
 

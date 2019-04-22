@@ -248,11 +248,6 @@ public:
 	Xapian::docid get_docid(std::string_view document_id);
 	Xapian::docid get_docid_term(const std::string& term);
 
-	Document find_document(std::string_view document_id);
-	Document find_document_term(const std::string& term);
-	Xapian::docid find_docid(std::string_view document_id);
-	Xapian::docid find_docid_term(const std::string& term);
-
 	void delete_document(Xapian::docid did, bool commit = false, bool wal = true, bool version = true);
 	void delete_document(std::string_view document_id, bool commit = false, bool wal = true, bool version = true);
 	void delete_document_term(const std::string& term, bool commit = false, bool wal = true, bool version = true);
