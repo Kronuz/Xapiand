@@ -398,16 +398,6 @@ DatabaseHandler::check()
 }
 
 
-Document
-DatabaseHandler::get_document_term(const std::string& term_id)
-{
-	L_CALL("DatabaseHandler::get_document_term({})", repr(term_id));
-
-	auto did = get_docid_term(term_id);
-	return Document(did, this);
-}
-
-
 std::unique_ptr<MsgPack>
 DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
@@ -1548,6 +1538,85 @@ DatabaseHandler::set_metadata(std::string_view key, std::string_view value, bool
 
 
 Document
+DatabaseHandler::find_document(std::string_view document_id)
+{
+	L_CALL("DatabaseHandler::find_document((std::string){})", repr(document_id));
+
+	auto did = to_docid(document_id);
+	if (did != 0u) {
+		return get_document(did);
+	}
+
+	const auto term_id = get_prefixed_term_id(document_id);
+	did = find_docid_term(term_id);
+	return Document(did, this);
+}
+
+
+Document
+DatabaseHandler::find_document_term(const std::string& term_id)
+{
+	L_CALL("DatabaseHandler::find_document_term({})", repr(term_id));
+
+	auto did = find_docid_term(term_id);
+	return Document(did, this);
+}
+
+
+Xapian::docid
+DatabaseHandler::find_docid(std::string_view document_id)
+{
+	L_CALL("DatabaseHandler::find_docid({})", repr(document_id));
+
+	auto did = to_docid(document_id);
+	if (did != 0u) {
+		return did;
+	}
+
+	const auto term_id = get_prefixed_term_id(document_id);
+	return find_docid_term(term_id);
+}
+
+
+Xapian::docid
+DatabaseHandler::find_docid_term(const std::string& term)
+{
+	L_CALL("DatabaseHandler::find_docid_term({})", repr(term));
+
+	Xapian::docid did = 0;
+
+	lock_database lk_db(*this);
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			auto rdb = lk_db.locked();
+			auto it = rdb->postlist_begin(term);
+			if (it == rdb->postlist_end(term)) {
+				throw Xapian::DocNotFoundError("Document not found");
+			}
+			did = *it;
+			break;
+		} catch (const Xapian::DatabaseModifiedError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseOpeningError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError& exc) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError& exc) {
+			lk_db.do_close();
+			if (exc.get_msg() == "Database has been closed") {
+				if (t == 0) { throw; }
+			} else {
+				throw;
+			}
+		}
+		lk_db.reopen();
+	}
+
+	return did;
+}
+
+
+Document
 DatabaseHandler::get_document(Xapian::docid did)
 {
 	L_CALL("DatabaseHandler::get_document((Xapian::docid){})", did);
@@ -1568,6 +1637,16 @@ DatabaseHandler::get_document(std::string_view document_id)
 
 	const auto term_id = get_prefixed_term_id(document_id);
 	did = get_docid_term(term_id);
+	return Document(did, this);
+}
+
+
+Document
+DatabaseHandler::get_document_term(const std::string& term_id)
+{
+	L_CALL("DatabaseHandler::get_document_term({})", repr(term_id));
+
+	auto did = get_docid_term(term_id);
 	return Document(did, this);
 }
 
