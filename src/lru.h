@@ -652,16 +652,37 @@ public:
 		return get(key);
 	}
 
-	size_t erase(iterator it) {
-		_map.erase(it->first);
+	iterator erase(iterator it) {
+		auto map_it = _map.find(it->first);
+		if (map_it == _map.end()) {
+			return end();
+		}
+		map_it = _map.erase(map_it);
+		if (map_it == _map.end()) {
+			return end();
+		}
+		auto node = &map_it->second;
+		return iterator(this, node);
 	}
 
-	size_t erase(const_iterator it) {
-		_map.erase(it->first);
+	iterator erase(const_iterator it) {
+		auto map_it = _map.find(it->first);
+		if (map_it == _map.end()) {
+			return end();
+		}
+		map_it = _map.erase(map_it);
+		if (map_it == _map.end()) {
+			return end();
+		}
+		auto node = &map_it->second;
+		return iterator(this, node);
 	}
 
 	size_t erase(const Key& key) {
-		return erase(find(key));
+		if (erase(find(key)) != end()) {
+			return 1;
+		}
+		return 0;
 	}
 
 	template <typename OnDrop>
