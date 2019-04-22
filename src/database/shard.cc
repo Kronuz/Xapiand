@@ -418,18 +418,10 @@ Shard::reopen_readable()
 					local = true;
 				} else {
 					_incomplete.store(true, std::memory_order_relaxed);
-					try {
-						// If remote is master (it should be), try triggering replication
-						trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
-					} catch (...) { }
 				}
 			} catch (const Xapian::DatabaseNotFoundError& exc) {
 			} catch (const Xapian::DatabaseOpeningError& exc) {
 				_incomplete.store(true, std::memory_order_relaxed);
-				try {
-					// If remote is master (it should be), try triggering replication
-					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
-				} catch (...) { }
 			}
 		} catch (const Xapian::NetworkError&) {
 			auto eptr = std::current_exception();
@@ -438,14 +430,14 @@ Shard::reopen_readable()
 				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
 				_incomplete.store(true, std::memory_order_relaxed);
-				try {
-					// If remote is master (it should be), try triggering replication
-					trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
-				} catch (...) { }
 			} catch (...) {
 				std::rethrow_exception(eptr);
 			}
 		}
+		try {
+			// If remote is master (it should be if we are here), try triggering replication
+			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
+		} catch (...) { }
 #endif  // XAPIAN_LOCAL_DB_FALLBACK
 	}
 	else
