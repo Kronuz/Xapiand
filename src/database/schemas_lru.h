@@ -30,6 +30,7 @@
 #include "endpoint.h"
 #include "lru.h"
 #include "msgpack.h"
+#include "xapian.h"              // for Xapian::rev
 
 
 constexpr size_t MAX_SCHEMA_RECURSION = 10;

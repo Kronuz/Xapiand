@@ -73,7 +73,7 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_
 }
 
 
-static inline MsgPack
+static inline std::pair<Xapian::rev, MsgPack>
 get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("get_shared({}, {}, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
@@ -88,7 +88,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
 			// Return default .xapiand/index (chicken and egg problem)
-			return {
+			return std::make_pair(0, MsgPack({
 				{ RESERVED_RECURSE, false },
 				{ SCHEMA_FIELD_NAME, {
 					{ ID_FIELD_NAME, {
@@ -96,7 +96,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
 				} },
-			};
+			}));
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
@@ -112,8 +112,10 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
-		auto doc = _db_handler.get_document(id);
-		auto o = doc.get_obj();
+		auto document = _db_handler.get_document(id);
+		auto version_ser = document.get_value(DB_SLOT_VERSION);
+		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
+		auto o = document.get_obj();
 		if (selector.empty()) {
 			// If there's no selector use "schema":
 			o = o[SCHEMA_FIELD_NAME];
@@ -126,7 +128,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		});
 		Schema::check<Error>(o, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
-		return o;
+		return std::make_pair(version, o);
 	} catch (...) {
 		context->erase(path);
 		throw;
@@ -165,15 +167,13 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 		context->erase(path);
 
 		Document document(did, &_db_handler);
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			return sortable_unserialise(version);
-		}
+		auto version_ser = document.get_value(DB_SLOT_VERSION);
+		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
+		return version;
 	} catch (...) {
 		context->erase(path);
 		throw;
 	}
-	return 0;
 }
 
 
@@ -425,9 +425,10 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			// Foreign Schema needs to be read
 			L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try loading from {} id={}", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,", repr(foreign_path), repr(foreign_id));
 			try {
-				schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
+				auto shared = get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context);
+				schema_ptr = std::make_shared<const MsgPack>(shared.second);
 				schema_ptr->lock();
-				schema_ptr->set_flags(1);
+				schema_ptr->set_flags(shared.first);
 				L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was loaded: " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
 			} catch (const ClientError&) {
 				L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be loaded (client error)", prefix, repr(foreign_uri));
@@ -494,14 +495,15 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			try {
 				auto version = save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
 				schema_updater()->debounce(foreign_uri, version, foreign_uri);
-				schema_ptr->set_flags(1);
+				schema_ptr->set_flags(version);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={}: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 			} catch (const Xapian::DocVersionConflictError&) {
 				// Foreign Schema needs to be read
 				try {
-					schema_ptr = std::make_shared<const MsgPack>(get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context));
+					auto shared = get_shared(Endpoint{foreign_path}, foreign_id, db_handler->context);
+					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
-					schema_ptr->set_flags(1);
+					schema_ptr->set_flags(shared.first);
 					L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {} id={}, it was reloaded: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				} catch (const ClientError&) {
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} and couldn't be reloaded (client error)", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
