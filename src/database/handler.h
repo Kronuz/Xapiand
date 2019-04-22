@@ -190,7 +190,7 @@ class DatabaseHandler {
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);
 
-	DataType index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+	DataType index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 

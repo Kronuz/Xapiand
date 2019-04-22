@@ -519,7 +519,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 
 
 DataType
-DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit)
+DatabaseHandler::index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit);
 
@@ -528,7 +528,12 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, con
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
 
-	auto did = replace_document_term(term_id, std::move(doc), commit);
+	if (did) {
+		assert(term_id != "QN\x80");
+		replace_document(did, std::move(doc), commit);
+	} else {
+		did = replace_document_term(term_id, std::move(doc), commit);
+	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
 	if (it != data_obj.end() && term_id == "QN\x80") {
@@ -548,10 +553,18 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
+	const auto term_id = get_prefixed_term_id(document_id);
+
 	int t = CONFLICT_RETRIES;
 	while (true) {
 		try {
 			Data data;
+			Xapian::docid did = 0;
+			try {
+				did = find_docid_term(term_id);
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
+
 			switch (body.get_type()) {
 				case MsgPack::Type::STR:
 					if (stored) {
@@ -563,14 +576,14 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+					return index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, MsgPack::MAP(), data, commit);
+					return index(did, document_id, document_ver, MsgPack::MAP(), data, commit);
 				case MsgPack::Type::MAP:
 					inject_data(data, body);
-					return index(document_id, document_ver, body, data, commit);
+					return index(did, document_id, document_ver, body, data, commit);
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
@@ -604,8 +617,10 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 	while (true) {
 		try {
 			Data data;
+			Xapian::docid did = 0;
 			try {
-				auto current_document = get_document_term(term_id);
+				auto current_document = find_document_term(term_id);
+				did = current_document.get_docid();
 				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
@@ -619,7 +634,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 				obj[ID_FIELD_NAME] = std::move(id_field);
 			}
 			inject_data(data, obj);
-			return index(document_id, document_ver, obj, data, commit);
+			return index(did, document_id, document_ver, obj, data, commit);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
@@ -646,8 +661,10 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 	while (true) {
 		try {
 			Data data;
+			Xapian::docid did = 0;
 			try {
-				auto current_document = get_document_term(term_id);
+				auto current_document = find_document_term(term_id);
+				did = current_document.get_docid();
 				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
@@ -664,18 +681,18 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 						}
 						data.update(ct_type, blob);
 					}
-					return index(document_id, document_ver, obj, data, commit);
+					return index(did, document_id, document_ver, obj, data, commit);
 				case MsgPack::Type::NIL:
 				case MsgPack::Type::UNDEFINED:
 					data.erase(ct_type);
-					return index(document_id, document_ver, obj, data, commit);
+					return index(did, document_id, document_ver, obj, data, commit);
 				case MsgPack::Type::MAP:
 					if (stored) {
 						THROW(ClientError, "Objects of this type cannot be put in storage");
 					}
 					if (obj.empty()) {
 						inject_data(data, body);
-						return index(document_id, document_ver, body, data, commit);
+						return index(did, document_id, document_ver, body, data, commit);
 					} else {
 						obj.update(body);
 						auto it = obj.find(ID_FIELD_NAME);
@@ -685,13 +702,13 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 							obj[ID_FIELD_NAME] = std::move(id_field);
 						}
 						inject_data(data, obj);
-						return index(document_id, document_ver, obj, data, commit);
+						return index(did, document_id, document_ver, obj, data, commit);
 					}
 				default:
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
 
-			return index(document_id, document_ver, obj, data, commit);
+			return index(did, document_id, document_ver, obj, data, commit);
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0 || document_ver) { throw; }
 		}
