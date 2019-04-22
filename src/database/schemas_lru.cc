@@ -32,6 +32,7 @@
 #include "opts.h"                                 // for opts.strict
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
 #include "serialise.h"                            // for KEYWORD_STR
+#include "server/discovery.h"                     // for schema_updater
 #include "string.hh"                              // for string::format, string::replace
 #include "url_parser.h"                           // for urldecode
 
@@ -133,7 +134,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 }
 
 
-static inline void
+static inline Xapian::rev
 save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("save_shared({}, {}, <schema>, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
@@ -148,7 +149,7 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
 			// Ignore .xapiand/index (chicken and egg problem)
-			return;
+			return 0;
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
@@ -160,12 +161,19 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		_db_handler.update(id.substr(0, needle), 0, false, schema, false, msgpack_type);
+		auto did = _db_handler.update(id.substr(0, needle), 0, false, schema, false, msgpack_type).first;
 		context->erase(path);
+
+		Document document(did, &_db_handler);
+		auto version = document.get_value(DB_SLOT_VERSION);
+		if (!version.empty()) {
+			return sortable_unserialise(version);
+		}
 	} catch (...) {
 		context->erase(path);
 		throw;
 	}
+	return 0;
 }
 
 
@@ -484,7 +492,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		// If we still need to save the schema document, we save it:
 		if (writable && schema_ptr->get_flags() == 0) {
 			try {
-				save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
+				auto version = save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
+				schema_updater()->debounce(foreign_uri, version, foreign_uri);
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={}: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 			} catch (const Xapian::DocVersionConflictError&) {
