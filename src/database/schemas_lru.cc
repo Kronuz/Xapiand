@@ -711,10 +711,16 @@ SchemasLRU::dump_schemas(int level) const
 	ret.push_back('\n');
 
 	{
-		std::lock_guard<std::mutex> lk(schemas_mtx);
+		std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
+		std::lock_guard<std::mutex> versions_lk(versions_mtx);
 		for (auto& schema : schemas) {
+			std::string outdated;
+			auto it = versions.find(schema.first);
+			if (it != versions.end() && schema.second->get_flags() < it->second) {
+				outdated = " " + LIGHT_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
+			}
 			ret += indent + indent;
-			ret += string::format("<Schema {}>", repr(schema.first));
+			ret += string::format("<Schema {}{}>", repr(schema.first),  outdated);
 			ret.push_back('\n');
 		}
 	}
