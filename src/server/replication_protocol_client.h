@@ -141,7 +141,7 @@ public:
 
 	void reset();
 
-	bool init_replication_protocol(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+	bool init_replication_protocol(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
 
 	void send_message(ReplicationReplyType type, const std::string& message);
 	void send_file(ReplicationReplyType type, int fd);
@@ -164,8 +164,8 @@ public:
 	void send_message(char type_as_char, const std::string& message);
 	void send_file(char type_as_char, int fd);
 
-	bool init_replication() noexcept;
-	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+	bool init_replication(int sock_) noexcept;
+	bool init_replication(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
 
 	void operator()();
 

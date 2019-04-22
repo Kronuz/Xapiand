@@ -161,7 +161,7 @@ ReplicationProtocolClient::reset()
 
 
 bool
-ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
+ReplicationProtocolClient::init_replication_protocol(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
 	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
@@ -174,12 +174,26 @@ ReplicationProtocolClient::init_replication_protocol(const Endpoint &src_endpoin
 
 		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
 	} catch (const Xapian::DatabaseNotAvailableError&) {
-		L_REPLICATION("Replication deferred: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+		L_REPLICATION("Replication deferred (not available): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
 	} catch (...) {
 		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
 		return false;
 	}
+
+	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
+	if (client_sock == -1) {
+		lk_shard_ptr.reset();
+
+		// If it cannot replicate because the other end is down, retry in a bit...
+		trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
+		L_REPLICATION("Replication deferred (cannot connect): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+		return false;
+	}
+	L_CONN("Connected to {}! (in socket {})", repr(src_endpoint.to_string()), client_sock);
+
+	init(client_sock);
+	L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	return true;
 }
 
@@ -730,9 +744,11 @@ ReplicationProtocolClient::destroy_impl()
 
 
 bool
-ReplicationProtocolClient::init_replication() noexcept
+ReplicationProtocolClient::init_replication(int sock_) noexcept
 {
-	L_CALL("ReplicationProtocolClient::init_replication()");
+	L_CALL("ReplicationProtocolClient::init_replication({})", sock_);
+
+	init(sock_);
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
@@ -749,7 +765,7 @@ ReplicationProtocolClient::init_replication() noexcept
 
 
 bool
-ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
+ReplicationProtocolClient::init_replication(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
 {
 	L_CALL("ReplicationProtocolClient::init_replication({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
@@ -760,7 +776,7 @@ ReplicationProtocolClient::init_replication(const Endpoint &src_endpoint, const 
 	// Setup state...
 	state = ReplicationState::INIT_REPLICATION_CLIENT;
 
-	if (init_replication_protocol(src_endpoint, dst_endpoint)) {
+	if (init_replication_protocol(host, port, src_endpoint, dst_endpoint)) {
 		// And start a runner.
 		running = true;
 		XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());

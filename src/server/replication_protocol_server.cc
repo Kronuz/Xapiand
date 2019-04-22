@@ -117,9 +117,7 @@ ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int re
 	if (client_sock != -1) {
 		auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout);
 
-		client->init(client_sock);
-
-		if (!client->init_replication()) {
+		if (!client->init_replication(client_sock)) {
 			client->detach();
 			return;
 		}
@@ -230,13 +228,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout, args.cluster_database);
 
-	if (!client->init_replication(args.src_endpoint, args.dst_endpoint)) {
-		client->detach();
-		return;
-	}
-
-	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
-	if (client_sock == -1) {
+	if (!client->init_replication(host, port, args.src_endpoint, args.dst_endpoint)) {
 		client->detach();
 		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database");
@@ -244,11 +236,6 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		}
 		return;
 	}
-
-	L_REPLICATION("Replication initialized: {} -->  {}", repr(args.src_endpoint.to_string()), repr(args.dst_endpoint.to_string()));
-
-	L_CONN("Connected to {}! (in socket {})", repr(args.src_endpoint.to_string()), client_sock);
-	client->init(client_sock);
 
 	client->start();
 	L_DEBUG("Database {} being synchronized from {}{}" + DEBUG_COL + "...", repr(args.src_endpoint.to_string()), node->col().ansi(), node->name());

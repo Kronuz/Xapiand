@@ -1258,9 +1258,11 @@ RemoteProtocolClient::destroy_impl()
 
 
 bool
-RemoteProtocolClient::init_remote() noexcept
+RemoteProtocolClient::init_remote(int sock_) noexcept
 {
-	L_CALL("RemoteProtocolClient::init_remote()");
+	L_CALL("RemoteProtocolClient::init_remote({})", sock_);
+
+	init(sock_);
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
