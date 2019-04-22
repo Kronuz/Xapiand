@@ -138,7 +138,7 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 {
 	L_CALL("save_shared({}, {}, <schema>, {})", repr(endpoint.to_string()), repr(id), context ? std::to_string(context->size()) : "nullptr");
 
-	auto path = endpoint.path;
+	auto& path = endpoint.path;
 	if (!context) {
 		context = std::make_shared<std::unordered_set<std::string>>();
 	}
