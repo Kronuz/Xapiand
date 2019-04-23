@@ -50,6 +50,7 @@ constexpr const char RESERVED_NAME[]                        = RESERVED__ "name";
 constexpr const char RESERVED_BODY[]                        = RESERVED__ "body";
 constexpr const char RESERVED_PARAMS[]                      = RESERVED__ "params";
 constexpr const char RESERVED_RECURSE[]                     = RESERVED__ "recurse";
+constexpr const char RESERVED_IGNORE[]                      = RESERVED__ "ignore";
 constexpr const char RESERVED_NAMESPACE[]                   = RESERVED__ "namespace";
 constexpr const char RESERVED_PARTIAL_PATHS[]               = RESERVED__ "partial_paths";
 constexpr const char RESERVED_INDEX_UUID_FIELD[]            = RESERVED__ "index_uuid_field";

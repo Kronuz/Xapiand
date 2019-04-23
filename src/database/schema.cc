@@ -1947,7 +1947,7 @@ required_spc_t::flags_t::flags_t()
 	  partials(DEFAULT_GEO_PARTIALS),
 	  store(true),
 	  parent_store(true),
-	  is_recurse(true),
+	  recurse(true),
 	  dynamic(true),
 	  strict(false),
 	  date_detection(true),
@@ -2105,7 +2105,7 @@ required_spc_t::to_obj() const
 
 	obj_flags["store"] = flags.store;
 	obj_flags["parent_store"] = flags.parent_store;
-	obj_flags["is_recurse"] = flags.is_recurse;
+	obj_flags["recurse"] = flags.recurse;
 	obj_flags["dynamic"] = flags.dynamic;
 	obj_flags["strict"] = flags.strict;
 	obj_flags["date_detection"] = flags.date_detection;
@@ -2139,6 +2139,11 @@ required_spc_t::to_obj() const
 	obj_flags["ngram"] = flags.ngram;
 	obj_flags["cjk_ngram"] = flags.cjk_ngram;
 	obj_flags["cjk_words"] = flags.cjk_words;
+
+	auto& obj_ignore = obj["ignored"] = MsgPack::ARRAY();
+	for (const auto& a : ignored) {
+		obj_ignore.append(a);
+	}
 
 	auto& obj_accuracy = obj["accuracy"] = MsgPack::ARRAY();
 	for (const auto& a : accuracy) {
@@ -3312,7 +3317,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		return;  // skip comments (fields starting with '#')
 	}
 
-	if (!specification.flags.is_recurse && name[0] != '_') {
+	if (!specification.flags.recurse && name[0] != '_') {
 		if (specification.flags.store) {
 			parent_data->get(name) = object;
 		}
@@ -3925,7 +3930,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		return;  // skip comments (fields starting with '#')
 	}
 
-	if (!specification.flags.is_recurse && name[0] != '_') {
+	if (!specification.flags.recurse && name[0] != '_') {
 		return;
 	}
 
@@ -4367,7 +4372,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std
 		return;  // skip comments (fields starting with '#')
 	}
 
-	if (!specification.flags.is_recurse && name[0] != '_') {
+	if (!specification.flags.recurse && name[0] != '_') {
 		return;
 	}
 
@@ -4957,16 +4962,20 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			mut_properties[RESERVED_ERROR] = specification.error;
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
-					try {
+					if (specification.doc_acc->is_array()) {
 						for (const auto& _accuracy : *specification.doc_acc) {
-							const auto val_acc = _accuracy.u64();
-							if (val_acc <= HTM_MAX_LEVEL) {
-								set_acc.insert(val_acc);
+							if (_accuracy.is_number()) {
+								const auto val_acc = _accuracy.u64();
+								if (val_acc <= HTM_MAX_LEVEL) {
+									set_acc.insert(val_acc);
+								} else {
+									THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+								}
 							} else {
-								THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+								THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 							}
 						}
-					} catch (const msgpack::type_error&) {
+					} else {
 						THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 					}
 				} else {
@@ -4980,7 +4989,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		case FieldType::datetime: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
-					try {
+					if (specification.doc_acc->is_array()) {
 						for (const auto& _accuracy : *specification.doc_acc) {
 							uint64_t accuracy;
 							if (_accuracy.is_string()) {
@@ -4990,16 +4999,17 @@ Schema::validate_required_data(MsgPack& mut_properties)
 								} else {
 									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
 								}
-							} else {
+							} else if (_accuracy.is_number()) {
 								accuracy = _accuracy.u64();
-								if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
-								} else {
+								if (!validate_acc_date(static_cast<UnitTime>(accuracy))) {
 									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 								}
+							} else {
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
 							}
 							set_acc.insert(accuracy);
 						}
-					} catch (const msgpack::type_error&) {
+					} else {
 						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
 					}
 				} else {
@@ -5013,15 +5023,20 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		case FieldType::timedelta: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
-					try {
+					if (specification.doc_acc->is_array()) {
 						for (const auto& _accuracy : *specification.doc_acc) {
-							try {
-								set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
-							} catch (const std::out_of_range&) {
+							if (_accuracy.is_string()) {
+								auto accuracy_time = _get_accuracy_time(_accuracy.str_view());
+								if (accuracy_time != UnitTime::INVALID) {
+									set_acc.insert(toUType(accuracy_time));
+								} else {
+									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+								}
+							} else {
 								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
 							}
 						}
-					} catch (const msgpack::type_error&) {
+					} else {
 						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 					}
 				} else {
@@ -5036,11 +5051,15 @@ Schema::validate_required_data(MsgPack& mut_properties)
 		case FieldType::floating: {
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
-					try {
+					if (specification.doc_acc->is_array()) {
 						for (const auto& _accuracy : *specification.doc_acc) {
-							set_acc.insert(_accuracy.u64());
+							if (_accuracy.is_number()) {
+								set_acc.insert(_accuracy.u64());
+							} else {
+								THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+							}
 						}
-					} catch (const msgpack::type_error&) {
+					} else {
 						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
 				} else {
@@ -5724,7 +5743,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 
 	switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::floating: {
-			try {
+			if (value.is_number()) {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::floating(f_val);
 				if (field_spc != nullptr) {
@@ -5736,12 +5755,12 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::integer: {
-			try {
+			if (value.is_number()) {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (field_spc != nullptr) {
@@ -5753,12 +5772,12 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
 		case FieldType::positive: {
-			try {
+			if (value.is_number()) {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (field_spc != nullptr) {
@@ -5770,7 +5789,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
@@ -5849,7 +5868,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			return;
 		}
 		case FieldType::keyword: {
-			try {
+			if (value.is_string()) {
 				auto ser_value = value.str();
 				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -5859,13 +5878,13 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				}
 				s.insert(std::move(ser_value));
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::string:
 		case FieldType::text: {
-			try {
+			if (value.is_string()) {
 				auto ser_value = value.str();
 				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -5878,7 +5897,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 					s.insert(std::move(ser_value));
 				}
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
@@ -5894,7 +5913,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			return;
 		}
 		case FieldType::uuid: {
-			try {
+			if (value.is_string()) {
 				auto ser_value = Serialise::uuid(value.str_view());
 				if (field_spc != nullptr) {
 					index_term(doc, ser_value, *field_spc, pos);
@@ -5904,7 +5923,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				}
 				s.insert(std::move(ser_value));
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
 			}
 		}
@@ -5921,7 +5940,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 
 	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::floating: {
-			try {
+			if (value.is_number()) {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::floating(f_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -5939,12 +5958,12 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, static_cast<int64_t>(f_val));
 				}
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::integer: {
-			try {
+			if (value.is_number()) {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -5962,12 +5981,12 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, i_val);
 				}
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
 		case FieldType::positive: {
-			try {
+			if (value.is_number()) {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -5985,7 +6004,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					GenerateTerms::positive(doc, global_spc.accuracy, global_spc.acc_prefix, u_val);
 				}
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
@@ -6091,7 +6110,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			return;
 		}
 		case FieldType::keyword: {
-			try {
+			if (value.is_string()) {
 				auto ser_value = value.str();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -6102,13 +6121,13 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_f.insert(ser_value);
 				s_g.insert(std::move(ser_value));
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
 		case FieldType::string:
 		case FieldType::text: {
-			try {
+			if (value.is_string()) {
 				auto ser_value = value.str();
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -6122,7 +6141,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 					s_g.insert(std::move(ser_value));
 				}
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
@@ -6139,7 +6158,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			return;
 		}
 		case FieldType::uuid: {
-			try {
+			if (value.is_string()) {
 				auto ser_value = Serialise::uuid(value.str_view());
 				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 					index_term(doc, ser_value, field_spc, pos);
@@ -6150,7 +6169,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_f.insert(ser_value);
 				s_g.insert(std::move(ser_value));
 				return;
-			} catch (const msgpack::type_error&) {
+			} else {
 				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
 			}
 		}
@@ -6363,6 +6382,7 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 		hh(RESERVED_INDEX),
 		hh(RESERVED_STORE),
 		hh(RESERVED_RECURSE),
+		hh(RESERVED_IGNORE),
 		hh(RESERVED_DYNAMIC),
 		hh(RESERVED_STRICT),
 		hh(RESERVED_DATE_DETECTION),
@@ -6403,6 +6423,9 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 			return true;
 		case _.fhh(RESERVED_RECURSE):
 			write_recurse(mut_properties, prop_name, value);
+			return true;
+		case _.fhh(RESERVED_IGNORE):
+			write_ignore(mut_properties, prop_name, value);
 			return true;
 		case _.fhh(RESERVED_DYNAMIC):
 			write_dynamic(mut_properties, prop_name, value);
@@ -6477,6 +6500,7 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 		hh(RESERVED_INDEX),
 		hh(RESERVED_STORE),
 		hh(RESERVED_RECURSE),
+		hh(RESERVED_IGNORE),
 		hh(RESERVED_DYNAMIC),
 		hh(RESERVED_STRICT),
 		hh(RESERVED_DATE_DETECTION),
@@ -6537,6 +6561,9 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 			return true;
 		case _.fhh(RESERVED_RECURSE):
 			Schema::feed_recurse(value);
+			return true;
+		case _.fhh(RESERVED_IGNORE):
+			Schema::feed_ignore(value);
 			return true;
 		case _.fhh(RESERVED_DYNAMIC):
 			Schema::feed_dynamic(value);
@@ -6738,6 +6765,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_INDEX),
 		hh(RESERVED_STORE),
 		hh(RESERVED_RECURSE),
+		hh(RESERVED_IGNORE),
 		hh(RESERVED_PARTIAL_PATHS),
 		hh(RESERVED_INDEX_UUID_FIELD),
 		hh(RESERVED_VALUE),
@@ -6813,6 +6841,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_INDEX),
 		hh(RESERVED_STORE),
 		hh(RESERVED_RECURSE),
+		hh(RESERVED_IGNORE),
 		hh(RESERVED_PARTIAL_PATHS),
 		hh(RESERVED_INDEX_UUID_FIELD),
 		hh(RESERVED_VALUE),
@@ -6896,6 +6925,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 			return true;
 		case _.fhh(RESERVED_RECURSE):
 			Schema::process_recurse(prop_name, value);
+			return true;
+		case _.fhh(RESERVED_IGNORE):
+			Schema::process_ignore(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_PARTIAL_PATHS):
 			Schema::process_partial_paths(prop_name, value);
@@ -7222,561 +7254,591 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 
 
 void
-Schema::feed_weight(const MsgPack& prop_weight)
+Schema::feed_weight(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_weight({})", repr(prop_weight.to_string()));
+	L_CALL("Schema::feed_weight({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
 		specification.weight.clear();
-		if (prop_weight.is_array()) {
-			for (const auto& _weight : prop_weight) {
-				specification.weight.push_back(static_cast<Xapian::termpos>(_weight.u64()));
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_number()) {
+				specification.weight.push_back(static_cast<Xapian::termpos>(prop_item_obj.u64()));
+			} else {
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-		} else {
-			specification.weight.push_back(static_cast<Xapian::termpos>(prop_weight.u64()));
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_number()) {
+		specification.weight.clear();
+		specification.weight.push_back(static_cast<Xapian::termpos>(prop_obj.u64()));
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_position(const MsgPack& prop_position)
+Schema::feed_position(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_position({})", repr(prop_position.to_string()));
+	L_CALL("Schema::feed_position({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
 		specification.position.clear();
-		if (prop_position.is_array()) {
-			for (const auto& _position : prop_position) {
-				specification.position.push_back(static_cast<Xapian::termpos>(_position.u64()));
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_number()) {
+				specification.position.push_back(static_cast<Xapian::termpos>(prop_item_obj.u64()));
+			} else {
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_WEIGHT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-		} else {
-			specification.position.push_back(static_cast<Xapian::termpos>(prop_position.u64()));
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_number()) {
+		specification.position.clear();
+		specification.position.push_back(static_cast<Xapian::termpos>(prop_obj.u64()));
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_POSITION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_spelling(const MsgPack& prop_spelling)
+Schema::feed_spelling(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_spelling({})", repr(prop_spelling.to_string()));
+	L_CALL("Schema::feed_spelling({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
 		specification.spelling.clear();
-		if (prop_spelling.is_array()) {
-			for (const auto& _spelling : prop_spelling) {
-				specification.spelling.push_back(_spelling.boolean());
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_boolean()) {
+				specification.spelling.push_back(prop_item_obj.boolean());
+			} else {
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_SPELLING, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-		} else {
-			specification.spelling.push_back(prop_spelling.boolean());
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_boolean()) {
+		specification.spelling.clear();
+		specification.spelling.push_back(prop_obj.boolean());
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_SPELLING, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_positions(const MsgPack& prop_positions)
+Schema::feed_positions(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_positions({})", repr(prop_positions.to_string()));
+	L_CALL("Schema::feed_positions({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
 		specification.positions.clear();
-		if (prop_positions.is_array()) {
-			for (const auto& _positions : prop_positions) {
-				specification.positions.push_back(_positions.boolean());
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_boolean()) {
+				specification.positions.push_back(prop_item_obj.boolean());
+			} else {
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_POSITIONS, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-		} else {
-			specification.positions.push_back(prop_positions.boolean());
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_boolean()) {
+		specification.positions.clear();
+		specification.positions.push_back(prop_obj.boolean());
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_POSITIONS, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_ngram(const MsgPack& prop_ngram)
+Schema::feed_ngram(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_ngram({})", repr(prop_ngram.to_string()));
+	L_CALL("Schema::feed_ngram({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.ngram = prop_ngram.as_boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.ngram = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_NGRAM, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_cjk_ngram(const MsgPack& prop_cjk_ngram)
+Schema::feed_cjk_ngram(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_cjk_ngram({})", repr(prop_cjk_ngram.to_string()));
+	L_CALL("Schema::feed_cjk_ngram({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.cjk_ngram = prop_cjk_ngram.as_boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.cjk_ngram = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_CJK_NGRAM, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_cjk_words(const MsgPack& prop_words)
+Schema::feed_cjk_words(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_cjk_words({})", repr(prop_words.to_string()));
+	L_CALL("Schema::feed_cjk_words({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.cjk_words = prop_words.as_boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.cjk_words = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_CJK_WORDS, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_language(const MsgPack& prop_language)
+Schema::feed_language(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_language({})", repr(prop_language.to_string()));
+	L_CALL("Schema::feed_language({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.language = prop_language.str();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_string()) {
+		specification.language = prop_obj.str();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_LANGUAGE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_stop_strategy(const MsgPack& prop_stop_strategy)
+Schema::feed_stop_strategy(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_stop_strategy({})", repr(prop_stop_strategy.to_string()));
+	L_CALL("Schema::feed_stop_strategy({})", repr(prop_obj.to_string()));
 
-	try {
-		if (prop_stop_strategy.is_string()) {
-			specification.stop_strategy = _get_stop_strategy(prop_stop_strategy.str_view());
-			if (specification.stop_strategy == StopStrategy::INVALID) {
-				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STOP_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_stop_strategy);
-			}
-		} else {
-			specification.stop_strategy = static_cast<StopStrategy>(prop_stop_strategy.u64());
+	if (prop_obj.is_string()) {
+		specification.stop_strategy = _get_stop_strategy(prop_obj.str_view());
+		if (specification.stop_strategy == StopStrategy::INVALID) {
+			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STOP_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_stop_strategy);
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_number()) {
+		specification.stop_strategy = static_cast<StopStrategy>(prop_obj.u64());
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STOP_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_stem_strategy(const MsgPack& prop_stem_strategy)
+Schema::feed_stem_strategy(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_stem_strategy({})", repr(prop_stem_strategy.to_string()));
+	L_CALL("Schema::feed_stem_strategy({})", repr(prop_obj.to_string()));
 
-	try {
-		if (prop_stem_strategy.is_string()) {
-			specification.stem_strategy = enum_type<StemStrategy>(prop_stem_strategy.str_view());
-			if (specification.stem_strategy == StemStrategy::INVALID) {
-				THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STEM_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_stem_strategy);
-			}
-		} else {
-			specification.stem_strategy = static_cast<StemStrategy>(prop_stem_strategy.u64());
+	if (prop_obj.is_string()) {
+		specification.stem_strategy = enum_type<StemStrategy>(prop_obj.str_view());
+		if (specification.stem_strategy == StemStrategy::INVALID) {
+			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_STEM_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_stem_strategy);
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_number()) {
+		specification.stem_strategy = static_cast<StemStrategy>(prop_obj.u64());
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STEM_STRATEGY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_stem_language(const MsgPack& prop_stem_language)
+Schema::feed_stem_language(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_stem_language({})", repr(prop_stem_language.to_string()));
+	L_CALL("Schema::feed_stem_language({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.stem_language = prop_stem_language.str();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_string()) {
+		specification.stem_language = prop_obj.str();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STEM_LANGUAGE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_type(const MsgPack& prop_type)
+Schema::feed_type(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_type({})", repr(prop_type.to_string()));
+	L_CALL("Schema::feed_type({})", repr(prop_obj.to_string()));
 
-	try {
-		if (prop_type.is_string()) {
-			specification.set_types(prop_type.str_view());
-		} else if (prop_type.is_array() && prop_type.size() == 4) {
-			specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)prop_type.at(SPC_FOREIGN_TYPE).u64();
-			specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)prop_type.at(SPC_OBJECT_TYPE).u64();
-			specification.sep_types[SPC_ARRAY_TYPE]    = (FieldType)prop_type.at(SPC_ARRAY_TYPE).u64();
-			specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)prop_type.at(SPC_CONCRETE_TYPE).u64();
-		} else {
-			THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TYPE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
+	if (prop_obj.is_string()) {
+		specification.set_types(prop_obj.str_view());
 		specification.flags.concrete = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TYPE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_accuracy(const MsgPack& prop_accuracy)
+Schema::feed_accuracy(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_accuracy({})", repr(prop_accuracy.to_string()));
+	L_CALL("Schema::feed_accuracy({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
 		specification.accuracy.clear();
-		specification.accuracy.reserve(prop_accuracy.size());
-		for (const auto& _accuracy : prop_accuracy) {
+		specification.accuracy.reserve(prop_obj.size());
+		for (const auto& prop_item_obj : prop_obj) {
 			uint64_t accuracy;
-			if (_accuracy.is_string()) {
-				auto accuracy_date = _get_accuracy_datetime(_accuracy.str_view());
+			if (prop_item_obj.is_string()) {
+				auto accuracy_date = _get_accuracy_datetime(prop_item_obj.str_view());
 				if (accuracy_date != UnitTime::INVALID) {
 					accuracy = toUType(accuracy_date);
 				} else {
 					THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
+			} else if (prop_item_obj.is_number()) {
+				accuracy = prop_item_obj.u64();
 			} else {
-				accuracy = _accuracy.u64();
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			specification.accuracy.push_back(accuracy);
 		}
-	} catch (const msgpack::type_error&) {
-		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-	}
-}
-
-
-void
-Schema::feed_acc_prefix(const MsgPack& prop_acc_prefix)
-{
-	L_CALL("Schema::feed_acc_prefix({})", repr(prop_acc_prefix.to_string()));
-
-	try {
-		specification.acc_prefix.clear();
-		specification.acc_prefix.reserve(prop_acc_prefix.size());
-		for (const auto& acc_p : prop_acc_prefix) {
-			specification.acc_prefix.push_back(acc_p.str());
-		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACC_PREFIX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_prefix(const MsgPack& prop_prefix)
+Schema::feed_acc_prefix(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_prefix({})", repr(prop_prefix.to_string()));
+	L_CALL("Schema::feed_acc_prefix({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.local_prefix.field.assign(prop_prefix.str_view());
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_array()) {
+		specification.acc_prefix.clear();
+		specification.acc_prefix.reserve(prop_obj.size());
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_string()) {
+				specification.acc_prefix.push_back(prop_item_obj.str());
+			} else {
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACC_PREFIX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
+		}
+	} else {
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACC_PREFIX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+	}
+}
+
+
+void
+Schema::feed_prefix(const MsgPack& prop_obj)
+{
+	L_CALL("Schema::feed_prefix({})", repr(prop_obj.to_string()));
+
+	if (prop_obj.is_string()) {
+		specification.local_prefix.field.assign(prop_obj.str_view());
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_PREFIX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_slot(const MsgPack& prop_slot)
+Schema::feed_slot(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_slot({})", repr(prop_slot.to_string()));
+	L_CALL("Schema::feed_slot({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.slot = static_cast<Xapian::valueno>(prop_slot.u64());
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_number()) {
+		specification.slot = static_cast<Xapian::valueno>(prop_obj.u64());
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_SLOT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_index(const MsgPack& prop_index)
+Schema::feed_index(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_index({})", repr(prop_index.to_string()));
+	L_CALL("Schema::feed_index({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.index = _get_index(prop_index.str_view());
+	if (prop_obj.is_string()) {
+		specification.index = _get_index(prop_obj.str_view());
 		if (specification.index == TypeIndex::INVALID) {
 			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_index);
 		}
 		specification.flags.has_index = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_store(const MsgPack& prop_store)
+Schema::feed_store(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_store({})", repr(prop_store.to_string()));
+	L_CALL("Schema::feed_store({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_boolean()) {
 		specification.flags.parent_store = specification.flags.store;
-		specification.flags.store = prop_store.boolean() && specification.flags.parent_store;
-	} catch (const msgpack::type_error&) {
+		specification.flags.store = prop_obj.boolean() && specification.flags.parent_store;
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STORE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_recurse(const MsgPack& prop_recurse)
+Schema::feed_recurse(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_recurse({})", repr(prop_recurse.to_string()));
+	L_CALL("Schema::feed_recurse({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.is_recurse = prop_recurse.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.recurse = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_RECURSE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_dynamic(const MsgPack& prop_dynamic)
+Schema::feed_ignore(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_dynamic({})", repr(prop_dynamic.to_string()));
+	L_CALL("Schema::feed_ignore({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.dynamic = prop_dynamic.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_array()) {
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_string()) {
+				auto ignored = prop_item_obj.str();
+				if (ignored == "*") {
+					specification.flags.recurse = false;
+					specification.ignored.clear();
+					break;
+				}
+				specification.ignored.insert(ignored);
+			} else {
+				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
+		}
+	} else {
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_IGNORE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+	}
+}
+
+
+void
+Schema::feed_dynamic(const MsgPack& prop_obj)
+{
+	L_CALL("Schema::feed_dynamic({})", repr(prop_obj.to_string()));
+
+	if (prop_obj.is_boolean()) {
+		specification.flags.dynamic = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_DYNAMIC, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_strict(const MsgPack& prop_strict)
+Schema::feed_strict(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_strict({})", repr(prop_strict.to_string()));
+	L_CALL("Schema::feed_strict({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.strict = prop_strict.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.strict = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_STRICT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_date_detection(const MsgPack& prop_date_detection)
+Schema::feed_date_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_date_detection({})", repr(prop_date_detection.to_string()));
+	L_CALL("Schema::feed_date_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.date_detection = prop_date_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.date_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_DATE_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_datetime_detection(const MsgPack& prop_datetime_detection)
+Schema::feed_datetime_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_datetime_detection({})", repr(prop_datetime_detection.to_string()));
+	L_CALL("Schema::feed_datetime_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.datetime_detection = prop_datetime_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.datetime_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_DATETIME_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_time_detection(const MsgPack& prop_time_detection)
+Schema::feed_time_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_time_detection({})", repr(prop_time_detection.to_string()));
+	L_CALL("Schema::feed_time_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.time_detection = prop_time_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.time_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TIME_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_timedelta_detection(const MsgPack& prop_timedelta_detection)
+Schema::feed_timedelta_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_timedelta_detection({})", repr(prop_timedelta_detection.to_string()));
+	L_CALL("Schema::feed_timedelta_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.timedelta_detection = prop_timedelta_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.timedelta_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TIMEDELTA_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_numeric_detection(const MsgPack& prop_numeric_detection)
+Schema::feed_numeric_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_numeric_detection({})", repr(prop_numeric_detection.to_string()));
+	L_CALL("Schema::feed_numeric_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.numeric_detection = prop_numeric_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.numeric_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_NUMERIC_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_geo_detection(const MsgPack& prop_geo_detection)
+Schema::feed_geo_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_geo_detection({})", repr(prop_geo_detection.to_string()));
+	L_CALL("Schema::feed_geo_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.geo_detection = prop_geo_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.geo_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_GEO_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_bool_detection(const MsgPack& prop_bool_detection)
+Schema::feed_bool_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_bool_detection({})", repr(prop_bool_detection.to_string()));
+	L_CALL("Schema::feed_bool_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.bool_detection = prop_bool_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.bool_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_BOOL_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_text_detection(const MsgPack& prop_text_detection)
+Schema::feed_text_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_text_detection({})", repr(prop_text_detection.to_string()));
+	L_CALL("Schema::feed_text_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.text_detection = prop_text_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.text_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_TEXT_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_uuid_detection(const MsgPack& prop_uuid_detection)
+Schema::feed_uuid_detection(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_uuid_detection({})", repr(prop_uuid_detection.to_string()));
+	L_CALL("Schema::feed_uuid_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.uuid_detection = prop_uuid_detection.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.uuid_detection = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_UUID_DETECTION, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_bool_term(const MsgPack& prop_bool_term)
+Schema::feed_bool_term(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_bool_term({})", repr(prop_bool_term.to_string()));
+	L_CALL("Schema::feed_bool_term({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.bool_term = prop_bool_term.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.bool_term = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_BOOL_TERM, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_partials(const MsgPack& prop_partials)
+Schema::feed_partials(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_partials({})", repr(prop_partials.to_string()));
+	L_CALL("Schema::feed_partials({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.partials = prop_partials.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.partials = prop_obj.boolean();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_PARTIALS, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_error(const MsgPack& prop_error)
+Schema::feed_error(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_error({})", repr(prop_error.to_string()));
+	L_CALL("Schema::feed_error({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.error = prop_error.f64();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_number()) {
+		specification.error = prop_obj.f64();
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ERROR, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_namespace(const MsgPack& prop_namespace)
+Schema::feed_namespace(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_namespace({})", repr(prop_namespace.to_string()));
+	L_CALL("Schema::feed_namespace({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.is_namespace = prop_namespace.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.is_namespace = prop_obj.boolean();
 		specification.flags.has_namespace = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_NAMESPACE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_partial_paths(const MsgPack& prop_partial_paths)
+Schema::feed_partial_paths(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_partial_paths({})", repr(prop_partial_paths.to_string()));
+	L_CALL("Schema::feed_partial_paths({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.partial_paths = prop_partial_paths.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.partial_paths = prop_obj.boolean();
 		specification.flags.has_partial_paths = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_PARTIAL_PATHS, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_index_uuid_field(const MsgPack& prop_index_uuid_field)
+Schema::feed_index_uuid_field(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_index_uuid_field({})", repr(prop_index_uuid_field.to_string()));
+	L_CALL("Schema::feed_index_uuid_field({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.index_uuid_field = _get_index_uuid_field(prop_index_uuid_field.str_view());
+	if (prop_obj.is_string()) {
+		specification.index_uuid_field = _get_index_uuid_field(prop_obj.str_view());
 		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
 			THROW(Error, "Schema is corrupt: '{}' in {} must be one of {}.", RESERVED_INDEX_UUID_FIELD, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name), str_set_index_uuid_field);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX_UUID_FIELD, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::feed_script([[maybe_unused]] const MsgPack& prop_script)
+Schema::feed_script([[maybe_unused]] const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_script({})", repr(prop_script.to_string()));
+	L_CALL("Schema::feed_script({})", repr(prop_obj.to_string()));
 
 #ifdef XAPIAND_CHAISCRIPT
-	specification.script = std::make_unique<const MsgPack>(prop_script);
+	specification.script = std::make_unique<const MsgPack>(prop_obj);
 	specification.flags.normalized_script = true;
 #else
 	THROW(ClientError, "{} only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
@@ -7785,411 +7847,429 @@ Schema::feed_script([[maybe_unused]] const MsgPack& prop_script)
 
 
 void
-Schema::feed_endpoint(const MsgPack& prop_endpoint)
+Schema::feed_endpoint(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_endpoint({})", repr(prop_endpoint.to_string()));
+	L_CALL("Schema::feed_endpoint({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.endpoint.assign(prop_endpoint.str_view());
+	if (prop_obj.is_string()) {
+		specification.endpoint.assign(prop_obj.str_view());
 		specification.flags.static_endpoint = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ENDPOINT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
 
 void
-Schema::write_position(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_position)
+Schema::write_position(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
-	L_CALL("Schema::write_position({})", repr(doc_position.to_string()));
+	L_CALL("Schema::write_position({})", repr(prop_obj.to_string()));
 
-	process_position(prop_name, doc_position);
+	process_position(prop_name, prop_obj);
 	mut_properties[prop_name] = specification.position;
 }
 
 
 void
-Schema::write_weight(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_weight)
+Schema::write_weight(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
-	L_CALL("Schema::write_weight({})", repr(doc_weight.to_string()));
+	L_CALL("Schema::write_weight({})", repr(prop_obj.to_string()));
 
-	process_weight(prop_name, doc_weight);
+	process_weight(prop_name, prop_obj);
 	mut_properties[prop_name] = specification.weight;
 }
 
 
 void
-Schema::write_spelling(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_spelling)
+Schema::write_spelling(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
-	L_CALL("Schema::write_spelling({})", repr(doc_spelling.to_string()));
+	L_CALL("Schema::write_spelling({})", repr(prop_obj.to_string()));
 
-	process_spelling(prop_name, doc_spelling);
+	process_spelling(prop_name, prop_obj);
 	mut_properties[prop_name] = specification.spelling;
 }
 
 
 void
-Schema::write_positions(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_positions)
+Schema::write_positions(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
-	L_CALL("Schema::write_positions({})", repr(doc_positions.to_string()));
+	L_CALL("Schema::write_positions({})", repr(prop_obj.to_string()));
 
-	process_positions(prop_name, doc_positions);
+	process_positions(prop_name, prop_obj);
 	mut_properties[prop_name] = specification.positions;
 }
 
 
 void
-Schema::write_index(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_index)
+Schema::write_index(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_INDEX is heritable and can change.
-	L_CALL("Schema::write_index({})", repr(doc_index.to_string()));
+	L_CALL("Schema::write_index({})", repr(prop_obj.to_string()));
 
-	process_index(prop_name, doc_index);
+	process_index(prop_name, prop_obj);
 	mut_properties[prop_name] = _get_str_index(specification.index);
 }
 
 
 void
-Schema::write_store(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_store)
+Schema::write_store(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_store({})", repr(doc_store.to_string()));
+	L_CALL("Schema::write_store({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_STORE is heritable and can change, but once fixed in false
 	 * it cannot change in its offsprings.
 	 */
 
-	process_store(prop_name, doc_store);
-	mut_properties[prop_name] = doc_store.boolean();
+	process_store(prop_name, prop_obj);
+	mut_properties[prop_name] = prop_obj.boolean();
 }
 
 
 void
-Schema::write_recurse(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_recurse)
+Schema::write_recurse(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_recurse({})", repr(doc_recurse.to_string()));
+	L_CALL("Schema::write_recurse({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_RECURSE is heritable and can change, but once fixed in false
 	 * it does not process its children.
 	 */
 
-	process_recurse(prop_name, doc_recurse);
-	mut_properties[prop_name] = static_cast<bool>(specification.flags.is_recurse);
+	process_recurse(prop_name, prop_obj);
+	mut_properties[prop_name] = static_cast<bool>(specification.flags.recurse);
 }
 
 
 void
-Schema::write_dynamic(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_dynamic)
+Schema::write_ignore(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
+{
+	L_CALL("Schema::write_ignore({})", repr(prop_obj.to_string()));
+
+	/*
+	 * RESERVED_IGNORE is heritable and can change, but once fixed in false
+	 * it does not process its children.
+	 */
+
+	process_ignore(prop_name, prop_obj);
+	mut_properties[prop_name] = MsgPack::ARRAY();
+	for (const auto& item : specification.ignored) {
+		mut_properties[prop_name].append(item);
+	}
+}
+
+
+void
+Schema::write_dynamic(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
-	L_CALL("Schema::write_dynamic({})", repr(doc_dynamic.to_string()));
+	L_CALL("Schema::write_dynamic({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.dynamic = doc_dynamic.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.dynamic = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.dynamic);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_strict(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_strict)
+Schema::write_strict(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STRICT is heritable but can't change.
-	L_CALL("Schema::write_strict({})", repr(doc_strict.to_string()));
+	L_CALL("Schema::write_strict({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.strict = doc_strict.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.strict = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.strict);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_date_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_date_detection)
+Schema::write_date_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_DATE_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_date_detection({})", repr(doc_date_detection.to_string()));
+	L_CALL("Schema::write_date_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.date_detection = doc_date_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.date_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.date_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_datetime_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_datetime_detection)
+Schema::write_datetime_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_DATETIME_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_datetime_detection({})", repr(doc_datetime_detection.to_string()));
+	L_CALL("Schema::write_datetime_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.datetime_detection = doc_datetime_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.datetime_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.datetime_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_time_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_time_detection)
+Schema::write_time_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TIME_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_time_detection({})", repr(doc_time_detection.to_string()));
+	L_CALL("Schema::write_time_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.time_detection = doc_time_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.time_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.time_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_timedelta_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_timedelta_detection)
+Schema::write_timedelta_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TD_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_timedelta_detection({})", repr(doc_timedelta_detection.to_string()));
+	L_CALL("Schema::write_timedelta_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.timedelta_detection = doc_timedelta_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.timedelta_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.timedelta_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_numeric_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_numeric_detection)
+Schema::write_numeric_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_N_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_numeric_detection({})", repr(doc_numeric_detection.to_string()));
+	L_CALL("Schema::write_numeric_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.numeric_detection = doc_numeric_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.numeric_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.numeric_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_geo_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_geo_detection)
+Schema::write_geo_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_G_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_geo_detection({})", repr(doc_geo_detection.to_string()));
+	L_CALL("Schema::write_geo_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.geo_detection = doc_geo_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.geo_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.geo_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_bool_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_detection)
+Schema::write_bool_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_B_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_bool_detection({})", repr(doc_bool_detection.to_string()));
+	L_CALL("Schema::write_bool_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.bool_detection = doc_bool_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.bool_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.bool_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_text_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_text_detection)
+Schema::write_text_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_T_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_text_detection({})", repr(doc_text_detection.to_string()));
+	L_CALL("Schema::write_text_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.text_detection = doc_text_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.text_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.text_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_uuid_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_uuid_detection)
+Schema::write_uuid_detection(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_U_DETECTION is heritable and can't change.
-	L_CALL("Schema::write_uuid_detection({})", repr(doc_uuid_detection.to_string()));
+	L_CALL("Schema::write_uuid_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.uuid_detection = doc_uuid_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.uuid_detection = prop_obj.boolean();
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.uuid_detection);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_bool_term(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_bool_term)
+Schema::write_bool_term(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
-	L_CALL("Schema::write_bool_term({})", repr(doc_bool_term.to_string()));
+	L_CALL("Schema::write_bool_term({})", repr(prop_obj.to_string()));
 
-	process_bool_term(prop_name, doc_bool_term);
+	process_bool_term(prop_name, prop_obj);
 	mut_properties[prop_name] = static_cast<bool>(specification.flags.bool_term);
 }
 
 
 void
-Schema::write_namespace(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_namespace)
+Schema::write_namespace(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
-	L_CALL("Schema::write_namespace({})", repr(doc_namespace.to_string()));
+	L_CALL("Schema::write_namespace({})", repr(prop_obj.to_string()));
 
-	try {
-		if (specification.flags.field_found) {
-			return consistency_namespace(prop_name, doc_namespace);
-		}
+	if (specification.flags.field_found) {
+		return consistency_namespace(prop_name, prop_obj);
+	}
 
+	if (prop_obj.is_boolean()) {
 		// Only save in Schema if RESERVED_NAMESPACE is true.
-		specification.flags.is_namespace = doc_namespace.boolean();
+		specification.flags.is_namespace = prop_obj.boolean();
 		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
 			specification.flags.partial_paths = specification.flags.partial_paths;
 		}
 		specification.flags.has_namespace = true;
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::write_partial_paths(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_partial_paths)
+Schema::write_partial_paths(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_partial_paths({})", repr(doc_partial_paths.to_string()));
+	L_CALL("Schema::write_partial_paths({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_PARTIAL_PATHS is heritable and can change.
 	 */
 
-	process_partial_paths(prop_name, doc_partial_paths);
+	process_partial_paths(prop_name, prop_obj);
 	mut_properties[prop_name] = static_cast<bool>(specification.flags.partial_paths);
 }
 
 
 void
-Schema::write_index_uuid_field(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_index_uuid_field)
+Schema::write_index_uuid_field(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_index_uuid_field({})", repr(doc_index_uuid_field.to_string()));
+	L_CALL("Schema::write_index_uuid_field({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_INDEX_UUID_FIELD is heritable and can change.
 	 */
 
-	process_index_uuid_field(prop_name, doc_index_uuid_field);
+	process_index_uuid_field(prop_name, prop_obj);
 	mut_properties[prop_name] = _get_str_index_uuid_field(specification.index_uuid_field);
 }
 
 
 void
-Schema::write_schema(MsgPack& /*unused*/, std::string_view prop_name, const MsgPack& doc_schema)
+Schema::write_schema(MsgPack& /*unused*/, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_schema({})", repr(doc_schema.to_string()));
+	L_CALL("Schema::write_schema({})", repr(prop_obj.to_string()));
 
-	consistency_schema(prop_name, doc_schema);
+	consistency_schema(prop_name, prop_obj);
 }
 
 
 void
-Schema::write_settings(MsgPack& /*unused*/, std::string_view prop_name, const MsgPack& doc_settings)
+Schema::write_settings(MsgPack& /*unused*/, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_settings({})", repr(doc_settings.to_string()));
+	L_CALL("Schema::write_settings({})", repr(prop_obj.to_string()));
 
-	consistency_settings(prop_name, doc_settings);
+	consistency_settings(prop_name, prop_obj);
 }
 
 
 void
-Schema::write_endpoint(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& doc_endpoint)
+Schema::write_endpoint(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_endpoint({})", repr(doc_endpoint.to_string()));
+	L_CALL("Schema::write_endpoint({})", repr(prop_obj.to_string()));
 
-	process_endpoint(prop_name, doc_endpoint);
+	process_endpoint(prop_name, prop_obj);
 	specification.flags.static_endpoint = true;
 	mut_properties[prop_name] = specification.endpoint;
 }
 
 
 void
-Schema::process_ngram(std::string_view prop_name, const MsgPack& doc_ngram)
+Schema::process_ngram(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_ngram({})", repr(doc_ngram.to_string()));
+	L_CALL("Schema::process_ngram({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.ngram = doc_ngram.as_boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.ngram = prop_obj.boolean();
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_cjk_ngram(std::string_view prop_name, const MsgPack& doc_cjk_ngram)
+Schema::process_cjk_ngram(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_cjk_ngram({})", repr(doc_cjk_ngram.to_string()));
+	L_CALL("Schema::process_cjk_ngram({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.cjk_ngram = doc_cjk_ngram.as_boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.cjk_ngram = prop_obj.boolean();
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_cjk_words(std::string_view prop_name, const MsgPack& doc_cjk_words)
+Schema::process_cjk_words(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_cjk_words({})", repr(doc_cjk_words.to_string()));
+	L_CALL("Schema::process_cjk_words({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.cjk_words = doc_cjk_words.as_boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.cjk_words = prop_obj.boolean();
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_language(std::string_view prop_name, const MsgPack& doc_language)
+Schema::process_language(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_language({})", repr(doc_language.to_string()));
+	L_CALL("Schema::process_language({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto str_language = doc_language.str_view();
+	if (prop_obj.is_string()) {
+		const auto str_language = prop_obj.str_view();
 		const auto& stem = _get_stem_language(str_language);
 		if (stem.first && stem.second != "unknown") {
 			specification.language = stem.second;
@@ -8197,88 +8277,88 @@ Schema::process_language(std::string_view prop_name, const MsgPack& doc_language
 		} else {
 			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_language));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_prefix(std::string_view prop_name, const MsgPack& doc_prefix)
+Schema::process_prefix(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_prefix isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_prefix({})", repr(doc_prefix.to_string()));
+	L_CALL("Schema::process_prefix({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.local_prefix.field.assign(doc_prefix.str_view());
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_string()) {
+		specification.local_prefix.field.assign(prop_obj.str_view());
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_slot(std::string_view prop_name, const MsgPack& doc_slot)
+Schema::process_slot(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_SLOT isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_slot({})", repr(doc_slot.to_string()));
+	L_CALL("Schema::process_slot({})", repr(prop_obj.to_string()));
 
-	try {
-		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
+	if (prop_obj.is_number()) {
+		auto slot = static_cast<Xapian::valueno>(prop_obj.u64());
 		if (slot == Xapian::BAD_VALUENO) {
 			THROW(ClientError, "{} invalid slot ({} not supported)", repr(prop_name), slot);
 		}
 		specification.slot = slot;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be integer", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_stop_strategy(std::string_view prop_name, const MsgPack& doc_stop_strategy)
+Schema::process_stop_strategy(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_stop_strategy({})", repr(doc_stop_strategy.to_string()));
+	L_CALL("Schema::process_stop_strategy({})", repr(prop_obj.to_string()));
 
-	try {
-		auto str_stop_strategy = doc_stop_strategy.str_view();
+	if (prop_obj.is_string()) {
+		auto str_stop_strategy = prop_obj.str_view();
 		specification.stop_strategy = _get_stop_strategy(str_stop_strategy);
 		if (specification.stop_strategy == StopStrategy::INVALID) {
 			THROW(ClientError, "{} can be in {} ({} not supported)", repr(prop_name), str_set_stop_strategy, repr(str_stop_strategy));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_stem_strategy(std::string_view prop_name, const MsgPack& doc_stem_strategy)
+Schema::process_stem_strategy(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_stem_strategy({})", repr(doc_stem_strategy.to_string()));
+	L_CALL("Schema::process_stem_strategy({})", repr(prop_obj.to_string()));
 
-	try {
-		auto str_stem_strategy = doc_stem_strategy.str_view();
+	if (prop_obj.is_string()) {
+		auto str_stem_strategy = prop_obj.str_view();
 		specification.stem_strategy = enum_type<StemStrategy>(str_stem_strategy);
 		if (specification.stem_strategy == StemStrategy::INVALID) {
 			THROW(ClientError, "{} can be in {} ({} not supported)", repr(prop_name), str_set_stem_strategy, repr(str_stem_strategy));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_stem_language(std::string_view prop_name, const MsgPack& doc_stem_language)
+Schema::process_stem_language(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_stem_language({})", repr(doc_stem_language.to_string()));
+	L_CALL("Schema::process_stem_language({})", repr(prop_obj.to_string()));
 
-	try {
-		auto str_stem_language = doc_stem_language.str_view();
+	if (prop_obj.is_string()) {
+		auto str_stem_language = prop_obj.str_view();
 		const auto& stem = _get_stem_language(str_stem_language);
 		if (stem.second != "unknown") {
 			specification.stem_language = stem.second.empty() ? stem.second : str_stem_language;
@@ -8286,30 +8366,21 @@ Schema::process_stem_language(std::string_view prop_name, const MsgPack& doc_ste
 		} else {
 			THROW(ClientError, "{}: {} is not supported", repr(prop_name), repr(str_stem_language));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_type(std::string_view prop_name, const MsgPack& doc_type)
+Schema::process_type(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_type({})", repr(doc_type.to_string()));
+	L_CALL("Schema::process_type({})", repr(prop_obj.to_string()));
 
-	try {
-		if (doc_type.is_string()) {
-			specification.set_types(doc_type.str_view());
-		} else if (doc_type.is_array() && doc_type.size() == 4) {
-			specification.sep_types[SPC_FOREIGN_TYPE]  = (FieldType)doc_type.at(SPC_FOREIGN_TYPE).u64();
-			specification.sep_types[SPC_OBJECT_TYPE]   = (FieldType)doc_type.at(SPC_OBJECT_TYPE).u64();
-			specification.sep_types[SPC_ARRAY_TYPE]    = (FieldType)doc_type.at(SPC_ARRAY_TYPE).u64();
-			specification.sep_types[SPC_CONCRETE_TYPE] = (FieldType)doc_type.at(SPC_CONCRETE_TYPE).u64();
-		} else {
-			THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
-		}
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_string()) {
+		specification.set_types(prop_obj.str_view());
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 	if (!specification.endpoint.empty()) {
@@ -8321,13 +8392,13 @@ Schema::process_type(std::string_view prop_name, const MsgPack& doc_type)
 
 
 void
-Schema::process_accuracy(std::string_view prop_name, const MsgPack& doc_accuracy)
+Schema::process_accuracy(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_accuracy({})", repr(doc_accuracy.to_string()));
+	L_CALL("Schema::process_accuracy({})", repr(prop_obj.to_string()));
 
-	if (doc_accuracy.is_array()) {
-		specification.doc_acc = std::make_unique<const MsgPack>(doc_accuracy);
+	if (prop_obj.is_array()) {
+		specification.doc_acc = std::make_unique<const MsgPack>(prop_obj);
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be array", repr(prop_name));
 	}
@@ -8335,287 +8406,333 @@ Schema::process_accuracy(std::string_view prop_name, const MsgPack& doc_accuracy
 
 
 void
-Schema::process_acc_prefix(std::string_view prop_name, const MsgPack& doc_acc_prefix)
+Schema::process_acc_prefix(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_ACC_PREFIX isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_acc_prefix({})", repr(doc_acc_prefix.to_string()));
+	L_CALL("Schema::process_acc_prefix({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
 		specification.acc_prefix.clear();
-		specification.acc_prefix.reserve(doc_acc_prefix.size());
-		for (const auto& acc_p : doc_acc_prefix) {
-			specification.acc_prefix.push_back(acc_p.str());
+		specification.acc_prefix.reserve(prop_obj.size());
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_string()) {
+				specification.acc_prefix.push_back(prop_item_obj.str());
+			} else {
+				THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
+			}
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_bool_term(std::string_view prop_name, const MsgPack& doc_bool_term)
+Schema::process_bool_term(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
-	L_CALL("Schema::process_bool_term({})", repr(doc_bool_term.to_string()));
+	L_CALL("Schema::process_bool_term({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.bool_term = doc_bool_term.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.bool_term = prop_obj.boolean();
 		specification.flags.has_bool_term = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_partials(std::string_view prop_name, const MsgPack& doc_partials)
+Schema::process_partials(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_partials({})", repr(doc_partials.to_string()));
+	L_CALL("Schema::process_partials({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.flags.partials = doc_partials.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.partials = prop_obj.boolean();
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_error(std::string_view prop_name, const MsgPack& doc_error)
+Schema::process_error(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
-	L_CALL("Schema::process_error({})", repr(doc_error.to_string()));
+	L_CALL("Schema::process_error({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.error = doc_error.f64();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_number()) {
+		specification.error = prop_obj.f64();
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a double", repr(prop_name));
 	}
 }
 
 
 void
-Schema::process_position(std::string_view prop_name, const MsgPack& doc_position)
+Schema::process_position(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_POSITION is heritable and can change between documents.
-	L_CALL("Schema::process_position({})", repr(doc_position.to_string()));
+	L_CALL("Schema::process_position({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
+		if (prop_obj.empty()) {
+			THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+		}
 		specification.position.clear();
-		if (doc_position.is_array()) {
-			if (doc_position.empty()) {
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_number()) {
+				specification.position.push_back(static_cast<unsigned>(prop_item_obj.u64()));
+			} else {
 				THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 			}
-			for (const auto& _position : doc_position) {
-				specification.position.push_back(static_cast<unsigned>(_position.u64()));
-			}
-		} else {
-			specification.position.push_back(static_cast<unsigned>(doc_position.u64()));
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_number()) {
+		specification.position.clear();
+		specification.position.push_back(static_cast<unsigned>(prop_obj.u64()));
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_data(std::string_view /*unused*/, [[maybe_unused]] const MsgPack& doc_data)
+Schema::process_data(std::string_view /*unused*/, [[maybe_unused]] const MsgPack& prop_obj)
 {
 	// RESERVED_DATA is ignored by the schema.
-	L_CALL("Schema::process_data({})", repr(doc_data.to_string()));
+	L_CALL("Schema::process_data({})", repr(prop_obj.to_string()));
 }
 
 
 inline void
-Schema::process_weight(std::string_view prop_name, const MsgPack& doc_weight)
+Schema::process_weight(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_WEIGHT property is heritable and can change between documents.
-	L_CALL("Schema::process_weight({})", repr(doc_weight.to_string()));
+	L_CALL("Schema::process_weight({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
+		if (prop_obj.empty()) {
+			THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+		}
 		specification.weight.clear();
-		if (doc_weight.is_array()) {
-			if (doc_weight.empty()) {
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_number()) {
+				specification.weight.push_back(static_cast<unsigned>(prop_item_obj.u64()));
+			} else {
 				THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 			}
-			for (const auto& _weight : doc_weight) {
-				specification.weight.push_back(static_cast<unsigned>(_weight.u64()));
-			}
-		} else {
-			specification.weight.push_back(static_cast<unsigned>(doc_weight.u64()));
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_number()) {
+		specification.weight.clear();
+		specification.weight.push_back(static_cast<unsigned>(prop_obj.u64()));
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_spelling(std::string_view prop_name, const MsgPack& doc_spelling)
+Schema::process_spelling(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_SPELLING is heritable and can change between documents.
-	L_CALL("Schema::process_spelling({})", repr(doc_spelling.to_string()));
+	L_CALL("Schema::process_spelling({})", repr(prop_obj.to_string()));
 
-	try {
-		specification.spelling.clear();
-		if (doc_spelling.is_array()) {
-			if (doc_spelling.empty()) {
-				THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
-			}
-			for (const auto& _spelling : doc_spelling) {
-				specification.spelling.push_back(_spelling.boolean());
-			}
-		} else {
-			specification.spelling.push_back(doc_spelling.boolean());
+	if (prop_obj.is_array()) {
+		if (prop_obj.empty()) {
+			THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+		specification.spelling.clear();
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_boolean()) {
+				specification.spelling.push_back(prop_item_obj.boolean());
+			} else {
+				THROW(ClientError, "Data inconsistency, {} must be a positive integer or a not-empty array of positive integers", repr(prop_name));
+			}
+		}
+	} else if (prop_obj.is_boolean()) {
+		specification.spelling.clear();
+		specification.spelling.push_back(prop_obj.boolean());
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_positions(std::string_view prop_name, const MsgPack& doc_positions)
+Schema::process_positions(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_POSITIONS is heritable and can change between documents.
-	L_CALL("Schema::process_positions({})", repr(doc_positions.to_string()));
+	L_CALL("Schema::process_positions({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_array()) {
+		if (prop_obj.empty()) {
+			THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
+		}
 		specification.positions.clear();
-		if (doc_positions.is_array()) {
-			if (doc_positions.empty()) {
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_boolean()) {
+				specification.positions.push_back(prop_item_obj.boolean());
+			} else {
 				THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 			}
-			for (const auto& _positions : doc_positions) {
-				specification.positions.push_back(_positions.boolean());
-			}
-		} else {
-			specification.positions.push_back(doc_positions.boolean());
 		}
-	} catch (const msgpack::type_error&) {
+	} else if (prop_obj.is_boolean()) {
+		specification.positions.clear();
+		specification.positions.push_back(prop_obj.boolean());
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a boolean or a not-empty array of booleans", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_index(std::string_view prop_name, const MsgPack& doc_index)
+Schema::process_index(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_INDEX is heritable and can change.
-	L_CALL("Schema::process_index({})", repr(doc_index.to_string()));
+	L_CALL("Schema::process_index({})", repr(prop_obj.to_string()));
 
-	try {
-		auto str_index = doc_index.str_view();
+	if (prop_obj.is_string()) {
+		auto str_index = prop_obj.str_view();
 		specification.index = _get_index(str_index);
 		if (specification.index == TypeIndex::INVALID) {
 			THROW(ClientError, "{} not supported, {} must be one of {}", repr(str_index), repr(prop_name), str_set_index);
 		}
 		specification.flags.has_index = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_store(std::string_view prop_name, const MsgPack& doc_store)
+Schema::process_store(std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::process_store({})", repr(doc_store.to_string()));
+	L_CALL("Schema::process_store({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_STORE is heritable and can change, but once fixed in false
 	 * it cannot change in its offsprings.
 	 */
 
-	try {
-		specification.flags.store = specification.flags.parent_store && doc_store.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.store = specification.flags.parent_store && prop_obj.boolean();
 		specification.flags.parent_store = specification.flags.store;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_recurse(std::string_view prop_name, const MsgPack& doc_recurse)
+Schema::process_recurse(std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::process_recurse({})", repr(doc_recurse.to_string()));
+	L_CALL("Schema::process_recurse({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_RECURSE is heritable and can change, but once fixed in false
 	 * it does not process its children.
 	 */
 
-	try {
-		specification.flags.is_recurse = doc_recurse.boolean();
-	} catch (const msgpack::type_error&) {
+	if (prop_obj.is_boolean()) {
+		specification.flags.recurse = prop_obj.boolean();
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_partial_paths(std::string_view prop_name, const MsgPack& doc_partial_paths)
+Schema::process_ignore(std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::process_partial_paths({})", repr(doc_partial_paths.to_string()));
+	L_CALL("Schema::process_ignore({})", repr(prop_obj.to_string()));
+
+	/*
+	 * RESERVED_IGNORE is heritable and can change, but once fixed in false
+	 * it does not process its children.
+	 */
+
+	if (prop_obj.is_array()) {
+		for (const auto& prop_item_obj : prop_obj) {
+			if (prop_item_obj.is_string()) {
+				auto ignored = prop_item_obj.str();
+				if (ignored == "*") {
+					specification.flags.recurse = false;
+					specification.ignored.clear();
+					break;
+				}
+				specification.ignored.insert(ignored);
+			} else {
+				THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
+			}
+		}
+	} else {
+		THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
+	}
+}
+
+
+inline void
+Schema::process_partial_paths(std::string_view prop_name, const MsgPack& prop_obj)
+{
+	L_CALL("Schema::process_partial_paths({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_PARTIAL_PATHS is heritable and can change.
 	 */
 
-	try {
-		specification.flags.partial_paths = doc_partial_paths.boolean();
+	if (prop_obj.is_boolean()) {
+		specification.flags.partial_paths = prop_obj.boolean();
 		specification.flags.has_partial_paths = true;
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& doc_index_uuid_field)
+Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::process_index_uuid_field({})", repr(doc_index_uuid_field.to_string()));
+	L_CALL("Schema::process_index_uuid_field({})", repr(prop_obj.to_string()));
 
 	/*
 	 * RESERVED_INDEX_UUID_FIELD is heritable and can change.
 	 */
 
-	auto str_index_uuid_field = doc_index_uuid_field.str_view();
-	try {
+	if (prop_obj.is_string()) {
+		auto str_index_uuid_field = prop_obj.str_view();
 		specification.index_uuid_field = _get_index_uuid_field(str_index_uuid_field);
 		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
 			THROW(ClientError, "{} not supported, {} must be one of {} ({} not supported)", repr(str_index_uuid_field), repr(prop_name), str_set_index_uuid_field);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_value(std::string_view /*unused*/, const MsgPack& doc_value)
+Schema::process_value(std::string_view /*unused*/, const MsgPack& prop_obj)
 {
 	// RESERVED_VALUE isn't heritable and is not saved in schema.
-	L_CALL("Schema::process_value({})", repr(doc_value.to_string()));
+	L_CALL("Schema::process_value({})", repr(prop_obj.to_string()));
 
 	if (specification.value || specification.value_rec) {
 		THROW(ClientError, "Object already has a value");
 	} else {
-		specification.value = std::make_unique<const MsgPack>(doc_value);
+		specification.value = std::make_unique<const MsgPack>(prop_obj);
 	}
 }
 
 
 inline void
-Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPack& doc_script)
+Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPack& prop_obj)
 {
 	// RESERVED_SCRIPT isn't heritable.
-	L_CALL("Schema::process_script({})", repr(doc_script.to_string()));
+	L_CALL("Schema::process_script({})", repr(prop_obj.to_string()));
 
 #ifdef XAPIAND_CHAISCRIPT
-	specification.script = std::make_unique<const MsgPack>(doc_script);
+	specification.script = std::make_unique<const MsgPack>(prop_obj);
 	specification.flags.normalized_script = false;
 #else
 	THROW(ClientError, "'{}' only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
@@ -8624,13 +8741,13 @@ Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPa
 
 
 inline void
-Schema::process_endpoint(std::string_view prop_name, const MsgPack& doc_endpoint)
+Schema::process_endpoint(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_ENDPOINT isn't heritable.
-	L_CALL("Schema::process_endpoint({})", repr(doc_endpoint.to_string()));
+	L_CALL("Schema::process_endpoint({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _endpoint = doc_endpoint.str_view();
+	if (prop_obj.is_string()) {
+		const auto _endpoint = prop_obj.str_view();
 		if (_endpoint.empty()) {
 			THROW(ClientError, "Data inconsistency, {} must be a valid endpoint", repr(prop_name));
 		}
@@ -8652,122 +8769,122 @@ Schema::process_endpoint(std::string_view prop_name, const MsgPack& doc_endpoint
 			specification.flags.static_endpoint = false;
 			specification.endpoint.assign(_endpoint);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::process_cast_object(std::string_view prop_name, const MsgPack& doc_cast_object)
+Schema::process_cast_object(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// This property isn't heritable and is not saved in schema.
-	L_CALL("Schema::process_cast_object({})", repr(doc_cast_object.to_string()));
+	L_CALL("Schema::process_cast_object({})", repr(prop_obj.to_string()));
 
 	if (specification.value || specification.value_rec) {
 		THROW(ClientError, "Object already has a value");
 	} else {
 		specification.value_rec = std::make_unique<const MsgPack>(MsgPack({
-			{ prop_name, doc_cast_object },
+			{ prop_name, prop_obj },
 		}));
 	}
 }
 
 
 inline void
-Schema::consistency_slot(std::string_view prop_name, const MsgPack& doc_slot)
+Schema::consistency_slot(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_SLOT isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_slot({})", repr(doc_slot.to_string()));
+	L_CALL("Schema::consistency_slot({})", repr(prop_obj.to_string()));
 
-	try {
-		auto slot = static_cast<Xapian::valueno>(doc_slot.u64());
+	if (prop_obj.is_number()) {
+		auto slot = static_cast<Xapian::valueno>(prop_obj.u64());
 		if (specification.slot != slot) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.slot, slot, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be integer", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_ngram(std::string_view prop_name, const MsgPack& doc_ngram)
+Schema::consistency_ngram(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_ngram({})", repr(doc_ngram.to_string()));
+	L_CALL("Schema::consistency_ngram({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto ngram = doc_ngram.as_boolean();
+	if (prop_obj.is_boolean()) {
+		const auto ngram = prop_obj.boolean();
 		if (specification.flags.ngram != ngram) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.ngram), ngram, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_cjk_ngram(std::string_view prop_name, const MsgPack& doc_cjk_ngram)
+Schema::consistency_cjk_ngram(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_cjk_ngram({})", repr(doc_cjk_ngram.to_string()));
+	L_CALL("Schema::consistency_cjk_ngram({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto cjk_ngram = doc_cjk_ngram.as_boolean();
+	if (prop_obj.is_boolean()) {
+		const auto cjk_ngram = prop_obj.boolean();
 		if (specification.flags.cjk_ngram != cjk_ngram) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.cjk_ngram), cjk_ngram, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_cjk_words(std::string_view prop_name, const MsgPack& doc_cjk_words)
+Schema::consistency_cjk_words(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_cjk_words({})", repr(doc_cjk_words.to_string()));
+	L_CALL("Schema::consistency_cjk_words({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto cjk_words = doc_cjk_words.as_boolean();
+	if (prop_obj.is_boolean()) {
+		const auto cjk_words = prop_obj.boolean();
 		if (specification.flags.cjk_words != cjk_words) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.cjk_words), cjk_words, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_language(std::string_view prop_name, const MsgPack& doc_language)
+Schema::consistency_language(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_language({})", repr(doc_language.to_string()));
+	L_CALL("Schema::consistency_language({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto str_language = doc_language.str_view();
+	if (prop_obj.is_string()) {
+		const auto str_language = prop_obj.str_view();
 		if (specification.language != str_language) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), specification.language, repr(str_language), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc_stop_strategy)
+Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STOP_STRATEGY isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_stop_strategy({})", repr(doc_stop_strategy.to_string()));
+	L_CALL("Schema::consistency_stop_strategy({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stop_strategy = string::lower(doc_stop_strategy.str_view());
+			const auto _stop_strategy = string::lower(prop_obj.str_view());
 			const auto stop_strategy = enum_name(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), stop_strategy, _stop_strategy, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8775,21 +8892,21 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& doc
 		} else {
 			THROW(ClientError, "{} only is allowed in text type fields", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc_stem_strategy)
+Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STEM_STRATEGY isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_stem_strategy({})", repr(doc_stem_strategy.to_string()));
+	L_CALL("Schema::consistency_stem_strategy({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stem_strategy = string::lower(doc_stem_strategy.str_view());
+			const auto _stem_strategy = string::lower(prop_obj.str_view());
 			const auto stem_strategy = enum_name(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(stem_strategy), repr(_stem_strategy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8797,41 +8914,41 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& doc
 		} else {
 			THROW(ClientError, "{} only is allowed in text type fields", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& doc_stem_language)
+Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STEM_LANGUAGE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_stem_language({})", repr(doc_stem_language.to_string()));
+	L_CALL("Schema::consistency_stem_language({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stem_language = string::lower(doc_stem_language.str_view());
+			const auto _stem_language = string::lower(prop_obj.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(specification.stem_language), repr(_stem_language), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		} else {
 			THROW(ClientError, "{} only is allowed in text type fields", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
+Schema::consistency_type(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TYPE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_type({})", repr(doc_type.to_string()));
+	L_CALL("Schema::consistency_type({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _str_type = doc_type.str_view();
+	if (prop_obj.is_string()) {
+		const auto _str_type = prop_obj.str_view();
 		auto init_pos = _str_type.rfind('/');
 		if (init_pos == std::string::npos) {
 			init_pos = 0;
@@ -8845,7 +8962,7 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_type), repr(str_concretr_type), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
 	}
 
@@ -8858,20 +8975,24 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& doc_type)
 
 
 inline void
-Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accuracy)
+Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_ACCURACY isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_accuracy({})", repr(doc_accuracy.to_string()));
+	L_CALL("Schema::consistency_accuracy({})", repr(prop_obj.to_string()));
 
-	if (doc_accuracy.is_array()) {
+	if (prop_obj.is_array()) {
 		std::set<uint64_t> set_acc;
 		switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
 			case FieldType::geo: {
-				try {
-					for (const auto& _accuracy : doc_accuracy) {
-						set_acc.insert(_accuracy.u64());
+				if (prop_obj.is_array()) {
+					for (const auto& prop_item_obj : prop_obj) {
+						if (prop_item_obj.is_number()) {
+							set_acc.insert(prop_item_obj.u64());
+						} else {
+							THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+						}
 					}
-				} catch (const msgpack::type_error&) {
+				} else {
 					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
@@ -8888,26 +9009,27 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 			}
 			case FieldType::date:
 			case FieldType::datetime: {
-				try {
-					for (const auto& _accuracy : doc_accuracy) {
+				if (prop_obj.is_array()) {
+					for (const auto& prop_item_obj : prop_obj) {
 						uint64_t accuracy;
-						if (_accuracy.is_string()) {
-							auto accuracy_date = _get_accuracy_datetime(_accuracy.str_view());
+						if (prop_item_obj.is_string()) {
+							auto accuracy_date = _get_accuracy_datetime(prop_item_obj.str_view());
 							if (accuracy_date != UnitTime::INVALID) {
 								accuracy = toUType(accuracy_date);
 							} else {
-								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(prop_item_obj.str_view()));
 							}
-						} else {
-							accuracy = _accuracy.u64();
-							if (validate_acc_date(static_cast<UnitTime>(accuracy))) {
-							} else {
+						} else if (prop_item_obj.is_number()) {
+							accuracy = prop_item_obj.u64();
+							if (!validate_acc_date(static_cast<UnitTime>(accuracy))) {
 								THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 							}
+						} else {
+							THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 						}
 						set_acc.insert(accuracy);
 					}
-				} catch (const msgpack::type_error&) {
+				} else {
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
@@ -8924,15 +9046,20 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 			}
 			case FieldType::time:
 			case FieldType::timedelta: {
-				try {
-					for (const auto& _accuracy : doc_accuracy) {
-						try {
-							set_acc.insert(toUType(_get_accuracy_time(_accuracy.str_view())));
-						} catch (const std::out_of_range&) {
-							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+				if (prop_obj.is_array()) {
+					for (const auto& prop_item_obj : prop_obj) {
+						if (prop_item_obj.is_string()) {
+							auto accuracy_time = _get_accuracy_time(prop_item_obj.str_view());
+							if (accuracy_time != UnitTime::INVALID) {
+								set_acc.insert(toUType(accuracy_time));
+							} else {
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date), repr(prop_item_obj.str_view()));
+							}
+						} else {
+							THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(prop_item_obj.str_view()));
 						}
 					}
-				} catch (const msgpack::type_error&) {
+				} else {
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
@@ -8950,11 +9077,15 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 			case FieldType::integer:
 			case FieldType::positive:
 			case FieldType::floating: {
-				try {
-					for (const auto& _accuracy : doc_accuracy) {
-						set_acc.insert(_accuracy.u64());
+				if (prop_obj.is_array()) {
+					for (const auto& prop_item_obj : prop_obj) {
+						if (prop_item_obj.is_number()) {
+							set_acc.insert(prop_item_obj.u64());
+						} else {
+							THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+						}
 					}
-				} catch (const msgpack::type_error&) {
+				} else {
 					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
@@ -8979,280 +9110,280 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& doc_accu
 
 
 inline void
-Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& doc_bool_term)
+Schema::consistency_bool_term(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_BOOL_TERM isn't heritable and can't change.
-	L_CALL("Schema::consistency_bool_term({})", repr(doc_bool_term.to_string()));
+	L_CALL("Schema::consistency_bool_term({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_boolean()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::keyword) {
-			const auto _bool_term = doc_bool_term.boolean();
+			const auto _bool_term = prop_obj.boolean();
 			if (specification.flags.bool_term != _bool_term) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), bool(specification.flags.bool_term), _bool_term, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		} else {
 			THROW(ClientError, "{} only is allowed in keyword type fields", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_partials(std::string_view prop_name, const MsgPack& doc_partials)
+Schema::consistency_partials(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_partials({})", repr(doc_partials.to_string()));
+	L_CALL("Schema::consistency_partials({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_boolean()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::geo) {
-			const auto _partials = doc_partials.boolean();
+			const auto _partials = prop_obj.boolean();
 			if (specification.flags.partials != _partials) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.partials), _partials);
 			}
 		} else {
 			THROW(ClientError, "{} only is allowed in geospatial type fields", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_error(std::string_view prop_name, const MsgPack& doc_error)
+Schema::consistency_error(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_PARTIALS isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_error({})", repr(doc_error.to_string()));
+	L_CALL("Schema::consistency_error({})", repr(prop_obj.to_string()));
 
-	try {
+	if (prop_obj.is_number()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::geo) {
-			const auto _error = doc_error.f64();
+			const auto _error = prop_obj.f64();
 			if (specification.error != _error) {
 				THROW(ClientError, "It is not allowed to change {} [{:.2}  ->  {:.2}]", repr(prop_name), specification.error, _error);
 			}
 		} else {
 			THROW(ClientError, "{} only is allowed in geospatial type fields", repr(prop_name));
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a double", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_dynamic(std::string_view prop_name, const MsgPack& doc_dynamic)
+Schema::consistency_dynamic(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_DYNAMIC is heritable but can't change.
-	L_CALL("Schema::consistency_dynamic({})", repr(doc_dynamic.to_string()));
+	L_CALL("Schema::consistency_dynamic({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _dynamic = doc_dynamic.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _dynamic = prop_obj.boolean();
 		if (specification.flags.dynamic != _dynamic) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.dynamic), _dynamic);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_strict(std::string_view prop_name, const MsgPack& doc_strict)
+Schema::consistency_strict(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_STRICT is heritable but can't change.
-	L_CALL("Schema::consistency_strict({})", repr(doc_strict.to_string()));
+	L_CALL("Schema::consistency_strict({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _strict = doc_strict.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _strict = prop_obj.boolean();
 		if (specification.flags.strict != _strict) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.strict), _strict);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_date_detection(std::string_view prop_name, const MsgPack& doc_date_detection)
+Schema::consistency_date_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_DATE_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_date_detection({})", repr(doc_date_detection.to_string()));
+	L_CALL("Schema::consistency_date_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _date_detection = doc_date_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _date_detection = prop_obj.boolean();
 		if (specification.flags.date_detection != _date_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.date_detection), _date_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_datetime_detection(std::string_view prop_name, const MsgPack& doc_datetime_detection)
+Schema::consistency_datetime_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_DATETIME_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_datetime_detection({})", repr(doc_datetime_detection.to_string()));
+	L_CALL("Schema::consistency_datetime_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _datetime_detection = doc_datetime_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _datetime_detection = prop_obj.boolean();
 		if (specification.flags.datetime_detection != _datetime_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.datetime_detection), _datetime_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_time_detection(std::string_view prop_name, const MsgPack& doc_time_detection)
+Schema::consistency_time_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TIME_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_time_detection({})", repr(doc_time_detection.to_string()));
+	L_CALL("Schema::consistency_time_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _time_detection = doc_time_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _time_detection = prop_obj.boolean();
 		if (specification.flags.time_detection != _time_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.time_detection), _time_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_timedelta_detection(std::string_view prop_name, const MsgPack& doc_timedelta_detection)
+Schema::consistency_timedelta_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TIMEDELTA_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_timedelta_detection({})", repr(doc_timedelta_detection.to_string()));
+	L_CALL("Schema::consistency_timedelta_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _timedelta_detection = doc_timedelta_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _timedelta_detection = prop_obj.boolean();
 		if (specification.flags.timedelta_detection != _timedelta_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.timedelta_detection), _timedelta_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_numeric_detection(std::string_view prop_name, const MsgPack& doc_numeric_detection)
+Schema::consistency_numeric_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_NUMERIC_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_numeric_detection({})", repr(doc_numeric_detection.to_string()));
+	L_CALL("Schema::consistency_numeric_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _numeric_detection = doc_numeric_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _numeric_detection = prop_obj.boolean();
 		if (specification.flags.numeric_detection != _numeric_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.numeric_detection), _numeric_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_geo_detection(std::string_view prop_name, const MsgPack& doc_geo_detection)
+Schema::consistency_geo_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_GEO_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_geo_detection({})", repr(doc_geo_detection.to_string()));
+	L_CALL("Schema::consistency_geo_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _geo_detection = doc_geo_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _geo_detection = prop_obj.boolean();
 		if (specification.flags.geo_detection != _geo_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.geo_detection), _geo_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& doc_bool_detection)
+Schema::consistency_bool_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_BOOL_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_bool_detection({})", repr(doc_bool_detection.to_string()));
+	L_CALL("Schema::consistency_bool_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _bool_detection = doc_bool_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _bool_detection = prop_obj.boolean();
 		if (specification.flags.bool_detection != _bool_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.bool_detection), _bool_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& doc_text_detection)
+Schema::consistency_text_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_TEXT_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_text_detection({})", repr(doc_text_detection.to_string()));
+	L_CALL("Schema::consistency_text_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _text_detection = doc_text_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _text_detection = prop_obj.boolean();
 		if (specification.flags.text_detection != _text_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.text_detection), _text_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_uuid_detection(std::string_view prop_name, const MsgPack& doc_uuid_detection)
+Schema::consistency_uuid_detection(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_UUID_DETECTION is heritable and can't change.
-	L_CALL("Schema::consistency_uuid_detection({})", repr(doc_uuid_detection.to_string()));
+	L_CALL("Schema::consistency_uuid_detection({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _uuid_detection = doc_uuid_detection.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _uuid_detection = prop_obj.boolean();
 		if (specification.flags.uuid_detection != _uuid_detection) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.uuid_detection), _uuid_detection);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_namespace(std::string_view prop_name, const MsgPack& doc_namespace)
+Schema::consistency_namespace(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_NAMESPACE isn't heritable and can't change once fixed.
-	L_CALL("Schema::consistency_namespace({})", repr(doc_namespace.to_string()));
+	L_CALL("Schema::consistency_namespace({})", repr(prop_obj.to_string()));
 
-	try {
-		const auto _is_namespace = doc_namespace.boolean();
+	if (prop_obj.is_boolean()) {
+		const auto _is_namespace = prop_obj.boolean();
 		if (specification.flags.is_namespace != _is_namespace) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.is_namespace), _is_namespace);
 		}
-	} catch (const msgpack::type_error&) {
+	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
 	}
 }
 
 
 inline void
-Schema::consistency_schema(std::string_view prop_name, const MsgPack& doc_schema)
+Schema::consistency_schema(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_SCHEMA isn't heritable and is only allowed in root object.
-	L_CALL("Schema::consistency_schema({})", repr(doc_schema.to_string()));
+	L_CALL("Schema::consistency_schema({})", repr(prop_obj.to_string()));
 
 	if (specification.full_meta_name.empty()) {
-		if (!doc_schema.is_string() && !doc_schema.is_map()) {
+		if (!prop_obj.is_string() && !prop_obj.is_map()) {
 			THROW(ClientError, "{} must be string or map", repr(prop_name));
 		}
 	} else {
@@ -9262,13 +9393,13 @@ Schema::consistency_schema(std::string_view prop_name, const MsgPack& doc_schema
 
 
 inline void
-Schema::consistency_settings(std::string_view prop_name, const MsgPack& doc_settings)
+Schema::consistency_settings(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// RESERVED_SETTINGS isn't heritable and is only allowed in root object.
-	L_CALL("Schema::consistency_settings({})", repr(doc_settings.to_string()));
+	L_CALL("Schema::consistency_settings({})", repr(prop_obj.to_string()));
 
 	if (specification.full_meta_name.empty()) {
-		if (!doc_settings.is_map()) {
+		if (!prop_obj.is_map()) {
 			THROW(ClientError, "{} must be string or map", repr(prop_name));
 		}
 	} else {
@@ -9467,12 +9598,12 @@ Schema::readable_slot(MsgPack& /*unused*/, MsgPack& /*unused*/)
 
 
 inline bool
-Schema::readable_stem_language(MsgPack& prop_stem_language, MsgPack& properties)
+Schema::readable_stem_language(MsgPack& prop_obj, MsgPack& properties)
 {
-	L_CALL("Schema::readable_stem_language({})", repr(prop_stem_language.to_string()));
+	L_CALL("Schema::readable_stem_language({})", repr(prop_obj.to_string()));
 
 	const auto language = properties[RESERVED_LANGUAGE].str_view();
-	const auto stem_language = prop_stem_language.str_view();
+	const auto stem_language = prop_obj.str_view();
 
 	return (language != stem_language);
 }
@@ -9488,11 +9619,11 @@ Schema::readable_acc_prefix(MsgPack& /*unused*/, MsgPack& /*unused*/)
 
 
 inline bool
-Schema::readable_script(MsgPack& prop_script, MsgPack& /*unused*/)
+Schema::readable_script(MsgPack& prop_obj, MsgPack& /*unused*/)
 {
-	L_CALL("Schema::readable_script({})", repr(prop_script.to_string()));
+	L_CALL("Schema::readable_script({})", repr(prop_obj.to_string()));
 
-	dispatch_readable(prop_script, false);
+	dispatch_readable(prop_obj, false);
 	return true;
 }
 
