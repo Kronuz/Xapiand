@@ -682,6 +682,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			}
 		}
 		if (retry) {
+			L_SCHEMA("GET: " + DARK_CORAL + "Schema {} is outdated, try reloading {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
 			DatabaseHandler _db_handler(db_handler->endpoints, DB_WRITABLE, db_handler->context);
 			up = _update("RETRY GET: ", &_db_handler, nullptr, schema_obj, false);
 			schema_ptr = std::get<1>(up);
@@ -696,21 +697,20 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 				}
 			}
 			if (latest_version > schema_version) {
-				// Still outdated, relink with a shorter lifespan (10s)
+				L_SCHEMA("GET: " + DARK_RED + "Schema {} is still outdated, relink with a shorter lifespan (10s) {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
 				std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
 				auto it = schemas.find(path_);
 				if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
 					it.relink(10s);
 				}
-				L_SCHEMA(RED + "Schema {} is outdated! {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
 			} else {
-				L_SCHEMA(GREEN + "Schema {} was outdated! {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
+				L_SCHEMA("GET: " + GREEN + "Schema {} was outdated but it was reloaded {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
 			}
 		} else {
-			L_SCHEMA(MAGENTA + "Schema {} is still outdated! {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
+			L_SCHEMA("GET: " + DARK_RED + "Schema {} is still outdated {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
 		}
 	} else {
-		L_SCHEMA(GREEN + "Schema {} is current! {{schema_version:{}}}", repr(path), schema_version);
+		L_SCHEMA("GET: " + GREEN + "Schema {} is current {{schema_version:{}}}", repr(path), schema_version);
 	}
 
 	if (schema_obj && schema_obj->is_map()) {
