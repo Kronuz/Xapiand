@@ -677,7 +677,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			}
 		}
 		if (retry) {
-			DatabaseHandler _db_handler(db_handler->endpoints, DB_WRITABLE);
+			DatabaseHandler _db_handler(db_handler->endpoints, DB_WRITABLE, db_handler->context);
 			up = _update("RETRY GET: ", &_db_handler, nullptr, schema_obj, false);
 			schema_ptr = std::get<1>(up);
 			local_schema_path = std::get<2>(up);
