@@ -666,11 +666,11 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	Xapian::rev latest_version = 0;
 	{
 		std::lock_guard<std::mutex> lk(versions_mtx);
-		auto it = versions.find(path);
-		if (it != versions.end()) {
-			latest_version = it->second;
+		auto version_it = versions.find(path);
+		if (version_it != versions.end()) {
+			latest_version = version_it->second;
 			if (latest_version <= schema_version) {
-				versions.erase(it);
+				versions.erase(version_it);
 			}
 		}
 	}
@@ -680,9 +680,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		bool retry = false;
 		{
 			std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
-			auto it = schemas.find(path);
-			if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
-				schemas.erase(it);
+			auto schema_it = schemas.find(path);
+			if (schema_it != schemas.end() && schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
+				schemas.erase(schema_it);
 				retry = true;
 			}
 		}
@@ -696,17 +696,17 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			schema_version = schema_ptr->get_flags();
 			{
 				std::lock_guard<std::mutex> lk(versions_mtx);
-				auto it = versions.find(path_);
-				if (it != versions.end()) {
-					latest_version = it->second;
+				auto version_it = versions.find(path_);
+				if (version_it != versions.end()) {
+					latest_version = version_it->second;
 				}
 			}
 			if (latest_version > schema_version) {
 				L_SCHEMA("GET: " + DARK_RED + "Schema {} is still outdated, relink with a shorter lifespan (10s) {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
 				std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
-				auto it = schemas.find(path_);
-				if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
-					it.relink(10s);
+				auto schema_it = schemas.find(path_);
+				if (schema_it != schemas.end() && schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
+					schema_it.relink(10s);
 				}
 			} else {
 				L_SCHEMA("GET: " + GREEN + "Schema {} was outdated but it was reloaded {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
@@ -834,11 +834,16 @@ SchemasLRU::dump_schemas(int level) const
 	{
 		std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
 		std::lock_guard<std::mutex> versions_lk(versions_mtx);
-		for (auto& schema : schemas) {
+		for (auto schema_it = schemas.begin(); schema_it != schemas.end(); ++schema_it) {
+			auto& schema = *schema_it;
 			std::string outdated;
-			auto it = versions.find(schema.first);
-			if (it != versions.end() && it->second > schema.second->get_flags()) {
-				outdated = " " + LIGHT_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
+			auto version_it = versions.find(schema.first);
+			if (version_it != versions.end() && version_it->second > schema.second->get_flags()) {
+				if (schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
+					outdated = " " + DARK_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
+				} else {
+					outdated = " " + DARK_ORANGE + "(outdated)" + STEEL_BLUE;
+				}
 			}
 			ret += indent + indent;
 			ret += string::format("<Schema {}{}>", repr(schema.first),  outdated);
