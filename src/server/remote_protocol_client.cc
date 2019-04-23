@@ -1264,7 +1264,9 @@ RemoteProtocolClient::init_remote(int sock_) noexcept
 {
 	L_CALL("RemoteProtocolClient::init_remote({})", sock_);
 
-	init(sock_);
+	if (!init(sock_)) {
+		return false;
+	}
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 

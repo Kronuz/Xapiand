@@ -108,7 +108,11 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 	if (client_sock != -1) {
 		auto client = Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags);
 
-		client->init(client_sock);
+		if (!client->init(client_sock)) {
+			io::close(client_sock);
+			client->detach();
+			return;
+		}
 
 		client->start();
 	}

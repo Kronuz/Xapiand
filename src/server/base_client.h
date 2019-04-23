@@ -141,7 +141,7 @@ protected:
 	bool send_file(int fd, size_t offset = 0);
 
 public:
-	void init(int sock_);
+	bool init(int sock_) noexcept;
 
 	bool write(const char *buf, size_t buf_size);
 

@@ -118,6 +118,7 @@ ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int re
 		auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout);
 
 		if (!client->init_replication(client_sock)) {
+			io::close(client_sock);
 			client->detach();
 			return;
 		}

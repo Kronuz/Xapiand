@@ -113,6 +113,7 @@ RemoteProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents
 		auto client = Worker::make_shared<RemoteProtocolClient>(share_this<RemoteProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout);
 
 		if (!client->init_remote(client_sock)) {
+			io::close(client_sock);
 			client->detach();
 			return;
 		}

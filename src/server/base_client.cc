@@ -130,17 +130,17 @@ BaseClient<ClientImpl>::~BaseClient() noexcept
 
 
 template <typename ClientImpl>
-void
-BaseClient<ClientImpl>::init(int sock_)
+bool
+BaseClient<ClientImpl>::init(int sock_) noexcept
 {
 	L_CALL("BaseClient::init()");
 
 	if (sock_ == -1) {
-		throw std::invalid_argument("Invalid socket");
+		return false;
 	}
 
 	if (sock != -1) {
-		throw std::invalid_argument("Socket already initialized");
+		return false;
 	}
 
 	closed = false;
@@ -154,6 +154,8 @@ BaseClient<ClientImpl>::init(int sock_)
 
 	io_read.set<BaseClient<ClientImpl>, &BaseClient<ClientImpl>::io_cb_read>(this);
 	io_read.set(sock, ev::READ);
+
+	return true;
 }
 
 

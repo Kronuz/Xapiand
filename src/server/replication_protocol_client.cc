@@ -177,22 +177,31 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 		L_REPLICATION("Replication deferred (not available): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
 	} catch (...) {
-		L_EXC("ERROR: Replication initialization ended with an unhandled exception");
+		L_EXC("ERROR: Replication initialization ended with an unhandled exception (1)");
 		return false;
 	}
 
 	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
 	if (client_sock == -1) {
 		lk_shard_ptr.reset();
-
-		// If it cannot replicate because the other end is down, retry in a bit...
-		trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
-		L_REPLICATION("Replication deferred (cannot connect): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
-		return false;
+		try {
+			// If it cannot replicate because the other end is down, retry in a bit...
+			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
+			L_REPLICATION("Replication deferred (cannot connect): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
+			return false;
+		} catch (...) {
+			L_EXC("ERROR: Replication initialization ended with an unhandled exception (2)");
+			return false;
+		}
 	}
 	L_CONN("Connected to {}! (in socket {})", repr(src_endpoint.to_string()), client_sock);
 
-	init(client_sock);
+	if (!init(client_sock)) {
+		io::close(client_sock);
+		lk_shard_ptr.reset();
+		return false;
+	}
+
 	L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	return true;
 }
@@ -754,7 +763,9 @@ ReplicationProtocolClient::init_replication(int sock_) noexcept
 {
 	L_CALL("ReplicationProtocolClient::init_replication({})", sock_);
 
-	init(sock_);
+	if (!init(sock_)) {
+		return false;
+	}
 
 	std::lock_guard<std::mutex> lk(runner_mutex);
 
