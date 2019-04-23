@@ -201,18 +201,18 @@ save_shared(const Endpoint& endpoint, std::string_view id, MsgPack schema, std::
 		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
 		return version;
 	} catch (const Xapian::DocNotFoundError&) {
+		context->erase(path);
 		if (path == ".xapiand/indices") {
 			// Ignore .xapiand/index (basic schema already known)
 			return 0;
 		}
-		context->erase(path);
 		throw;
 	} catch (const Xapian::DatabaseNotFoundError&) {
+		context->erase(path);
 		if (path == ".xapiand/indices") {
 			// Ignore .xapiand/index (basic schema already known)
 			return 0;
 		}
-		context->erase(path);
 		throw;
 	} catch (...) {
 		context->erase(path);
