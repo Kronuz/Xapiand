@@ -141,6 +141,11 @@ static constexpr auto DARK_BLUE = rgb(0, 0, 139);
 #define L_DARK_BLUE(args...) L(LOG_NOTICE, DARK_BLUE, args)
 #define L_STACKED_DARK_BLUE(args...) L_STACKED(LOG_NOTICE, DARK_BLUE, args)
 
+static constexpr auto DARK_CORAL = rgb(205, 91, 69);
+#define L_UNINDENTED_DARK_CORAL(args...) L_UNINDENTED(LOG_NOTICE, DARK_CORAL, args)
+#define L_DARK_CORAL(args...) L(LOG_NOTICE, DARK_CORAL, args)
+#define L_STACKED_DARK_CORAL(args...) L_STACKED(LOG_NOTICE, DARK_CORAL, args)
+
 static constexpr auto DARK_CYAN = rgb(0, 139, 139);
 #define L_UNINDENTED_DARK_CYAN(args...) L_UNINDENTED(LOG_NOTICE, DARK_CYAN, args)
 #define L_DARK_CYAN(args...) L(LOG_NOTICE, DARK_CYAN, args)
