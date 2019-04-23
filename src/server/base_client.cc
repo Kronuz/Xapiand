@@ -438,7 +438,7 @@ BaseClient<ClientImpl>::io_cb_read(ev::io &watcher, int revents) noexcept
 				L_ERR("ERROR: read error {{sock:{}}} - {}: {} ({})", watcher.fd, error::name(errno), errno, error::description(errno));
 			}
 			on_read(nullptr, received);
-			shutdown();
+			detach();
 			return;
 		}
 
@@ -446,7 +446,7 @@ BaseClient<ClientImpl>::io_cb_read(ev::io &watcher, int revents) noexcept
 			// The peer has closed its half side of the connection.
 			L_CONN("Received EOF {{sock:{}}}!", watcher.fd);
 			on_read(nullptr, received);
-			shutdown();
+			detach();
 			return;
 		}
 
@@ -588,7 +588,7 @@ BaseClient<ClientImpl>::io_cb_write(ev::io &watcher, int revents) noexcept
 						io_write.stop();
 						L_EV("Disable write event");
 						if (is_shutting_down()) {
-							shutdown();
+							detach();
 						}
 					}
 				});

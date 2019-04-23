@@ -279,17 +279,17 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {
-			close();
+			destroy();
 		}
-		shutdown();
+		detach();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching remote protocol message");
-		close();
-		shutdown();
+		destroy();
+		detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
@@ -297,7 +297,7 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		shutdown();
+		detach();
 	}
 }
 
@@ -1224,8 +1224,8 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 {
 	L_CALL("RemoteProtocolClient::msg_shutdown(<message>)");
 
-	close();
-	shutdown();
+	destroy();
+	detach();
 }
 
 
@@ -1573,8 +1573,8 @@ RemoteProtocolClient::operator()()
 	L_CONN("Running in replication worker ended. {{messages_empty:{}, closed:{}, is_shutting_down:{}}}", messages.empty(), closed.load(), is_shutting_down());
 	lk.unlock();
 
-	if (is_shutting_down()) {
-		shutdown();
+	if (is_shutting_down() && is_idle()) {
+		detach();
 		return;
 	}
 

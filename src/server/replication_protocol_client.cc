@@ -246,17 +246,17 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) {
-			close();
+			destroy();
 		}
-		shutdown();
+		detach();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
 		// to be able to communicate further across this connection. So we don't
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching replication protocol message");
-		close();
-		shutdown();
+		destroy();
+		detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
@@ -264,7 +264,7 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 	} catch (...) {
 		L_EXC("ERROR: Dispatching replication protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
-		shutdown();
+		detach();
 	}
 }
 
@@ -489,8 +489,8 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	}
 
-	close();
-	shutdown();
+	destroy();
+	detach();
 }
 
 
@@ -566,8 +566,8 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::set_cluster_database_ready();
 	}
 
-	close();
-	shutdown();
+	destroy();
+	detach();
 }
 
 
@@ -584,8 +584,8 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 	reset();
 	lk_shard_ptr.reset();
 
-	close();
-	shutdown();
+	destroy();
+	detach();
 }
 
 
@@ -1116,8 +1116,8 @@ ReplicationProtocolClient::operator()()
 	L_CONN("Running in replication worker ended. {{messages_empty:{}, closed:{}, is_shutting_down:{}}}", messages.empty(), closed.load(), is_shutting_down());
 	lk.unlock();
 
-	if (is_shutting_down()) {
-		shutdown();
+	if (is_shutting_down() && is_idle()) {
+		detach();
 		return;
 	}
 

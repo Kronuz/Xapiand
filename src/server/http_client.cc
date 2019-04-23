@@ -1172,7 +1172,8 @@ HttpClient::prepare()
 			if (opts.admin_commands && !has_pth && id.empty()) {
 				XapiandManager::try_shutdown(true);
 				write_http_response(*new_request, HTTP_STATUS_OK);
-				shutdown();
+				destroy();
+				detach();
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1283,7 +1284,8 @@ HttpClient::operator()()
 				running = false;
 				L_CONN("Running in worker ended after request closing.");
 				lk.unlock();
-				shutdown();
+				destroy();
+				detach();
 				return;
 			}
 		} else {
@@ -1295,8 +1297,8 @@ HttpClient::operator()()
 	L_CONN("Running in replication worker ended. {{requests_empty:{}, closed:{}, is_shutting_down:{}}}", requests.empty(), closed.load(), is_shutting_down());
 	lk.unlock();
 
-	if (is_shutting_down()) {
-		shutdown();
+	if (is_shutting_down() && is_idle()) {
+		detach();
 		return;
 	}
 
