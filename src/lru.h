@@ -661,29 +661,18 @@ public:
 		return get(key);
 	}
 
-	iterator erase(iterator it) {
-		auto map_it = _map.find(it->first);
-		if (map_it == _map.end()) {
-			return end();
-		}
-		map_it = _map.erase(map_it);
-		if (map_it == _map.end()) {
-			return end();
-		}
-		auto node = &map_it->second;
-		return iterator(this, node);
-	}
-
 	iterator erase(const_iterator it) {
 		auto map_it = _map.find(it->first);
 		if (map_it == _map.end()) {
 			return end();
 		}
+		auto node = &map_it->second;
+		node->unlink();
 		map_it = _map.erase(map_it);
 		if (map_it == _map.end()) {
 			return end();
 		}
-		auto node = &map_it->second;
+		node = &map_it->second;
 		return iterator(this, node);
 	}
 
