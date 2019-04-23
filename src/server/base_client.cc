@@ -165,8 +165,10 @@ BaseClient<ClientImpl>::close()
 {
 	L_CALL("BaseClient::close()");
 
-	if (!closed.exchange(true)) {
-		io::shutdown(sock, SHUT_RDWR);
+	if (sock != -1) {
+		if (!closed.exchange(true)) {
+			io::shutdown(sock, SHUT_RDWR);
+		}
 	}
 }
 
