@@ -648,8 +648,8 @@ class Schema {
 	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack& object, FieldVector& fields, size_t pos);
 	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos);
 
-	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, std::string_view name);
-	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, std::string_view name);
+	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
+	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
@@ -660,10 +660,10 @@ class Schema {
 	 */
 
 	const MsgPack& update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, FieldVector& fields);
-	const MsgPack& update_subproperties(const MsgPack*& properties, std::string_view name);
+	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name);
 
-	void update_object(const MsgPack*& parent_properties, const MsgPack& object, std::string_view name);
-	void update_array(const MsgPack*& parent_properties, const MsgPack& array, std::string_view name);
+	void update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
+	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
 
 	void update_item_value();
 	void update_item_value(const MsgPack*& properties, const FieldVector& fields);
@@ -673,10 +673,10 @@ class Schema {
 	 */
 
 	MsgPack& write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, FieldVector& fields);
-	MsgPack& write_subproperties(MsgPack*& mut_properties, std::string_view name);
+	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name);
 
-	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std::string_view name);
-	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, std::string_view name);
+	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
+	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
 
 	void write_item_value(MsgPack*& mut_properties);
 	void write_item_value(MsgPack*& mut_properties, const FieldVector& fields);

@@ -3305,7 +3305,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 
 void
-Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, std::string_view name)
+Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
 	L_CALL("Schema::index_object({}, {}, {}, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(parent_data->to_string()), repr(name));
 
@@ -3399,7 +3399,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 
 void
-Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, std::string_view name)
+Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
 	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
 
@@ -3829,7 +3829,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 
 
 const MsgPack&
-Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
+Schema::update_subproperties(const MsgPack*& properties, const std::string& name)
 {
 	L_CALL("Schema::update_subproperties({}, {})", repr(properties->to_string()), repr(name));
 
@@ -3918,7 +3918,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name)
 
 
 void
-Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, std::string_view name)
+Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
 {
 	L_CALL("Schema::update_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
 
@@ -3970,7 +3970,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 }
 
 void
-Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, std::string_view name)
+Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name)
 {
 	L_CALL("Schema::update_array({}, {}, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
 
@@ -4273,7 +4273,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 
 
 MsgPack&
-Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
+Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 {
 	L_CALL("Schema::write_subproperties({}, {})", repr(mut_properties->to_string()), repr(name));
 
@@ -4360,7 +4360,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name)
 
 
 void
-Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std::string_view name)
+Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
 {
 	L_CALL("Schema::write_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
 
@@ -4413,7 +4413,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, std
 
 
 void
-Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, std::string_view name)
+Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name)
 {
 	L_CALL("Schema::write_array({}, {}, {})", repr(mut_parent_properties->to_string()), repr(array.to_string()), repr(name));
 
