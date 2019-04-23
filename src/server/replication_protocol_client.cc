@@ -245,9 +245,8 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// We've had a timeout, so the client may not be listening, if we can't
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		} catch (...) {
-			destroy();
-		}
+		} catch (...) { }
+		destroy();
 		detach();
 	} catch (const Xapian::NetworkError&) {
 		// All other network errors mean we are fatally confused and are unlikely
@@ -261,9 +260,12 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
+		destroy();
+		detach();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching replication protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
+		destroy();
 		detach();
 	}
 }
@@ -288,6 +290,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	if (endpoint_path.empty()) {
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
+		destroy();
+		detach();
 
 		auto ends = std::chrono::steady_clock::now();
 		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
@@ -370,6 +374,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 				if (whole_db_copies_left == 0) {
 					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
+					destroy();
+					detach();
 
 					auto ends = std::chrono::steady_clock::now();
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
