@@ -536,8 +536,10 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			if (writable && schema_ptr->get_flags() == 0) {
 				try {
 					auto version = save_shared(Endpoint{foreign_path}, foreign_id, *schema_ptr, db_handler->context);
-					schema_updater()->debounce(foreign_uri, version, foreign_uri);
 					schema_ptr->set_flags(version);
+					if (version) {
+						schema_updater()->debounce(foreign_uri, version, foreign_uri);
+					}
 					L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={}: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), schema_ptr->to_string());
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
@@ -764,15 +766,21 @@ SchemasLRU::updated(const std::string& uri, Xapian::rev version)
 {
 	L_CALL("SchemasLRU::updated({}, {})", repr(uri), version);
 
-	std::lock_guard<std::mutex> lk(versions_mtx);
-	auto it = versions.find_and_relink(uri);
-	if (it == versions.end()) {
-		versions.emplace(uri, version);
-	} else {
-		it->second = version;
+	if (!version) {
+		return;
 	}
 
-	L_SCHEMA("Schema {} received update! {{latest_version:{}}}", repr(uri), version);
+	std::lock_guard<std::mutex> lk(versions_mtx);
+	auto emplaced = versions.emplace(uri, version);
+	auto& it = emplaced.first;
+	auto& latest_version = it->second;
+	if (latest_version < version) {
+		latest_version = version;
+		if (!emplaced.second) {
+			it.relink();
+		}
+		L_SCHEMA("Schema {} updated schema version! {{latest_version:{}}}", repr(uri), latest_version);
+	}
 }
 
 
