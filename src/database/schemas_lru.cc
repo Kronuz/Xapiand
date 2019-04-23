@@ -813,7 +813,8 @@ SchemasLRU::cleanup()
 std::string
 SchemasLRU::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<SchemasLRU>");
+	std::lock_guard<std::mutex> versions_lk(versions_mtx);
+	return string::format(STEEL_BLUE + "<SchemasLRU {{versions:{}}}>", versions.size());
 }
 
 
