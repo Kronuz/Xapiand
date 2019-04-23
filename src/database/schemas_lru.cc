@@ -658,13 +658,16 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	// than the currently loaded version of the schema, we try to reload
 	// the new schema or otherwise lower the schema's lifespan in the LRU.
 	auto& path = foreign_uri.empty() ? local_schema_path : foreign_uri;
-	bool outdated;
+	Xapian::rev schema_version = schema_ptr->get_flags();
+	Xapian::rev latest_version = 0;
 	{
 		std::lock_guard<std::mutex> lk(versions_mtx);
 		auto it = versions.find(path);
-		outdated = it != versions.end() && it->second > schema_ptr->get_flags();
+		if (it != versions.end()) {
+			latest_version = it->second;
+		}
 	}
-	if (outdated) {
+	if (latest_version > schema_version) {
 		// If the schema was flagged as outdated (newer version exists), try
 		// erasing the schema, retry _update, and re-check outdated status.
 		bool retry = false;
@@ -686,24 +689,26 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			{
 				std::lock_guard<std::mutex> lk(versions_mtx);
 				auto it = versions.find(path_);
-				outdated = it != versions.end() && it->second > schema_ptr->get_flags();
+				if (it != versions.end()) {
+					latest_version = it->second;
+				}
 			}
-			if (outdated) {
+			if (latest_version > schema_version) {
 				// Still outdated, relink with a shorter lifespan (10s)
 				std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
 				auto it = schemas.find(path_);
 				if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
 					it.relink(10s);
 				}
-				L_SCHEMA(RED + "Schema {} is outdated!", repr(path_));
+				L_SCHEMA(RED + "Schema {} is outdated! {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
 			} else {
-				L_SCHEMA(GREEN + "Schema {} was outdated!", repr(path_));
+				L_SCHEMA(GREEN + "Schema {} was outdated! {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
 			}
 		} else {
-			L_SCHEMA(MAGENTA + "Schema {} is still outdated!", repr(path));
+			L_SCHEMA(MAGENTA + "Schema {} is still outdated! {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
 		}
 	} else {
-		L_SCHEMA(GREEN + "Schema {} is current!", repr(path));
+		L_SCHEMA(GREEN + "Schema {} is current! {{schema_version:{}}}", repr(path), schema_version);
 	}
 
 	if (schema_obj && schema_obj->is_map()) {
@@ -767,7 +772,7 @@ SchemasLRU::updated(const std::string& uri, Xapian::rev version)
 		it->second = version;
 	}
 
-	L_RED("Schema updated: {} at {}", uri, version);
+	L_SCHEMA("Schema {} received update! {{latest_version:{}}}", repr(uri), version);
 }
 
 
