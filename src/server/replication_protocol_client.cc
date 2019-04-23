@@ -269,8 +269,6 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		destroy();
-		detach();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching replication protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());

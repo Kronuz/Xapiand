@@ -293,8 +293,6 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
 		send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		destroy();
-		detach();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
