@@ -672,13 +672,13 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
 			auto it = schemas.find(path);
 			if (it != schemas.end() && it.expiration() > std::chrono::steady_clock::now() + 10s) {
-				it.relink(0s);
+				schemas.erase(it);
 				retry = true;
 			}
 		}
 		if (retry) {
 			DatabaseHandler _db_handler(db_handler->endpoints, DB_WRITABLE);
-			up = _update("GET: ", &_db_handler, nullptr, schema_obj, false);
+			up = _update("RETRY GET: ", &_db_handler, nullptr, schema_obj, false);
 			schema_ptr = std::get<1>(up);
 			local_schema_path = std::get<2>(up);
 			foreign_uri = std::get<3>(up);
