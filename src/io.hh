@@ -79,7 +79,7 @@ namespace io {
 #define OPENED 1
 #define SOCKET 2
 #define CLOSED 4
-int check(const char* msg, int fd, int check_set, int check_unset, int set, const char* function, const char* filename, int line);
+int check(const char* msg, int fd, int check_set, int check_unset, int set, const char* function, const char* filename, int line) noexcept;
 #define CHECK_OPEN(fd) io::check("while opening as file", fd, 0, OPENED | CLOSED, OPENED, __func__, __FILE__, __LINE__)
 #define CHECK_OPEN_SOCKET(fd) io::check("while opening as socket", fd, 0, OPENED | SOCKET | CLOSED, OPENED | SOCKET, __func__, __FILE__, __LINE__)
 #define CHECK_CLOSING(fd) io::check("while closing", fd, OPENED, 0, 0, __func__, __FILE__, __LINE__)
@@ -101,15 +101,15 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 #elif defined HAVE_FSYNC
 #define __io_fsync ::fsync
 #else
-inline int __noop(int /*unused*/) { return 0; }
+inline int __noop(int /*unused*/) noexcept { return 0; }
 #define __io_fsync io::__noop
 #endif
 
 
-std::atomic_bool& ignore_eintr();
+std::atomic_bool& ignore_eintr() noexcept;
 
 
-inline bool ignored_errno(int e, bool again, bool tcp, bool udp) {
+inline bool ignored_errno(int e, bool again, bool tcp, bool udp) noexcept {
 	switch(e) {
 		case EINTR:
 			return ignore_eintr().load();  //  Always ignore error
@@ -142,7 +142,7 @@ inline bool ignored_errno(int e, bool again, bool tcp, bool udp) {
 
 
 template <typename Fun, typename... Args>
-inline auto RetryAfterSignal(const Fun &F, const Args &... As) -> decltype(F(As...)) {
+inline auto RetryAfterSignal(const Fun &F, const Args &... As) noexcept -> decltype(F(As...)) {
 	decltype(F(As...)) _err;
 	do {
 		errno = 0;
@@ -152,17 +152,17 @@ inline auto RetryAfterSignal(const Fun &F, const Args &... As) -> decltype(F(As.
 }
 
 
-int open(const char* path, int oflag=O_RDONLY, int mode=0644);
-int close(int fd);
+int open(const char* path, int oflag=O_RDONLY, int mode = 0644) noexcept;
+int close(int fd) noexcept;
 
-ssize_t write(int fd, const void* buf, size_t nbyte);
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset);
+ssize_t write(int fd, const void* buf, size_t nbyte) noexcept;
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) noexcept;
 
-ssize_t read(int fd, void* buf, size_t nbyte);
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset);
+ssize_t read(int fd, void* buf, size_t nbyte) noexcept;
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) noexcept;
 
 
-inline int mkstemp(char* template_) {
+inline int mkstemp(char* template_) noexcept {
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 	int fd = ::mkstemp(template_);
@@ -170,17 +170,17 @@ inline int mkstemp(char* template_) {
 	return fd;
 }
 
-inline char* mkdtemp(char* template_) {
+inline char* mkdtemp(char* template_) noexcept {
 	return ::mkdtemp(template_);
 }
 
 
-inline int unlink(const char* path) {
+inline int unlink(const char* path) noexcept {
 	return ::unlink(path);
 }
 
 
-inline off_t lseek(int fd, off_t offset, int whence) {
+inline off_t lseek(int fd, off_t offset, int whence) noexcept {
 	CHECK_OPENED("during lseek()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -190,7 +190,7 @@ inline off_t lseek(int fd, off_t offset, int whence) {
 
 
 template <typename... Args>
-inline int unchecked_fcntl(int fd, int cmd, Args&&... args) {
+inline int unchecked_fcntl(int fd, int cmd, Args&&... args) noexcept {
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 	return RetryAfterSignal(::fcntl, fd, cmd, std::forward<Args>(args)...);
@@ -198,7 +198,7 @@ inline int unchecked_fcntl(int fd, int cmd, Args&&... args) {
 
 
 template <typename... Args>
-inline int fcntl(int fd, int cmd, Args&&... args) {
+inline int fcntl(int fd, int cmd, Args&&... args) noexcept {
 	CHECK_OPENED("during fcntl()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -207,7 +207,7 @@ inline int fcntl(int fd, int cmd, Args&&... args) {
 }
 
 
-inline int fstat(int fd, struct stat* buf) {
+inline int fstat(int fd, struct stat* buf) noexcept {
 	CHECK_OPENED("during fstat()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -216,7 +216,7 @@ inline int fstat(int fd, struct stat* buf) {
 }
 
 
-inline int dup(int fd) {
+inline int dup(int fd) noexcept {
 	CHECK_OPENED("during dup()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -225,7 +225,7 @@ inline int dup(int fd) {
 }
 
 
-inline int dup2(int fd, int fd2) {
+inline int dup2(int fd, int fd2) noexcept {
 	CHECK_OPENED("during dup2()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -234,7 +234,7 @@ inline int dup2(int fd, int fd2) {
 }
 
 
-inline int shutdown(int socket, int how) {
+inline int shutdown(int socket, int how) noexcept {
 	CHECK_OPENED_SOCKET("during shutdown()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ECONNABORTED, 0);
@@ -243,7 +243,7 @@ inline int shutdown(int socket, int how) {
 }
 
 
-inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
+inline ssize_t send(int socket, const void* buffer, size_t length, int flags) noexcept {
 	CHECK_OPENED_SOCKET("during send()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ECONNABORTED, socket);
@@ -252,7 +252,7 @@ inline ssize_t send(int socket, const void* buffer, size_t length, int flags) {
 }
 
 
-inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) {
+inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, const struct sockaddr* dest_addr, socklen_t dest_len) noexcept {
 	CHECK_OPENED_SOCKET("during sendto()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ECONNABORTED, socket);
@@ -261,7 +261,7 @@ inline ssize_t sendto(int socket, const void* buffer, size_t length, int flags, 
 }
 
 
-inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
+inline ssize_t recv(int socket, void* buffer, size_t length, int flags) noexcept {
 	CHECK_OPENED_SOCKET("during recv()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ECONNABORTED, socket);
@@ -270,7 +270,7 @@ inline ssize_t recv(int socket, void* buffer, size_t length, int flags) {
 }
 
 
-inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) {
+inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, struct sockaddr* address, socklen_t* address_len) noexcept {
 	CHECK_OPENED_SOCKET("during recvfrom()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ECONNABORTED, socket);
@@ -279,7 +279,7 @@ inline ssize_t recvfrom(int socket, void* buffer, size_t length, int flags, stru
 }
 
 
-inline int socket(int domain, int type, int protocol) {
+inline int socket(int domain, int type, int protocol) noexcept {
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ENETDOWN, 0);
 
 	int socket = ::socket(domain, type, protocol);
@@ -288,7 +288,7 @@ inline int socket(int domain, int type, int protocol) {
 }
 
 
-inline int getsockopt(int socket, int level, int option_name, void* option_value, socklen_t* option_len){
+inline int getsockopt(int socket, int level, int option_name, void* option_value, socklen_t* option_len) noexcept {
 	CHECK_OPENED_SOCKET("during getsockopt()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(EOPNOTSUPP, 0);
@@ -297,7 +297,7 @@ inline int getsockopt(int socket, int level, int option_name, void* option_value
 }
 
 
-inline int setsockopt(int socket, int level, int option_name, const void* option_value, socklen_t option_len){
+inline int setsockopt(int socket, int level, int option_name, const void* option_value, socklen_t option_len) noexcept {
 	CHECK_OPENED_SOCKET("during setsockopt()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(EOPNOTSUPP, 0);
@@ -306,7 +306,7 @@ inline int setsockopt(int socket, int level, int option_name, const void* option
 }
 
 
-inline int listen(int socket, int backlog) {
+inline int listen(int socket, int backlog) noexcept {
 	CHECK_OPENED_SOCKET("during listen()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ENETDOWN, 0);
@@ -315,7 +315,7 @@ inline int listen(int socket, int backlog) {
 }
 
 
-inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) {
+inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) noexcept {
 	CHECK_OPENED_SOCKET("during accept()", socket);
 	int new_socket = RetryAfterSignal(::accept, socket, address, address_len);
 	CHECK_OPEN_SOCKET(new_socket);
@@ -326,7 +326,7 @@ inline int accept(int socket, struct sockaddr* address, socklen_t* address_len) 
 }
 
 
-inline int bind(int socket, const struct sockaddr *address, socklen_t address_len) {
+inline int bind(int socket, const struct sockaddr *address, socklen_t address_len) noexcept {
 	CHECK_OPENED_SOCKET("during bind()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(EOPNOTSUPP, 0);
@@ -335,7 +335,7 @@ inline int bind(int socket, const struct sockaddr *address, socklen_t address_le
 }
 
 
-inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) {
+inline int connect(int socket, const struct sockaddr* address, socklen_t address_len) noexcept {
 	CHECK_OPENED_SOCKET("during connect()", socket);
 
 	RANDOM_ERRORS_NET_ERRNO_RETURN(ENETDOWN, 0);
@@ -344,14 +344,14 @@ inline int connect(int socket, const struct sockaddr* address, socklen_t address
 }
 
 
-inline int unchecked_fsync(int fd) {
+inline int unchecked_fsync(int fd) noexcept {
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 	return RetryAfterSignal(__io_fsync, fd);
 }
 
 
-inline int fsync(int fd) {
+inline int fsync(int fd) noexcept {
 	CHECK_OPENED("during fsync()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -360,7 +360,7 @@ inline int fsync(int fd) {
 }
 
 
-inline int unchecked_full_fsync(int fd) {
+inline int unchecked_full_fsync(int fd) noexcept {
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
 #ifdef F_FULLFSYNC
@@ -371,7 +371,7 @@ inline int unchecked_full_fsync(int fd) {
 }
 
 
-inline int full_fsync(int fd) {
+inline int full_fsync(int fd) noexcept {
 	CHECK_OPENED("during full_fsync()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -381,7 +381,7 @@ inline int full_fsync(int fd) {
 
 
 #ifdef HAVE_FALLOCATE
-inline int fallocate(int fd, int mode, off_t offset, off_t len) {
+inline int fallocate(int fd, int mode, off_t offset, off_t len) noexcept {
 	CHECK_OPENED("during fallocate()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -389,12 +389,12 @@ inline int fallocate(int fd, int mode, off_t offset, off_t len) {
 	return RetryAfterSignal(::fallocate, fd, mode, offset, len);
 }
 #else
-int fallocate(int fd, int mode, off_t offset, off_t len);
+int fallocate(int fd, int mode, off_t offset, off_t len) noexcept;
 #endif
 
 
 #ifdef HAVE_POSIX_FADVISE
-inline int fadvise(int fd, off_t offset, off_t len, int advice) {
+inline int fadvise(int fd, off_t offset, off_t len, int advice) noexcept {
 	CHECK_OPENED("during fadvise()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
@@ -409,7 +409,7 @@ inline int fadvise(int fd, off_t offset, off_t len, int advice) {
 #define POSIX_FADV_DONTNEED   4
 #define POSIX_FADV_NOREUSE    5
 
-inline int fadvise([[maybe_unused]] int fd, off_t, off_t, int) {
+inline int fadvise([[maybe_unused]] int fd, off_t, off_t, int) noexcept {
 	CHECK_OPENED("during fadvise()", fd);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);

@@ -44,13 +44,13 @@
 
 namespace io {
 
-std::atomic_bool& ignore_eintr() {
+std::atomic_bool& ignore_eintr() noexcept {
 	static std::atomic_bool ignore_eintr = true;
 	return ignore_eintr;
 }
 
 
-int open(const char* path, int oflag, int mode) {
+int open(const char* path, int oflag, int mode) noexcept {
 	L_CALL("io::open({}, <buf>, <mode>)", path);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EACCES);
@@ -93,7 +93,7 @@ int open(const char* path, int oflag, int mode) {
 }
 
 
-int close(int fd) {
+int close(int fd) noexcept {
 	// Make sure we don't ever close 0, 1 or 2 file descriptors
 	assert(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR);
 	if likely(fd == -1 || fd >= XAPIAND_MINIMUM_FILE_DESCRIPTOR) {
@@ -105,7 +105,7 @@ int close(int fd) {
 }
 
 
-ssize_t write(int fd, const void* buf, size_t nbyte) {
+ssize_t write(int fd, const void* buf, size_t nbyte) noexcept {
 	L_CALL("io::write({}, <buf>, {})", fd, nbyte);
 	CHECK_OPENED("during write()", fd);
 
@@ -135,7 +135,7 @@ ssize_t write(int fd, const void* buf, size_t nbyte) {
 }
 
 
-ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
+ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) noexcept {
 	L_CALL("io::pwrite({}, <buf>, {}, {})", fd, nbyte, offset);
 	CHECK_OPENED("during pwrite()", fd);
 
@@ -176,7 +176,7 @@ ssize_t pwrite(int fd, const void* buf, size_t nbyte, off_t offset) {
 }
 
 
-ssize_t read(int fd, void* buf, size_t nbyte) {
+ssize_t read(int fd, void* buf, size_t nbyte) noexcept {
 	L_CALL("io::read({}, <buf>, {})", fd, nbyte);
 	CHECK_OPENED("during read()", fd);
 
@@ -208,7 +208,7 @@ ssize_t read(int fd, void* buf, size_t nbyte) {
 }
 
 
-ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
+ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) noexcept {
 	L_CALL("io::pread({}, <buf>, {}, {})", fd, nbyte, offset);
 	CHECK_OPENED("during pread()", fd);
 
@@ -251,7 +251,7 @@ ssize_t pread(int fd, void* buf, size_t nbyte, off_t offset) {
 
 
 #ifndef HAVE_FALLOCATE
-int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
+int fallocate(int fd, int /* mode */, off_t offset, off_t len) noexcept {
 	CHECK_OPENED("during fallocate()", fd);
 #if defined(HAVE_POSIX_FALLOCATE)
 	return posix_fallocate(fd, offset, len);
@@ -313,7 +313,7 @@ int fallocate(int fd, int /* mode */, off_t offset, off_t len) {
 #ifdef XAPIAND_CHECK_IO_FDES
 #include <mutex>
 #include <bitset>
-int check(const char* msg, int fd, int check_set, int check_unset, int set, const char* function, const char* filename, int line) {
+int check(const char* msg, int fd, int check_set, int check_unset, int set, const char* function, const char* filename, int line) noexcept {
 	static std::mutex mtx;
 	static std::bitset<1024*1024> socket;
 	static std::bitset<1024*1024> opened;
@@ -386,7 +386,7 @@ int check(const char* msg, int fd, int check_set, int check_unset, int set, cons
 
 #ifdef XAPIAND_CHECK_IO_FDES
 #include <sysexits.h>                       // for EX_SOFTWARE
-int close(int fd) {
+int close(int fd) noexcept {
 	static int honeypot = io::RetryAfterSignal(::open, "/tmp/xapiand.honeypot", O_RDWR | O_CREAT | O_TRUNC, 0644);
 	if unlikely(honeypot == -1) {
 		L_ERR("honeypot: {} ({}): {}", error::name(errno), errno, error::description(errno));
