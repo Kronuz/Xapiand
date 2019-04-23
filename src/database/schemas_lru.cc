@@ -89,7 +89,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (path == ".xapiand/indices") {
 			// Return default .xapiand/index (chicken and egg problem)
 			return std::make_pair(0, MsgPack({
-				{ RESERVED_RECURSE, false },
+				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 				{ SCHEMA_FIELD_NAME, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
@@ -117,13 +117,13 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
 		auto o = document.get_obj();
 		if (selector.empty()) {
-			// If there's no selector use "schema":
+			// If there's no selector use SCHEMA_FIELD_NAME ("schema"):
 			o = o[SCHEMA_FIELD_NAME];
 		} else {
 			o = o.select(selector);
 		}
 		o = MsgPack({
-			{ RESERVED_RECURSE, false },
+			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, o },
 		});
 		Schema::check<Error>(o, "Foreign schema is invalid: ", false, false);
@@ -134,7 +134,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (path == ".xapiand/indices") {
 			// Return default .xapiand/index (basic schema already known)
 			return std::make_pair(0, MsgPack({
-				{ RESERVED_RECURSE, false },
+				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 				{ SCHEMA_FIELD_NAME, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
@@ -149,7 +149,7 @@ get_shared(const Endpoint& endpoint, std::string_view id, std::shared_ptr<std::u
 		if (path == ".xapiand/indices") {
 			// Return default .xapiand/index (basic schema already known)
 			return std::make_pair(0, MsgPack({
-				{ RESERVED_RECURSE, false },
+				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 				{ SCHEMA_FIELD_NAME, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
@@ -724,7 +724,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			sep_types[SPC_FOREIGN_TYPE] = FieldType::empty;
 			type = required_spc_t::get_str_type(sep_types);
 		}
-		o[RESERVED_RECURSE] = false;
+		o[RESERVED_IGNORE] = SCHEMA_FIELD_NAME;
 		if (opts.strict && o.find(ID_FIELD_NAME) == o.end()) {
 			THROW(MissingTypeError, "Type of field '{}' for the foreign schema is missing", ID_FIELD_NAME);
 		}

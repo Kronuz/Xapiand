@@ -2581,7 +2581,7 @@ Schema::get_initial_schema()
 	L_CALL("Schema::get_initial_schema()");
 
 	static const MsgPack initial_schema_tpl({
-		{ RESERVED_RECURSE, false },
+		{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 		{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
 	});
 	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);

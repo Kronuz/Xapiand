@@ -1450,6 +1450,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_TYPE,  "array/string" },
 				{ RESERVED_VALUE, replicas },
 			} },
+			{ RESERVED_IGNORE, "schema" },
 		}, false, msgpack_type);
 	}
 }
@@ -1490,6 +1491,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "array/string" },
 					} },
+					{ RESERVED_IGNORE, "schema" },
 				}, false, msgpack_type);
 			}
 		}
