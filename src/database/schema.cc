@@ -2028,6 +2028,7 @@ required_spc_t::required_spc_t(required_spc_t&& o) noexcept
 	  flags(std::move(o.flags)),
 	  accuracy(std::move(o.accuracy)),
 	  acc_prefix(std::move(o.acc_prefix)),
+	  ignored(std::move(o.ignored)),
 	  language(std::move(o.language)),
 	  stop_strategy(std::move(o.stop_strategy)),
 	  stem_strategy(std::move(o.stem_strategy)),
@@ -2048,6 +2049,7 @@ required_spc_t::operator=(required_spc_t&& o) noexcept
 	flags = std::move(o.flags);
 	accuracy = std::move(o.accuracy);
 	acc_prefix = std::move(o.acc_prefix);
+	ignored = std::move(o.ignored);
 	language = std::move(o.language);
 	stop_strategy = std::move(o.stop_strategy);
 	stem_strategy = std::move(o.stem_strategy);
@@ -2140,11 +2142,6 @@ required_spc_t::to_obj() const
 	obj_flags["cjk_ngram"] = flags.cjk_ngram;
 	obj_flags["cjk_words"] = flags.cjk_words;
 
-	auto& obj_ignore = obj["ignored"] = MsgPack::ARRAY();
-	for (const auto& a : ignored) {
-		obj_ignore.append(a);
-	}
-
 	auto& obj_accuracy = obj["accuracy"] = MsgPack::ARRAY();
 	for (const auto& a : accuracy) {
 		obj_accuracy.append(a);
@@ -2153,6 +2150,11 @@ required_spc_t::to_obj() const
 	auto& obj_acc_prefix = obj["acc_prefix"] = MsgPack::ARRAY();
 	for (const auto& a : acc_prefix) {
 		obj_acc_prefix.append(a);
+	}
+
+	auto& obj_ignore = obj["ignored"] = MsgPack::ARRAY();
+	for (const auto& a : ignored) {
+		obj_ignore.append(a);
 	}
 
 	obj["language"] = language;
@@ -2677,6 +2679,8 @@ Schema::restart_specification()
 	specification.acc_prefix                 = default_spc.acc_prefix;
 	specification.aux_stem_language          = default_spc.aux_stem_language;
 	specification.aux_language               = default_spc.aux_language;
+
+	specification.ignored                    = default_spc.ignored;
 
 	specification.partial_index_spcs         = default_spc.partial_index_spcs;
 }
