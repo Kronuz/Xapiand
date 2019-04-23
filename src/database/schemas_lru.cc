@@ -669,6 +669,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		auto it = versions.find(path);
 		if (it != versions.end()) {
 			latest_version = it->second;
+			if (latest_version <= schema_version) {
+				versions.erase(it);
+			}
 		}
 	}
 	if (latest_version > schema_version) {
@@ -712,7 +715,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			L_SCHEMA("GET: " + DARK_RED + "Schema {} is still outdated {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
 		}
 	} else {
-		L_SCHEMA("GET: " + GREEN + "Schema {} is current {{schema_version:{}}}", repr(path), schema_version);
+		L_SCHEMA("GET: " + GREEN + "Schema {} is current {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
 	}
 
 	if (schema_obj && schema_obj->is_map()) {
