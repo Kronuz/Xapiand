@@ -1179,7 +1179,7 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
 		if (tm.fsec > 0.0) {
-			res += string::format("{:.6}", tm.fsec).erase(0, 1);
+			res += string::format("{:.6f}", tm.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1195,7 +1195,7 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 		auto res = string::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
-		res += string::format("{:.6}", tm.fsec).erase(0, 1);
+		res += string::format("{:.6f}", tm.fsec).erase(0, 1);
 		return res;
 	}
 
@@ -1497,7 +1497,7 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 		auto res = string::format("{:02}:{:02}:{:02}",
 			clk.hour, clk.min, clk.sec);
 		if (clk.fsec > 0) {
-			res += string::format("{:.6}", clk.fsec).erase(0, 1);
+			res += string::format("{:.6f}", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1512,7 +1512,7 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 	if (clk.fsec > 0) {
 		auto res = string::format("{:02}:{:02}:{:02}",
 			clk.hour, clk.min, clk.sec);
-		res += string::format("{:.6}{}{:02}:{:02}", clk.fsec,
+		res += string::format("{:.6f}{}{:02}:{:02}", clk.fsec,
 			clk.tz_s, clk.tz_h, clk.tz_m).erase(0, 1);
 		return res;
 	}
@@ -1739,7 +1739,7 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 		auto res = string::format("{}{:02}:{:02}:{:02}",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
 		if (clk.fsec > 0) {
-			res += string::format("{:.6}", clk.fsec).erase(0, 1);
+			res += string::format("{:.6f}", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
