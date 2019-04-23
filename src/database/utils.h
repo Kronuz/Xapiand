@@ -113,12 +113,6 @@ struct query_field_t {
 };
 
 
-// All non-empty field names not starting with underscore are valid.
-inline bool is_valid(std::string_view field_name) {
-	return !field_name.empty() && field_name.at(0) != '_';
-}
-
-
 inline std::string get_hashed(std::string_view name) {
 	return sortable_serialise(xxh64::hash(name));
 }

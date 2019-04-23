@@ -24,3 +24,21 @@
 
 #define RESERVED__ "_"
 constexpr const char reserved__ = RESERVED__[0];
+
+
+// All non-empty names starting with an underscore are reserved.
+inline bool is_reserved(std::string_view field_name) {
+	return !field_name.empty() && field_name[0] == reserved__;
+}
+
+
+// All non-empty names not starting with an underscore or a hash sign are valid.
+inline bool is_valid(std::string_view field_name) {
+	return !field_name.empty() && field_name[0] != reserved__ && field_name[0] != '#';
+}
+
+
+// All empty names or names starting with a hash sign are comments.
+inline bool is_comment(std::string_view field_name) {
+	return field_name.empty() || field_name[0] == '#';
+}

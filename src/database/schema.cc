@@ -2964,14 +2964,18 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				const auto it_e = mut_object->end();
 				for (auto it = mut_object->begin(); it != it_e; ++it) {
 					auto str_key = it->str_view();
-					auto key = hh(str_key);
-					if (!has_dispatch_process_properties(key)) {
-						if (!has_dispatch_process_concrete_properties(key)) {
-							fields.emplace_back(str_key, &it.value());
-							if (key == hh(ID_FIELD_NAME)) {
-								id_field = &fields.back();
+					if (is_reserved(str_key)) {
+						auto key = hh(str_key);
+						if (!has_dispatch_process_properties(key)) {
+							if (!has_dispatch_process_concrete_properties(key)) {
+								fields.emplace_back(str_key, &it.value());
+								if (key == hh(ID_FIELD_NAME)) {
+									id_field = &fields.back();
+								}
 							}
 						}
+					} else {
+						fields.emplace_back(str_key, &it.value());
 					}
 				}
 			}
@@ -3313,15 +3317,11 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 {
 	L_CALL("Schema::index_object({}, {}, {}, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(parent_data->to_string()), repr(name));
 
-	if (name.empty()) {
-		THROW(ClientError, "Field name must not be empty");
+	if (is_comment(name)) {
+		return;  // skip comments (empty fields or fields starting with '#')
 	}
 
-	if (name[0] == '#') {
-		return;  // skip comments (fields starting with '#')
-	}
-
-	if (name[0] != '_' && (!specification.flags.recurse || specification.ignored.find(name) != specification.ignored.end())) {
+	if (is_valid(name) && (!specification.flags.recurse || specification.ignored.find(name) != specification.ignored.end())) {
 		if (specification.flags.store) {
 			parent_data->get(name) = object;
 		}
@@ -3926,15 +3926,11 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 {
 	L_CALL("Schema::update_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
 
-	if (name.empty()) {
-		THROW(ClientError, "Field name must not be empty");
+	if (is_comment(name)) {
+		return;  // skip comments (empty fields or fields starting with '#')
 	}
 
-	if (name[0] == '#') {
-		return;  // skip comments (fields starting with '#')
-	}
-
-	if (name[0] != '_' && (!specification.flags.recurse || specification.ignored.find(name) != specification.ignored.end())) {
+	if (is_valid(name) && (!specification.flags.recurse || specification.ignored.find(name) != specification.ignored.end())) {
 		return;
 	}
 
@@ -4368,15 +4364,11 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 {
 	L_CALL("Schema::write_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
 
-	if (name.empty()) {
-		THROW(ClientError, "Field name must not be empty");
+	if (is_comment(name)) {
+		return;  // skip comments (empty fields or fields starting with '#')
 	}
 
-	if (name[0] == '#') {
-		return;  // skip comments (fields starting with '#')
-	}
-
-	if (name[0] != '_' && (!specification.flags.recurse || specification.ignored.find(name) != specification.ignored.end())) {
+	if (is_valid(name) && (!specification.flags.recurse || specification.ignored.find(name) != specification.ignored.end())) {
 		return;
 	}
 
@@ -6294,13 +6286,17 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = hh(str_key);
-		auto &value = it.value();
-		if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-			fields.emplace_back(str_key, &value);
-			if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
-				*id_field = &fields.back();
+		auto& value = it.value();
+		if (is_reserved(str_key)) {
+			auto key = hh(str_key);
+			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+				fields.emplace_back(str_key, &value);
+				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+					*id_field = &fields.back();
+				}
 			}
+		} else {
+			fields.emplace_back(str_key, &value);
 		}
 	}
 
@@ -6318,15 +6314,19 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = hh(str_key);
 		auto& value = it.value();
-		if (!_dispatch_process_properties(key, str_key, value)) {
-			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-				fields.emplace_back(str_key, &value);
-				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
-					*id_field = &fields.back();
+		if (is_reserved(str_key)) {
+			auto key = hh(str_key);
+			if (!_dispatch_process_properties(key, str_key, value)) {
+				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+					fields.emplace_back(str_key, &value);
+					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+						*id_field = &fields.back();
+					}
 				}
 			}
+		} else {
+			fields.emplace_back(str_key, &value);
 		}
 	}
 
@@ -6355,15 +6355,19 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = hh(str_key);
 		auto& value = it.value();
-		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
-			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-				fields.emplace_back(str_key, &value);
-				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
-					*id_field = &fields.back();
+		if (is_reserved(str_key)) {
+			auto key = hh(str_key);
+			if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
+				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+					fields.emplace_back(str_key, &value);
+					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+						*id_field = &fields.back();
+					}
 				}
 			}
+		} else {
+			fields.emplace_back(str_key, &value);
 		}
 	}
 
@@ -7114,17 +7118,21 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 	auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = hh(str_key);
 		auto& value = it.value();
-		if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
-			if (!_dispatch_process_properties(key, str_key, value)) {
-				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-					fields.emplace_back(str_key, &value);
-					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
-						*id_field = &fields.back();
+		if (is_reserved(str_key)) {
+			auto key = hh(str_key);
+			if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
+				if (!_dispatch_process_properties(key, str_key, value)) {
+					if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+						fields.emplace_back(str_key, &value);
+						if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
+							*id_field = &fields.back();
+						}
 					}
 				}
 			}
+		} else {
+			fields.emplace_back(str_key, &value);
 		}
 	}
 
@@ -7250,9 +7258,11 @@ Schema::dispatch_feed_properties(const MsgPack& properties)
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
 		auto str_key = it->str_view();
-		auto key = hh(str_key);
-		auto& value = it.value();
-		_dispatch_feed_properties(key, value);
+		if (is_reserved(str_key)) {
+			auto& value = it.value();
+			auto key = hh(str_key);
+			_dispatch_feed_properties(key, value);
+		}
 	}
 }
 
@@ -9570,26 +9580,30 @@ Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 	// Change this item of schema in readable form.
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->str_view();
-		auto key = hh(str_key);
 		auto& value = it.value();
+		auto key = hh(str_key);
 		try {
-			if (!_dispatch_readable(key, value, item_schema)) {
-				it = item_schema.erase(it);
-				continue;
-			}
-		} catch (const std::out_of_range&) {
-			if (is_valid(str_key)) {
-				if (value.is_map()) {
-					dispatch_readable(value, false);
-				}
-			} else if (has_dispatch_set_default_spc(key)) {
-				if (at_root) {
+			if (is_reserved(str_key)) {
+				if (!_dispatch_readable(key, value, item_schema)) {
 					it = item_schema.erase(it);
 					continue;
 				}
-				if (value.is_map()) {
-					dispatch_readable(value, false);
-				}
+				++it;
+				continue;
+			}
+		} catch (const std::out_of_range&) { }
+
+		if (is_valid(str_key)) {
+			if (value.is_map()) {
+				dispatch_readable(value, false);
+			}
+		} else if (has_dispatch_set_default_spc(key)) {
+			if (at_root) {
+				it = item_schema.erase(it);
+				continue;
+			}
+			if (value.is_map()) {
+				dispatch_readable(value, false);
 			}
 		}
 		++it;
