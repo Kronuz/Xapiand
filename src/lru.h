@@ -55,53 +55,62 @@ protected:
 };
 
 
-template <typename LRU, typename T, typename Node, typename BaseNode, typename Mode = void>
-class iterator : public aging, public std::iterator<std::bidirectional_iterator_tag, T>
+template <typename LRU, typename Type, typename Node, typename BaseNode, typename Mode = void>
+class iterator : public aging, public std::iterator<std::bidirectional_iterator_tag, Type>
 {
-	LRU* _lru;
+	typedef detail::iterator<const LRU, const Type, const Node, const BaseNode, Mode> const_iterator;
+	friend detail::iterator<typename std::remove_const<LRU>::type, typename std::remove_const<Type>::type, typename std::remove_const<Node>::type, typename std::remove_const<BaseNode>::type, Mode>;
+	friend const_iterator;
+	friend LRU;
 
+	LRU* _lru;
 	BaseNode* _node;
 
 public:
-	using mode = Mode;
 
 	iterator(LRU* lru, BaseNode* node) : _lru(lru), _node(node) { }
 
-	T& operator*() const noexcept {
+	operator const_iterator() {
+		return const_iterator(_lru, _node);
+	}
+
+	Type& operator*() const noexcept {
 		return static_cast<Node*>(_node)->data;
 	}
 
-	T* operator->() const noexcept {
+	Type* operator->() const noexcept {
 		return &static_cast<Node*>(_node)->data;
 	}
 
-	bool operator==(const iterator& rhs) const noexcept {
+	template <typename L, typename T, typename N, typename B, typename M>
+	bool operator==(const iterator<L, T, N, B, M>& rhs) const noexcept {
 		return _node == rhs._node;
 	}
 
-	bool operator!=(const iterator& rhs) const noexcept {
+	template <typename L, typename T, typename N, typename B, typename M>
+	bool operator!=(const iterator<L, T, N, B, M>& rhs) const noexcept {
 		return _node != rhs._node;
 	}
 
 	iterator& operator++() noexcept {
-		_node = _node->template next<mode>(this);
+		_node = _node->template next<Mode>(this);
 		return *this;
 	}
 
 	iterator& operator--() noexcept {
-		_node = _node->template prev<mode>(this);
+		_node = _node->template prev<Mode>(this);
 		return *this;
 	}
 
 	iterator operator++(int) noexcept {
 		iterator tmp(_lru, _node);
-		_node = _node->template next<mode>(this);
+		_node = _node->template next<Mode>(this);
 		return tmp;
 	}
 
 	iterator operator--(int) noexcept {
 		iterator tmp(_lru, _node);
-		_node = _node->template prev<mode>(this);
+		_node = _node->template prev<Mode>(this);
 		return tmp;
 	}
 
@@ -315,10 +324,10 @@ public:
 	typedef typename Node::base_node_type base_node_type;
 	typedef std::pair<const key_type, mapped_type> value_type;
 
-	typedef detail::iterator<lru<Key, T, Hash, KeyEqual, Node, Allocator>, std::pair<const Key, T>, Node, typename Node::base_node_type> iterator;
 	typedef detail::iterator<const lru<Key, T, Hash, KeyEqual, Node, Allocator>, const std::pair<const Key, T>, const Node, const typename Node::base_node_type> const_iterator;
-	typedef detail::iterator<lru<Key, T, Hash, KeyEqual, Node, Allocator>, std::pair<const Key, T>, Node, typename Node::base_node_type, detail::iterate_by_age> iterator_by_age;
+	typedef detail::iterator<lru<Key, T, Hash, KeyEqual, Node, Allocator>, std::pair<const Key, T>, Node, typename Node::base_node_type> iterator;
 	typedef detail::iterator<const lru<Key, T, Hash, KeyEqual, Node, Allocator>, const std::pair<const Key, T>, const Node, const typename Node::base_node_type, detail::iterate_by_age> const_iterator_by_age;
+	typedef detail::iterator<lru<Key, T, Hash, KeyEqual, Node, Allocator>, std::pair<const Key, T>, Node, typename Node::base_node_type, detail::iterate_by_age> iterator_by_age;
 
 	friend iterator;
 	friend iterator_by_age;
