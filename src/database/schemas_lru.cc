@@ -74,9 +74,9 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_
 
 
 static inline std::pair<Xapian::rev, MsgPack>
-get_shared(std::string_view id, const Endpoint& endpoint, int flags, std::shared_ptr<std::unordered_set<std::string>> context)
+get_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("get_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), flags, context ? std::to_string(context->size()) : "nullptr");
+	L_CALL("get_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), read_flags, context ? std::to_string(context->size()) : "nullptr");
 
 	auto path = endpoint.path;
 	if (!context) {
@@ -105,7 +105,7 @@ get_shared(std::string_view id, const Endpoint& endpoint, int flags, std::shared
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
-		DatabaseHandler _db_handler(endpoints, flags, context);
+		DatabaseHandler _db_handler(endpoints, read_flags, context);
 		std::string_view selector;
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		if (needle != std::string_view::npos) {
@@ -229,12 +229,9 @@ SchemasLRU::SchemasLRU(ssize_t max_size) :
 
 
 std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>
-SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable)
+SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("SchemasLRU::_update(<db_handler>, {}, {})", new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr");
-
-	assert(db_handler);
-	assert(!db_handler->endpoints.empty());
+	L_CALL("SchemasLRU::_update({}, {}, {}, {}, {}, {}, <context>)", repr(prefix), writable, new_schema ? repr(new_schema->to_string()) : "nullptr", schema_obj ? repr(schema_obj->to_string()) : "nullptr", repr(endpoints.to_string()), read_flags);
 
 	std::string foreign_uri, foreign_path, foreign_id;
 	std::shared_ptr<const MsgPack> schema_ptr;
@@ -243,7 +240,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 
 	// We first try to load schema from the LRU cache
 	std::shared_ptr<const MsgPack> local_schema_ptr;
-	const auto endpoints_path = unsharded_path(db_handler->endpoints[0].path);
+	const auto endpoints_path = unsharded_path(endpoints[0].path);
 	const auto local_schema_path = std::string(endpoints_path) + "/";  // FIXME: This should remain a string_view, but LRU's std::unordered_map cannot find std::string_view directly!
 	L_SCHEMA("{}" + LIGHT_GREY + "[{}]{}{}{}", prefix, repr(local_schema_path), new_schema ? " new_schema=" : schema_obj ? " schema_obj=" : "", new_schema ? new_schema->to_string() : schema_obj ? schema_obj->to_string() : "", writable ? " (writable)" : "");
 	{
@@ -301,7 +298,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 		L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
 		std::string schema_ser;
 		try {
-			schema_ser = db_handler->get_metadata(reserved_schema);
+			DatabaseHandler _db_handler(endpoints, read_flags, context);
+			schema_ser = _db_handler.get_metadata(reserved_schema);
 		} catch (const Xapian::DocNotFoundError&) {
 		} catch (const Xapian::DatabaseNotFoundError&) {
 		} catch (...) {
@@ -361,22 +359,23 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 	// If we still need to save the metadata, we save it:
 	if (writable && schema_ptr->get_flags() == 0) {
 		try {
+			DatabaseHandler _db_handler(endpoints, DB_WRITABLE, context);
 			// Try writing (only if there's no metadata there alrady)
 			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr)) {
 				std::string schema_ser;
 				try {
-					schema_ser = db_handler->get_metadata(reserved_schema);
+					schema_ser = _db_handler.get_metadata(reserved_schema);
 				} catch (const Xapian::DocNotFoundError&) {
 				} catch (const Xapian::DatabaseNotFoundError&) {
 				} catch (...) {
 					L_EXC("Exception");
 				}
 				if (schema_ser.empty()) {
-					db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
+					_db_handler.set_metadata(reserved_schema, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
-					db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
+					_db_handler.set_metadata(reserved_schema, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 				} else {
@@ -404,7 +403,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 					failure = true;
 				}
 			} else {
-				db_handler->set_metadata(reserved_schema, schema_ptr->serialise());
+				_db_handler.set_metadata(reserved_schema, schema_ptr->serialise());
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written: " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->to_string());
 			}
@@ -467,7 +466,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				// Foreign Schema needs to be read
 				L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try loading from {} id={}", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,", repr(foreign_path), repr(foreign_id));
 				try {
-					auto shared = get_shared(foreign_id, Endpoint{foreign_path}, db_handler->flags, db_handler->context);
+					auto shared = get_shared(foreign_id, Endpoint{foreign_path}, read_flags, context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
 					schema_ptr->set_flags(shared.first);
@@ -535,7 +534,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 			// If we still need to save the schema document, we save it:
 			if (writable && schema_ptr->get_flags() == 0) {
 				try {
-					auto version = save_shared(foreign_id, *schema_ptr, Endpoint{foreign_path}, db_handler->context);
+					auto version = save_shared(foreign_id, *schema_ptr, Endpoint{foreign_path}, context);
 					schema_ptr->set_flags(version);
 					if (version) {
 						schema_updater()->debounce(foreign_uri, version, foreign_uri);
@@ -544,7 +543,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, DatabaseHandler* db_han
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
 					try {
-						auto shared = get_shared(foreign_id, Endpoint{foreign_path}, db_handler->flags, db_handler->context);
+						auto shared = get_shared(foreign_id, Endpoint{foreign_path}, DB_WRITABLE, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_ptr->set_flags(shared.first);
@@ -642,6 +641,9 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	 */
 	L_CALL("SchemasLRU::get(<db_handler>, {})", obj ? repr(obj->to_string()) : "nullptr");
 
+	assert(db_handler);
+	assert(!db_handler->endpoints.empty());
+
 	const MsgPack* schema_obj = nullptr;
 	if (obj && obj->is_map()) {
 		const auto it = obj->find(reserved_schema);
@@ -650,7 +652,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 	}
 
-	auto up = _update("GET: ", db_handler, nullptr, schema_obj, false);
+	auto up = _update("GET: ", false, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
 	auto schema_ptr = std::get<1>(up);
 	auto local_schema_path = std::get<2>(up);
 	auto foreign_uri = std::get<3>(up);
@@ -683,8 +685,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 		if (retry) {
 			L_SCHEMA("GET: " + DARK_CORAL + "Schema {} is outdated, try reloading {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
-			DatabaseHandler _db_handler(db_handler->endpoints, DB_WRITABLE, db_handler->context);
-			up = _update("RETRY GET: ", &_db_handler, nullptr, schema_obj, false);
+			up = _update("RETRY GET: ", false, nullptr, schema_obj, db_handler->endpoints, DB_WRITABLE, db_handler->context);
 			schema_ptr = std::get<1>(up);
 			local_schema_path = std::get<2>(up);
 			foreign_uri = std::get<3>(up);
@@ -749,7 +750,11 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 {
 	L_CALL("SchemasLRU::set(<db_handler>, <old_schema>, {})", new_schema ? repr(new_schema->to_string()) : "nullptr");
 
-	auto up = _update("SET: ", db_handler, new_schema, nullptr, (db_handler->flags & DB_WRITABLE) == DB_WRITABLE);
+	assert(db_handler);
+	assert(!db_handler->endpoints.empty());
+
+	bool writable = (db_handler->flags & DB_WRITABLE) == DB_WRITABLE;
+	auto up = _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context);
 	auto failure = std::get<0>(up);
 	auto schema_ptr = std::get<1>(up);
 

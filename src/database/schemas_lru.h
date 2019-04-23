@@ -46,7 +46,12 @@ class SchemasLRU {
 	mutable std::mutex versions_mtx;
 	lru::aging_lru<std::string, Xapian::rev> versions;
 
-	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string> _update(const char* prefix, DatabaseHandler* db_handler, const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj, bool writable);
+	std::tuple<bool, std::shared_ptr<const MsgPack>, std::string, std::string>
+	_update(
+		const char* prefix,
+		bool writable,
+		const std::shared_ptr<const MsgPack>& new_schema, const MsgPack* schema_obj,
+		const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context);
 
 public:
 	SchemasLRU(ssize_t max_size = -1);
