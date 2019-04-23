@@ -178,8 +178,8 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 				if (name.empty()) {
 					THROW(QueryDslError, "Invalid field name: must not be empty");
 				}
-				if (name[0] == '#') {
-					continue;  // skip comments (fields starting with '#')
+				if (is_comment(name)) {
+					continue;  // skip comments (empty fields or fields starting with '#')
 				}
 				auto const& o = it.value();
 
@@ -187,7 +187,7 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 
 				Xapian::Query query;
 
-				if (name[0] == reserved__ && name != ID_FIELD_NAME) {
+				if (is_reserved(name) && name != ID_FIELD_NAME) {
 					constexpr static auto _ = phf::make_phf({
 						// Compound query clauses
 						hh(RESERVED_QUERYDSL_AND),
