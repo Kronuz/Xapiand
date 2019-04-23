@@ -428,7 +428,7 @@ TCP::checked_tcp_backlog(int tcp_backlog)
 
 
 int
-TCP::connect(const char* hostname, const char* servname)
+TCP::connect(const char* hostname, const char* servname) noexcept
 {
 	L_CALL("TCP::connect({}, {})", hostname, servname);
 
