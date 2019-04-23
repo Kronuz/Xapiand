@@ -470,7 +470,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
 					schema_ptr->set_flags(shared.first);
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was loaded: " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->to_string());
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was loaded {{schema_version:{}}}: " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->get_flags(), schema_ptr->to_string());
 				} catch (const ClientError&) {
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be loaded (client error)", prefix, repr(foreign_uri));
 					throw;
@@ -690,6 +690,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			local_schema_path = std::get<2>(up);
 			foreign_uri = std::get<3>(up);
 			auto& path_ = foreign_uri.empty() ? local_schema_path : foreign_uri;
+			schema_version = schema_ptr->get_flags();
 			{
 				std::lock_guard<std::mutex> lk(versions_mtx);
 				auto it = versions.find(path_);
