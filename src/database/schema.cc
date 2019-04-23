@@ -3002,6 +3002,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
 	} catch (...) {
+		L_DEBUG("ERROR IN {}: {}", document_id.to_string(), object.to_string());
 		mut_schema.reset();
 		throw;
 	}
@@ -3724,6 +3725,7 @@ Schema::update(const MsgPack& object)
 
 		return false;
 	} catch (...) {
+		L_DEBUG("ERROR: {}", object.to_string());
 		mut_schema.reset();
 		throw;
 	}
@@ -4169,6 +4171,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 		return false;
 	} catch (...) {
+		L_DEBUG("ERROR: {}", object.to_string());
 		mut_schema.reset();
 		throw;
 	}
