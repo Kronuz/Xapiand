@@ -7587,19 +7587,25 @@ Schema::feed_ignore(const MsgPack& prop_obj)
 	L_CALL("Schema::feed_ignore({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_array()) {
+		specification.ignored.clear();
 		for (const auto& prop_item_obj : prop_obj) {
 			if (prop_item_obj.is_string()) {
 				auto ignored = prop_item_obj.str();
 				if (ignored == "*") {
 					specification.flags.recurse = false;
-					specification.ignored.clear();
-					break;
 				}
 				specification.ignored.insert(ignored);
 			} else {
 				THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_INDEX, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
+	} else if (prop_obj.is_string()) {
+		auto ignored = prop_obj.str();
+		if (ignored == "*") {
+			specification.flags.recurse = false;
+		}
+		specification.ignored.clear();
+		specification.ignored.insert(ignored);
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_IGNORE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
@@ -7956,9 +7962,11 @@ Schema::write_ignore(MsgPack& mut_properties, std::string_view prop_name, const 
 	 */
 
 	process_ignore(prop_name, prop_obj);
-	mut_properties[prop_name] = MsgPack::ARRAY();
-	for (const auto& item : specification.ignored) {
-		mut_properties[prop_name].append(item);
+	if (!specification.ignored.empty()) {
+		mut_properties[prop_name] = MsgPack::ARRAY();
+		for (const auto& item : specification.ignored) {
+			mut_properties[prop_name].append(item);
+		}
 	}
 }
 
@@ -8653,19 +8661,25 @@ Schema::process_ignore(std::string_view prop_name, const MsgPack& prop_obj)
 	 */
 
 	if (prop_obj.is_array()) {
+		specification.ignored.clear();
 		for (const auto& prop_item_obj : prop_obj) {
 			if (prop_item_obj.is_string()) {
 				auto ignored = prop_item_obj.str();
 				if (ignored == "*") {
 					specification.flags.recurse = false;
-					specification.ignored.clear();
-					break;
 				}
 				specification.ignored.insert(ignored);
 			} else {
 				THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
 			}
 		}
+	} else if (prop_obj.is_string()) {
+		auto ignored = prop_obj.str();
+		if (ignored == "*") {
+			specification.flags.recurse = false;
+		}
+		specification.ignored.clear();
+		specification.ignored.insert(ignored);
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be an array of strings", repr(prop_name));
 	}
