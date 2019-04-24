@@ -169,7 +169,7 @@ GeoSpatialRange::name() const
 std::string
 GeoSpatialRange::serialise() const
 {
-	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges(_ranges) };
+	std::vector<std::string> data = { serialise_length(get_slot()), Serialise::ranges_centroids(_ranges, _centroids) };
 	return StringList::serialise(data.begin(), data.end());
 }
 
