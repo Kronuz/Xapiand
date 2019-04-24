@@ -127,8 +127,20 @@ namespace std {
 	template<>
 	struct hash<range_t> {
 		inline size_t operator()(const range_t& p) const {
-			std::hash<uint64_t> hash_fn;
+			hash<uint64_t> hash_fn;
 			return hash_fn(p.start) ^ hash_fn(p.end);
+		}
+	};
+
+	template<>
+	struct hash<std::vector<range_t>> {
+		inline size_t operator()(const std::vector<range_t>& ranges) const {
+			hash<range_t> hash_fn;
+			size_t ret = 0;
+			for (const auto& range : ranges) {
+				ret ^= hash_fn(range);
+			}
+			return ret;
 		}
 	};
 }
