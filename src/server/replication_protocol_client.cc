@@ -269,6 +269,8 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
+		reset();
+		lk_shard_ptr.reset();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching replication protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
@@ -593,9 +595,6 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 	L_REPLICATION("FAIL: {}", repr((*lk_shard_ptr)->endpoint.path));
 
 	L(LOG_DEBUG, rgb(190, 30, 10), "REPLY_FAIL {}: {}", repr((*lk_shard_ptr)->endpoint.path), msg);
-
-	reset();
-	lk_shard_ptr.reset();
 
 	destroy();
 	detach();
