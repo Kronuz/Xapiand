@@ -55,6 +55,9 @@ class GeoSpatialRange : public Xapian::ValuePostingSource {
 	bool insideRanges() const;
 
 public:
+	GeoSpatialRange() :
+		Xapian::ValuePostingSource(0) { }
+
 	/* Construct a new match decider which returns only documents with a
 	 *  some of their values inside of ranges.
 	 *
@@ -62,10 +65,10 @@ public:
 	 *  @param ranges
 	*/
 	template <typename R, typename C, typename = std::enable_if_t<std::is_same<std::vector<range_t>, std::decay_t<R>>::value && std::is_same<std::vector<Cartesian>, std::decay_t<C>>::value>>
-	GeoSpatialRange(Xapian::valueno slot_, R&& ranges, C&& centroids)
-		: Xapian::ValuePostingSource(slot_),
-		  _ranges(std::forward<R>(ranges)),
-		  _centroids(std::forward<C>(centroids)) {
+	GeoSpatialRange(Xapian::valueno slot_, R&& ranges, C&& centroids) :
+		Xapian::ValuePostingSource(slot_),
+		_ranges(std::forward<R>(ranges)),
+		_centroids(std::forward<C>(centroids)) {
 		set_maxweight(geo_weight_from_angle(0.0));
 	}
 

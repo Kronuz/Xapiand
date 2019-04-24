@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,9 @@ class MultipleValueRange : public Xapian::ValuePostingSource {
 	static Xapian::Query query_geo(std::string_view str, const required_spc_t& field_spc);
 
 public:
+	MultipleValueRange() :
+		Xapian::ValuePostingSource(0) { }
+
 	/* Construct a new match decider which returns only documents with a
 	 *  some of their values inside of [start, end].
 	 *
@@ -78,6 +81,9 @@ class MultipleValueGE : public Xapian::ValuePostingSource {
 	bool insideRange() const noexcept;
 
 public:
+	MultipleValueGE() :
+		Xapian::ValuePostingSource(0) { }
+
 	/* Construct a new match decider which returns only documents with a
 	 *  some of their values inside of [start, ..].
 	 *
@@ -109,6 +115,9 @@ class MultipleValueLE : public Xapian::ValuePostingSource {
 	bool insideRange() const noexcept;
 
 public:
+	MultipleValueLE() :
+		Xapian::ValuePostingSource(0) { }
+
 	/* Construct a new match decider which returns only documents with a
 	 *  some of their values inside of [.., end].
 	 *
