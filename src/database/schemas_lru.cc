@@ -359,7 +359,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 	// If we still need to save the metadata, we save it:
 	if (writable && schema_ptr->get_flags() == 0) {
 		try {
-			DatabaseHandler _db_handler(endpoints, DB_WRITABLE, context);
+			DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 			// Try writing (only if there's no metadata there alrady)
 			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr)) {
 				std::string schema_ser;
@@ -543,7 +543,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
 					try {
-						auto shared = get_shared(foreign_id, Endpoint{foreign_path}, DB_WRITABLE, context);
+						auto shared = get_shared(foreign_id, Endpoint{foreign_path}, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_ptr->set_flags(shared.first);
