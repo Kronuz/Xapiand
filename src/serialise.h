@@ -196,18 +196,18 @@ namespace Serialise {
 		return std::string(1, field_value ? SERIALISED_TRUE : SERIALISED_FALSE);
 	}
 
-	// Serialise field_value like geospatial.
-	std::string geospatial(std::string_view field_value);
-	inline std::string geospatial(const std::string& field_value) {
-		return geospatial(std::string_view(field_value));
-	}
-	std::string geospatial(const class MsgPack& field_value);
-
 	// Serialise a vector of ranges and a vector of centroids generate by GeoSpatial.
 	std::string ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids);
 
 	// Serialise a vector of ranges generates by GeoSpatial.
 	std::string ranges(const std::vector<range_t>& ranges);
+
+	// Serialise a vector of ranges hash.
+	std::string ranges_hash(const std::vector<range_t>& ranges);
+
+	// Serialise field_value like geospatial.
+	std::string geospatial(const class MsgPack& field_value);
+	std::string geospatial(std::string_view field_value);
 
 	// Serialise a normalize cartesian coordinate in SERIALISED_LENGTH_CARTESIAN bytes.
 	std::string cartesian(const Cartesian& norm_cartesian);

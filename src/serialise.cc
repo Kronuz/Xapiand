@@ -34,6 +34,7 @@
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
+#include "hashes.hh"                                  // for xxh64
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
@@ -714,10 +715,24 @@ Serialise::boolean(std::string_view field_value)
 
 
 std::string
-Serialise::geospatial(std::string_view field_value)
+Serialise::ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
 {
-	EWKT ewkt(field_value);
-	return Serialise::ranges(ewkt.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+	std::vector<std::string> data = { RangeList::serialise(ranges.begin(), ranges.end()), CartesianList::serialise(centroids.begin(), centroids.end()) };
+	return StringList::serialise(data.begin(), data.end());
+}
+
+
+std::string
+Serialise::ranges(const std::vector<range_t>& ranges)
+{
+	return RangeList::serialise(ranges.begin(), ranges.end());
+}
+
+
+std::string
+Serialise::ranges_hash(const std::vector<range_t>& ranges)
+{
+	return serialise_length(xxh64::hash(Serialise::ranges(ranges)));
 }
 
 
@@ -730,17 +745,10 @@ Serialise::geospatial(const class MsgPack& field_value)
 
 
 std::string
-Serialise::ranges_centroids(const std::vector<range_t>& ranges, const std::vector<Cartesian>& centroids)
+Serialise::geospatial(std::string_view field_value)
 {
-	std::vector<std::string> data = { RangeList::serialise(ranges.begin(), ranges.end()), CartesianList::serialise(centroids.begin(), centroids.end()) };
-	return StringList::serialise(data.begin(), data.end());
-}
-
-
-std::string
-Serialise::ranges(const std::vector<range_t>& ranges)
-{
-	return RangeList::serialise(ranges.begin(), ranges.end());
+	EWKT ewkt(field_value);
+	return Serialise::ranges(ewkt.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 }
 
 
