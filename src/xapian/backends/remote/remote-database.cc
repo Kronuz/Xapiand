@@ -86,15 +86,22 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
       mru_slot(Xapian::BAD_VALUENO),
       timeout(timeout_)
 {
+    try {
 #ifndef __WIN32__
-    // It's simplest to just ignore SIGPIPE.  We'll still know if the
-    // connection dies because we'll get EPIPE back from write().
-    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-	throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
-    }
+	// It's simplest to just ignore SIGPIPE.  We'll still know if the
+	// connection dies because we'll get EPIPE back from write().
+	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+	    throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
+	}
 #endif
 
-    update_stats(MSG_MAX);
+	update_stats(MSG_MAX);
+    } catch (...) {
+	// Make sure we close the connection to avoid leaking
+	// resources.
+	do_close();
+	throw;
+    }
 }
 
 Xapian::termcount
