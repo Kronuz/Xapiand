@@ -745,8 +745,9 @@ Serialise::ranges(const std::vector<range_t>& ranges)
 	}
 
 	size_t hash = 0;
+	std::hash<range_t> hash_fn;
 	for (const auto& range : ranges) {
-		hash ^= std::hash<range_t>{}(range);
+		hash ^= hash_fn(range);
 	}
 
 	return sortable_serialise(hash);
