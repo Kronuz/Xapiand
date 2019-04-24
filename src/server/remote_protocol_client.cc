@@ -31,6 +31,7 @@
 #include <sysexits.h>
 #include <unistd.h>
 
+#include "aggregations/aggregations.h"        // for AggregationMatchSpy
 #include "database/flags.h"                   // for DB_*
 #include "database/lock.h"                    // for lock_shard
 #include "database/shard.h"                   // for Shard
@@ -644,6 +645,7 @@ RemoteProtocolClient::init_msg_query()
 	_msg_query_reg.register_posting_source(MultipleValueRange{});
 	_msg_query_reg.register_posting_source(MultipleValueGE{});
 	_msg_query_reg.register_posting_source(MultipleValueLE{});
+	_msg_query_reg.register_match_spy(AggregationMatchSpy{});
 }
 
 
