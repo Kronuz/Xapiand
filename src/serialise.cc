@@ -740,17 +740,7 @@ Serialise::ranges_centroids(const std::vector<range_t>& ranges, const std::vecto
 std::string
 Serialise::ranges(const std::vector<range_t>& ranges)
 {
-	if (ranges.empty()) {
-		return "";
-	}
-
-	size_t hash = 0;
-	std::hash<range_t> hash_fn;
-	for (const auto& range : ranges) {
-		hash ^= hash_fn(range);
-	}
-
-	return sortable_serialise(hash);
+	return RangeList::serialise(ranges.begin(), ranges.end());
 }
 
 
