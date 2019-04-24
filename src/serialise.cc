@@ -740,7 +740,7 @@ std::string
 Serialise::geospatial(const class MsgPack& field_value)
 {
 	GeoSpatial geo(field_value);
-	return Serialise::ranges(geo.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+	return Serialise::ranges_hash(geo.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 }
 
 
@@ -748,7 +748,7 @@ std::string
 Serialise::geospatial(std::string_view field_value)
 {
 	EWKT ewkt(field_value);
-	return Serialise::ranges(ewkt.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
+	return Serialise::ranges_hash(ewkt.getGeometry()->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR));
 }
 
 

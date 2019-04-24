@@ -5839,11 +5839,11 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			std::string term;
 			if (field_spc != nullptr) {
 				if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
-					term = Serialise::ranges(ranges);
+					term = Serialise::ranges_hash(ranges);
 					index_term(doc, term, *field_spc, pos);
 				} else {
 					const auto f_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-					term = Serialise::ranges(f_ranges);
+					term = Serialise::ranges_hash(f_ranges);
 					index_term(doc, term, *field_spc, pos);
 				}
 			}
@@ -5852,10 +5852,10 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 					index_term(doc, std::move(term), *global_spc, pos);
 				} else {
 					if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
-						index_term(doc, Serialise::ranges(ranges), *global_spc, pos);
+						index_term(doc, Serialise::ranges_hash(ranges), *global_spc, pos);
 					} else {
 						const auto g_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-						index_term(doc, Serialise::ranges(g_ranges), *global_spc, pos);
+						index_term(doc, Serialise::ranges_hash(g_ranges), *global_spc, pos);
 					}
 				}
 			}
@@ -6071,7 +6071,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
 				if (toUType(field_spc.index & TypeIndex::TERMS) != 0u) {
-					auto ser_value = Serialise::ranges(ranges);
+					auto ser_value = Serialise::ranges_hash(ranges);
 					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 						index_term(doc, ser_value, field_spc, pos);
 					}
@@ -6090,7 +6090,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			} else {
 				auto g_ranges = geometry->getRanges(global_spc.flags.partials, global_spc.error);
 				if (toUType(field_spc.index & TypeIndex::TERMS) != 0u) {
-					const auto ser_value = Serialise::ranges(g_ranges);
+					const auto ser_value = Serialise::ranges_hash(g_ranges);
 					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
 						index_term(doc, ser_value, field_spc, pos);
 					}
