@@ -419,13 +419,13 @@ MultipleValueRange::unserialise_with_registry(const std::string& serialised, con
 		StringList data(serialised);
 
 		if (data.size() != 3) {
-			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+			throw Xapian::NetworkError("Bad serialised MultipleValueRange");
 		}
 
 		auto it = data.begin();
 		return new MultipleValueRange(unserialise_length(*it), std::move(*(++it)), std::move(*(++it)));
 	} catch (const SerialisationError& er) {
-		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+		throw Xapian::NetworkError("Bad serialised MultipleValueRange");
 	}
 }
 
@@ -544,13 +544,13 @@ MultipleValueGE::unserialise_with_registry(const std::string& serialised, const 
 		StringList data(serialised);
 
 		if (data.size() != 2) {
-			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+			throw Xapian::NetworkError("Bad serialised MultipleValueGE");
 		}
 
 		auto it = data.begin();
 		return new MultipleValueGE(unserialise_length(*it), std::move(*(++it)));
 	} catch (const SerialisationError& er) {
-		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+		throw Xapian::NetworkError("Bad serialised MultipleValueGE");
 	}
 }
 
@@ -668,13 +668,13 @@ MultipleValueLE::unserialise_with_registry(const std::string& serialised, const 
 		StringList data(serialised);
 
 		if (data.size() != 2) {
-			throw Xapian::NetworkError("Bad serialised GeoSpatialRange");
+			throw Xapian::NetworkError("Bad serialised MultipleValueLE");
 		}
 
 		auto it = data.begin();
 		return new MultipleValueLE(unserialise_length(*it), std::move(*(++it)));
 	} catch (const SerialisationError& er) {
-		throw Xapian::NetworkError("Bad serialised AggregationMatchSpy");
+		throw Xapian::NetworkError("Bad serialised MultipleValueLE");
 	}
 }
 
