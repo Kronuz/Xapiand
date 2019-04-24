@@ -42,6 +42,8 @@
 #include "metrics.h"                          // for Metrics::metrics
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
+#include "multivalue/geospatialrange.h"       // for GeoSpatialRange
+#include "multivalue/range.h"                 // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
 #include "xapian/common/serialise-double.h"   // for unserialise_double
 #include "xapian/net/serialise-error.h"       // for serialise_error
@@ -620,18 +622,6 @@ RemoteProtocolClient::msg_update(const std::string &)
 
 
 void
-RemoteProtocolClient::init_msg_query()
-{
-	L_CALL("RemoteProtocolClient::init_msg_query()");
-
-	_msg_query_lk_shard = std::make_unique<lock_shard>(endpoint, flags);
-	_msg_query_matchspies.clear();
-	_msg_query_reg = Xapian::Registry{};
-	_msg_query_enquire.reset();
-}
-
-
-void
 RemoteProtocolClient::reset()
 {
 	L_CALL("RemoteProtocolClient::reset()");
@@ -640,6 +630,20 @@ RemoteProtocolClient::reset()
 	_msg_query_reg = Xapian::Registry{};
 	_msg_query_enquire.reset();
 	_msg_query_lk_shard.reset();
+}
+
+
+void
+RemoteProtocolClient::init_msg_query()
+{
+	L_CALL("RemoteProtocolClient::init_msg_query()");
+
+	reset();
+	_msg_query_lk_shard = std::make_unique<lock_shard>(endpoint, flags);
+	_msg_query_reg.register_posting_source(GeoSpatialRange{});
+	_msg_query_reg.register_posting_source(MultipleValueRange{});
+	_msg_query_reg.register_posting_source(MultipleValueGE{});
+	_msg_query_reg.register_posting_source(MultipleValueLE{});
 }
 
 

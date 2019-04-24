@@ -192,8 +192,9 @@ class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
 	Xapian::Registry _msg_query_reg;
 	std::unique_ptr<Xapian::Enquire> _msg_query_enquire;
 	std::vector<Xapian::MatchSpy*> _msg_query_matchspies;
-	void init_msg_query();
+
 	void reset();
+	void init_msg_query();
 
 	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
