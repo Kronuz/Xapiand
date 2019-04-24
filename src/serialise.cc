@@ -34,7 +34,6 @@
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
 #include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
-#include "hashes.hh"                                  // for xxh64
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO
@@ -732,7 +731,7 @@ Serialise::ranges(const std::vector<range_t>& ranges)
 std::string
 Serialise::ranges_hash(const std::vector<range_t>& ranges)
 {
-	return serialise_length(xxh64::hash(Serialise::ranges(ranges)));
+	return serialise_length(std::hash<std::vector<range_t>>{}(ranges));
 }
 
 
