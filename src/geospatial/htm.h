@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include <cinttypes>        // for PRIu64
-#include <cmath>            // for M_PI
-#include <cstdint>          // for uint64_t, int8_t
-#include <cstdio>           // for snprintf
-#include <memory>           // for shared_ptr
-#include <vector>           // for vector
+#include <cmath>                                  // for M_PI
+#include <cstdint>                                // for uint64_t, int8_t
+#include <cstdio>                                 // for snprintf
+#include <memory>                                 // for std::shared_ptr
+#include <vector>                                 // for std::vector
 
-#include "cartesian.h"
+#include "cartesian.h"                            // for Cartesian
+#include "string.hh"                              // for string::format
 
 
 #define __STDC_FORMAT_MACROS
@@ -118,9 +118,7 @@ struct range_t {
 	}
 
 	std::string to_string() const {
-		char result[36];
-		snprintf(result, 36, "%" PRIu64 "-%" PRIu64, start, end);
-		return std::string(result);
+		return string::format("{}-{}", start, end);
 	}
 };
 
