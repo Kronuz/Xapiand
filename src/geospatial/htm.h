@@ -127,8 +127,8 @@ namespace std {
 	template<>
 	struct hash<range_t> {
 		inline size_t operator()(const range_t& p) const {
-			std::hash<std::string> hash_fn;
-			return hash_fn(p.to_string());
+			std::hash<uint64_t> hash_fn;
+			return hash_fn(p.start) ^ hash_fn(p.end);
 		}
 	};
 }
