@@ -113,7 +113,8 @@ public:
 	// Construct an empty AggregationMatchSpy.
 	AggregationMatchSpy()
 		: _total(0),
-		  _result(MsgPack::MAP()) { }
+		  _result(MsgPack::MAP()),
+		  _aggs(MsgPack::MAP()) { }
 
 	/*
 	 * Construct a AggregationMatchSpy which aggregates the values.
