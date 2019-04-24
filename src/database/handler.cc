@@ -249,10 +249,13 @@ public:
 					try {
 						shard->reopen();
 						db = *shard->db();
-					} catch (const Xapian::DatabaseOpeningError& exc) {
+					} catch (const Xapian::DatabaseOpeningError&) {
 						eptr = std::current_exception();
 						--valid;
-					} catch (const Xapian::NetworkError& exc) {
+					} catch (const Xapian::NetworkTimeoutError&) {
+						eptr = std::current_exception();
+						--valid;
+					} catch (const Xapian::NetworkError&) {
 						eptr = std::current_exception();
 						--valid;
 					} catch (const Xapian::DatabaseError& exc) {
@@ -775,11 +778,13 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 				rset.add_document(did);
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -900,11 +905,13 @@ DatabaseHandler::dump_documents()
 				docs.push_back(_dump_document(did, Data(doc.get_data())));
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -955,11 +962,13 @@ DatabaseHandler::dump_documents(int fd)
 				sha256.add(obj_ser.data(), obj_ser.size());
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -1135,11 +1144,13 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 				mset.push_back(initial);
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -1305,11 +1316,13 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			enquire.set_query(final_query);
 			mset = enquire.get_mset(offset, limit, check_at_least);
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -1357,11 +1370,13 @@ DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned 
 			enquire.set_query(final_query);
 			mset = enquire.get_mset(offset, limit, check_at_least);
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -1443,10 +1458,13 @@ DatabaseHandler::get_metadata_keys()
 			if (!keys.empty()) {
 				break;
 			}
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			eptr = std::current_exception();
 			--valid;
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError&) {
 			eptr = std::current_exception();
 			--valid;
 		} catch (const Xapian::DatabaseError& exc) {
@@ -1482,10 +1500,13 @@ DatabaseHandler::get_metadata(const std::string& key)
 			if (!value.empty()) {
 				break;
 			}
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			eptr = std::current_exception();
 			--valid;
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError&) {
 			eptr = std::current_exception();
 			--valid;
 		} catch (const Xapian::DatabaseError& exc) {
@@ -1525,10 +1546,13 @@ DatabaseHandler::set_metadata(const std::string& key, const std::string& value, 
 		lock_shard lk_shard(endpoint, flags);
 		try {
 			lk_shard->set_metadata(key, value, commit, wal);
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			eptr = std::current_exception();
 			--valid;
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError&) {
 			eptr = std::current_exception();
 			--valid;
 		} catch (const Xapian::DatabaseError& exc) {
@@ -1629,11 +1653,13 @@ DatabaseHandler::get_docid_term(const std::string& term)
 			}
 			did = *it;
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_db.do_close();
@@ -1982,10 +2008,13 @@ DatabaseHandler::commit(bool wal)
 		lock_shard lk_shard(endpoint, flags);
 		try {
 			ret = lk_shard->commit(wal, true) || ret;
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			eptr = std::current_exception();
 			--valid;
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError&) {
 			eptr = std::current_exception();
 			--valid;
 		} catch (const Xapian::DatabaseError& exc) {
@@ -2347,11 +2376,13 @@ Document::serialise()
 			auto doc = lk_shard->get_document(shard_did, true);
 			serialised = doc.serialise();
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
@@ -2398,11 +2429,13 @@ Document::get_value(Xapian::valueno slot)
 			auto doc = lk_shard->get_document(shard_did, true);
 			value = doc.get_value(slot);
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
@@ -2449,11 +2482,13 @@ Document::get_data()
 			auto doc = lk_shard->get_document(shard_did, true);
 			data = doc.get_data();
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
@@ -2497,11 +2532,13 @@ Document::validate()
 		try {
 			lk_shard->get_document(shard_did, false);
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
@@ -2564,11 +2601,13 @@ Document::get_terms()
 				}
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
@@ -2619,11 +2658,13 @@ Document::get_values()
 				values[std::to_string(iv.get_valueno())] = *iv;
 			}
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
@@ -2735,11 +2776,13 @@ Document::hash()
 			// Add hash of data
 			hash_value ^= xxh64::hash(doc.get_data());
 			break;
-		} catch (const Xapian::DatabaseModifiedError& exc) {
+		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseOpeningError& exc) {
+		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { throw; }
-		} catch (const Xapian::NetworkError& exc) {
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { throw; }
+		} catch (const Xapian::NetworkError&) {
 			if (t == 0) { throw; }
 		} catch (const Xapian::DatabaseError& exc) {
 			lk_shard->do_close();
