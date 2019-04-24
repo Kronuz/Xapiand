@@ -140,6 +140,9 @@ public:
 	std::string name() const override;
 	std::string serialise() const override;
 	Xapian::MatchSpy* unserialise(const std::string& serialised, const Xapian::Registry& context) const override;
+	std::string serialise_results() const override;
+	void merge_results(const std::string& serialised) override;
+
 	std::string get_description() const override;
 	const MsgPack& get_aggregation() noexcept;
 };

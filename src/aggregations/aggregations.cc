@@ -313,6 +313,20 @@ AggregationMatchSpy::unserialise(const std::string& serialised, const Xapian::Re
 
 
 std::string
+AggregationMatchSpy::serialise_results() const
+{
+	return MatchSpy::serialise_results();
+}
+
+
+void
+AggregationMatchSpy::merge_results(const std::string& serialised)
+{
+	return MatchSpy::merge_results(serialised);
+}
+
+
+std::string
 AggregationMatchSpy::get_description() const
 {
 	std::string desc("AggregationMatchSpy(");
