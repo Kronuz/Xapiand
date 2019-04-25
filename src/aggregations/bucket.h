@@ -458,11 +458,57 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		for (auto& agg : _aggs) {
+			results += serialise_string(agg.first);
+			results += serialise_string(agg.second.serialise_results());
+		}
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented BucketAggregation::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("BucketAggregation::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		while (p != p_end) {
+			auto bucket = unserialise_string(&p, p_end);
+			auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
+			if (it == _aggs.end()) {
+				auto emplaced = _aggs.emplace(std::piecewise_construct,
+					std::forward_as_tuple(bucket),
+					std::forward_as_tuple(_context, _schema));
+				it = emplaced.first;
+
+				// Find and store the Aggregation the value should be recovered from:
+				if (!_sort_field.empty()) {
+					BaseAggregation* agg = &it->second;
+					for (const auto& field : _sort_field) {
+						if (it->second.value_ptr) {
+							THROW(AggregationError, "Bad field path!");
+						}
+						auto agg_ = agg->get_agg(field);
+						if (agg_) {
+							agg = agg_;
+						} else {
+							it->second.value_ptr = agg->get_value_ptr(field);
+							if (!it->second.value_ptr) {
+								THROW(AggregationError, "Field not found! (1)");
+							}
+						}
+					}
+					if (!it->second.value_ptr) {
+						THROW(AggregationError, "Field not found! (2)");
+					}
+				}
+			}
+			auto data = unserialise_string(&p, p_end);
+			it->second.merge_results(data);
+			if (data.size()) {
+				THROW(SerialisationError, "Junk found at end of serialised Aggregation");
+			}
+		}
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {
@@ -483,30 +529,31 @@ public:
 		auto emplaced = _aggs.emplace(std::piecewise_construct,
 			std::forward_as_tuple(bucket),
 			std::forward_as_tuple(_context, _schema));
+		it = emplaced.first;
 
-		emplaced.first->second(doc);
+		it->second(doc);
 
-		emplaced.first->second.slot = slot;
-		emplaced.first->second.idx = idx;
+		it->second.slot = slot;
+		it->second.idx = idx;
 
 		// Find and store the Aggregation the value should be recovered from:
 		if (!_sort_field.empty()) {
-			BaseAggregation* agg = &emplaced.first->second;
+			BaseAggregation* agg = &it->second;
 			for (const auto& field : _sort_field) {
-				if (emplaced.first->second.value_ptr) {
+				if (it->second.value_ptr) {
 					THROW(AggregationError, "Bad field path!");
 				}
 				auto agg_ = agg->get_agg(field);
 				if (agg_) {
 					agg = agg_;
 				} else {
-					emplaced.first->second.value_ptr = agg->get_value_ptr(field);
-					if (!emplaced.first->second.value_ptr) {
+					it->second.value_ptr = agg->get_value_ptr(field);
+					if (!it->second.value_ptr) {
 						THROW(AggregationError, "Field not found! (1)");
 					}
 				}
 			}
-			if (!emplaced.first->second.value_ptr) {
+			if (!it->second.value_ptr) {
 				THROW(AggregationError, "Field not found! (2)");
 			}
 		}
@@ -1104,7 +1151,7 @@ public:
 
 	std::string serialise_results() const override;
 
-	void merge_results(std::string_view serialised) override;
+	void merge_results(std::string_view& serialised) override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);

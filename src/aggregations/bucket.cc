@@ -95,14 +95,16 @@ FilterAggregation::get_result() const
 std::string
 FilterAggregation::serialise_results() const
 {
-	return "";
+	return _agg.serialise_results();
 }
 
 
 void
-FilterAggregation::merge_results(std::string_view serialised)
+FilterAggregation::merge_results(std::string_view& serialised)
 {
-	L_RED("Unimplemented FilterAggregation::merge_results({})", repr(serialised));
+	L_CALL("FilterAggregation::merge_results({})", repr(serialised));
+
+	_agg.merge_results(serialised);
 }
 
 

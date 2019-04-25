@@ -40,6 +40,7 @@
 #include "reserved/aggregations.h"  // for RESERVED_AGGS_*
 #include "serialise_list.h"         // for StringList, RangeList
 #include "xapian.h"                 // for valueno
+#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
 class Schema;
@@ -233,11 +234,18 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += serialise_double(_count);
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricCount::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricCount::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		_count += unserialise_double(&p, p_end);
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -309,11 +317,18 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += serialise_double(_sum);
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricSum::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetriSum::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		_sum += unserialise_double(&p, p_end);
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -372,11 +387,22 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += MetricSum::serialise_results();
+		results += serialise_double(_count);
+		// results += serialise_double(_avg);  // calculated during update()
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricAvg::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricAvg::merge_results({})", repr(serialised));
+
+		MetricSum::merge_results(serialised);
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		_count += unserialise_double(&p, p_end);
+		// _avg = unserialise_double(&p, p_end);  // calculated during update()
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -387,8 +413,8 @@ public:
 	}
 
 	void _aggregate(long double value) {
+		MetricSum::_aggregate(value);
 		++_count;
-		_sum += value;
 	}
 
 	void aggregate_float(long double value, const Xapian::Document&) override {
@@ -448,11 +474,21 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += serialise_double(_min);
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricMin::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricMin::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		auto value = unserialise_double(&p, p_end);
+		if (_min > value) {
+			_min = value;
+		}
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -463,7 +499,7 @@ public:
 	}
 
 	void _aggregate(long double value) {
-		if (value < _min) {
+		if (_min > value) {
 			_min = value;
 		}
 	}
@@ -517,11 +553,21 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += serialise_double(_max);
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricMax::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricMax::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		auto value = unserialise_double(&p, p_end);
+		if (_max < value) {
+			_max = value;
+		}
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -532,7 +578,7 @@ public:
 	}
 
 	void _aggregate(long double value) {
-		if (value > _max) {
+		if (_max < value) {
 			_max = value;
 		}
 	}
@@ -581,11 +627,22 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += MetricAvg::serialise_results();
+		results += serialise_double(_sq_sum);
+		// results += serialise_double(_variance);  // calculated during update()
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricVariance::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricVariance::merge_results({})", repr(serialised));
+
+		MetricAvg::merge_results(serialised);
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		_sq_sum += unserialise_double(&p, p_end);
+		// _variance = unserialise_double(&p, p_end);  // calculated during update()
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -596,8 +653,7 @@ public:
 	}
 
 	void _aggregate(long double value) {
-		++_count;
-		_sum += value;
+		MetricAvg::_aggregate(value);
 		_sq_sum += value * value;
 	}
 
@@ -677,11 +733,26 @@ public:
 
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += MetricVariance::serialise_results();
+		results += serialise_double(_sigma);
+		// results += serialise_double(_std);  // calculated during update()
+		// results += serialise_double(_upper);  // calculated during update()
+		// results += serialise_double(_lower);  // calculated during update()
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricStdDeviation::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricStdDeviation::merge_results({})", repr(serialised));
+
+		MetricVariance::merge_results(serialised);
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		_sigma = unserialise_double(&p, p_end);
+		// _std = unserialise_double(&p, p_end);  // calculated during update()
+		// _upper = unserialise_double(&p, p_end);  // calculated during update()
+		// _lower = unserialise_double(&p, p_end);  // calculated during update()
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {
@@ -714,7 +785,7 @@ public:
 
 
 class MetricMedian : public HandledSubAggregation<ValuesHandler> {
-	std::vector<long double> values;
+	std::vector<long double> _values;
 
 	long double _median;
 
@@ -730,11 +801,27 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += serialise_length(_values.size());
+		for (auto& value : _values) {
+			results += serialise_double(value);
+		}
+		// results += serialise_double(_median);  // calculated during update()
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricMedian::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricMedian::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		size_t size = unserialise_length(&p, p_end);
+		while (size--) {
+			auto value = unserialise_double(&p, p_end);
+			_values.push_back(value);
+		}
+		// _median = unserialise_double(&p, p_end);  // calculated during update()
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -745,24 +832,25 @@ public:
 	}
 
 	void update() override {
-		if (!values.empty()) {
-			size_t median_pos = values.size();
+		if (!_values.empty()) {
+			std::sort(_values.begin(), _values.end());
+			size_t median_pos = _values.size();
 			if (median_pos % 2 == 0) {
 				median_pos /= 2;
-				std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-				auto val1 = values[median_pos];
-				std::nth_element(values.begin(), values.begin() + median_pos - 1, values.end());
-				_median = (val1 + values[median_pos - 1]) / 2;
+				std::nth_element(_values.begin(), _values.begin() + median_pos, _values.end());
+				auto val1 = _values[median_pos];
+				std::nth_element(_values.begin(), _values.begin() + median_pos - 1, _values.end());
+				_median = (val1 + _values[median_pos - 1]) / 2;
 			} else {
 				median_pos /= 2;
-				std::nth_element(values.begin(), values.begin() + median_pos, values.end());
-				_median = values[median_pos];
+				std::nth_element(_values.begin(), _values.begin() + median_pos, _values.end());
+				_median = _values[median_pos];
 			}
 		}
 	}
 
 	void _aggregate(long double value) {
-		values.push_back(value);
+		_values.push_back(value);
 	}
 
 	void aggregate_float(long double value, const Xapian::Document&) override {
@@ -808,11 +896,29 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += serialise_length(_histogram.size());
+		for (auto& item : _histogram) {
+			results += serialise_double(item.first);
+			results += serialise_length(item.second);
+		}
+		// results += serialise_double(_mode);  // calculated during update()
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricMode::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricMode::merge_results({})", repr(serialised));
+
+		const char *p = serialised.data();
+		const char *p_end = p + serialised.size();
+		size_t size = unserialise_length(&p, p_end);
+		while (size--) {
+			auto key = unserialise_double(&p, p_end);
+			auto value = unserialise_length(&p, p_end);
+			_histogram[key] += value;
+		}
+		// _mode = unserialise_double(&p, p_end);  // calculated during update()
+		serialised = std::string_view(p, p_end - p);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -881,11 +987,19 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += MetricAvg::serialise_results();
+		results += _min_metric.serialise_results();
+		results += _max_metric.serialise_results();
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricStats::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricStats::merge_results({})", repr(serialised));
+
+		MetricAvg::merge_results(serialised);
+		_min_metric.merge_results(serialised);
+		_max_metric.merge_results(serialised);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -908,9 +1022,9 @@ public:
 	}
 
 	void _aggregate(long double value) {
+		MetricAvg::_aggregate(value);
 		_min_metric._aggregate(value);
 		_max_metric._aggregate(value);
-		MetricAvg::_aggregate(value);
 	}
 
 	void aggregate_float(long double value, const Xapian::Document&) override {
@@ -968,11 +1082,19 @@ public:
 	}
 
 	std::string serialise_results() const override {
-		return "";
+		std::string results;
+		results += MetricStdDeviation::serialise_results();
+		results += _min_metric.serialise_results();
+		results += _max_metric.serialise_results();
+		return results;
 	}
 
-	void merge_results(std::string_view serialised) override {
-		L_RED("Unimplemented MetricExtendedStats::merge_results({})", repr(serialised));
+	void merge_results(std::string_view& serialised) override {
+		L_CALL("MetricExtendedStats::merge_results({})", repr(serialised));
+
+		MetricStdDeviation::merge_results(serialised);
+		_min_metric.merge_results(serialised);
+		_max_metric.merge_results(serialised);
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {
@@ -1017,9 +1139,9 @@ public:
 	}
 
 	void _aggregate(long double value) {
+		MetricStdDeviation::_aggregate(value);
 		_min_metric._aggregate(value);
 		_max_metric._aggregate(value);
-		MetricStdDeviation::_aggregate(value);
 	}
 
 	void aggregate_float(long double value, const Xapian::Document&) override {
