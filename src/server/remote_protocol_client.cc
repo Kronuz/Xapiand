@@ -117,6 +117,8 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 RemoteProtocolClient::~RemoteProtocolClient() noexcept
 {
 	try {
+		reset();
+
 		if (XapiandManager::remote_clients().fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of binary clients");
 			sig_exit(-EX_SOFTWARE);
