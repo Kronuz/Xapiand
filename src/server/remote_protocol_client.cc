@@ -284,6 +284,7 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) { }
+		reset();
 		destroy();
 		detach();
 	} catch (const Xapian::NetworkError&) {
@@ -292,6 +293,7 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching remote protocol message");
+		reset();
 		destroy();
 		detach();
 	} catch (const Xapian::Error& exc) {
@@ -302,6 +304,7 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
+		reset();
 		destroy();
 		detach();
 	}
@@ -1233,6 +1236,7 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 {
 	L_CALL("RemoteProtocolClient::msg_shutdown(<message>)");
 
+	reset();
 	destroy();
 	detach();
 }
@@ -1252,17 +1256,6 @@ RemoteProtocolClient::is_idle() const
 	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
 
 	return !is_waiting() && !is_running() && write_queue.empty() && !pending_messages();
-}
-
-
-void
-RemoteProtocolClient::destroy_impl()
-{
-	L_CALL("RemoteProtocolClient::destroy_impl()");
-
-	BaseClient<RemoteProtocolClient>::destroy_impl();
-
-	reset();
 }
 
 
@@ -1574,6 +1567,7 @@ RemoteProtocolClient::operator()()
 				lk.unlock();
 				L_ERR("ERROR: Unexpected RemoteProtocolClient state");
 				stop();
+				reset();
 				destroy();
 				detach();
 				return;

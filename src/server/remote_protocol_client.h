@@ -201,8 +201,6 @@ class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
 	size_t pending_messages() const;
 	bool is_idle() const;
 
-	void destroy_impl() override;
-
 	ssize_t on_read(const char *buf, ssize_t received);
 	void on_read_file(const char *buf, ssize_t received);
 	void on_read_file_done();

@@ -156,6 +156,7 @@ ReplicationProtocolClient::reset()
 		log->clear();
 		log.reset();
 	}
+
 	changesets = 0;
 }
 
@@ -255,6 +256,8 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			// send the message right away, just exit and the client will cope.
 			send_message(ReplicationReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) { }
+		reset();
+		lk_shard_ptr.reset();
 		destroy();
 		detach();
 	} catch (const Xapian::NetworkError&) {
@@ -263,6 +266,8 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching replication protocol message");
+		reset();
+		lk_shard_ptr.reset();
 		destroy();
 		detach();
 	} catch (const Xapian::Error& exc) {
@@ -274,6 +279,8 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 	} catch (...) {
 		L_EXC("ERROR: Dispatching replication protocol message");
 		send_message(ReplicationReplyType::REPLY_EXCEPTION, std::string());
+		reset();
+		lk_shard_ptr.reset();
 		destroy();
 		detach();
 	}
@@ -299,6 +306,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	if (endpoint_path.empty()) {
 		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
+		reset();
+		lk_shard_ptr.reset();
 		destroy();
 		detach();
 
@@ -383,6 +392,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 				if (whole_db_copies_left == 0) {
 					send_message(ReplicationReplyType::REPLY_FAIL, "Database changing too fast");
+					reset();
+					lk_shard_ptr.reset();
 					destroy();
 					detach();
 
@@ -504,6 +515,8 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	}
 
+	reset();
+	lk_shard_ptr.reset();
 	destroy();
 	detach();
 }
@@ -581,6 +594,8 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::set_cluster_database_ready();
 	}
 
+	reset();
+	lk_shard_ptr.reset();
 	destroy();
 	detach();
 }
@@ -596,6 +611,8 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 
 	L(LOG_DEBUG, rgb(190, 30, 10), "REPLY_FAIL {}: {}", repr((*lk_shard_ptr)->endpoint.path), msg);
 
+	reset();
+	lk_shard_ptr.reset();
 	destroy();
 	detach();
 }
@@ -740,18 +757,6 @@ ReplicationProtocolClient::is_idle() const
 	L_CALL("ReplicationProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
 
 	return !is_waiting() && !is_running() && write_queue.empty() && !pending_messages();
-}
-
-
-void
-ReplicationProtocolClient::destroy_impl()
-{
-	L_CALL("ReplicationProtocolClient::destroy_impl()");
-
-	BaseClient<ReplicationProtocolClient>::destroy_impl();
-
-	reset();
-	lk_shard_ptr.reset();
 }
 
 
@@ -1120,6 +1125,8 @@ ReplicationProtocolClient::operator()()
 				lk.unlock();
 				L_ERR("ERROR: Unexpected ReplicationProtocolClient state");
 				stop();
+				reset();
+				lk_shard_ptr.reset();
 				destroy();
 				detach();
 				return;
