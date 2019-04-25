@@ -38,24 +38,21 @@ constexpr int max_length_size = sizeof(unsigned long long) * 8 / 7;
 std::string
 serialise_length(unsigned long long len)
 {
-	std::string result;
-	result.reserve(max_length_size);
-	if (len < 255) {
-		result.push_back(static_cast<unsigned char>(len));
-	} else {
-		result.push_back('\xff');
+	char result[12];
+	char* end = result;
+	unsigned char b = static_cast<unsigned char>(len);
+	if (len >= 255) {
+		b = '\xff';
 		len -= 255;
-		while (true) {
-			auto b = static_cast<unsigned char>(len & 0x7f);
+		do {
+			*end++ = b;
+			b = static_cast<unsigned char>(len & 0x7f);
 			len >>= 7;
-			if (len == 0u) {
-				result.push_back(b | static_cast<unsigned char>(0x80));
-				break;
-			}
-			result.push_back(b);
-		}
+		} while (len);
+		b |= static_cast<unsigned char>(0x80);
 	}
-	return result;
+	*end++ = b;
+	return std::string(result, end);
 }
 
 
