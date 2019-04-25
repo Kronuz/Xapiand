@@ -1191,6 +1191,21 @@ XapiandManager::join()
 		}
 	}
 
+	auto& schema_updater_obj = schema_updater(false);
+	if (schema_updater_obj) {
+		L_MANAGER("Finishing schema updater!");
+		schema_updater_obj->finish();
+
+		L_MANAGER("Waiting for {} schema updater{}...", schema_updater_obj->running_size(), (schema_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the schema updaters...", "Database updaters finished!");
+		while (!schema_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
 #endif
 
 	////////////////////////////////////////////////////////////////////
