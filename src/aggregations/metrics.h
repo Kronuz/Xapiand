@@ -232,6 +232,14 @@ public:
 		};
 	}
 
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricCount::merge_results({})", repr(serialised));
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_COUNT) {
 			return &_count;
@@ -300,6 +308,14 @@ public:
 		};
 	}
 
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricSum::merge_results({})", repr(serialised));
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_SUM) {
 			return &_sum;
@@ -353,6 +369,14 @@ public:
 		return {
 			{ RESERVED_AGGS_AVG, static_cast<double>(_avg) },
 		};
+	}
+
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricAvg::merge_results({})", repr(serialised));
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -423,6 +447,14 @@ public:
 		};
 	}
 
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricMin::merge_results({})", repr(serialised));
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_MIN) {
 			return &_min;
@@ -484,6 +516,14 @@ public:
 		};
 	}
 
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricMax::merge_results({})", repr(serialised));
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_MAX) {
 			return &_max;
@@ -538,6 +578,14 @@ public:
 		return {
 			{ RESERVED_AGGS_VARIANCE, static_cast<double>(_variance) },
 		};
+	}
+
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricVariance::merge_results({})", repr(serialised));
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -627,6 +675,15 @@ public:
 		};
 	}
 
+
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricStdDeviation::merge_results({})", repr(serialised));
+	}
+
 	BaseAggregation* get_agg(std::string_view field) override {
 		if (field == RESERVED_AGGS_STD_BOUNDS) {
 			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds
@@ -670,6 +727,14 @@ public:
 		return {
 			{ RESERVED_AGGS_MEDIAN, static_cast<double>(_median) },
 		};
+	}
+
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricMedian::merge_results({})", repr(serialised));
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -742,6 +807,14 @@ public:
 		};
 	}
 
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricMode::merge_results({})", repr(serialised));
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_MODE) {
 			return &_mode;
@@ -805,6 +878,14 @@ public:
 			{ RESERVED_AGGS_AVG, static_cast<double>(_avg) },
 			{ RESERVED_AGGS_SUM, static_cast<double>(_sum) },
 		};
+	}
+
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricStats::merge_results({})", repr(serialised));
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -885,6 +966,15 @@ public:
 			}},
 		};
 	}
+
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented MetricExtendedStats::merge_results({})", repr(serialised));
+	}
+
 	BaseAggregation* get_agg(std::string_view field) override {
 		if (field == RESERVED_AGGS_STD_BOUNDS) {
 			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds

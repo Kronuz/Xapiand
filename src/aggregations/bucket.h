@@ -457,6 +457,14 @@ public:
 		}
 	}
 
+	std::string serialise_results() const override {
+		return "";
+	}
+
+	void merge_results(std::string_view serialised) override {
+		L_RED("Unimplemented BucketAggregation::merge_results({})", repr(serialised));
+	}
+
 	BaseAggregation* get_agg(std::string_view field) override {
 		auto it = _aggs.find(std::string(field));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 		if (it != _aggs.end()) {
@@ -1093,6 +1101,10 @@ public:
 	void update() override;
 
 	MsgPack get_result() const override;
+
+	std::string serialise_results() const override;
+
+	void merge_results(std::string_view serialised) override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);

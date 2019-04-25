@@ -92,6 +92,20 @@ FilterAggregation::get_result() const
 }
 
 
+std::string
+FilterAggregation::serialise_results() const
+{
+	return "";
+}
+
+
+void
+FilterAggregation::merge_results(std::string_view serialised)
+{
+	L_RED("Unimplemented FilterAggregation::merge_results({})", repr(serialised));
+}
+
+
 void
 FilterAggregation::check_single(const Xapian::Document& doc)
 {

@@ -47,6 +47,9 @@ public:
 
 	virtual MsgPack get_result() const = 0;
 
+	virtual std::string serialise_results() const = 0;
+	virtual void merge_results(std::string_view serialised) = 0;
+
 	virtual BaseAggregation* get_agg(std::string_view) {
 		return nullptr;
 	}
@@ -76,6 +79,9 @@ public:
 	void update() override;
 
 	MsgPack get_result() const override;
+
+	std::string serialise_results() const override;
+	void merge_results(std::string_view serialised) override;
 
 	BaseAggregation* get_agg(std::string_view field) override;
 

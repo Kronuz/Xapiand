@@ -31,6 +31,7 @@
 #include "exception.h"                      // for AggregationError, MSG_Agg...
 #include "hashes.hh"                        // for fnv1ah32
 #include "msgpack.h"                        // for MsgPack, MsgPack::const_i...
+#include "length.h"                         // for serialise_length
 #include "phf.hh"                           // for phf
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 
@@ -253,6 +254,32 @@ Aggregation::get_result() const
 }
 
 
+std::string
+Aggregation::serialise_results() const
+{
+	std::string results;
+	results += serialise_length(_doc_count);
+	for (auto& sub_agg : _sub_aggs) {
+		results += serialise_string(sub_agg.first);
+		results += serialise_string(sub_agg.second->serialise_results());
+	}
+	return results;
+}
+
+
+void
+Aggregation::merge_results(std::string_view serialised)
+{
+	const char *p = serialised.data();
+	const char *p_end = p + serialised.size();
+	_doc_count += unserialise_length(&p, p_end);
+	while (p != p_end) {
+		auto name = unserialise_string(&p, p_end);
+		_sub_aggs[name]->merge_results(unserialise_string(&p, p_end));
+	}
+}
+
+
 BaseAggregation*
 Aggregation::get_agg(std::string_view field)
 {
@@ -315,14 +342,14 @@ AggregationMatchSpy::unserialise(const std::string& serialised, const Xapian::Re
 std::string
 AggregationMatchSpy::serialise_results() const
 {
-	return MatchSpy::serialise_results();
+	return _aggregation.serialise_results();
 }
 
 
 void
 AggregationMatchSpy::merge_results(const std::string& serialised)
 {
-	return MatchSpy::merge_results(serialised);
+	_aggregation.merge_results(serialised);
 }
 
 
