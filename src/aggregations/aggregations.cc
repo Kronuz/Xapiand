@@ -241,7 +241,7 @@ Aggregation::update()
 
 
 MsgPack
-Aggregation::get_result()
+Aggregation::get_result() const
 {
 	MsgPack result = {
 		{ RESERVED_AGGS_DOC_COUNT, _doc_count },

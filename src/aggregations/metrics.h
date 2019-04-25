@@ -226,7 +226,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _count{0.0} { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_COUNT, static_cast<uint64_t>(_count) },
 		};
@@ -294,7 +294,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _sum{0.0} { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_SUM, static_cast<double>(_sum) },
 		};
@@ -349,7 +349,7 @@ public:
 		  _count{0.0},
 		  _avg{0.0} { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_AVG, static_cast<double>(_avg) },
 		};
@@ -417,7 +417,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _min(std::numeric_limits<long double>::max()) { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_MIN, static_cast<double>(_min) },
 		};
@@ -478,7 +478,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _max(std::numeric_limits<long double>::min()) { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_MAX, static_cast<double>(_max) },
 		};
@@ -534,7 +534,7 @@ public:
 		  _sq_sum{0.0},
 		  _variance{0.0} { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_VARIANCE, static_cast<double>(_variance) },
 		};
@@ -617,7 +617,7 @@ public:
 		}
 	}
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_STD, static_cast<double>(_std) },
 			{ RESERVED_AGGS_STD_BOUNDS, {
@@ -666,7 +666,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _median{0.0} { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_MEDIAN, static_cast<double>(_median) },
 		};
@@ -736,7 +736,7 @@ public:
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
 		  _mode{0.0} { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_MODE, static_cast<double>(_mode) },
 		};
@@ -797,7 +797,7 @@ public:
 		  _min_metric(_conf, schema),
 		  _max_metric(_conf, schema) { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_COUNT, static_cast<uint64_t>(_count) },
 			{ RESERVED_AGGS_MIN, static_cast<double>(_min_metric._min) },
@@ -869,7 +869,7 @@ public:
 		  _min_metric(_conf, schema),
 		  _max_metric(_conf, schema) { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		return {
 			{ RESERVED_AGGS_COUNT, static_cast<uint64_t>(_count) },
 			{ RESERVED_AGGS_MIN, static_cast<double>(_min_metric._min) },

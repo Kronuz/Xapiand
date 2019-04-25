@@ -84,13 +84,13 @@ private:
 	friend struct CmpByFieldDesc;
 
 	struct CmpByIndex {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			return a->second.idx < b->second.idx;
 		}
 	};
 
 	struct CmpByKeyAsc {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			if (a->second.slot != b->second.slot) {
 				return a->second.slot < b->second.slot;
 			}
@@ -99,7 +99,7 @@ private:
 	};
 
 	struct CmpByKeyDesc {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			if (a->second.slot != b->second.slot) {
 				return a->second.slot > b->second.slot;
 			}
@@ -108,7 +108,7 @@ private:
 	};
 
 	struct CmpByCountAsc {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			if (a->second.doc_count() != b->second.doc_count()) {
 				return a->second.doc_count() < b->second.doc_count();
 			}
@@ -120,7 +120,7 @@ private:
 	};
 
 	struct CmpByCountDesc {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			if (a->second.doc_count() != b->second.doc_count()) {
 				return a->second.doc_count() > b->second.doc_count();
 			}
@@ -132,7 +132,7 @@ private:
 	};
 
 	struct CmpByFieldAsc {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			assert(a->second.value_ptr);
 			assert(b->second.value_ptr);
 			if (*a->second.value_ptr != *b->second.value_ptr) {
@@ -146,7 +146,7 @@ private:
 	};
 
 	struct CmpByFieldDesc {
-		bool operator()(const std::map<std::string, Aggregation>::iterator& a, const std::map<std::string, Aggregation>::iterator& b) const {
+		bool operator()(const std::map<std::string, Aggregation>::const_iterator& a, const std::map<std::string, Aggregation>::const_iterator& b) const {
 			assert(a->second.value_ptr);
 			assert(b->second.value_ptr);
 			if (*a->second.value_ptr != *b->second.value_ptr) {
@@ -159,14 +159,21 @@ private:
 		}
 	};
 
-	template <typename Cmp>
-	MsgPack _get_result() {
-		Cmp cmp;
-		bool is_heap = false;
-		std::vector<std::map<std::string, Aggregation>::iterator> ordered;
+	void update() override {
 		for (auto it = _aggs.begin(); it != _aggs.end(); ++it) {
 			if (it->second.doc_count() >= _min_doc_count) {
 				it->second.update();
+			}
+		}
+	}
+
+	template <typename Cmp>
+	MsgPack _get_result() const {
+		Cmp cmp;
+		bool is_heap = false;
+		std::vector<std::map<std::string, Aggregation>::const_iterator> ordered;
+		for (auto it = _aggs.begin(); it != _aggs.end(); ++it) {
+			if (it->second.doc_count() >= _min_doc_count) {
 				ordered.push_back(it);
 				if (ordered.size() > _limit) {
 					if (is_heap) {
@@ -430,7 +437,7 @@ public:
 		  _keyed(_conf_keyed()),
 		  _min_doc_count(_conf_min_doc_count()) { }
 
-	MsgPack get_result() override {
+	MsgPack get_result() const override {
 		switch (_sort) {
 			default:
 			case Sort::by_index:
@@ -1085,7 +1092,7 @@ public:
 
 	void update() override;
 
-	MsgPack get_result() override;
+	MsgPack get_result() const override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);

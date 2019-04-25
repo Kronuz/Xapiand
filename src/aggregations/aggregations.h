@@ -45,7 +45,7 @@ public:
 
 	virtual void update() { }
 
-	virtual MsgPack get_result() = 0;
+	virtual MsgPack get_result() const = 0;
 
 	virtual BaseAggregation* get_agg(std::string_view) {
 		return nullptr;
@@ -75,7 +75,7 @@ public:
 
 	void update() override;
 
-	MsgPack get_result() override;
+	MsgPack get_result() const override;
 
 	BaseAggregation* get_agg(std::string_view field) override;
 

@@ -86,7 +86,7 @@ FilterAggregation::update()
 
 
 MsgPack
-FilterAggregation::get_result()
+FilterAggregation::get_result() const
 {
 	return _agg.get_result();
 }
