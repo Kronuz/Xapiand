@@ -93,7 +93,7 @@ public:
 		serialised += StringMetric<Jaccard>::serialise();
 		serialised += serialise_length(_set_str.size());
 		for (auto ch : _set_str) {
-			serialised += ch;
+			serialised += serialise_char(ch);
 		}
 		return serialised;
 	}
@@ -102,10 +102,7 @@ public:
 		StringMetric<Jaccard>::unserialise(p, p_end);
 		size_t size = unserialise_length(p, p_end);
 		while (size--) {
-			if (*p == p_end) {
-				THROW(SerialisationError, "Invalid input: insufficient data");
-			}
-			_set_str.insert(**p++);
+			_set_str.insert(unserialise_char(p, p_end));
 		}
 	}
 };

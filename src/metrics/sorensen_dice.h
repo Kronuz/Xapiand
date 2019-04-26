@@ -130,9 +130,6 @@ public:
 		StringMetric<Sorensen_Dice>::unserialise(p, p_end);
 		size_t size = unserialise_length(p, p_end);
 		while (size--) {
-			if (*p == p_end) {
-				THROW(SerialisationError, "Invalid input: insufficient data");
-			}
 			_str_bigrams.insert(std::string(unserialise_string(p, p_end)));
 		}
 	}
