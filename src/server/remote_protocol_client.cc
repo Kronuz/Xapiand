@@ -861,15 +861,18 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 
 	_msg_query_enquire->unserialise_stats(std::string(p, p_end));
 
-	Xapian::MSet mset = _msg_query_enquire->get_mset(first, maxitems, check_at_least);
-
 	std::string msg;
-	for (auto& i : _msg_query_matchspies) {
-		std::string spy_results = i->serialise_results();
-		msg += serialise_length(spy_results.size());
-		msg += spy_results;
+	{
+		Xapian::MSet mset = _msg_query_enquire->get_mset(first, maxitems, check_at_least);
+		for (auto& i : _msg_query_matchspies) {
+			std::string spy_results = i->serialise_results();
+			msg += serialise_length(spy_results.size());
+			msg += spy_results;
+		}
+		msg += mset.serialise();
+		// Make sure mset is destroyed before the database
+		// is checked in by the reset()
 	}
-	msg += mset.serialise();
 
 	reset();
 
