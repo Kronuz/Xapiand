@@ -1966,7 +1966,7 @@ DatabaseHandler::get_database_info()
 	auto doccount = db->get_doccount();
 	auto lastdocid = db->get_lastdocid();
 	return {
-		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path) },
+		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path).first },
 		{ RESPONSE_DOC_COUNT, doccount },
 		{ RESPONSE_LAST_ID, lastdocid },
 		{ RESPONSE_DOC_DEL, lastdocid - doccount },

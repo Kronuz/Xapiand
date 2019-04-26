@@ -118,9 +118,10 @@ inline std::string get_hashed(std::string_view name) {
 }
 
 
-inline std::string_view unsharded_path(std::string_view path) {
+inline std::pair<std::string_view, bool> unsharded_path(std::string_view path) {
 	auto pos = path.find("/.__");
-	return pos == std::string_view::npos ? path : path.substr(0, pos);
+	bool sharded = pos != std::string_view::npos;
+	return std::make_pair(sharded ? path.substr(0, pos) : path, sharded);
 }
 
 

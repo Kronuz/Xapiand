@@ -1525,10 +1525,10 @@ HttpClient::write_document_view(Request& request)
 		if (document_id.empty()) {
 			if (it == response_obj.end()) {
 				auto document_id_obj = document.get_value(ID_FIELD_NAME);
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), document_id_obj.as_str());
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
 				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
 			} else {
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), it.value().as_str());
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
 			}
 		} else {
 			if (it == response_obj.end()) {
@@ -1560,9 +1560,9 @@ HttpClient::write_document_view(Request& request)
 			auto it = response_obj.find(ID_FIELD_NAME);
 			if (it == response_obj.end()) {
 				auto document_id_obj = document.get_value(ID_FIELD_NAME);
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), document_id_obj.as_str());
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
 			} else {
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path), it.value().as_str());
+				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
 			}
 		}
 
@@ -1912,7 +1912,7 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 	}
 
 	// Get index settings (from .xapiand/indices)
-	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path));
+	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path).first);
 	endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/indices"},
 		false,
