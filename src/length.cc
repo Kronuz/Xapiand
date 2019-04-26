@@ -23,13 +23,14 @@
 
 #include "length.h"
 
-#include <algorithm>    // for min
-#include <cassert>      // for assert
-#include <cfloat>       // for FLT_RADIX, DBL_MANT_DIG, DBL_MAX_EXP, DBL_MAX
-#include <cmath>        // for scalbn, frexp, HUGE_VAL
-#include <functional>   // for std::reference_wrapper
+#include <algorithm>                              // for min
+#include <cassert>                                // for assert
+#include <cfloat>                                 // for FLT_RADIX, DBL_MANT_DIG, DBL_MAX_EXP, DBL_MAX
+#include <cmath>                                  // for scalbn, frexp, HUGE_VAL
+#include <functional>                             // for std::reference_wrapper
 
-#include "io.hh"        // for io::read and io::write
+#include "io.hh"                                  // for io::read and io::write
+#include "xapian/net/length.h"                    // for encode_length, decode_length
 
 
 constexpr int max_length_size = sizeof(unsigned long long) * 8 / 7;
@@ -38,58 +39,20 @@ constexpr int max_length_size = sizeof(unsigned long long) * 8 / 7;
 std::string
 serialise_length(unsigned long long len)
 {
-	char result[12];
-	char* end = result;
-	unsigned char b = static_cast<unsigned char>(len);
-	if (len >= 255) {
-		b = '\xff';
-		len -= 255;
-		do {
-			*end++ = b;
-			b = static_cast<unsigned char>(len & 0x7f);
-			len >>= 7;
-		} while (len);
-		b |= static_cast<unsigned char>(0x80);
-	}
-	*end++ = b;
-	return std::string(result, end);
+	return encode_length(len);
 }
 
 
 unsigned long long
 unserialise_length(const char** p, const char* end, bool check_remaining)
 {
-	const char *ptr = *p;
-	assert(ptr);
-	assert(ptr <= end);
-
-	if unlikely(ptr == end) {
-		// Out of data.
-		*p = nullptr;
-		THROW(SerialisationError, "Bad encoded length: no data");
+	unsigned long long decoded;
+	if (check_remaining) {
+		decode_length_and_check(p, end, decoded);
+	} else {
+		decode_length(p, end, decoded);
 	}
-
-	unsigned long long len = static_cast<unsigned char>(*ptr++);
-	if (len == 0xff) {
-		len = 0;
-		unsigned char ch;
-		unsigned shift = 0;
-		do {
-			if unlikely(ptr == end || shift > (max_length_size * 7)) {
-				*p = nullptr;
-				THROW(SerialisationError, "Bad encoded length: insufficient data");
-			}
-			ch = *ptr++;
-			len |= static_cast<unsigned long long>(ch & 0x7f) << shift;
-			shift += 7;
-		} while ((ch & 0x80) == 0);
-		len += 255;
-	}
-	if (check_remaining && len > static_cast<unsigned long long>(end - ptr)) {
-		THROW(SerialisationError, "Bad encoded length: length greater than data");
-	}
-	*p = ptr;
-	return len;
+	return decoded;
 }
 
 
@@ -115,6 +78,31 @@ unserialise_bool(const char** p, const char* end)
 		THROW(SerialisationError, "Bad encoded boolean: invalid");
 	}
 	bool value(*ptr++ != '0');
+
+	*p = ptr;
+	return value;
+}
+
+
+std::string
+serialise_char(char value)
+{
+	return std::string(1, value);
+}
+
+
+char
+unserialise_char(const char** p, const char* end)
+{
+	const char *ptr = *p;
+	assert(ptr);
+	assert(ptr <= end);
+
+	if unlikely(ptr == end) {
+		THROW(SerialisationError, "Bad encoded char: no data");
+	}
+
+	char value = *ptr++;
 
 	*p = ptr;
 	return value;

@@ -23,13 +23,14 @@
 
 #pragma once
 
-#include <cassert>               // for assert
-#include <stddef.h>              // for size_t, NULL
-#include <string>                // for string
-#include <string_view>           // for std::string_view
+#include <cassert>                                // for assert
+#include <stddef.h>                               // for size_t, NULL
+#include <string>                                 // for string
+#include <string_view>                            // for std::string_view
 
-#include "exception.h"           // for MSG_SerialisationError, SerialisationError
-#include "likely.h"              // for likely, unlikely
+#include "exception.h"                            // for MSG_SerialisationError, SerialisationError
+#include "likely.h"                               // for likely, unlikely
+#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
 /** Serialise a length as a variable-length string.
@@ -57,6 +58,10 @@ unsigned long long unserialise_length(const char** p, const char* end, bool chec
 std::string serialise_bool(bool value);
 
 bool unserialise_bool(const char** p, const char* end);
+
+std::string serialise_char(char value);
+
+char unserialise_char(const char** p, const char* end);
 
 std::string serialise_string(std::string_view input);
 
@@ -184,6 +189,13 @@ inline bool unserialise_bool(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_bool(&p, p_end);
+}
+
+
+inline bool unserialise_char(std::string_view data) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_char(&p, p_end);
 }
 
 
