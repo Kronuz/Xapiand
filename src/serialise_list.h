@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -299,7 +299,7 @@ public:
 
 class StringList : public SerialiseList<StringList, std::string> {
 	size_t get_length(const char** pos) const {
-		return unserialise_length(pos, _end, true);
+		return unserialise_length_and_check(pos, _end);
 	}
 
 	std::string get_value(const char* pos, size_t length) const {
@@ -336,7 +336,7 @@ public:
 			if (*pos == SERIALISED_LIST_MAGIC) {
 				++pos;
 				for ( ; pos != end; ++d_first) {
-					const auto length = unserialise_length(&pos, end, true);
+					const auto length = unserialise_length_and_check(&pos, end);
 					*d_first = std::string(pos, length);
 					pos += length;
 				}

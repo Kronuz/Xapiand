@@ -512,7 +512,7 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 
 	if (p != p_end) {
 		size_t len;
-		len = unserialise_length(&p, p_end, true);
+		len = unserialise_length_and_check(&p, p_end);
 		endpoint = Endpoint{std::string_view(p, len)};
 		p += len;
 		if (p != p_end) {
@@ -560,7 +560,7 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 
 	if (p != p_end) {
 		size_t len;
-		len = unserialise_length(&p, p_end, true);
+		len = unserialise_length_and_check(&p, p_end);
 		endpoint = Endpoint{std::string_view(p, len)};
 		p += len;
 		if (p != p_end) {
@@ -670,7 +670,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Query.
-	size_t len = unserialise_length(&p, p_end, true);
+	size_t len = unserialise_length_and_check(&p, p_end);
 	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), _msg_query_reg));
 	p += len;
 
@@ -760,7 +760,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Weight object.
-	len = unserialise_length(&p, p_end, true);
+	len = unserialise_length_and_check(&p, p_end);
 	std::string wtname(p, len);
 	p += len;
 
@@ -772,21 +772,21 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		THROW(InvalidArgumentError, "Weighting scheme " + wtname + " not registered");
 	}
 
-	len = unserialise_length(&p, p_end, true);
+	len = unserialise_length_and_check(&p, p_end);
 	std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(std::string(p, len)));
 	_msg_query_enquire->set_weighting_scheme(*wt);
 	p += len;
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the RSet object.
-	len = unserialise_length(&p, p_end, true);
+	len = unserialise_length_and_check(&p, p_end);
 	Xapian::RSet rset = Xapian::RSet::unserialise(std::string(p, len));
 	p += len;
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise any MatchSpy or KeyMaker objects.
 	while (p != p_end) {
-		len = unserialise_length(&p, p_end, true);
+		len = unserialise_length_and_check(&p, p_end);
 		std::string_view classtype(p, len);
 		if (len < 8) {
 			THROW(InvalidArgumentError, "Class type {} is invalid", classtype);
@@ -794,7 +794,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		std::string_view type(p + len - 8, 8);
 		p += len;
 
-		len = unserialise_length(&p, p_end, true);
+		len = unserialise_length_and_check(&p, p_end);
 		std::string_view serialised(p, len);
 		p += len;
 
@@ -1153,7 +1153,7 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	size_t len = unserialise_length(&p, p_end, true);
+	size_t len = unserialise_length_and_check(&p, p_end);
 	std::string unique_term(p, len);
 	p += len;
 
@@ -1220,7 +1220,7 @@ RemoteProtocolClient::msg_setmetadata(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	size_t keylen = unserialise_length(&p, p_end, true);
+	size_t keylen = unserialise_length_and_check(&p, p_end);
 	std::string key(p, keylen);
 	p += keylen;
 	std::string val(p, p_end - p);
@@ -1404,7 +1404,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 
 		ssize_t len;
 		try {
-			len = unserialise_length(&p, p_end, true);
+			len = unserialise_length_and_check(&p, p_end);
 		} catch (const Xapian::SerialisationError) {
 			return received;
 		}

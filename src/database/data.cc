@@ -207,7 +207,7 @@ Locator::unserialise(std::string_view locator_str)
 {
 	const char *p = locator_str.data();
 	const char *p_end = p + locator_str.size();
-	auto length = unserialise_length(&p, p_end, true);
+	auto length = unserialise_length_and_check(&p, p_end);
 	Locator locator(ct_type_t(std::string_view(p, length)));
 	p += length;
 	locator.type = static_cast<Type>(*p++);
@@ -296,7 +296,7 @@ Data::feed(std::string&& new_serialised, std::string&& new_version)
 	}
 	while (p < p_end) {
 		try {
-			auto length = unserialise_length(&p, p_end, true);
+			auto length = unserialise_length_and_check(&p, p_end);
 			if (!length) {
 				break;
 			}

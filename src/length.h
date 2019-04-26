@@ -53,7 +53,8 @@ std::string serialise_length(unsigned long long len);
  *
  *  @return	The decoded length.
  */
-unsigned long long unserialise_length(const char** p, const char* end, bool check_remaining=false);
+unsigned long long unserialise_length(const char** p, const char* end);
+unsigned long long unserialise_length_and_check(const char** p, const char* end);
 
 std::string serialise_bool(bool value);
 
@@ -171,10 +172,17 @@ inline void unserialise_unsigned(const char** p, const char* end, T* result) {
 }
 
 
-inline unsigned long long unserialise_length(std::string_view data, bool check_remaining=false) {
+inline unsigned long long unserialise_length(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
-	return unserialise_length(&p, p_end, check_remaining);
+	return unserialise_length(&p, p_end);
+}
+
+
+inline unsigned long long unserialise_length_and_check(std::string_view data) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_length_and_check(&p, p_end);
 }
 
 

@@ -39,20 +39,57 @@ constexpr int max_length_size = sizeof(unsigned long long) * 8 / 7;
 std::string
 serialise_length(unsigned long long len)
 {
-	return encode_length(len);
+	char result[12];
+	char* end = result;
+	unsigned char b = static_cast<unsigned char>(len);
+	if (len >= 255) {
+		b = '\xff';
+		len -= 255;
+		do {
+			*end++ = b;
+			b = static_cast<unsigned char>(len & 0x7f);
+			len >>= 7;
+		} while (len);
+		b |= static_cast<unsigned char>(0x80);
+	}
+	*end++ = b;
+	return std::string(result, end);
 }
 
 
 unsigned long long
-unserialise_length(const char** p, const char* end, bool check_remaining)
+unserialise_length(const char** p, const char* end)
 {
-	unsigned long long decoded;
-	if (check_remaining) {
-		decode_length_and_check(p, end, decoded);
-	} else {
-		decode_length(p, end, decoded);
+	if (*p == end) {
+		THROW(SerialisationError, "Bad encoded length: no data");
 	}
-	return decoded;
+
+	unsigned long long len = static_cast<unsigned char>(*(*p)++);
+	if (len == 0xff) {
+		len = 0;
+		unsigned char ch;
+		unsigned shift = 0;
+		do {
+			if (*p == end || shift > (sizeof(unsigned long long) * 8 / 7 * 7))
+				THROW(SerialisationError, "Bad encoded length: insufficient data");
+			ch = *(*p)++;
+			len |= static_cast<unsigned long long>(ch & 0x7f) << shift;
+			shift += 7;
+		} while ((ch & 0x80) == 0);
+		len += 255;
+	}
+	return len;
+}
+
+
+unsigned long long
+unserialise_length_and_check(const char** p, const char* end)
+{
+	auto len = unserialise_length(p, end);
+	if (len > static_cast<unsigned long long>(end - *p)) {
+		THROW(SerialisationError, "Bad encoded length: length greater than data");
+	}
+	return len;
 }
 
 
@@ -126,7 +163,7 @@ unserialise_string(const char** p, const char* end) {
 	assert(ptr);
 	assert(ptr <= end);
 
-	unsigned long long length = unserialise_length(&ptr, end, true);
+	unsigned long long length = unserialise_length_and_check(&ptr, end);
 	std::string_view string(ptr, length);
 	ptr += length;
 
@@ -163,7 +200,7 @@ unserialise_length(int fd, std::string &buffer, std::size_t& off, std::size_t& a
 	auto end = start + buffer.size();
 	start += off;
 	auto pos = start;
-	auto length = unserialise_length(&pos, end, false);
+	auto length = unserialise_length(&pos, end);
 	off += (pos - start);
 
 	return length;
@@ -278,7 +315,7 @@ unserialise_string_at(size_t at, const char** p, const char* end)
 	do {
 		ptr += length;
 		if (ptr >= end) { break; }
-		length = unserialise_length(&ptr, end, true);
+		length = unserialise_length_and_check(&ptr, end);
 	} while (--at != 0u);
 
 	std::string_view string = "";

@@ -398,7 +398,7 @@ DatabaseWAL::to_string_line(std::string_view line, bool unserialised)
 			break;
 		case Type::SET_METADATA:
 			repr["op"] = "SET_METADATA";
-			size = unserialise_length(&p, p_end, true);
+			size = unserialise_length_and_check(&p, p_end);
 			repr["key"] = std::string(p, size);
 			repr["data"] = to_string_metadata(std::string_view(p + size, p_end - p - size), unserialised);
 			break;
@@ -605,7 +605,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 			}
 			break;
 		case Type::SET_METADATA:
-			size = unserialise_length(&p, p_end, true);
+			size = unserialise_length_and_check(&p, p_end);
 			_shard->set_metadata(std::string(p, size), std::string(p + size, p_end - p - size), false, wal_);
 			break;
 		case Type::ADD_SPELLING:
