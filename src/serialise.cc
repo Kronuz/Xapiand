@@ -731,7 +731,8 @@ Serialise::ranges(const std::vector<range_t>& ranges)
 std::string
 Serialise::centroids(const std::vector<Cartesian>& centroids)
 {
-	return CartesianList::serialise(centroids.begin(), centroids.end());
+	std::vector<std::string> data = { "", CartesianList::serialise(centroids.begin(), centroids.end()) };
+	return StringList::serialise(data.begin(), data.end());
 }
 
 
