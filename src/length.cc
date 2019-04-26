@@ -94,6 +94,34 @@ unserialise_length(const char** p, const char* end, bool check_remaining)
 
 
 std::string
+serialise_bool(bool value)
+{
+	return value ? "1" : "0";
+}
+
+
+bool
+unserialise_bool(const char** p, const char* end)
+{
+	const char *ptr = *p;
+	assert(ptr);
+	assert(ptr <= end);
+
+	if unlikely(ptr == end) {
+		THROW(SerialisationError, "Bad encoded boolean: no data");
+	}
+
+	if (*ptr < '0' || *ptr > '1') {
+		THROW(SerialisationError, "Bad encoded boolean: invalid");
+	}
+	bool value(*ptr++ != '0');
+
+	*p = ptr;
+	return value;
+}
+
+
+std::string
 serialise_string(std::string_view input) {
 	std::string output;
 	unsigned long long input_size = input.size();

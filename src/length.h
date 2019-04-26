@@ -54,6 +54,10 @@ std::string serialise_length(unsigned long long len);
  */
 unsigned long long unserialise_length(const char** p, const char* end, bool check_remaining=false);
 
+std::string serialise_bool(bool value);
+
+bool unserialise_bool(const char** p, const char* end);
+
 std::string serialise_string(std::string_view input);
 
 std::string_view unserialise_string(const char** p, const char* end);
@@ -173,6 +177,13 @@ inline std::string_view unserialise_string(std::string_view data) {
 	const char *p = data.data();
 	const char *p_end = p + data.size();
 	return unserialise_string(&p, p_end);
+}
+
+
+inline bool unserialise_bool(std::string_view data) {
+	const char *p = data.data();
+	const char *p_end = p + data.size();
+	return unserialise_bool(&p, p_end);
 }
 
 
