@@ -67,7 +67,7 @@ SerialiseKey::unserialise(const char** p, const char* p_end)
 std::string
 SerialiseKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_STR_CMPVALUE;
 	}
@@ -81,7 +81,7 @@ SerialiseKey::findSmallest(const Xapian::Document& doc) const
 std::string
 SerialiseKey::findBiggest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MIN_STR_CMPVALUE;
 	}
@@ -115,7 +115,7 @@ FloatKey::unserialise(const char** p, const char* p_end)
 std::string
 FloatKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -152,7 +152,7 @@ FloatKey::findSmallest(const Xapian::Document& doc) const
 std::string
 FloatKey::findBiggest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -202,7 +202,7 @@ IntegerKey::unserialise(const char** p, const char* p_end)
 std::string
 IntegerKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -239,7 +239,7 @@ IntegerKey::findSmallest(const Xapian::Document& doc) const
 std::string
 IntegerKey::findBiggest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -289,7 +289,7 @@ PositiveKey::unserialise(const char** p, const char* p_end)
 std::string
 PositiveKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -327,7 +327,7 @@ PositiveKey::findSmallest(const Xapian::Document& doc) const
 std::string
 PositiveKey::findBiggest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -378,7 +378,7 @@ DateKey::unserialise(const char** p, const char* p_end)
 std::string
 DateKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -415,7 +415,7 @@ DateKey::findSmallest(const Xapian::Document& doc) const
 std::string
 DateKey::findBiggest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -463,7 +463,7 @@ BoolKey::unserialise(const char** p, const char* p_end)
 std::string
 BoolKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
@@ -480,7 +480,7 @@ BoolKey::findSmallest(const Xapian::Document& doc) const
 std::string
 BoolKey::findBiggest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MIN_CMPVALUE;
 	}
@@ -517,12 +517,12 @@ GeoKey::unserialise(const char** p, const char* p_end)
 std::string
 GeoKey::findSmallest(const Xapian::Document& doc) const
 {
-	auto multiValues = doc.get_value(_slot);
+	const auto multiValues = doc.get_value(_slot);
 	if (multiValues.empty()) {
 		return MAX_CMPVALUE;
 	}
 
-	auto centroids = Unserialise::centroids(std::move(multiValues));
+	auto centroids = Unserialise::centroids(multiValues);
 
 	if (centroids.empty()) {
 		return SERIALISED_M_PI;
@@ -550,7 +550,7 @@ GeoKey::findBiggest(const Xapian::Document& doc) const
 		return MIN_CMPVALUE;
 	}
 
-	auto centroids = Unserialise::centroids(std::move(multiValues));
+	auto centroids = Unserialise::centroids(multiValues);
 
 	if (centroids.empty()) {
 		return SERIALISED_ZERO;
