@@ -202,6 +202,9 @@ namespace Serialise {
 	// Serialise a vector of ranges generates by GeoSpatial.
 	std::string ranges(const std::vector<range_t>& ranges);
 
+	// Serialise a vector of centroids generates by GeoSpatial.
+	std::string centroids(const std::vector<Cartesian>& centroids);
+
 	// Serialise a vector of ranges hash.
 	std::string ranges_hash(const std::vector<range_t>& ranges);
 
