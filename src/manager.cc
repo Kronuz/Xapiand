@@ -55,7 +55,7 @@
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
 #include "database/pool.h"                       // for DatabasePool
 #include "database/schemas_lru.h"                // for SchemasLRU
-#include "database/utils.h"                      // for RESERVED_TYPE
+#include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
 #include "error.hh"                              // for error:name, error::description
@@ -1835,39 +1835,45 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 
 	Endpoints endpoints;
 
-	// Shard endpoints (those with /.__) are already resolved.
-	auto pos = endpoint.path.find("/.__");
-	if (pos != std::string_view::npos) {
-		endpoints.add(endpoint);
-		return endpoints;
+	auto unsharded = unsharded_path(endpoint.path);
+	std::string unsharded_endpoint_path;
+	if (unsharded.second) {
+		unsharded_endpoint_path = std::string(unsharded.first);
 	}
+	auto& endpoint_path = unsharded.second ? unsharded_endpoint_path : endpoint.path;
 
-	auto nodes = resolve_index_nodes_impl(endpoint.path, writable, settings);
-	int n_shards = endpoint.path == ".xapiand/indices"
+	auto nodes = resolve_index_nodes_impl(endpoint_path, writable, settings);
+
+	int n_shards = endpoint_path == ".xapiand/indices"
 		? 0  // unknown number of shards for .xapiand/indices, always use .__ notation
 		: nodes.size();
 	size_t shard_num = 0;
 	for (const auto& shard_nodes : nodes) {
-		auto path = n_shards == 1 ? endpoint.path : string::format("{}/.__{}", endpoint.path, ++shard_num);
-		Endpoint node_endpoint;
-		for (const auto& node : shard_nodes) {
-			node_endpoint = Endpoint{path, node};
-			if (writable) {
-				L_MANAGER("Writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+		auto path = n_shards == 1 ? endpoint_path : string::format("{}/.__{}", endpoint_path, ++shard_num);
+		if (!unsharded.second || path == endpoint.path) {
+			Endpoint node_endpoint;
+			for (const auto& node : shard_nodes) {
+				node_endpoint = Endpoint{path, node};
+				if (writable) {
+					L_MANAGER("Writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+					break;
+				} else {
+					if (Node::is_active(node)) {
+						L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+						break;
+					}
+					if (primary) {
+						L_MANAGER("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+						break;
+					}
+					L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+				}
+			}
+			endpoints.add(node_endpoint);
+			if (unsharded.second) {
 				break;
-			} else {
-				if (Node::is_active(node)) {
-					L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-					break;
-				}
-				if (primary) {
-					L_MANAGER("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
-					break;
-				}
-				L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 			}
 		}
-		endpoints.add(node_endpoint);
 	}
 	return endpoints;
 }
