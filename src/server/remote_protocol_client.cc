@@ -45,10 +45,10 @@
 #include "utype.hh"                           // for toUType
 #include "multivalue/geospatialrange.h"       // for GeoSpatialRange
 #include "multivalue/range.h"                 // for MultipleValueRange, MultipleValueGE, MultipleValueLE
+#include "multivalue/keymaker.h"              // for Multi_MultiValueKeyMaker
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
 #include "xapian/common/serialise-double.h"   // for unserialise_double
 #include "xapian/net/serialise-error.h"       // for serialise_error
-
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
 // #undef L_CALL
@@ -651,6 +651,7 @@ RemoteProtocolClient::init_msg_query()
 	_msg_query_reg.register_posting_source(MultipleValueGE{});
 	_msg_query_reg.register_posting_source(MultipleValueLE{});
 	_msg_query_reg.register_match_spy(AggregationMatchSpy{});
+	_msg_query_reg.register_key_maker(Multi_MultiValueKeyMaker{});
 }
 
 
@@ -783,22 +784,54 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	p += len;
 
 	////////////////////////////////////////////////////////////////////////////
-	// Unserialise any MatchSpy objects.
+	// Unserialise any MatchSpy or KeyMaker objects.
 	while (p != p_end) {
 		len = unserialise_length(&p, p_end, true);
-		std::string spytype(p, len);
-		const Xapian::MatchSpy * spyclass = _msg_query_reg.get_match_spy(spytype);
-		if (spyclass == nullptr) {
-			THROW(InvalidArgumentError, "Match spy " + spytype + " not registered");
+		std::string_view classtype(p, len);
+		if (len < 8) {
+			THROW(InvalidArgumentError, "Class type {} is invalid", classtype);
 		}
+		std::string_view type(p + len - 8, 8);
 		p += len;
 
 		len = unserialise_length(&p, p_end, true);
-		Xapian::MatchSpy *spy = spyclass->unserialise(std::string(p, len), _msg_query_reg);
-		_msg_query_matchspies.push_back(spy);
-		_msg_query_enquire->add_matchspy(spy->release());
+		std::string_view serialised(p, len);
 		p += len;
+
+		if (type == "KeyMaker") {
+			const Xapian::KeyMaker * sorterclass = _msg_query_reg.get_key_maker(std::string(classtype));
+			if (sorterclass == nullptr) {
+				THROW(InvalidArgumentError, "Key maker {} not registered", classtype);
+			}
+			Xapian::KeyMaker * sorter = sorterclass->unserialise(std::string(serialised), _msg_query_reg);
+			switch (sort_by) {
+				case REL:
+					break;
+				case VAL:
+					_msg_query_enquire->set_sort_by_key(sorter->release(), sort_value_forward);
+					break;
+				case VAL_REL:
+					_msg_query_enquire->set_sort_by_key_then_relevance(sorter->release(), sort_value_forward);
+					break;
+				case REL_VAL:
+					_msg_query_enquire->set_sort_by_relevance_then_key(sorter->release(), sort_value_forward);
+					break;
+				case DOCID:
+					break;
+			}
+		} else if (type == "MatchSpy") {
+			const Xapian::MatchSpy * spyclass = _msg_query_reg.get_match_spy(std::string(classtype));
+			if (spyclass == nullptr) {
+				THROW(InvalidArgumentError, "Match spy {} not registered", classtype);
+			}
+			Xapian::MatchSpy * spy = spyclass->unserialise(std::string(serialised), _msg_query_reg);
+			_msg_query_matchspies.push_back(spy);
+			_msg_query_enquire->add_matchspy(spy->release());
+		} else {
+			THROW(InvalidArgumentError, "Class type {} is invalid", classtype);
+		}
 	}
+
 
 	////////////////////////////////////////////////////////////////////////////
 	_msg_query_enquire->prepare_mset(&rset, nullptr);
