@@ -648,6 +648,7 @@ RemoteDatabase::set_query(const std::string& query_id,
 			  const Xapian::Weight& wtscheme,
 			  const Xapian::RSet &omrset,
 			  const vector<opt_ptr_spy>& matchspies,
+			  const Xapian::KeyMaker* sorter,
 			  bool full_db_has_positions) const
 {
     string message;
@@ -675,6 +676,15 @@ RemoteDatabase::set_query(const std::string& query_id,
     pack_string(message, wtscheme.serialise());
 
     pack_string(message, serialise_rset(omrset));
+
+    if (sorter != NULL) {
+	const string& name = sorter->name();
+	if (name.empty()) {
+	    throw Xapian::UnimplementedError("KeyMaker subclass not suitable for use with remote searches - name() method returned empty string");
+	}
+	pack_string(message, name);
+	pack_string(message, sorter->serialise());
+    }
 
     for (auto i : matchspies) {
 	const string& name = i->name();

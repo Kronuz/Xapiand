@@ -188,8 +188,8 @@ Matcher::prepare_mset(const std::string& query_id_,
 		      const Xapian::RSet* rset,
 		      Xapian::Weight::Internal& stats,
 		      const Xapian::Weight& wtscheme,
-		      bool have_sorter,
 		      bool have_mdecider,
+		      const Xapian::KeyMaker* sorter,
 		      Xapian::valueno collapse_key,
 		      Xapian::doccount collapse_max,
 		      int percent_threshold,
@@ -228,10 +228,6 @@ Matcher::prepare_mset(const std::string& query_id_,
 #ifdef XAPIAN_HAS_REMOTE_BACKEND
 	if (subdb->get_backend_info(NULL) == BACKEND_REMOTE) {
 	    auto as_rem = static_cast<const RemoteDatabase*>(subdb);
-	    if (have_sorter) {
-		unimplemented("Xapian::KeyMaker not supported by the remote "
-			      "backend");
-	    }
 	    if (have_mdecider) {
 		unimplemented("Xapian::MatchDecider not supported by the "
 			      "remote backend");
@@ -244,15 +240,17 @@ Matcher::prepare_mset(const std::string& query_id_,
 			      n_shards == 1 ? percent_threshold : 0,
 			      weight_threshold,
 			      wtscheme,
-			      subrsets[i], matchspies,
+			      subrsets[i],
+			      matchspies,
+			      sorter,
 			      full_db_has_positions);
 	    remotes.emplace_back(new RemoteSubMatch(as_rem, i));
 	    continue;
 	}
 #else
 	// Avoid unused parameter warnings.
-	(void)have_sorter;
 	(void)have_mdecider;
+	(void)sorter;
 	(void)collapse_key;
 	(void)collapse_max;
 	(void)percent_threshold;
