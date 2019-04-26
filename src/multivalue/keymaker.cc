@@ -74,7 +74,7 @@ SerialiseKey::findSmallest(const Xapian::Document& doc) const
 
 	StringList values(multiValues);
 
-	return values.front();
+	return std::string(values.front());
 }
 
 
@@ -88,7 +88,7 @@ SerialiseKey::findBiggest(const Xapian::Document& doc) const
 
 	StringList values(multiValues);
 
-	return values.back();
+	return std::string(values.back());
 }
 
 

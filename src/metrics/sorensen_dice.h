@@ -33,23 +33,23 @@
  * Token-based metric.
  */
 class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
-	std::set<std::string> _str_bigrams;
+	std::set<std::string_view> _str_bigrams;
 
 	friend class StringMetric<Sorensen_Dice>;
 
-	std::set<std::string> get_bigrams(const std::string& str) const {
+	std::set<std::string_view> get_bigrams(std::string_view str) const {
 		// Extract bigrams from str
-		const size_t num_pairs = str.length() - 1;
-		std::set<std::string> str_bigrams;
+		const size_t num_pairs = str.size() - 1;
+		std::set<std::string_view> str_bigrams;
 		for (size_t i = 0; i < num_pairs; ++i) {
 			str_bigrams.insert(str.substr(i, 2));
 		}
 		return str_bigrams;
 	}
 
-	double _similarity(const std::string& str1, const std::string& str2) const {
+	double _similarity(std::string_view str1, std::string_view str2) const {
 		// Base case: if some string does not have bigrams.
-		if (str1.length() < 2 || str2.length() < 2) {
+		if (str1.size() < 2 || str2.size() < 2) {
 			return 0;
 		}
 
@@ -68,9 +68,9 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 		return (2.0 * c.count) / (str1_bigrams.size() + str2_bigrams.size());
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		// Base case: if _str_bigrams or str2 does not have bigrams.
-		if (_str_bigrams.empty() || str2.length() < 2) {
+		if (_str_bigrams.empty() || str2.size() < 2) {
 			return 0.0;
 		}
 
@@ -91,11 +91,11 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 	 * the property of triangle inequality.
 	 */
 
-	double _distance(const std::string& str1, const std::string& str2) const {
+	double _distance(std::string_view str1, std::string_view str2) const {
 		return 1.0 - _similarity(str1, str2);
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return 1.0 - _similarity(str2);
 	}
 
@@ -119,18 +119,11 @@ public:
 	std::string serialise() const override {
 		std::string serialised;
 		serialised += StringMetric<Sorensen_Dice>::serialise();
-		serialised += serialise_length(_str_bigrams.size());
-		for (const auto& str : _str_bigrams) {
-			serialised += serialise_string(str);
-		}
 		return serialised;
 	}
 
 	void unserialise(const char** p, const char* p_end) override {
 		StringMetric<Sorensen_Dice>::unserialise(p, p_end);
-		size_t size = unserialise_length(p, p_end);
-		while (size--) {
-			_str_bigrams.insert(std::string(unserialise_string(p, p_end)));
-		}
+		_str_bigrams = get_bigrams(_str);
 	}
 };

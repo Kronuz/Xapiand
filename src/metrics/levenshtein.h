@@ -37,8 +37,8 @@ class Levenshtein : public StringMetric<Levenshtein> {
 
 	friend class StringMetric<Levenshtein>;
 
-	double _distance(const std::string& str1, const std::string& str2) const {
-		const auto len1 = str1.length(), len2 = str2.length();
+	double _distance(std::string_view str1, std::string_view str2) const {
+		const auto len1 = str1.size(), len2 = str2.size();
 		std::vector<size_t> col(len2 + 1), prev_col(len2 + 1);
 
 		for (size_t i = 0; i <= len2; ++i) {
@@ -56,15 +56,15 @@ class Levenshtein : public StringMetric<Levenshtein> {
 		return (double)prev_col[len2] / (_maxCost * std::max(len1, len2));
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return _distance(_str, str2);
 	}
 
-	double _similarity(const std::string& str1, const std::string& str2) const {
+	double _similarity(std::string_view str1, std::string_view str2) const {
 		return 1.0 - _distance(str1, str2);
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		return 1.0 - _distance(_str, str2);
 	}
 

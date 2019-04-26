@@ -40,15 +40,15 @@ class Jaro_Winkler : public Jaro {
 
 	friend Jaro;
 
-	size_t len_common_prefix(const std::string& str1, const std::string& str2) const {
-		if (str1.length() > str2.length()) {
+	size_t len_common_prefix(std::string_view str1, std::string_view str2) const {
+		if (str1.size() > str2.size()) {
 			return std::min(MAX_PREFIX_LEN, (size_t)std::distance(str2.begin(), std::mismatch(str2.begin(), str2.end(), str1.begin()).first));
 		} else {
 			return std::min(MAX_PREFIX_LEN, (size_t)std::distance(str1.begin(), std::mismatch(str1.begin(), str1.end(), str2.begin()).first));
 		}
 	}
 
-	double _similarity(const std::string& str1, const std::string& str2) const {
+	double _similarity(std::string_view str1, std::string_view str2) const {
 		const double jd = Jaro::_similarity(str1, str2);
 
 		if (jd < _bt) {
@@ -58,15 +58,15 @@ class Jaro_Winkler : public Jaro {
 		return jd + (len_common_prefix(str1, str2) * _p * (1.0 - jd));
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		return _similarity(_str, str2);
 	}
 
-	double _distance(const std::string& str1, const std::string& str2) const {
+	double _distance(std::string_view str1, std::string_view str2) const {
 		return 1.0 - _similarity(str1, str2);
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return 1.0 - _similarity(_str, str2);
 	}
 

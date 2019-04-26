@@ -38,7 +38,7 @@ class Jaccard : public StringMetric<Jaccard> {
 
 	friend class StringMetric<Jaccard>;
 
-	double _similarity(const std::string& str1, const std::string& str2) const {
+	double _similarity(std::string_view str1, std::string_view str2) const {
 		const std::set<char> set_str1(str1.begin(), str1.end());
 		const std::set<char> set_str2(str2.begin(), str2.end());
 
@@ -51,7 +51,7 @@ class Jaccard : public StringMetric<Jaccard> {
 		return c.count / (double)(set_str1.size() + set_str2.size() - c.count);
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		const std::set<char> set_str2(str2.begin(), str2.end());
 
 		// Find the count intersection between the two usets.
@@ -63,11 +63,11 @@ class Jaccard : public StringMetric<Jaccard> {
 		return c.count / (double)(_set_str.size() + set_str2.size() - c.count);
 	}
 
-	double _distance(const std::string& str1, const std::string& str2) const {
+	double _distance(std::string_view str1, std::string_view str2) const {
 		return 1.0 - _similarity(str1, str2);
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return 1.0 - _similarity(str2);
 	}
 
@@ -91,18 +91,11 @@ public:
 	std::string serialise() const override {
 		std::string serialised;
 		serialised += StringMetric<Jaccard>::serialise();
-		serialised += serialise_length(_set_str.size());
-		for (auto ch : _set_str) {
-			serialised += serialise_char(ch);
-		}
 		return serialised;
 	}
 
 	void unserialise(const char** p, const char* p_end) override {
 		StringMetric<Jaccard>::unserialise(p, p_end);
-		size_t size = unserialise_length(p, p_end);
-		while (size--) {
-			_set_str.insert(unserialise_char(p, p_end));
-		}
+		_set_str = std::set<char>(_str.begin(), _str.end());
 	}
 };

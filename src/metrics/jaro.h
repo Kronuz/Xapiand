@@ -33,8 +33,8 @@
 class Jaro : public StringMetric<Jaro> {
 	friend class StringMetric<Jaro>;
 
-	std::vector<char> get_common_characters(const std::string& str1, const std::string& str2, size_t max_separation) const {
-		const auto l_str1 = str1.length();
+	std::vector<char> get_common_characters(std::string_view str1, std::string_view str2, size_t max_separation) const {
+		const auto l_str1 = str1.size();
 		std::vector<char> common_chars;
 		common_chars.reserve(l_str1);
 		std::vector<bool> proc_str1(l_str1, false);
@@ -57,8 +57,8 @@ class Jaro : public StringMetric<Jaro> {
 	}
 
 protected:
-	double _similarity(const std::string& str1, const std::string& str2) const {
-		const auto l_str1 = str1.length(), l_str2 = str2.length();
+	double _similarity(std::string_view str1, std::string_view str2) const {
+		const auto l_str1 = str1.size(), l_str2 = str2.size();
 
 		const auto max_separation = std::max((size_t)0, std::max(l_str1, l_str2) / 2 - 1);
 
@@ -90,15 +90,15 @@ protected:
 		return (((double)m1 / l_str1) + ((double)m1 / l_str2) + ((m1 - t / 2.0) / m1)) / 3.0;
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		return _similarity(_str, str2);
 	}
 
-	double _distance(const std::string& str1, const std::string& str2) const {
+	double _distance(std::string_view str1, std::string_view str2) const {
 		return 1.0 - _similarity(str1, str2);
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return 1.0 - _similarity(_str, str2);
 	}
 

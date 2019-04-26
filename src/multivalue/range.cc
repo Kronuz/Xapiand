@@ -328,7 +328,8 @@ MultipleValueRange::MultipleValueRange(Xapian::valueno slot_, T&& start_, T&& en
 bool
 MultipleValueRange::insideRange() const noexcept
 {
-	StringList data(get_value());
+	const auto value = get_value();
+	StringList data(value);
 
 	if (data.empty() || end < data.front() || start > data.back()) {
 		return false;
@@ -423,7 +424,7 @@ MultipleValueRange::unserialise_with_registry(const std::string& serialised, con
 		}
 
 		auto it = data.begin();
-		return new MultipleValueRange(unserialise_length(*it), std::move(*(++it)), std::move(*(++it)));
+		return new MultipleValueRange(unserialise_length(*it), std::string(*(++it)), std::string(*(++it)));
 	} catch (const SerialisationError& er) {
 		throw Xapian::NetworkError("Bad serialised MultipleValueRange");
 	}
@@ -459,7 +460,8 @@ MultipleValueGE::MultipleValueGE(Xapian::valueno slot_, T&& start_)
 bool
 MultipleValueGE::insideRange() const noexcept
 {
-	StringList data(get_value());
+	const auto value = get_value();
+	StringList data(value);
 
 	if (data.empty()) {
 		return false;
@@ -548,7 +550,7 @@ MultipleValueGE::unserialise_with_registry(const std::string& serialised, const 
 		}
 
 		auto it = data.begin();
-		return new MultipleValueGE(unserialise_length(*it), std::move(*(++it)));
+		return new MultipleValueGE(unserialise_length(*it), std::string(*(++it)));
 	} catch (const SerialisationError& er) {
 		throw Xapian::NetworkError("Bad serialised MultipleValueGE");
 	}
@@ -583,7 +585,8 @@ MultipleValueLE::MultipleValueLE(Xapian::valueno slot_, T&& end_)
 bool
 MultipleValueLE::insideRange() const noexcept
 {
-	StringList data(get_value());
+	const auto value = get_value();
+	StringList data(value);
 
 	if (data.empty()) {
 		return false;
@@ -672,7 +675,7 @@ MultipleValueLE::unserialise_with_registry(const std::string& serialised, const 
 		}
 
 		auto it = data.begin();
-		return new MultipleValueLE(unserialise_length(*it), std::move(*(++it)));
+		return new MultipleValueLE(unserialise_length(*it), std::string(*(++it)));
 	} catch (const SerialisationError& er) {
 		throw Xapian::NetworkError("Bad serialised MultipleValueLE");
 	}

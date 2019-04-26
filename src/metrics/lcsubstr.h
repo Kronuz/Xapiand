@@ -34,8 +34,8 @@ class LCSubstr : public StringMetric<LCSubstr> {
 
 	friend class StringMetric<LCSubstr>;
 
-	size_t lcs(const std::string& str1, const std::string& str2) const {
-		const auto m = str1.length(), n = str2.length();
+	size_t lcs(std::string_view str1, std::string_view str2) const {
+		const auto m = str1.size(), n = str2.size();
 
 		std::vector<size_t> v1(n + 1);
 		std::vector<size_t> v2(n + 1);
@@ -62,19 +62,19 @@ class LCSubstr : public StringMetric<LCSubstr> {
 		return res;
 	}
 
-	double _distance(const std::string& str1, const std::string& str2) const {
+	double _distance(std::string_view str1, std::string_view str2) const {
 		return 1.0 - _similarity(str1, str2);
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return _distance(_str, str2);
 	}
 
-	double _similarity(const std::string& str1, const std::string& str2) const {
-		return (double)lcs(str1, str2) / std::max(str1.length(), str2.length());
+	double _similarity(std::string_view str1, std::string_view str2) const {
+		return (double)lcs(str1, str2) / std::max(str1.size(), str2.size());
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		return _similarity(_str, str2);
 	}
 

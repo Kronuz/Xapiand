@@ -55,7 +55,8 @@ GeoSpatialRange::getQuery(const required_spc_t& field_spc, const MsgPack& obj)
 double
 GeoSpatialRange::calculateWeight() const
 {
-	const auto centroids = Unserialise::centroids(get_value());
+	const auto value = get_value();
+	const auto centroids = Unserialise::centroids(value);
 
 	if (_centroids.empty()) {
 		return geo_weight_from_angle(M_PI);
@@ -77,7 +78,8 @@ GeoSpatialRange::calculateWeight() const
 bool
 GeoSpatialRange::insideRanges() const
 {
-	const auto ranges = Unserialise::ranges(get_value());
+	const auto value = get_value();
+	const auto ranges = Unserialise::ranges(value);
 
 	if (ranges.empty() || ranges.front().start > _ranges.back().end || ranges.back().end < _ranges.front().start) {
 		return false;

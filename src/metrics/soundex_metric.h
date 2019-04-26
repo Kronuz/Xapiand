@@ -37,19 +37,19 @@ template <typename SoundexLan, typename Metric>
 class SoundexMetric : public Metric {
 	SoundexLan _soundex;
 
-	double _distance(const std::string& str1, const std::string& str2) const {
+	double _distance(std::string_view str1, std::string_view str2) const {
 		return Metric::distance(_soundex.encode(str1), _soundex.encode(str2));
 	}
 
-	double _distance(const std::string& str2) const {
+	double _distance(std::string_view str2) const {
 		return Metric::distance(_soundex.encode(str2));
 	}
 
-	double _similarity(const std::string& str1, const std::string& str2) const {
+	double _similarity(std::string_view str1, std::string_view str2) const {
 		return Metric::similarity(_soundex.encode(str1), _soundex.encode(str2));
 	}
 
-	double _similarity(const std::string& str2) const {
+	double _similarity(std::string_view str2) const {
 		return Metric::similarity(_soundex.encode(str2));
 	}
 
