@@ -209,8 +209,12 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 		return str;
 	}
 
+	std::string_view _name() const noexcept {
+		return "SoundexSpanish";
+	}
+
 	std::string _description() const noexcept {
-		return std::string("Soundex for Spanish Language");
+		return "Soundex for Spanish Language";
 	}
 
 public:

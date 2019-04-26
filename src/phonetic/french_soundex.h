@@ -179,8 +179,12 @@ class SoundexFrench : public Soundex<SoundexFrench> {
 		return str;
 	}
 
+	std::string_view _name() const noexcept {
+		return "SoundexFrench";
+	}
+
 	std::string _description() const noexcept {
-		return std::string("Soundex for French Language");
+		return "Soundex for French Language";
 	}
 
 public:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,12 @@
 
 #pragma once
 
-#include <string>                // for std::string
-#include <utility>               // for std::forward
+#include <string>                                 // for std::string
+#include <utility>                                // for std::forward
 
-#include "string.hh"             // for string::upper
+#include "length.h"                               // for serialise_length, unserialise_length
+#include "string.hh"                              // for string::upper
+#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
 /*
@@ -112,10 +114,26 @@ public:
 		);
 	}
 
+	std::string_view name() const noexcept {
+		return static_cast<const Impl*>(this)->_name();
+	}
+
 	std::string description() const noexcept {
 		auto desc = static_cast<const Impl*>(this)->_description();
 		desc.append(_icase ? " ignore case" : " case sensitive");
 		return desc;
+	}
+
+	virtual std::string serialise() const {
+		std::string serialised;
+		serialised += serialise_bool(_icase);
+		serialised += serialise_string(_str);
+		return serialised;
+	}
+
+	virtual void unserialise(const char** p, const char* p_end) {
+		_icase = unserialise_bool(p, p_end);
+		_str = unserialise_string(p, p_end);
 	}
 };
 

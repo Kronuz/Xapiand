@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,6 +68,10 @@ class Levenshtein : public StringMetric<Levenshtein> {
 		return 1.0 - _distance(_str, str2);
 	}
 
+	std::string_view _name() const noexcept {
+		return "Levenshtein";
+	}
+
 	std::string _description() const noexcept {
 		return "Levenshtein";
 	}
@@ -85,4 +89,21 @@ public:
 		  _subst_cost(subst_cost),
 		  _ins_del_cost(ins_del_cost),
 		  _maxCost(std::max(_subst_cost, _ins_del_cost)) { }
+
+	std::string serialise() const override {
+		std::string serialised;
+		serialised += StringMetric<Levenshtein>::serialise();
+		serialised += serialise_length(_subst_cost);
+		serialised += serialise_length(_ins_del_cost);
+		serialised += serialise_length(_maxCost);
+
+		return serialised;
+	}
+
+	void unserialise(const char** p, const char* p_end) override {
+		StringMetric<Levenshtein>::unserialise(p, p_end);
+		_subst_cost = unserialise_length(p, p_end);
+		_ins_del_cost = unserialise_length(p, p_end);
+		_maxCost = unserialise_length(p, p_end);
+	}
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,7 +32,6 @@
  */
 class Jaro : public StringMetric<Jaro> {
 	friend class StringMetric<Jaro>;
-	friend class Jaro_Winkler;
 
 	std::vector<char> get_common_characters(const std::string& str1, const std::string& str2, size_t max_separation) const {
 		const auto l_str1 = str1.length();
@@ -57,6 +56,7 @@ class Jaro : public StringMetric<Jaro> {
 		return common_chars;
 	}
 
+protected:
 	double _similarity(const std::string& str1, const std::string& str2) const {
 		const auto l_str1 = str1.length(), l_str2 = str2.length();
 
@@ -100,6 +100,10 @@ class Jaro : public StringMetric<Jaro> {
 
 	double _distance(const std::string& str2) const {
 		return 1.0 - _similarity(_str, str2);
+	}
+
+	std::string_view _name() const noexcept {
+		return "Jaro";
 	}
 
 	std::string _description() const noexcept {

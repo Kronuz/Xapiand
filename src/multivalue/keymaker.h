@@ -22,24 +22,25 @@
 
 #pragma once
 
-#include <cfloat>                         // for DBL_MAX
-#include <cmath>                          // for fabs
-#include <cstdlib>                        // for llabs
-#include <memory>                         // for default_delete, unique_ptr
-#include <stdexcept>                      // for out_of_range
-#include <string>                         // for string, operator==, stod
-#include <sys/types.h>                    // for int64_t, uint64_t
+#include <cfloat>                                 // for DBL_MAX
+#include <cmath>                                  // for fabs
+#include <cstdlib>                                // for llabs
+#include <memory>                                 // for default_delete, unique_ptr
+#include <stdexcept>                              // for out_of_range
+#include <string>                                 // for string, operator==, stod
+#include <sys/types.h>                            // for int64_t, uint64_t
+#include <vector>                                 // for std::vector
 
-#include "database/schema.h"              // for required_spc_t, required_sp...
-#include "database/utils.h"               // for query_field_t
-#include "datetime.h"                     // for timestamp
-#include "hashes.hh"                      // for fnv1ah32
-#include "phf.hh"                         // for phf
-#include "phonetic.h"                     // for SoundexEnglish, SoundexFrench...
-#include "serialise_list.h"               // for StringList, ...
-#include "strict_stox.hh"                 // for strict_stoull
-#include "string_metric.h"                // for Jaccard, Jaro, Jaro_Winkler...
-#include "xapian.h"                       // for valueno, KeyMaker
+#include "database/schema.h"                      // for required_spc_t, required_sp...
+#include "database/utils.h"                       // for query_field_t
+#include "datetime.h"                             // for timestamp
+#include "hashes.hh"                              // for fnv1ah32
+#include "phf.hh"                                 // for phf
+#include "phonetic.h"                             // for SoundexEnglish, SoundexFrench...
+#include "serialise_list.h"                       // for StringList, ...
+#include "strict_stox.hh"                         // for strict_stoull
+#include "string_metric.h"                        // for Jaccard, Jaro, Jaro_Winkler...
+#include "xapian.h"                               // for valueno, KeyMaker
 
 
 const std::string MAX_CMPVALUE(Serialise::floating(DBL_MAX));
@@ -66,11 +67,18 @@ protected:
 	bool _reverse;
 
 public:
+	BaseKey() = default;
+
 	BaseKey(Xapian::valueno slot, bool reverse)
 		: _slot(slot),
 		  _reverse(reverse) { }
 
 	virtual ~BaseKey() = default;
+
+	virtual std::string_view name() const noexcept = 0;
+	virtual std::unique_ptr<BaseKey> clone() const = 0;
+	virtual std::string serialise() const;
+	virtual void unserialise(const char** p, const char* p_end);
 
 	bool get_reverse() const noexcept {
 		return _reverse;
@@ -84,8 +92,21 @@ public:
 // Class for creating key from serialised value.
 class SerialiseKey : public BaseKey {
 public:
+	SerialiseKey() = default;
+
 	SerialiseKey(Xapian::valueno slot, bool reverse)
 		: BaseKey(slot, reverse) { }
+
+	std::string_view name() const noexcept override {
+		return "SerialiseKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<SerialiseKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -98,10 +119,23 @@ class FloatKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
+	FloatKey() = default;
+
 	FloatKey(Xapian::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::floating(_ref_val)) { }
+
+	std::string_view name() const noexcept override {
+		return "FloatKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<FloatKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -114,10 +148,23 @@ class IntegerKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
+	IntegerKey() = default;
+
 	IntegerKey(Xapian::valueno slot, bool reverse, int64_t val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::integer(_ref_val)) { }
+
+	std::string_view name() const noexcept override {
+		return "IntegerKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<IntegerKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -130,10 +177,23 @@ class PositiveKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
+	PositiveKey() = default;
+
 	PositiveKey(Xapian::valueno slot, bool reverse, uint64_t val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::positive(_ref_val)) { }
+
+	std::string_view name() const noexcept override {
+		return "PositiveKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<PositiveKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -146,10 +206,23 @@ class DateKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
+	DateKey() = default;
+
 	DateKey(Xapian::valueno slot, bool reverse, double val)
 		: BaseKey(slot, reverse),
 		  _ref_val(val),
 		  _ser_ref_val(Serialise::timestamp(_ref_val)) { }
+
+	std::string_view name() const noexcept override {
+		return "DateKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<DateKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -161,9 +234,22 @@ class BoolKey : public BaseKey {
 	std::string _ser_ref_val;
 
 public:
+	BoolKey() = default;
+
 	BoolKey(Xapian::valueno slot, bool reverse, bool val)
 		: BaseKey(slot, reverse),
 		  _ser_ref_val(Serialise::boolean(val)) { }
+
+	std::string_view name() const noexcept override {
+		return "BoolKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<BoolKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -176,9 +262,27 @@ class StringKey : public BaseKey {
 	StringMetric _metric;
 
 public:
+	StringKey() = default;
+
 	StringKey(Xapian::valueno slot, bool reverse, std::string_view value, bool icase)
 		: BaseKey(slot, reverse),
 		  _metric(value, icase) { }
+
+	std::string_view name() const noexcept override {
+		return _metric.name();
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<StringKey<StringMetric>>(*this);
+	}
+
+	std::string serialise() const override {
+		return _metric.serialise();
+	}
+
+	void unserialise(const char** p, const char* p_end) override {
+		_metric.unserialise(p, p_end);
+	}
 
 	std::string findSmallest(const Xapian::Document& doc) const override {
 		const auto multiValues = doc.get_value(_slot);
@@ -228,10 +332,23 @@ class GeoKey : public BaseKey {
 	std::vector<Cartesian> _centroids;
 
 public:
+	GeoKey() = default;
+
 	template <typename T, typename = std::enable_if_t<std::is_same<std::vector<Cartesian>, std::decay_t<T>>::value>>
 	GeoKey(Xapian::valueno slot, bool reverse, T&& centroids)
 		: BaseKey(slot, reverse),
 		  _centroids(std::forward<T>(centroids)) { }
+
+	std::string_view name() const noexcept override {
+		return "GeoKey";
+	}
+
+	std::unique_ptr<BaseKey> clone() const override {
+		return std::make_unique<GeoKey>(*this);
+	}
+
+	std::string serialise() const override;
+	void unserialise(const char** p, const char* p_end) override;
 
 	std::string findSmallest(const Xapian::Document& doc) const override;
 	std::string findBiggest(const Xapian::Document& doc) const override;
@@ -251,11 +368,10 @@ class Multi_MultiValueKeyMaker : public Xapian::KeyMaker {
 	std::vector<std::unique_ptr<BaseKey>> slots;
 
 public:
-	Multi_MultiValueKeyMaker() = default;
-
-	template <class Iterator>
-	Multi_MultiValueKeyMaker(Iterator begin, Iterator end)
-		: slots(begin, end) { }
+	virtual Multi_MultiValueKeyMaker* clone() const override;
+	virtual std::string name() const override;
+	virtual std::string serialise() const override;
+	virtual Multi_MultiValueKeyMaker* unserialise(const std::string& serialised, const Xapian::Registry& registry) const override;
 
 	virtual std::string operator()(const Xapian::Document& doc) const override;
 

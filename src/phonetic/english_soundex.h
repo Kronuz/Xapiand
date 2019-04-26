@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -175,8 +175,12 @@ class SoundexEnglish : public Soundex<SoundexEnglish> {
 		return str;
 	}
 
+	std::string_view _name() const noexcept {
+		return "SoundexEnglish";
+	}
+
 	std::string _description() const noexcept {
-		return std::string("Soundex for English Language");
+		return "Soundex for English Language";
 	}
 
 public:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,6 +68,10 @@ class LCSubsequence : public StringMetric<LCSubsequence> {
 
 	double _similarity(const std::string& str2) const {
 		return _similarity(_str, str2);
+	}
+
+	std::string_view _name() const noexcept {
+		return "LCSubsequence";
 	}
 
 	std::string _description() const noexcept {

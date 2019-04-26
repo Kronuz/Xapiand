@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -99,6 +99,10 @@ class Sorensen_Dice : public StringMetric<Sorensen_Dice> {
 		return 1.0 - _similarity(str2);
 	}
 
+	std::string_view _name() const noexcept {
+		return "Sorensen_Dice";
+	}
+
 	std::string _description() const noexcept {
 		return "Sorensen Dice";
 	}
@@ -111,4 +115,25 @@ public:
 	Sorensen_Dice(T&& str, bool icase=true)
 		: StringMetric<Sorensen_Dice>(std::forward<T>(str), icase),
 		  _str_bigrams(get_bigrams(_str)) { }
+
+	std::string serialise() const override {
+		std::string serialised;
+		serialised += StringMetric<Sorensen_Dice>::serialise();
+		serialised += serialise_length(_str_bigrams.size());
+		for (const auto& str : _str_bigrams) {
+			serialised += serialise_string(str);
+		}
+		return serialised;
+	}
+
+	void unserialise(const char** p, const char* p_end) override {
+		StringMetric<Sorensen_Dice>::unserialise(p, p_end);
+		size_t size = unserialise_length(p, p_end);
+		while (size--) {
+			if (*p == p_end) {
+				THROW(SerialisationError, "Invalid input: insufficient data");
+			}
+			_str_bigrams.insert(std::string(unserialise_string(p, p_end)));
+		}
+	}
 };

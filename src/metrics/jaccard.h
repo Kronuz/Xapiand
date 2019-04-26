@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,10 @@ class Jaccard : public StringMetric<Jaccard> {
 		return 1.0 - _similarity(str2);
 	}
 
+	std::string_view _name() const noexcept {
+		return "Jaccard";
+	}
+
 	std::string _description() const noexcept {
 		return "Jaccard";
 	}
@@ -83,4 +87,25 @@ public:
 	Jaccard(T&& str, bool icase=true)
 		: StringMetric<Jaccard>(std::forward<T>(str), icase),
 		  _set_str(_str.begin(), _str.end()) { }
+
+	std::string serialise() const override {
+		std::string serialised;
+		serialised += StringMetric<Jaccard>::serialise();
+		serialised += serialise_length(_set_str.size());
+		for (auto ch : _set_str) {
+			serialised += ch;
+		}
+		return serialised;
+	}
+
+	void unserialise(const char** p, const char* p_end) override {
+		StringMetric<Jaccard>::unserialise(p, p_end);
+		size_t size = unserialise_length(p, p_end);
+		while (size--) {
+			if (*p == p_end) {
+				THROW(SerialisationError, "Invalid input: insufficient data");
+			}
+			_set_str.insert(**p++);
+		}
+	}
 };

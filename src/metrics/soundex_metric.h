@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,31 +34,28 @@
  * Phonetic-based metric.
  */
 template <typename SoundexLan, typename Metric>
-class SoundexMetric : public StringMetric<SoundexMetric<SoundexLan, Metric>> {
+class SoundexMetric : public Metric {
 	SoundexLan _soundex;
-	Metric _metric;
-
-	friend class StringMetric<SoundexMetric<SoundexLan, Metric>>;
 
 	double _distance(const std::string& str1, const std::string& str2) const {
-		return _metric.distance(_soundex.encode(str1), _soundex.encode(str2));
+		return Metric::distance(_soundex.encode(str1), _soundex.encode(str2));
 	}
 
 	double _distance(const std::string& str2) const {
-		return _metric.distance(_soundex.encode(str2));
+		return Metric::distance(_soundex.encode(str2));
 	}
 
 	double _similarity(const std::string& str1, const std::string& str2) const {
-		return _metric.similarity(_soundex.encode(str1), _soundex.encode(str2));
+		return Metric::similarity(_soundex.encode(str1), _soundex.encode(str2));
 	}
 
 	double _similarity(const std::string& str2) const {
-		return _metric.similarity(_soundex.encode(str2));
+		return Metric::similarity(_soundex.encode(str2));
 	}
 
 	std::string _description() const {
 		std::string desc("SoundexMetric<");
-		desc.append(_soundex.description()).append(", ").append(_metric.description());
+		desc.append(_soundex.description()).append(", ").append(Metric::description());
 		desc.push_back('>');
 		return desc;
 	}
@@ -69,14 +66,29 @@ public:
 	 * Soundex is icase, therefore the parameter is not necessary.
 	 * Always icase=false to optimize.
 	 */
-
-	SoundexMetric(bool=false)
-		: StringMetric<SoundexMetric<SoundexLan, Metric>>(false),
-		  _metric(false) { }
+	SoundexMetric(bool = false)
+		: Metric(false) { }
 
 	template <typename T>
-	SoundexMetric(T&& str, bool=false)
-		: StringMetric<SoundexMetric<SoundexLan, Metric>>(std::forward<T>(str), false),
-		  _soundex(str),
-		  _metric(_soundex.encode(), false) { }
+	SoundexMetric(T&& str, bool = false) :
+		Metric(false),
+		_soundex(str) {
+		this->_str = _soundex.encode();
+	}
+
+	std::string serialise() const override {
+		std::string serialised;
+		serialised += Metric::serialise();
+		serialised += _soundex.serialise();
+		return serialised;
+	}
+
+	void unserialise(const char** p, const char* p_end) override {
+		Metric::unserialise(p, p_end);
+		_soundex.unserialise(p, p_end);
+	}
+
+	std::string_view name() const noexcept {
+		return _soundex.name();
+	}
 };

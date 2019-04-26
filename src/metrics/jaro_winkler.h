@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +30,7 @@
  *
  * It is a variant of the Jaro distance metric.
  */
-class Jaro_Winkler : public StringMetric<Jaro_Winkler> {
-	Jaro _jaro;
+class Jaro_Winkler : public Jaro {
 	double _p;  // Scaling factor.
 	double _bt; // Boost threshold.
 
@@ -39,7 +38,7 @@ class Jaro_Winkler : public StringMetric<Jaro_Winkler> {
 	const double MAX_P{0.25};
 	const double MAX_BT{1.0};
 
-	friend StringMetric<Jaro_Winkler>;
+	friend Jaro;
 
 	size_t len_common_prefix(const std::string& str1, const std::string& str2) const {
 		if (str1.length() > str2.length()) {
@@ -50,7 +49,7 @@ class Jaro_Winkler : public StringMetric<Jaro_Winkler> {
 	}
 
 	double _similarity(const std::string& str1, const std::string& str2) const {
-		const double jd = _jaro._similarity(str1, str2);
+		const double jd = Jaro::_similarity(str1, str2);
 
 		if (jd < _bt) {
 			return jd;
@@ -71,19 +70,23 @@ class Jaro_Winkler : public StringMetric<Jaro_Winkler> {
 		return 1.0 - _similarity(_str, str2);
 	}
 
+	std::string_view _name() const noexcept {
+		return "Jaro_Winkler";
+	}
+
 	std::string _description() const noexcept {
 		return "Jaro Winkler";
 	}
 
 public:
 	Jaro_Winkler(bool icase=true, double p=0.1, double bt=0.7)
-		: StringMetric<Jaro_Winkler>(icase),
+		: Jaro(icase),
 		  _p(p),
 		  _bt(bt) { }
 
 	template <typename T>
 	Jaro_Winkler(T&& str, bool icase=true, double p=0.1, double bt=0.7)
-		: StringMetric<Jaro_Winkler>(std::forward<T>(str), icase),
+		: Jaro(std::forward<T>(str), icase),
 		  _p(p),
 		  _bt(bt)
 	{
@@ -93,5 +96,19 @@ public:
 		if (_bt < 0.0 || _bt > MAX_BT) {
 			throw std::invalid_argument("_bt should be positive and not exceed " + std::to_string(MAX_BT));
 		}
+	}
+
+	std::string serialise() const override {
+		std::string serialised;
+		serialised += Jaro::serialise();
+		serialised += serialise_double(_p);
+		serialised += serialise_double(_bt);
+		return serialised;
+	}
+
+	void unserialise(const char** p, const char* p_end) override {
+		Jaro::unserialise(p, p_end);
+		_p = unserialise_double(p, p_end);
+		_bt = unserialise_double(p, p_end);
 	}
 };

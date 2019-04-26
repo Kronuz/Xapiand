@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,8 +22,11 @@
 
 #pragma once
 
-#include <utility>               // for std::forward
-#include <string>                // for std::string
+#include <utility>                                // for std::forward
+#include <string>                                 // for std::string
+
+#include "length.h"                               // for serialise_length, unserialise_length
+#include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
 /*
@@ -43,15 +46,28 @@ public:
 		: _code_str(std::forward<T>(code_str)) { }
 
 	template <typename T>
-	inline std::string encode(T&& str) const {
+	std::string encode(T&& str) const {
 		return static_cast<const Impl*>(this)->_encode(str);
 	}
 
-	inline std::string encode() const {
+	std::string encode() const {
 		return _code_str;
 	}
 
-	inline std::string description() const noexcept {
+	virtual std::string serialise() const {
+		std::string serialised;
+		serialised += serialise_string(_code_str);
+		return serialised;
+	}
+	virtual void unserialise(const char** p, const char* p_end) {
+		_code_str = unserialise_string(p, p_end);
+	}
+
+	std::string_view name() const noexcept {
+		return static_cast<const Impl*>(this)->_name();
+	}
+
+	std::string description() const noexcept {
 		return static_cast<const Impl*>(this)->_description();
 	}
 };
