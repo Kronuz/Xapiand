@@ -466,11 +466,11 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("BucketAggregation::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("BucketAggregation::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		while (p != p_end) {
-			auto bucket = unserialise_string(&p, p_end);
+		while (*p != p_end) {
+			auto bucket = unserialise_string(p, p_end);
 			auto it = _aggs.find(std::string(bucket));  // FIXME: This copies bucket as std::map cannot find std::string_view directly!
 			if (it == _aggs.end()) {
 				auto emplaced = _aggs.emplace(std::piecewise_construct,
@@ -500,12 +500,12 @@ public:
 					}
 				}
 			}
-			auto data = unserialise_string(&p, p_end);
+			auto data = unserialise_string(p, p_end);
 			const char* q = data.data();
 			const char* q_end = q + data.size();
-			it->second.merge_results(q, q_end);
+			it->second.merge_results(&q, q_end);
 			if (q != q_end) {
-				THROW(SerialisationError, "Junk found at end of serialised Aggregation");
+				THROW(SerialisationError, "Junk found at end of serialised Aggregation2");
 			}
 		}
 	}
@@ -1150,7 +1150,7 @@ public:
 
 	std::string serialise_results() const override;
 
-	void merge_results(const char* p, const char* p_end) override;
+	void merge_results(const char** p, const char* p_end) override;
 
 	void check_single(const Xapian::Document& doc);
 	void check_multiple(const Xapian::Document& doc);

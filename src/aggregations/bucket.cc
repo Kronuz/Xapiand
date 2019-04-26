@@ -100,9 +100,9 @@ FilterAggregation::serialise_results() const
 
 
 void
-FilterAggregation::merge_results(const char* p, const char* p_end)
+FilterAggregation::merge_results(const char** p, const char* p_end)
 {
-	L_CALL("FilterAggregation::merge_results({})", repr(std::string(p, p_end - p)));
+	L_CALL("FilterAggregation::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 	_agg.merge_results(p, p_end);
 }

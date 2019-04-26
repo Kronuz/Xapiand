@@ -48,7 +48,7 @@ public:
 	virtual MsgPack get_result() const = 0;
 
 	virtual std::string serialise_results() const = 0;
-	virtual void merge_results(const char* p, const char* end) = 0;
+	virtual void merge_results(const char** p, const char* end) = 0;
 
 	virtual BaseAggregation* get_agg(std::string_view) {
 		return nullptr;
@@ -81,7 +81,7 @@ public:
 	MsgPack get_result() const override;
 
 	std::string serialise_results() const override;
-	void merge_results(const char* p, const char* p_end) override;
+	void merge_results(const char** p, const char* p_end) override;
 
 	BaseAggregation* get_agg(std::string_view field) override;
 

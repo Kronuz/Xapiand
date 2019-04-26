@@ -239,10 +239,10 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricCount::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricCount::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		_count += unserialise_double(&p, p_end);
+		_count += unserialise_double(p, p_end);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -319,10 +319,10 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
+	void merge_results(const char** p, const char* p_end) override {
 		L_CALL("MetriSum::merge_results({})", repr(std::string_view(p, p_end - p)));
 
-		_sum += unserialise_double(&p, p_end);
+		_sum += unserialise_double(p, p_end);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -388,12 +388,12 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricAvg::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricAvg::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricSum::merge_results(p, p_end);
-		_count += unserialise_double(&p, p_end);
-		// _avg = unserialise_double(&p, p_end);  // calculated during update()
+		_count += unserialise_double(p, p_end);
+		// _avg = unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -470,10 +470,10 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricMin::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricMin::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		auto value = unserialise_double(&p, p_end);
+		auto value = unserialise_double(p, p_end);
 		if (_min > value) {
 			_min = value;
 		}
@@ -546,10 +546,10 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricMax::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricMax::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		auto value = unserialise_double(&p, p_end);
+		auto value = unserialise_double(p, p_end);
 		if (_max < value) {
 			_max = value;
 		}
@@ -619,12 +619,12 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricVariance::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricVariance::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricAvg::merge_results(p, p_end);
-		_sq_sum += unserialise_double(&p, p_end);
-		// _variance = unserialise_double(&p, p_end);  // calculated during update()
+		_sq_sum += unserialise_double(p, p_end);
+		// _variance = unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -724,14 +724,14 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricStdDeviation::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricStdDeviation::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricVariance::merge_results(p, p_end);
-		_sigma = unserialise_double(&p, p_end);
-		// _std = unserialise_double(&p, p_end);  // calculated during update()
-		// _upper = unserialise_double(&p, p_end);  // calculated during update()
-		// _lower = unserialise_double(&p, p_end);  // calculated during update()
+		_sigma = unserialise_double(p, p_end);
+		// _std = unserialise_double(p, p_end);  // calculated during update()
+		// _upper = unserialise_double(p, p_end);  // calculated during update()
+		// _lower = unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {
@@ -789,15 +789,15 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricMedian::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricMedian::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		size_t size = unserialise_length(&p, p_end);
+		size_t size = unserialise_length(p, p_end);
 		while (size--) {
-			auto value = unserialise_double(&p, p_end);
+			auto value = unserialise_double(p, p_end);
 			_values.push_back(value);
 		}
-		// _median = unserialise_double(&p, p_end);  // calculated during update()
+		// _median = unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -882,16 +882,16 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricMode::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricMode::merge_results({})", repr(std::string(*p, p_end - *p)));
 
-		size_t size = unserialise_length(&p, p_end);
+		size_t size = unserialise_length(p, p_end);
 		while (size--) {
-			auto key = unserialise_double(&p, p_end);
-			auto value = unserialise_length(&p, p_end);
+			auto key = unserialise_double(p, p_end);
+			auto value = unserialise_length(p, p_end);
 			_histogram[key] += value;
 		}
-		// _mode = unserialise_double(&p, p_end);  // calculated during update()
+		// _mode = unserialise_double(p, p_end);  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -967,8 +967,8 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricStats::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricStats::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricAvg::merge_results(p, p_end);
 		_min_metric.merge_results(p, p_end);
@@ -1062,8 +1062,8 @@ public:
 		return results;
 	}
 
-	void merge_results(const char* p, const char* p_end) override {
-		L_CALL("MetricExtendedStats::merge_results({})", repr(std::string(p, p_end - p)));
+	void merge_results(const char** p, const char* p_end) override {
+		L_CALL("MetricExtendedStats::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricStdDeviation::merge_results(p, p_end);
 		_min_metric.merge_results(p, p_end);
