@@ -87,7 +87,7 @@ get_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::s
 	}
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
-			// Return default .xapiand/index (chicken and egg problem)
+			// Return default .xapiand/indices (chicken and egg problem)
 			return std::make_pair(0, MsgPack({
 				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 				{ SCHEMA_FIELD_NAME, {
@@ -150,7 +150,7 @@ save_shared(std::string_view id, MsgPack schema, const Endpoint& endpoint, std::
 	}
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
-			// Ignore .xapiand/index (chicken and egg problem)
+			// Ignore .xapiand/indices (chicken and egg problem)
 			return 0;
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
@@ -270,7 +270,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 			} else if (endpoints_path != ".xapiand/nodes") {
-				// Implement foreign schemas in .xapiand/index by default:
+				// Implement foreign schemas in .xapiand/indices by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
 					{ RESERVED_ENDPOINT, string::format(".xapiand/indices/{}", string::replace(endpoints_path, "/", "%2F")) },
