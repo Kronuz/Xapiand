@@ -45,6 +45,7 @@ namespace Xapian {
 
 class Matcher {
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
+    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
 
     Xapian::Database db;
 
@@ -114,7 +115,7 @@ class Matcher {
      *  @param rset		Relevance set (NULL for none)
      *  @param stats		Object to collate stats into
      *  @param wtscheme		Weight object to use as factory
-     *  @param have_sorter	KeyMaker in use for sort keys?
+     *  @param sorter		KeyMaker for sort keys (NULL for none)
      *  @param have_mdecider	MatchDecider specified?
      *  @param collapse_key	value slot to collapse on (Xapian::BAD_VALUENO
      *				which means no collapsing)
@@ -136,8 +137,8 @@ class Matcher {
 	    const Xapian::RSet* rset,
 	    Xapian::Weight::Internal& stats,
 	    const Xapian::Weight& wtscheme,
-	    bool have_sorter,
 	    bool have_mdecider,
+	    const Xapian::KeyMaker* sorter,
 	    Xapian::valueno collapse_key,
 	    Xapian::doccount collapse_max,
 	    int percent_threshold,

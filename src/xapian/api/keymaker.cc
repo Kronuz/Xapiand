@@ -24,6 +24,7 @@
 #include "xapian/keymaker.h"
 
 #include "xapian/document.h"
+#include "xapian/error.h"
 
 #include <string>
 #include <vector>
@@ -33,6 +34,30 @@ using namespace std;
 namespace Xapian {
 
 KeyMaker::~KeyMaker() { }
+
+KeyMaker *
+KeyMaker::clone() const
+{
+    throw UnimplementedError("KeyMaker not suitable for use with remote searches - clone() method unimplemented");
+}
+
+string
+KeyMaker::name() const
+{
+    throw UnimplementedError("KeyMaker not suitable for use with remote searches - name() method unimplemented");
+}
+
+string
+KeyMaker::serialise() const
+{
+    throw UnimplementedError("KeyMaker not suitable for use with remote searches - serialise() method unimplemented");
+}
+
+KeyMaker *
+KeyMaker::unserialise(const string &, const Registry &) const
+{
+    throw UnimplementedError("KeyMaker not suitable for use with remote searches - unserialise() method unimplemented");
+}
 
 string
 MultiValueKeyMaker::operator()(const Xapian::Document & doc) const
