@@ -158,6 +158,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
 
+    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
+
     /** Set the query
      *
      * @param query			The query.
@@ -190,7 +192,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
 		   int percent_threshold, double weight_threshold,
 		   const Xapian::Weight& wtscheme,
 		   const Xapian::RSet &omrset,
-		   const std::vector<opt_ptr_spy>& matchspies) const;
+		   const std::vector<opt_ptr_spy>& matchspies,
+		   const Xapian::KeyMaker* sorter) const;
 
     /** Get the underlying fd this remote connection reads from.
      *
