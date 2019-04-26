@@ -268,22 +268,21 @@ Aggregation::serialise_results() const
 
 
 void
-Aggregation::merge_results(std::string_view& serialised)
+Aggregation::merge_results(const char* p, const char* p_end)
 {
-	L_CALL("Aggregation::merge_results({})", repr(serialised));
+	L_CALL("Aggregation::merge_results({})", repr(std::string(p, p_end - p)));
 
-	const char *p = serialised.data();
-	const char *p_end = p + serialised.size();
 	_doc_count += unserialise_length(&p, p_end);
 	while (p != p_end) {
 		auto name = unserialise_string(&p, p_end);
 		auto data = unserialise_string(&p, p_end);
-		_sub_aggs[name]->merge_results(data);
-		if (data.size()) {
+		const char *q = data.data();
+		const char *q_end = q + data.size();
+		_sub_aggs[name]->merge_results(q, q_end);
+		if (q != q_end) {
 			THROW(SerialisationError, "Junk found at end of serialised Aggregation");
 		}
 	}
-	serialised = std::string_view(p, p_end - p);
 }
 
 
@@ -356,8 +355,9 @@ AggregationMatchSpy::serialise_results() const
 void
 AggregationMatchSpy::merge_results(const std::string& serialised)
 {
-	std::string_view data(serialised);
-	_aggregation.merge_results(data);
+	const char *p = serialised.data();
+	const char *p_end = p + serialised.size();
+	_aggregation.merge_results(p, p_end);
 }
 
 
