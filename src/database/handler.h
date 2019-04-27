@@ -267,7 +267,7 @@ public:
 	bool commit(bool wal = true);
 	void reopen();
 
-	void do_close();
+	void do_close(bool commit_ = true);
 };
 
 

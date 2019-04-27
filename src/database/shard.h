@@ -138,7 +138,7 @@ public:
 	void reset() noexcept;
 
 	void do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions = true);
-	void do_close();
+	void do_close(bool commit_ = true);
 	void close();
 
 	static void autocommit(const std::shared_ptr<Shard>& shard);
