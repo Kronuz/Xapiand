@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.20.0] - 2019-04-27
+{: #v0-20-0 }
+
+### Fixed
+- **BREAKING**: Remote Protocol issue which provoked messaged to get out of sync
+- Issues schemas not being saved (unexpected "_id" errors)
+- Detection of remote schema updates
+- Certain cluster remote queries
+
+
+---
 ## [0.19.7] - 2019-04-15
 {: #v0-19-7 }
 
@@ -647,7 +658,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.19.7...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/Kronuz/Xapiand/compare/v0.19.7...v0.20.0
 [0.19.7]: https://github.com/Kronuz/Xapiand/compare/v0.19.6...v0.19.7
 [0.19.6]: https://github.com/Kronuz/Xapiand/compare/v0.19.5...v0.19.6
 [0.19.5]: https://github.com/Kronuz/Xapiand/compare/v0.19.4...v0.19.5
