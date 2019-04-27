@@ -1084,6 +1084,8 @@ RemoteProtocolClient::msg_cancel(const std::string &)
 	// has the same effect with minimal additional overhead.
 	lk_shard->begin_transaction(false);
 	lk_shard->cancel_transaction();
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 
@@ -1129,6 +1131,8 @@ RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
 	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->delete_document_term(message);
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 
@@ -1146,6 +1150,8 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->replace_document(did, std::move(document));
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 
@@ -1231,6 +1237,8 @@ RemoteProtocolClient::msg_setmetadata(const std::string & message)
 	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->set_metadata(key, val);
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 
@@ -1246,6 +1254,8 @@ RemoteProtocolClient::msg_addspelling(const std::string & message)
 	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->add_spelling(std::string(p, p_end - p), freqinc);
+
+	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
 
 

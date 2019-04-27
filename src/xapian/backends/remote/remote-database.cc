@@ -759,6 +759,8 @@ RemoteDatabase::cancel()
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_CANCEL, string());
+    string dummy;
+    get_message(dummy, REPLY_DONE);
 }
 
 Xapian::docid
@@ -797,6 +799,8 @@ RemoteDatabase::delete_document(const std::string & unique_term)
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_DELETEDOCUMENTTERM, unique_term);
+    string dummy;
+    get_message(dummy, REPLY_DONE);
 }
 
 void
@@ -810,6 +814,8 @@ RemoteDatabase::replace_document(Xapian::docid did,
     message += serialise_document(doc);
 
     send_message(MSG_REPLACEDOCUMENT, message);
+    string dummy;
+    get_message(dummy, REPLY_DONE);
 }
 
 Xapian::docid
@@ -856,6 +862,8 @@ RemoteDatabase::set_metadata(const string & key, const string & value)
     data += key;
     data += value;
     send_message(MSG_SETMETADATA, data);
+    string dummy;
+    get_message(dummy, REPLY_DONE);
 }
 
 void
@@ -865,6 +873,8 @@ RemoteDatabase::add_spelling(const string & word,
     string data = encode_length(freqinc);
     data += word;
     send_message(MSG_ADDSPELLING, data);
+    string dummy;
+    get_message(dummy, REPLY_DONE);
 }
 
 Xapian::termcount
