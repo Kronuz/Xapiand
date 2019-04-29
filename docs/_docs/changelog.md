@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.20.1] - 2019-04-29
+{: #v0-20-1 }
+
+### Fixed
+- Fix issue with aggregations returning invalid results at times
+
+
+---
 ## [0.20.0] - 2019-04-27
 {: #v0-20-0 }
 
@@ -658,7 +666,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.20.1...HEAD
+[0.20.1]: https://github.com/Kronuz/Xapiand/compare/v0.20.0...v0.20.1
 [0.20.0]: https://github.com/Kronuz/Xapiand/compare/v0.19.7...v0.20.0
 [0.19.7]: https://github.com/Kronuz/Xapiand/compare/v0.19.6...v0.19.7
 [0.19.6]: https://github.com/Kronuz/Xapiand/compare/v0.19.5...v0.19.6
