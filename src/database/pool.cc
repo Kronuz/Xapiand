@@ -300,7 +300,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 		shard = shard_ref;
 	}
 
-	L_POOL_TIMED(3s,
+	L_POOL_TIMED(5s,
 		"Checked out shard is taking too long: {} ({})",
 		"Checked out shard was out for too long: {} ({})",
 		repr(shard->to_string()),
