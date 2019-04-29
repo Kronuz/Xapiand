@@ -91,8 +91,8 @@ std::vector<std::string>
 ValuesHandler::values(const Xapian::Document& doc) const
 {
 	std::vector<std::string> values;
-
-	for (const auto& value : StringList(doc.get_value(_slot))) {
+	auto doc_value = doc.get_value(_slot);
+	for (const auto& value : StringList(doc_value)) {
 		values.push_back(std::string(value));
 	}
 	return values;
