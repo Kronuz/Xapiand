@@ -94,6 +94,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 
 	std::thread::id thread_id;
 
+	void** callstack;
 	const char* function;
 	const char* filename;
 	int line;
@@ -111,6 +112,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	std::atomic_ullong cleaned_at;
 	std::chrono::time_point<std::chrono::system_clock> timestamp;
 
+	void** unlog_callstack;
 	const char* unlog_function;
 	const char* unlog_filename;
 	int unlog_line;
@@ -124,6 +126,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 
 	static Log add(
 		const std::chrono::time_point<std::chrono::steady_clock>& wakeup,
+		void** callstack,
 		const char* function,
 		const char* filename,
 		int line,
@@ -149,6 +152,7 @@ public:
 	static std::vector<std::unique_ptr<Logger>> handlers;
 
 	Logging(
+		void** callstack,
 		const char *function,
 		const char *filename,
 		int line,
@@ -187,13 +191,13 @@ public:
 	static void reset();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::format_args args);
-	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 	template <typename... Args>
-	void unlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
-		vunlog(_priority, _function, _filename, _line, format, fmt::make_format_args(std::forward<Args>(args)...));
+	void unlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {
+		vunlog(_priority, _callstack, _function, _filename, _line, format, fmt::make_format_args(std::forward<Args>(args)...));
 	}
-	void vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
+	void vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
 
 	void clean();
 

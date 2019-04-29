@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"           // for HAVE_EXECINFO_H
+#include "config.h"           // for HAVE_EXECINFO_H, XAPIAND_TRACEBACKS
 
 #include <exception>          // for std::exception_ptr
 #include <string>             // for std::string
@@ -51,3 +51,9 @@ std::string traceback(const char* function, const char* filename, int line, int 
 std::string traceback(const char* function, const char* filename, int line, void** callstack, int skip = 1);
 
 #define TRACEBACK() ::traceback(__func__, __FILE__, __LINE__)
+
+#ifdef XAPIAND_TRACEBACKS
+#define BACKTRACE() backtrace()
+#else
+#define BACKTRACE() nullptr
+#endif

@@ -148,9 +148,9 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::format_args
 
 
 Log
-vlog(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+vlog(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
-	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, args);
+	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, args);
 }
 
 
@@ -186,10 +186,10 @@ Log::operator=(Log&& o)
 
 
 void
-Log::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
+Log::vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
 {
 	if (log) {
-		log->vunlog(_priority, _function, _filename, _line, format, args);
+		log->vunlog(_priority, _callstack, _function, _filename, _line, format, args);
 	}
 }
 
@@ -292,9 +292,10 @@ SysLog::log(int priority, std::string_view str, bool with_priority, bool /*with_
 
 
 Logging::Logging(
-	[[maybe_unused]] const char *function,
-	[[maybe_unused]] const char *filename,
-	[[maybe_unused]] int line,
+	void** callstack,
+	const char *function,
+	const char *filename,
+	int line,
 	std::string&& str,
 	std::exception_ptr&& eptr,
 	bool clears,
@@ -308,6 +309,7 @@ Logging::Logging(
 ) :
 	ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>(created_at),
 	thread_id(std::this_thread::get_id()),
+	callstack(callstack),
 	function(function),
 	filename(filename),
 	line(line),
@@ -321,7 +323,12 @@ Logging::Logging(
 	once(once),
 	priority(priority),
 	cleaned_at(0),
-	timestamp(timestamp)
+	timestamp(timestamp),
+	unlog_callstack(nullptr),
+	unlog_function(nullptr),
+	unlog_filename(nullptr),
+	unlog_line(0),
+	unlog_priority(0)
 {
 	if (stacked) {
 		std::lock_guard<std::mutex> lk(stack_mtx);
@@ -381,6 +388,7 @@ Logging::clean()
 		if (!unlog_str.empty() && unlog_priority <= log_level) {
 			add(
 				now,
+				unlog_callstack,
 				unlog_function,
 				unlog_filename,
 				unlog_line,
@@ -395,6 +403,15 @@ Logging::clean()
 				time_point_from_ullong(created_at),
 				timestamp
 			);
+			unlog_callstack = nullptr;
+		}
+		if (callstack != nullptr) {
+			free(callstack);
+			callstack = nullptr;
+		}
+		if (unlog_callstack != nullptr) {
+			free(unlog_callstack);
+			unlog_callstack = nullptr;
 		}
 	}
 }
@@ -657,6 +674,9 @@ Logging::operator()()
 			msg.append(": ");
 		}
 		msg.append(exception_description);
+	} else if (callstack != nullptr) {
+		msg.append(DEBUG_COL.c_str(), DEBUG_COL.size());
+		msg.append(traceback(function, filename, line, callstack));
 	}
 
 	if (async) {
@@ -679,9 +699,10 @@ Logging::operator()()
 
 
 void
-Logging::vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
+Logging::vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
 {
 	unlog_priority = _priority;
+	unlog_callstack = _callstack;
 	unlog_function = _function;
 	unlog_filename = _filename;
 	unlog_line = _line;
@@ -714,7 +735,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
@@ -724,7 +745,7 @@ Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::steady_c
 			L_EXC("Cannot format {}", repr(format));
 			str = format;
 		}
-		return add(wakeup, function, filename, line, std::move(str), std::move(eptr), clears, async, info, stacked, once, priority);
+		return add(wakeup, callstack, function, filename, line, std::move(str), std::move(eptr), clears, async, info, stacked, once, priority);
 	}
 	return Log();
 }
@@ -733,6 +754,7 @@ Logging::do_log(bool clears, const std::chrono::time_point<std::chrono::steady_c
 Log
 Logging::add(
 	const std::chrono::time_point<std::chrono::steady_clock>& wakeup,
+	void** callstack,
 	const char* function,
 	const char* filename,
 	int line,
@@ -748,6 +770,7 @@ Logging::add(
 	const std::chrono::time_point<std::chrono::system_clock>& timestamp
 ) {
 	auto l_ptr = std::make_shared<Logging>(
+		callstack,
 		function,
 		filename,
 		line,

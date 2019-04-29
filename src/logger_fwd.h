@@ -62,10 +62,10 @@ public:
 	~Log() noexcept;
 
 	template <typename... Args>
-	void unlog(int priority, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-		vunlog(priority, function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
+	void unlog(int priority, void** callstack, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+		vunlog(priority, callstack, function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
 	}
-	void vunlog(int _priority, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
+	void vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
 
 	bool clear();
 	long double age();
@@ -88,12 +88,12 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+Log vlog(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 
 template <typename... Args>
-inline Log log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return vlog(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
+inline Log log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+	return vlog(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
 }
 
 
@@ -135,18 +135,19 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 #define LOG_ARGS_APPLY_ALL_H2(t, n, ...) LOG_ARGS_APPLY_ALL_H3(t, n, __VA_ARGS__)
 #define LOG_ARGS_APPLY_ALL(t, ...) LOG_ARGS_APPLY_ALL_H2(t, LOG_ARGS_NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-#define LAZY_LOG(clears, wakeup, async, info, stacked, once, priority, eptr, function, filename, line, ...) \
-	::log(clears, wakeup, async, info, stacked, once, priority, eptr, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+#define LAZY_LOG(clears, wakeup, async, info, stacked, once, priority, eptr, callstack, function, filename, line, ...) \
+	::log(clears, wakeup, async, info, stacked, once, priority, eptr, callstack, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
 
-#define LAZY_UNLOG(priority, function, filename, line, ...) \
-	unlog(priority, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
+#define LAZY_UNLOG(priority, callstack, function, filename, line, ...) \
+	unlog(priority, callstack, function, filename, line, LOG_ARGS_APPLY_ALL(LAZY, __VA_ARGS__))
 
 #define MERGE_(a,b)  a##b
 #define LABEL_(a) MERGE_(__unique, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
-#define L_DELAYED(clears, delay, priority, color, format, ...) LAZY_LOG(clears, delay, true, true, false, false, priority, std::exception_ptr{}, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
-#define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
+#define L_DELAYED(clears, delay, priority, color, format, ...) LAZY_LOG(clears, delay, true, true, false, false, priority, std::exception_ptr{}, nullptr, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
+#define L_DELAYED_BACKTRACE(clears, delay, priority, color, format, ...) LAZY_LOG(clears, delay, true, true, false, false, priority, std::exception_ptr{}, BACKTRACE(), __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
+#define L_DELAYED_UNLOG(priority, color, format, ...) LAZY_UNLOG(priority, nullptr, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
 #define L_DELAYED_CLEAR() clear()
 
 #define L_DELAYED_100(...) auto __log_delayed = L_DELAYED(true, 100ms, LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
@@ -173,9 +174,9 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 
 #define L_NOTHING(...)
 
-#define LOG(stacked, once, priority, color, format, ...) LAZY_LOG(false, 0ms, priority >= ASYNC_LOG_LEVEL, true, stacked, once, priority, std::exception_ptr{}, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
+#define LOG(stacked, once, priority, color, format, ...) LAZY_LOG(false, 0ms, priority >= ASYNC_LOG_LEVEL, true, stacked, once, priority, std::exception_ptr{}, nullptr, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__)
 
-#define HOOK_LOG(hook, stacked, priority, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { LAZY_LOG(false, 0ms, true, true, stacked, false, priority, std::exception_ptr{}, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__); }
+#define HOOK_LOG(hook, stacked, priority, color, format, ...) if ((logger_info_hook.load() & fnv1ah32::hash(hook)) == fnv1ah32::hash(hook)) { LAZY_LOG(false, 0ms, true, true, stacked, false, priority, std::exception_ptr{}, nullptr, __func__, __FILE__, __LINE__, ((color) + (format)), ##__VA_ARGS__); }
 
 #define L_INFO(...) LOG(true, 0, LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE(...) LOG(true, 0, LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
@@ -190,7 +191,7 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 #define L_CRIT(...) LOG(true, 0, LOG_CRIT, CRIT_COL, __VA_ARGS__)
 #define L_ALERT(...) LOG(true, 0, LOG_ALERT, ALERT_COL, __VA_ARGS__)
 #define L_EMERG(...) LOG(true, 0, LOG_EMERG, EMERG_COL, __VA_ARGS__)
-#define L_EXC(format, ...) LAZY_LOG(false, 0ms, true, true, true, false, LOG_CRIT, std::current_exception(), __func__, __FILE__, __LINE__, (ERR_COL + (format)), ##__VA_ARGS__)
+#define L_EXC(format, ...) LAZY_LOG(false, 0ms, true, true, true, false, LOG_CRIT, std::current_exception(), nullptr, __func__, __FILE__, __LINE__, (ERR_COL + (format)), ##__VA_ARGS__)
 
 #define L_TRACEBACK(...) LOG(true, 0, LOG_DEBUG, DEBUG_COL, DEBUG_COL + TRACEBACK() + "", __VA_ARGS__)
 
