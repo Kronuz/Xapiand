@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Changed
+- Default do check_at_least one when using aggregations
+
 
 ---
 ## [0.20.1] - 2019-04-29
