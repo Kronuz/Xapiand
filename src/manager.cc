@@ -1685,8 +1685,10 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			// Index databases are always in their specified node
 			std::vector<std::shared_ptr<const Node>> node_replicas;
 			int errno_save;
-			size_t idx = strict_stoull(&errno_save, normalized_path.substr(18));
+			size_t idx = strict_stoull(&errno_save, normalized_path.substr(std::string_view(".xapiand/indices/.__").size()));
+			assert(errno_save == 0);
 			if (errno_save == 0) {
+				assert(idx > 0);
 				node_replicas.push_back(Node::get_node(idx));
 				node_replicas.push_back(Node::local_node());
 				nodes.push_back(std::move(node_replicas));
