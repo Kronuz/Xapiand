@@ -1296,6 +1296,11 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 				enquire.set_collapse_key(collapse_key, query_field.collapse_max);
 			}
 			if (aggs) {
+				if (check_at_least == 0) {
+					// When using aggregations, at request xapian to at least
+					// check 1, otherwise aggregations are altogether skipped.
+					check_at_least = 1;
+				}
 				enquire.add_matchspy(aggs);
 			}
 			if (sorter) {
