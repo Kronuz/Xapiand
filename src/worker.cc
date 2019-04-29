@@ -272,7 +272,7 @@ Worker::parent() const
 std::string
 Worker::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<Worker {{cnt:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<Worker {{cnt:{}}}{}{}{}>",
 		use_count(),
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
 		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,

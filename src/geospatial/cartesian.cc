@@ -26,7 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "string.hh"
+#include "strings.hh"
 
 
 /*
@@ -555,7 +555,7 @@ Cartesian::norm() const
 std::string
 Cartesian::to_string() const
 {
-	return string::format("{} ({:.6} {:.6} {:.6})", DEFAULT_CRS, x * scale, y * scale, z * scale);
+	return strings::format("{} ({:.6} {:.6} {:.6})", DEFAULT_CRS, x * scale, y * scale, z * scale);
 }
 
 

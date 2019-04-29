@@ -42,7 +42,7 @@
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
-#include "string.hh"              // for string::from_delta, string::format
+#include "strings.hh"             // for strings::from_delta, strings::format
 
 #ifdef XAPIAND_RANDOM_ERRORS
 #include "random.hh"                // for random_real
@@ -983,7 +983,7 @@ Shard::storage_get_stored(const Locator& locator)
 	assert(locator.volume != -1);
 
 	if (storage) {
-		storage->open(string::format(DATA_STORAGE_PATH "{}", locator.volume));
+		storage->open(strings::format(DATA_STORAGE_PATH "{}", locator.volume));
 		storage->seek(static_cast<uint32_t>(locator.offset));
 		return storage->read();
 	}
@@ -1021,13 +1021,13 @@ Shard::storage_push_blobs(std::string&& doc_data)
 						try {
 							if (writable_storage->closed()) {
 								writable_storage->volume = writable_storage->get_volumes_range(DATA_STORAGE_PATH).second;
-								writable_storage->open(string::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
+								writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 							}
 							offset = writable_storage->write(serialise_strings({ locator.ct_type.to_string(), locator.raw }));
 							break;
 						} catch (StorageEOF) {
 							++writable_storage->volume;
-							writable_storage->open(string::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
+							writable_storage->open(strings::format(DATA_STORAGE_PATH "{}", writable_storage->volume));
 						}
 					}
 					data.update(locator.ct_type, writable_storage->volume, offset, locator.size);
@@ -1611,7 +1611,7 @@ Shard::get_metadata(const std::string& key)
 			++p;
 			ssize_t volume = unserialise_length(&p, p_end);
 			size_t offset = unserialise_length(&p, p_end);
-			storage->open(string::format(DATA_STORAGE_PATH "{}", volume));
+			storage->open(strings::format(DATA_STORAGE_PATH "{}", volume));
 			storage->seek(static_cast<uint32_t>(offset));
 			return storage->read();
 		}
@@ -1757,7 +1757,7 @@ Shard::to_string() const
 std::string
 Shard::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<Shard {} ({}){}{}{}{}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<Shard {} ({}){}{}{}{}{}{}{}>",
 		repr(to_string()),
 		readable_flags(flags),
 		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "",

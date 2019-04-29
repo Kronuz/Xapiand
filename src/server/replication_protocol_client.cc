@@ -313,7 +313,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 		auto ends = std::chrono::steady_clock::now();
 		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
-		L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
 		return;
 	}
 
@@ -359,7 +359,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				};
 
 				for (const auto& filename : filenames) {
-					auto path = string::format("{}/{}", endpoint_path, filename);
+					auto path = strings::format("{}/{}", endpoint_path, filename);
 					int fd = io::open(path.c_str());
 					if (fd != -1) {
 						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
@@ -368,8 +368,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 				}
 
 				for (size_t volume = 0; true; ++volume) {
-					auto filename = string::format("docdata.{}", volume);
-					auto path = string::format("{}/{}", endpoint_path, filename);
+					auto filename = strings::format("docdata.{}", volume);
+					auto path = strings::format("{}/{}", endpoint_path, filename);
 					int fd = io::open(path.c_str());
 					if (fd != -1) {
 						send_message(ReplicationReplyType::REPLY_DB_FILENAME, filename);
@@ -399,7 +399,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 					auto ends = std::chrono::steady_clock::now();
 					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
-					L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+					L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					db = lk_shard.lock()->db();
@@ -450,9 +450,9 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	auto ends = std::chrono::steady_clock::now();
 	_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
 	if (from_revision == to_revision) {
-		L(LOG_DEBUG, rgba(116, 100, 77, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT EMPTY {} {}", repr(endpoint_path), remote_uuid, remote_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, rgba(116, 100, 77, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT EMPTY {} {}", repr(endpoint_path), remote_uuid, remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
 	} else {
-		L(LOG_DEBUG, rgba(55, 100, 79, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT [{}..{}] {} {}", repr(endpoint_path), remote_uuid, remote_revision, from_revision, to_revision, string::from_bytes(_total_sent_bytes), string::from_delta(begins, ends));
+		L(LOG_DEBUG, rgba(55, 100, 79, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT [{}..{}] {} {}", repr(endpoint_path), remote_uuid, remote_revision, from_revision, to_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
 	}
 }
 
@@ -814,7 +814,7 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 		std::string reason;
 
 		if (received < 0) {
-			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
+			reason = strings::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
 			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
 				L_NOTICE("Replication Protocol {} connection closed unexpectedly: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 				close();
@@ -1157,13 +1157,13 @@ ReplicationProtocolClient::__repr__() const
 		switch (st) {
 			case ReplicationState::INIT_REPLICATION_CLIENT:
 			case ReplicationState::REPLICATION_CLIENT:
-				return string::format("{}) ({}<->{}",
+				return strings::format("{}) ({}<->{}",
 					enum_name(st),
 					enum_name(static_cast<ReplicationReplyType>(received)),
 					enum_name(static_cast<ReplicationMessageType>(sent)));
 			case ReplicationState::INIT_REPLICATION_SERVER:
 			case ReplicationState::REPLICATION_SERVER:
-				return string::format("{}) ({}<->{}",
+				return strings::format("{}) ({}<->{}",
 					enum_name(st),
 					enum_name(static_cast<ReplicationMessageType>(received)),
 					enum_name(static_cast<ReplicationReplyType>(sent)));
@@ -1174,7 +1174,7 @@ ReplicationProtocolClient::__repr__() const
 #else
 	const auto& state_repr = enum_name(state.load(std::memory_order_relaxed));
 #endif
-	return string::format(STEEL_BLUE + "<ReplicationProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<ReplicationProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,
 		use_count(),
 		sock,

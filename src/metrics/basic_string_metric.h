@@ -26,7 +26,7 @@
 #include <utility>                                // for std::forward
 
 #include "length.h"                               // for serialise_length, unserialise_length
-#include "string.hh"                              // for string::upper
+#include "strings.hh"                             // for strings::upper
 #include "xapian/common/serialise-double.h"       // for serialise_double, unserialise_double
 
 
@@ -46,7 +46,7 @@ public:
 	template <typename T>
 	StringMetric(T&& str, bool icase)
 		: _icase(icase),
-		  _str(_icase ? string::upper(std::forward<T>(str)) : std::forward<T>(str)) { }
+		  _str(_icase ? strings::upper(std::forward<T>(str)) : std::forward<T>(str)) { }
 
 	template <typename T>
 	double distance(T&& str1, T&& str2) const {
@@ -60,8 +60,8 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_distance(
-			_icase ? string::upper(std::forward<T>(str1)) : std::forward<T>(str1),
-			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? strings::upper(std::forward<T>(str1)) : std::forward<T>(str1),
+			_icase ? strings::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 
@@ -77,7 +77,7 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_distance(
-			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? strings::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 
@@ -93,8 +93,8 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_similarity(
-			_icase ? string::upper(std::forward<T>(str1)) : std::forward<T>(str1),
-			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? strings::upper(std::forward<T>(str1)) : std::forward<T>(str1),
+			_icase ? strings::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 
@@ -110,7 +110,7 @@ public:
 		}
 
 		return static_cast<const Impl*>(this)->_similarity(
-			_icase ? string::upper(std::forward<T>(str2)) : std::forward<T>(str2)
+			_icase ? strings::upper(std::forward<T>(str2)) : std::forward<T>(str2)
 		);
 	}
 

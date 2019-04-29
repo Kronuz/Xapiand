@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "string.hh"          // for string::join
+#include "strings.hh"         // for strings::join
 
 constexpr int DB_OPEN              = 0x0000;  // Opens a database
 constexpr int DB_CREATE_OR_OPEN    = 0x0001;  // Automatically creates the database if it doesn't exist
@@ -40,5 +40,5 @@ inline std::string readable_flags(int flags) {
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 	if ((flags & DB_DISABLE_WAL) == DB_DISABLE_WAL) values.push_back("DB_DISABLE_WAL");
 	if ((flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) values.push_back("DB_SYNCHRONOUS_WAL");
-	return string::join(values, "|");
+	return strings::join(values, "|");
 }

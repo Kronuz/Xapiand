@@ -24,7 +24,7 @@
 
 #include "length.h"                               // for serialise_length()
 #include "msgpack.h"                              // for MsgPack
-#include "string.hh"                              // for string::*
+#include "strings.hh"                             // for string::*
 #include "utype.hh"                               // for toUType
 #include "compressor_lz4.h"                       // for compress_lz4, decompress_lz4
 
@@ -45,10 +45,10 @@ ct_type_t::ct_type_t(std::string_view ct_type_str)
 		auto subtype = ct_type_str.find_first_not_of(" \t/", dash);
 		auto subtype_end = ct_type_str.find_last_not_of(" \t;", ct_type_str.find(';', dash));
 		if (type != std::string::npos) {
-			first = string::lower(ct_type_str.substr(type, type_end - type + 1));
+			first = strings::lower(ct_type_str.substr(type, type_end - type + 1));
 		}
 		if (subtype != std::string::npos) {
-			second = string::lower(ct_type_str.substr(subtype, subtype_end - subtype + 1));
+			second = strings::lower(ct_type_str.substr(subtype, subtype_end - subtype + 1));
 		}
 	}
 }

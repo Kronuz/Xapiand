@@ -31,7 +31,7 @@
 #include "database/data.h"                        // for ct_type_t
 #include "hashes.hh"                              // for fnv1ah32
 #include "log.h"                                  // for L_WARNING_ONCE
-#include "string.hh"                              // for string::lower
+#include "strings.hh"                             // for strings::lower
 
 
 std::unordered_map<std::string, ct_type_t>
@@ -93,7 +93,7 @@ load_mime_types()
 						if (word == "}") {
 							L_WARNING("Unexpected {} in mime types file: {}:{}", repr(word), mime_types_path, line_num);
 						} else {
-							mime_types[string::lower(word)] = ct_type;
+							mime_types[strings::lower(word)] = ct_type;
 						}
 						break;
 					case ENDED:
@@ -123,7 +123,7 @@ mime_type(std::string_view extension)
 	}
 
 	if (!extension.empty()) {
-		auto it = mime_types.find(string::lower(extension));
+		auto it = mime_types.find(strings::lower(extension));
 		if (it != mime_types.end()) {
 			return it->second;
 		}

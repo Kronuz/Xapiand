@@ -55,7 +55,7 @@
 #include "split.h"                                // for Split
 #include "static_string.hh"                       // for static_string
 #include "stopper.h"                              // for getStopper
-#include "string.hh"                              // for string::format, string::inplace_lower
+#include "strings.hh"                             // for strings::format, strings::inplace_lower
 
 #define L_SCHEMA L_NOTHING
 
@@ -352,7 +352,7 @@ _get_str_index(TypeIndex index) noexcept
 }
 
 
-static const std::string str_set_acc_date(string::join<std::string>({
+static const std::string str_set_acc_date(strings::join<std::string>({
 	"second",
 	"minute",
 	"hour",
@@ -450,7 +450,7 @@ get_accuracy_datetime(std::string_view str_accuracy_datetime)
 }
 
 
-static const std::string str_set_acc_time(string::join<std::string>({
+static const std::string str_set_acc_time(strings::join<std::string>({
 	"second",
 	"minute",
 	"hour",
@@ -485,7 +485,7 @@ get_accuracy_time(std::string_view str_accuracy_time)
 }
 
 
-static const std::string str_set_stop_strategy(string::join<std::string>({
+static const std::string str_set_stop_strategy(strings::join<std::string>({
 	"stop_none",
 	"none",
 	"stop_all",
@@ -525,7 +525,7 @@ _get_stop_strategy(std::string_view str_stop_strategy)
 }
 
 
-static const std::string str_set_stem_strategy(string::join<std::string>({
+static const std::string str_set_stem_strategy(strings::join<std::string>({
 	"stem_none",
 	"none",
 	"stem_some",
@@ -537,7 +537,7 @@ static const std::string str_set_stem_strategy(string::join<std::string>({
 }, ", ", " or "));
 
 
-static const std::string str_set_index_uuid_field(string::join<std::string>({
+static const std::string str_set_index_uuid_field(strings::join<std::string>({
 	"uuid",
 	"uuid_field",
 	"both",
@@ -566,7 +566,7 @@ _get_index_uuid_field(std::string_view str_index_uuid_field)
 
 
 
-static const std::string str_set_index(string::join<std::string>({
+static const std::string str_set_index(strings::join<std::string>({
 	"none",
 	"field_terms",
 	"field_values",
@@ -1933,7 +1933,7 @@ _get_stem_language(std::string_view str_stem_language)
 std::string
 repr_field(std::string_view name, std::string_view field_name)
 {
-	return name == field_name ? repr(name) : string::format("{} ({})", repr(name), repr(field_name));
+	return name == field_name ? repr(name) : strings::format("{} ({})", repr(name), repr(field_name));
 }
 
 
@@ -4905,7 +4905,7 @@ Schema::validate_required_namespace_data()
 
 		case FieldType::keyword:
 			if (!specification.flags.has_bool_term) {
-				specification.flags.bool_term = string::hasupper(specification.meta_name);
+				specification.flags.bool_term = strings::hasupper(specification.meta_name);
 				specification.flags.has_bool_term = specification.flags.bool_term;
 			}
 			specification.flags.concrete = true;
@@ -5094,7 +5094,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
 				// By default, if normalized name has upper characters then it is consider bool term.
-				const auto bool_term = string::hasupper(specification.meta_name);
+				const auto bool_term = strings::hasupper(specification.meta_name);
 				if (specification.flags.bool_term != bool_term) {
 					specification.flags.bool_term = bool_term;
 					mut_properties[RESERVED_BOOL_TERM] = static_cast<bool>(specification.flags.bool_term);
@@ -5680,7 +5680,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 		case FieldType::keyword:
 			if (!field_spc.flags.bool_term) {
-				string::inplace_lower(serialise_val);
+				strings::inplace_lower(serialise_val);
 			}
 			[[fallthrough]];
 
@@ -8912,7 +8912,7 @@ Schema::consistency_stop_strategy(std::string_view prop_name, const MsgPack& pro
 
 	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stop_strategy = string::lower(prop_obj.str_view());
+			const auto _stop_strategy = strings::lower(prop_obj.str_view());
 			const auto stop_strategy = enum_name(specification.stop_strategy);
 			if (stop_strategy != _stop_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), stop_strategy, _stop_strategy, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8934,7 +8934,7 @@ Schema::consistency_stem_strategy(std::string_view prop_name, const MsgPack& pro
 
 	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stem_strategy = string::lower(prop_obj.str_view());
+			const auto _stem_strategy = strings::lower(prop_obj.str_view());
 			const auto stem_strategy = enum_name(specification.stem_strategy);
 			if (stem_strategy != _stem_strategy) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(stem_strategy), repr(_stem_strategy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8956,7 +8956,7 @@ Schema::consistency_stem_language(std::string_view prop_name, const MsgPack& pro
 
 	if (prop_obj.is_string()) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
-			const auto _stem_language = string::lower(prop_obj.str_view());
+			const auto _stem_language = strings::lower(prop_obj.str_view());
 			if (specification.stem_language != _stem_language) {
 				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(specification.stem_language), repr(_stem_language), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
@@ -9026,10 +9026,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(string::format("{}", acc)).push_back(' ');
+						str_accuracy.append(strings::format("{}", acc)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
+						_str_accuracy.append(strings::format("{}", acc)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{} ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
@@ -9119,10 +9119,10 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
 					std::string str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(string::format("{}", acc)).push_back(' ');
+						str_accuracy.append(strings::format("{}", acc)).push_back(' ');
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(string::format("{}", acc)).push_back(' ');
+						_str_accuracy.append(strings::format("{}", acc)).push_back(' ');
 					}
 					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}

@@ -37,7 +37,7 @@
 #include "reserved/types.h"                       // for RESERVED_TIME
 #include "reserved/datetime.h"                    // for RESERVED_
 #include "strict_stox.hh"                         // for strict_stoull
-#include "string.hh"                              // for string::format
+#include "strings.hh"                             // for strings::format
 
 
 const std::regex Datetime::date_re(R"(([0-9]{4})([-/ ]?)(0[1-9]|1[0-2])\2(0[0-9]|[12][0-9]|3[01])([T ]?([01]?[0-9]|2[0-3]):([0-5][0-9])(:([0-5][0-9])([.,]([0-9]+))?)?([ ]*[+-]([01]?[0-9]|2[0-3]):([0-5][0-9])|Z)?)?([ ]*\|\|[ ]*([+-/\dyMwdhms]+))?)", std::regex::optimize);
@@ -1157,12 +1157,12 @@ std::string
 Datetime::iso8601(const std::tm& tm, bool trim, char sep)
 {
 	if (trim) {
-		return string::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
+		return strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
 			tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
 			sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 	}
 
-	return string::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}.000000",
+	return strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}.000000",
 		tm.tm_year + DATETIME_START_YEAR, tm.tm_mon + 1, tm.tm_mday,
 		sep, tm.tm_hour, tm.tm_min, tm.tm_sec);
 }
@@ -1175,11 +1175,11 @@ std::string
 Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
 	if (trim) {
-		auto res = string::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
+		auto res = strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
 		if (tm.fsec > 0.0) {
-			res += string::format("{:.6f}", tm.fsec).erase(0, 1);
+			res += strings::format("{:.6f}", tm.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1192,14 +1192,14 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 	}
 
 	if (tm.fsec > 0.0) {
-		auto res = string::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
+		auto res = strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
-		res += string::format("{:.6f}", tm.fsec).erase(0, 1);
+		res += strings::format("{:.6f}", tm.fsec).erase(0, 1);
 		return res;
 	}
 
-	return string::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}.000000",
+	return strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}.000000",
 		tm.year, tm.mon, tm.day, sep,
 		tm.hour, tm.min, tm.sec);
 }
@@ -1494,10 +1494,10 @@ std::string
 Datetime::time_to_string(const clk_t& clk, bool trim)
 {
 	if (trim && clk.tz_h == 0 && clk.tz_m == 0) {
-		auto res = string::format("{:02}:{:02}:{:02}",
+		auto res = strings::format("{:02}:{:02}:{:02}",
 			clk.hour, clk.min, clk.sec);
 		if (clk.fsec > 0) {
-			res += string::format("{:.6f}", clk.fsec).erase(0, 1);
+			res += strings::format("{:.6f}", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1510,14 +1510,14 @@ Datetime::time_to_string(const clk_t& clk, bool trim)
 	}
 
 	if (clk.fsec > 0) {
-		auto res = string::format("{:02}:{:02}:{:02}",
+		auto res = strings::format("{:02}:{:02}:{:02}",
 			clk.hour, clk.min, clk.sec);
-		res += string::format("{:.6f}{}{:02}:{:02}", clk.fsec,
+		res += strings::format("{:.6f}{}{:02}:{:02}", clk.fsec,
 			clk.tz_s, clk.tz_h, clk.tz_m).erase(0, 1);
 		return res;
 	}
 
-	return string::format("{:02}:{:02}:{:02}.000000{}{:02}:{:02}",
+	return strings::format("{:02}:{:02}:{:02}.000000{}{:02}:{:02}",
 		clk.hour, clk.min, clk.sec,
 		clk.tz_s, clk.tz_h, clk.tz_m);
 }
@@ -1736,10 +1736,10 @@ std::string
 Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 {
 	if (trim) {
-		auto res = string::format("{}{:02}:{:02}:{:02}",
+		auto res = strings::format("{}{:02}:{:02}:{:02}",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
 		if (clk.fsec > 0) {
-			res += string::format("{:.6f}", clk.fsec).erase(0, 1);
+			res += strings::format("{:.6f}", clk.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
 			for (; *it == '0'; --it) { }
@@ -1752,11 +1752,11 @@ Datetime::timedelta_to_string(const clk_t& clk, bool trim)
 	}
 
 	if (clk.fsec > 0) {
-		return string::format("{}{:02}:{:02}:{:02}",
+		return strings::format("{}{:02}:{:02}:{:02}",
 			clk.tz_s, clk.hour, clk.min, clk.sec);
 	}
 
-	return string::format("{}{:02}:{:02}:{:02}.000000",
+	return strings::format("{}{:02}:{:02}:{:02}.000000",
 		clk.tz_s, clk.hour, clk.min, clk.sec);
 }
 

@@ -80,7 +80,7 @@ std::ostream& operator<<(std::ostream& os, const T& obj) {
 }
 
 
-namespace string {
+namespace strings {
 
 template <typename T>
 inline std::string join(const std::vector<T>& values, std::string_view delimiter, std::string_view last_delimiter)
@@ -334,4 +334,4 @@ std::string from_delta(const std::chrono::time_point<T>& start, const std::chron
 	return from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), prefix, colored);
 }
 
-} // namespace string
+}  // namespace strings

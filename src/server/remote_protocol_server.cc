@@ -126,7 +126,7 @@ RemoteProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents
 std::string
 RemoteProtocolServer::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<RemoteProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<RemoteProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? remote.sock : sock,
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,

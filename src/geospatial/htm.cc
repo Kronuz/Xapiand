@@ -27,7 +27,7 @@
 #include <set>
 
 #include "collection.h"
-#include "string.hh"
+#include "strings.hh"
 
 
 std::vector<std::string>
@@ -852,9 +852,9 @@ constexpr int HTM_LINE_POINTS     = 25;
 
 
 static std::string getConstraint3D(const Constraint& bCircle, char color) {
-	std::string xs = "x = [" + string::format("{}", bCircle.center.x) + "]\n";
-	xs += "y = [" + string::format("{}", bCircle.center.y) + "]\n";
-	xs += "z = [" + string::format("{}", bCircle.center.z) + "]\n";
+	std::string xs = "x = [" + strings::format("{}", bCircle.center.x) + "]\n";
+	xs += "y = [" + strings::format("{}", bCircle.center.y) + "]\n";
+	xs += "z = [" + strings::format("{}", bCircle.center.z) + "]\n";
 	xs += "ax.plot3D(x, y, z, '" + std::string(1, color) + "o', linewidth = 2.0)\n\n"; // 211
 
 	auto c_inv = bCircle.center;
@@ -878,9 +878,9 @@ static std::string getConstraint3D(const Constraint& bCircle, char color) {
 		vc.x = bCircle.distance * bCircle.center.x + rc * a.x + rs * b.x;
 		vc.y = bCircle.distance * bCircle.center.y + rc * a.y + rs * b.y;
 		vc.z = bCircle.distance * bCircle.center.z + rc * a.z + rs * b.z;
-		auto vcx = string::format("{}", vc.x);
-		auto vcy = string::format("{}", vc.y);
-		auto vcz = string::format("{}", vc.z);
+		auto vcx = strings::format("{}", vc.x);
+		auto vcy = strings::format("{}", vc.y);
+		auto vcz = strings::format("{}", vc.z);
 		xs += vcx + ", ";
 		ys += vcy + ", ";
 		zs += vcz + ", ";
@@ -1468,15 +1468,15 @@ static void writePython3D(std::ofstream& fs, const Polygon& polygon, bool& spher
 			for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 				const auto inc = i / HTM_LINE_POINTS;
 				const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
-				x.append(string::format("{}", mp.x)).append(", ");
-				y.append(string::format("{}", mp.y)).append(", ");
-				z.append(string::format("{}", mp.z)).append(", ");
+				x.append(strings::format("{}", mp.x)).append(", ");
+				y.append(strings::format("{}", mp.y)).append(", ");
+				z.append(strings::format("{}", mp.z)).append(", ");
 			}
 		}
 		// Close polygon.
-		x.append(string::format("{}", it->x)).append("]\n");
-		y.append(string::format("{}", it->y)).append("]\n");
-		z.append(string::format("{}", it->z)).append("]\n");
+		x.append(strings::format("{}", it->x)).append("]\n");
+		y.append(strings::format("{}", it->y)).append("]\n");
+		z.append(strings::format("{}", it->z)).append("]\n");
 		fs << x << y << z;
 		fs << "ax.plot3D(x, y, z, 'b-', linewidth = 2.0)\n";
 		const auto& c = convexpolygon.getCentroid();
@@ -1666,28 +1666,28 @@ HTM::writePython3D(const std::string& file, const std::shared_ptr<Geometry>& g, 
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
-			x.append(string::format("{}", mp.x)).append(", ");
-			y.append(string::format("{}", mp.y)).append(", ");
-			z.append(string::format("{}", mp.z)).append(", ");
+			x.append(strings::format("{}", mp.x)).append(", ");
+			y.append(strings::format("{}", mp.y)).append(", ");
+			z.append(strings::format("{}", mp.z)).append(", ");
 		}
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v1 + inc * v2).normalize();
-			x.append(string::format("{}", mp.x)).append(", ");
-			y.append(string::format("{}", mp.y)).append(", ");
-			z.append(string::format("{}", mp.z)).append(", ");
+			x.append(strings::format("{}", mp.x)).append(", ");
+			y.append(strings::format("{}", mp.y)).append(", ");
+			z.append(strings::format("{}", mp.z)).append(", ");
 		}
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v2 + inc * v0).normalize();
-			x.append(string::format("{}", mp.x)).append(", ");
-			y.append(string::format("{}", mp.y)).append(", ");
-			z.append(string::format("{}", mp.z)).append(", ");
+			x.append(strings::format("{}", mp.x)).append(", ");
+			y.append(strings::format("{}", mp.y)).append(", ");
+			z.append(strings::format("{}", mp.z)).append(", ");
 		}
 		// Close the trixel.
-		x.append(string::format("{}", v0.x)).append("]\n");
-		y.append(string::format("{}", v0.y)).append("]\n");
-		z.append(string::format("{}", v0.z)).append("]\n");
+		x.append(strings::format("{}", v0.x)).append("]\n");
+		y.append(strings::format("{}", v0.y)).append("]\n");
+		z.append(strings::format("{}", v0.z)).append("]\n");
 		fs << (x + y + z);
 		fs << rule_trixel;
 	}
@@ -1761,15 +1761,15 @@ HTM::writeGrahamScan3D(const std::string& file, const std::vector<Cartesian>& po
 		for (double i = 0; i < HTM_LINE_POINTS; ++i) {
 			const auto inc = i / HTM_LINE_POINTS;
 			const auto mp = ((1.0 - inc) * v0 + inc * v1).normalize();
-			x.append(string::format("{}", mp.x)).append(", ");
-			y.append(string::format("{}", mp.y)).append(", ");
-			z.append(string::format("{}", mp.z)).append(", ");
+			x.append(strings::format("{}", mp.x)).append(", ");
+			y.append(strings::format("{}", mp.y)).append(", ");
+			z.append(strings::format("{}", mp.z)).append(", ");
 		}
 	}
 	// Close polygon.
-	x.append(string::format("{}", it->x)).append("]\n");
-	y.append(string::format("{}", it->y)).append("]\n");
-	z.append(string::format("{}", it->z)).append("]\n");
+	x.append(strings::format("{}", it->x)).append("]\n");
+	y.append(strings::format("{}", it->y)).append("]\n");
+	z.append(strings::format("{}", it->z)).append("]\n");
 	fs << x << y << z;
 	fs << "ax.plot3D(x, y, z, 'b-', linewidth = 2.0)\n";
 	fs << "plt.ion()\nplt.grid()\nplt.show()";

@@ -31,7 +31,7 @@
 #include "logger.h"             // for Logging::tab_title, Logging::badge
 #include "opts.h"               // for opts
 #include "serialise.h"          // for Serialise
-#include "string.hh"            // for string::format, string::lower
+#include "strings.hh"           // for strings::format, strings::lower
 #include "xapian.h"             // for SerialisationError
 
 
@@ -56,7 +56,7 @@ set_as_title(const std::shared_ptr<const Node>& node)
 	if (node && !node->name().empty()) {
 		// Set window title
 		Logging::tab_title(node->idx
-			? string::format("[{}] {}", node->idx, node->name())
+			? strings::format("[{}] {}", node->idx, node->name())
 			: node->name());
 
 		// Set iTerm2 badge
@@ -101,7 +101,7 @@ Node::unserialise(const char **p, const char *end)
 		throw Xapian::SerialisationError("Bad Node: No name");
 	}
 
-	node._lower_name = string::lower(node._name);
+	node._lower_name = strings::lower(node._name);
 	node._host = inet_ntop(node._addr);
 
 	*p = ptr;
@@ -113,7 +113,7 @@ Node::unserialise(const char **p, const char *end)
 std::string
 Node::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<Node {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<Node {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}>",
 		idx, repr(name()), repr(host()), http_port, remote_port, replication_port, touched.load(std::memory_order_relaxed),
 		is_active() ? " " + DARK_STEEL_BLUE + "(active)" + STEEL_BLUE : "",
 		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
@@ -318,7 +318,7 @@ Node::get_node(std::string_view _node_name)
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
-	auto it = _nodes.find(string::lower(_node_name));
+	auto it = _nodes.find(strings::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		// L_NODE_NODES("get_node({}) -> {}", _node_name, node_ref->__repr__());
@@ -447,7 +447,7 @@ Node::drop_node(std::string_view _node_name)
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
-	auto it = _nodes.find(string::lower(_node_name));
+	auto it = _nodes.find(strings::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		node_ref->touched.store(0, std::memory_order_relaxed);

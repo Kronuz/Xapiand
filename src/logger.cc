@@ -43,7 +43,7 @@
 #include "io.hh"              // for io::write
 #include "opts.h"             // for opts
 #include "repr.hh"            // for repr
-#include "string.hh"          // for string::format
+#include "strings.hh"         // for strings::format
 #include "thread.hh"          // for get_thread_name, ThreadPolicyType::*
 #include "time_point.hh"      // for time_point_to_ullong
 #include "xapian.h"           // for Xapian::Error
@@ -456,9 +456,9 @@ Logging::tab_rgb(int red, int green, int blue)
 {
 	if (is_tty() && opts.iterm2) {
 		std::string buf;
-		buf += string::format("\033]6;1;bg;red;brightness;{}\a", red);
-		buf += string::format("\033]6;1;bg;green;brightness;{}\a", green);
-		buf += string::format("\033]6;1;bg;blue;brightness;{}\a", blue);
+		buf += strings::format("\033]6;1;bg;red;brightness;{}\a", red);
+		buf += strings::format("\033]6;1;bg;green;brightness;{}\a", green);
+		buf += strings::format("\033]6;1;bg;blue;brightness;{}\a", blue);
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -467,7 +467,7 @@ void
 Logging::tab_title(std::string_view title)
 {
 	if (is_tty() && opts.iterm2) {
-		auto buf = string::format("\033]0;{}\a", title);
+		auto buf = strings::format("\033]0;{}\a", title);
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -477,7 +477,7 @@ void
 Logging::badge(std::string_view badge)
 {
 	if (is_tty() && opts.iterm2) {
-		auto buf = string::format("\033]1337;SetBadgeFormat={}\a", Base64::rfc4648().encode(badge));
+		auto buf = strings::format("\033]1337;SetBadgeFormat={}\a", Base64::rfc4648().encode(badge));
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -487,7 +487,7 @@ void
 Logging::growl(std::string_view text)
 {
 	if (is_tty() && opts.iterm2) {
-		auto buf = string::format("\033]9;{}\a", text);
+		auto buf = strings::format("\033]9;{}\a", text);
 		write_stderr(buf.data(), buf.size());
 	}
 }
@@ -528,13 +528,13 @@ Logging::operator()()
 		} else if (opts.log_epoch) {
 			auto epoch = static_cast<int>(seconds);
 			msg.append(std::string(rgb(94, 94, 94)));
-			msg.append(string::format("{:010}", epoch));
+			msg.append(strings::format("{:010}", epoch));
 			if (opts.log_microseconds) {
 				msg.append(std::string(rgb(60, 60, 60)));
-				msg.append(string::format("{:.6f}", seconds - epoch).erase(0, 1));
+				msg.append(strings::format("{:.6f}", seconds - epoch).erase(0, 1));
 			} else if (opts.log_milliseconds) {
 				msg.append(std::string(rgb(60, 60, 60)));
-				msg.append(string::format("{:.3f}", seconds - epoch).erase(0, 1));
+				msg.append(strings::format("{:.3f}", seconds - epoch).erase(0, 1));
 			} else if (opts.log_plainseconds) {
 					// Use plain seconds only
 			}
@@ -543,56 +543,56 @@ Logging::operator()()
 			auto tm = Datetime::to_tm_t(seconds);
 			if (opts.log_iso8601) {
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(std::string(string::format("{:04}", tm.year)));
+				msg.append(std::string(strings::format("{:04}", tm.year)));
 				msg.append(std::string(rgb(60, 60, 60)));
 				msg.push_back('-');
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(std::string(string::format("{:02}", tm.mon)));
+				msg.append(std::string(strings::format("{:02}", tm.mon)));
 				msg.append(std::string(rgb(60, 60, 60)));
 				msg.push_back('-');
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(std::string(string::format("{:02}", tm.day)));
+				msg.append(std::string(strings::format("{:02}", tm.day)));
 				msg.append(std::string(rgb(60, 60, 60)));
 				msg.push_back(' ');
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(std::string(string::format("{:02}", tm.hour)));
+				msg.append(std::string(strings::format("{:02}", tm.hour)));
 				msg.append(std::string(rgb(60, 60, 60)));
 				msg.push_back(':');
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(std::string(string::format("{:02}", tm.min)));
+				msg.append(std::string(strings::format("{:02}", tm.min)));
 				msg.append(std::string(rgb(60, 60, 60)));
 				msg.push_back(':');
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(string::format("{:02}", tm.sec));
+				msg.append(strings::format("{:02}", tm.sec));
 				if (opts.log_microseconds) {
 					msg.append(std::string(rgb(60, 60, 60)));
-					msg.append(string::format("{:.6f}", tm.fsec).erase(0, 1));
+					msg.append(strings::format("{:.6f}", tm.fsec).erase(0, 1));
 				} else if (opts.log_milliseconds) {
 					msg.append(std::string(rgb(60, 60, 60)));
-					msg.append(string::format("{:.3f}", tm.fsec).erase(0, 1));
+					msg.append(strings::format("{:.3f}", tm.fsec).erase(0, 1));
 				} else if (opts.log_plainseconds) {
 					// Use plain seconds only
 				}
 				msg.push_back(' ');
 			} else {
 				msg.append(std::string(rgb(60, 60, 60)));
-				msg.append(string::format("{:04}", tm.year));
+				msg.append(strings::format("{:04}", tm.year));
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(string::format("{:02}", tm.mon));
+				msg.append(strings::format("{:02}", tm.mon));
 				msg.append(std::string(rgb(162, 162, 162)));
-				msg.append(string::format("{:02}", tm.day));
+				msg.append(strings::format("{:02}", tm.day));
 				msg.append(std::string(rgb(230, 230, 230)));
-				msg.append(string::format("{:02}", tm.hour));
+				msg.append(strings::format("{:02}", tm.hour));
 				msg.append(std::string(rgb(162, 162, 162)));
-				msg.append(string::format("{:02}", tm.min));
+				msg.append(strings::format("{:02}", tm.min));
 				msg.append(std::string(rgb(94, 94, 94)));
-				msg.append(string::format("{:02}", tm.sec));
+				msg.append(strings::format("{:02}", tm.sec));
 				if (opts.log_microseconds) {
 					msg.append(std::string(rgb(60, 60, 60)));
-					msg.append(string::format("{:.6f}", tm.fsec).erase(0, 1));
+					msg.append(strings::format("{:.6f}", tm.fsec).erase(0, 1));
 				} else if (opts.log_milliseconds) {
 					msg.append(std::string(rgb(60, 60, 60)));
-					msg.append(string::format("{:.3f}", tm.fsec).erase(0, 1));
+					msg.append(strings::format("{:.3f}", tm.fsec).erase(0, 1));
 				} else if (opts.log_plainseconds) {
 					// Use plain seconds only
 				}
@@ -609,7 +609,7 @@ Logging::operator()()
 		if (opts.log_location) {
 			msg.append(filename);
 			msg.push_back(':');
-			msg.append(string::format("{}", line));
+			msg.append(strings::format("{}", line));
 			msg.append(" at ");
 			msg.append(function);
 			msg.append(": ");
@@ -662,7 +662,7 @@ Logging::operator()()
 	if (async) {
 		auto log_age = age();
 		if (log_age > 1e8) {
-			msg += " " + string::from_delta(log_age, clears ? "+" : "~", true);
+			msg += " " + strings::from_delta(log_age, clears ? "+" : "~", true);
 		}
 	}
 

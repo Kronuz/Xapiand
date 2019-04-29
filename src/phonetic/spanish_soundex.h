@@ -28,7 +28,7 @@
 #include <unordered_map>         // for std::unordered_map
 #include <utility>               // for std::forward
 
-#include "string.hh"             // for string::inplace_upper
+#include "strings.hh"            // for strings::inplace_upper
 
 
 static const std::unordered_map<std::string, std::string> spanish_accents({
@@ -69,7 +69,7 @@ class SoundexSpanish : public Soundex<SoundexSpanish> {
 		replace(str, 0, spanish_accents);
 
 		// 2. Pass to upper case.
-		string::inplace_upper(str);
+		strings::inplace_upper(str);
 
 		// 3. Remove all non alphabetic characters and 'H's at the begin.
 		auto it = str.begin();

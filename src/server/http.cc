@@ -46,7 +46,7 @@ Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 std::string
 Http::getDescription() const
 {
-	return string::format("TCP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION, XAPIAND_HTTP_PROTOCOL_MINOR_VERSION);
+	return strings::format("TCP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAND_HTTP_PROTOCOL_MAJOR_VERSION, XAPIAND_HTTP_PROTOCOL_MINOR_VERSION);
 }
 
 
@@ -66,7 +66,7 @@ Http::start()
 std::string
 Http::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<Http {{cnt:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<Http {{cnt:{}}}{}{}{}>",
 		use_count(),
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
 		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,

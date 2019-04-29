@@ -40,7 +40,7 @@
 #include "metrics.h"                              // for HandledSubAggregation
 #include "msgpack.h"                              // for MsgPack, object::object, ...
 #include "exception.h"                            // for AggregationError, MSG_Agg...
-#include "string.hh"                              // for string::format
+#include "strings.hh"                             // for strings::format
 #include "hashes.hh"                              // for xxh64
 #include "xapian.h"                               // for Document, valueno
 
@@ -566,27 +566,27 @@ public:
 		: BucketAggregation<ValuesHandler>(context, name, schema, Sort::by_count_desc) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
@@ -613,27 +613,27 @@ public:
 		: BucketAggregation<TermsHandler>(context, name, schema, Sort::by_count_desc) { }
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
-		aggregate(value, string::format("{}", value), doc);
+		aggregate(value, strings::format("{}", value), doc);
 	}
 
 	void aggregate_boolean(bool value, const Xapian::Document& doc) override {
@@ -811,32 +811,32 @@ public:
 
 	void aggregate_float(long double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(value, string::format("{}", bucket), doc);
+		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
 	void aggregate_integer(int64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(value, string::format("{}", bucket), doc);
+		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
 	void aggregate_positive(uint64_t value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(value);
-		aggregate(value, string::format("{}", bucket), doc);
+		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
 	void aggregate_date(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(value, string::format("{}", bucket), doc);
+		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
 	void aggregate_time(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(value, string::format("{}", bucket), doc);
+		aggregate(value, strings::format("{}", bucket), doc);
 	}
 
 	void aggregate_timedelta(double value, const Xapian::Document& doc) override {
 		auto bucket = get_bucket(static_cast<long double>(value));
-		aggregate(value, string::format("{}", bucket), doc);
+		aggregate(value, strings::format("{}", bucket), doc);
 	}
 };
 
@@ -852,15 +852,15 @@ class RangeAggregation : public BucketAggregation<ValuesHandler> {
 			if (start == std::numeric_limits<T>::min()) {
 				return "..";
 			}
-			return string::format("{}..", start);
+			return strings::format("{}..", start);
 		}
 		if (start == std::numeric_limits<T>::min()) {
 			if (end == std::numeric_limits<T>::max()) {
 				return "..";
 			}
-			return string::format("..{}", end);
+			return strings::format("..{}", end);
 		}
-		return string::format("{}..{}", start, end);
+		return strings::format("{}..{}", start, end);
 	}
 
 	void configure_u64() {

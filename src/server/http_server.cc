@@ -121,7 +121,7 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 std::string
 HttpServer::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<HttpServer {{cnt:{}, sock:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<HttpServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? http.sock : sock,
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,

@@ -26,7 +26,7 @@
 #include "exception.h"             // for AggregationError, MSG_AggregationE...
 #include "msgpack/object_fwd.hpp"  // for type_error
 #include "repr.hh"                 // for repr
-#include "string.hh"               // for string::startswith
+#include "strings.hh"              // for strings::startswith
 #include "utype.hh"                // for toUType
 
 
@@ -130,7 +130,7 @@ TermsHandler::values(const Xapian::Document& doc) const
 	auto it_e = doc.termlist_end();
 	for (; it != it_e; ++it) {
 		const auto& term = *it;
-		if (string::startswith(term, _prefix)) {
+		if (strings::startswith(term, _prefix)) {
 			if (term.size() > _prefix.size() + 1) {
 				values.push_back(term.substr(_prefix.size() + 1));
 			}

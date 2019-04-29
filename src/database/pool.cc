@@ -466,7 +466,7 @@ ShardEndpoint::is_used() const
 std::string
 ShardEndpoint::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {}{}{}>",
+	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {}{}{}>",
 		refs.load(),
 		repr(to_string()),
 		is_locked() ? " " + RED + "(locked)" + STEEL_BLUE : "",
@@ -921,7 +921,7 @@ DatabasePool::count()
 std::string
 DatabasePool::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<DatabasePool {{locks:{}}}>",
+	return strings::format(STEEL_BLUE + "<DatabasePool {{locks:{}}}>",
 		locks.load());
 }
 

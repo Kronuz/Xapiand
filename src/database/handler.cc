@@ -54,7 +54,7 @@
 #include "reserved/schema.h"                // for RESERVED_*
 #include "response.h"                       // for RESPONSE_*
 #include "script.h"                         // for Script
-#include "string.hh"                        // for string::from_bytes
+#include "strings.hh"                       // for strings::from_bytes
 #include "serialise.h"                      // for cast, serialise, type
 #include "server/http_utils.h"              // for catch_http_errors
 
@@ -134,7 +134,7 @@ inject_blob(Data& data, const MsgPack& obj)
 	if (type == "inplace") {
 		auto blob = blob_value.str_view();
 		if (blob.size() > NON_STORED_SIZE_LIMIT) {
-			THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+			THROW(ClientError, "Non-stored object has a size limit of {}", strings::from_bytes(NON_STORED_SIZE_LIMIT));
 		}
 		data.update(ct_type, blob);
 	} else if (type == "stored") {
@@ -155,7 +155,7 @@ inject_data(Data& data, const MsgPack& obj)
 			case MsgPack::Type::STR: {
 				auto blob = _data.str_view();
 				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+					THROW(ClientError, "Non-stored object has a size limit of {}", strings::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
 				data.update("application/octet-stream", blob);
 				break;
@@ -188,7 +188,7 @@ public:
 
 	bool operator() (const std::string& term) const override {
 		for (const auto& prefix : prefixes) {
-			if (string::startswith(term, prefix)) {
+			if (strings::startswith(term, prefix)) {
 				return true;
 			}
 		}
@@ -503,7 +503,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 			} else {
 				auto blob = body.str_view();
 				if (blob.size() > NON_STORED_SIZE_LIMIT) {
-					THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+					THROW(ClientError, "Non-stored object has a size limit of {}", strings::from_bytes(NON_STORED_SIZE_LIMIT));
 				}
 				data.update(ct_type, blob);
 			}
@@ -575,7 +575,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 					} else {
 						auto blob = body.str_view();
 						if (blob.size() > NON_STORED_SIZE_LIMIT) {
-							THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+							THROW(ClientError, "Non-stored object has a size limit of {}", strings::from_bytes(NON_STORED_SIZE_LIMIT));
 						}
 						data.update(ct_type, blob);
 					}
@@ -680,7 +680,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 					} else {
 						auto blob = body.str_view();
 						if (blob.size() > NON_STORED_SIZE_LIMIT) {
-							THROW(ClientError, "Non-stored object has a size limit of {}", string::from_bytes(NON_STORED_SIZE_LIMIT));
+							THROW(ClientError, "Non-stored object has a size limit of {}", strings::from_bytes(NON_STORED_SIZE_LIMIT));
 						}
 						data.update(ct_type, blob);
 					}
@@ -1174,7 +1174,7 @@ DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, si
 MSet
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs)
 {
-	L_CALL("DatabaseHandler::get_mset({}, {})", repr(string::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
+	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
 
 	schema = get_schema();
 
@@ -1906,7 +1906,7 @@ DatabaseHandler::get_document_info(std::string_view document_id, bool raw_data, 
 						{ RESPONSE_OFFSET, locator.offset },
 					};
 					if (human) {
-						locator_info[RESPONSE_SIZE] = string::from_bytes(locator.size);
+						locator_info[RESPONSE_SIZE] = strings::from_bytes(locator.size);
 					} else {
 						locator_info[RESPONSE_SIZE] = locator.size;
 					}
@@ -2084,7 +2084,7 @@ DocPreparer::operator()()
 					Xapian::Document{},
 					indexer->comments ? MsgPack{
 						{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-						{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
+						{ RESPONSE_xMESSAGE, strings::split(http_errors.error, '\n') }
 					} : MsgPack::MAP(),
 					idx
 				)
@@ -2224,7 +2224,7 @@ DocIndexer::operator()()
 				if (http_errors.error_code != HTTP_STATUS_OK) {
 					if (comments) {
 						obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
-						obj[RESPONSE_xMESSAGE] = string::split(http_errors.error, '\n');
+						obj[RESPONSE_xMESSAGE] = strings::split(http_errors.error, '\n');
 					}
 				}
 			} else if (!data_obj.is_undefined()) {
@@ -2804,9 +2804,9 @@ committer_commit(std::weak_ptr<Shard> weak_shard) {
 		auto end = std::chrono::steady_clock::now();
 
 		if (error.empty()) {
-			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), string::from_delta(start, end));
+			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), strings::from_delta(start, end));
 		} else {
-			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), string::from_delta(start, end), error);
+			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
 		}
 	}
 }

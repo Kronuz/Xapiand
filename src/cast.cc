@@ -23,7 +23,7 @@
 #include "cast.h"
 
 #include "database/schema.h"
-#include "string.hh"                              // for string::format
+#include "strings.hh"                             // for strings::format
 
 
 MsgPack
@@ -229,11 +229,11 @@ Cast::string(const MsgPack& obj)
 {
 	switch (obj.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return string::format("{}", obj.u64());
+			return strings::format("{}", obj.u64());
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return string::format("{}", obj.i64());
+			return strings::format("{}", obj.i64());
 		case MsgPack::Type::FLOAT:
-			return string::format("{}", obj.f64());
+			return strings::format("{}", obj.f64());
 		case MsgPack::Type::STR:
 			return obj.str();
 		case MsgPack::Type::BOOLEAN:
@@ -275,7 +275,7 @@ Cast::boolean(const MsgPack& obj)
 				// 	switch (value[0]) {
 				// 		case 't':
 				// 		case 'T': {
-				// 			auto lower_value = string::lower(value);
+				// 			auto lower_value = strings::lower(value);
 				// 			if (lower_value == "true") {
 				// 				return true;
 				// 			}
@@ -286,7 +286,7 @@ Cast::boolean(const MsgPack& obj)
 					switch (value[0]) {
 						case 'f':
 						case 'F': {
-							auto lower_value = string::lower(value);
+							auto lower_value = strings::lower(value);
 							if (lower_value == "false") {
 								return false;
 							}

@@ -39,7 +39,7 @@
 #include "io.hh"                    // for io::*
 #include "log.h"                    // for L_ERR, L_WARNING, L_INFO
 #include "likely.h"                 // for likely, unlikely
-#include "string.hh"                // for string::format
+#include "strings.hh"               // for strings::format
 
 
 #ifndef OPEN_MAX
@@ -247,11 +247,11 @@ std::size_t get_max_files_system_wide()
 
 std::string check_compiler() {
 #ifdef _MSC_VER
-	return string::format("Visual Studio {}", _MSC_VER);
+	return strings::format("Visual Studio {}", _MSC_VER);
 #elif __clang__
-    return string::format("Clang v{}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
+    return strings::format("Clang v{}.{}.{}", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #elif __GNUC__
-    return string::format("GCC v{}.{}.{}", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+    return strings::format("GCC v{}.{}.{}", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #else
 	return "Unknown Compiler";
 #endif

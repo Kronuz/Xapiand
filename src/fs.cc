@@ -35,7 +35,7 @@
 #include "log.h"                    // for L_ERR, L_WARNING, L_INFO
 #include "repr.hh"                  // for repr
 #include "split.h"                  // for Split
-#include "string.hh"                // for string::startswith, string::endswith
+#include "strings.hh"               // for strings::startswith, strings::endswith
 #include "stringified.hh"           // for stringified
 
 #define L_FS L_NOTHING
@@ -212,9 +212,9 @@ DIR* opendir(std::string_view path, bool create) {
 void find_file_dir(DIR* dir, File_ptr& fptr, std::string_view pattern, bool pre_suf_fix) {
 	bool(*match_pattern)(std::string_view, std::string_view);
 	if (pre_suf_fix) {
-		match_pattern = string::startswith;
+		match_pattern = strings::startswith;
 	} else {
-		match_pattern = string::endswith;
+		match_pattern = strings::endswith;
 	}
 
 	if (fptr.ent != nullptr) {

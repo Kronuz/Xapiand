@@ -33,7 +33,7 @@
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
 #include "serialise.h"                            // for KEYWORD_STR
 #include "server/discovery.h"                     // for schema_updater
-#include "string.hh"                              // for string::format, string::replace
+#include "strings.hh"                             // for strings::format, strings::replace
 #include "url_parser.h"                           // for urldecode
 
 #define L_SCHEMA L_NOTHING
@@ -273,7 +273,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				// Implement foreign schemas in .xapiand/indices by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_ENDPOINT, string::format(".xapiand/indices/{}", string::replace(endpoints_path, "/", "%2F")) },
+					{ RESERVED_ENDPOINT, strings::format(".xapiand/indices/{}", strings::replace(endpoints_path, "/", "%2F")) },
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
@@ -770,7 +770,7 @@ std::string
 SchemasLRU::__repr__() const
 {
 	std::lock_guard<std::mutex> versions_lk(versions_mtx);
-	return string::format(STEEL_BLUE + "<SchemasLRU {{versions:{}}}>", versions.size());
+	return strings::format(STEEL_BLUE + "<SchemasLRU {{versions:{}}}>", versions.size());
 }
 
 
@@ -802,7 +802,7 @@ SchemasLRU::dump_schemas(int level) const
 				}
 			}
 			ret += indent + indent;
-			ret += string::format("<Schema {}{}>", repr(schema.first),  outdated);
+			ret += strings::format("<Schema {}{}>", repr(schema.first),  outdated);
 			ret.push_back('\n');
 		}
 	}

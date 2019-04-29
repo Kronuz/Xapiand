@@ -29,7 +29,7 @@
 #include <utility>               // for std::forward
 #include <vector>                // for std::vector
 
-#include "string.hh"             // for string::inplace_upper
+#include "strings.hh"            // for strings::inplace_upper
 
 
 static const std::unordered_map<std::string, std::string> french_accents({
@@ -80,7 +80,7 @@ class SoundexFrench : public Soundex<SoundexFrench> {
 		replace(str, 0, french_accents);
 
 		// 2. Pass to upper case.
-		string::inplace_upper(str);
+		strings::inplace_upper(str);
 
 		// 3. Keep only alphabet characters.
 		for (auto it = str.begin(); it != str.end(); ) {

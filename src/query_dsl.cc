@@ -46,7 +46,7 @@
 #include "reserved/types.h"                       // for RESERVED_POSITIVE,...
 #include "serialise.h"                            // for MsgPack, get_range_type...
 #include "stopper.h"                              // for getStopper
-#include "string.hh"                              // for string::startswith
+#include "strings.hh"                             // for strings::startswith
 
 #define L_QUERY L_NOTHING
 
@@ -556,7 +556,7 @@ QueryDSL::get_acc_geo_query(const required_spc_t& field_spc, std::string_view fi
 {
 	L_CALL("QueryDSL::get_acc_geo_query(<required_spc_t>, {}, {}, <wqf>)", repr(field_accuracy), repr(obj.to_string()));
 
-	if (string::startswith(field_accuracy, "_geo")) {
+	if (strings::startswith(field_accuracy, "_geo")) {
 		int errno_save;
 		auto nivel = strict_stoull(&errno_save, field_accuracy.substr(4));
 		if (errno_save != 0) {
@@ -706,13 +706,13 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 		case FieldType::keyword: {
 			std::string serialised_term_holder;
 			if (!field_spc.flags.bool_term) {
-				serialised_term_holder = string::lower(serialised_term);
+				serialised_term_holder = strings::lower(serialised_term);
 				serialised_term = serialised_term_holder;
 			}
-			if (string::endswith(serialised_term, '*')) {
+			if (strings::endswith(serialised_term, '*')) {
 				serialised_term.remove_suffix(1);
 				flags |= Xapian::QueryParser::FLAG_PARTIAL;
-			} else if (string::endswith(serialised_term, '~')) {
+			} else if (strings::endswith(serialised_term, '~')) {
 				serialised_term.remove_suffix(1);
 				flags |= Xapian::QueryParser::FLAG_FUZZY;
 			}
@@ -1037,7 +1037,7 @@ QueryDSL::make_dsl_query(std::string_view query)
 					MsgPack value;
 					auto is_range = fp.is_range();
 					if (is_range) {
-						auto dates = string::split(fp.get_values(), "..");
+						auto dates = strings::split(fp.get_values(), "..");
 						if (dates.size() > 2) {
 							THROW(QueryDslError, "Bad query range: {}", fp.get_values());
 						}

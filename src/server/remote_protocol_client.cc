@@ -1337,7 +1337,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 		std::string reason;
 
 		if (received < 0) {
-			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
+			reason = strings::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
 			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
 				L_NOTICE("Remote Protocol {} connection closed unexpectedly: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
 				close();
@@ -1644,7 +1644,7 @@ RemoteProtocolClient::__repr__() const
 		switch (st) {
 			case RemoteState::INIT_REMOTE:
 			case RemoteState::REMOTE_SERVER:
-				return string::format("{}) ({}<->{}",
+				return strings::format("{}) ({}<->{}",
 					enum_name(st),
 					enum_name(static_cast<RemoteMessageType>(received)),
 					enum_name(static_cast<RemoteReplyType>(sent)));
@@ -1655,7 +1655,7 @@ RemoteProtocolClient::__repr__() const
 #else
 	const auto& state_repr = enum_name(state.load(std::memory_order_relaxed));
 #endif
-	return string::format(STEEL_BLUE + "<RemoteProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<RemoteProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		state_repr,
 		use_count(),
 		sock,

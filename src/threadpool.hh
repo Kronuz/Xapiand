@@ -34,7 +34,7 @@
 #include "blocking_concurrent_queue.h"
 #include "likely.h"              // for likely, unlikely
 #include "log.h"                 // for L_EXC
-#include "string.hh"             // for string::format
+#include "strings.hh"            // for strings::format
 #include "thread.hh"             // for Thread
 
 
@@ -85,7 +85,7 @@ public:
 
 	ThreadPoolThread(std::size_t idx, ThreadPool<TaskType, thread_policy>* pool) noexcept :
 		_pool(pool),
-		_name(string::format(pool->_format, idx)) {}
+		_name(strings::format(pool->_format, idx)) {}
 
 	void operator()();
 

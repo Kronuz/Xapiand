@@ -145,12 +145,12 @@ inline auto& fsyncher(bool create = true) {
 
 		if (err == -1) {
 			if (errno == EBADF || errno == EINVAL) {
-				L_DEBUG("Async {} falied after {}: {} ({}): {}", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), error::name(errno), errno, error::description(errno));
+				L_DEBUG("Async {} falied after {}: {} ({}): {}", full_fsync ? "Full Fsync" : "Fsync", strings::from_delta(start, end), error::name(errno), errno, error::description(errno));
 			} else {
-				L_WARNING("Async {} falied after {}: {} ({}): {}", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end), error::name(errno), errno, error::description(errno));
+				L_WARNING("Async {} falied after {}: {} ({}): {}", full_fsync ? "Full Fsync" : "Fsync", strings::from_delta(start, end), error::name(errno), errno, error::description(errno));
 			}
 		} else {
-			L_DEBUG("Async {} succeeded after {}", full_fsync ? "Full Fsync" : "Fsync", string::from_delta(start, end));
+			L_DEBUG("Async {} succeeded after {}", full_fsync ? "Full Fsync" : "Fsync", strings::from_delta(start, end));
 		}
 	}, std::chrono::milliseconds(opts.fsyncher_throttle_time), std::chrono::milliseconds(opts.fsyncher_debounce_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_busy_timeout), std::chrono::milliseconds(opts.fsyncher_debounce_force_timeout)) : nullptr;
 	assert(!create || fsyncher);

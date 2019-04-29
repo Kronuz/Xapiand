@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <string_view>                            // for string::lower
+#include <string_view>                            // for std::string_view
 
 struct ct_type_t;
 

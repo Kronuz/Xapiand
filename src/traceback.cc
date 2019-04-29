@@ -46,7 +46,7 @@
 #include "atomic_shared_ptr.h"                    // for atomic_shared_ptr
 #include "error.hh"                               // for error::name
 #include "likely.h"                               // for likely/unlikely
-#include "string.hh"                              // for string::format
+#include "strings.hh"                             // for strings::format
 #include "time_point.hh"                          // for wait
 
 
@@ -116,7 +116,7 @@ public:
 		rep.push_back('{');
 		for (size_t idx = 0; idx < size(); ++idx) {
 			rep.push_back(' ');
-			rep.append(string::format("{}", callstack[idx + 1]));
+			rep.append(strings::format("{}", callstack[idx + 1]));
 		}
 		rep.append(" }");
 		return rep;
@@ -621,28 +621,28 @@ dump_callstacks()
 				auto& snapshot = *thread_info->snapshot;
 				if (snapshot.empty() || callstack.empty()) {
 					++active;
-					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, snapshot.empty() ? " " + DARK_STEEL_BLUE + "(no snapshot)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(no callstack)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
+					ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, snapshot.empty() ? " " + DARK_STEEL_BLUE + "(no snapshot)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(no callstack)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 					if (!callstack.empty()) {
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
-						ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
+						ret.append(strings::format(DEBUG_COL + "{}\n", strings::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
 #endif
 					}
 				} else if (callstack[skip] != snapshot[skip]) {
 					++active;
-					ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " " + DARK_ORANGE + "(active)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
+					ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, callstack[skip] == snapshot[skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " " + DARK_ORANGE + "(active)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
-					ret.append(string::format(DEBUG_COL + "{}\n", string::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
+					ret.append(strings::format(DEBUG_COL + "{}\n", strings::indent(traceback(thread_info->name, "", idx, callstack.get(), skip), ' ', 8, true)));
 #endif
 				}
 			} else {
-				ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, LIGHT_STEEL_BLUE + "(uninitialized)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
+				ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info->name, LIGHT_STEEL_BLUE + "(uninitialized)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 			}
 		} else {
-			ret.append(string::format("        " + STEEL_BLUE + "<Thread {}: {}>\n", idx, "???"));
+			ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}>\n", idx, "???"));
 		}
 		skip = 0;
 	}
-	return string::format("    " + STEEL_BLUE + "<Threads {{total:{}, active:{}}}>\n", idx, active) + ret;
+	return strings::format("    " + STEEL_BLUE + "<Threads {{total:{}, active:{}}}>\n", idx, active) + ret;
 }
 
 

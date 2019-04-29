@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "string.hh"
+#include "strings.hh"
 
 #include <cassert>            // for assert
 #include <cmath>              // for std::log, std::pow
@@ -80,10 +80,10 @@ public:
 		if (colored) {
 			auto& color = colors[order];
 			auto& reset = colors[last];
-			return string::format("{}{}{}{}{}", color, prefix, static_cast<double>(num), unit, reset);
+			return strings::format("{}{}{}{}{}", color, prefix, static_cast<double>(num), unit, reset);
 		}
 
-		return string::format("{}{}{}", prefix, static_cast<double>(num), unit);
+		return strings::format("{}{}{}", prefix, static_cast<double>(num), unit);
 	}
 };
 
@@ -107,7 +107,7 @@ static inline std::string _from_bytes(size_t bytes, const char* prefix, bool col
 	return humanize(bytes, prefix, colored, 10.0L);
 }
 
-std::string string::from_bytes(size_t bytes, const char* prefix, bool colored) {
+std::string strings::from_bytes(size_t bytes, const char* prefix, bool colored) {
 	return _from_bytes(bytes, prefix, colored);
 }
 
@@ -122,7 +122,7 @@ static inline std::string _from_small_time(long double seconds, const char* pref
 	return humanize(seconds, prefix, colored, 1000.0L);
 }
 
-std::string string::from_small_time(long double seconds, const char* prefix, bool colored) {
+std::string strings::from_small_time(long double seconds, const char* prefix, bool colored) {
 	return _from_small_time(seconds, prefix, colored);
 }
 
@@ -136,7 +136,7 @@ static inline std::string _from_time(long double seconds, const char* prefix, bo
 	return humanize(seconds, prefix, colored, 100.0L);
 }
 
-std::string string::from_time(long double seconds, const char* prefix, bool colored) {
+std::string strings::from_time(long double seconds, const char* prefix, bool colored) {
 	return _from_time(seconds, prefix, colored);
 }
 
@@ -146,6 +146,6 @@ static inline std::string _from_delta(long double nanoseconds, const char* prefi
 	return (seconds < 1) ? _from_small_time(seconds, prefix, colored) : _from_time(seconds, prefix, colored);
 }
 
-std::string string::from_delta(long double nanoseconds, const char* prefix, bool colored) {
+std::string strings::from_delta(long double nanoseconds, const char* prefix, bool colored) {
 	return _from_delta(nanoseconds, prefix, colored);
 }

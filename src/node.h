@@ -41,7 +41,7 @@
 #include "color_tools.hh"       // for color, hsv2rgb
 #include "epoch.hh"             // for epoch::now
 #include "net.hh"               // for inet_ntop
-#include "string.hh"            // for string::lower
+#include "strings.hh"           // for strings::lower
 #include "stringified.hh"       // for stringified
 
 
@@ -140,7 +140,7 @@ public:
 
 	void name(std::string_view name) {
 		_name = std::string(name);
-		_lower_name = string::lower(_name);
+		_lower_name = strings::lower(_name);
 	}
 
 	const std::string& name() const noexcept {

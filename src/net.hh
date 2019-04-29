@@ -30,7 +30,7 @@
 #include "error.hh"                 // for error:name, error::description
 #include "io.hh"                    // for io::setsockopt
 #include "log.h"                    // for L_ERR
-#include "string.hh"                // for string::format, string::join
+#include "strings.hh"               // for strings::format, strings::join
 
 
 inline std::string inet_ntop(const struct sockaddr_in& addr) {
@@ -39,7 +39,7 @@ inline std::string inet_ntop(const struct sockaddr_in& addr) {
 	// 	L_ERR("ERROR: inet_ntop: {} ({}): {}", error::name(errno), errno, error::description(errno));
 	// }
 	// return std::string(ip);
-	return string::format("{}.{}.{}.{}",
+	return strings::format("{}.{}.{}.{}",
 		addr.sin_addr.s_addr & 0xff,
 		(addr.sin_addr.s_addr >> 8) & 0xff,
 		(addr.sin_addr.s_addr >> 16) & 0xff,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@
 #include <vector>             // for std::vector
 
 #include "ev/ev++.h"          // for EV_ASYNC, EV_CHECK, EV_CHILD, EV_EMBED...
-#include "string.hh"          // for string::join
+#include "strings.hh"         // for strings::join
 
 
 inline std::string readable_revents(int revents) {
@@ -48,5 +48,5 @@ inline std::string readable_revents(int revents) {
 	if ((revents & EV_EMBED) == EV_EMBED) values.push_back("EV_EMBED");
 	if ((revents & EV_ERROR) == EV_ERROR) values.push_back("EV_ERROR");
 	if ((revents & EV_UNDEF) == EV_UNDEF) values.push_back("EV_UNDEF");
-	return string::join(values, "|");
+	return strings::join(values, "|");
 }

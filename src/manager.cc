@@ -500,7 +500,7 @@ XapiandManager::init()
 	// Setup node from node database directory
 	std::string node_name(load_node_name());
 	if (!node_name.empty()) {
-		if (!_node_name.empty() && string::lower(_node_name) != string::lower(node_name)) {
+		if (!_node_name.empty() && strings::lower(_node_name) != strings::lower(node_name)) {
 			_node_name = "~";
 		} else {
 			_node_name = node_name;
@@ -622,7 +622,7 @@ XapiandManager::start_discovery()
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		auto msg = string::format("Discovering cluster {} by listening on ", opts.cluster_name);
+		auto msg = strings::format("Discovering cluster {} by listening on ", opts.cluster_name);
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
 		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
@@ -716,7 +716,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	// Set node as ready!
 	_node_name = set_node_name(local_node->name());
-	if (string::lower(_node_name) != local_node->lower_name()) {
+	if (strings::lower(_node_name) != local_node->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node);
 		local_node_copy->name(_node_name);
 		local_node = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
@@ -739,7 +739,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		// Request updates from indexes databases
 		for (auto& node : Node::nodes()) {
 			if (node->idx && !node->is_local()) {
-				auto index = string::format(".xapiand/indices/.__{}", node->idx);
+				auto index = strings::format(".xapiand/indices/.__{}", node->idx);
 				Endpoint endpoint{index};
 				Endpoint remote_endpoint{index, node};
 				_replication->trigger_replication({remote_endpoint, endpoint, false});
@@ -928,17 +928,17 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	} else {
 		std::vector<std::string> nodes;
 		for (const auto& node : Node::nodes()) {
-			nodes.push_back(string::format("{}{}" + NOTICE_COL, node->col().ansi(), node->name()));
+			nodes.push_back(strings::format("{}{}" + NOTICE_COL, node->col().ansi(), node->name()));
 		}
 		switch (_new_cluster) {
 			case 0:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " opened cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, string::join(nodes, ", ", " and "));
+				L_NOTICE("Node {}{}" + NOTICE_COL + " opened cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 			case 1:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " created cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, string::join(nodes, ", ", " and "));
+				L_NOTICE("Node {}{}" + NOTICE_COL + " created cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 			case 2:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " joined cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, string::join(nodes, ", ", " and "));
+				L_NOTICE("Node {}{}" + NOTICE_COL + " joined cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 		}
 	}
@@ -1444,7 +1444,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 	auto idx = replicas.front();  // The very first node is the shard master
 	auto node = Node::get_node(idx);
 	if (node && node->is_active()) {
-		Endpoint endpoint{string::format(".xapiand/indices/.__{}", node->idx), node};
+		Endpoint endpoint{strings::format(".xapiand/indices/.__{}", node->idx), node};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		db_handler.update(normalized_path, 0, false, {
 			{ ID_FIELD_NAME, {
@@ -1485,7 +1485,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			auto& main_master_name = replicas.front();  // The very first node is the main master
 			auto node = Node::get_node(main_master_name);
 			if (node && node->is_active()) {
-				Endpoint endpoint{string::format(".xapiand/indices/.__{}", node->idx), node};
+				Endpoint endpoint{strings::format(".xapiand/indices/.__{}", node->idx), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				db_handler.update(normalized_path, 0, false, {
 					{ ID_FIELD_NAME, {
@@ -1513,7 +1513,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 		size_t shard_num = 0;
 		for (auto& shard_replicas : shards) {
 			if (!shard_replicas.empty()) {
-				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
+				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
 				index_replicas(shard_normalized_path, shard_replicas);
 			}
 		}
@@ -1567,7 +1567,7 @@ load_shards(const std::string& normalized_path)
 	Endpoints index_endpoints;
 	for (auto& node : nodes) {
 		if (node->idx) {
-			index_endpoints.add(Endpoint{string::format(".xapiand/indices/.__{}", node->idx)});
+			index_endpoints.add(Endpoint{strings::format(".xapiand/indices/.__{}", node->idx)});
 		}
 	}
 
@@ -1581,7 +1581,7 @@ load_shards(const std::string& normalized_path)
 			if (n_shards_val.is_number()) {
 				size_t n_shards = n_shards_val.u64();
 				for (size_t shard_num = 1; shard_num <= n_shards; ++shard_num) {
-					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, shard_num);
+					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
 					shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
 				}
 			}
@@ -1681,7 +1681,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			return nodes;
 		}
 
-		if (string::startswith(normalized_path, ".xapiand/indices/.__")) {
+		if (strings::startswith(normalized_path, ".xapiand/indices/.__")) {
 			// Index databases are always in their specified node
 			std::vector<std::shared_ptr<const Node>> node_replicas;
 			int errno_save;
@@ -1717,7 +1717,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 						nodes.clear();  // There were missing replicas, abort!
 						break;
 					}
-					auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
+					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
 					std::vector<std::vector<std::string>> shard_shards;
 					shard_shards.push_back(replicas);
 					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
@@ -1783,7 +1783,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
 				assert(!replicas.empty());
-				auto shard_normalized_path = string::format("{}/.__{}", normalized_path, ++shard_num);
+				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
 				std::vector<std::vector<std::string>> shard_shards;
 				shard_shards.push_back(replicas);
 				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
@@ -1849,7 +1849,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 		: nodes.size();
 	size_t shard_num = 0;
 	for (const auto& shard_nodes : nodes) {
-		auto path = n_shards == 1 ? endpoint_path : string::format("{}/.__{}", endpoint_path, ++shard_num);
+		auto path = n_shards == 1 ? endpoint_path : strings::format("{}/.__{}", endpoint_path, ++shard_num);
 		if (!unsharded.second || path == endpoint.path) {
 			Endpoint node_endpoint;
 			for (const auto& node : shard_nodes) {
@@ -1976,7 +1976,7 @@ XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds t
 std::string
 XapiandManager::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
 		enum_name(_state.load()),
 		use_count(),
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,

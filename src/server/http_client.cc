@@ -73,7 +73,7 @@
 #include "reserved/schema.h"                // for RESERVED_VERSION
 #include "response.h"                       // for RESPONSE_*
 #include "serialise.h"                      // for Serialise::boolean
-#include "string.hh"                        // for string::from_delta
+#include "strings.hh"                       // for strings::from_delta
 #include "system.hh"                        // for check_compiler, check_OS, check_architecture
 #include "xapian.h"                         // for Xapian::major_version, Xapian::minor_version
 
@@ -255,7 +255,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 		if (http_major == 0 && http_minor == 0) {
 			http_major = 1;
 		}
-		head += string::format("HTTP/{}.{} {} ", http_major, http_minor, status);
+		head += strings::format("HTTP/{}.{} {} ", http_major, http_minor, status);
 		head += http_status_str(status);
 		head_sep += eol;
 		if ((mode & HTTP_HEADER_RESPONSE) == 0) {
@@ -275,14 +275,14 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 		request.ends = std::chrono::steady_clock::now();
 
 		if (request.human) {
-			headers += string::format("Response-Time: {}", string::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count())) + eol;
+			headers += strings::format("Response-Time: {}", strings::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count())) + eol;
 			if (request.ready >= request.processing) {
-				headers += string::format("Operation-Time: {}", string::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count())) + eol;
+				headers += strings::format("Operation-Time: {}", strings::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count())) + eol;
 			}
 		} else {
-			headers += string::format("Response-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9) + eol;
+			headers += strings::format("Response-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9) + eol;
 			if (request.ready >= request.processing) {
-				headers += string::format("Operation-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9) + eol;
+				headers += strings::format("Operation-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9) + eol;
 			}
 		}
 
@@ -303,9 +303,9 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 		}
 
 		if ((mode & HTTP_CONTENT_LENGTH_RESPONSE) != 0) {
-			headers += string::format("Content-Length: {}", content_length) + eol;
+			headers += strings::format("Content-Length: {}", content_length) + eol;
 		} else {
-			headers += string::format("Content-Length: {}", body.size()) + eol;
+			headers += strings::format("Content-Length: {}", body.size()) + eol;
 		}
 		headers_sep += eol;
 	}
@@ -342,7 +342,7 @@ HttpClient::handled_errors(Request& request, Func&& func)
 		} else if (request.comments) {
 			write_http_response(request, http_errors.error_code, MsgPack({
 				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-				{ RESPONSE_xMESSAGE, string::split(http_errors.error, '\n') }
+				{ RESPONSE_xMESSAGE, strings::split(http_errors.error, '\n') }
 			}));
 		} else {
 			write_http_response(request, http_errors.error_code);
@@ -403,9 +403,9 @@ HttpClient::on_read(const char* buf, ssize_t received)
 		std::string reason;
 
 		if (received < 0) {
-			reason = string::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
+			reason = strings::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
 			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("HTTP client connection closed unexpectedly after {}: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
+				L_NOTICE("HTTP client connection closed unexpectedly after {}: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 				close();
 				return received;
 			}
@@ -415,25 +415,25 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 		auto state = HTTP_PARSER_STATE(&new_request->parser);
 		if (state != s_start_req) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), state, reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), state, reason);
 			close();
 			return received;
 		}
 
 		if (is_waiting()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There was still a request in progress: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There was still a request in progress: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 			close();
 			return received;
 		}
 
 		if (!write_queue.empty()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There is still pending data: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There is still pending data: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 			close();
 			return received;
 		}
 
 		if (pending_requests()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests: {}", string::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
 			close();
 			return received;
 		}
@@ -460,7 +460,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 				if (new_request->comments) {
 					write_http_response(*new_request, error_code, MsgPack({
 						{ RESPONSE_xSTATUS, (int)error_code },
-						{ RESPONSE_xMESSAGE, string::split(message, '\n') }
+						{ RESPONSE_xMESSAGE, strings::split(message, '\n') }
 					}));
 				} else {
 					write_http_response(*new_request, error_code);
@@ -518,7 +518,7 @@ inline std::string readable_http_parser_flags(http_parser* parser) {
 	if ((parser->flags & F_UPGRADE) == F_UPGRADE) values.push_back("F_UPGRADE");
 	if ((parser->flags & F_SKIPBODY) == F_SKIPBODY) values.push_back("F_SKIPBODY");
 	if ((parser->flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) values.push_back("F_CONTENTLENGTH");
-	return string::join(values, "|");
+	return strings::join(values, "|");
 }
 
 
@@ -703,7 +703,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 
 		case _.fhhl("accept"): {
 			static AcceptLRU accept_sets;
-			auto value = string::lower(_header_value);
+			auto value = strings::lower(_header_value);
 			auto lookup = accept_sets.lookup(value);
 			if (!lookup.first) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
@@ -738,7 +738,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 
 		case _.fhhl("accept-encoding"): {
 			static AcceptEncodingLRU accept_encoding_sets;
-			auto value = string::lower(_header_value);
+			auto value = strings::lower(_header_value);
 			auto lookup = accept_encoding_sets.lookup(value);
 			if (!lookup.first) {
 				std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
@@ -1359,13 +1359,13 @@ HttpClient::node_obj()
 			{ "arch", check_architecture() },
 		} },
 		{ "versions", {
-			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : string::format("{}_{}", Package::VERSION, Package::REVISION) },
-			{ "Xapian", string::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
+			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : strings::format("{}_{}", Package::VERSION, Package::REVISION) },
+			{ "Xapian", strings::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
-			{ "ChaiScript", string::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+			{ "ChaiScript", strings::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
 #endif
 #ifdef USE_ICU
-			{ "ICU", string::format("{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM) },
+			{ "ICU", strings::format("{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM) },
 #endif
 		} },
 		{ "options", {
@@ -1471,7 +1471,7 @@ HttpClient::delete_document_view(Request& request)
 	write_http_response(request, HTTP_STATUS_NO_CONTENT);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Deletion took {}", string::from_delta(took));
+	L_TIME("Deletion took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1525,10 +1525,10 @@ HttpClient::write_document_view(Request& request)
 		if (document_id.empty()) {
 			if (it == response_obj.end()) {
 				auto document_id_obj = document.get_value(ID_FIELD_NAME);
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
+				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
 				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
 			} else {
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
+				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
 			}
 		} else {
 			if (it == response_obj.end()) {
@@ -1560,9 +1560,9 @@ HttpClient::write_document_view(Request& request)
 			auto it = response_obj.find(ID_FIELD_NAME);
 			if (it == response_obj.end()) {
 				auto document_id_obj = document.get_value(ID_FIELD_NAME);
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
+				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
 			} else {
-				location = string::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
+				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
 			}
 		}
 
@@ -1570,7 +1570,7 @@ HttpClient::write_document_view(Request& request)
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Indexing took {}", string::from_delta(took));
+	L_TIME("Indexing took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1658,7 +1658,7 @@ HttpClient::update_document_view(Request& request)
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Updating took {}", string::from_delta(took));
+	L_TIME("Updating took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1722,7 +1722,7 @@ HttpClient::retrieve_metadata_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Get metadata took {}", string::from_delta(took));
+	L_TIME("Get metadata took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1775,7 +1775,7 @@ HttpClient::write_metadata_view(Request& request)
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Set metadata took {}", string::from_delta(took));
+	L_TIME("Set metadata took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -1848,7 +1848,7 @@ HttpClient::info_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, response_obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Info took {}", string::from_delta(took));
+	L_TIME("Info took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2003,7 +2003,7 @@ HttpClient::retrieve_database_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Retrieving database took {}", string::from_delta(took));
+	L_TIME("Retrieving database took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2071,7 +2071,7 @@ HttpClient::update_database_view(Request& request)
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Updating database took {}", string::from_delta(took));
+	L_TIME("Updating database took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2110,7 +2110,7 @@ HttpClient::commit_database_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Commit took {}", string::from_delta(took));
+	L_TIME("Commit took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2145,7 +2145,7 @@ HttpClient::dump_document_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Dump took {}", string::from_delta(took));
+	L_TIME("Dump took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2215,7 +2215,7 @@ HttpClient::dump_database_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, docs);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Dump took {}", string::from_delta(took));
+	L_TIME("Dump took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2297,14 +2297,14 @@ HttpClient::restore_database_view(Request& request)
 		};
 
 		if (request.human) {
-			response_obj[RESPONSE_TOOK] = string::from_delta(took);
+			response_obj[RESPONSE_TOOK] = strings::from_delta(took);
 		} else {
 			response_obj[RESPONSE_TOOK] = took / 1e9;
 		}
 
 		write_http_response(request, HTTP_STATUS_OK, response_obj);
 
-		L_TIME("Restore took {}", string::from_delta(took));
+		L_TIME("Restore took {}", strings::from_delta(took));
 
 		Metrics::metrics()
 			.xapiand_operations_summary
@@ -2340,7 +2340,7 @@ HttpClient::wal_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, obj);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("WAL took {}", string::from_delta(took));
+	L_TIME("WAL took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2373,7 +2373,7 @@ HttpClient::check_database_view(Request& request)
 	write_http_response(request, HTTP_STATUS_OK, status);
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Database check took {}", string::from_delta(took));
+	L_TIME("Database check took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2491,7 +2491,7 @@ HttpClient::retrieve_document_view(Request& request)
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Retrieving took {}", string::from_delta(took));
+	L_TIME("Retrieving took {}", strings::from_delta(took));
 
 	Metrics::metrics()
 		.xapiand_operations_summary
@@ -2617,10 +2617,10 @@ HttpClient::search_view(Request& request)
 
 	request.ready = std::chrono::steady_clock::now();
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
-	L_TIME("Searching took {}", string::from_delta(took));
+	L_TIME("Searching took {}", strings::from_delta(took));
 
 	if (request.human) {
-		obj[RESPONSE_TOOK] = string::from_delta(took);
+		obj[RESPONSE_TOOK] = strings::from_delta(took);
 	} else {
 		obj[RESPONSE_TOOK] = took / 1e9;
 	}
@@ -2699,7 +2699,7 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 	if (request.comments) {
 		write_http_response(request, status, MsgPack({
 			{ RESPONSE_xSTATUS, (int)status },
-			{ RESPONSE_xMESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : string::split(message, '\n') }
+			{ RESPONSE_xMESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : strings::split(message, '\n') }
 		}));
 	} else {
 		write_http_response(request, status);
@@ -2839,7 +2839,7 @@ HttpClient::expand_paths(Request& request)
 		std::string index_path;
 
 		auto pth = request.path_parser.get_pth();
-		if (string::startswith(pth, '/')) {
+		if (strings::startswith(pth, '/')) {
 			pth.remove_prefix(1);
 		}
 		index_path.append(pth);
@@ -2847,16 +2847,16 @@ HttpClient::expand_paths(Request& request)
 
 #ifdef XAPIAND_CLUSTERING
 		MSet mset;
-		if (string::endswith(index_path, '*')) {
+		if (strings::endswith(index_path, '*')) {
 			index_path.pop_back();
 			auto stripped_index_path = index_path;
-			if (string::endswith(stripped_index_path, '/')) {
+			if (strings::endswith(stripped_index_path, '/')) {
 				stripped_index_path.pop_back();
 			}
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					index_endpoints.add(Endpoint{string::format(".xapiand/nodes/{}", node->lower_name())});
+					index_endpoints.add(Endpoint{strings::format(".xapiand/nodes/{}", node->lower_name())});
 				}
 			}
 			DatabaseHandler db_handler;
@@ -3125,7 +3125,7 @@ HttpClient::log_request(Request& request)
 		priority = LOG_NOTICE;
 	}
 	auto request_text = request.to_text(true);
-	L(priority, NO_COLOR, "{}{}", request_prefix, string::indent(request_text, ' ', 4, false));
+	L(priority, NO_COLOR, "{}{}", request_prefix, strings::indent(request_text, ' ', 4, false));
 }
 
 
@@ -3148,7 +3148,7 @@ HttpClient::log_response(Response& response)
 		priority = LOG_NOTICE;
 	}
 	auto response_text = response.to_text(true);
-	L(priority, NO_COLOR, "{}{}", response_prefix, string::indent(response_text, ' ', 4, false));
+	L(priority, NO_COLOR, "{}{}", response_prefix, strings::indent(response_text, ' ', 4, false));
 }
 
 
@@ -3210,14 +3210,14 @@ HttpClient::end_http_request(Request& request)
 			.xapiand_http_requests_summary
 			.Add({
 				{"method", http_method_str(request.method)},
-				{"status", string::format("{}", request.response.status)},
+				{"status", strings::format("{}", request.response.status)},
 			})
 			.Observe(took / 1e9);
 
-		L(priority, NO_COLOR, fmt, request.head(), (int)request.response.status, string::from_bytes(request.response.size), string::from_delta(request.begins, request.ends));
+		L(priority, NO_COLOR, fmt, request.head(), (int)request.response.status, strings::from_bytes(request.response.size), strings::from_delta(request.begins, request.ends));
 	}
 
-	L_TIME("Full request took {}, response took {}", string::from_delta(request.begins, request.ends), string::from_delta(request.received, request.ends));
+	L_TIME("Full request took {}, response took {}", strings::from_delta(request.begins, request.ends), strings::from_delta(request.received, request.ends));
 
 	auto sent = total_sent_bytes.exchange(0);
 	Metrics::metrics()
@@ -3563,7 +3563,7 @@ HttpClient::encoding_http_response(Response& response, Encoding e, const std::st
 std::string
 HttpClient::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<HttpClient {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<HttpClient {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
 		use_count(),
 		sock,
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
@@ -3852,14 +3852,14 @@ Request::head()
 	auto parser_method = HTTP_PARSER_METHOD(&parser);
 
 	if (parser_method != method) {
-		return string::format("{} <- {} {} HTTP/{}.{}",
+		return strings::format("{} <- {} {} HTTP/{}.{}",
 			http_method_str(method),
 			http_method_str(parser_method),
 			path, parser.http_major,
 			parser.http_minor);
 	}
 
-	return string::format("{} {} HTTP/{}.{}",
+	return strings::format("{} {} HTTP/{}.{}",
 		http_method_str(parser_method),
 		path, parser.http_major,
 		parser.http_minor);
@@ -4056,7 +4056,7 @@ Request::to_text(bool decode)
 	if (!raw.empty()) {
 		if (!decode) {
 			if (raw.size() > 1024 * 10) {
-				request_text += "<body " + string::from_bytes(raw.size()) + ">";
+				request_text += "<body " + strings::from_bytes(raw.size()) + ">";
 			} else {
 				request_text += "<body " + repr(raw, true, true, 500) + ">";
 			}
@@ -4064,14 +4064,14 @@ Request::to_text(bool decode)
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(raw);
-			request_text += string::format("\033]1337;File=name={};inline=1;size={};width=20%:",
+			request_text += strings::format("\033]1337;File=name={};inline=1;size={};width=20%:",
 				b64_name,
 				b64_data.size());
 			request_text += b64_data;
 			request_text += '\a';
 		} else {
 			if (raw.size() > 1024 * 10) {
-				request_text += "<body " + string::from_bytes(raw.size()) + ">";
+				request_text += "<body " + strings::from_bytes(raw.size()) + ">";
 			} else {
 				auto& decoded = decoded_body();
 				if (
@@ -4084,24 +4084,24 @@ Request::to_text(bool decode)
 				) {
 					request_text += decoded.to_string(DEFAULT_INDENTATION);
 				} else {
-					request_text += "<body " + string::from_bytes(raw.size()) + ">";
+					request_text += "<body " + strings::from_bytes(raw.size()) + ">";
 				}
 			}
 		}
 	} else if (!text.empty()) {
 		if (!decode) {
 			if (text.size() > 1024 * 10) {
-				request_text += "<body " + string::from_bytes(text.size()) + ">";
+				request_text += "<body " + strings::from_bytes(text.size()) + ">";
 			} else {
 				request_text += "<body " + repr(text, true, true, 500) + ">";
 			}
 		} else if (text.size() > 1024 * 10) {
-			request_text += "<body " + string::from_bytes(text.size()) + ">";
+			request_text += "<body " + strings::from_bytes(text.size()) + ">";
 		} else {
 			request_text += text;
 		}
 	} else if (size) {
-		request_text += "<body " + string::from_bytes(size) + ">";
+		request_text += "<body " + strings::from_bytes(size) + ">";
 	}
 
 	return request_text;
@@ -4166,7 +4166,7 @@ Response::to_text(bool decode)
 	if (!blob.empty()) {
 		if (!decode) {
 			if (blob.size() > 1024 * 10) {
-				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
+				response_text += "<blob " + strings::from_bytes(blob.size()) + ">";
 			} else {
 				response_text += "<blob " + repr(blob, true, true, 500) + ">";
 			}
@@ -4174,32 +4174,32 @@ Response::to_text(bool decode)
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(blob);
-			response_text += string::format("\033]1337;File=name={};inline=1;size={};width=20%:",
+			response_text += strings::format("\033]1337;File=name={};inline=1;size={};width=20%:",
 				b64_name,
 				b64_data.size());
 			response_text += b64_data;
 			response_text += '\a';
 		} else {
 			if (blob.size() > 1024 * 10) {
-				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
+				response_text += "<blob " + strings::from_bytes(blob.size()) + ">";
 			} else {
-				response_text += "<blob " + string::from_bytes(blob.size()) + ">";
+				response_text += "<blob " + strings::from_bytes(blob.size()) + ">";
 			}
 		}
 	} else if (!text.empty()) {
 		if (!decode) {
 			if (size > 1024 * 10) {
-				response_text += "<body " + string::from_bytes(size) + ">";
+				response_text += "<body " + strings::from_bytes(size) + ">";
 			} else {
 				response_text += "<body " + repr(text, true, true, 500) + ">";
 			}
 		} else if (size > 1024 * 10) {
-			response_text += "<body " + string::from_bytes(size) + ">";
+			response_text += "<body " + strings::from_bytes(size) + ">";
 		} else {
 			response_text += text;
 		}
 	} else if (size) {
-		response_text += "<body " + string::from_bytes(size) + ">";
+		response_text += "<body " + strings::from_bytes(size) + ">";
 	}
 
 	return response_text;

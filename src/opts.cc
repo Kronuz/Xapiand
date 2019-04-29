@@ -33,7 +33,7 @@
 #include "cmdoutput.h"                            // for CmdOutput
 #include "ev/ev++.h"                              // for ev_supported
 #include "hashes.hh"                              // for fnv1ah32
-#include "string.hh"                              // for string::lower
+#include "strings.hh"                             // for strings::lower
 
 #define XAPIAND_PID_FILE         "xapiand.pid"
 #define XAPIAND_LOG_FILE         "xapiand.log"
@@ -103,7 +103,7 @@
 unsigned int
 ev_backend(const std::string& name)
 {
-	auto ev_use = string::lower(name);
+	auto ev_use = strings::lower(name);
 	if (ev_use.empty() || ev_use.compare("auto") == 0) {
 		return ev::AUTO;
 	}

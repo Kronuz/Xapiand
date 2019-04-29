@@ -30,7 +30,7 @@
 #include "node.h"           // for Node::
 #include "opts.h"           // for opts
 #include "serialise.h"      // for UUIDRepr, Serialise
-#include "string.hh"        // for string::format
+#include "strings.hh"       // for strings::format
 #include "xapian.h"         // for SerialisationError
 
 
@@ -240,12 +240,12 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 		user = _user;
 	}
 
-	if (!string::startswith(_path, '/')) {
+	if (!strings::startswith(_path, '/')) {
 		_path = path = Endpoint::cwd + std::string(_path);
 	}
 	path = normalize_path(_path);
 	_path = path;
-	if (string::startswith(_path, Endpoint::cwd)) {
+	if (strings::startswith(_path, Endpoint::cwd)) {
 		_path.remove_prefix(Endpoint::cwd.size());
 	}
 
@@ -371,7 +371,7 @@ Endpoint::to_string() const
 		ret += node->host();
 		if (node->remote_port > 0) {
 			ret += ":";
-			ret += string::format("{}", node->remote_port);
+			ret += strings::format("{}", node->remote_port);
 		}
 		if (!node->host().empty() || node->remote_port > 0) {
 			ret += "/";

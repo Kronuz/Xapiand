@@ -63,7 +63,7 @@ RemoteProtocol::start()
 std::string
 RemoteProtocol::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<RemoteProtocol {{cnt:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<RemoteProtocol {{cnt:{}}}{}{}{}>",
 		use_count(),
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
 		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
@@ -74,7 +74,7 @@ RemoteProtocol::__repr__() const
 std::string
 RemoteProtocol::getDescription() const
 {
-	return string::format("TCP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
+	return strings::format("TCP {}:{} ({} v{}.{})", addr.sin_addr.s_addr ? inet_ntop(addr) : "", ntohs(addr.sin_port), description, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
 }
 
 #endif  /* XAPIAND_CLUSTERING */

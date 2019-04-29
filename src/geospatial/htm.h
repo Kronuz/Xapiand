@@ -29,7 +29,7 @@
 #include <vector>                                 // for std::vector
 
 #include "cartesian.h"                            // for Cartesian
-#include "string.hh"                              // for string::format
+#include "strings.hh"                             // for strings::format
 
 
 #define __STDC_FORMAT_MACROS
@@ -118,7 +118,7 @@ struct range_t {
 	}
 
 	std::string to_string() const {
-		return string::format("{}-{}", start, end);
+		return strings::format("{}-{}", start, end);
 	}
 };
 

@@ -46,7 +46,7 @@
 #include "opts.h"                   // for opts::*
 #include "repr.hh"                  // for repr
 #include "server/discovery.h"       // for db_updater
-#include "string.hh"                // for string::format
+#include "strings.hh"               // for strings::format
 #include "utype.hh"                 // for toUType
 
 #define L_DATABASE_NOW(name)
@@ -183,7 +183,7 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 		Xapian::rev end_rev;
 		for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 			try {
-				open(string::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
+				open(strings::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
 				if (header.head.revision != end_rev) {
 					if (!unsafe) {
 						L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
@@ -437,7 +437,7 @@ DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, boo
 	Xapian::rev end_rev;
 	for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 		try {
-			open(string::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
+			open(strings::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
 			if (header.head.revision != end_rev) {
 				L_WARNING("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
 				header.head.revision = end_rev;
@@ -648,7 +648,7 @@ DatabaseWAL::init_database()
 	validate_uuid = false;
 
 	try {
-		open(string::format(WAL_STORAGE_PATH "{}", 0), STORAGE_OPEN);
+		open(strings::format(WAL_STORAGE_PATH "{}", 0), STORAGE_OPEN);
 		if (header.head.revision != 0) {
 			L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), 0);
 			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -716,7 +716,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		if (closed()) {
 			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
 			auto volume = (volumes.first <= volumes.second) ? volumes.second : revision;
-			open(string::format(WAL_STORAGE_PATH "{}", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+			open(strings::format(WAL_STORAGE_PATH "{}", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != volume) {
 				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), volume);
 				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -732,7 +732,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 
 		if (slot >= WAL_SLOTS) {
 			// We need a new volume, the old one is full
-			open(string::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+			open(strings::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != revision) {
 				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision);
 				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -756,7 +756,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 			if (slot + 1 < WAL_SLOTS) {
 				header.slot[slot + 1] = header.slot[slot];
 			} else {
-				open(string::format(WAL_STORAGE_PATH "{}", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+				open(strings::format(WAL_STORAGE_PATH "{}", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 				if (header.head.revision != revision + 1) {
 					L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision + 1);
 					THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -791,7 +791,7 @@ DatabaseWAL::locate_revision(Xapian::rev revision)
 
 	auto volumes = get_volumes_range(WAL_STORAGE_PATH, 0, revision);
 	if (volumes.first <= volumes.second && revision - volumes.second < WAL_SLOTS) {
-		open(string::format(WAL_STORAGE_PATH "{}", volumes.second), STORAGE_OPEN);
+		open(strings::format(WAL_STORAGE_PATH "{}", volumes.second), STORAGE_OPEN);
 		if (header.head.revision != volumes.second) {
 			L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), volumes.second);
 			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
@@ -862,7 +862,7 @@ DatabaseWALWriterThread::DatabaseWALWriterThread() noexcept :
 
 DatabaseWALWriterThread::DatabaseWALWriterThread(size_t idx, DatabaseWALWriter* wal_writer) noexcept :
 	_wal_writer(wal_writer),
-	_name(string::format(wal_writer->_format, idx))
+	_name(strings::format(wal_writer->_format, idx))
 {
 }
 
@@ -1054,7 +1054,7 @@ DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 	wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
 
 	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
+	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
 }
 
 
@@ -1071,7 +1071,7 @@ DatabaseWALWriterTask::write_commit(DatabaseWALWriterThread& thread)
 	wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
 
 	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
+	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
 }
 
 
@@ -1090,7 +1090,7 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
 
 	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
+	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
 }
 
 
@@ -1108,7 +1108,7 @@ DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
 	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
 
 	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
+	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
 }
 
 
@@ -1127,7 +1127,7 @@ DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
 	wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
 
 	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
+	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
 }
 
 
@@ -1146,7 +1146,7 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
 
 	L_DATABASE_NOW(end);
-	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), string::from_delta(start, end));
+	L_DATABASE("Database WAL writer of {} succeeded after {}", repr(path), strings::from_delta(start, end));
 }
 
 

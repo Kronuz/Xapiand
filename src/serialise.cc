@@ -689,7 +689,7 @@ Serialise::boolean(std::string_view field_value)
 			switch (field_value[0]) {
 				case 't':
 				case 'T': {
-					auto lower_value = string::lower(field_value);
+					auto lower_value = strings::lower(field_value);
 					if (lower_value == "true") {
 						return std::string(1, SERIALISED_TRUE);
 					}
@@ -700,7 +700,7 @@ Serialise::boolean(std::string_view field_value)
 			switch (field_value[0]) {
 				case 'f':
 				case 'F': {
-					auto lower_value = string::lower(field_value);
+					auto lower_value = strings::lower(field_value);
 					if (lower_value == "false") {
 						return std::string(1, SERIALISED_FALSE);
 					}
@@ -1167,7 +1167,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 			// {00000000-0000-1000-8000-010000000000}
 			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.push_back('{');
-			result.append(string::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			result.push_back('}');
 			break;
 #endif
@@ -1176,7 +1176,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 			// urn:uuid:00000000-0000-1000-8000-010000000000
 			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
 			result.append("urn:uuid:");
-			result.append(string::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
 #endif
 #ifdef XAPIAND_UUID_ENCODED
@@ -1199,7 +1199,7 @@ Unserialise::uuid(std::string_view serialised_uuid, UUIDRepr repr)
 		case UUIDRepr::vanilla:
 			// 00000000-0000-1000-8000-010000000000
 			UUID::unserialise(serialised_uuid, std::back_inserter(uuids));
-			result.append(string::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
+			result.append(strings::join(uuids, std::string(1, UUID_SEPARATOR_LIST)));
 			break;
 	}
 	return result;

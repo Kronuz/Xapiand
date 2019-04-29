@@ -166,7 +166,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	const auto& normalized_path = args.src_endpoint.path;
 
-	if (string::startswith(normalized_path, ".xapiand/")) {
+	if (strings::startswith(normalized_path, ".xapiand/")) {
 		// Index databases are always replicated
 		replicated = true;
 	}
@@ -246,7 +246,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 std::string
 ReplicationProtocolServer::__repr__() const
 {
-	return string::format(STEEL_BLUE + "<ReplicationProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<ReplicationProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
 		use_count(),
 		sock == -1 ? replication.sock : sock,
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,

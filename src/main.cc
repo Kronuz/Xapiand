@@ -67,7 +67,7 @@
 #include "manager.h"                              // for XapiandManager
 #include "opts.h"                                 // for opts_t
 #include "package.h"                              // for Package::
-#include "string.hh"                              // for string::format, string::center
+#include "strings.hh"                             // for strings::format, strings::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
 #include "traceback.h"                            // for backtrace, traceback, collect_callstack_sig_handler
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
@@ -126,8 +126,8 @@ public:
 				case SIGSEGV:
 				case SIGSYS:
 					// create core image
-					tty_messages[signum] = string::format(LIGHT_RED + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = strings::format(LIGHT_RED + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = strings::format("Signal received: {}\n", sig_str);
 					names[signum] = sig_str;
 					break;
 				case SIGHUP:
@@ -146,8 +146,8 @@ public:
 				case SIGSTKFLT:
 #endif
 					// terminate process
-					tty_messages[signum] = string::format(BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = strings::format(BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = strings::format("Signal received: {}\n", sig_str);
 					names[signum] = sig_str;
 					break;
 				case SIGSTOP:
@@ -155,8 +155,8 @@ public:
 				case SIGTTIN:
 				case SIGTTOU:
 					// stop process
-					tty_messages[signum] = string::format(SADDLE_BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = strings::format(SADDLE_BROWN + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = strings::format("Signal received: {}\n", sig_str);
 					names[signum] = sig_str;
 					break;
 				case SIGURG:
@@ -169,13 +169,13 @@ public:
 #endif
 					// discard signal
 
-					tty_messages[signum] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = strings::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = strings::format("Signal received: {}\n", sig_str);
 					names[signum] = sig_str;
 					break;
 				default:
-					tty_messages[signum] = string::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
-					messages[signum] = string::format("Signal received: {}\n", sig_str);
+					tty_messages[signum] = strings::format(STEEL_BLUE + "Signal received: {}" + CLEAR_COLOR + "\n", sig_str);
+					messages[signum] = strings::format("Signal received: {}\n", sig_str);
 					names[signum] = sig_str;
 					break;
 			}
@@ -624,7 +624,7 @@ void writepid(const char* pidfile) {
 	/* Try to write the pid file in a best-effort way. */
 	int fd = io::open(pidfile, O_RDWR | O_CREAT, 0644);
 	if (fd != -1) {
-		auto pid = string::format("{}\n", (unsigned long)getpid());
+		auto pid = strings::format("{}\n", (unsigned long)getpid());
 		io::write(fd, pid.data(), pid.size());
 		io::close(fd);
 	}
@@ -633,7 +633,7 @@ void writepid(const char* pidfile) {
 
 void usedir(std::string_view path, bool force) {
 	auto directory = normalize_path(path);
-	if (string::endswith(directory, "/.xapiand")) {
+	if (strings::endswith(directory, "/.xapiand")) {
 		directory.resize(directory.size() - 9);
 	}
 	auto xapiand_directory = directory + "/.xapiand";
@@ -732,12 +732,12 @@ void banner() {
 	set_thread_name("MAIN");
 
 	std::vector<std::string> values({
-			string::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
+			strings::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
 #ifdef XAPIAND_CHAISCRIPT
-			string::format("ChaiScript v{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+			strings::format("ChaiScript v{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
 #endif
 #ifdef USE_ICU
-			string::format("ICU v{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM),
+			strings::format("ICU v{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM),
 #endif
 	});
 
@@ -759,7 +759,7 @@ void banner() {
 			"v" + Package::VERSION,
 			"rev:" + Package::REVISION,
 			Package::BUGREPORT,
-			"Using " + string::join(values, ", ", " and "));
+			"Using " + strings::join(values, ", ", " and "));
 	}
 
 	L(-LOG_NOTICE, NOTICE_COL, "{} (pid:{})", Package::STRING, getpid());
@@ -772,7 +772,7 @@ void setup() {
 		modes.emplace_back("strict");
 	}
 	if (!modes.empty()) {
-		L_INFO("Activated " + string::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
+		L_INFO("Activated " + strings::join(modes, ", ", " and ") + ((modes.size() == 1) ? " mode by default." : " modes by default."));
 	}
 
 	adjustOpenFilesLimit();
