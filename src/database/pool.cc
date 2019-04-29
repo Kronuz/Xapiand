@@ -31,9 +31,6 @@
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
 
-#define L_POOL_TIMED L_NOTHING
-#define L_POOL_TIMED_CLEAR L_NOTHING
-
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -41,23 +38,25 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_DATABASE
 // #define L_DATABASE L_SLATE_BLUE
-// #undef L_POOL_TIMED_CLEAR
-// #define L_POOL_TIMED_CLEAR() { \
-// 	if (shard->log) { \
-// 		shard->log->clear(); \
-// 		shard->log.reset(); \
-// 	} \
-// }
-// #undef L_POOL_TIMED
-// #define L_POOL_TIMED(delay, format_timeout, format_done, ...) { \
-// 	if (shard->log) { \
-// 		shard->log->clear(); \
-// 		shard->log.reset(); \
-// 	} \
-// 	auto __log_timed = L_DELAYED(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
-// 	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
-// 	shard->log = __log_timed.release(); \
-// }
+
+
+#undef L_POOL_TIMED
+#define L_POOL_TIMED(delay, format_timeout, format_done, ...) { \
+	if (shard->log) { \
+		shard->log->clear(); \
+		shard->log.reset(); \
+	} \
+	auto __log_timed = L_DELAYED_BACKTRACE(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
+	shard->log = __log_timed.release(); \
+}
+#undef L_POOL_TIMED_CLEAR
+#define L_POOL_TIMED_CLEAR() { \
+	if (shard->log) { \
+		shard->log->clear(); \
+		shard->log.reset(); \
+	} \
+}
 
 
 #define REMOTE_DATABASE_UPDATE_TIME 3
@@ -254,27 +253,29 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 
 	auto now = std::chrono::steady_clock::now();
 
+	std::shared_ptr<Shard> shard;
+
 	std::unique_lock<std::mutex> lk(mtx);
 
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
-		return _writable_checkout(flags, timeout, callback, now, lk);
+		shard = _writable_checkout(flags, timeout, callback, now, lk);
 	} else {
-		auto& shard = _readable_checkout(flags, timeout, callback, now, lk);
+		auto& shard_ref = _readable_checkout(flags, timeout, callback, now, lk);
 		lk.unlock();
 		try {
 			// Reopening of old/outdated (readable) databases:
 			bool reopen = false;
-			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - shard->reopen_time).count();
+			auto reopen_age = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - shard_ref->reopen_time).count();
 			if (reopen_age >= LOCAL_DATABASE_UPDATE_TIME) {
 				L_DATABASE("Shard is just too old, reopen");
 				reopen = true;
 			} else {
-				if (shard->is_local()) {
+				if (shard_ref->is_local()) {
 					auto referenced_database_endpoint = database_pool.get(*this);
 					if (referenced_database_endpoint) {
 						auto revision = referenced_database_endpoint->local_revision.load();
 						referenced_database_endpoint.reset();
-						if (revision && revision != shard->db()->get_revision()) {
+						if (revision && revision != shard_ref->db()->get_revision()) {
 							L_DATABASE("Local writable shard has changed revision");
 							reopen = true;
 						}
@@ -291,13 +292,20 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 				auto new_database = std::make_shared<Shard>(*this, flags);
 				new_database->busy.store(true);
 				lk.lock();
-				shard = new_database;
+				shard_ref = new_database;
 			}
 		} catch (...) {
 			L_WARNING("WARNING: Readable shard reopening failed: {}", to_string());
 		}
-		return shard;
+		shard = shard_ref;
 	}
+
+	L_POOL_TIMED(3s,
+		"Checked out shard is taking too long: {} ({})",
+		"Checked out shard was out for too long: {} ({})",
+		repr(shard->to_string()),
+		readable_flags(shard->flags));
+	return shard;
 }
 
 
@@ -719,12 +727,6 @@ DatabasePool::checkout(const Endpoint& endpoint, int flags, double timeout, std:
 
 	auto shard = spawn(endpoint)->checkout(flags, timeout, callback);
 	assert(shard);
-
-	L_POOL_TIMED(200ms,
-		"Shard checkout is taking too long: {} ({})",
-		"Shard checked out for too long: {} ({})",
-		repr(shard->to_string()),
-		readable_flags(shard->flags));
 
 	return shard;
 }
