@@ -249,7 +249,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 std::shared_ptr<Shard>
 ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* callback)
 {
-	L_CALL("ShardEndpoint::checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
+	L_RED("ShardEndpoint::checkout({} ({}), {}, {})", to_string(), readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
 	auto now = std::chrono::steady_clock::now();
 

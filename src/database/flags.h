@@ -36,8 +36,8 @@ constexpr int DB_RETRIES           = 10;      // Number of tries to do an operat
 inline std::string readable_flags(int flags) {
 	std::vector<std::string> values;
 	if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
-	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
+	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
 	if ((flags & DB_DISABLE_WAL) == DB_DISABLE_WAL) values.push_back("DB_DISABLE_WAL");
 	if ((flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) values.push_back("DB_SYNCHRONOUS_WAL");
 	return strings::join(values, "|");
