@@ -53,7 +53,8 @@ public:
 	{
 		assert(scaling.size() == units.size());
 		assert(colors.size() == units.size() + 1);
-		assert(needle >= 0 && needle < units.size());
+		assert(needle >= 0);
+		assert(needle < units.size());
 		std::transform(scaling.begin(), scaling.end(), scaling.begin(), [&](long double s) {
 			return std::pow(base, s);
 		});

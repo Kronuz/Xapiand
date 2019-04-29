@@ -740,7 +740,8 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 			slot = revision - header.head.revision;
 		}
 
-		assert(slot >= 0 && slot < WAL_SLOTS);
+		assert(slot >= 0);
+		assert(slot < WAL_SLOTS);
 		if (slot + 1 < WAL_SLOTS) {
 			if (header.slot[slot + 1] != 0) {
 				L_DEBUG("Slot {} already occupied for revision {}: {} volume {}", slot, revision, repr(base_path), header.head.revision);

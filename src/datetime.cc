@@ -979,7 +979,8 @@ Datetime::isleapRef_year(int tm_year)
 int
 _getDays_month(int year, int month)
 {
-	assert(month > 0 && month <= 12);
+	assert(month > 0);
+	assert(month <= 12);
 	auto leap = static_cast<int>(Datetime::isleapYear(year));
 	return days[leap][month - 1];
 }
