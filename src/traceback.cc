@@ -380,7 +380,9 @@ traceback(const char* function, const char* filename, int line, int skip)
 	// retrieve current stack addresses
 	auto callstack = backtrace();
 	auto tb = traceback(function, filename, line, callstack, skip);
-	free(callstack);
+	if (callstack != nullptr) {
+		free(callstack);
+	}
 	return tb;
 }
 
@@ -545,7 +547,7 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { };
 		if (thread_info && thread_info->pthread == pthread) {
 			auto callstack = backtrace();
-			if (callstack) {
+			if (callstack != nullptr) {
 				size_t frames = static_cast<void**>(*callstack) - callstack;
 				void** actual = nullptr;
 				for (size_t n = 0; n < frames; ++n) {
