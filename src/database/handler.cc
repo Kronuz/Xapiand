@@ -282,13 +282,14 @@ public:
 		return database.get();
 	}
 
-	void unlock() noexcept
+	int unlock() noexcept
 	{
 		if (locks > 0 && --locks == 0) {
 			assert(database);
 			database.reset();
 			XapiandManager::database_pool()->checkin(shards);
 		}
+		return locks;
 	}
 
 	Xapian::Database& operator*() const noexcept

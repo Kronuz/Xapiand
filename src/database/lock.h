@@ -69,12 +69,13 @@ public:
 		return _locked;
 	}
 
-	void unlock() noexcept
+	int unlock() noexcept
 	{
 		if (_locks > 0 && --_locks == 0) {
 			assert(_locked);
 			XapiandManager::database_pool()->checkin(_locked);
 		}
+		return _locks;
 	}
 
 	Shard& operator*() const noexcept
