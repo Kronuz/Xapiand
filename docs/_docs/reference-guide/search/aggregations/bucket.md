@@ -74,7 +74,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "fruits": {
       "_values": {
@@ -99,7 +98,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "fruits": {
       "_values": {
@@ -127,7 +125,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "balance_by_state": {
       "_values": {
@@ -160,7 +157,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "balance_by_state": {
       "_values": {
@@ -207,7 +203,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "states": {
       "_values": {
@@ -256,7 +251,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "balances": {
       "_histogram": {
@@ -325,7 +319,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "employers": {
       "_values": {
@@ -392,7 +385,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "gender": {
       "_values": {
@@ -427,7 +419,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "balances_by_range": {
       "_range": {

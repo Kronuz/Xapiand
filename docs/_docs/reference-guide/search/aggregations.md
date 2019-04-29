@@ -64,8 +64,8 @@ The following snippet captures the basic structure of aggregations:
     }
     ( "<aggregation_name_2>": { ... }, )*
 }
-( "_limit": <limit>, )
 ( "_check_at_least": <check_at_least>, )
+( "_limit": <limit>, )
 ```
 
 ### Aggregation Name

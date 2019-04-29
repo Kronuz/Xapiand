@@ -38,7 +38,6 @@ SEARCH /bank/
     "contact.state": "Indiana"
   },
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "indiana_total_balance": {
       "_sum": {

@@ -38,7 +38,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "balance_std_deviation": {
       "_std_deviation": {
@@ -87,7 +86,6 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
-  "_check_at_least": 1000,
   "_aggs": {
     "balance_std_deviation": {
       "_std_deviation": {
