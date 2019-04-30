@@ -1274,7 +1274,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					auto did = sortable_unserialise(did_serialised);
 					if (did == 0) {
 						shard_did = wdb->get_lastdocid() + 1;
-						did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+						did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 						ver_prefix = "V" + serialise_length(shard_did);
 						did_serialised = sortable_serialise(did);
 						new_term = "QN" + did_serialised;

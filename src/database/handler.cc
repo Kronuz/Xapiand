@@ -767,34 +767,11 @@ DatabaseHandler::get_rset(const Xapian::Query& query, Xapian::doccount maxitems)
 
 	Xapian::RSet rset;
 
-	lock_database lk_db(*this);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto db = lk_db.locked();
-			Xapian::Enquire enquire(*db);
-			enquire.set_query(query);
-			auto mset = enquire.get_mset(0, maxitems);
-			for (const auto& did : mset) {
-				rset.add_document(did);
-			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
-		}
-		lk_db.reopen();
+	auto mset = get_mset(query, 0, maxitems);
+	const auto m_e = mset.end();
+	for (auto m = mset.begin(); m != m_e; ++m) {
+		auto did = *m;
+		rset.add_document(did);
 	}
 
 	return rset;
@@ -888,42 +865,50 @@ DatabaseHandler::dump_documents()
 	L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
 	auto docs = MsgPack::ARRAY();
-	Xapian::docid initial = 1;
 
-	lock_database lk_db(*this);
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::docid did = initial;
-		try {
-			auto db = lk_db.locked();
-			auto it = db->postlist_begin("");
-			auto it_e = db->postlist_end("");
-			it.skip_to(initial);
-			for (; it != it_e; ++it) {
-				did = *it;
-				auto doc = db->get_document(did);
-				docs.push_back(_dump_document(did, Data(doc.get_data())));
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+
+		Xapian::docid initial = 1;
+		for (int t = DB_RETRIES; t >= 0; --t) {
+			Xapian::docid shard_did = initial;
+			try {
+				auto db = lk_shard->db();
+				auto it = db->postlist_begin("");
+				auto it_e = db->postlist_end("");
+				it.skip_to(initial);
+				for (; it != it_e; ++it) {
+					shard_did = *it;
+					auto doc = db->get_document(shard_did);
+					Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+					docs.push_back(_dump_document(did, Data(doc.get_data())));
+				}
+				break;
+			} catch (const Xapian::DatabaseModifiedError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseOpeningError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkTimeoutError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseClosedError&) {
+				lk_shard->do_close();
+				if (t == 0) { throw; }
+			} catch (const Xapian::DatabaseError&) {
+				lk_shard->do_close();
+				throw;
 			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
-		}
-		lk_db.reopen();
-		L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+			lk_shard->reopen();
+			L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
-		initial = did;
+			initial = shard_did;
+		}
+
+		++shard_num;
 	}
 
 	return docs;
@@ -940,46 +925,53 @@ DatabaseHandler::dump_documents(int fd)
 
 	SHA256 sha256;
 
-	Xapian::docid initial = 1;
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
 
-	lock_database lk_db(*this);
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		Xapian::docid did = initial;
-		try {
-			auto db = lk_db.locked();
-			auto it = db->postlist_begin("");
-			auto it_e = db->postlist_end("");
-			it.skip_to(initial);
-			for (; it != it_e; ++it) {
-				did = *it;
-				auto doc = db->get_document(did);
-				auto obj = _dump_document(did, Data(doc.get_data()));
-				std::string obj_ser = obj.serialise();
-				ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
-				if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
-				sha256.add(obj_ser.data(), obj_ser.size());
+		Xapian::docid initial = 1;
+		for (int t = DB_RETRIES; t >= 0; --t) {
+			Xapian::docid shard_did = initial;
+			try {
+				auto db = lk_shard->db();
+				auto it = db->postlist_begin("");
+				auto it_e = db->postlist_end("");
+				it.skip_to(initial);
+				for (; it != it_e; ++it) {
+					shard_did = *it;
+					auto doc = db->get_document(shard_did);
+					Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+					auto obj = _dump_document(did, Data(doc.get_data()));
+					std::string obj_ser = obj.serialise();
+					ssize_t w = io::write(fd, obj_ser.data(), obj_ser.size());
+					if (w < 0) THROW(Error, "Cannot write to file [{}]", fd);
+					sha256.add(obj_ser.data(), obj_ser.size());
+				}
+				break;
+			} catch (const Xapian::DatabaseModifiedError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseOpeningError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkTimeoutError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseClosedError&) {
+				lk_shard->do_close();
+				if (t == 0) { throw; }
+			} catch (const Xapian::DatabaseError&) {
+				lk_shard->do_close();
+				throw;
 			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
-		}
-		lk_db.reopen();
-		L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
+			lk_shard->reopen();
+			L_DATABASE_WRAP_END("DatabaseHandler::dump_documents:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 
-		initial = did;
+			initial = shard_did;
+		}
+
+		++shard_num;
 	}
 
 	return sha256.getHash();
@@ -1119,53 +1111,61 @@ DatabaseHandler::prepare_document(MsgPack& body)
 
 
 MSet
-DatabaseHandler::get_all_mset(const std::string& term, Xapian::docid initial, size_t limit)
+DatabaseHandler::get_all_mset(const std::string& term, unsigned /*offset*/, unsigned limit)
 {
 	L_CALL("DatabaseHandler::get_all_mset()");
 
-	MSet mset{};
+	MSet mset;
 
-	auto term_string = std::string(term);
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
 
-	lock_database lk_db(*this);
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto db = lk_db.locked();
-			auto it = db->postlist_begin(term_string);
-			auto it_e = db->postlist_end(term_string);
-			if (initial) {
+		Xapian::docid initial = 1;
+		for (int t = DB_RETRIES; t >= 0; --t) {
+			Xapian::docid shard_did = initial;
+			try {
+				auto db = lk_shard->db();
+				auto it = db->postlist_begin(term);
+				auto it_e = db->postlist_end(term);
 				it.skip_to(initial);
+				for (; it != it_e && limit; ++it, --limit) {
+					shard_did = *it;
+					Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+					mset.push_back(did);
+				}
+				break;
+			} catch (const Xapian::DatabaseModifiedError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseOpeningError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkTimeoutError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseClosedError&) {
+				lk_shard->do_close();
+				if (t == 0) { throw; }
+			} catch (const Xapian::DatabaseError&) {
+				lk_shard->do_close();
+				throw;
+			} catch (const QueryParserError& exc) {
+				THROW(ClientError, exc.what());
+			} catch (const SerialisationError& exc) {
+				THROW(ClientError, exc.what());
+			} catch (const QueryDslError& exc) {
+				THROW(ClientError, exc.what());
+			} catch (const Xapian::QueryParserError& exc) {
+				THROW(ClientError, exc.get_description());
 			}
-			for (; it != it_e && limit; ++it, --limit) {
-				initial = *it;
-				mset.push_back(initial);
-			}
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
-		} catch (const QueryParserError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const QueryDslError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const Xapian::QueryParserError& exc) {
-			THROW(ClientError, exc.get_description());
+			lk_shard->reopen();
+
+			initial = shard_did;
 		}
-		lk_db.reopen();
+
+		++shard_num;
 	}
 
 	return mset;
@@ -1643,35 +1643,44 @@ DatabaseHandler::get_docid_term(const std::string& term)
 		return did;
 	}
 
-	lock_database lk_db(*this);
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto rdb = lk_db.locked();
-			auto it = rdb->postlist_begin(term);
-			if (it == rdb->postlist_end(term)) {
-				throw Xapian::DocNotFoundError("Document not found");
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
+
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+
+		for (int t = DB_RETRIES; t >= 0; --t) {
+			try {
+				auto rdb = lk_shard->db();
+				auto it = rdb->postlist_begin(term);
+				if (it != rdb->postlist_end(term)) {
+					auto shard_did = *it;
+					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+					return did;
+				}
+				break;
+			} catch (const Xapian::DatabaseModifiedError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseOpeningError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkTimeoutError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::NetworkError&) {
+				if (t == 0) { lk_shard->do_close(); throw; }
+			} catch (const Xapian::DatabaseClosedError&) {
+				lk_shard->do_close();
+				if (t == 0) { throw; }
+			} catch (const Xapian::DatabaseError&) {
+				lk_shard->do_close();
+				throw;
 			}
-			did = *it;
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
+			lk_shard->reopen();
 		}
-		lk_db.reopen();
+
+		++shard_num;
 	}
 
-	return did;
+	throw Xapian::DocNotFoundError("Document not found");
 }
 
 
@@ -1762,7 +1771,7 @@ DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, boo
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
 	auto shard_did = lk_shard->add_document(std::move(doc), commit, wal, version);
-	auto did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+	Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	return did;
 }
 
@@ -1836,7 +1845,7 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
 	auto shard_did = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
-	did = (shard_did - 1) * n_shards + shard_num + 1;  // shard number and shard docid to docid in multi-db
+	did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 	return did;
 }
 
@@ -1960,19 +1969,43 @@ DatabaseHandler::get_database_info()
 		shards.append(endpoint.path);
 	}
 
-	lock_database lk_db(*this);
-	auto db = lk_db.locked();
-	auto doccount = db->get_doccount();
-	auto lastdocid = db->get_lastdocid();
+	Xapian::doccount doc_count = 0;
+	Xapian::docid lastdocid = 0;
+	bool has_positions = false;
+	Xapian::totallength total_length = 0;
+	Xapian::termcount doclength_lower_bound;
+	Xapian::termcount doclength_upper_bound;
+	size_t n_shards = endpoints.size();
+	size_t shard_num = 0;
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+		auto db = lk_shard->db();
+		doc_count += db->get_doccount();
+		Xapian::docid shard_lastdocid = db->get_lastdocid();
+		Xapian::docid did = (shard_lastdocid - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+		lastdocid = std::max(lastdocid, did);
+		has_positions = has_positions || db->has_positions();
+		auto old_total_length = total_length;
+		total_length += db->get_total_length();
+		if (total_length < old_total_length) {
+			throw Xapian::DatabaseError("Total document length overflowed!");
+		}
+		Xapian::termcount shard_doclength_lower_bound = -db->get_doclength_lower_bound();
+		doclength_lower_bound = std::max(doclength_lower_bound, shard_doclength_lower_bound);
+		doclength_upper_bound = std::max(doclength_upper_bound, db->get_doclength_upper_bound());
+		++shard_num;
+	}
+    double average_length = doc_count == 0 ? 0.0 : total_length / double(doc_count);
+
 	return {
 		{ RESPONSE_ENDPOINT , unsharded_path(endpoints[0].path).first },
-		{ RESPONSE_DOC_COUNT, doccount },
+		{ RESPONSE_DOC_COUNT, doc_count },
 		{ RESPONSE_LAST_ID, lastdocid },
-		{ RESPONSE_DOC_DEL, lastdocid - doccount },
-		{ RESPONSE_AV_LENGTH, db->get_avlength() },
-		{ RESPONSE_DOC_LEN_LOWER,  db->get_doclength_lower_bound() },
-		{ RESPONSE_DOC_LEN_UPPER, db->get_doclength_upper_bound() },
-		{ RESPONSE_HAS_POSITIONS, db->has_positions() },
+		{ RESPONSE_DOC_DEL, lastdocid - doc_count },
+		{ RESPONSE_AV_LENGTH, average_length },
+		{ RESPONSE_DOC_LEN_LOWER,  doclength_lower_bound },
+		{ RESPONSE_DOC_LEN_UPPER, doclength_upper_bound },
+		{ RESPONSE_HAS_POSITIONS, has_positions },
 		{ "shards", shards },
 	};
 }
@@ -2037,8 +2070,10 @@ DatabaseHandler::reopen()
 {
 	L_CALL("DatabaseHandler::reopen()");
 
-	lock_database lk_db(*this);
-	lk_db.reopen();
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+		lk_shard->reopen();
+	}
 }
 
 
@@ -2047,8 +2082,10 @@ DatabaseHandler::do_close(bool commit_)
 {
 	L_CALL("DatabaseHandler::do_close()");
 
-	lock_database lk_db(*this);
-	lk_db.do_close(commit_);
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+		lk_shard->do_close(commit_);
+	}
 }
 
 /*

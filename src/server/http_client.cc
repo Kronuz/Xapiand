@@ -2516,7 +2516,7 @@ HttpClient::search_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	MSet mset{};
+	MSet mset;
 	MsgPack aggregations;
 
 	request.processing = std::chrono::steady_clock::now();
