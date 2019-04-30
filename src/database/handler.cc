@@ -2409,7 +2409,7 @@ Document::serialise()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, true);
+			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
 			serialised = doc.serialise();
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -2461,7 +2461,7 @@ Document::get_value(Xapian::valueno slot)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, true);
+			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
 			value = doc.get_value(slot);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -2513,7 +2513,7 @@ Document::get_data()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, true);
+			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
 			data = doc.get_data();
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -2563,7 +2563,7 @@ Document::validate()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			lk_shard->get_document(shard_did, false);
+			lk_shard->get_document(shard_did);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -2614,7 +2614,7 @@ Document::get_terms()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, true);
+			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
 			const auto it_e = doc.termlist_end();
 			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
 				auto& term = terms[*it];
@@ -2682,7 +2682,7 @@ Document::get_values()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, true);
+			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
 			values.reserve(doc.values_count());
 			const auto iv_e = doc.values_end();
 			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
@@ -2788,7 +2788,7 @@ Document::hash()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, true);
+			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
 			// Add hash of values
 			const auto iv_e = doc.values_end();
 			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {

@@ -1545,7 +1545,7 @@ Shard::get_docid_term(const std::string& term)
 
 
 Xapian::Document
-Shard::get_document(Xapian::docid shard_did, bool assume_valid_)
+Shard::get_document(Xapian::docid shard_did, unsigned doc_flags)
 {
 	L_CALL("Shard::get_document({})", shard_did);
 
@@ -1560,11 +1560,7 @@ Shard::get_document(Xapian::docid shard_did, bool assume_valid_)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			if (assume_valid_) {
-				doc = rdb->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
-			} else {
-				doc = rdb->get_document(shard_did);
-			}
+			doc = rdb->get_document(shard_did, doc_flags);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }

@@ -160,7 +160,7 @@ public:
 
 	Xapian::docid get_docid_term(const std::string& term);
 
-	Xapian::Document get_document(Xapian::docid shard_did, bool assume_valid_);
+	Xapian::Document get_document(Xapian::docid shard_did, unsigned doc_flags = 0);
 
 	std::vector<std::string> get_metadata_keys();
 	std::string get_metadata(const std::string& key);
