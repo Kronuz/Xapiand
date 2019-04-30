@@ -358,6 +358,8 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
      */
     void set_time_limit(double time_limit);
 
+    void set_db(const Database& db_);
+
     void unserialise_stats(const std::string& serialised);
 
     const std::string serialise_stats() const;

@@ -197,6 +197,12 @@ Enquire::set_time_limit(double time_limit)
 }
 
 void
+Enquire::set_db(const Database& db_)
+{
+    internal->set_db(db_);
+}
+
+void
 Enquire::unserialise_stats(const string& serialised)
 {
     internal->unserialise_stats(serialised);
@@ -270,6 +276,18 @@ Enquire::get_description() const
 
 Enquire::Internal::Internal(const Database& db_)
     : db(db_) {}
+
+void
+Enquire::Internal::set_db(const Database& db_)
+{
+    db = db_;
+    if (match) {
+	match->set_db(db);
+    }
+    if (stats) {
+	stats->set_bounds_from_db(db);
+    }
+}
 
 void
 Enquire::Internal::unserialise_stats(const string& serialised)

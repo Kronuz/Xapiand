@@ -92,6 +92,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     explicit
     Internal(const Database& db_);
 
+    void set_db(const Database& db_);
     void unserialise_stats(const std::string& serialised);
 
     const std::string serialise_stats() const;
