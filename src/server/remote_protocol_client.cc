@@ -112,6 +112,13 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 		.xapiand_remote_connections
 		.Increment();
 
+	registry.register_posting_source(GeoSpatialRange{});
+	registry.register_posting_source(MultipleValueRange{});
+	registry.register_posting_source(MultipleValueGE{});
+	registry.register_posting_source(MultipleValueLE{});
+	registry.register_match_spy(AggregationMatchSpy{});
+	registry.register_key_maker(Multi_MultiValueKeyMaker{});
+
 	L_CONN("New Remote Protocol Client, {} client(s) of a total of {} connected.", XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
 }
 
@@ -119,8 +126,6 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 RemoteProtocolClient::~RemoteProtocolClient() noexcept
 {
 	try {
-		reset();
-
 		if (XapiandManager::remote_clients().fetch_sub(1) == 0) {
 			L_CRIT("Inconsistency in number of binary clients");
 			sig_exit(-EX_SOFTWARE);
@@ -286,7 +291,6 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 			// send the message right away, just exit and the client will cope.
 			send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
 		} catch (...) { }
-		reset();
 		destroy();
 		detach();
 	} catch (const Xapian::NetworkError&) {
@@ -295,18 +299,15 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 		// try to propagate the error to the client, but instead just log the
 		// exception and close the connection.
 		L_EXC("ERROR: Dispatching remote protocol message");
-		reset();
 		destroy();
 		detach();
 	} catch (const Xapian::Error& exc) {
 		// Propagate the exception to the client, then return to the main
 		// message handling loop.
 		send_message(RemoteReplyType::REPLY_EXCEPTION, serialise_error(exc));
-		reset();
 	} catch (...) {
 		L_EXC("ERROR: Dispatching remote protocol message");
 		send_message(RemoteReplyType::REPLY_EXCEPTION, std::string());
-		reset();
 		destroy();
 		detach();
 	}
@@ -322,7 +323,6 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 	std::string prev = message;
 	const std::string& prefix = message;
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -353,7 +353,6 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -397,7 +396,6 @@ RemoteProtocolClient::msg_positionlist(const std::string &message)
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 	std::string term(p, p_end - p);
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -421,7 +419,6 @@ RemoteProtocolClient::msg_positionlistcount(const std::string &message)
 {
 	L_CALL("RemoteProtocolClient::msg_positionlistcount(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -451,7 +448,6 @@ RemoteProtocolClient::msg_postlist(const std::string &message)
 
 	const std::string & term = message;
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -482,8 +478,6 @@ void
 RemoteProtocolClient::msg_readaccess(const std::string &message)
 {
 	L_CALL("RemoteProtocolClient::msg_readaccess(<message>)");
-
-	reset();
 
 	flags = DB_OPEN;
 	const char *p = message.c_str();
@@ -531,8 +525,6 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_writeaccess(<message>)");
 
-	reset();
-
 	flags = DB_WRITABLE;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -579,7 +571,6 @@ RemoteProtocolClient::msg_reopen(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_reopen(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 
 	if (!lk_shard->reopen()) {
@@ -607,7 +598,6 @@ RemoteProtocolClient::msg_update(const std::string &)
 	std::string message(protocol, 2);
 
 	if (!endpoint.empty()) {
-		reset();
 		lock_shard lk_shard(endpoint, flags);
 		auto db = lk_shard->db();
 
@@ -630,34 +620,6 @@ RemoteProtocolClient::msg_update(const std::string &)
 
 
 void
-RemoteProtocolClient::reset()
-{
-	L_CALL("RemoteProtocolClient::reset()");
-
-	_msg_query_matchspies.clear();
-	_msg_query_reg = Xapian::Registry{};
-	_msg_query_enquire.reset();
-	_msg_query_lk_shard.reset();
-}
-
-
-void
-RemoteProtocolClient::init_msg_query()
-{
-	L_CALL("RemoteProtocolClient::init_msg_query()");
-
-	reset();
-	_msg_query_lk_shard = std::make_unique<lock_shard>(endpoint, flags);
-	_msg_query_reg.register_posting_source(GeoSpatialRange{});
-	_msg_query_reg.register_posting_source(MultipleValueRange{});
-	_msg_query_reg.register_posting_source(MultipleValueGE{});
-	_msg_query_reg.register_posting_source(MultipleValueLE{});
-	_msg_query_reg.register_match_spy(AggregationMatchSpy{});
-	_msg_query_reg.register_key_maker(Multi_MultiValueKeyMaker{});
-}
-
-
-void
 RemoteProtocolClient::msg_query(const std::string &message_in)
 {
 	L_CALL("RemoteProtocolClient::msg_query(<message>)");
@@ -665,15 +627,19 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	const char *p = message_in.c_str();
 	const char *p_end = p + message_in.size();
 
-	init_msg_query();
-	auto db = (*_msg_query_lk_shard)->db();
+	lock_shard lk_shard(endpoint, flags);
+	auto db = lk_shard->db();
+
+	_msg_query_matchspies.clear();
+
+	_msg_query_revision = db->get_revision();
 
 	_msg_query_enquire = std::make_unique<Xapian::Enquire>(*db);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Query.
 	size_t len = unserialise_length_and_check(&p, p_end);
-	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), _msg_query_reg));
+	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), registry));
 	p += len;
 
 	// Unserialise assorted Enquire settings.
@@ -766,7 +732,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	std::string wtname(p, len);
 	p += len;
 
-	const Xapian::Weight * wttype = _msg_query_reg.get_weighting_scheme(wtname);
+	const Xapian::Weight * wttype = registry.get_weighting_scheme(wtname);
 	if (wttype == nullptr) {
 		// Note: user weighting schemes should be registered by adding them to
 		// a Registry, and setting the context using
@@ -801,11 +767,11 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		p += len;
 
 		if (type == "KeyMaker") {
-			const Xapian::KeyMaker * sorterclass = _msg_query_reg.get_key_maker(std::string(classtype));
+			const Xapian::KeyMaker * sorterclass = registry.get_key_maker(std::string(classtype));
 			if (sorterclass == nullptr) {
 				THROW(InvalidArgumentError, "Key maker {} not registered", classtype);
 			}
-			Xapian::KeyMaker * sorter = sorterclass->unserialise(std::string(serialised), _msg_query_reg);
+			Xapian::KeyMaker * sorter = sorterclass->unserialise(std::string(serialised), registry);
 			switch (sort_by) {
 				case REL:
 					break;
@@ -822,11 +788,11 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 					break;
 			}
 		} else if (type == "MatchSpy") {
-			const Xapian::MatchSpy * spyclass = _msg_query_reg.get_match_spy(std::string(classtype));
+			const Xapian::MatchSpy * spyclass = registry.get_match_spy(std::string(classtype));
 			if (spyclass == nullptr) {
 				THROW(InvalidArgumentError, "Match spy {} not registered", classtype);
 			}
-			Xapian::MatchSpy * spy = spyclass->unserialise(std::string(serialised), _msg_query_reg);
+			Xapian::MatchSpy * spy = spyclass->unserialise(std::string(serialised), registry);
 			_msg_query_matchspies.push_back(spy);
 			_msg_query_enquire->add_matchspy(spy->release());
 		} else {
@@ -840,7 +806,8 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	send_message(RemoteReplyType::REPLY_STATS, _msg_query_enquire->serialise_stats());
 
-	// No checkout for database (it'll still be needed by msg_getmset)
+	// Clear internal database, as it's going to be checked in.
+	_msg_query_enquire->set_db(Xapian::Database{});
 }
 
 
@@ -852,6 +819,16 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 	if (!_msg_query_enquire) {
 		THROW(NetworkError, "Unexpected MSG_GETMSET");
 	}
+
+	lock_shard lk_shard(endpoint, flags);
+	auto db = lk_shard->db();
+
+	if (_msg_query_revision != db->get_revision()) {
+		throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
+	}
+
+	// Set internal database from checked out database.
+	_msg_query_enquire->set_db(*db);
 
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
@@ -876,7 +853,9 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 		// is checked in by the reset()
 	}
 
-	reset();
+	_msg_query_matchspies.clear();
+	_msg_query_revision = 0;
+	_msg_query_enquire.reset();
 
 	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }
@@ -891,7 +870,6 @@ RemoteProtocolClient::msg_document(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 
 	Xapian::Document doc = lk_shard->get_document(did, false);
@@ -914,7 +892,6 @@ RemoteProtocolClient::msg_keepalive(const std::string &)
 {
 	L_CALL("RemoteProtocolClient::msg_keepalive(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -932,7 +909,6 @@ RemoteProtocolClient::msg_termexists(const std::string &term)
 {
 	L_CALL("RemoteProtocolClient::msg_termexists(<term>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -948,7 +924,6 @@ RemoteProtocolClient::msg_collfreq(const std::string &term)
 {
 	L_CALL("RemoteProtocolClient::msg_collfreq(<term>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -964,7 +939,6 @@ RemoteProtocolClient::msg_termfreq(const std::string &term)
 {
 	L_CALL("RemoteProtocolClient::msg_termfreq(<term>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -980,7 +954,6 @@ RemoteProtocolClient::msg_freqs(const std::string &term)
 {
 	L_CALL("RemoteProtocolClient::msg_freqs(<term>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -999,7 +972,6 @@ RemoteProtocolClient::msg_valuestats(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_valuestats(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -1030,7 +1002,6 @@ RemoteProtocolClient::msg_doclength(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -1050,7 +1021,6 @@ RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 	const char *p_end = p + message.size();
 	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -1066,7 +1036,6 @@ RemoteProtocolClient::msg_commit(const std::string &)
 {
 	L_CALL("RemoteProtocolClient::msg_commit(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->commit();
 	lk_shard.unlock();
@@ -1080,7 +1049,6 @@ RemoteProtocolClient::msg_cancel(const std::string &)
 {
 	L_CALL("RemoteProtocolClient::msg_cancel(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	// We can't call cancel since that's an internal method, but this
 	// has the same effect with minimal additional overhead.
@@ -1098,7 +1066,6 @@ RemoteProtocolClient::msg_adddocument(const std::string & message)
 
 	auto document = Xapian::Document::unserialise(message);
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto did = lk_shard->add_document(std::move(document));
 	lk_shard.unlock();
@@ -1116,7 +1083,6 @@ RemoteProtocolClient::msg_deletedocument(const std::string & message)
 	const char *p_end = p + message.size();
 	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->delete_document(did);
 	lk_shard.unlock();
@@ -1130,7 +1096,6 @@ RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_deletedocumentterm(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->delete_document_term(message);
 
@@ -1149,7 +1114,6 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->replace_document(did, std::move(document));
 
@@ -1170,7 +1134,6 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto did = lk_shard->replace_document_term(unique_term, std::move(document));
 	lk_shard.unlock();
@@ -1184,7 +1147,6 @@ RemoteProtocolClient::msg_getmetadata(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_getmetadata(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto value = lk_shard->get_metadata(message);
 	lk_shard.unlock();
@@ -1198,7 +1160,6 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_metadatakeylist(<message>)");
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
@@ -1236,7 +1197,6 @@ RemoteProtocolClient::msg_setmetadata(const std::string & message)
 	p += keylen;
 	std::string val(p, p_end - p);
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->set_metadata(key, val);
 
@@ -1253,7 +1213,6 @@ RemoteProtocolClient::msg_addspelling(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	lk_shard->add_spelling(std::string(p, p_end - p), freqinc);
 
@@ -1270,7 +1229,6 @@ RemoteProtocolClient::msg_removespelling(const std::string & message)
 	const char *p_end = p + message.size();
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	reset();
 	lock_shard lk_shard(endpoint, flags);
 	auto result = lk_shard->remove_spelling(std::string(p, p_end - p), freqdec);
 	auto serialised = serialise_length(result);
@@ -1284,7 +1242,6 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 {
 	L_CALL("RemoteProtocolClient::msg_shutdown(<message>)");
 
-	reset();
 	destroy();
 	detach();
 }
@@ -1615,7 +1572,6 @@ RemoteProtocolClient::operator()()
 				lk.unlock();
 				L_ERR("ERROR: Unexpected RemoteProtocolClient state");
 				stop();
-				reset();
 				destroy();
 				detach();
 				return;
