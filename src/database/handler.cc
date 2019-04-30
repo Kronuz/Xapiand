@@ -2410,7 +2410,7 @@ Document::serialise()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
+			auto doc = lk_shard->get_document(shard_did);
 			serialised = doc.serialise();
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -2462,7 +2462,7 @@ Document::get_value(Xapian::valueno slot)
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
+			auto doc = lk_shard->get_document(shard_did);
 			value = doc.get_value(slot);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -2514,7 +2514,7 @@ Document::get_data()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
+			auto doc = lk_shard->get_document(shard_did);
 			data = doc.get_data();
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -2615,7 +2615,7 @@ Document::get_terms()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
+			auto doc = lk_shard->get_document(shard_did);
 			const auto it_e = doc.termlist_end();
 			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
 				auto& term = terms[*it];
@@ -2683,7 +2683,7 @@ Document::get_values()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
+			auto doc = lk_shard->get_document(shard_did);
 			values.reserve(doc.values_count());
 			const auto iv_e = doc.values_end();
 			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
@@ -2789,7 +2789,7 @@ Document::hash()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto doc = lk_shard->get_document(shard_did, Xapian::DOC_ASSUME_VALID);
+			auto doc = lk_shard->get_document(shard_did);
 			// Add hash of values
 			const auto iv_e = doc.values_end();
 			for (auto iv = doc.values_begin(); iv != iv_e; ++iv) {
