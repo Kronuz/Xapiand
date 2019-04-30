@@ -147,8 +147,11 @@ hexdec(const char** ptr) noexcept {
 	auto pos = *ptr;
 	auto a = hexdigit(*pos++);
 	auto b = hexdigit(*pos++);
-	*ptr = pos;
-	return a << 4 | b;
+	int dec = a << 4 | b;
+	if (dec < 256) {
+		*ptr = pos;
+	}
+	return dec;
 }
 
 
