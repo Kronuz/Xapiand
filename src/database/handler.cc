@@ -82,9 +82,10 @@ const std::string dump_documents_header("xapiand-dump-docs");
 Xapian::docid
 to_docid(std::string_view document_id)
 {
-	size_t sz = document_id.size();
-	if (sz > 2 && document_id[0] == ':' && document_id[1] == ':') {
-		document_id.remove_prefix(2);
+	L_CALL("to_docid({})", document_id);
+
+	if (document_id.size() > 1 && document_id[0] == '&') {
+		document_id.remove_prefix(1);
 		try {
 			return static_cast<Xapian::docid>(strict_stoull(document_id));
 		} catch (const InvalidArgument& er) {
