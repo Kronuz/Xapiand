@@ -99,7 +99,7 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
     } catch (...) {
 	// Make sure we close the connection to avoid leaking
 	// resources.
-	do_close();
+	link.do_close(false);
 	throw;
     }
 }
