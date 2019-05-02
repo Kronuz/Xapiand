@@ -245,6 +245,14 @@ public:
 		_count += unserialise_double(p, p_end);
 	}
 
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricCount::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricCount*>(other);
+
+		_count += aggs->_count;
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_COUNT) {
 			return &_count;
@@ -325,6 +333,14 @@ public:
 		_sum += unserialise_double(p, p_end);
 	}
 
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricSum::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricSum*>(other);
+
+		_sum += aggs->_sum;
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_SUM) {
 			return &_sum;
@@ -392,8 +408,20 @@ public:
 		L_CALL("MetricAvg::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricSum::merge_results(p, p_end);
+
 		_count += unserialise_double(p, p_end);
 		// _avg = unserialise_double(p, p_end);  // calculated during update()
+	}
+
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricAvg::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricAvg*>(other);
+
+		MetricSum::merge_results(aggs);
+
+		_count += aggs->_count;
+		// _avg += aggs->_avg;  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -479,6 +507,16 @@ public:
 		}
 	}
 
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricMin::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricMin*>(other);
+
+		if (_min > aggs->_min) {
+			_min = aggs->_min;
+		}
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_MIN) {
 			return &_min;
@@ -555,6 +593,16 @@ public:
 		}
 	}
 
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricMax::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricMax*>(other);
+
+		if (_max > aggs->_max) {
+			_max = aggs->_max;
+		}
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_MAX) {
 			return &_max;
@@ -623,8 +671,20 @@ public:
 		L_CALL("MetricVariance::merge_results({})", repr(std::string(*p, p_end - *p)));
 
 		MetricAvg::merge_results(p, p_end);
+
 		_sq_sum += unserialise_double(p, p_end);
 		// _variance = unserialise_double(p, p_end);  // calculated during update()
+	}
+
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricVariance::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricVariance*>(other);
+
+		MetricAvg::merge_results(aggs);
+
+		_sq_sum += aggs->_sq_sum;
+		// _variance = aggs->_variance;  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -734,6 +794,18 @@ public:
 		// _lower = unserialise_double(p, p_end);  // calculated during update()
 	}
 
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricStdDeviation::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricStdDeviation*>(other);
+
+		MetricVariance::merge_results(aggs);
+		_sigma = aggs->_sigma;
+		// _std = aggs->_std;  // calculated during update()
+		// _upper = aggs->_upper;  // calculated during update()
+		// _lower = aggs->_lower;  // calculated during update()
+	}
+
 	BaseAggregation* get_agg(std::string_view field) override {
 		if (field == RESERVED_AGGS_STD_BOUNDS) {
 			return this;  // FIXME: This is an ugly hack to allow getting fields inside _std_deviation_bounds
@@ -798,6 +870,17 @@ public:
 			_values.push_back(value);
 		}
 		// _median = unserialise_double(p, p_end);  // calculated during update()
+	}
+
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricMedian::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricMedian*>(other);
+
+		for (auto& value : aggs->_values) {
+			_values.push_back(value);
+		}
+		// _median = aggs->_median;  // calculated during update()
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -894,6 +977,17 @@ public:
 		// _mode = unserialise_double(p, p_end);  // calculated during update()
 	}
 
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricMode::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricMode*>(other);
+
+		for (auto& hist : aggs->_histogram) {
+			_histogram[hist.first] += hist.second;
+		}
+		// _mode = aggs->_mode;  // calculated during update()
+	}
+
 	const long double* get_value_ptr(std::string_view field) const override {
 		if (field == RESERVED_AGGS_MODE) {
 			return &_mode;
@@ -973,6 +1067,16 @@ public:
 		MetricAvg::merge_results(p, p_end);
 		_min_metric.merge_results(p, p_end);
 		_max_metric.merge_results(p, p_end);
+	}
+
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricStats::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricStats*>(other);
+
+		MetricAvg::merge_results(aggs);
+		_min_metric.merge_results(aggs);
+		_max_metric.merge_results(aggs);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -1068,6 +1172,16 @@ public:
 		MetricStdDeviation::merge_results(p, p_end);
 		_min_metric.merge_results(p, p_end);
 		_max_metric.merge_results(p, p_end);
+	}
+
+	void merge_results(const BaseAggregation* other) override {
+		L_CALL("MetricExtendedStats::merge_results(<aggs>)");
+
+		auto aggs = static_cast<const MetricExtendedStats*>(other);
+
+		MetricStdDeviation::merge_results(aggs);
+		_min_metric.merge_results(aggs);
+		_max_metric.merge_results(aggs);
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {

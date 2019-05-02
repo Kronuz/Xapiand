@@ -49,6 +49,7 @@ public:
 
 	virtual std::string serialise_results() const = 0;
 	virtual void merge_results(const char** p, const char* end) = 0;
+	virtual void merge_results(const BaseAggregation* other) = 0;
 
 	virtual BaseAggregation* get_agg(std::string_view) {
 		return nullptr;
@@ -82,6 +83,7 @@ public:
 
 	std::string serialise_results() const override;
 	void merge_results(const char** p, const char* p_end) override;
+	void merge_results(const BaseAggregation* other) override;
 
 	BaseAggregation* get_agg(std::string_view field) override;
 
@@ -148,6 +150,7 @@ public:
 	Xapian::MatchSpy* unserialise(const std::string& serialised, const Xapian::Registry& context) const override;
 	std::string serialise_results() const override;
 	void merge_results(const std::string& serialised) override;
+	void merge_results(const AggregationMatchSpy& other);
 
 	std::string get_description() const override;
 	const MsgPack& get_aggregation() noexcept;

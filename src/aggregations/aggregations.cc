@@ -286,6 +286,20 @@ Aggregation::merge_results(const char** p, const char* p_end)
 }
 
 
+void
+Aggregation::merge_results(const BaseAggregation* other)
+{
+	L_CALL("Aggregation::merge_results(<aggs>)");
+
+	auto aggs = static_cast<const Aggregation*>(other);
+
+	_doc_count += aggs->_doc_count;
+	for (auto& _sub_agg : aggs->_sub_aggs) {
+		_sub_aggs[_sub_agg.first]->merge_results(_sub_agg.second.get());
+	}
+}
+
+
 BaseAggregation*
 Aggregation::get_agg(std::string_view field)
 {
@@ -360,6 +374,12 @@ AggregationMatchSpy::merge_results(const std::string& serialised)
 	_aggregation.merge_results(&p, p_end);
 }
 
+
+void
+AggregationMatchSpy::merge_results(const AggregationMatchSpy& other)
+{
+	_aggregation.merge_results(&other._aggregation);
+}
 
 std::string
 AggregationMatchSpy::get_description() const

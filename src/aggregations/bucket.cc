@@ -109,6 +109,17 @@ FilterAggregation::merge_results(const char** p, const char* p_end)
 
 
 void
+FilterAggregation::merge_results(const BaseAggregation* other)
+{
+	L_CALL("FilterAggregation::merge_results(<aggs>)");
+
+	auto aggs = static_cast<const FilterAggregation*>(other);
+
+	_agg.merge_results(&aggs->_agg);
+}
+
+
+void
 FilterAggregation::check_single(const Xapian::Document& doc)
 {
 	for (const auto& filter : _filters) {
