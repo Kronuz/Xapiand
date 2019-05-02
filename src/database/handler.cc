@@ -868,8 +868,8 @@ DatabaseHandler::dump_documents()
 	auto docs = MsgPack::ARRAY();
 
 	size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
 
+	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 
@@ -927,8 +927,8 @@ DatabaseHandler::dump_documents(int fd)
 	SHA256 sha256;
 
 	size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
 
+	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 
@@ -1119,8 +1119,8 @@ DatabaseHandler::get_all_mset(const std::string& term, unsigned /*offset*/, unsi
 	MSet mset;
 
 	size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
 
+	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 
@@ -1180,9 +1180,9 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 	schema = get_schema();
 
-	auto limit = query_field.limit;
-	auto check_at_least = query_field.check_at_least;
-	auto offset = query_field.offset;
+	Xapian::doccount first = query_field.offset;
+	Xapian::doccount maxitems = query_field.limit;
+	Xapian::doccount check_at_least = query_field.check_at_least;
 
 	QueryDSL query_object(schema);
 
@@ -1203,7 +1203,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	if (qdsl && qdsl->find(RESERVED_QUERYDSL_OFFSET) != qdsl->end()) {
 		auto value = qdsl->at(RESERVED_QUERYDSL_OFFSET);
 		if (value.is_integer()) {
-			offset = value.as_u64();
+			first = value.as_u64();
 		} else {
 			THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_OFFSET);
 		}
@@ -1212,7 +1212,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 	if (qdsl && qdsl->find(RESERVED_QUERYDSL_LIMIT) != qdsl->end()) {
 		auto value = qdsl->at(RESERVED_QUERYDSL_LIMIT);
 		if (value.is_integer()) {
-			limit = value.as_u64();
+			maxitems = value.as_u64();
 		} else {
 			THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_LIMIT);
 		}
@@ -1270,19 +1270,55 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		collapse_key = field_spc.slot;
 	}
 
+	if (aggs && check_at_least == 0) {
+		// When using aggregations, at request xapian to at least
+		// check 1, otherwise aggregations are altogether skipped.
+		check_at_least = 1;
+	}
+
+	return get_mset(
+		query,
+		first,
+		maxitems,
+		check_at_least,
+		sorter.get(),
+		collapse_key,
+		query_field.collapse_max,
+		aggs,
+		query_field.is_fuzzy ? &query_field.fuzzy : nullptr,
+		query_field.is_nearest ? &query_field.nearest : nullptr);
+}
+
+
+MSet
+DatabaseHandler::get_mset(
+	const Xapian::Query& query,
+	Xapian::doccount first,
+	Xapian::doccount maxitems,
+	Xapian::doccount check_at_least,
+	Xapian::KeyMaker* sorter,
+	Xapian::valueno collapse_key,
+	Xapian::doccount collapse_max,
+	Xapian::MatchSpy* spy,
+	const similar_field_t* fuzzy,
+	const similar_field_t* nearest
+	)
+{
+	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), first, maxitems, check_at_least);
+
 	// Configure nearest and fuzzy search:
-	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 	Xapian::RSet nearest_rset;
-	if (query_field.is_nearest) {
-		nearest_edecider = get_edecider(query_field.nearest);
-		nearest_rset = get_rset(query, query_field.nearest.n_rset);
+	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
+	if (nearest) {
+		nearest_edecider = get_edecider(*nearest);
+		nearest_rset = get_rset(query, nearest->n_rset);
 	}
 
 	Xapian::RSet fuzzy_rset;
 	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
-	if (query_field.is_fuzzy) {
-		fuzzy_edecider = get_edecider(query_field.fuzzy);
-		fuzzy_rset = get_rset(query, query_field.fuzzy.n_rset);
+	if (fuzzy) {
+		fuzzy_edecider = get_edecider(*fuzzy);
+		fuzzy_rset = get_rset(query, fuzzy->n_rset);
 	}
 
 	MSet mset;
@@ -1295,82 +1331,24 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			auto db = lk_db.locked();
 			Xapian::Enquire enquire(*db);
 			if (collapse_key != Xapian::BAD_VALUENO) {
-				enquire.set_collapse_key(collapse_key, query_field.collapse_max);
+				enquire.set_collapse_key(collapse_key, collapse_max);
 			}
-			if (aggs) {
-				if (check_at_least == 0) {
-					// When using aggregations, at request xapian to at least
-					// check 1, otherwise aggregations are altogether skipped.
-					check_at_least = 1;
-				}
-				enquire.add_matchspy(aggs);
-			}
-			if (sorter) {
-				enquire.set_sort_by_key_then_relevance(sorter.get(), false);
-			}
-			if (query_field.is_nearest) {
-				auto eset = enquire.get_eset(query_field.nearest.n_eset, nearest_rset, nearest_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), query_field.nearest.n_term);
-			}
-			if (query_field.is_fuzzy) {
-				auto eset = enquire.get_eset(query_field.fuzzy.n_eset, fuzzy_rset, fuzzy_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), query_field.fuzzy.n_term));
-			}
-			enquire.set_query(final_query);
-			mset = enquire.get_mset(offset, limit, check_at_least);
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
-		} catch (const QueryParserError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const QueryDslError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const Xapian::QueryParserError& exc) {
-			THROW(ClientError, exc.get_description());
-		}
-		lk_db.reopen();
-	}
-
-	return mset;
-}
-
-
-MSet
-DatabaseHandler::get_mset(const Xapian::Query& query, unsigned offset, unsigned limit, unsigned check_at_least, Xapian::KeyMaker* sorter, Xapian::MatchSpy* spy)
-{
-	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), offset, limit, check_at_least);
-
-	MSet mset;
-
-	lock_database lk_db(*this);
-
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto final_query = query;
-			auto db = lk_db.locked();
-			Xapian::Enquire enquire(*db);
 			if (spy) {
 				enquire.add_matchspy(spy);
 			}
 			if (sorter) {
 				enquire.set_sort_by_key_then_relevance(sorter, false);
 			}
+			if (nearest) {
+				auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
+			}
+			if (fuzzy) {
+				auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
+			}
 			enquire.set_query(final_query);
-			mset = enquire.get_mset(offset, limit, check_at_least);
+			mset = enquire.get_mset(first, maxitems, check_at_least);
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_db.do_close(); throw; }
@@ -1645,8 +1623,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 	}
 
 	size_t n_shards = endpoints.size();
-	size_t shard_num = 0;
 
+	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
 
@@ -1747,7 +1725,9 @@ DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, boo
 	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
 
 	assert(!endpoints.empty());
+
 	size_t n_shards = endpoints.size();
+
 	size_t shard_num = 0;
 	if (n_shards > 1) {
 		// Try getting a new ID which can currently be indexed (active node)
@@ -1799,7 +1779,9 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
 
 	assert(!endpoints.empty());
+
 	size_t n_shards = endpoints.size();
+
 	size_t shard_num = 0;
 	if (n_shards > 1) {
 		assert(term.size() > 2);
@@ -1976,7 +1958,9 @@ DatabaseHandler::get_database_info()
 	Xapian::totallength total_length = 0;
 	Xapian::termcount doclength_lower_bound;
 	Xapian::termcount doclength_upper_bound;
+
 	size_t n_shards = endpoints.size();
+
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);

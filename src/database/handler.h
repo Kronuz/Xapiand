@@ -224,7 +224,17 @@ public:
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	MSet get_all_mset(const std::string& term = "", unsigned offset = 0, unsigned limit = 10);
 	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
-	MSet get_mset(const Xapian::Query& query, unsigned offset = 0, unsigned limit = 10, unsigned check_at_least = 0, Xapian::KeyMaker* sorter = nullptr, Xapian::MatchSpy* spy = nullptr);
+	MSet get_mset(
+		const Xapian::Query& query,
+		Xapian::doccount first = 0,
+		Xapian::doccount maxitems = 10,
+		Xapian::doccount check_at_least = 0,
+		Xapian::KeyMaker* sorter = nullptr,
+		Xapian::valueno collapse_key = Xapian::BAD_VALUENO,
+		Xapian::doccount collapse_max = 0,
+		Xapian::MatchSpy* spy = nullptr,
+		const similar_field_t* fuzzy = nullptr,
+		const similar_field_t* nearest = nullptr);
 
 	MsgPack dump_document(Xapian::docid did);
 	MsgPack dump_document(std::string_view document_id);
