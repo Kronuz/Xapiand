@@ -505,7 +505,7 @@ public:
 			const char* q_end = q + data.size();
 			it->second.merge_results(&q, q_end);
 			if (q != q_end) {
-				THROW(SerialisationError, "Junk found at end of serialised Aggregation2");
+				THROW(SerialisationError, "Junk found at end of serialised Aggregation");
 			}
 		}
 	}

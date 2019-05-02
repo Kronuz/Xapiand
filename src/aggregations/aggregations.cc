@@ -280,7 +280,7 @@ Aggregation::merge_results(const char** p, const char* p_end)
 		const char *q_end = q + data.size();
 		_sub_aggs[name]->merge_results(&q, q_end);
 		if (q != q_end) {
-			THROW(SerialisationError, "Junk found at end of serialised Aggregation1");
+			THROW(SerialisationError, "Junk found at end of serialised Aggregation");
 		}
 	}
 }
