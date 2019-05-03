@@ -1937,8 +1937,6 @@ inline void MsgPack::update(M&& o) {
 		THROW(msgpack::const_error, "Locked object");
 	}
 	switch (o._body->get_type()) {
-		case Type::UNDEFINED:
-			break;
 		case Type::MAP:
 			if (_body->get_type() == Type::UNDEFINED) {
 				_init_map();
