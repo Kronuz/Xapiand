@@ -70,8 +70,8 @@
 #define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
 #define MAX_ASYNC_WAL_WRITERS         10
 
-#define NUM_DOC_MATCHERS            1.0          // Number of threads handling parallel matching of documents per CPU
-#define MAX_DOC_MATCHERS             10
+#define NUM_DOC_MATCHERS             2.0          // Number of threads handling parallel matching of documents per CPU
+#define MAX_DOC_MATCHERS              20
 
 #define NUM_DOC_PREPARERS            1.0          // Number of threads handling bulk documents preparing per CPU
 #define MAX_DOC_PREPARERS             10
@@ -79,7 +79,7 @@
 #define NUM_DOC_INDEXERS             2.0          // Number of threads handling bulk documents indexing per CPU
 #define MAX_DOC_INDEXERS              20
 
-#define NUM_COMMITTERS               0.5          // Number of threads handling the commits per CPU
+#define NUM_COMMITTERS               1.0          // Number of threads handling the commits per CPU
 #define MAX_COMMITTERS                10
 
 #define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
