@@ -525,6 +525,7 @@ RemoteServer::msg_update(const string &)
 	pack_uint(message, db->get_doclength_upper_bound() - doclen_lb);
 	pack_bool(message, db->has_positions());
 	pack_uint(message, db->get_total_length());
+	pack_uint(message, db->get_revision());
 	message += db->get_uuid();
     }
     send_message(REPLY_UPDATE, message);
