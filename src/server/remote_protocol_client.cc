@@ -801,11 +801,9 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		}
 	}
 
-
 	////////////////////////////////////////////////////////////////////////////
-	_msg_query_enquire->prepare_mset(&rset, nullptr);
-
-	send_message(RemoteReplyType::REPLY_STATS, _msg_query_enquire->serialise_stats());
+	auto prepared_mset = _msg_query_enquire->prepare_mset(&rset, nullptr);
+	send_message(RemoteReplyType::REPLY_STATS, prepared_mset.serialise_stats());
 
 	// Clear internal database, as it's going to be checked in.
 	_msg_query_enquire->set_db(Xapian::Database{});
@@ -839,7 +837,7 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 
 	Xapian::termcount check_at_least = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
-	_msg_query_enquire->unserialise_stats(std::string(p, p_end));
+	_msg_query_enquire->set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
 
 	std::string msg;
 	{
