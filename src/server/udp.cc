@@ -34,7 +34,7 @@
 #include <sysexits.h>               // for EX_CONFIG
 
 #include "error.hh"                 // for error:name, error::description
-#include "exception.h"              // for MSG_NetworkError, NetworkError
+#include "exception_xapian.h"       // for NetworkError
 #include "io.hh"                    // for close, ignored_errno
 #include "length.h"                 // for serialise_string, unserialise_string
 #include "log.h"                    // for L_ERR, L_OBJ, L_CRIT, L_CONN, L_UDP_WIRE

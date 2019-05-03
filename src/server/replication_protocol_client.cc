@@ -37,6 +37,7 @@
 #include "database/shard.h"                   // for Shard
 #include "database/wal.h"                     // for DatabaseWAL
 #include "error.hh"                           // for error:name, error::description
+#include "exception_xapian.h"                 // for InvalidArgumentError
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
 #include "length.h"                           // for serialise_length, unserialise_length

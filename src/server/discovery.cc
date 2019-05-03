@@ -33,6 +33,7 @@
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
+#include "exception_xapian.h"               // for InvalidArgumentError
 #include "manager.h"                        // for XapiandManager, XapiandManager::State
 #include "namegen.h"                        // for name_generator
 #include "node.h"                           // for Node, local_node

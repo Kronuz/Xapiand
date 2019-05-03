@@ -23,6 +23,7 @@
 #include "cast.h"
 
 #include "database/schema.h"
+#include "exception_xapian.h"                     // for CastError
 #include "strings.hh"                             // for strings::format
 
 

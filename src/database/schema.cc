@@ -44,7 +44,7 @@
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard
 #include "datetime.h"                             // for isDate, isDatetime, tm_t
-#include "exception.h"                            // for ClientError
+#include "exception_xapian.h"                     // for ClientError, SerialisationError
 #include "geospatial/geospatial.h"                // for GeoSpatial
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive

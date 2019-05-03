@@ -29,6 +29,7 @@
 #include <cmath>                                  // for scalbn, frexp, HUGE_VAL
 #include <functional>                             // for std::reference_wrapper
 
+#include "exception_xapian.h"                     // for SerialisationError
 #include "io.hh"                                  // for io::read and io::write
 #include "xapian/net/length.h"                    // for encode_length, decode_length
 

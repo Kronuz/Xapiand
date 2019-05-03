@@ -25,6 +25,7 @@
 #include <string>                                 // for std::string
 #include <string_view>                            // for std::string_view
 
+#include "exception_xapian.h"                     // for SerialisationError
 #include "length.h"                               // for serialise_string
 #include "serialise.h"
 

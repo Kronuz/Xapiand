@@ -41,6 +41,7 @@
 #include "strict_stox.hh"        // for strict_stoull
 #include "stringified.hh"        // for stringified
 #include "thread.hh"             // for ThreadPolicyType::*
+#include "xapian.h"              // for Xapian::DatabaseNotFoundError
 
 
 #ifndef L_CALL

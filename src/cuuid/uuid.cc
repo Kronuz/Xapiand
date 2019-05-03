@@ -23,19 +23,19 @@
 
 #include "cuuid/uuid.h"
 
-#include <algorithm>      // for std::copy_n
-#include <cassert>        // for assert
-#include <iomanip>        // for std::setw and std::setfill
-#include <random>         // for std::mt19937
-#include <sstream>        // for std::ostringstream
-#include <stdexcept>      // for std::bad_alloc
+#include <algorithm>                              // for std::copy_n
+#include <cassert>                                // for assert
+#include <iomanip>                                // for std::setw and std::setfill
+#include <random>                                 // for std::mt19937
+#include <sstream>                                // for std::ostringstream
+#include <stdexcept>                              // for std::bad_alloc
 
-#include "repr.hh"        // for repr
-#include "endian.hh"      // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
-#include "exception.h"    // for THROW, SerialisationError, InvalidArgument
-#include "chars.hh"       // for chars::char_repr, chars::hexdigit, chars::hexdec
-#include "log.h"          // for L_*
-#include "node.h"         // for Node
+#include "repr.hh"                                // for repr
+#include "endian.hh"                              // for htobe16, be16toh, htobe32, be32toh, htobe64, be64toh
+#include "exception_xapian.h"                     // for THROW, SerialisationError, InvalidArgument
+#include "chars.hh"                               // for chars::char_repr, chars::hexdigit, chars::hexdec
+#include "log.h"                                  // for L_*
+#include "node.h"                                 // for Node
 
 
 #ifndef L_UUID

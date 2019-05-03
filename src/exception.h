@@ -45,8 +45,6 @@
 	using fmt::vformat;
 #endif
 
-#include "xapian.h"           // for DocNotFoundError, InternalError, InvalidArgum...
-
 
 class BaseException {
 	static const BaseException& default_exc() {
@@ -128,62 +126,6 @@ class ClientError : public Exception {
 public:
 	template<typename... Args>
 	ClientError(Args&&... args) : Exception(std::forward<Args>(args)...) { }
-};
-
-
-class DocVersionConflictError : public ClientError, public Xapian::DocVersionConflictError {
-public:
-	template<typename... Args>
-	DocVersionConflictError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::DocVersionConflictError(message) { }
-};
-
-
-class SerialisationError : public ClientError, public Xapian::SerialisationError {
-public:
-	template<typename... Args>
-	SerialisationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError(message) { }
-};
-
-
-class CastError : public ClientError, public Xapian::SerialisationError {
-public:
-	template<typename... Args>
-	CastError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::SerialisationError(message) { }
-};
-
-
-class NetworkError : public ClientError, public Xapian::NetworkError {
-public:
-	template<typename... Args>
-	NetworkError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::NetworkError(message) { }
-};
-
-
-class InvalidArgumentError : public ClientError, public Xapian::InvalidArgumentError {
-public:
-	template<typename... Args>
-	InvalidArgumentError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidArgumentError(message) { }
-};
-
-
-class InvalidOperationError : public ClientError, public Xapian::InvalidOperationError {
-public:
-	template<typename... Args>
-	InvalidOperationError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InvalidOperationError(message) { }
-};
-
-
-class QueryParserError : public ClientError, public Xapian::QueryParserError {
-public:
-	template<typename... Args>
-	QueryParserError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::QueryParserError(message) { }
-};
-
-
-class InternalError : public ClientError, public Xapian::InternalError {
-public:
-	template<typename... Args>
-	InternalError(Args&&... args) : ClientError(std::forward<Args>(args)...), Xapian::InternalError(message) { }
 };
 
 

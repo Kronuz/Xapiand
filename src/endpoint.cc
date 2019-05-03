@@ -22,16 +22,16 @@
 
 #include "endpoint.h"
 
-#include <algorithm>        // for std::lower_bound
+#include <algorithm>                              // for std::lower_bound
 
-#include "config.h"         // for XAPIAND_*
+#include "config.h"                               // for XAPIAND_*
 
-#include "fs.hh"            // for normalize_path
-#include "node.h"           // for Node::
-#include "opts.h"           // for opts
-#include "serialise.h"      // for UUIDRepr, Serialise
-#include "strings.hh"       // for strings::format
-#include "xapian.h"         // for SerialisationError
+#include "fs.hh"                                  // for normalize_path
+#include "node.h"                                 // for Node::
+#include "opts.h"                                 // for opts
+#include "serialise.h"                            // for UUIDRepr, Serialise
+#include "strings.hh"                             // for strings::format
+#include "exception_xapian.h"                     // for SerialisationError
 
 
 static inline std::string

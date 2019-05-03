@@ -22,6 +22,7 @@
 
 #include "data.h"
 
+#include "exception_xapian.h"                     // for SerialisationError
 #include "length.h"                               // for serialise_length()
 #include "msgpack.h"                              // for MsgPack
 #include "strings.hh"                             // for string::*
