@@ -1395,6 +1395,7 @@ HttpClient::node_obj()
 				{ "num_replication_clients", opts.num_replication_clients },
 #endif
 				{ "num_async_wal_writers", opts.num_async_wal_writers },
+				{ "num_doc_matchers", opts.num_doc_matchers },
 				{ "num_doc_preparers", opts.num_doc_preparers },
 				{ "num_doc_indexers", opts.num_doc_indexers },
 				{ "num_committers", opts.num_committers },

@@ -63,6 +63,7 @@ extern struct opts_t {
 	ssize_t num_replication_servers = 1;
 	ssize_t num_replication_clients = 1;
 	ssize_t num_async_wal_writers = 1;
+	ssize_t num_doc_matchers = 1;
 	ssize_t num_doc_preparers = 1;
 	ssize_t num_doc_indexers = 1;
 	ssize_t num_committers = 1;

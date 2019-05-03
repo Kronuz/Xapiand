@@ -34,6 +34,7 @@ enum class ThreadPolicyType {
 	wal_writer,
 	logging,
 	replication,
+	doc_matchers,
 	doc_preparers,
 	doc_indexers,
 	committers,

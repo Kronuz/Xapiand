@@ -162,6 +162,7 @@ XapiandManager::XapiandManager()
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
+	  _doc_matcher_pool(std::make_unique<ThreadPool<std::unique_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
 	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
 	  _shutdown_asap(0),
@@ -192,6 +193,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
+	  _doc_matcher_pool(std::make_unique<ThreadPool<std::unique_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
 	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
 	  _shutdown_asap(0),
@@ -1014,6 +1016,21 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
+	if (_doc_matcher_pool) {
+		L_MANAGER("Finishing parallel document matcher threads pool!");
+		_doc_matcher_pool->finish();
+
+		L_MANAGER("Waiting for {} parallel document matcher thread{}...", _doc_matcher_pool->running_size(), (_doc_matcher_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the parallel document matchers...", "Parallel document matchers finished!");
+		while (!_doc_matcher_pool->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
 	if (_doc_preparer_pool) {
 		L_MANAGER("Finishing bulk document preparer threads pool!");
 		_doc_preparer_pool->finish();
@@ -1276,6 +1293,7 @@ XapiandManager::join()
 	_http_client_pool.reset();
 	_http_server_pool.reset();
 
+	_doc_matcher_pool.reset();
 	_doc_indexer_pool.reset();
 	_doc_preparer_pool.reset();
 

@@ -56,6 +56,7 @@ class ReplicationProtocolClient;
 class ReplicationProtocolServer;
 #endif
 
+class DocMatcher;
 class DocPreparer;
 class DocIndexer;
 
@@ -150,6 +151,7 @@ private:
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> _replication_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> _replication_server_pool;
 #endif
+	std::unique_ptr<ThreadPool<std::unique_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>> _doc_matcher_pool;
 	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> _doc_preparer_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> _doc_indexer_pool;
 
@@ -354,6 +356,12 @@ public:
 		return _manager->_replication;
 	}
 #endif
+
+	static auto& doc_matcher_pool() {
+		assert(_manager);
+		assert(_manager->_doc_matcher_pool);
+		return _manager->_doc_matcher_pool;
+	}
 
 	static auto& doc_preparer_pool() {
 		assert(_manager);

@@ -70,6 +70,9 @@
 #define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
 #define MAX_ASYNC_WAL_WRITERS         10
 
+#define NUM_DOC_MATCHERS            1.0          // Number of threads handling parallel matching of documents per CPU
+#define MAX_DOC_MATCHERS             10
+
 #define NUM_DOC_PREPARERS            1.0          // Number of threads handling bulk documents preparing per CPU
 #define MAX_DOC_PREPARERS             10
 
@@ -232,6 +235,7 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
 		ValueArg<std::size_t> num_shards("", "shards", "Default number of database shards per index.", false, NUM_SHARDS, "shards", cmd);
 #endif
+		ValueArg<std::size_t> num_doc_matchers("", "matchers", "Number of threads handling parallel document matching.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_doc_preparers("", "bulk-preparers", "Number of threads handling bulk documents preparing.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, 0, "threads", cmd);
@@ -450,6 +454,7 @@ parseOptions(int argc, char** argv)
 		o.num_replicators = fallback(num_replicators.getValue(), std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors))));
 		o.num_discoverers = fallback(num_discoverers.getValue(), std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors))));
 #endif
+		o.num_doc_matchers = fallback(num_doc_matchers.getValue(), std::min(MAX_DOC_MATCHERS, static_cast<int>(std::ceil(NUM_DOC_MATCHERS * o.processors))));
 		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors))));
 		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors))));
 		o.num_committers = fallback(num_committers.getValue(), std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors))));
