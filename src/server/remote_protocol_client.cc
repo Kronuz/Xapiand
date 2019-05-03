@@ -338,6 +338,7 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 		reply.append(term, reuse, std::string::npos);
 		prev = term;
 	}
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_ALLTERMS, reply);
@@ -612,8 +613,6 @@ RemoteProtocolClient::msg_update(const std::string &)
 		message += serialise_length(db->get_revision());
 		std::string uuid = db->get_uuid();
 		message += uuid;
-
-		lk_shard.unlock();
 	}
 
 	send_message(RemoteReplyType::REPLY_UPDATE, message);
@@ -912,6 +911,7 @@ RemoteProtocolClient::msg_termexists(const std::string &term)
 	auto db = lk_shard->db();
 
 	auto reply_type = db->term_exists(term) ? RemoteReplyType::REPLY_TERMEXISTS : RemoteReplyType::REPLY_TERMDOESNTEXIST;
+
 	lk_shard.unlock();
 
 	send_message(reply_type, std::string());
@@ -927,6 +927,7 @@ RemoteProtocolClient::msg_collfreq(const std::string &term)
 	auto db = lk_shard->db();
 
 	auto collection_freq = db->get_collection_freq(term);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_COLLFREQ, serialise_length(collection_freq));
@@ -942,6 +943,7 @@ RemoteProtocolClient::msg_termfreq(const std::string &term)
 	auto db = lk_shard->db();
 
 	auto termfreq = db->get_termfreq(term);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_TERMFREQ, serialise_length(termfreq));
@@ -958,6 +960,7 @@ RemoteProtocolClient::msg_freqs(const std::string &term)
 
 	auto termfreq = db->get_termfreq(term);
 	auto collection_freq = db->get_collection_freq(term);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_FREQS,
@@ -1005,6 +1008,7 @@ RemoteProtocolClient::msg_doclength(const std::string &message)
 	auto db = lk_shard->db();
 
 	auto doclength = db->get_doclength(did);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(doclength));
@@ -1024,6 +1028,7 @@ RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 	auto db = lk_shard->db();
 
 	auto unique_terms = db->get_unique_terms(did);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(unique_terms));
@@ -1036,7 +1041,9 @@ RemoteProtocolClient::msg_commit(const std::string &)
 	L_CALL("RemoteProtocolClient::msg_commit(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
+
 	lk_shard->commit();
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
@@ -1066,7 +1073,9 @@ RemoteProtocolClient::msg_adddocument(const std::string & message)
 	auto document = Xapian::Document::unserialise(message);
 
 	lock_shard lk_shard(endpoint, flags);
+
 	auto did = lk_shard->add_document(std::move(document));
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
@@ -1083,7 +1092,9 @@ RemoteProtocolClient::msg_deletedocument(const std::string & message)
 	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
 
 	lock_shard lk_shard(endpoint, flags);
+
 	lk_shard->delete_document(did);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
@@ -1134,7 +1145,9 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
 	lock_shard lk_shard(endpoint, flags);
+
 	auto did = lk_shard->replace_document_term(unique_term, std::move(document));
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
@@ -1147,7 +1160,9 @@ RemoteProtocolClient::msg_getmetadata(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_getmetadata(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
+
 	auto value = lk_shard->get_metadata(message);
+
 	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_METADATA, value);
@@ -1229,9 +1244,12 @@ RemoteProtocolClient::msg_removespelling(const std::string & message)
 	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
 
 	lock_shard lk_shard(endpoint, flags);
+
 	auto result = lk_shard->remove_spelling(std::string(p, p_end - p), freqdec);
 	auto serialised = serialise_length(result);
+
 	lk_shard.unlock();
+
 	send_message(RemoteReplyType::REPLY_REMOVESPELLING, serialised);
 }
 
