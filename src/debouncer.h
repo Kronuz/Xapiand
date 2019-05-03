@@ -162,18 +162,20 @@ Debouncer<Key, Func, Tuple, thread_policy>::throttle(const Key& key)
 
 			std::lock_guard<std::mutex> statuses_lk(statuses_mtx);
 			auto it = statuses.find(key);
-			if (it != statuses.end()) {
-				auto status = &(it->second);
-
-				status->max_wakeup_time = 0;  // flag status as throttler
-
-				if (status->task) {
-					status->task->clear();
-				}
-				task = std::make_shared<DebouncerTask<Key, Func, Tuple, thread_policy>>(*this, key);
-				task->wakeup_time = time_point_to_ullong(now + throttle_time);
-				status->task = task;
+			if (it == statuses.end()) {
+				return;
 			}
+
+			auto status = &(it->second);
+
+			status->max_wakeup_time = 0;  // flag status as throttler
+
+			if (status->task) {
+				status->task->clear();
+			}
+			task = std::make_shared<DebouncerTask<Key, Func, Tuple, thread_policy>>(*this, key);
+			task->wakeup_time = time_point_to_ullong(now + throttle_time);
+			status->task = task;
 		}
 
 		this->add(task);
