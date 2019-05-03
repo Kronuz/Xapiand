@@ -85,8 +85,6 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// The context to return with any error messages
     std::string context;
 
-    mutable bool cached_stats_valid;
-
     /** The most recently used value statistics. */
     mutable ValueStats mru_valstats;
 

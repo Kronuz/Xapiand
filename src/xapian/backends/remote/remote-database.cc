@@ -81,7 +81,6 @@ RemoteDatabase::RemoteDatabase(int fd, double timeout_,
       flags(flags_),
       link(fd, fd, context_),
       context(context_),
-      cached_stats_valid(),
       mru_valstats(),
       mru_slot(Xapian::BAD_VALUENO),
       timeout(timeout_)
@@ -101,7 +100,7 @@ Xapian::termcount
 RemoteDatabase::positionlist_count(Xapian::docid did,
 				   const std::string& term) const
 {
-    if (cached_stats_valid && !has_positional_info)
+    if (!has_positional_info)
 	return 0;
 
     string message;
@@ -142,7 +141,7 @@ RemoteDatabase::open_term_list(Xapian::docid did) const
     Assert(did);
 
     // Ensure that total_length and doccount are up-to-date.
-    if (!cached_stats_valid) update_stats();
+    update_stats();
 
     string message;
     pack_uint_last(message, did);
@@ -235,7 +234,7 @@ RemoteDatabase::open_position_list(Xapian::docid did, const string &term) const
 bool
 RemoteDatabase::has_positions() const
 {
-    if (!cached_stats_valid) update_stats();
+    update_stats();
     return has_positional_info;
 }
 
@@ -395,28 +394,27 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
     lastdocid += doccount;
     doclen_ubound += doclen_lbound;
     uuid.assign(p, p_end);
-    cached_stats_valid = true;
     return true;
 }
 
 Xapian::doccount
 RemoteDatabase::get_doccount() const
 {
-    if (!cached_stats_valid) update_stats();
+    update_stats();
     return doccount;
 }
 
 Xapian::docid
 RemoteDatabase::get_lastdocid() const
 {
-    if (!cached_stats_valid) update_stats();
+    update_stats();
     return lastdocid;
 }
 
 Xapian::totallength
 RemoteDatabase::get_total_length() const
 {
-    if (!cached_stats_valid) update_stats();
+    update_stats();
     return total_length;
 }
 
@@ -739,7 +737,6 @@ RemoteDatabase::commit()
 void
 RemoteDatabase::cancel()
 {
-    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_CANCEL, string());
@@ -750,7 +747,6 @@ RemoteDatabase::cancel()
 Xapian::docid
 RemoteDatabase::add_document(const Xapian::Document & doc)
 {
-    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_ADDDOCUMENT, serialise_document(doc));
@@ -770,7 +766,6 @@ RemoteDatabase::add_document(const Xapian::Document & doc)
 void
 RemoteDatabase::delete_document(Xapian::docid did)
 {
-    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     string message;
@@ -783,7 +778,6 @@ RemoteDatabase::delete_document(Xapian::docid did)
 void
 RemoteDatabase::delete_document(const std::string & unique_term)
 {
-    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_DELETEDOCUMENTTERM, unique_term);
@@ -795,7 +789,6 @@ void
 RemoteDatabase::replace_document(Xapian::docid did,
 				 const Xapian::Document & doc)
 {
-    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     string message;
@@ -811,7 +804,6 @@ Xapian::docid
 RemoteDatabase::replace_document(const std::string & unique_term,
 				 const Xapian::Document & doc)
 {
-    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     string message;
