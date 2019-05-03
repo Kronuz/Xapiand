@@ -389,6 +389,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
     }
     has_positional_info = (*p++ == '1');
     decode_length(&p, p_end, total_length);
+    decode_length(&p, p_end, revision);
     uuid.assign(p, p_end);
     cached_stats_valid = true;
     return true;
@@ -833,6 +834,15 @@ RemoteDatabase::replace_document(const std::string & unique_term,
     Xapian::docid did;
     decode_length(&p, p_end, did);
     return did;
+}
+
+
+Xapian::rev
+RemoteDatabase::get_revision() const
+{
+    // Ensure that revision is up-to-date.
+    update_stats();
+    return revision;
 }
 
 string

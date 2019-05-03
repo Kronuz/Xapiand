@@ -79,6 +79,9 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// Has positional information?
     mutable bool has_positional_info;
 
+    /// The revision of the remote database.
+    mutable Xapian::rev revision;
+
     /// The UUID of the remote database.
     mutable std::string uuid;
 
@@ -284,6 +287,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
     void replace_document(Xapian::docid did, const Xapian::Document & doc);
     Xapian::docid replace_document(const std::string & unique_term,
 				   const Xapian::Document & document);
+
+    Xapian::rev get_revision() const;
 
     std::string get_uuid() const;
 
