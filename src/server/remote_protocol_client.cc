@@ -609,6 +609,7 @@ RemoteProtocolClient::msg_update(const std::string &)
 		message += serialise_length(db->get_doclength_upper_bound() - doclen_lb);
 		message += (db->has_positions() ? '1' : '0');
 		message += serialise_length(db->get_total_length());
+		message += serialise_length(db->get_revision());
 		std::string uuid = db->get_uuid();
 		message += uuid;
 
