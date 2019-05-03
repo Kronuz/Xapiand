@@ -284,14 +284,20 @@ public:
 
 
 class DocMatcher {
+private:
+	using dispatch_func = void (DocMatcher::*)();
+	dispatch_func dispatcher;
+
 	Xapian::doccount docs;
 	Xapian::rev revision;
 	Xapian::Enquire enquire;
 
+	std::atomic_size_t& pending;
+	LightweightSemaphore& ready;
 	size_t shard_num;
 	const Endpoints& endpoints;
 	int flags;
-	const Xapian::Query& query;
+	const Xapian::Query query;
 	Xapian::doccount first;
 	Xapian::doccount maxitems;
 	Xapian::doccount check_at_least;
@@ -312,12 +318,15 @@ class DocMatcher {
 
 public:
 	Xapian::MSet& mset;
+	std::exception_ptr eptr;
 
 	DocMatcher(
+		std::atomic_size_t& pending,
+		LightweightSemaphore& ready,
 		size_t shard_num,
 		const Endpoints& endpoints,
 		int flags,
-		const Xapian::Query& query,
+		const Xapian::Query query,
 		Xapian::MSet& mset,
 		Xapian::doccount first,
 		Xapian::doccount maxitems,
@@ -341,7 +350,14 @@ public:
 	void prepare_mset();
 	void get_mset();
 
-	void operator()();
+	void operator()() {
+		assert(dispatcher);
+		try {
+			(this->*(dispatcher))();
+		} catch (...) {
+			eptr = std::current_exception();
+		}
+	}
 
 	Xapian::doccount get_doccount() {
 		return docs;

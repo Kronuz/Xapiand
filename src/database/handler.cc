@@ -45,6 +45,8 @@
 #include "msgpack.h"                        // for MsgPack
 #include "msgpack_patcher.h"                // for apply_patch
 #include "aggregations/aggregations.h"      // for AggregationMatchSpy
+#include "multivalue/geospatialrange.h"     // for GeoSpatialRange
+#include "multivalue/range.h"               // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
 #include "query_dsl.h"                      // for QueryDSL
@@ -1185,10 +1187,12 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 
 DocMatcher::DocMatcher(
+	std::atomic_size_t& pending,
+	LightweightSemaphore& ready,
 	size_t shard_num,
 	const Endpoints& endpoints,
 	int flags,
-	const Xapian::Query& query,
+	const Xapian::Query query,
 	Xapian::MSet& mset,
 	Xapian::doccount first,
 	Xapian::doccount maxitems,
@@ -1208,9 +1212,12 @@ DocMatcher::DocMatcher(
 	std::unique_ptr<Xapian::ExpandDecider>&& fuzzy_edecider,
 	const Xapian::Enquire& merger
 ) :
+	dispatcher(&DocMatcher::prepare_mset),
 	docs(0),
 	revision(0),
 	enquire(Xapian::Database()),
+	pending(pending),
+	ready(ready),
 	shard_num(shard_num),
 	endpoints(endpoints),
 	flags(flags),
@@ -1240,6 +1247,8 @@ DocMatcher::DocMatcher(
 void
 DocMatcher::prepare_mset()
 {
+	L_CALL("DocMatcher::prepare_mset() {{endpoint:{}}}", endpoints[shard_num].to_string());
+
 	lock_shard lk_shard(endpoints[shard_num], flags);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1295,19 +1304,26 @@ DocMatcher::prepare_mset()
 		}
 		lk_shard->reopen();
 	}
+
+	dispatcher = &DocMatcher::get_mset;
+
+	if (pending.fetch_sub(1) == 1) {
+		ready.signal();
+	}
 }
 
 
 void
 DocMatcher::get_mset()
 {
+	L_CALL("DocMatcher::get_mset() {{endpoint:{}}}", endpoints[shard_num].to_string());
+
 	size_t n_shards = endpoints.size();
 
 	lock_shard lk_shard(endpoints[shard_num], flags);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto final_query = query;
 			auto db = lk_shard->db();
 			if (revision != db->get_revision()) {
 				throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
@@ -1342,12 +1358,12 @@ DocMatcher::get_mset()
 		}
 		lk_shard->reopen();
 	}
-}
 
+	dispatcher = nullptr;
 
-void
-DocMatcher::operator()()
-{
+	if (pending.fetch_sub(1) == 1) {
+		ready.signal();
+	}
 }
 
 
@@ -1390,13 +1406,30 @@ DatabaseHandler::get_mset(
 		fuzzy_rset = get_rset(query, fuzzy->n_rset);
 	}
 
-	std::vector<DocMatcher> matchers;
+	std::vector<std::shared_ptr<DocMatcher>> matchers;
 	std::vector<Xapian::MSet> msets;
 
-	matchers.reserve(endpoints.size());
-	msets.reserve(endpoints.size());
+	std::atomic_size_t pending;
+	LightweightSemaphore ready;
 
-	for (size_t shard_num = 0; shard_num < endpoints.size(); ++shard_num) {
+	size_t n_shards = endpoints.size();
+
+	matchers.reserve(n_shards);
+	msets.reserve(n_shards);
+	pending.store(n_shards);
+
+	// FIXME: Serialising/unserialising query shouldn't be necessary, but
+	//        Xapian is not cloning PostingSources when queries get copied?
+	auto serialised_query = query.serialise();
+	Xapian::Registry registry;
+	registry.register_posting_source(GeoSpatialRange{});
+	registry.register_posting_source(MultipleValueRange{});
+	registry.register_posting_source(MultipleValueGE{});
+	registry.register_posting_source(MultipleValueLE{});
+	registry.register_match_spy(AggregationMatchSpy{});
+	registry.register_key_maker(Multi_MultiValueKeyMaker{});
+
+	for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
 		// Configure nearest and fuzzy search:
 		std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 		if (nearest) {
@@ -1412,11 +1445,13 @@ DatabaseHandler::get_mset(
 		msets.push_back(Xapian::MSet());
 
 		// Create matcher object:
-		matchers.emplace_back(
+		auto matcher = std::make_shared<DocMatcher>(
+			pending,
+			ready,
 			shard_num,
 			endpoints,
 			flags,
-			query,
+			Xapian::Query::unserialise(serialised_query, registry),
 			msets.back(),
 			first,
 			maxitems,
@@ -1436,21 +1471,33 @@ DatabaseHandler::get_mset(
 			std::move(fuzzy_edecider),
 			merger
 		);
+		matchers.emplace_back(matcher);
+		XapiandManager::doc_matcher_pool()->enqueue(matcher);
 	}
 
-	for (auto& matcher : matchers) {
-		matcher.prepare_mset();
-	}
+	ready.wait();
 
 	for (auto& matcher : matchers) {
-		merger.add_prepared_mset(matcher.mset);
-		docs += matcher.get_doccount();
+		if (matcher->eptr) {
+			std::rethrow_exception(matcher->eptr);
+		}
+		merger.add_prepared_mset(matcher->mset);
+		docs += matcher->get_doccount();
 	}
 
+	pending.store(n_shards);
 	for (auto& matcher : matchers) {
-		matcher.get_mset();
+		XapiandManager::doc_matcher_pool()->enqueue(matcher);
+	}
+
+	ready.wait();
+
+	for (auto& matcher : matchers) {
+		if (matcher->eptr) {
+			std::rethrow_exception(matcher->eptr);
+		}
 		if (aggs) {
-			aggs->merge_results(*matcher.get_aggs());
+			aggs->merge_results(*matcher->get_aggs());
 		}
 	}
 
