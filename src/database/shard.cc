@@ -265,7 +265,6 @@ Shard::reopen_writable()
 	auto new_database = std::make_unique<Xapian::WritableDatabase>();
 
 	assert(!endpoint.empty());
-	Xapian::WritableDatabase wsdb;
 	bool local = false;
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
@@ -289,7 +288,7 @@ Shard::reopen_writable()
 		if (host.empty()) {
 			throw Xapian::NetworkError("Endpoint node without a valid host");
 		}
-		wsdb = Xapian::Remote::open_writable(host, port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
+		*new_database = Xapian::Remote::open_writable(host, port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
 		// Writable remote databases do not have a local fallback
 	}
 	else
@@ -298,20 +297,18 @@ Shard::reopen_writable()
 		L_DATABASE("Opening local writable shard {}", repr(endpoint.to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
+			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseNotFoundError&) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
 				throw;
 			}
 			build_path_index(endpoint.path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			wsdb = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
+			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | XAPIAN_DB_SYNC_MODE);
 			created = true;
 		}
 		local = true;
 	}
-
-	new_database->add_database(wsdb);
 
 	_local.store(local, std::memory_order_relaxed);
 	if (local) {
@@ -378,7 +375,6 @@ Shard::reopen_readable()
 	auto new_database = std::make_unique<Xapian::Database>();
 
 	assert(!endpoint.empty());
-	Xapian::Database rsdb;
 	bool local = false;
 #ifdef XAPIAND_CLUSTERING
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
@@ -406,16 +402,16 @@ Shard::reopen_readable()
 			if (host.empty()) {
 				throw Xapian::NetworkError("Endpoint node without a valid host");
 			}
-			rsdb = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
+			*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
 #ifdef XAPIAN_LOCAL_DB_FALLBACK
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				if (tmp.get_uuid() == rsdb.get_uuid()) {
+				if (tmp.get_uuid() == new_database->get_uuid()) {
 					L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
 					// Handle remote endpoint and figure out if the endpoint is a local database
 					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-					rsdb = tmp;
+					*new_database = tmp;
 					local = true;
 				} else {
 					_incomplete.store(true, std::memory_order_relaxed);
@@ -432,7 +428,7 @@ Shard::reopen_readable()
 		if (eptr) {
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+				*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 				local = true;
 				_incomplete.store(true, std::memory_order_relaxed);
 			} catch (...) {
@@ -451,7 +447,7 @@ Shard::reopen_readable()
 		L_DATABASE("Opening local shard {}", repr(endpoint.to_string()));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 		} catch (const Xapian::DatabaseNotFoundError&) {
 			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
 				throw;
@@ -462,12 +458,10 @@ Shard::reopen_readable()
 			created = true;
 
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			rsdb = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 		}
 		local = true;
 	}
-
-	new_database->add_database(rsdb);
 
 	_local.store(local, std::memory_order_relaxed);
 	if (local) {
