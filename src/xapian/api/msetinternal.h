@@ -104,6 +104,8 @@ class MSet::Internal : public Xapian::Internal::intrusive_base {
 
     Xapian::Weight::Internal* get_stats() const { return stats.get(); }
 
+    Xapian::Weight::Internal* release_stats() { return stats.release(); }
+
     void set_stats(Xapian::Weight::Internal* stats_) { stats.reset(stats_); }
 
     double get_percent_scale_factor() const { return percent_scale_factor; }
@@ -141,6 +143,10 @@ class MSet::Internal : public Xapian::Internal::intrusive_base {
      *  This object is updated with the unserialised data.
      */
     void unserialise(const char * p, const char * p_end);
+
+    std::string serialise_stats() const;
+
+    void unserialise_stats(const std::string& serialised);
 
     /// Return a string describing this object.
     std::string get_description() const;

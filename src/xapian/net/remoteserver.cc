@@ -648,9 +648,8 @@ RemoteServer::msg_query(const string &message_in)
 	p += len;
     }
 
-    enquire.prepare_mset(&rset, nullptr);
-
-    send_message(REPLY_STATS, enquire.serialise_stats());
+    Xapian::MSet prepared_mset = enquire.prepare_mset(&rset, nullptr);
+    send_message(REPLY_STATS, prepared_mset.serialise_stats());
 
     string message;
     get_message(active_timeout, message, MSG_GETMSET);
@@ -665,7 +664,7 @@ RemoteServer::msg_query(const string &message_in)
     Xapian::termcount check_at_least;
     decode_length(&p, p_end, check_at_least);
 
-    enquire.unserialise_stats(std::string(p, p_end));
+    enquire.set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
 
     Xapian::MSet mset = enquire.get_mset(first, maxitems, check_at_least);
 

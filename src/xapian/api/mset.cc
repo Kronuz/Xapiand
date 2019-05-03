@@ -81,6 +81,13 @@ MSet::convert_to_percent(double weight) const
     return internal->convert_to_percent(weight);
 }
 
+void
+MSet::unshard_docids(Xapian::doccount shard,
+		     Xapian::doccount n_shards)
+{
+    return internal->unshard_docids(shard, n_shards);
+}
+
 Xapian::doccount
 MSet::get_termfreq(const std::string& term) const
 {
@@ -206,6 +213,20 @@ MSet::unserialise(const std::string &s)
 {
     MSet mset;
     mset.internal->unserialise(s.data(), s.data() + s.size());
+    return mset;
+}
+
+std::string
+MSet::serialise_stats() const
+{
+    return internal->serialise_stats();
+}
+
+MSet
+MSet::unserialise_stats(const std::string &s)
+{
+    MSet mset;
+    mset.internal->unserialise_stats(s);
     return mset;
 }
 
@@ -396,7 +417,7 @@ MSet::Internal::serialise() const
     }
 
     if (stats)
-	result += serialise_stats(*stats);
+	result += ::serialise_stats(*stats);
 
     return result;
 }
@@ -439,8 +460,21 @@ MSet::Internal::unserialise(const char * p, const char * p_end)
 
     if (p != p_end) {
 	stats.reset(new Xapian::Weight::Internal());
-	unserialise_stats(string(p, p_end - p), *stats);
+	::unserialise_stats(string(p, p_end - p), *stats);
     }
+}
+
+string
+MSet::Internal::serialise_stats() const
+{
+    return ::serialise_stats(*stats);
+}
+
+void
+MSet::Internal::unserialise_stats(const string& serialised)
+{
+    stats.reset(new Xapian::Weight::Internal());
+    ::unserialise_stats(serialised, *stats);
 }
 
 string

@@ -111,6 +111,11 @@ class Matcher {
      *
      *  @param db_		Database to search
      *  @param query		Query object
+     */
+    Matcher(const Xapian::Database& db_);
+
+    /** Constructor.
+     *
      *  @param query_length	Query length
      *  @param rset		Relevance set (NULL for none)
      *  @param stats		Object to collate stats into
@@ -131,24 +136,23 @@ class Matcher {
      *				check_at_least (0.0 means don't).
      *  @param matchspies	MatchSpy objects to use
      */
-    Matcher(const Xapian::Database& db_,
-	    const Xapian::Query& query,
-	    Xapian::termcount query_length,
-	    const Xapian::RSet* rset,
-	    Xapian::Weight::Internal& stats,
-	    const Xapian::Weight& wtscheme,
-	    bool have_mdecider,
-	    const Xapian::KeyMaker* sorter,
-	    Xapian::valueno collapse_key,
-	    Xapian::doccount collapse_max,
-	    int percent_threshold,
-	    double weight_threshold,
-	    Xapian::Enquire::docid_order order,
-	    Xapian::valueno sort_key,
-	    Xapian::Enquire::Internal::sort_setting sort_by,
-	    bool sort_val_reverse,
-	    double time_limit,
-	    const std::vector<opt_ptr_spy>& matchspies);
+    void prepare_mset(const Xapian::Query& query,
+		      Xapian::termcount query_length,
+		      const Xapian::RSet* rset,
+		      Xapian::Weight::Internal& stats,
+		      const Xapian::Weight& wtscheme,
+		      bool have_mdecider,
+		      const Xapian::KeyMaker* sorter,
+		      Xapian::valueno collapse_key,
+		      Xapian::doccount collapse_max,
+		      int percent_threshold,
+		      double weight_threshold,
+		      Xapian::Enquire::docid_order order,
+		      Xapian::valueno sort_key,
+		      Xapian::Enquire::Internal::sort_setting sort_by,
+		      bool sort_val_reverse,
+		      double time_limit,
+		      const std::vector<opt_ptr_spy>& matchspies);
 
     void set_db(const Xapian::Database& db_) {
 	db = db_;
@@ -207,6 +211,17 @@ class Matcher {
 			  bool sort_val_reverse,
 			  double time_limit,
 			  const std::vector<opt_ptr_spy>& matchspies);
+
+    Xapian::MSet merge_mset(
+	const std::vector<Xapian::MSet>& msets,
+	Xapian::doccount first,
+	Xapian::doccount maxitems,
+	Xapian::doccount collapse_max,
+	int percent_threshold,
+	Xapian::Enquire::docid_order order,
+	Xapian::Enquire::Internal::sort_setting sort_by,
+	bool sort_val_reverse
+    );
 
     bool full_db_has_positions() const {
 	return db.has_positions();

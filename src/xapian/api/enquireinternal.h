@@ -85,7 +85,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
 
     double expand_k = 1.0;
 
-    mutable std::unique_ptr<Xapian::Weight::Internal> stats;
+    mutable std::unique_ptr<Xapian::MSet> prepared_mset;
     mutable std::unique_ptr<::Matcher> match;
 
   public:
@@ -93,17 +93,28 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     Internal(const Database& db_);
 
     void set_db(const Database& db_);
-    void unserialise_stats(const std::string& serialised);
 
-    const std::string serialise_stats() const;
+    const MSet& prepare_mset(const RSet *rset, const MatchDecider *mdecider) const;
 
-    void prepare_mset(const RSet *rset, const MatchDecider *mdecider) const;
+    const MSet& get_prepared_mset() const;
+
+    void clear_prepared_mset() const;
+
+    void set_prepared_mset(const MSet& mset) const;
+
+    void add_prepared_mset(const MSet& mset) const;
 
     MSet get_mset(doccount first,
 		  doccount maxitems,
 		  doccount checkatleast,
 		  const RSet* rset,
 		  const MatchDecider* mdecider) const;
+
+    MSet merge_mset(
+	const std::vector<Xapian::MSet>& msets,
+	Xapian::doccount docs,
+	Xapian::doccount first,
+	Xapian::doccount maxitems) const;
 
     TermIterator get_matching_terms_begin(docid did) const;
 

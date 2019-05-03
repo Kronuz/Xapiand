@@ -360,12 +360,16 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
 
     void set_db(const Database& db_);
 
-    void unserialise_stats(const std::string& serialised);
-
-    const std::string serialise_stats() const;
-
-    void prepare_mset(const RSet *omrset,
+    const MSet& prepare_mset(const RSet *omrset,
 		      const MatchDecider *mdecider) const;
+
+    const MSet& get_prepared_mset() const;
+
+    void clear_prepared_mset() const;
+
+    void set_prepared_mset(const MSet& mset) const;
+
+    void add_prepared_mset(const MSet& mset) const;
 
     /** Run the query.
      *
@@ -395,6 +399,12 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
 		  doccount checkatleast = 0,
 		  const RSet* rset = NULL,
 		  const MatchDecider* mdecider = NULL) const;
+
+    MSet merge_mset(
+	const std::vector<Xapian::MSet>& msets,
+	Xapian::doccount docs,
+	Xapian::doccount first,
+	Xapian::doccount maxitems) const;
 
     /** Run the query.
      *
