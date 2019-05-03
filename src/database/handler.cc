@@ -208,122 +208,6 @@ public:
  *
  */
 
-class lock_database {
-	DatabaseHandler& db_handler;
-
-	std::vector<std::shared_ptr<Shard>> shards;
-	std::unique_ptr<Xapian::Database> database;
-	int locks;
-
-	lock_database(const lock_database&) = delete;
-	lock_database& operator=(const lock_database&) = delete;
-
-public:
-	lock_database(DatabaseHandler& db_handler, bool do_lock = true) :
-	    db_handler(db_handler),
-		locks(0)
-	{
-		if (do_lock) {
-			lock();
-		}
-	}
-
-	~lock_database() noexcept
-	{
-		while (locks) {
-			unlock();
-		}
-	}
-
-	template <typename... Args>
-	const Xapian::Database* lock(Args&&... args)
-	{
-		if (!database) {
-			assert(locks == 0);
-			auto new_database = std::make_unique<Xapian::Database>();
-			shards = XapiandManager::database_pool()->checkout(db_handler.endpoints, db_handler.flags, std::forward<Args>(args)...);
-			try {
-				auto valid = shards.size();
-				std::exception_ptr eptr;
-				for (auto& shard : shards) {
-					Xapian::Database db("", Xapian::DB_BACKEND_INMEMORY);
-					try {
-						shard->reopen();
-						db = *shard->db();
-					} catch (const Xapian::DatabaseOpeningError&) {
-						eptr = std::current_exception();
-						--valid;
-					} catch (const Xapian::NetworkTimeoutError&) {
-						eptr = std::current_exception();
-						--valid;
-					} catch (const Xapian::NetworkError&) {
-						eptr = std::current_exception();
-						--valid;
-					} catch (const Xapian::DatabaseClosedError&) {
-						shard->do_close();
-						eptr = std::current_exception();
-						--valid;
-					} catch (const Xapian::DatabaseError&) {
-						shard->do_close();
-						throw;
-					}
-					new_database->add_database(db);
-				}
-				if (eptr && !valid) {
-					std::rethrow_exception(eptr);
-				}
-				database = std::move(new_database);
-			} catch (...) {
-				new_database.reset();
-				XapiandManager::database_pool()->checkin(shards);
-				throw;
-			}
-		}
-		++locks;
-		return database.get();
-	}
-
-	int unlock() noexcept
-	{
-		if (locks > 0 && --locks == 0) {
-			assert(database);
-			database.reset();
-			XapiandManager::database_pool()->checkin(shards);
-		}
-		return locks;
-	}
-
-	Xapian::Database& operator*() const noexcept
-	{
-		assert(database);
-		return *database;
-	}
-
-	Xapian::Database* operator->() const noexcept
-	{
-		assert(database);
-		return database.get();
-	}
-
-	const Xapian::Database* locked()
-	{
-		assert(database);
-		return database.get();
-	}
-
-	void reopen() {
-		for (auto& shard : shards) {
-			shard->reopen();
-		}
-	}
-
-	void do_close(bool commit_ = true) {
-		for (auto& shard : shards) {
-			shard->do_close(commit_);
-		}
-	}
-};
-
 
 DatabaseHandler::DatabaseHandler()
 	: flags(0)
@@ -1265,10 +1149,17 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 	// Get the collapse key to use for queries.
 	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
+	Xapian::doccount collapse_max = 0;
 	if (!query_field.collapse.empty()) {
 		const auto field_spc = schema->get_slot_field(query_field.collapse);
 		collapse_key = field_spc.slot;
+		collapse_max = query_field.collapse_max;
 	}
+
+	double percent_threshold = 0;
+	double weight_threshold = 0;
+
+	Xapian::Enquire::docid_order order = Xapian::Enquire::ASCENDING;
 
 	if (aggs && check_at_least == 0) {
 		// When using aggregations, at request xapian to at least
@@ -1283,10 +1174,180 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		check_at_least,
 		sorter.get(),
 		collapse_key,
-		query_field.collapse_max,
+		collapse_max,
+		percent_threshold,
+		weight_threshold,
+		order,
 		aggs,
 		query_field.is_fuzzy ? &query_field.fuzzy : nullptr,
 		query_field.is_nearest ? &query_field.nearest : nullptr);
+}
+
+
+DocMatcher::DocMatcher(
+	size_t shard_num,
+	const Endpoints& endpoints,
+	int flags,
+	const Xapian::Query& query,
+	Xapian::MSet& mset,
+	Xapian::doccount first,
+	Xapian::doccount maxitems,
+	Xapian::doccount check_at_least,
+	Xapian::KeyMaker* sorter,
+	Xapian::valueno collapse_key,
+	Xapian::doccount collapse_max,
+	double percent_threshold,
+	double weight_threshold,
+	Xapian::Enquire::docid_order order,
+	AggregationMatchSpy* aggs,
+	const similar_field_t* nearest,
+	const Xapian::RSet& nearest_rset,
+	std::unique_ptr<Xapian::ExpandDecider>&& nearest_edecider,
+	const similar_field_t* fuzzy,
+	const Xapian::RSet& fuzzy_rset,
+	std::unique_ptr<Xapian::ExpandDecider>&& fuzzy_edecider,
+	const Xapian::Enquire& merger
+) :
+	docs(0),
+	revision(0),
+	enquire(Xapian::Database()),
+	shard_num(shard_num),
+	endpoints(endpoints),
+	flags(flags),
+	query(query),
+	first(first),
+	maxitems(maxitems),
+	check_at_least(check_at_least),
+	sorter(sorter ? sorter->clone() : nullptr),
+	collapse_key(collapse_key),
+	collapse_max(collapse_max),
+	percent_threshold(percent_threshold),
+	weight_threshold(weight_threshold),
+	order(order),
+	aggs(aggs ? static_cast<AggregationMatchSpy*>(aggs->clone()) : nullptr),
+	nearest(nearest),
+	nearest_rset(nearest_rset),
+	nearest_edecider(std::move(nearest_edecider)),
+	fuzzy(fuzzy),
+	fuzzy_rset(fuzzy_rset),
+	fuzzy_edecider(std::move(fuzzy_edecider)),
+	merger(merger),
+	mset(mset)
+{
+}
+
+
+void
+DocMatcher::prepare_mset()
+{
+	lock_shard lk_shard(endpoints[shard_num], flags);
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			auto final_query = query;
+			auto db = lk_shard->db();
+			enquire.set_db(*db);
+			enquire.set_collapse_key(collapse_key, collapse_max);
+			enquire.set_cutoff(percent_threshold, weight_threshold);
+			enquire.set_docid_order(order);
+			if (aggs) {
+				enquire.add_matchspy(aggs);
+			}
+			if (sorter) {
+				enquire.set_sort_by_key_then_relevance(sorter.get(), false);
+			}
+			if (nearest) {
+				auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
+			}
+			if (fuzzy) {
+				auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
+				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
+			}
+			enquire.set_query(final_query);
+			mset = enquire.prepare_mset(nullptr, nullptr);
+			revision = db->get_revision();
+			docs += db->get_doccount();
+			enquire.set_db(Xapian::Database{});
+			break;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::DatabaseOpeningError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::NetworkError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::DatabaseClosedError&) {
+			lk_shard->do_close();
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError&) {
+			lk_shard->do_close();
+			throw;
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const Xapian::QueryParserError& exc) {
+			THROW(ClientError, exc.get_description());
+		}
+		lk_shard->reopen();
+	}
+}
+
+
+void
+DocMatcher::get_mset()
+{
+	size_t n_shards = endpoints.size();
+
+	lock_shard lk_shard(endpoints[shard_num], flags);
+
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			auto final_query = query;
+			auto db = lk_shard->db();
+			if (revision != db->get_revision()) {
+				throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
+			}
+			enquire.set_db(*db);
+			enquire.set_prepared_mset(merger.get_prepared_mset());
+			mset = enquire.get_mset(first, maxitems, check_at_least);
+			mset.unshard_docids(shard_num, n_shards);
+			break;
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::DatabaseOpeningError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::NetworkTimeoutError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::NetworkError&) {
+			if (t == 0) { lk_shard->do_close(); throw; }
+		} catch (const Xapian::DatabaseClosedError&) {
+			lk_shard->do_close();
+			if (t == 0) { throw; }
+		} catch (const Xapian::DatabaseError&) {
+			lk_shard->do_close();
+			throw;
+		} catch (const QueryParserError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const SerialisationError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const QueryDslError& exc) {
+			THROW(ClientError, exc.what());
+		} catch (const Xapian::QueryParserError& exc) {
+			THROW(ClientError, exc.get_description());
+		}
+		lk_shard->reopen();
+	}
+}
+
+
+void
+DocMatcher::operator()()
+{
 }
 
 
@@ -1299,84 +1360,101 @@ DatabaseHandler::get_mset(
 	Xapian::KeyMaker* sorter,
 	Xapian::valueno collapse_key,
 	Xapian::doccount collapse_max,
-	Xapian::MatchSpy* spy,
+	double percent_threshold,
+	double weight_threshold,
+	Xapian::Enquire::docid_order order,
+	AggregationMatchSpy* aggs,
 	const similar_field_t* fuzzy,
 	const similar_field_t* nearest
 	)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), first, maxitems, check_at_least);
 
-	// Configure nearest and fuzzy search:
+	Xapian::doccount docs = 0;
+	Xapian::Enquire merger(Xapian::Database{});
+
+	merger.set_collapse_key(collapse_key, collapse_max);
+	merger.set_cutoff(percent_threshold, weight_threshold);
+	merger.set_docid_order(order);
+	if (sorter) {
+		merger.set_sort_by_key_then_relevance(sorter, false);
+	}
+
 	Xapian::RSet nearest_rset;
-	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
 	if (nearest) {
-		nearest_edecider = get_edecider(*nearest);
 		nearest_rset = get_rset(query, nearest->n_rset);
 	}
 
 	Xapian::RSet fuzzy_rset;
-	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	if (fuzzy) {
-		fuzzy_edecider = get_edecider(*fuzzy);
 		fuzzy_rset = get_rset(query, fuzzy->n_rset);
 	}
 
-	MSet mset;
+	std::vector<DocMatcher> matchers;
+	std::vector<Xapian::MSet> msets;
 
-	lock_database lk_db(*this);
+	matchers.reserve(endpoints.size());
+	msets.reserve(endpoints.size());
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			auto final_query = query;
-			auto db = lk_db.locked();
-			Xapian::Enquire enquire(*db);
-			if (collapse_key != Xapian::BAD_VALUENO) {
-				enquire.set_collapse_key(collapse_key, collapse_max);
-			}
-			if (spy) {
-				enquire.add_matchspy(spy);
-			}
-			if (sorter) {
-				enquire.set_sort_by_key_then_relevance(sorter, false);
-			}
-			if (nearest) {
-				auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
-			}
-			if (fuzzy) {
-				auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
-			}
-			enquire.set_query(final_query);
-			mset = enquire.get_mset(first, maxitems, check_at_least);
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseOpeningError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkTimeoutError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::NetworkError&) {
-			if (t == 0) { lk_db.do_close(); throw; }
-		} catch (const Xapian::DatabaseClosedError&) {
-			lk_db.do_close();
-			if (t == 0) { throw; }
-		} catch (const Xapian::DatabaseError&) {
-			lk_db.do_close();
-			throw;
-		} catch (const QueryParserError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const SerialisationError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const QueryDslError& exc) {
-			THROW(ClientError, exc.what());
-		} catch (const Xapian::QueryParserError& exc) {
-			THROW(ClientError, exc.get_description());
+	for (size_t shard_num = 0; shard_num < endpoints.size(); ++shard_num) {
+		// Configure nearest and fuzzy search:
+		std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
+		if (nearest) {
+			nearest_edecider = get_edecider(*nearest);
 		}
-		lk_db.reopen();
+
+		std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
+		if (fuzzy) {
+			fuzzy_edecider = get_edecider(*fuzzy);
+		}
+
+		// Add mset object to msets vector:
+		msets.push_back(Xapian::MSet());
+
+		// Create matcher object:
+		matchers.emplace_back(
+			shard_num,
+			endpoints,
+			flags,
+			query,
+			msets.back(),
+			first,
+			maxitems,
+			check_at_least,
+			sorter,
+			collapse_key,
+			collapse_max,
+			percent_threshold,
+			weight_threshold,
+			order,
+			aggs,
+			nearest,
+			nearest_rset,
+			std::move(nearest_edecider),
+			fuzzy,
+			fuzzy_rset,
+			std::move(fuzzy_edecider),
+			merger
+		);
 	}
 
-	return mset;
+	for (auto& matcher : matchers) {
+		matcher.prepare_mset();
+	}
+
+	for (auto& matcher : matchers) {
+		merger.add_prepared_mset(matcher.mset);
+		docs += matcher.get_doccount();
+	}
+
+	for (auto& matcher : matchers) {
+		matcher.get_mset();
+		if (aggs) {
+			aggs->merge_results(*matcher.get_aggs());
+		}
+	}
+
+	return merger.merge_mset(msets, docs, first, maxitems);
 }
 
 

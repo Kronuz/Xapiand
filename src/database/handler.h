@@ -172,7 +172,6 @@ class DatabaseHandler {
 	friend class Document;
 	friend class Schema;
 	friend class SchemasLRU;
-	friend class lock_database;
 
 	int flags;
 	Endpoints endpoints;
@@ -232,7 +231,10 @@ public:
 		Xapian::KeyMaker* sorter = nullptr,
 		Xapian::valueno collapse_key = Xapian::BAD_VALUENO,
 		Xapian::doccount collapse_max = 0,
-		Xapian::MatchSpy* spy = nullptr,
+		double percent_threshold = 0,
+		double weight_threshold = 0,
+		Xapian::Enquire::docid_order order = Xapian::Enquire::ASCENDING,
+		AggregationMatchSpy* aggs = nullptr,
 		const similar_field_t* fuzzy = nullptr,
 		const similar_field_t* nearest = nullptr);
 
@@ -278,6 +280,76 @@ public:
 	void reopen();
 
 	void do_close(bool commit_ = true);
+};
+
+
+class DocMatcher {
+	Xapian::doccount docs;
+	Xapian::rev revision;
+	Xapian::Enquire enquire;
+
+	size_t shard_num;
+	const Endpoints& endpoints;
+	int flags;
+	const Xapian::Query& query;
+	Xapian::doccount first;
+	Xapian::doccount maxitems;
+	Xapian::doccount check_at_least;
+	std::unique_ptr<Xapian::KeyMaker> sorter;
+	Xapian::valueno collapse_key;
+	Xapian::doccount collapse_max;
+	double percent_threshold;
+	double weight_threshold;
+	Xapian::Enquire::docid_order order;
+	AggregationMatchSpy* aggs;
+	const similar_field_t* nearest;
+	Xapian::RSet nearest_rset;
+	std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
+	const similar_field_t* fuzzy;
+	Xapian::RSet fuzzy_rset;
+	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
+	const Xapian::Enquire& merger;
+
+public:
+	Xapian::MSet& mset;
+
+	DocMatcher(
+		size_t shard_num,
+		const Endpoints& endpoints,
+		int flags,
+		const Xapian::Query& query,
+		Xapian::MSet& mset,
+		Xapian::doccount first,
+		Xapian::doccount maxitems,
+		Xapian::doccount check_at_least,
+		Xapian::KeyMaker* sorter,
+		Xapian::valueno collapse_key,
+		Xapian::doccount collapse_max,
+		double percent_threshold,
+		double weight_threshold,
+		Xapian::Enquire::docid_order order,
+		AggregationMatchSpy* aggs,
+		const similar_field_t* nearest,
+		const Xapian::RSet& nearest_rset,
+		std::unique_ptr<Xapian::ExpandDecider>&& nearest_edecider,
+		const similar_field_t* fuzzy,
+		const Xapian::RSet& fuzzy_rset,
+		std::unique_ptr<Xapian::ExpandDecider>&& fuzzy_edecider,
+		const Xapian::Enquire& merger
+	);
+
+	void prepare_mset();
+	void get_mset();
+
+	void operator()();
+
+	Xapian::doccount get_doccount() {
+		return docs;
+	}
+
+	AggregationMatchSpy* get_aggs() {
+		return aggs;
+	}
 };
 
 
