@@ -168,7 +168,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
 	try {
-		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_WRITABLE | DB_CREATE_OR_OPEN, false);
+		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_REPLICA, false);
 		lk_shard_ptr->lock(0, [=] {
 			// If it cannot checkout because database is busy, retry when ready...
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
@@ -726,7 +726,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_shard) {
-				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_WRITABLE | DB_SYNCHRONOUS_WAL);
+				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_REPLICA | DB_SYNCHRONOUS_WAL);
 			}
 			switch_shard->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_shard.get());
