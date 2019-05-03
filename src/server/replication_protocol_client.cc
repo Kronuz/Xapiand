@@ -239,6 +239,8 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 	L_OBJ_BEGIN("ReplicationProtocolClient::replication_server:BEGIN {{type:{}}}", enum_name(type));
 	L_OBJ_END("ReplicationProtocolClient::replication_server:END {{type:{}}}", enum_name(type));
 
+	L_DEBUG("{} ({}) -> {}", enum_name(type), strings::from_bytes(message.size()), repr(endpoint.to_string()));
+
 	try {
 		switch (type) {
 			case ReplicationMessageType::MSG_GET_CHANGESETS:
@@ -465,6 +467,8 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 
 	L_OBJ_BEGIN("ReplicationProtocolClient::replication_client:BEGIN {{type:{}}}", enum_name(type));
 	L_OBJ_END("ReplicationProtocolClient::replication_client:END {{type:{}}}", enum_name(type));
+
+	L_DEBUG("{} ({}) -> {}", enum_name(type), strings::from_bytes(message.size()), repr(endpoint.to_string()));
 
 	try {
 		switch (type) {

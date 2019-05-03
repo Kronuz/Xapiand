@@ -177,6 +177,8 @@ RemoteProtocolClient::remote_server(RemoteMessageType type, const std::string &m
 	L_OBJ_BEGIN("RemoteProtocolClient::remote_server:BEGIN {{type:{}}}", enum_name(type));
 	L_OBJ_END("RemoteProtocolClient::remote_server:END {{type:{}}}", enum_name(type));
 
+	L_DEBUG("{} ({}) -> {}", enum_name(type), strings::from_bytes(message.size()), repr(endpoint.to_string()));
+
 	try {
 		switch (type) {
 			case RemoteMessageType::MSG_ALLTERMS:
