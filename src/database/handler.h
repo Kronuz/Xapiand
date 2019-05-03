@@ -284,11 +284,12 @@ public:
 
 
 class DocMatcher {
-private:
+	friend DatabaseHandler;
+
 	using dispatch_func = void (DocMatcher::*)();
 	dispatch_func dispatcher;
 
-	Xapian::doccount docs;
+	Xapian::doccount doccount;
 	Xapian::rev revision;
 	Xapian::Enquire enquire;
 
@@ -297,7 +298,7 @@ private:
 	size_t shard_num;
 	const Endpoints& endpoints;
 	int flags;
-	const Xapian::Query query;
+	Xapian::Query query;
 	Xapian::doccount first;
 	Xapian::doccount maxitems;
 	Xapian::doccount check_at_least;
@@ -315,6 +316,9 @@ private:
 	Xapian::RSet fuzzy_rset;
 	std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
 	const Xapian::Enquire& merger;
+
+	void prepare_mset();
+	void get_mset();
 
 public:
 	Xapian::MSet& mset;
@@ -347,25 +351,7 @@ public:
 		const Xapian::Enquire& merger
 	);
 
-	void prepare_mset();
-	void get_mset();
-
-	void operator()() {
-		assert(dispatcher);
-		try {
-			(this->*(dispatcher))();
-		} catch (...) {
-			eptr = std::current_exception();
-		}
-	}
-
-	Xapian::doccount get_doccount() {
-		return docs;
-	}
-
-	AggregationMatchSpy* get_aggs() {
-		return aggs;
-	}
+	void operator()();
 };
 
 

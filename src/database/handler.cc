@@ -1213,7 +1213,7 @@ DocMatcher::DocMatcher(
 	const Xapian::Enquire& merger
 ) :
 	dispatcher(&DocMatcher::prepare_mset),
-	docs(0),
+	doccount(0),
 	revision(0),
 	enquire(Xapian::Database()),
 	pending(pending),
@@ -1276,7 +1276,7 @@ DocMatcher::prepare_mset()
 			enquire.set_query(final_query);
 			mset = enquire.prepare_mset(nullptr, nullptr);
 			revision = db->get_revision();
-			docs += db->get_doccount();
+			doccount += db->get_doccount();
 			enquire.set_db(Xapian::Database{});
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
@@ -1306,10 +1306,6 @@ DocMatcher::prepare_mset()
 	}
 
 	dispatcher = &DocMatcher::get_mset;
-
-	if (pending.fetch_sub(1) == 1) {
-		ready.signal();
-	}
 }
 
 
@@ -1333,8 +1329,6 @@ DocMatcher::get_mset()
 			mset = enquire.get_mset(first, maxitems, check_at_least);
 			mset.unshard_docids(shard_num, n_shards);
 			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { lk_shard->do_close(); throw; }
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
 		} catch (const Xapian::NetworkTimeoutError&) {
@@ -1360,6 +1354,19 @@ DocMatcher::get_mset()
 	}
 
 	dispatcher = nullptr;
+}
+
+
+void
+DocMatcher::operator()()
+{
+	assert(dispatcher);
+
+	try {
+		(this->*(dispatcher))();
+	} catch (...) {
+		eptr = std::current_exception();
+	}
 
 	if (pending.fetch_sub(1) == 1) {
 		ready.signal();
@@ -1386,7 +1393,7 @@ DatabaseHandler::get_mset(
 {
 	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), first, maxitems, check_at_least);
 
-	Xapian::doccount docs = 0;
+	Xapian::doccount doccount = 0;
 	Xapian::Enquire merger(Xapian::Database{});
 
 	merger.set_collapse_key(collapse_key, collapse_max);
@@ -1451,7 +1458,7 @@ DatabaseHandler::get_mset(
 			shard_num,
 			endpoints,
 			flags,
-			Xapian::Query::unserialise(serialised_query, registry),
+			Xapian::Query::unserialise(serialised_query, registry),  // FIXME: unserialise shouldn't be needed
 			msets.back(),
 			first,
 			maxitems,
@@ -1475,33 +1482,56 @@ DatabaseHandler::get_mset(
 		XapiandManager::doc_matcher_pool()->enqueue(matcher);
 	}
 
-	ready.wait();
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			ready.wait();
 
-	for (auto& matcher : matchers) {
-		if (matcher->eptr) {
-			std::rethrow_exception(matcher->eptr);
+			for (auto& matcher : matchers) {
+				if (matcher->eptr) {
+					std::rethrow_exception(matcher->eptr);
+				}
+				merger.add_prepared_mset(matcher->mset);
+				doccount += matcher->doccount;
+			}
+
+			pending.store(n_shards);
+			for (auto& matcher : matchers) {
+				XapiandManager::doc_matcher_pool()->enqueue(matcher);
+			}
+
+			ready.wait();
+
+			for (auto& matcher : matchers) {
+				if (matcher->eptr) {
+					std::rethrow_exception(matcher->eptr);
+				}
+				if (aggs) {
+					aggs->merge_results(*matcher->aggs);
+				}
+			}
+
+			return merger.merge_mset(msets, doccount, first, maxitems);
+		} catch (const Xapian::DatabaseModifiedError&) {
+			if (t == 0) { throw; }
 		}
-		merger.add_prepared_mset(matcher->mset);
-		docs += matcher->get_doccount();
-	}
-
-	pending.store(n_shards);
-	for (auto& matcher : matchers) {
-		XapiandManager::doc_matcher_pool()->enqueue(matcher);
-	}
-
-	ready.wait();
-
-	for (auto& matcher : matchers) {
-		if (matcher->eptr) {
-			std::rethrow_exception(matcher->eptr);
+		for (auto& endpoint : endpoints) {
+			lock_shard lk_shard(endpoint, flags);
+			lk_shard->reopen();
 		}
-		if (aggs) {
-			aggs->merge_results(*matcher->get_aggs());
+		pending.store(n_shards);
+		for (auto& matcher : matchers) {
+			matcher->eptr = nullptr;
+			matcher->dispatcher = &DocMatcher::prepare_mset;
+			matcher->query = Xapian::Query::unserialise(serialised_query, registry);  // FIXME: unserialise shouldn't be needed
+			if (nearest) {
+				matcher->nearest_edecider = get_edecider(*nearest);
+			}
+			if (fuzzy) {
+				matcher->fuzzy_edecider = get_edecider(*fuzzy);
+			}
+			XapiandManager::doc_matcher_pool()->enqueue(matcher);
 		}
 	}
-
-	return merger.merge_mset(msets, docs, first, maxitems);
 }
 
 
