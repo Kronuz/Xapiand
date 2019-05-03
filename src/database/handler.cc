@@ -1510,7 +1510,7 @@ DatabaseHandler::get_mset(
 				}
 			}
 
-			return merger.merge_mset(msets, doccount, first, maxitems);
+			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { throw; }
 		}
@@ -1532,6 +1532,8 @@ DatabaseHandler::get_mset(
 			XapiandManager::doc_matcher_pool()->enqueue(matcher);
 		}
 	}
+
+	return merger.merge_mset(msets, doccount, first, maxitems);
 }
 
 
