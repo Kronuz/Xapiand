@@ -1945,7 +1945,9 @@ inline void MsgPack::update(M&& o) {
 			}
 			for (const auto& key : o) {
 				const auto& val = o.at(key);
-				if (find(key) == end()) {
+				if (val.is_undefined()) {
+					erase(key);
+				} else if (find(key) == end()) {
 					replace(key, val);
 				} else {
 					auto& item = at(key);
@@ -1958,7 +1960,8 @@ inline void MsgPack::update(M&& o) {
 			}
 			break;
 		default:
-			THROW(msgpack::type_error, "Cannot update {} with {}", enum_name(_body->get_type()), enum_name(o._body->get_type()));
+			*this = o;
+			break;
 	}
 }
 
