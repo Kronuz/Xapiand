@@ -162,7 +162,7 @@ XapiandManager::XapiandManager()
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
-	  _doc_matcher_pool(std::make_unique<ThreadPool<std::unique_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
+	  _doc_matcher_pool(std::make_unique<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
 	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
 	  _shutdown_asap(0),
@@ -193,7 +193,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
 	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
-	  _doc_matcher_pool(std::make_unique<ThreadPool<std::unique_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
+	  _doc_matcher_pool(std::make_unique<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
 	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
 	  _shutdown_asap(0),
