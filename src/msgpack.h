@@ -111,11 +111,6 @@ public:
 
 	using out_of_range = OutOfRange;
 	using invalid_argument = InvalidArgument;
-	class duplicate_key : public OutOfRange {
-	public:
-		template<typename... Args>
-		duplicate_key(Args&&... args) : OutOfRange(std::forward<Args>(args)...) { }
-	};
 
 	using iterator = Iterator<MsgPack>;
 	using const_iterator = Iterator<const MsgPack>;
@@ -758,12 +753,8 @@ inline void MsgPack::_initializer_map(std::initializer_list<MsgPack> list) {
 	_deinitialize();
 	_init_map();
 	_reserve_map(list.size());
-	bool inserted;
 	for (const auto& val : list) {
-		std::tie(std::ignore, inserted) = _put(val.at(0), val.at(1), false);
-		if unlikely(!inserted) {
-			THROW(duplicate_key, "Duplicate key {} in MAP", val.at(0).as_str());
-		}
+		_put(val.at(0), val.at(1), true);
 	}
 }
 
@@ -806,11 +797,13 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 				}
 				auto it = parent_body->map.find(val);
 				if (it != parent_body->map.end()) {
-					if (parent_body->map.emplace(str_key, std::move(it->second)).second) {
-						parent_body->map.erase(it);
+					auto pit = parent_body->map.find(str_key);
+					if (pit == parent_body->map.end()) {
+						parent_body->map.emplace(str_key, std::move(it->second));
 					} else {
-						THROW(duplicate_key, "Duplicate key {} in MAP", str_key);
+						pit->second = std::move(it->second);
 					}
+					parent_body->map.erase(it);
 					assert(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
 			}
@@ -933,19 +926,27 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 	}
 	MsgPack* ret = nullptr;
 	_body->map.reserve(_body->_capacity);
-	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
-	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
+	auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
+	for (auto p = &_body->_obj->via.map.ptr[pos]; p < pend; ++p) {
 		if (p->key.type != msgpack::type::STR) {
 			THROW(msgpack::type_error, "MAP keys must be of type STR");
 		}
-		auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
-		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, last_key._body, &p->val));
 		std::string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
-		auto inserted = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val)));
-		if (!inserted.second) {
-			THROW(duplicate_key, "Duplicate key {} in MAP", str_key);
+		auto pit = _body->map.find(str_key);
+		if (pit == _body->map.end()) {
+			auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
+			auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos++, last_key._body, &p->val));
+			pit = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val))).first;
+		} else {
+			*pit->second.first._body->_obj = p->key;
+			*pit->second.second._body->_obj = p->val;
+			--pend;
+			--_body->_obj->via.map.size;
+			for (auto q = p; q < pend; ++q) {
+				*q = *(p + 1);
+			}
 		}
-		ret = &inserted.first->second.second;
+		ret = &pit->second.second;
 	}
 	assert(_body->_obj->via.map.size == _body->map.size());
 	_body->_initialized = true;
@@ -959,7 +960,7 @@ inline void MsgPack::_update_map(size_t pos) {
 		THROW(msgpack::const_error, "Locked object");
 	}
 	const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
-	for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
+	for (auto p = &_body->_obj->via.map.ptr[pos]; p < pend; ++p, ++pos) {
 		std::string_view str_key(p->key.via.str.ptr, p->key.via.str.size);
 		auto it = _body->map.find(str_key);
 		assert(it != _body->map.end());
@@ -985,7 +986,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 	MsgPack* ret = nullptr;
 	_body->array.reserve(_body->_capacity);
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
-	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
+	for (auto p = &_body->_obj->via.array.ptr[pos]; p < pend; ++p, ++pos) {
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p));
 		ret = &*_body->array.insert(_body->array.end(), std::move(last_val));
 	}
@@ -1001,7 +1002,7 @@ inline void MsgPack::_update_array(size_t pos) {
 		THROW(msgpack::const_error, "Locked object");
 	}
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
-	for (auto p = &_body->_obj->via.array.ptr[pos]; p != pend; ++p, ++pos) {
+	for (auto p = &_body->_obj->via.array.ptr[pos]; p < pend; ++p, ++pos) {
 		// If the previous item was a MAP, force map update.
 		_body->array.at(pos)._body->map.clear();
 		auto& mobj = _body->at(pos);
@@ -2462,7 +2463,7 @@ inline std::size_t MsgPack::hash() const {
 			size_t pos = 0;
 			std::size_t hash = 0;
 			const auto pend = &_body->_obj->via.map.ptr[_body->_obj->via.map.size];
-			for (auto p = &_body->_obj->via.map.ptr[pos]; p != pend; ++p, ++pos) {
+			for (auto p = &_body->_obj->via.map.ptr[pos]; p < pend; ++p, ++pos) {
 				if (p->key.type != msgpack::type::STR) {
 					THROW(msgpack::type_error, "MAP keys must be of type STR");
 				}
