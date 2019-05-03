@@ -206,7 +206,7 @@
                       "pm.test(\"response is merged\", function() {",
                       "    var jsonData = pm.response.json();",
                       "    pm.expect(jsonData.name).to.be.an('string')",
-                      "    pm.expect(jsonData.gender).to.be.eql('male')",
+                      "    pm.expect(jsonData.gender).to.equal('male')",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -298,11 +298,11 @@
                       "pm.test(\"response is merged\", function() {",
                       "    var jsonData = pm.response.json();",
                       "    pm.expect(jsonData.gender).to.be.an('string')",
-                      "    pm.expect(jsonData.name).to.be.eql('John Doe')",
+                      "    pm.expect(jsonData.name).to.equal('John Doe')",
                       "});",
                       "pm.test(\"response with script applied\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.age).to.be.eql(22)",
+                      "    pm.expect(jsonData.age).to.equal(22)",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -369,21 +369,21 @@
                       "});",
                       "pm.test(\"restore received all\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.total).to.be.eql(1000)",
+                      "    pm.expect(jsonData.total).to.equal(1000)",
                       "});",
                       "pm.test(\"restore processed all\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.processed).to.eql(1000)",
+                      "    pm.expect(jsonData.processed).to.equal(1000)",
                       "});",
                       "pm.test(\"restore indexed all\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.indexed).to.be.eql(1000)",
-                      "    pm.expect(jsonData.items.length).to.eql(1000);",
+                      "    pm.expect(jsonData.indexed).to.equal(1000)",
+                      "    pm.expect(jsonData.items.length).to.equal(1000);",
                       "});",
                       "pm.test(\"restore values are valid\", function() {",
                       "    var jsonData = pm.response.json();",
                       "    for (var i = 0; i < 1000; ++i) {",
-                      "        pm.expect(jsonData.items[i]._id).to.eql(i + 1);",
+                      "        pm.expect(jsonData.items[i]._id).to.equal(i + 1);",
                       "    }",
                       "});"
                     ],
@@ -435,7 +435,7 @@
                       "    var jsonData = pm.response.json();",
                       "    var expected = [100123,100481,101121,101253,101294,103213,103486,103710,104419,107465];",
                       "    for (var i = 0; i < expected.length; ++i) {",
-                      "        pm.expect(jsonData.hits[i]).to.eql(expected[i]);",
+                      "        pm.expect(jsonData.hits[i]).to.equal(expected[i]);",
                       "    }",
                       "});"
                     ],
@@ -487,7 +487,7 @@
                       "    var jsonData = pm.response.json();",
                       "    var expected = [12699.46,10857.55,10819.51,10729.87,10663.25,10643.84,10513.99,10448.36,10087.41,10073.05];",
                       "    for (var i = 0; i < expected.length; ++i) {",
-                      "        pm.expect(jsonData.hits[i]).to.eql(expected[i]);",
+                      "        pm.expect(jsonData.hits[i]).to.equal(expected[i]);",
                       "    }",
                       "});"
                     ],
@@ -541,7 +541,7 @@
                       "});",
                       "pm.test(\"response is valid\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.total).to.eql(286);",
+                      "    pm.expect(jsonData.total).to.equal(286);",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -751,8 +751,8 @@
                       "    pm.response.to.be.header('Content-Type', 'application/pdf');",
                       "});",
                       "pm.test(\"response is stored PDF\", function() {",
-                      "    pm.expect(pm.response.stream.length).to.eql(692615);",
-                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.eql('66bb6df2255f34e2be54344047dad389a94be873e53a0b4c46817a3ecaeb6a61')",
+                      "    pm.expect(pm.response.stream.length).to.equal(692615);",
+                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('66bb6df2255f34e2be54344047dad389a94be873e53a0b4c46817a3ecaeb6a61')",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -799,8 +799,8 @@
                       "    pm.response.to.be.header('Content-Type', 'image/png');",
                       "});",
                       "pm.test(\"response is stored PNG\", function() {",
-                      "    pm.expect(pm.response.stream.length).to.eql(473831);",
-                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.eql('7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f')",
+                      "    pm.expect(pm.response.stream.length).to.equal(473831);",
+                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f')",
                       "});"
                     ],
                     "type": "text/javascript"
@@ -847,13 +847,378 @@
                       "    pm.response.to.be.header('Content-Type', 'image/jpeg');",
                       "});",
                       "pm.test(\"response is stored JPG\", function() {",
-                      "    pm.expect(pm.response.stream.length).to.eql(570958);",
-                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.eql('820eae76e4639a059a1bc799763ad82961ffbc8d41b58920a3f7ac622455ed46')",
+                      "    pm.expect(pm.response.stream.length).to.equal(570958);",
+                      "    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('820eae76e4639a059a1bc799763ad82961ffbc8d41b58920a3f7ac622455ed46')",
                       "});"
                     ],
                     "type": "text/javascript"
                   }
                 }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Indices",
+      "item": [
+      ]
+    },
+    {
+      "name": "Schemas",
+      "item": [
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search API",
+          "item": [
+          ]
+        },
+        {
+          "name": "Query DSL",
+          "item": [
+          ]
+        },
+        {
+          "name": "Aggregations",
+          "item": [
+            {
+              "name": "Metrics",
+              "item": [
+                {
+                  "name": "Count",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"contact.state\": \"Indiana\"\n  },\n  \"_limit\": 0,\n  \"_aggs\": {\n    \"indiana_city_count\": {\n      \"_count\": {\n        \"_field\": \"contact.city\"\n      }\n    }\n  }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations.indiana_city_count._count, 17);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Sum",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"contact.state\": \"Indiana\"\n  },\n  \"_limit\": 0,\n  \"_aggs\": {\n    \"indiana_total_balance\": {\n      \"_sum\": {\n        \"_field\": \"balance\"\n      }\n    }\n  }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations.indiana_total_balance._sum, 42152.87);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Average",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": \"*\",\n  \"_limit\": 0,\n  \"_check_at_least\": 1000,\n  \"_aggs\": {\n    \"avg_age\": {\n      \"_avg\": {\n        \"_field\": \"age\"\n      }\n    }\n  }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.avg_age._avg, 30.042);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Median",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": \"*\",\n  \"_limit\": 0,\n  \"_check_at_least\": 1000,\n  \"_aggs\": {\n    \"balance_median\": {\n      \"_median\": {\n        \"_field\": \"balance\"\n      }\n    }\n  }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_median._median, 2414.425);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Mode",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": \"*\",\n  \"_limit\": 0,\n  \"_check_at_least\": 1000,\n  \"_aggs\": {\n    \"balance_mode\": {\n      \"_mode\": {\n        \"_field\": \"balance\"\n      }\n    }\n  }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_mode._mode, 3673.84);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Extended Statistics",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": \"*\",\n  \"_limit\": 0,\n  \"_check_at_least\": 1000,\n  \"_aggs\": {\n    \"balance_stats\": {\n      \"_extended_stats\": {\n        \"_field\": \"balance\"\n      }\n    }\n  }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._min, 7.99);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._max, 12699.46);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._avg, 2565.03304);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._sum, 2565033.04);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._sum_of_squares, 8844461934.66);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._variance, 2267334.7731415);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation, 1505.7671709602053);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation_bounds._upper, 5576.56738192041);",
+                          "    expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation_bounds._lower, -446.50130192041049);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Bucket",
+              "item": [
               ]
             }
           ]
@@ -920,21 +1285,21 @@
                       "});",
                       "pm.test(\"restore received all\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.total).to.be.eql(1000)",
+                      "    pm.expect(jsonData.total).to.equal(1000)",
                       "});",
                       "pm.test(\"restore processed all\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.processed).to.eql(1000)",
+                      "    pm.expect(jsonData.processed).to.equal(1000)",
                       "});",
                       "pm.test(\"restore indexed all\", function() {",
                       "    var jsonData = pm.response.json();",
-                      "    pm.expect(jsonData.indexed).to.be.eql(1000)",
-                      "    pm.expect(jsonData.items.length).to.eql(1000);",
+                      "    pm.expect(jsonData.indexed).to.equal(1000)",
+                      "    pm.expect(jsonData.items.length).to.equal(1000);",
                       "});",
                       "pm.test(\"restore values are valid\", function() {",
                       "    var jsonData = pm.response.json();",
                       "    for (var i = 0; i < 1000; ++i) {",
-                      "        pm.expect(jsonData.items[i]._id).to.eql(i + 1);",
+                      "        pm.expect(jsonData.items[i]._id).to.equal(i + 1);",
                       "    }",
                       "});"
                     ],
@@ -986,7 +1351,7 @@
                       "    var jsonData = pm.response.json();",
                       "    var expected = ['Richmond','Berkeley','Oakland','San Francisco','Vallejo'];",
                       "    for (var i = 0; i < expected.length; ++i) {",
-                      "        pm.expect(jsonData.hits[i]).to.eql(expected[i]);",
+                      "        pm.expect(jsonData.hits[i]).to.equal(expected[i]);",
                       "    }",
                       "});"
                     ],
@@ -1038,7 +1403,7 @@
                       "    var jsonData = pm.response.json();",
                       "    var expected = ['San Francisco','Oakland','Richmond','Berkeley','Vallejo'];",
                       "    for (var i = 0; i < expected.length; ++i) {",
-                      "        pm.expect(jsonData.hits[i]).to.eql(expected[i]);",
+                      "        pm.expect(jsonData.hits[i]).to.equal(expected[i]);",
                       "    }",
                       "});"
                     ],
