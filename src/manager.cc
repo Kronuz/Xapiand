@@ -660,13 +660,12 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	auto local_node = Node::local_node();
 	auto leader_node = Node::leader_node();
-	auto is_leader = Node::is_superset(local_node, leader_node);
 
 	_new_cluster = 0;
 	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
 	bool found = false;
 	try {
-		if (is_leader) {
+		if (Node::is_superset(local_node, leader_node)) {
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
 			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 				auto mset = db_handler.get_all_mset();
@@ -728,14 +727,15 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	#ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		// Replicate cluster database from the leader
-		if (!is_leader) {
+		if (Node::is_superset(local_node, leader_node)) {
+			// The local node is the leader
+			load_nodes();
+			set_cluster_database_ready_impl();
+		} else {
+			// Replicate cluster database from the leader
 			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
 			_new_cluster = 2;
 			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
-		} else {
-			load_nodes();
-			set_cluster_database_ready_impl();
 		}
 
 		// Request updates from indexes databases
