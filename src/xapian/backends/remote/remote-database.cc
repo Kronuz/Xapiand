@@ -837,6 +837,8 @@ RemoteDatabase::replace_document(const std::string & unique_term,
 Xapian::rev
 RemoteDatabase::get_revision() const
 {
+    // Ensure that revision is up-to-date.
+    update_stats();
     return revision;
 }
 
