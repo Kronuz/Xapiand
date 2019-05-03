@@ -236,7 +236,7 @@ void sig_handler(int signum) {
 	// }
 	// #endif
 
-	auto manager = XapiandManager::manager();
+	auto manager = XapiandManager::manager(false);
 	if (manager && !manager->is_deinited()) {
 		try {
 			manager->signal_sig(signum);
