@@ -598,7 +598,7 @@ public:
 
 		auto aggs = static_cast<const MetricMax*>(other);
 
-		if (_max > aggs->_max) {
+		if (_max < aggs->_max) {
 			_max = aggs->_max;
 		}
 	}
@@ -1075,8 +1075,8 @@ public:
 		auto aggs = static_cast<const MetricStats*>(other);
 
 		MetricAvg::merge_results(aggs);
-		_min_metric.merge_results(aggs);
-		_max_metric.merge_results(aggs);
+		_min_metric.merge_results(&aggs->_min_metric);
+		_max_metric.merge_results(&aggs->_max_metric);
 	}
 
 	const long double* get_value_ptr(std::string_view field) const override {
@@ -1180,8 +1180,8 @@ public:
 		auto aggs = static_cast<const MetricExtendedStats*>(other);
 
 		MetricStdDeviation::merge_results(aggs);
-		_min_metric.merge_results(aggs);
-		_max_metric.merge_results(aggs);
+		_min_metric.merge_results(&aggs->_min_metric);
+		_max_metric.merge_results(&aggs->_max_metric);
 	}
 
 	BaseAggregation* get_agg(std::string_view field) override {
