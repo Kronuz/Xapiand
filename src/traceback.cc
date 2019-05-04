@@ -138,15 +138,15 @@ struct ThreadInfo {
 		errnum(0),
 		callstack(std::make_shared<Callstack>(nullptr)),
 		snapshot(std::make_shared<Callstack>(nullptr)),
-		req(pthreads_req.load(std::memory_order_acquire)) {}
+		req(pthreads_req.load()) {}
 
 	ThreadInfo(const ThreadInfo& other) :
 		pthread(other.pthread),
 		name(other.name),
-		errnum(other.errnum.load(std::memory_order_relaxed)),
+		errnum(other.errnum.load()),
 		callstack(other.callstack),
 		snapshot(other.snapshot),
-		req(pthreads_req.load(std::memory_order_acquire)) {}
+		req(pthreads_req.load()) {}
 };
 
 
@@ -539,9 +539,9 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 	auto return_address = frame && !(frame BELOW stack) ? frame->return_address : nullptr;
 
 	auto pthread = pthread_self();
-	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
-		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { };
+		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { };
 		if (thread_info && thread_info->pthread == pthread) {
 			auto callstack = backtrace();
 			if (callstack != nullptr) {
@@ -577,9 +577,9 @@ dump_callstacks()
 	size_t req = pthreads_req.fetch_add(1) + 1;
 
 	// request all threads to collect their callstack
-	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
-		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 		if (thread_info) {
 			thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 		}
@@ -588,14 +588,14 @@ dump_callstacks()
 	// try waiting for callstacks
 	for (int w = 10; w >= 0; --w) {
 		size_t ok = 0;
-		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 			std::shared_ptr<ThreadInfo> thread_info;
-			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 			if (thread_info && thread_info->req >= req) {
 				++ok;
 			}
 		}
-		if (ok == pthreads_cnt.load(std::memory_order_acquire)) {
+		if (ok == pthreads_cnt.load()) {
 			break;
 		}
 		sched_yield();
@@ -610,11 +610,11 @@ dump_callstacks()
 	size_t skip = 4;
 	size_t idx = 0;
 	size_t active = 0;
-	for (; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+	for (; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 		std::shared_ptr<ThreadInfo> thread_info;
-		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 		if (thread_info) {
-			auto errnum = thread_info->errnum.load(std::memory_order_relaxed);
+			auto errnum = thread_info->errnum.load();
 			if (thread_info->callstack && thread_info->snapshot) {
 				auto& callstack = *thread_info->callstack;
 				auto& snapshot = *thread_info->snapshot;
@@ -658,9 +658,9 @@ callstacks_snapshot()
 			size_t req = pthreads_req.fetch_add(1) + 1;
 
 			// request all threads to collect their callstack
-			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 				std::shared_ptr<ThreadInfo> thread_info;
-				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 				if (thread_info) {
 					if (thread_info->callstack && thread_info->snapshot) {
 						auto& callstack = *thread_info->callstack;
@@ -680,14 +680,14 @@ callstacks_snapshot()
 			// try waiting for callstacks
 			for (int w = 10; w >= 0; --w) {
 				size_t ok = 0;
-				for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+				for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 					std::shared_ptr<ThreadInfo> thread_info;
-					for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+					for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 					if (thread_info && thread_info->req >= req) {
 						++ok;
 					}
 				}
-				if (ok == pthreads_cnt.load(std::memory_order_acquire)) {
+				if (ok == pthreads_cnt.load()) {
 					break;
 				}
 				sched_yield();
@@ -695,9 +695,9 @@ callstacks_snapshot()
 
 			// save snapshots:
 			retry = false;
-			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 				std::shared_ptr<ThreadInfo> thread_info;
-				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 				if (thread_info) {
 					if (thread_info->callstack && thread_info->snapshot) {
 						auto& callstack = *thread_info->callstack;
@@ -738,9 +738,9 @@ callstacks_snapshot()
 		size_t req = pthreads_req.fetch_add(1) + 1;
 
 		// request all threads to collect their callstack
-		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 			std::shared_ptr<ThreadInfo> thread_info;
-			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 			if (thread_info) {
 				thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 			}
@@ -749,23 +749,23 @@ callstacks_snapshot()
 		// try waiting for callstacks
 		for (int w = 10; w >= 0; --w) {
 			size_t ok = 0;
-			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 				std::shared_ptr<ThreadInfo> thread_info;
-				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 				if (thread_info && thread_info->req >= req) {
 					++ok;
 				}
 			}
-			if (ok == pthreads_cnt.load(std::memory_order_acquire)) {
+			if (ok == pthreads_cnt.load()) {
 				break;
 			}
 			sched_yield();
 		}
 
 		// check snapshots, invalidate if any is different:
-		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
+		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
 			std::shared_ptr<ThreadInfo> thread_info;
-			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load(std::memory_order_acquire)); --r) { }
+			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
 			if (thread_info) {
 				if (thread_info->callstack && thread_info->snapshot) {
 					auto& callstack = *thread_info->callstack;
