@@ -31,7 +31,7 @@
 inline void nanosleep(unsigned long long nsec) {
 	if (nsec > 0) {
 		struct timespec ts;
-		ts.tv_sec = static_cast<long>(nsec / 1000000000) * 1000000000;
+		ts.tv_sec = static_cast<long>(nsec / 1000000000);
 		ts.tv_nsec = static_cast<long>(nsec % 1000000000);
 		while (nanosleep(&ts, &ts) < 0 && errno == EINTR) { }
 	}
