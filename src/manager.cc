@@ -524,6 +524,7 @@ XapiandManager::init()
 
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 	local_node = Node::local_node(local_node);
+	Node::touch_node(*local_node, true);
 
 	if (opts.solo) {
 		Node::leader_node(local_node);
