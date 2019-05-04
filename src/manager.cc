@@ -654,18 +654,18 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 					if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
 						found = true;
 					}
-					#ifdef XAPIAND_CLUSTERING
+#ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
 						_discovery->raft_add_command(serialise_length(did) + serialise_string(obj["name"].str_view()));
 					}
-					#endif
+#endif
 				}
 			}
 		} else {
-			#ifdef XAPIAND_CLUSTERING
+#ifdef XAPIAND_CLUSTERING
 			auto node = Node::get_node(local_node->lower_name());
 			found = node && !!node->idx;
-			#endif
+#endif
 		}
 	} catch (const Xapian::DocNotFoundError&) {
 	} catch (const Xapian::DatabaseNotFoundError&) {}
@@ -685,11 +685,11 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			} },
 		}, false, msgpack_type).first;
 		_new_cluster = 1;
-		#ifdef XAPIAND_CLUSTERING
+#ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
 			_discovery->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
 		}
-		#endif
+#endif
 	}
 
 	// Set node as ready!
@@ -702,7 +702,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 	Metrics::metrics({{NODE_LABEL, _node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
-	#ifdef XAPIAND_CLUSTERING
+#ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		if (Node::is_superset(local_node, leader_node)) {
 			// The local node is the leader
@@ -725,7 +725,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			}
 		}
 	} else
-	#endif
+#endif
 	{
 		set_cluster_database_ready_impl();
 	}
