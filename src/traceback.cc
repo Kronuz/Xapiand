@@ -306,13 +306,10 @@ traceback(const char* function, const char* filename, int line, void** callstack
 	tb.push_back(':');
 
 	// Iterate over the callstack. Skip the first, it is the address of this function.
-	std::string result;
 	for (size_t i = skip; i < frames; ++i) {
 		auto address = callstack[i + 1];
 
-		result.assign(std::to_string(frames - i - 1));
-		result.push_back(' ');
-
+		std::string result = strings::format("{:3} ", frames - i - 1);
 
 		auto address_string = atos(address);
 		if (address_string.size() > 2 && address_string.compare(0, 2, "0x") != 0) {
