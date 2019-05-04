@@ -71,35 +71,35 @@ throw_connection_closed_unexpectedly()
 }
 
 RemoteDatabase::RemoteDatabase(int fd, double timeout_,
-			       const string & context_, bool writable_,
-			       int flags_, const string & dir)
-    : Xapian::Database::Internal(writable_ ?
+			       const string & context_, bool writable,
+			       int flags)
+    : Xapian::Database::Internal(writable ?
 				 TRANSACTION_NONE :
 				 TRANSACTION_READONLY),
-      db_dir(dir),
-      writable(writable_),
-      flags(flags_),
       link(fd, fd, context_),
       context(context_),
+      cached_stats_valid(),
       mru_valstats(),
       mru_slot(Xapian::BAD_VALUENO),
       timeout(timeout_)
 {
-    try {
 #ifndef __WIN32__
-	// It's simplest to just ignore SIGPIPE.  We'll still know if the
-	// connection dies because we'll get EPIPE back from write().
-	if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
-	    throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
-	}
+    // It's simplest to just ignore SIGPIPE.  We'll still know if the
+    // connection dies because we'll get EPIPE back from write().
+    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR) {
+	throw Xapian::NetworkError("Couldn't set SIGPIPE to SIG_IGN", errno);
+    }
 #endif
 
-	update_stats(MSG_MAX);
-    } catch (...) {
-	// Make sure we close the connection to avoid leaking
-	// resources.
-	link.do_close(false);
-	throw;
+    update_stats(MSG_MAX);
+
+    if (writable) {
+	if (flags & Xapian::DB_RETRY_LOCK) {
+	    const string & body = encode_length(flags & Xapian::DB_RETRY_LOCK);
+	    update_stats(MSG_WRITEACCESS, body);
+	} else {
+	    update_stats(MSG_WRITEACCESS);
+	}
     }
 }
 
@@ -107,7 +107,7 @@ Xapian::termcount
 RemoteDatabase::positionlist_count(Xapian::docid did,
 				   const std::string& term) const
 {
-    if (!has_positional_info)
+    if (cached_stats_valid && !has_positional_info)
 	return 0;
 
     send_message(MSG_POSITIONLISTCOUNT, encode_length(did) + term);
@@ -147,7 +147,7 @@ RemoteDatabase::open_term_list(Xapian::docid did) const
     Assert(did);
 
     // Ensure that total_length and doccount are up-to-date.
-    update_stats();
+    if (!cached_stats_valid) update_stats();
 
     send_message(MSG_TERMLIST, encode_length(did));
 
@@ -240,7 +240,7 @@ RemoteDatabase::open_position_list(Xapian::docid did, const string &term) const
 bool
 RemoteDatabase::has_positions() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return has_positional_info;
 }
 
@@ -315,7 +315,7 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	return false;
     }
 
-    if (message.size() < 2) {
+    if (message.size() < 3) {
 	throw_handshake_failed(context);
     }
     const char *p = message.c_str();
@@ -344,46 +344,6 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	throw Xapian::NetworkError(errmsg, context);
     }
 
-    if (p == p_end) {
-	message = encode_length(flags);
-	message += encode_length(db_dir.size());
-	message += db_dir;
-
-	if (writable) {
-	    send_message(MSG_WRITEACCESS, message);
-	} else {
-	    send_message(MSG_READACCESS, message);
-	}
-
-	get_message(message, REPLY_UPDATE);
-	if (message.size() < 3) {
-	    throw Xapian::NetworkError("Database was not selected", context);
-	}
-
-	p = message.c_str();
-	p_end = p + message.size();
-
-	// The protocol versions where already checked.
-	p += 2;
-    } else if (msg_code == MSG_MAX && writable) {
-	if (flags) {
-	    send_message(MSG_WRITEACCESS, encode_length(flags));
-	} else {
-	    send_message(MSG_WRITEACCESS, string());
-	}
-
-	get_message(message, REPLY_UPDATE);
-	if (message.size() < 3) {
-	    throw Xapian::NetworkError("Database was not selected", context);
-	}
-
-	p = message.c_str();
-	p_end = p + message.size();
-
-	// The protocol versions where already checked.
-	p += 2;
-    }
-
     decode_length(&p, p_end, doccount);
     decode_length(&p, p_end, lastdocid);
     lastdocid += doccount;
@@ -395,29 +355,29 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
     }
     has_positional_info = (*p++ == '1');
     decode_length(&p, p_end, total_length);
-    decode_length(&p, p_end, revision);
     uuid.assign(p, p_end);
+    cached_stats_valid = true;
     return true;
 }
 
 Xapian::doccount
 RemoteDatabase::get_doccount() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return doccount;
 }
 
 Xapian::docid
 RemoteDatabase::get_lastdocid() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return lastdocid;
 }
 
 Xapian::totallength
 RemoteDatabase::get_total_length() const
 {
-    update_stats();
+    if (!cached_stats_valid) update_stats();
     return total_length;
 }
 
@@ -611,18 +571,20 @@ RemoteDatabase::send_message(message_type type, const string &message) const
 void
 RemoteDatabase::do_close()
 {
-    bool writable_ = !is_read_only();
-
     // The dtor hasn't really been called!  FIXME: This works, but means any
     // exceptions from end_transaction()/commit() are swallowed, which is
     // not entirely desirable.
     dtor_called();
 
-    // If we're writable, wait for a confirmation of the close, so we know that
-    // changes have been written and flushed, and the database write lock
-    // released.  For the non-writable case, there's no need to wait, so don't
-    // slow down searching by waiting here.
-    link.do_close(writable_);
+    if (!is_read_only()) {
+	// If we're writable, send a shutdown message to the server and wait
+	// for it to close its end of the connection so we know that changes
+	// have been written and flushed, and the database write lock released.
+	// For the non-writable case, there's no need to wait - it would just
+	// slow down searching needlessly.
+	link.shutdown();
+    }
+    link.do_close();
 }
 
 void
@@ -638,8 +600,7 @@ RemoteDatabase::set_query(const Xapian::Query& query,
 			  int percent_threshold, double weight_threshold,
 			  const Xapian::Weight& wtscheme,
 			  const Xapian::RSet &omrset,
-			  const vector<opt_ptr_spy>& matchspies,
-			  const Xapian::KeyMaker* sorter) const
+			  const vector<opt_ptr_spy>& matchspies) const
 {
     string tmp = query.serialise();
     string message = encode_length(tmp.size());
@@ -668,19 +629,6 @@ RemoteDatabase::set_query(const Xapian::Query& query,
     tmp = serialise_rset(omrset);
     message += encode_length(tmp.size());
     message += tmp;
-
-    if (sorter != NULL) {
-	tmp = sorter->name();
-	if (tmp.empty()) {
-	    throw Xapian::UnimplementedError("KeyMaker subclass not suitable for use with remote searches - name() method returned empty string");
-	}
-	message += encode_length(tmp.size());
-	message += tmp;
-
-	tmp = sorter->serialise();
-	message += encode_length(tmp.size());
-	message += tmp;
-    }
 
     for (auto i : matchspies) {
 	tmp = i->name();
@@ -754,16 +702,16 @@ RemoteDatabase::commit()
 void
 RemoteDatabase::cancel()
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_CANCEL, string());
-    string dummy;
-    get_message(dummy, REPLY_DONE);
 }
 
 Xapian::docid
 RemoteDatabase::add_document(const Xapian::Document & doc)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_ADDDOCUMENT, serialise_document(doc));
@@ -781,6 +729,7 @@ RemoteDatabase::add_document(const Xapian::Document & doc)
 void
 RemoteDatabase::delete_document(Xapian::docid did)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_DELETEDOCUMENT, encode_length(did));
@@ -791,31 +740,30 @@ RemoteDatabase::delete_document(Xapian::docid did)
 void
 RemoteDatabase::delete_document(const std::string & unique_term)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     send_message(MSG_DELETEDOCUMENTTERM, unique_term);
-    string dummy;
-    get_message(dummy, REPLY_DONE);
 }
 
 void
 RemoteDatabase::replace_document(Xapian::docid did,
 				 const Xapian::Document & doc)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     string message = encode_length(did);
     message += serialise_document(doc);
 
     send_message(MSG_REPLACEDOCUMENT, message);
-    string dummy;
-    get_message(dummy, REPLY_DONE);
 }
 
 Xapian::docid
 RemoteDatabase::replace_document(const std::string & unique_term,
 				 const Xapian::Document & doc)
 {
+    cached_stats_valid = false;
     mru_slot = Xapian::BAD_VALUENO;
 
     string message = encode_length(unique_term.size());
@@ -831,15 +779,6 @@ RemoteDatabase::replace_document(const std::string & unique_term,
     Xapian::docid did;
     decode_length(&p, p_end, did);
     return did;
-}
-
-
-Xapian::rev
-RemoteDatabase::get_revision() const
-{
-    // Ensure that revision is up-to-date.
-    update_stats();
-    return revision;
 }
 
 string
@@ -864,8 +803,6 @@ RemoteDatabase::set_metadata(const string & key, const string & value)
     data += key;
     data += value;
     send_message(MSG_SETMETADATA, data);
-    string dummy;
-    get_message(dummy, REPLY_DONE);
 }
 
 void
@@ -875,8 +812,6 @@ RemoteDatabase::add_spelling(const string & word,
     string data = encode_length(freqinc);
     data += word;
     send_message(MSG_ADDSPELLING, data);
-    string dummy;
-    get_message(dummy, REPLY_DONE);
 }
 
 Xapian::termcount

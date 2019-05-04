@@ -38,7 +38,6 @@ class LatLongMetric;
 class MatchSpy;
 class PostingSource;
 class Weight;
-class KeyMaker;
 
 /** Registry for user subclasses.
  *
@@ -49,9 +48,12 @@ class XAPIAN_VISIBILITY_DEFAULT Registry {
   public:
     /// Class holding details of the registry.
     class Internal;
-    /// @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, Registry> internal;
 
+  private:
+    /// @internal Reference counted internals.
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
+
+  public:
     /** Copy constructor.
      *
      *  The internals are reference counted, so copying is cheap.
@@ -151,23 +153,6 @@ class XAPIAN_VISIBILITY_DEFAULT Registry {
      */
     const Xapian::LatLongMetric *
 	    get_lat_long_metric(const std::string & name) const;
-
-    /** Register a user-defined key maker class.
-     *
-     *  @param source	The key maker to register.
-     */
-    void register_key_maker(const Xapian::KeyMaker &source);
-
-    /** Get a key maker given a name.
-     *
-     *  @param name	The name of the key maker to find.
-     *  @return		An object with the requested name, or NULL if the
-     *			key maker could not be found.  The returned
-     *			object is owned by the registry and so must not be
-     *			deleted by the caller.
-     */
-    const Xapian::KeyMaker *
-	    get_key_maker(const std::string & name) const;
 
 };
 

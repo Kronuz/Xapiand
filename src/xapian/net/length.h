@@ -35,21 +35,23 @@ template<class T>
 std::string
 encode_length(T len)
 {
-    char result[12];
-    char* end = result;
-    unsigned char b = static_cast<unsigned char>(len);
-    if (len >= 255) {
-	b = '\xff';
+    std::string result;
+    if (len < 255) {
+	result += static_cast<unsigned char>(len);
+    } else {
+	result += '\xff';
 	len -= 255;
-	do {
-	    *end++ = b;
-	    b = static_cast<unsigned char>(len & 0x7f);
+	while (true) {
+	    unsigned char b = static_cast<unsigned char>(len & 0x7f);
 	    len >>= 7;
-	} while (len);
-	b |= static_cast<unsigned char>(0x80);
+	    if (!len) {
+		result += char(b | static_cast<unsigned char>(0x80));
+		break;
+	    }
+	    result += b;
+	}
     }
-    *end++ = b;
-    return std::string(result, end);
+    return result;
 }
 
 /** Decode a length encoded by encode_length.

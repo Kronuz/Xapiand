@@ -36,7 +36,6 @@
 namespace Xapian {
 
 class Document;
-class Registry;
 
 /** Virtual base class for key making functors. */
 class XAPIAN_VISIBILITY_DEFAULT KeyMaker
@@ -85,71 +84,6 @@ class XAPIAN_VISIBILITY_DEFAULT KeyMaker
 	opt_intrusive_base::release();
 	return this;
     }
-
-    /** Clone the key maker.
-     *
-     *  The clone should inherit the configuration of the parent, but need not
-     *  inherit the state.
-     *
-     *  If you don't want to support the remote backend in your key maker, you
-     *  can use the default implementation which simply throws
-     *  Xapian::UnimplementedError.
-     *
-     *  Note that the returned object will be deallocated by Xapian after use
-     *  with "delete".  If you want to handle the deletion in a special way
-     *  (for example when wrapping the Xapian API for use from another
-     *  language) then you can define a static <code>operator delete</code>
-     *  method in your subclass as shown here:
-     *  https://trac.xapian.org/ticket/554#comment:1
-     */
-    virtual KeyMaker * clone() const;
-
-    /** Name of the key maker class.
-     *
-     *  This name is used by the remote backend.  It is passed with the
-     *  serialised parameters to the remote server so that it knows which class
-     *  to create.
-     *
-     *  Return the full namespace-qualified name of your class here - if your
-     *  class is called MyApp::FooKeyMaker, return "MyApp::FooKeyMaker" from
-     *  this method.
-     *
-     *  If you don't want to support the remote backend in your key maker, you
-     *  can use the default implementation which simply throws
-     *  Xapian::UnimplementedError.
-     */
-    virtual std::string name() const;
-
-    /** Serialise object parameters into a string.
-     *
-     *  If you don't want to support the remote backend in your key maker, you
-     *  can use the default implementation which simply throws
-     *  Xapian::UnimplementedError.
-     */
-    virtual std::string serialise() const;
-
-    /** Create object given string serialisation returned by serialise().
-     *
-     *  This method unserialises parameters serialised by the @a serialise()
-     *  method and allocates and returns a new object initialised with them.
-     *
-     *  Note that the returned object will be deallocated by Xapian after use
-     *  with "delete".  If you want to handle the deletion in a special way
-     *  (for example when wrapping the Xapian API for use from another
-     *  language) then you can define a static <code>operator delete</code>
-     *  method in your subclass as shown here:
-     *  https://trac.xapian.org/ticket/554#comment:1
-     *
-     *  If you don't want to support the remote backend in your key maker, you
-     *  can use the default implementation which simply throws
-     *  Xapian::UnimplementedError.
-     *
-     *  @param serialised A serialised instance of this KeyMaker subclass.
-     *  @param context	Registry object to use for unserialisation to permit
-     *			KeyMaker subclasses with sub-KeyMaker objects to be
-     *			implemented.
-     */
-    virtual KeyMaker * unserialise(const std::string & serialised, const Registry & registry) const;
 };
 
 /** KeyMaker subclass which combines several values.

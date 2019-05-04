@@ -45,7 +45,6 @@ namespace Xapian {
 
 class Matcher {
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
-    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
 
     Xapian::Database db;
 
@@ -111,16 +110,11 @@ class Matcher {
      *
      *  @param db_		Database to search
      *  @param query		Query object
-     */
-    Matcher(const Xapian::Database& db_);
-
-    /** Constructor.
-     *
      *  @param query_length	Query length
      *  @param rset		Relevance set (NULL for none)
      *  @param stats		Object to collate stats into
      *  @param wtscheme		Weight object to use as factory
-     *  @param sorter		KeyMaker for sort keys (NULL for none)
+     *  @param have_sorter	KeyMaker in use for sort keys?
      *  @param have_mdecider	MatchDecider specified?
      *  @param collapse_key	value slot to collapse on (Xapian::BAD_VALUENO
      *				which means no collapsing)
@@ -136,27 +130,24 @@ class Matcher {
      *				check_at_least (0.0 means don't).
      *  @param matchspies	MatchSpy objects to use
      */
-    void prepare_mset(const Xapian::Query& query,
-		      Xapian::termcount query_length,
-		      const Xapian::RSet* rset,
-		      Xapian::Weight::Internal& stats,
-		      const Xapian::Weight& wtscheme,
-		      bool have_mdecider,
-		      const Xapian::KeyMaker* sorter,
-		      Xapian::valueno collapse_key,
-		      Xapian::doccount collapse_max,
-		      int percent_threshold,
-		      double weight_threshold,
-		      Xapian::Enquire::docid_order order,
-		      Xapian::valueno sort_key,
-		      Xapian::Enquire::Internal::sort_setting sort_by,
-		      bool sort_val_reverse,
-		      double time_limit,
-		      const std::vector<opt_ptr_spy>& matchspies);
-
-    void set_db(const Xapian::Database& db_) {
-	db = db_;
-    }
+    Matcher(const Xapian::Database& db_,
+	    const Xapian::Query& query,
+	    Xapian::termcount query_length,
+	    const Xapian::RSet* rset,
+	    Xapian::Weight::Internal& stats,
+	    const Xapian::Weight& wtscheme,
+	    bool have_sorter,
+	    bool have_mdecider,
+	    Xapian::valueno collapse_key,
+	    Xapian::doccount collapse_max,
+	    int percent_threshold,
+	    double weight_threshold,
+	    Xapian::Enquire::docid_order order,
+	    Xapian::valueno sort_key,
+	    Xapian::Enquire::Internal::sort_setting sort_by,
+	    bool sort_val_reverse,
+	    double time_limit,
+	    const std::vector<opt_ptr_spy>& matchspies);
 
     /** Run the match and produce an MSet object.
      *
@@ -211,17 +202,6 @@ class Matcher {
 			  bool sort_val_reverse,
 			  double time_limit,
 			  const std::vector<opt_ptr_spy>& matchspies);
-
-    Xapian::MSet merge_mset(
-	const std::vector<Xapian::MSet>& msets,
-	Xapian::doccount first,
-	Xapian::doccount maxitems,
-	Xapian::doccount collapse_max,
-	int percent_threshold,
-	Xapian::Enquire::docid_order order,
-	Xapian::Enquire::Internal::sort_setting sort_by,
-	bool sort_val_reverse
-    );
 
     bool full_db_has_positions() const {
 	return db.has_positions();

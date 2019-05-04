@@ -358,19 +358,6 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
      */
     void set_time_limit(double time_limit);
 
-    void set_db(const Database& db_);
-
-    const MSet& prepare_mset(const RSet *omrset,
-		      const MatchDecider *mdecider) const;
-
-    const MSet& get_prepared_mset() const;
-
-    void clear_prepared_mset() const;
-
-    void set_prepared_mset(const MSet& mset) const;
-
-    void add_prepared_mset(const MSet& mset) const;
-
     /** Run the query.
      *
      *  Run the query using the settings in this Enquire object and those
@@ -399,12 +386,6 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
 		  doccount checkatleast = 0,
 		  const RSet* rset = NULL,
 		  const MatchDecider* mdecider = NULL) const;
-
-    MSet merge_mset(
-	const std::vector<Xapian::MSet>& msets,
-	Xapian::doccount docs,
-	Xapian::doccount first,
-	Xapian::doccount maxitems) const;
 
     /** Run the query.
      *

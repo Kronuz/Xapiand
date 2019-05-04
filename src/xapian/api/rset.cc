@@ -21,7 +21,6 @@
 #include "xapian/rset.h"
 
 #include "xapian/api/rsetinternal.h"
-#include "xapian/net/serialise.h"
 #include "xapian/common/str.h"
 
 #include <string>
@@ -75,19 +74,6 @@ RSet::contains(Xapian::docid did) const
 {
     return internal.get() && internal->docs.find(did) != internal->docs.end();
 }
-
-string
-RSet::serialise() const
-{
-    return serialise_rset(*this);
-}
-
-RSet
-RSet::unserialise(const string &s)
-{
-    return unserialise_rset(s);
-}
-
 
 string
 RSet::get_description() const

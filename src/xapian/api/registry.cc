@@ -29,7 +29,6 @@
 #include "xapian/matchspy.h"
 #include "xapian/postingsource.h"
 #include "xapian/weight.h"
-#include "xapian/keymaker.h"
 
 #include "xapian/common/debuglog.h"
 #include "xapian/common/stringutils.h"
@@ -57,9 +56,6 @@ class Xapian::Registry::Internal : public Xapian::Internal::intrusive_base {
 
     /// Registered lat-long metrics.
     std::map<std::string, Xapian::LatLongMetric *> lat_long_metrics;
-
-    /// Registered key makers.
-    std::map<std::string, Xapian::KeyMaker *> keymakers;
 
     /// Add the standard subclasses provided in the API.
     void add_defaults();
@@ -395,20 +391,6 @@ Registry::get_lat_long_metric(const string & name) const
 {
     LOGCALL(API, const Xapian::LatLongMetric *, "Xapian::Registry::get_lat_long_metric", name);
     RETURN(lookup_object(internal->lat_long_metrics, name));
-}
-
-void
-Registry::register_key_maker(const Xapian::KeyMaker &keymaker)
-{
-    LOGCALL_VOID(API, "Xapian::Registry::register_key_maker", keymaker.name());
-    register_object(internal->keymakers, keymaker);
-}
-
-const Xapian::KeyMaker *
-Registry::get_key_maker(const string & name) const
-{
-    LOGCALL(API, const Xapian::KeyMaker *, "Xapian::Registry::get_key_maker", name);
-    RETURN(lookup_object(internal->keymakers, name));
 }
 
 }
