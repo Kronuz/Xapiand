@@ -69,6 +69,17 @@ MSet::set_item_weight(Xapian::doccount i, double weight)
 }
 
 void
+MSet::set_database(const Database& db) const
+{
+    if (internal->stats.get() != NULL) {
+	internal->stats->db = db;
+    }
+    if (internal->enquire.get() != NULL) {
+	internal->enquire->set_database(db);
+    }
+}
+
+void
 MSet::sort_by_relevance()
 {
     std::sort(internal->items.begin(), internal->items.end(),

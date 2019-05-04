@@ -38,6 +38,8 @@
 
 namespace Xapian {
 
+class Database;
+
 /** Class representing a document.
  *
  *  The term "document" shouldn't be taken too literally - really it's a "thing
@@ -98,6 +100,8 @@ class XAPIAN_VISIBILITY_DEFAULT Document {
 
     /// Destructor.
     ~Document();
+
+    void set_database(const Database& db) const;
 
     /** Get the document ID this document came from.
      *

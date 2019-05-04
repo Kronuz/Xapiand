@@ -359,6 +359,8 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
      */
     void set_time_limit(double time_limit);
 
+    void set_database(const Database& db_) const;
+
     const MSet& prepare_mset(const RSet *omrset,
 		      const MatchDecider *mdecider) const;
 

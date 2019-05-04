@@ -39,6 +39,7 @@
 
 namespace Xapian {
 
+class Database;
 class MSetIterator;
 
 /// Class representing a list of search results.
@@ -98,6 +99,8 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 
     /// Destructor.
     ~MSet();
+
+    void set_database(const Database& db) const;
 
     /** Assigns new weights and updates MSet.
      *
