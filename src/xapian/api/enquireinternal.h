@@ -92,6 +92,8 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     explicit
     Internal(const Database& db_);
 
+    void set_db(const Database& db_);
+
     const MSet& prepare_mset(const RSet *rset, const MatchDecider *mdecider) const;
 
     const MSet& get_prepared_mset() const;

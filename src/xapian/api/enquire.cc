@@ -196,6 +196,12 @@ Enquire::set_time_limit(double time_limit)
     internal->time_limit = time_limit;
 }
 
+void
+Enquire::set_db(const Database& db_)
+{
+    internal->set_db(db_);
+}
+
 const MSet&
 Enquire::prepare_mset(const RSet *rset,
 		      const MatchDecider *mdecider) const
@@ -293,6 +299,18 @@ Enquire::get_description() const
 
 Enquire::Internal::Internal(const Database& db_)
     : db(db_) {}
+
+void
+Enquire::Internal::set_db(const Database& db_)
+{
+    db = db_;
+    if (match) {
+	match->set_db(db);
+    }
+    if (prepared_mset && prepared_mset->internal->get_stats()) {
+	prepared_mset->internal->get_stats()->set_bounds_from_db(db);
+    }
+}
 
 const MSet&
 Enquire::Internal::prepare_mset(const RSet *rset,
