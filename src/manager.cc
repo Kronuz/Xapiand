@@ -671,7 +671,24 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	} catch (const Xapian::DatabaseNotFoundError&) {}
 
 	if (!found) {
-		L_INFO("Cluster database doesn't exist. Generating database...");
+		if (Node::is_superset(local_node, leader_node)) {
+			L_INFO("Cluster database doesn't exist. Generating database...");
+		} else {
+			if (!leader_node->is_active() || leader_node->remote_port == 0 || leader_node->host().empty()) {
+				nanosleep(1000000000);  // sleep for 1 second
+				if (!leader_node->is_active()) {
+					throw Xapian::NetworkError("Endpoint node is inactive");
+				}
+				auto port = leader_node->remote_port;
+				if (port == 0) {
+					throw Xapian::NetworkError("Endpoint node without a valid port");
+				}
+				auto& host = leader_node->host();
+				if (host.empty()) {
+					throw Xapian::NetworkError("Endpoint node without a valid host");
+				}
+			}
+		}
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		[[maybe_unused]] auto did = db_handler.update(local_node->lower_name(), 0, false, {
 			{ ID_FIELD_NAME, {
