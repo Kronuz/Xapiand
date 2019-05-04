@@ -333,6 +333,18 @@ Matcher::prepare_mset(const std::string& query_id_,
 #endif
 }
 
+void
+Matcher::set_database(const Xapian::Database& db_)
+{
+    db = db_;
+    for (auto& o : locals) {
+	o->set_database(db_);
+    }
+    for (auto& o : remotes) {
+	o->set_database(db_);
+    }
+}
+
 Xapian::MSet
 Matcher::get_local_mset(Xapian::doccount first,
 			Xapian::doccount maxitems,

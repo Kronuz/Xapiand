@@ -97,6 +97,12 @@ Document::Internal::~Internal()
 	database->invalidate_doc_object(this);
 }
 
+void
+Document::Internal::set_database(const Database& db) const
+{
+    database = db.internal.get();
+}
+
 TermList*
 Document::Internal::open_term_list() const
 {

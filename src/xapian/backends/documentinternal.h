@@ -122,7 +122,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *
      *  If this document didn't come from a database, this will be NULL.
      */
-    Xapian::Internal::intrusive_ptr<const Xapian::Database::Internal> database;
+    mutable Xapian::Internal::intrusive_ptr<const Xapian::Database::Internal> database;
 
     /** The document ID this document came from in @a database.
      *
@@ -178,6 +178,8 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *  using a pointer to the base class, so we need a virtual destructor.
      */
     virtual ~Internal();
+
+    void set_database(const Database& db) const;
 
     /** Return true if the document data might have been modified.
      *
