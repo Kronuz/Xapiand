@@ -585,31 +585,8 @@ XapiandManager::run()
 		shutdown_sig(0);
 		join();
 
-	} catch (const SystemExit& exc) {
-		shutdown_sig(0);
-		join();
-		sig_exit(-exc.code);
-
-	} catch (const BaseException& exc) {
-		L_CRIT("Exception: {}", *exc.get_context() ? exc.get_context() : "Unkown BaseException!");
-		shutdown_sig(0);
-		join();
-		sig_exit(-EX_SOFTWARE);
-
-	} catch (const Xapian::Error& exc) {
-		L_CRIT("Exception: {}", exc.get_description());
-		shutdown_sig(0);
-		join();
-		sig_exit(-EX_SOFTWARE);
-
-	} catch (const std::exception& exc) {
-		L_CRIT("Exception: {}", *exc.what() ? exc.what() : "Unkown std::exception!");
-		shutdown_sig(0);
-		join();
-		sig_exit(-EX_SOFTWARE);
-
 	} catch (...) {
-		L_CRIT("Exception: Unknown!");
+		L_EXC("Exception");
 		shutdown_sig(0);
 		join();
 		sig_exit(-EX_SOFTWARE);
