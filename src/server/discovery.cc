@@ -319,6 +319,10 @@ Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& messa
 {
 	L_CALL("Discovery::cluster_hello({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
+	if (XapiandManager::state() != XapiandManager::State::READY) {
+		return;
+	}
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
