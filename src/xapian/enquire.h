@@ -28,6 +28,7 @@
 #endif
 
 #include <string>
+#include <vector>
 
 #include "xapian/attributes.h"
 #include "xapian/eset.h"
