@@ -290,23 +290,6 @@ struct node : BaseNodeType
 };
 
 
-enum class DropAction {
-	leave,    // leave alone
-	renew,    // renew item
-	relink,   // renew item + reset timeout
-	evict,    // remove item
-	stop,     // stop any loops as soon as possible
-};
-
-
-enum class GetAction {
-	leave,    // leave alone
-	renew,    // renew item
-	relink,   // renew item + reset timeout
-	evict,    // remove item
-};
-
-
 template <typename Key, typename T,
 	typename Hash = std::hash<Key>,
 	typename KeyEqual = std::equal_to<Key>,
@@ -334,8 +317,20 @@ public:
 	friend const_iterator;
 	friend const_iterator_by_age;
 
-	using GetAction = GetAction;
-	using DropAction = DropAction;
+	enum class DropAction {
+		leave,    // leave alone
+		renew,    // renew item
+		relink,   // renew item + reset timeout
+		evict,    // remove item
+		stop,     // stop any loops as soon as possible
+	};
+
+	enum class GetAction {
+		leave,    // leave alone
+		renew,    // renew item
+		relink,   // renew item + reset timeout
+		evict,    // remove item
+	};
 
 	lru(size_t max_size = 0, std::chrono::milliseconds max_age = std::chrono::milliseconds{0}) {
 		this->_max_size = max_size ? max_size : max;

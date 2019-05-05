@@ -667,11 +667,11 @@ DatabasePool::_spawn(const Endpoint& endpoint)
 	auto it = find_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>& endpoint_database_endpoint, bool, bool) {
 		assert(endpoint_database_endpoint.second);
 		endpoint_database_endpoint.second->renew_time = std::chrono::steady_clock::now();
-		return lru::GetAction::renew;
+		return GetAction::renew;
 	}, endpoint);
 	if (it == end()) {
 		auto emplaced = emplace_and([&](const std::pair<const Endpoint, std::unique_ptr<ShardEndpoint>>&, bool, bool) {
-			return lru::DropAction::stop;
+			return DropAction::stop;
 		}, endpoint, std::make_unique<ShardEndpoint>(*this, endpoint));
 		database_endpoint = emplaced.first->second.get();
 	} else {
@@ -843,13 +843,13 @@ DatabasePool::cleanup(bool immediate)
 				referenced_database_endpoint.reset();
 				if (endpoint_database_endpoint.second->is_used()) {
 					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-					return lru::DropAction::leave;
+					return DropAction::leave;
 				}
 				L_DATABASE("Evict endpoint from full LRU: {}", repr(endpoint_database_endpoint.second->to_string()));
-				return lru::DropAction::evict;
+				return DropAction::evict;
 			}
 			L_DATABASE("Leave recently used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-			return lru::DropAction::leave;
+			return DropAction::leave;
 		}
 		if (immediate || endpoint_database_endpoint.second->renew_time < now - 3600s) {
 			ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
@@ -859,13 +859,13 @@ DatabasePool::cleanup(bool immediate)
 			referenced_database_endpoint.reset();
 			if (endpoint_database_endpoint.second->is_used()) {
 				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-				return lru::DropAction::leave;
+				return DropAction::leave;
 			}
 			L_DATABASE("Evict endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-			return lru::DropAction::evict;
+			return DropAction::evict;
 		}
 		L_DATABASE("Stop at endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
-		return lru::DropAction::stop;
+		return DropAction::stop;
 	});
 }
 
