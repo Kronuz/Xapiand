@@ -170,8 +170,8 @@ public:
 		return _host;
 	}
 
-	std::string to_string() const {
-		return strings::format("{}@{}", _name, idx);
+	const std::string& to_string() const {
+		return _name;
 	}
 
 	color col() const;
