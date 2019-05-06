@@ -540,8 +540,7 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 
 	auto pthread = pthread_self();
 	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-		std::shared_ptr<ThreadInfo> thread_info;
-		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { };
+		auto thread_info = pthreads[idx].load();
 		if (thread_info && thread_info->pthread == pthread) {
 			auto callstack = backtrace();
 			if (callstack != nullptr) {
@@ -578,8 +577,7 @@ dump_callstacks()
 
 	// request all threads to collect their callstack
 	for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-		std::shared_ptr<ThreadInfo> thread_info;
-		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+		auto thread_info = pthreads[idx].load();
 		if (thread_info) {
 			thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 		}
@@ -589,8 +587,7 @@ dump_callstacks()
 	for (int w = 10; w >= 0; --w) {
 		size_t ok = 0;
 		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-			std::shared_ptr<ThreadInfo> thread_info;
-			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+			auto thread_info = pthreads[idx].load();
 			if (thread_info && thread_info->req >= req) {
 				++ok;
 			}
@@ -611,8 +608,7 @@ dump_callstacks()
 	size_t idx = 0;
 	size_t active = 0;
 	for (; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-		std::shared_ptr<ThreadInfo> thread_info;
-		for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+		auto thread_info = pthreads[idx].load();
 		if (thread_info) {
 			auto errnum = thread_info->errnum.load();
 			if (thread_info->callstack && thread_info->snapshot) {
@@ -659,8 +655,7 @@ callstacks_snapshot()
 
 			// request all threads to collect their callstack
 			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-				std::shared_ptr<ThreadInfo> thread_info;
-				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+				auto thread_info = pthreads[idx].load();
 				if (thread_info) {
 					if (thread_info->callstack && thread_info->snapshot) {
 						auto& callstack = *thread_info->callstack;
@@ -681,8 +676,7 @@ callstacks_snapshot()
 			for (int w = 10; w >= 0; --w) {
 				size_t ok = 0;
 				for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-					std::shared_ptr<ThreadInfo> thread_info;
-					for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+					auto thread_info = pthreads[idx].load();
 					if (thread_info && thread_info->req >= req) {
 						++ok;
 					}
@@ -696,8 +690,7 @@ callstacks_snapshot()
 			// save snapshots:
 			retry = false;
 			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-				std::shared_ptr<ThreadInfo> thread_info;
-				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+				auto thread_info = pthreads[idx].load();
 				if (thread_info) {
 					if (thread_info->callstack && thread_info->snapshot) {
 						auto& callstack = *thread_info->callstack;
@@ -739,8 +732,7 @@ callstacks_snapshot()
 
 		// request all threads to collect their callstack
 		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-			std::shared_ptr<ThreadInfo> thread_info;
-			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+			auto thread_info = pthreads[idx].load();
 			if (thread_info) {
 				thread_info->errnum = pthread_kill(thread_info->pthread, SIGUSR2);
 			}
@@ -750,8 +742,7 @@ callstacks_snapshot()
 		for (int w = 10; w >= 0; --w) {
 			size_t ok = 0;
 			for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-				std::shared_ptr<ThreadInfo> thread_info;
-				for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+				auto thread_info = pthreads[idx].load();
 				if (thread_info && thread_info->req >= req) {
 					++ok;
 				}
@@ -764,8 +755,7 @@ callstacks_snapshot()
 
 		// check snapshots, invalidate if any is different:
 		for (size_t idx = 0; idx < pthreads.size() && idx < pthreads_cnt.load(); ++idx) {
-			std::shared_ptr<ThreadInfo> thread_info;
-			for (int r = 1000; r >= 0 && !(thread_info = pthreads[idx].load()); --r) { }
+			auto thread_info = pthreads[idx].load();
 			if (thread_info) {
 				if (thread_info->callstack && thread_info->snapshot) {
 					auto& callstack = *thread_info->callstack;
