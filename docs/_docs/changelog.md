@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 {: #unreleased }
 
+### Changed
+- Enabled Honey backend
+
+### Fixed
+- Issues when launching multiple nodes simultaneously
+- Retry database initialization during node launch
+
 
 ---
 ## [0.21.1] - 2019-05-05
