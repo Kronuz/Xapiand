@@ -672,31 +672,36 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	} catch (const Xapian::DatabaseNotFoundError&) {}
 
 	if (!found) {
-		if (Node::is_superset(local_node, leader_node)) {
-			L_INFO("Cluster database doesn't exist. Generating database...");
-		} else {
-			for (int t = 10; t >= 0; --t) {
-				try {
-					if (!leader_node->is_active()) {
-						throw Xapian::NetworkError("Endpoint node is inactive");
+#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo) {
+			if (Node::is_superset(local_node, leader_node)) {
+				L_INFO("Cluster database doesn't exist. Generating database...");
+				load_nodes();
+			} else {
+				for (int t = 10; t >= 0; --t) {
+					try {
+						if (!leader_node->is_active()) {
+							throw Xapian::NetworkError("Endpoint node is inactive");
+						}
+						auto port = leader_node->remote_port;
+						if (port == 0) {
+							throw Xapian::NetworkError("Endpoint node without a valid port");
+						}
+						auto& host = leader_node->host();
+						if (host.empty()) {
+							throw Xapian::NetworkError("Endpoint node without a valid host");
+						}
+						break;
+					} catch (...) {
+						if (t == 0) { throw; }
 					}
-					auto port = leader_node->remote_port;
-					if (port == 0) {
-						throw Xapian::NetworkError("Endpoint node without a valid port");
-					}
-					auto& host = leader_node->host();
-					if (host.empty()) {
-						throw Xapian::NetworkError("Endpoint node without a valid host");
-					}
-					break;
-				} catch (...) {
-					if (t == 0) { throw; }
+					nanosleep(100000000);  // sleep for 100 milliseconds
+					local_node = Node::local_node();
+					leader_node = Node::leader_node();
 				}
-				nanosleep(100000000);  // sleep for 100 milliseconds
-				local_node = Node::local_node();
-				leader_node = Node::leader_node();
 			}
 		}
+#endif
 		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		[[maybe_unused]] auto did = db_handler.update(local_node->lower_name(), 0, false, {
 			{ ID_FIELD_NAME, {
