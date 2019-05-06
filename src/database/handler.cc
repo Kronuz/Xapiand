@@ -1484,7 +1484,9 @@ DatabaseHandler::get_mset(
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			ready.wait();
+			do {
+				ready.wait();  // doesn't seem to add a barrier, we use pending's, below
+			} while (pending.load());
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
@@ -1499,7 +1501,9 @@ DatabaseHandler::get_mset(
 				XapiandManager::doc_matcher_pool()->enqueue(matcher);
 			}
 
-			ready.wait();
+			do {
+				ready.wait();  // doesn't seem to add a barrier, we use pending's, below
+			} while (pending.load());
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
