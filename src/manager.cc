@@ -926,29 +926,31 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 #endif
 
 	auto local_node = Node::local_node();
+	L_NOTICE(SEA_GREEN + "Node {}{}" + SEA_GREEN + " is ready!", local_node->col().ansi(), local_node->to_string());
+
 	if (opts.solo) {
 		switch (_new_cluster) {
 			case 0:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " using solo cluster {}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name);
+				L_INFO("Using solo cluster {}", opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " using new solo cluster {}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name);
+				L_INFO("Using new solo cluster {}", opts.cluster_name);
 				break;
 		}
 	} else {
 		std::vector<std::string> nodes;
 		for (const auto& node : Node::nodes()) {
-			nodes.push_back(strings::format("{}{}" + NOTICE_COL, node->col().ansi(), node->to_string()));
+			nodes.push_back(strings::format("{}{}" + SEA_GREEN, node->col().ansi(), node->to_string()));
 		}
 		switch (_new_cluster) {
 			case 0:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " opened cluster {} {{{}}}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name, strings::join(nodes, ", ", " and "));
+				L_INFO("Opened cluster {} {{{}}}", opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 			case 1:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " created cluster {} {{{}}}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name, strings::join(nodes, ", ", " and "));
+				L_INFO("Created cluster {} {{{}}}", opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 			case 2:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " joined cluster {} {{{}}}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name, strings::join(nodes, ", ", " and "));
+				L_INFO("Joined cluster {} {{{}}}", opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 		}
 	}
