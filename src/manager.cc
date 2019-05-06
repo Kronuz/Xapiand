@@ -638,9 +638,9 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	nanosleep(100000000);  // sleep for 100 miliseconds
 	auto local_node = Node::local_node();
 	auto leader_node = Node::leader_node();
+	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
 
 	_new_cluster = 0;
-	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
 	bool found = false;
 	try {
 		if (Node::is_superset(local_node, leader_node)) {
@@ -672,14 +672,14 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	} catch (const Xapian::DatabaseNotFoundError&) {}
 
 	if (!found) {
+		for (int t = 10; t >= 0; --t) {
+			try {
 #ifdef XAPIAND_CLUSTERING
-		if (!opts.solo) {
-			if (Node::is_superset(local_node, leader_node)) {
-				L_INFO("Cluster database doesn't exist. Generating database...");
-				load_nodes();
-			} else {
-				for (int t = 10; t >= 0; --t) {
-					try {
+				if (!opts.solo) {
+					if (Node::is_superset(local_node, leader_node)) {
+						L_INFO("Cluster database doesn't exist. Generating database...");
+						load_nodes();
+					} else {
 						if (!leader_node->is_active()) {
 							throw Xapian::NetworkError("Endpoint node is inactive");
 						}
@@ -691,35 +691,36 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 						if (host.empty()) {
 							throw Xapian::NetworkError("Endpoint node without a valid host");
 						}
-						break;
-					} catch (...) {
-						if (t == 0) { throw; }
 					}
-					nanosleep(100000000);  // sleep for 100 milliseconds
-					local_node = Node::local_node();
-					leader_node = Node::leader_node();
 				}
-			}
-		}
 #endif
-		DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		[[maybe_unused]] auto did = db_handler.update(local_node->lower_name(), 0, false, {
-			{ ID_FIELD_NAME, {
-				{ RESERVED_STORE, false },
-				{ RESERVED_TYPE,  KEYWORD_STR },
-			} },
-			{ "name", {
-				{ RESERVED_INDEX, "none" },
-				{ RESERVED_TYPE,  KEYWORD_STR },
-				{ RESERVED_VALUE, local_node->name() },
-			} },
-		}, false, msgpack_type).first;
-		_new_cluster = 1;
+				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				[[maybe_unused]] auto did = db_handler.update(local_node->lower_name(), 0, false, {
+					{ ID_FIELD_NAME, {
+						{ RESERVED_STORE, false },
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "name", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  KEYWORD_STR },
+						{ RESERVED_VALUE, local_node->name() },
+					} },
+				}, false, msgpack_type).first;
+				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
-		if (!opts.solo) {
-			_discovery->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
-		}
+				if (!opts.solo) {
+					_discovery->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
+				}
 #endif
+				break;
+			} catch (...) {
+				if (t == 0) { throw; }
+			}
+			nanosleep(100000000);  // sleep for 100 milliseconds
+			local_node = Node::local_node();
+			leader_node = Node::leader_node();
+			cluster_endpoint = Endpoint{".xapiand/nodes", leader_node};
+		}
 	}
 
 	// Set node as ready!
