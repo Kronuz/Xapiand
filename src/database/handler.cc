@@ -2345,7 +2345,7 @@ DocIndexer::operator()()
 
 		size_t processed_;
 		if (valid) {
-			processed_ = _processed.fetch_add(1, std::memory_order_acquire) + 1;
+			processed_ = _processed.fetch_add(1, std::memory_order_acq_rel) + 1;
 
 			auto& term_id = std::get<0>(prepared);
 			auto& doc = std::get<1>(prepared);
