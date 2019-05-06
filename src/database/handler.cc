@@ -1368,7 +1368,8 @@ DocMatcher::operator()()
 		eptr = std::current_exception();
 	}
 
-	if (pending.fetch_sub(1) == 1) {
+	if (pending.fetch_sub(1, std::memory_order_release) == 1) {
+		std::atomic_thread_fence(std::memory_order_acquire);
 		ready.signal();
 	}
 }
@@ -1423,7 +1424,7 @@ DatabaseHandler::get_mset(
 
 	matchers.reserve(n_shards);
 	msets.reserve(n_shards);
-	pending.store(n_shards);
+	pending.store(n_shards, std::memory_order_release);
 
 	// FIXME: Serialising/unserialising query shouldn't be necessary, but
 	//        Xapian is not cloning PostingSources when queries get copied?
@@ -1486,7 +1487,7 @@ DatabaseHandler::get_mset(
 		try {
 			do {
 				ready.wait();  // doesn't seem to add a barrier, we use pending's, below
-			} while (pending.load());
+			} while (pending.load(std::memory_order_acquire));
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
@@ -1496,14 +1497,14 @@ DatabaseHandler::get_mset(
 				doccount += matcher->doccount;
 			}
 
-			pending.store(n_shards);
+			pending.store(n_shards, std::memory_order_release);
 			for (auto& matcher : matchers) {
 				XapiandManager::doc_matcher_pool()->enqueue(matcher);
 			}
 
 			do {
 				ready.wait();  // doesn't seem to add a barrier, we use pending's, below
-			} while (pending.load());
+			} while (pending.load(std::memory_order_acquire));
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
@@ -1522,7 +1523,7 @@ DatabaseHandler::get_mset(
 			lock_shard lk_shard(endpoint, flags);
 			lk_shard->reopen();
 		}
-		pending.store(n_shards);
+		pending.store(n_shards, std::memory_order_release);
 		for (auto& matcher : matchers) {
 			matcher->eptr = nullptr;
 			matcher->dispatcher = &DocMatcher::prepare_mset;
