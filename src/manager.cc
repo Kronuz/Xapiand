@@ -369,13 +369,13 @@ XapiandManager::signal_sig_impl()
 	int sig = atom_sig;
 
 	if (sig < 0) {
-		shutdown_sig(sig);
+		shutdown_sig(sig, is_running_loop());
 	}
 
 	switch (sig) {
 		case SIGTERM:
 		case SIGINT:
-			shutdown_sig(sig);
+			shutdown_sig(sig, is_running_loop());
 			break;
 		case SIGUSR1:
 #if defined(__APPLE__) || defined(__FreeBSD__)
@@ -392,9 +392,9 @@ XapiandManager::signal_sig_impl()
 
 
 void
-XapiandManager::shutdown_sig(int sig)
+XapiandManager::shutdown_sig(int sig, bool async)
 {
-	L_CALL("XapiandManager::shutdown_sig({})", sig);
+	L_CALL("XapiandManager::shutdown_sig({}, {})", sig, async);
 
 	/* SIGINT is often delivered via Ctrl+C in an interactive session.
 	 * If we receive the signal the second time, we interpret this as
@@ -457,7 +457,7 @@ XapiandManager::shutdown_sig(int sig)
 		_shutdown_now = now;
 	}
 
-	shutdown(_shutdown_asap, _shutdown_now, is_running_loop());
+	shutdown(_shutdown_asap, _shutdown_now, async);
 }
 
 
@@ -582,12 +582,12 @@ XapiandManager::run()
 			throw SystemExit(-sig);
 		}
 
-		shutdown_sig(0);
+		shutdown_sig(0, false);
 		join();
 
 	} catch (...) {
 		L_EXC("Exception");
-		shutdown_sig(0);
+		shutdown_sig(0, false);
 		join();
 		sig_exit(-EX_SOFTWARE);
 	}

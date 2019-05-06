@@ -175,7 +175,7 @@ private:
 	void signal_sig_async_cb(ev::async&, int);
 	void signal_sig_impl();
 
-	void shutdown_sig(int sig);
+	void shutdown_sig(int sig, bool async);
 
 	void setup_node_async_cb(ev::async&, int);
 	void setup_node_impl();
@@ -199,7 +199,7 @@ private:
 
 	void try_shutdown_impl(bool always) {
 		if (always || (_shutdown_asap != 0 && _total_clients == 0)) {
-			shutdown_sig(0);
+			shutdown_sig(0, true);
 		}
 	}
 
