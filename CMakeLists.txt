@@ -495,7 +495,7 @@ file(GLOB XAPIAN_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/xapian/backends/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/xapian/backends/multi/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/multi/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/xapian/backends/glass/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/glass/*.h*"
-	# "${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/honey/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/xapian/backends/inmemory/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/inmemory/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/xapian/backends/remote/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/backends/remote/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/xapian/languages/*.c*" "${PROJECT_SOURCE_DIR}/src/xapian/languages/*.h*"
