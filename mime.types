@@ -106,4 +106,7 @@ types {
   text/x-component                      htc;
   text/x-vcard                          vcf;
 
+  application/yaml                      yaml yml;
+  application/ndjson                    ndjson;
+  application/msgpack                   msgpack;
 }
