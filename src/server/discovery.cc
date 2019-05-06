@@ -327,7 +327,7 @@ Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& messa
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.to_string());
 
 
 	auto local_node = Node::local_node();
@@ -352,16 +352,16 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.to_string());
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}[{}] {}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", remote_node.col().ansi(), remote_node.idx, remote_node.name(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", remote_node.col().ansi(), remote_node.to_string(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node {}[{}] {}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Added node {}{}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 		if (put.second) {
-			L_INFO("Node {}[{}] {}" + INFO_COL + " is at the party on ip:{}, http_port:{}, remote_port:{}, replication_port:{}!", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port, node->replication_port);
+			L_INFO("Node {}{}" + INFO_COL + " is at the party on ip:{}, http_port:{}, remote_port:{}, replication_port:{}!", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 			// L_DIM_GREY("{}", Node::dump_nodes());
 		}
 
@@ -390,7 +390,7 @@ Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& messa
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.to_string());
 
 	auto local_node = Node::local_node();
 	if (remote_node == *local_node) {
@@ -416,21 +416,21 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 	const char *p_end = p + message.size();
 
 	auto remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.to_string());
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}[{}] {}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", remote_node.col().ansi(), remote_node.idx, remote_node.name(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", remote_node.col().ansi(), remote_node.to_string(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node {}[{}] {}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Added node {}{}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 		if (put.second) {
 			if (XapiandManager::state() == XapiandManager::State::READY) {
 				// Replicate database from the other node
 				auto path = strings::format(".xapiand/indices/.__{}", node->idx);
 				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, path, Endpoint{path, node}, Endpoint{path});
 			}
-			L_INFO("Node {}[{}] {}" + INFO_COL + " joined the party on ip:{}, http_port:{}, remote_port:{}, replication_port:{}!", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port, node->replication_port);
+			L_INFO("Node {}{}" + INFO_COL + " joined the party on ip:{}, http_port:{}, remote_port:{}, replication_port:{}!", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 			// L_DIM_GREY("{}", Node::dump_nodes());
 		}
 	}
@@ -452,21 +452,21 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 	const char *p_end = p + message.size();
 
 	Node remote_node = Node::unserialise(&p, p_end);
-	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.name());
+	L_DISCOVERY(">> {} [from {}]", enum_name(type), remote_node.to_string());
 
 	Node::drop_node(remote_node.name());
 
 	auto leader_node = Node::leader_node();
 	if (*leader_node == remote_node) {
-		L_INFO("Leader node {}[{}] {}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+		L_INFO("Leader node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.to_string());
 
 		Node::leader_node(std::make_shared<const Node>());
 		XapiandManager::renew_leader();
 	} else {
-		L_INFO("Node {}[{}] {}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.to_string());
 	}
 
-	L_DEBUG("Nodes still active after [{}] {} left: {}", remote_node.idx, remote_node.name(), Node::active_nodes());
+	L_DEBUG("Nodes still active after {} left: {}", remote_node.to_string(), Node::active_nodes());
 }
 
 
@@ -488,7 +488,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
 		return;
 	}
 
@@ -505,14 +505,14 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
 
 	auto granted = false;
 	if (term == raft_current_term) {
 		if (raft_voted_for.empty()) {
 			if (Node::is_local(node)) {
 				raft_voted_for = *node;
-				L_RAFT("I vote for {} (1)", raft_voted_for.name());
+				L_RAFT("I vote for {} (1)", raft_voted_for.to_string());
 			} else if (raft_role == Role::RAFT_FOLLOWER) {
 				uint64_t remote_last_log_term = unserialise_length(&p, p_end);
 				size_t remote_last_log_index = unserialise_length(&p, p_end);
@@ -523,27 +523,27 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 					// If the logs have last entries with different terms, then the
 					// raft_log with the later term is more up-to-date.
 					raft_voted_for = *node;
-					L_RAFT("I vote for {} (raft_log term is newer)", raft_voted_for.name());
+					L_RAFT("I vote for {} (raft_log term is newer)", raft_voted_for.to_string());
 				} else if (last_log_term == remote_last_log_term) {
 					// If the logs end with the same term, then whichever
 					// raft_log is longer is more up-to-date.
 					if (raft_log.size() <= remote_last_log_index) {
 						raft_voted_for = *node;
-						L_RAFT("I vote for {} (raft_log index size concurs)", raft_voted_for.name());
+						L_RAFT("I vote for {} (raft_log index size concurs)", raft_voted_for.to_string());
 					} else {
-						L_RAFT("I don't vote for {} (raft_log index is shorter)", raft_voted_for.name());
+						L_RAFT("I don't vote for {} (raft_log index is shorter)", raft_voted_for.to_string());
 					}
 				} else {
-					L_RAFT("I don't vote for {} (raft_log term is older)", raft_voted_for.name());
+					L_RAFT("I don't vote for {} (raft_log term is older)", raft_voted_for.to_string());
 				}
 			}
 		} else {
-			L_RAFT("I already voted for {}", raft_voted_for.name());
+			L_RAFT("I already voted for {}", raft_voted_for.to_string());
 		}
 		granted = raft_voted_for == *node;
 	}
 
-	L_RAFT("   << REQUEST_VOTE_RESPONSE {{node:{}, term:{}, granted:{}}}", node->name(), term, granted);
+	L_RAFT("   << REQUEST_VOTE_RESPONSE {{node:{}, term:{}, granted:{}}}", node->to_string(), term, granted);
 	send_message(Message::RAFT_REQUEST_VOTE_RESPONSE,
 		node->serialise() +
 		serialise_length(term) +
@@ -573,7 +573,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
 		return;
 	}
 
@@ -592,7 +592,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
 		if (Node::is_superset(local_node, node)) {
@@ -618,7 +618,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 					auto prev_log_term = entry_index > 1 ? raft_log[prev_log_index - 1].term : 0;
 
 					L_RAFT("   << HEARTBEAT {{node:{}, term:{}, prev_log_term:{}, prev_log_index:{}, raft_commit_index:{}}}",
-						local_node->name(), raft_current_term, prev_log_term, prev_log_index, raft_commit_index);
+						local_node->to_string(), raft_current_term, prev_log_term, prev_log_index, raft_commit_index);
 					send_message(Message::RAFT_HEARTBEAT,
 						local_node->serialise() +
 						serialise_length(raft_current_term) +
@@ -656,7 +656,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
 		return;
 	}
 
@@ -683,7 +683,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
 
 	size_t next_index;
 	size_t match_index;
@@ -784,7 +784,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		response_type = Message::RAFT_HEARTBEAT_RESPONSE;
 	}
 	L_RAFT("   << {} {{node:{}, term:{}, success:{}}}",
-		enum_name(response_type), local_node->name(), term, success);
+		enum_name(response_type), local_node->to_string(), term, success);
 	send_message(response_type,
 		local_node->serialise() +
 		serialise_length(term) +
@@ -821,7 +821,7 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
 		return;
 	}
 
@@ -842,7 +842,7 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", enum_name(type), node->name(), term == raft_current_term ? "" : " (wrong term)");
+	L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
 
 	if (term == raft_current_term) {
 		bool success = unserialise_length(&p, p_end);
@@ -895,7 +895,7 @@ Discovery::raft_add_command([[maybe_unused]] Message type, const std::string& me
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.name());
+		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
 		return;
 	}
 
@@ -931,7 +931,7 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 	unserialise_length(&p, p_end);  // revision ignored
 
 	auto path = std::string_view(p, p_end - p);
-	L_DISCOVERY(">> {} [from {}]: {}", enum_name(type), remote_node.name(), repr(path));
+	L_DISCOVERY(">> {} [from {}]: {}", enum_name(type), remote_node.to_string(), repr(path));
 
 	auto node = Node::touch_node(remote_node, false).first;
 	if (node) {
@@ -1196,10 +1196,10 @@ Discovery::_raft_apply(const std::string& command)
 
 	auto put = Node::touch_node(indexed_node, false);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}[{}] {}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", indexed_node.col().ansi(), indexed_node.idx, indexed_node.name(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", indexed_node.col().ansi(), indexed_node.to_string(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
 	} else {
 		node = put.first;
-		L_DEBUG("Added node {}[{}] {}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Added node {}{}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 	}
 }
 
@@ -1266,7 +1266,7 @@ Discovery::_raft_request_vote(bool immediate)
 
 		auto local_node = Node::local_node();
 		L_RAFT("   << REQUEST_VOTE {{ node:{}, term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, active_nodes:{}, leader:{} }}",
-			local_node->name(), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->name());
+			local_node->to_string(), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->to_string());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
 			serialise_length(raft_current_term) +

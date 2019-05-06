@@ -740,7 +740,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			set_cluster_database_ready_impl();
 		} else {
 			// Replicate cluster database from the leader
-			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->name());
+			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->to_string());
 			_new_cluster = 2;
 			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
 		}
@@ -928,26 +928,26 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	if (opts.solo) {
 		switch (_new_cluster) {
 			case 0:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " using solo cluster {}", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				L_NOTICE("Node {}{}" + NOTICE_COL + " using solo cluster {}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name);
 				break;
 			case 1:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " using new solo cluster {}", local_node->col().ansi(), local_node->name(), opts.cluster_name);
+				L_NOTICE("Node {}{}" + NOTICE_COL + " using new solo cluster {}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name);
 				break;
 		}
 	} else {
 		std::vector<std::string> nodes;
 		for (const auto& node : Node::nodes()) {
-			nodes.push_back(strings::format("{}{}" + NOTICE_COL, node->col().ansi(), node->name()));
+			nodes.push_back(strings::format("{}{}" + NOTICE_COL, node->col().ansi(), node->to_string()));
 		}
 		switch (_new_cluster) {
 			case 0:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " opened cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, strings::join(nodes, ", ", " and "));
+				L_NOTICE("Node {}{}" + NOTICE_COL + " opened cluster {} {{{}}}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 			case 1:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " created cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, strings::join(nodes, ", ", " and "));
+				L_NOTICE("Node {}{}" + NOTICE_COL + " created cluster {} {{{}}}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 			case 2:
-				L_NOTICE("Node {}{}" + NOTICE_COL + " joined cluster {} {{{}}}", local_node->col().ansi(), local_node->name(), opts.cluster_name, strings::join(nodes, ", ", " and "));
+				L_NOTICE("Node {}{}" + NOTICE_COL + " joined cluster {} {{{}}}", local_node->col().ansi(), local_node->to_string(), opts.cluster_name, strings::join(nodes, ", ", " and "));
 				break;
 		}
 	}
@@ -1375,7 +1375,7 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	auto leader_node = Node::leader_node();
-	L_INFO("New leader of cluster {} is {}{}", opts.cluster_name, leader_node->col().ansi(), leader_node->name());
+	L_INFO("New leader of cluster {} is {}{}", opts.cluster_name, leader_node->col().ansi(), leader_node->to_string());
 
 	if (_state == State::READY) {
 		if (leader_node->is_local()) {
@@ -1417,7 +1417,7 @@ XapiandManager::load_nodes()
 		}) == db_nodes.end()) {
 			if (node->idx) {
 				// Node is not in our local database, add it now!
-				L_WARNING("Adding missing node: [{}] {}", node->idx, node->name());
+				L_WARNING("Adding missing node: {}{}", node->col().ansi(), node->to_string());
 				auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },

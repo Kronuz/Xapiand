@@ -171,7 +171,7 @@ public:
 	}
 
 	std::string to_string() const {
-		return _name;
+		return strings::format("{}@{}", _name, idx);
 	}
 
 	color col() const;
