@@ -356,10 +356,10 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node: {}[{}] {}", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+		L_ERR("Denied node {}[{}] {}" + ERR_COL + ": ip:{}, tcp:{} (http), tcp:{} (xapian)", remote_node.col().ansi(), remote_node.idx, remote_node.name(), remote_node.host(), remote_node.http_port, remote_node.remote_port);
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
+		L_DEBUG("Added node {}[{}] {}" + INFO_COL + ": ip:{}, tcp:{} (http), tcp:{} (xapian)", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port);
 		if (put.second) {
 			L_INFO("Node {}{}" + INFO_COL + " is at the party on ip:{}, tcp:{} (http), tcp:{} (xapian)!", node->col().ansi(), node->name(), node->host(), node->http_port, node->remote_port);
 		}
@@ -419,10 +419,10 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node: {}[{}] {}", remote_node.col().ansi(), remote_node.idx, remote_node.name());
+		L_ERR("Denied node {}[{}] {}" + ERR_COL + ": ip:{}, tcp:{} (http), tcp:{} (xapian)", remote_node.col().ansi(), remote_node.idx, remote_node.name(), remote_node.host(), remote_node.http_port, remote_node.remote_port);
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
+		L_DEBUG("Added node {}[{}] {}" + INFO_COL + ": ip:{}, tcp:{} (http), tcp:{} (xapian)", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port);
 		if (put.second) {
 			if (XapiandManager::state() == XapiandManager::State::READY) {
 				// Replicate database from the other node
@@ -1194,10 +1194,10 @@ Discovery::_raft_apply(const std::string& command)
 
 	auto put = Node::touch_node(indexed_node, false);
 	if (put.first == nullptr) {
-		L_ERR("Denied node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
+		L_ERR("Denied node {}[{}] {}" + ERR_COL + ": ip:{}, tcp:{} (http), tcp:{} (xapian)", indexed_node.col().ansi(), indexed_node.idx, indexed_node.name(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port);
 	} else {
 		node = put.first;
-		L_DEBUG("Added node: {}[{}] {}", node->col().ansi(), node->idx, node->name());
+		L_DEBUG("Added node {}[{}] {}" + INFO_COL + ": ip:{}, tcp:{} (http), tcp:{} (xapian)", node->col().ansi(), node->idx, node->name(), node->host(), node->http_port, node->remote_port);
 	}
 }
 
