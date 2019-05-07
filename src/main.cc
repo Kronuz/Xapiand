@@ -762,7 +762,7 @@ void banner() {
 			"Using " + strings::join(values, ", ", " and "));
 	}
 
-	L(-LOG_NOTICE, NOTICE_COL, "{} (pid:{})", Package::STRING, getpid());
+	L(-LOG_NOTICE, WHITE, "{} (pid:{})", Package::STRING, getpid());
 }
 
 
