@@ -844,7 +844,11 @@ HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t
 		}
 		if (new_request->view) {
 			if (signal_pending) {
-				new_request->pending.signal();
+				{
+					std::lock_guard<std::mutex> pending_lk(new_request->pending_mtx);
+					new_request->has_pending = true;
+					new_request->pending.notify_one();
+				}
 
 				std::lock_guard<std::mutex> lk(runner_mutex);
 				if (!running) {  // Start a runner if not running
@@ -885,7 +889,12 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 		}
 		if (request->view) {
 			if (signal_pending) {
-				request->pending.signal();  // always signal, so view continues ending
+				{
+					// always signal, so view continues ending
+					std::lock_guard<std::mutex> pending_lk(request->pending_mtx);
+					request->has_pending = true;
+					request->pending.notify_one();
+				}
 
 				std::lock_guard<std::mutex> lk(runner_mutex);
 				if (requests.empty() || request != requests.front()) {
@@ -3799,13 +3808,14 @@ bool
 Request::wait()
 {
 	if (mode != Request::Mode::FULL) {
-		// Wait for a pending raw body for one second (1000000us) and flush
-		// pending signals before processing the request, otherwise retry
+		// Wait for a pending raw body for one second and clear pending
+		// flag before processing the request, otherwise retry
 		// checking for empty/ended requests or closed connections.
-		if (!pending.wait(1000000)) {
-			return false;
-		}
-		while (pending.tryWaitMany(std::numeric_limits<ssize_t>::max())) { }
+		std::unique_lock<std::mutex> pending_lk(pending_mtx);
+		while (!pending.wait_for(pending_lk, 1s, [this]() {
+			return has_pending;
+		})) {}
+		has_pending = false;
 	}
 	return true;
 }

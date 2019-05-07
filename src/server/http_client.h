@@ -41,7 +41,6 @@
 #include "endpoint.h"                       // for Endpoints
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
-#include "lightweight_semaphore.h"          // for LightweightSemaphore
 #include "lru.h"                            // for lru::lru
 #include "msgpack.h"                        // for MsgPack
 #include "phf.hh"                           // for phf::make_phf
@@ -204,7 +203,9 @@ public:
 	std::atomic_bool atom_ending;  // ending requests have received all body
 	std::atomic_bool atom_ended;
 
-	LightweightSemaphore pending;
+	std::condition_variable pending;
+	std::mutex pending_mtx;
+	bool has_pending;
 
 	std::string raw;
 	size_t raw_peek;
