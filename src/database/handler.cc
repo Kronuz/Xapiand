@@ -1126,7 +1126,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 DocMatcher::DocMatcher(
 	std::atomic_size_t& pending,
-	LightweightSemaphore& ready,
+	std::condition_variable& ready,
 	size_t shard_num,
 	const Endpoints& endpoints,
 	int flags,
@@ -1308,7 +1308,7 @@ DocMatcher::operator()()
 
 	if (pending.fetch_sub(1, std::memory_order_release) == 1) {
 		std::atomic_thread_fence(std::memory_order_acquire);
-		ready.signal();
+		ready.notify_one();
 	}
 }
 
@@ -1356,7 +1356,8 @@ DatabaseHandler::get_mset(
 	std::vector<Xapian::MSet> msets;
 
 	std::atomic_size_t pending;
-	LightweightSemaphore ready;
+	std::mutex ready_mtx;
+	std::condition_variable ready;
 
 	size_t n_shards = endpoints.size();
 
@@ -1421,11 +1422,13 @@ DatabaseHandler::get_mset(
 		XapiandManager::doc_matcher_pool()->enqueue(matcher);
 	}
 
+	std::unique_lock<std::mutex> ready_lk(ready_mtx);
+
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			do {
-				ready.wait();  // doesn't seem to add a barrier, we use pending's, below
-			} while (pending.load(std::memory_order_acquire));
+			ready.wait(ready_lk, [&]() {
+				return !pending.load(std::memory_order_acquire);
+			});
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
@@ -1440,9 +1443,9 @@ DatabaseHandler::get_mset(
 				XapiandManager::doc_matcher_pool()->enqueue(matcher);
 			}
 
-			do {
-				ready.wait();  // doesn't seem to add a barrier, we use pending's, below
-			} while (pending.load(std::memory_order_acquire));
+			ready.wait(ready_lk, [&]() {
+				return !pending.load(std::memory_order_acquire);
+			});
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {

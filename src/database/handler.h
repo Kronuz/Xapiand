@@ -191,7 +191,7 @@ class DocMatcher {
 	Xapian::Enquire enquire;
 
 	std::atomic_size_t& pending;
-	LightweightSemaphore& ready;
+	std::condition_variable& ready;
 	size_t shard_num;
 	const Endpoints& endpoints;
 	int flags;
@@ -223,7 +223,7 @@ public:
 
 	DocMatcher(
 		std::atomic_size_t& pending,
-		LightweightSemaphore& ready,
+		std::condition_variable& ready,
 		size_t shard_num,
 		const Endpoints& endpoints,
 		int flags,
