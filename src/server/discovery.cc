@@ -356,12 +356,12 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}{}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", remote_node.col().ansi(), remote_node.to_string(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", remote_node.col().ansi(), remote_node.to_string(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node {}{}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Added node {}{}" + INFO_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 		if (put.second) {
-			L_INFO("Node {}{}" + INFO_COL + " is at the party on ip:{}, http_port:{}, remote_port:{}, replication_port:{}!", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+			L_INFO("Node {}{}" + INFO_COL + " is at the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 			// L_DIM_GREY("{}", Node::dump_nodes());
 		}
 
@@ -420,17 +420,17 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 
 	auto put = Node::touch_node(remote_node, true);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}{}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", remote_node.col().ansi(), remote_node.to_string(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", remote_node.col().ansi(), remote_node.to_string(), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 	} else {
 		auto node = put.first;
-		L_DEBUG("Added node {}{}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Added node {}{}" + INFO_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 		if (put.second) {
 			if (XapiandManager::state() == XapiandManager::State::READY) {
 				// Replicate database from the other node
 				auto path = strings::format(".xapiand/indices/.__{}", node->idx);
 				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, path, Endpoint{path, node}, Endpoint{path});
 			}
-			L_INFO("Node {}{}" + INFO_COL + " joined the party on ip:{}, http_port:{}, remote_port:{}, replication_port:{}!", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+			L_INFO("Node {}{}" + INFO_COL + " joined the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 			// L_DIM_GREY("{}", Node::dump_nodes());
 		}
 	}
@@ -1196,10 +1196,10 @@ Discovery::_raft_apply(const std::string& command)
 
 	auto put = Node::touch_node(indexed_node, false);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}{}" + ERR_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", indexed_node.col().ansi(), indexed_node.to_string(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", indexed_node.col().ansi(), indexed_node.to_string(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
 	} else {
 		node = put.first;
-		L_DEBUG("Added node {}{}" + INFO_COL + ": ip:{}, http_port:{}, remote_port:{}, replication_port:{}", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Added node {}{}" + INFO_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 	}
 }
 
