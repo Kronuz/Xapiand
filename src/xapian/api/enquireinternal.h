@@ -51,7 +51,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     typedef enum { REL, VAL, VAL_REL, REL_VAL, DOCID } sort_setting;
 
   private:
-    Xapian::Database db;
+    mutable Xapian::Database db;
 
     Xapian::Query query;
 
@@ -92,7 +92,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     explicit
     Internal(const Database& db_);
 
-    void set_db(const Database& db_);
+    void set_database(const Database& db_) const;
 
     const MSet& prepare_mset(const RSet *rset, const MatchDecider *mdecider) const;
 
