@@ -1268,7 +1268,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					size_t n_shards = p == p_end ? 1 : unserialise_length(&p, p_end);
 					auto did_serialised = term.substr(2);
 					auto did = sortable_unserialise(did_serialised);
-					if (did == 0) {
+					if (did == 0u) {
 						shard_did = wdb->get_lastdocid() + 1;
 						did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 						ver_prefix = "V" + serialise_length(shard_did);
