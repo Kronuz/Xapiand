@@ -387,8 +387,10 @@ HttpClient::destroy_impl()
 	std::unique_lock<std::mutex> lk(runner_mutex);
 	if (!requests.empty()) {
 		auto& request = *requests.front();
-		if (request.indexer) {
-			request.indexer->finish();
+		auto indexer = request.indexer.load();
+		if (indexer) {
+			indexer->finish();
+			request.indexer.store(nullptr);
 		}
 	}
 }
@@ -2241,10 +2243,12 @@ HttpClient::restore_database_view(Request& request)
 {
 	L_CALL("HttpClient::restore_database_view()");
 
+	auto indexer = request.indexer.load();
+
 	if (request.mode == Request::Mode::STREAM_MSGPACK || request.mode == Request::Mode::STREAM_NDJSON) {
 		MsgPack obj;
 		while (request.next_object(obj)) {
-			if (!request.indexer) {
+			if (!indexer) {
 				MsgPack* settings = nullptr;
 				if (obj.is_map()) {
 					auto settings_it = obj.find(RESERVED_SETTINGS);
@@ -2259,9 +2263,10 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
+				indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
+				request.indexer.store(indexer);
 			}
-			request.indexer->prepare(std::move(obj));
+			indexer->prepare(std::move(obj));
 		}
 	} else {
 		auto& docs = request.decoded_body();
@@ -2269,7 +2274,7 @@ HttpClient::restore_database_view(Request& request)
 			THROW(ClientError, "Invalid request body");
 		}
 		for (auto& obj : docs) {
-			if (!request.indexer) {
+			if (!indexer) {
 				MsgPack* settings = nullptr;
 				if (obj.is_map()) {
 					auto settings_it = obj.find(RESERVED_SETTINGS);
@@ -2284,15 +2289,16 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				request.indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
+				indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, request.echo, request.comments, query_field.commit);
+				request.indexer.store(indexer);
 			}
-			request.indexer->prepare(std::move(obj));
+			indexer->prepare(std::move(obj));
 		}
 	}
 
 	if (request.ending) {
-		if (request.indexer) {
-			request.indexer->wait();
+		if (indexer) {
+			indexer->wait();
 		}
 
 		request.ready = std::chrono::steady_clock::now();
@@ -2300,10 +2306,10 @@ HttpClient::restore_database_view(Request& request)
 
 		MsgPack response_obj = {
 			// { RESPONSE_ENDPOINT, endpoints.to_string() },
-			{ RESPONSE_PROCESSED, request.indexer ? request.indexer->processed() : 0 },
-			{ RESPONSE_INDEXED, request.indexer ? request.indexer->indexed() : 0 },
-			{ RESPONSE_TOTAL, request.indexer ? request.indexer->total() : 0 },
-			{ RESPONSE_ITEMS, request.indexer ? request.indexer->results() : MsgPack::ARRAY() },
+			{ RESPONSE_PROCESSED, indexer ? indexer->processed() : 0 },
+			{ RESPONSE_INDEXED, indexer ? indexer->indexed() : 0 },
+			{ RESPONSE_TOTAL, indexer ? indexer->total() : 0 },
+			{ RESPONSE_ITEMS, indexer ? indexer->results() : MsgPack::ARRAY() },
 		};
 
 		if (request.human) {
@@ -3172,9 +3178,10 @@ HttpClient::end_http_request(Request& request)
 	request.atom_ended = true;
 	waiting = false;
 
-	if (request.indexer) {
-		request.indexer->finish();
-		request.indexer.reset();
+	auto indexer = request.indexer.load();
+	if (indexer) {
+		indexer->finish();
+		request.indexer.store(nullptr);
 	}
 
 	if (request.log) {
@@ -3614,8 +3621,9 @@ Request::Request(HttpClient* client)
 Request::~Request() noexcept
 {
 	try {
-		if (indexer) {
-			indexer->finish();
+		auto indexer_ = indexer.load();
+		if (indexer_) {
+			indexer_->finish();
 		}
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");

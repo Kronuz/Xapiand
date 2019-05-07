@@ -35,6 +35,7 @@
 #include <utility>                          // for std::pair
 #include <vector>                           // for std::vector
 
+#include "atomic_shared_ptr.h"              // for atomic_shared_ptr
 #include "base_client.h"                    // for BaseClient
 #include "compressor_deflate.h"             // for DeflateCompressData
 #include "database/data.h"                  // for ct_type_t, accept_set_t
@@ -237,7 +238,7 @@ public:
 	std::chrono::time_point<std::chrono::steady_clock> ready;
 	std::chrono::time_point<std::chrono::steady_clock> ends;
 
-	std::shared_ptr<DocIndexer> indexer;
+	atomic_shared_ptr<DocIndexer> indexer;
 
 	Request() : view{nullptr} { }
 	Request(class HttpClient* client);
