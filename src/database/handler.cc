@@ -2250,7 +2250,13 @@ DocIndexer::_prepare(MsgPack&& obj)
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		bulk_cnt = 0;
-		limit.wait();  // throttle the prepare
+
+		// throttle the prepare
+		std::unique_lock<std::mutex> limit_lk(limit_mtx);
+		while (!limit.wait_for(limit_lk, 1s, [this]() {
+			return finished || limit_cnt > 0;
+		})) {}
+		--limit_cnt;
 	}
 }
 
@@ -2378,7 +2384,9 @@ DocIndexer::operator()()
 			}
 		} else {
 			if (processed_ % (limit_signal * 32) == 0) {
-				limit.signal(limit_signal);
+				std::lock_guard<std::mutex> limit_lk(limit_mtx);
+				limit_cnt += limit_signal;
+				limit.notify_one();
 			}
 		}
 	}

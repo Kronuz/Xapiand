@@ -39,7 +39,6 @@
 #include "database/flags.h"                  // for DB_*
 #include "debouncer.h"                       // for make_debouncer
 #include "endpoint.h"                        // for Endpoints
-#include "lightweight_semaphore.h"           // for LightweightSemaphore
 #include "msgpack.h"                         // for MsgPack
 #include "opts.h"                            // for opts::*
 #include "thread.hh"                         // for ThreadPolicyType::*
@@ -303,8 +302,10 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::atomic_size_t _indexed;
 	std::atomic_size_t _total;
 	std::atomic_size_t _idx;
-	LightweightSemaphore limit;
 	std::condition_variable done;
+	std::condition_variable limit;
+	std::mutex limit_mtx;
+	size_t limit_cnt;
 
 	std::mutex _results_mtx;
 	std::vector<MsgPack> _results;
@@ -326,7 +327,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 		_indexed{0},
 		_total{0},
 		_idx{0},
-		limit{limit_max},
+		limit_cnt{limit_max},
 		bulk_cnt{0} { }
 
 	void _prepare(MsgPack&& obj);
