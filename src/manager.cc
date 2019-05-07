@@ -926,7 +926,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 #endif
 
 	auto local_node = Node::local_node();
-	L_NOTICE(SEA_GREEN + "Node {}{}" + SEA_GREEN + " is ready!", local_node->col().ansi(), local_node->to_string());
+	L(-LOG_NOTICE, SEA_GREEN, "Node {}{}" + SEA_GREEN + " is Ready to Rock!", local_node->col().ansi(), local_node->to_string());
 
 	if (opts.solo) {
 		switch (_new_cluster) {
