@@ -1721,12 +1721,6 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 	Xapian::docid did = 0;
 
-	if (term.size() > 2 && term[0] == 'Q' && term[1] == 'N') {
-		auto did_serialised = term.substr(2);
-		did = sortable_unserialise(did_serialised);
-		return did;
-	}
-
 	size_t n_shards = endpoints.size();
 
 	size_t shard_num = 0;
