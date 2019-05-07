@@ -534,7 +534,7 @@ XapiandManager::init()
 		try {
 			DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand/nodes"}});
 			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-				auto mset = db_handler.get_all_mset();
+				auto mset = db_handler.get_mset();
 				const auto m_e = mset.end();
 				for (auto m = mset.begin(); m != m_e; ++m) {
 					auto did = *m;
@@ -646,7 +646,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (Node::is_superset(local_node, leader_node)) {
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
 			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-				auto mset = db_handler.get_all_mset();
+				auto mset = db_handler.get_mset();
 				const auto m_e = mset.end();
 				for (auto m = mset.begin(); m != m_e; ++m) {
 					auto did = *m;
@@ -1403,7 +1403,7 @@ XapiandManager::load_nodes()
 
 	Endpoint cluster_endpoint{".xapiand/nodes"};
 	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	auto mset = db_handler.get_all_mset();
+	auto mset = db_handler.get_mset();
 	const auto m_e = mset.end();
 
 	std::vector<std::pair<size_t, std::string>> db_nodes;

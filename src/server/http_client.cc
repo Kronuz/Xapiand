@@ -2517,7 +2517,7 @@ HttpClient::search_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	MSet mset;
+	Xapian::MSet mset;
 	MsgPack aggregations;
 
 	request.processing = std::chrono::steady_clock::now();
@@ -2656,7 +2656,7 @@ HttpClient::count_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	resolve_index_endpoints(request, query_field);
 
-	MSet mset{};
+	Xapian::MSet mset;
 
 	request.processing = std::chrono::steady_clock::now();
 
@@ -2847,7 +2847,7 @@ HttpClient::expand_paths(Request& request)
 
 
 #ifdef XAPIAND_CLUSTERING
-		MSet mset;
+		Xapian::MSet mset;
 		if (strings::endswith(index_path, '*')) {
 			index_path.pop_back();
 			auto stripped_index_path = index_path;
@@ -2863,7 +2863,7 @@ HttpClient::expand_paths(Request& request)
 			DatabaseHandler db_handler;
 			db_handler.reset(index_endpoints);
 			if (stripped_index_path.empty()) {
-				mset = db_handler.get_all_mset("", 0, 100);
+				mset = db_handler.get_mset(Xapian::Query(std::string()), 0, 100);
 			} else {
 				auto query = Xapian::Query(Xapian::Query::OP_AND_NOT,
 					Xapian::Query(Xapian::Query::OP_OR,

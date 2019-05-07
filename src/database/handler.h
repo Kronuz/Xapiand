@@ -64,108 +64,6 @@ struct similar_field_t;
 
 Xapian::docid to_docid(std::string_view document_id);
 
-
-// MSet is a thin wrapper, as Xapian::MSet keeps enquire->db references; this
-// only keeps a set of Xapian::docid internally (mostly) so it's thread safe
-// across database checkouts.
-class MSet {
-	struct MSetItem {
-		Xapian::docid did;
-		Xapian::doccount rank;
-		double weight;
-		int percent;
-
-		MSetItem(const Xapian::MSetIterator& it) :
-			did{*it},
-			rank{it.get_rank()},
-			weight{it.get_weight()},
-			percent{it.get_percent()} { }
-
-		MSetItem(Xapian::docid did) :
-			did{did},
-			rank{0},
-			weight{0},
-			percent{0} { }
-	};
-
-	using items_t = std::vector<MSetItem>;
-
-	class MSetIterator {
-		items_t::const_iterator it;
-
-	public:
-		MSetIterator(items_t::const_iterator&& it) : it{std::move(it)} { }
-
-		auto operator*() const {
-			return it->did;
-		}
-
-		auto operator++() {
-			return ++it;
-		}
-
-		auto operator!=(const MSetIterator& mit) {
-			return it != mit.it;
-		}
-
-		auto get_rank() const {
-			return it->rank;
-		}
-
-		auto get_weight() const {
-			return it->weight;
-		}
-
-		auto get_percent() const {
-			return it->percent;
-		}
-	};
-
-	items_t items;
-	Xapian::doccount matches_estimated;
-
-public:
-	MSet() :
-		matches_estimated{0}
-	{ }
-
-	MSet(const Xapian::MSet& mset) :
-		matches_estimated{mset.get_matches_estimated()}
-	{
-		auto it_end = mset.end();
-		for (auto it = mset.begin(); it != it_end; ++it) {
-			items.push_back(it);
-		}
-	}
-
-	MSet(Xapian::docid did) :
-		matches_estimated{1}
-	{
-		items.push_back(did);
-	}
-
-	std::size_t size() const {
-		return items.size();
-	}
-
-	Xapian::doccount get_matches_estimated() const {
-		return matches_estimated;
-	}
-
-	auto begin() const {
-		return MSetIterator(items.begin());
-	}
-
-	auto end() const {
-		return MSetIterator(items.end());
-	}
-
-	void push_back(Xapian::docid did) {
-		items.push_back(did);
-		++matches_estimated;
-	}
-};
-
 using DataType = std::pair<Xapian::docid, MsgPack>;
 
 class DatabaseHandler {
@@ -221,10 +119,9 @@ public:
 	void write_schema(const MsgPack& obj, bool replace);
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
-	MSet get_all_mset(const std::string& term = "", unsigned offset = 0, unsigned limit = 10);
-	MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
-	MSet get_mset(
-		const Xapian::Query& query,
+	Xapian::MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
+	Xapian::MSet get_mset(
+		const Xapian::Query& query = Xapian::Query(std::string()),
 		Xapian::doccount first = 0,
 		Xapian::doccount maxitems = 10,
 		Xapian::doccount check_at_least = 0,

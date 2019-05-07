@@ -997,69 +997,7 @@ DatabaseHandler::prepare_document(MsgPack& body)
 }
 
 
-MSet
-DatabaseHandler::get_all_mset(const std::string& term, unsigned /*offset*/, unsigned limit)
-{
-	L_CALL("DatabaseHandler::get_all_mset()");
-
-	MSet mset;
-
-	size_t n_shards = endpoints.size();
-
-	size_t shard_num = 0;
-	for (auto& endpoint : endpoints) {
-		lock_shard lk_shard(endpoint, flags);
-
-		Xapian::docid initial = 1;
-		for (int t = DB_RETRIES; t >= 0; --t) {
-			Xapian::docid shard_did = initial;
-			try {
-				auto db = lk_shard->db();
-				auto it = db->postlist_begin(term);
-				auto it_e = db->postlist_end(term);
-				it.skip_to(initial);
-				for (; it != it_e && limit; ++it, --limit) {
-					shard_did = *it;
-					Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-					mset.push_back(did);
-				}
-				break;
-			} catch (const Xapian::DatabaseModifiedError&) {
-				if (t == 0) { lk_shard->do_close(); throw; }
-			} catch (const Xapian::DatabaseOpeningError&) {
-				if (t == 0) { lk_shard->do_close(); throw; }
-			} catch (const Xapian::NetworkTimeoutError&) {
-				if (t == 0) { lk_shard->do_close(); throw; }
-			} catch (const Xapian::NetworkError&) {
-				if (t == 0) { lk_shard->do_close(); throw; }
-			} catch (const Xapian::DatabaseClosedError&) {
-				lk_shard->do_close();
-				if (t == 0) { throw; }
-			} catch (const Xapian::DatabaseError&) {
-				lk_shard->do_close();
-				throw;
-			} catch (const QueryParserError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const SerialisationError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const QueryDslError& exc) {
-				THROW(ClientError, exc.what());
-			} catch (const Xapian::QueryParserError& exc) {
-				THROW(ClientError, exc.get_description());
-			}
-			lk_shard->reopen();
-
-			initial = shard_did;
-		}
-
-		++shard_num;
-	}
-
-	return mset;
-}
-
-
-MSet
+Xapian::MSet
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
@@ -1375,7 +1313,7 @@ DocMatcher::operator()()
 }
 
 
-MSet
+Xapian::MSet
 DatabaseHandler::get_mset(
 	const Xapian::Query& query,
 	Xapian::doccount first,
@@ -1538,7 +1476,9 @@ DatabaseHandler::get_mset(
 		}
 	}
 
-	return merger.merge_mset(msets, doccount, first, maxitems);
+	auto merged_mset = merger.merge_mset(msets, doccount, first, maxitems);
+	merged_mset.set_database(Xapian::Database{});
+	return merged_mset;
 }
 
 
