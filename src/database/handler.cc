@@ -1332,6 +1332,10 @@ DatabaseHandler::get_mset(
 {
 	L_CALL("DatabaseHandler::get_mset({}, {}, {}, {})", query.get_description(), first, maxitems, check_at_least);
 
+	if (query.empty()) {
+		return Xapian::MSet{};
+	}
+
 	Xapian::doccount doccount = 0;
 	Xapian::Enquire merger(Xapian::Database{});
 
