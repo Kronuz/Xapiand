@@ -304,7 +304,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::atomic_size_t _total;
 	std::atomic_size_t _idx;
 	LightweightSemaphore limit;
-	LightweightSemaphore done;
+	std::condition_variable done;
 
 	std::mutex _results_mtx;
 	std::vector<MsgPack> _results;

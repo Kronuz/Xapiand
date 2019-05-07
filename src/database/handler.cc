@@ -2388,7 +2388,7 @@ DocIndexer::operator()()
 	}
 
 	running.store(false, std::memory_order_release);
-	done.signal();
+	done.notify_one();
 }
 
 
@@ -2418,15 +2418,26 @@ DocIndexer::wait(double timeout)
 		}
 	}
 
-	if (_total && timeout) {
+	std::mutex done_mtx;
+	std::unique_lock<std::mutex> done_lk(done_mtx);
+	auto wait_pred = [this]() {
+		return finished || !running.load(std::memory_order_acquire) || _processed.load(std::memory_order_acquire) >= _total.load(std::memory_order_acquire);
+	};
+	if (timeout) {
 		if (timeout > 0.0) {
-			return done.wait(timeout * 1e6);
+			auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
+			if (!done.wait_until(done_lk, timeout_tp, wait_pred)) {
+				return false;
+			}
 		} else {
-			done.wait();
+			while (!done.wait_for(done_lk, 1s, wait_pred)) {}
+		}
+	} else {
+		if (!wait_pred()) {
+			return false;
 		}
 	}
-
-	return !running.load(std::memory_order_acquire) && _processed.load(std::memory_order_acquire) >= _total.load(std::memory_order_acquire);
+	return _processed.load(std::memory_order_acquire) >= _total.load(std::memory_order_acquire);
 }
 
 
