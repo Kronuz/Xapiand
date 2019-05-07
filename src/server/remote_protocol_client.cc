@@ -807,7 +807,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	send_message(RemoteReplyType::REPLY_STATS, prepared_mset.serialise_stats());
 
 	// Clear internal database, as it's going to be checked in.
-	_msg_query_enquire->set_db(Xapian::Database{});
+	_msg_query_enquire->set_database(Xapian::Database{});
 }
 
 
@@ -828,7 +828,7 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 	}
 
 	// Set internal database from checked out database.
-	_msg_query_enquire->set_db(*db);
+	_msg_query_enquire->set_database(*db);
 
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();

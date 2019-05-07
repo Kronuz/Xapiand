@@ -197,7 +197,7 @@ Enquire::set_time_limit(double time_limit)
 }
 
 void
-Enquire::set_database(const Database& db_)
+Enquire::set_database(const Database& db_) const
 {
     internal->set_database(db_);
 }
@@ -301,7 +301,7 @@ Enquire::Internal::Internal(const Database& db_)
     : db(db_) {}
 
 void
-Enquire::Internal::set_database(const Database& db_)
+Enquire::Internal::set_database(const Database& db_) const
 {
     db = db_;
     if (match) {

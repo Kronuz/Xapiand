@@ -1255,7 +1255,7 @@ DocMatcher::prepare_mset()
 		try {
 			auto final_query = query;
 			auto db = lk_shard->db();
-			enquire.set_db(*db);
+			enquire.set_database(*db);
 			enquire.set_collapse_key(collapse_key, collapse_max);
 			enquire.set_cutoff(percent_threshold, weight_threshold);
 			enquire.set_docid_order(order);
@@ -1277,7 +1277,7 @@ DocMatcher::prepare_mset()
 			mset = enquire.prepare_mset(nullptr, nullptr);
 			revision = db->get_revision();
 			doccount += db->get_doccount();
-			enquire.set_db(Xapian::Database{});
+			enquire.set_database(Xapian::Database{});
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -1324,7 +1324,7 @@ DocMatcher::get_mset()
 			if (revision != db->get_revision()) {
 				throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
 			}
-			enquire.set_db(*db);
+			enquire.set_database(*db);
 			enquire.set_prepared_mset(merger.get_prepared_mset());
 			mset = enquire.get_mset(first, maxitems, check_at_least);
 			mset.unshard_docids(shard_num, n_shards);
