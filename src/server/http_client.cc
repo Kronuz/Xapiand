@@ -2297,8 +2297,8 @@ HttpClient::restore_database_view(Request& request)
 	}
 
 	if (request.ending) {
-		if (indexer) {
-			indexer->wait();
+		if (indexer && !indexer->wait()) {
+			indexer.reset();
 		}
 
 		request.ready = std::chrono::steady_clock::now();

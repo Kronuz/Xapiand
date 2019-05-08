@@ -2239,7 +2239,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	if (bulk_cnt == bulk.size()) {
-		if unlikely(!running.exchange(true, std::memory_order_release) && !finished.load(std::memory_order_acquire)) {
+		if unlikely(!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
 			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 		}
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
@@ -2252,7 +2252,7 @@ DocIndexer::_prepare(MsgPack&& obj)
 		// throttle the prepare
 		std::unique_lock<std::mutex> limit_lk(limit_mtx);
 		while (!limit.wait_for(limit_lk, 1s, [this]() {
-			return finished || limit_cnt > 0;
+			return finished.load(std::memory_order_acquire) || limit_cnt > 0;
 		})) {}
 		--limit_cnt;
 	}
@@ -2282,7 +2282,7 @@ DocIndexer::operator()()
 	DatabaseHandler db_handler(endpoints, flags);
 
 	bool ready_ = false;
-	while (running.load(std::memory_order_acquire)) {
+	while (!finished.load(std::memory_order_acquire)) {
 		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
 		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
@@ -2404,7 +2404,7 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
-		if unlikely(!running.exchange(true, std::memory_order_release) && !finished.load(std::memory_order_acquire)) {
+		if unlikely(!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
 			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 		}
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
@@ -2427,7 +2427,7 @@ DocIndexer::wait(double timeout)
 	std::mutex done_mtx;
 	std::unique_lock<std::mutex> done_lk(done_mtx);
 	auto wait_pred = [this]() {
-		return finished || !running.load(std::memory_order_acquire) || _processed.load(std::memory_order_acquire) >= _total.load(std::memory_order_acquire);
+		return !running.load(std::memory_order_acquire);
 	};
 	if (timeout) {
 		if (timeout > 0.0) {
@@ -2443,7 +2443,7 @@ DocIndexer::wait(double timeout)
 			return false;
 		}
 	}
-	return _processed.load(std::memory_order_acquire) >= _total.load(std::memory_order_acquire);
+	return true;
 }
 
 
@@ -2453,7 +2453,6 @@ DocIndexer::finish()
 	L_CALL("DocIndexer::finish()");
 
 	finished.store(true, std::memory_order_release);
-	running.store(false, std::memory_order_release);
 	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, 0));
 }
 
