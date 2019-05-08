@@ -830,9 +830,13 @@ RemoteServer::msg_adddocument(const string & message)
     if (!wdb)
 	throw_read_only();
 
-    Xapian::docid did = wdb->add_document(unserialise_document(message));
+    auto info = wdb->add_document(unserialise_document(message));
 
-    send_message(REPLY_ADDDOCUMENT, encode_length(did));
+    std::string reply;
+    reply += encode_length(info.did);
+    reply += encode_length(info.version);
+    reply += info.term;
+    send_message(REPLY_ADDDOCUMENT, reply);
 }
 
 void
@@ -871,7 +875,13 @@ RemoteServer::msg_replacedocument(const string & message)
     Xapian::docid did;
     decode_length(&p, p_end, did);
 
-    wdb->replace_document(did, unserialise_document(string(p, p_end)));
+    auto info = wdb->replace_document(did, unserialise_document(string(p, p_end)));
+
+    std::string reply;
+    reply += encode_length(info.did);
+    reply += encode_length(info.version);
+    reply += info.term;
+    send_message(REPLY_ADDDOCUMENT, reply);
 }
 
 void
@@ -887,9 +897,13 @@ RemoteServer::msg_replacedocumentterm(const string & message)
     string unique_term(p, len);
     p += len;
 
-    Xapian::docid did = wdb->replace_document(unique_term, unserialise_document(string(p, p_end)));
+    auto info = wdb->replace_document(unique_term, unserialise_document(string(p, p_end)));
 
-    send_message(REPLY_ADDDOCUMENT, encode_length(did));
+    std::string reply;
+    reply += encode_length(info.did);
+    reply += encode_length(info.version);
+    reply += info.term;
+    send_message(REPLY_ADDDOCUMENT, reply);
 }
 
 void

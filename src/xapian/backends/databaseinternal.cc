@@ -164,7 +164,7 @@ Database::Internal::end_transaction(bool do_commit)
     }
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 Database::Internal::add_document(const Xapian::Document &)
 {
     // Writable databases should override this method, but this can get called
@@ -213,7 +213,7 @@ Database::Internal::delete_document(const string& unique_term)
     state = old_state;
 }
 
-void
+Xapian::DocumentInfo
 Database::Internal::replace_document(Xapian::docid, const Xapian::Document &)
 {
     // Writable databases should override this method, but this can get called
@@ -222,7 +222,7 @@ Database::Internal::replace_document(Xapian::docid, const Xapian::Document &)
 		      "read-only shard");
 }
 
-Xapian::docid
+Xapian::DocumentInfo
 Database::Internal::replace_document(const string & unique_term,
 				     const Xapian::Document & document)
 {
@@ -238,9 +238,13 @@ Database::Internal::replace_document(const string & unique_term,
     unique_ptr<PostList> pl(open_post_list(unique_term));
     pl->next();
     if (pl->at_end()) {
-	return add_document(document);
+	auto info = add_document(document);
+	info.term = unique_term;
+	return info;
     }
-    Xapian::docid did = pl->get_docid();
+    Xapian::DocumentInfo info;
+    info.did = pl->get_docid();
+    info.term = unique_term;
 
     // We want this operation to be atomic if possible, so if we aren't in a
     // transaction and the backend supports transactions, temporarily enter an
@@ -249,7 +253,7 @@ Database::Internal::replace_document(const string & unique_term,
     if (state != TRANSACTION_UNIMPLEMENTED)
 	state = TRANSACTION_UNFLUSHED;
     try {
-	replace_document(did, document);
+	replace_document(info.did, document);
 	while (pl->next(), !pl->at_end()) {
 	    delete_document(pl->get_docid());
 	}
@@ -258,7 +262,7 @@ Database::Internal::replace_document(const string & unique_term,
 	throw;
     }
     state = old_state;
-    return did;
+    return info;
 }
 
 ValueList *
