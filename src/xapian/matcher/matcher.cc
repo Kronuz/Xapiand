@@ -643,6 +643,10 @@ Matcher::merge_mset(
 	}
     }
 
+    if (msets_cnt.empty()) {
+	return merged_mset;
+    }
+
     // Factor to multiply maximum weight seen by to get the minimum weight we
     // need to consider.
     double percent_threshold_factor = percent_threshold / 100.0;
