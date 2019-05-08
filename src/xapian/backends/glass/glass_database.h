@@ -384,7 +384,7 @@ class GlassWritableDatabase : public GlassDatabase {
     /** Cancel pending modifications to the database. */
     void cancel();
 
-    Xapian::docid add_document(const Xapian::Document& document);
+    Xapian::DocumentInfo add_document(const Xapian::Document& document);
     Xapian::docid add_document_(Xapian::docid did,
 				const Xapian::Document& document);
     // Stop the default implementation of delete_document(term) and
@@ -395,7 +395,7 @@ class GlassWritableDatabase : public GlassDatabase {
     using Xapian::Database::Internal::delete_document;
     using Xapian::Database::Internal::replace_document;
     void delete_document(Xapian::docid did);
-    void replace_document(Xapian::docid did, const Xapian::Document & document);
+    Xapian::DocumentInfo replace_document(Xapian::docid did, const Xapian::Document & document);
 
     Xapian::Document::Internal * open_document(Xapian::docid did,
 					       bool lazy) const;
