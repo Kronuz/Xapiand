@@ -282,7 +282,7 @@ public:
 
 	void operator()(DatabaseWALWriterThread& thread) {
 		assert(dispatcher);
-		(this->*(dispatcher))(thread);
+		(this->*dispatcher)(thread);
 	}
 
 	operator bool() const {

@@ -1298,10 +1298,9 @@ DocMatcher::get_mset()
 void
 DocMatcher::operator()()
 {
-	assert(dispatcher);
-
 	try {
-		(this->*(dispatcher))();
+		assert(dispatcher);
+		(this->*dispatcher)();
 	} catch (...) {
 		eptr = std::current_exception();
 	}
