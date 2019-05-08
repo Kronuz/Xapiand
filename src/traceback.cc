@@ -227,25 +227,45 @@ atos(const void* address)
 		write(fd, tmp, size);
 	}
 
-	const unsigned int MAXLINE = 4096;
-	char line[MAXLINE];
-	char c = '\0';
-	size_t nread = 0;
-	while (c != '\n' && nread < MAXLINE) {
-		if unlikely(read(fd, &c, 1) <= 0) {
-			std::perror("Lost `atos` connection.");
-			close(fd);
-			fd = -1;
+	for (int t = 0; t <= 10; ++t) {
+		const unsigned int MINLINE = 3;
+		const unsigned int MAXLINE = 4096;
+		char line[MAXLINE];
+		size_t nread = 0;
+		char c = '\0';
+		while (c != '\n' && nread < MAXLINE) {
+			if unlikely(read(fd, &c, 1) <= 0) {
+				std::perror("Lost `atos` connection.");
+				close(fd);
+				fd = -1;
+				return "";
+			}
+			if (c != '\n') {
+				line[nread++] = c;
+			}
+		}
+		if (nread > MAXLINE - 4) {
+			std::fprintf(stderr, "Line read from `atos` was too long.\n");
 			return "";
 		}
-		if (c != '\n') {
-			line[nread++] = c;
+		if (nread < MINLINE) {
+			std::fprintf(stderr, "Line read from `atos` was too short.\n");
+			return "";
+		}
+		if (t != 10 && line[nread - 3] == ':' && line[nread - 2] == '0' && line[nread - 1] == ')') {
+			address = static_cast<const char*>(address) - 1;
+			int size = std::snprintf(tmp, sizeof(tmp), "%p\n", address);
+			write(fd, tmp, size);
+		} else {
+			if (t != 0) {
+				line[nread++] = ' ';
+				line[nread++] = '+';
+				line[nread++] = ' ';
+				line[nread++] = t + '0';
+			}
+			return std::string(line, nread);
 		}
 	}
-	if (nread < MAXLINE) {
-		return std::string(line, nread);
-	}
-	std::fprintf(stderr, "Line read from `atos` was too long.\n");
 	return "";
 }
 #else
