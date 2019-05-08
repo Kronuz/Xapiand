@@ -2177,6 +2177,40 @@ DatabaseHandler::do_close(bool commit_)
 	}
 }
 
+MsgPack
+DatabaseHandler::unserialise_term_id(std::string_view term_id)
+{
+	L_CALL("DatabaseHandler::unserialise_term_id({})", repr(term_id));
+
+	if (term_id.size() < 3 || term_id[0] != 'Q') {
+		THROW(SerialisationError, "Term cannot be unserialised");
+	}
+	auto type = term_id[1];
+	term_id.remove_prefix(2);
+	switch (type) {
+		case 'U':
+			return Unserialise::MsgPack(FieldType::uuid, term_id);
+		case 'K':
+			return Unserialise::MsgPack(FieldType::keyword, term_id);
+		case 'S':
+			return Unserialise::MsgPack(FieldType::text, term_id);
+		case 'B':
+			return Unserialise::MsgPack(FieldType::boolean, term_id);
+		case 'G':
+			return Unserialise::MsgPack(FieldType::geo, term_id);
+		case 'N':
+		case 'D':
+		case 'T': {
+			// These three types need further information, get such from the schema.
+			auto field_type = get_schema()->get_slot_field(ID_FIELD_NAME).get_type();
+			return Unserialise::MsgPack(field_type, term_id);
+		}
+		default:
+			THROW(SerialisationError, "Term type: {} is an unknown type", type);
+	}
+}
+
+
 /*
  *  ____             ___           _
  * |  _ \  ___   ___|_ _|_ __   __| | _____  _____ _ __
@@ -2307,41 +2341,20 @@ DocIndexer::operator()()
 
 					Document document(info.did, &db_handler);
 
-					auto it_id = data_obj.find(ID_FIELD_NAME);
-					if (it_id == data_obj.end()) {
-						// TODO: This may be somewhat expensive, but replace_document()
-						//       doesn't currently return the "document_id" (not the docid).
-						obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
-					} else if (term_id == "QN\x80") {
-						// Set id inside serialized object:
-						auto& value = it_id.value();
-						switch (value.get_type()) {
-							case MsgPack::Type::POSITIVE_INTEGER:
-								value = static_cast<uint64_t>(info.did);
-								break;
-							case MsgPack::Type::NEGATIVE_INTEGER:
-								value = static_cast<int64_t>(info.did);
-								break;
-							case MsgPack::Type::FLOAT:
-								value = static_cast<double>(info.did);
-								break;
-							default:
-								break;
-						}
-						obj[ID_FIELD_NAME] = value;
+					if (term_id == "QN\x80") {
+						obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 					} else {
-						auto& value = it_id.value();
-						obj[ID_FIELD_NAME] = value;
+						auto it_id = data_obj.find(ID_FIELD_NAME);
+						if (it_id == data_obj.end()) {
+							obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+						} else {
+							obj[ID_FIELD_NAME] = it_id.value();
+						}
 					}
 
 					if (echo) {
 						try {
-							// TODO: This may be somewhat expensive, but replace_document()
-							//       doesn't currently return the "version".
-							auto version = document.get_value(DB_SLOT_VERSION);
-							if (!version.empty()) {
-								obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-							}
+							obj[RESERVED_VERSION] = info.version;
 						} catch(...) {
 							L_EXC("Cannot retrieve document version for docid {}!", info.did);
 						}

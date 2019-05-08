@@ -1536,7 +1536,7 @@ HttpClient::write_document_view(Request& request)
 		auto it = response_obj.find(ID_FIELD_NAME);
 		if (document_id.empty()) {
 			if (it == response_obj.end()) {
-				auto document_id_obj = document.get_value(ID_FIELD_NAME);
+				auto document_id_obj = db_handler.unserialise_term_id(info.term);
 				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
 				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
 			} else {
@@ -1544,14 +1544,11 @@ HttpClient::write_document_view(Request& request)
 			}
 		} else {
 			if (it == response_obj.end()) {
-				response_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+				response_obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 			}
 		}
 
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			response_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-		}
+		response_obj[RESERVED_VERSION] = info.version;
 
 		if (request.comments) {
 			response_obj[RESPONSE_xDOCID] = info.did;
@@ -1571,7 +1568,7 @@ HttpClient::write_document_view(Request& request)
 		if (document_id.empty()) {
 			auto it = response_obj.find(ID_FIELD_NAME);
 			if (it == response_obj.end()) {
-				auto document_id_obj = document.get_value(ID_FIELD_NAME);
+				auto document_id_obj = db_handler.unserialise_term_id(info.term);
 				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
 			} else {
 				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
@@ -1643,13 +1640,10 @@ HttpClient::update_document_view(Request& request)
 		Document document(info.did, &db_handler);
 
 		if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
-			response_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
+			response_obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 		}
 
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			response_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
-		}
+		response_obj[RESERVED_VERSION] = info.version;
 
 		if (request.comments) {
 			response_obj[RESPONSE_xDOCID] = info.did;

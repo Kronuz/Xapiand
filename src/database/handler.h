@@ -176,6 +176,8 @@ public:
 	void reopen();
 
 	void do_close(bool commit_ = true);
+
+	MsgPack unserialise_term_id(std::string_view term_id);
 };
 
 
