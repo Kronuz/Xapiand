@@ -873,10 +873,12 @@ RemoteServer::msg_adddocument(const string & message)
     if (!wdb)
 	throw_read_only();
 
-    Xapian::docid did = wdb->add_document(unserialise_document(message));
+    auto info = wdb->add_document(unserialise_document(message));
 
     string reply;
-    pack_uint_last(reply, did);
+    pack_uint(reply, info.did);
+    pack_uint(reply, info.version);
+    reply += info.term;
     send_message(REPLY_ADDDOCUMENT, reply);
 }
 
@@ -922,9 +924,13 @@ RemoteServer::msg_replacedocument(const string & message)
 	throw Xapian::NetworkError("Bad MSG_REPLACEDOCUMENT");
     }
 
-    wdb->replace_document(did, unserialise_document(string(p, p_end)));
+    auto info = wdb->replace_document(did, unserialise_document(string(p, p_end)));
 
-    send_message(REPLY_DONE, string());
+    string reply;
+    pack_uint(reply, info.did);
+    pack_uint(reply, info.version);
+    reply += info.term;
+    send_message(REPLY_ADDDOCUMENT, reply);
 }
 
 void
@@ -939,10 +945,12 @@ RemoteServer::msg_replacedocumentterm(const string & message)
     if (!unpack_string(&p, p_end, unique_term)) {
 	throw Xapian::NetworkError("Bad MSG_REPLACEDOCUMENTTERM");
     }
-    Xapian::docid did = wdb->replace_document(unique_term, unserialise_document(string(p, p_end)));
+    auto info = wdb->replace_document(unique_term, unserialise_document(string(p, p_end)));
 
     string reply;
-    pack_uint_last(reply, did);
+    pack_uint(reply, info.did);
+    pack_uint(reply, info.version);
+    reply += info.term;
     send_message(REPLY_ADDDOCUMENT, reply);
 }
 
