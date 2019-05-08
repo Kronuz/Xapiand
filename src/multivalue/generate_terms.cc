@@ -93,16 +93,12 @@ struct Tree {
 	bool leaf;
 	size_t pos;
 
-#ifdef HAVE_LIBCPP
 	// [https://stackoverflow.com/a/27564183/167522]
-	// In libstdc++, std::unordered_map doesn't take
-	// uncomplete types but std::map does.
-	std::unordered_map<T, Tree<T>> terms;
-#else
-	std::map<T, Tree<T>> terms;
-#endif
+	// In libstdc++, std::unordered_map doesn't take uncomplete
+	// types (i.e. Tree<T>), so we use a std::unique_ptr here.
+	const std::unique_ptr<std::unordered_map<T, Tree<T>>> terms;
 
-	Tree() : leaf{false}, pos{0} {}
+	Tree() : leaf{false}, pos{0}, terms{std::make_unique<std::unordered_map<T, Tree<T>>>()} {}
 };
 
 
@@ -111,11 +107,11 @@ static inline void
 get_trixels(std::vector<std::string>& trixels, Tree* tree, const std::vector<uint64_t>& accuracy, size_t& max_terms)
 {
 	const auto accuracy_size = accuracy.size();
-	const auto terms_size = tree->terms.size();
+	const auto terms_size = tree->terms->size();
 	size_t max_terms_level = tree->pos >= accuracy_size ? mode : tree->pos > 0 ? mode == 2 ? accuracy[tree->pos] / accuracy[tree->pos - 1] : 1 << (accuracy[tree->pos] - accuracy[tree->pos - 1]) : 0;
 
-	for (const auto& t : tree->terms) {
-		const auto size = t.second.terms.size();
+	for (const auto& t : *tree->terms) {
+		const auto size = t.second.terms->size();
 		if ((!t.second.leaf && terms_size == 1 && size <= max_terms_level * 0.1) || tree->pos >= accuracy_size) {
 			// Skip level if:
 			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
@@ -147,12 +143,12 @@ print(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& a
 	}
 
 	const auto accuracy_size = accuracy.size();
-	const auto terms_size = tree->terms.size();
+	const auto terms_size = tree->terms->size();
 	size_t max_terms_level = tree->pos >= accuracy_size ? mode : tree->pos > 0 ? mode == 2 ? accuracy[tree->pos] / accuracy[tree->pos - 1] : 1 << (accuracy[tree->pos] - accuracy[tree->pos - 1]) : 0;
 	const auto& prefix = tree->pos >= accuracy_size ? "" : acc_prefix[tree->pos];
 
-	for (const auto& t : tree->terms) {
-		const auto size = t.second.terms.size();
+	for (const auto& t : *tree->terms) {
+		const auto size = t.second.terms->size();
 		if ((!t.second.leaf && terms_size == 1 && size <= max_terms_level * 0.1) || tree->pos >= accuracy_size) {
 			// Skip level if:
 			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
@@ -182,14 +178,14 @@ static inline Xapian::Query
 get_query(Tree* tree, const std::vector<uint64_t>& accuracy, const std::vector<S>& acc_prefix, Xapian::termcount wqf, char field_type, size_t& max_terms)
 {
 	const auto accuracy_size = accuracy.size();
-	const auto terms_size = tree->terms.size();
+	const auto terms_size = tree->terms->size();
 	size_t max_terms_level = tree->pos >= accuracy_size ? mode : tree->pos > 0 ? mode == 2 ? accuracy[tree->pos] / accuracy[tree->pos - 1] : 1 << (accuracy[tree->pos] - accuracy[tree->pos - 1]) : 0;
 	const auto& prefix = tree->pos >= accuracy_size ? "" : acc_prefix[tree->pos];
 
 	std::vector<Xapian::Query> queries;
 	queries.reserve(terms_size);
-	for (const auto& t : tree->terms) {
-		const auto size = t.second.terms.size();
+	for (const auto& t : *tree->terms) {
+		const auto size = t.second.terms->size();
 		if ((!t.second.leaf && terms_size == 1 && size <= max_terms_level * 0.1) || tree->pos >= accuracy_size) {
 			// Skip level if:
 			//   It's a lonely (single node) non-leaf level with less than 10% of its children terms set
@@ -850,10 +846,10 @@ GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_
 			for (size_t current_pos = level_terms_size; current_pos > pos; --current_pos) {
 				current->pos = current_pos;
 				auto current_term = current_pos <= last_acc_pos ? term >> (inv_acc_bits[current_pos] - acc) : 0;
-				current = &current->terms[current_term];
+				current = &(*current->terms)[current_term];
 			}
 			current->pos = pos;
-			current = &current->terms[term];
+			current = &(*current->terms)[term];
 			current->leaf = true;
 		}
 	}
@@ -1011,10 +1007,10 @@ _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vecto
 			for (size_t current_pos = level_terms_size; current_pos > pos; --current_pos) {
 				current->pos = current_pos;
 				auto current_term = current_pos <= last_pos ? term - modulus(term, accuracy[current_pos]) : 0;
-				current = &current->terms[current_term];
+				current = &(*current->terms)[current_term];
 			}
 			current->pos = pos;
-			current = &current->terms[term];
+			current = &(*current->terms)[term];
 			current->leaf = true;
 		}
 	}
