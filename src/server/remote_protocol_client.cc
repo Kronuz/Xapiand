@@ -1076,11 +1076,15 @@ RemoteProtocolClient::msg_adddocument(const std::string & message)
 
 	lock_shard lk_shard(endpoint, flags);
 
-	auto did = lk_shard->add_document(std::move(document));
+	auto info = lk_shard->add_document(std::move(document));
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
+	std::string reply;
+	reply += serialise_length(info.did);
+	reply += serialise_length(info.version);
+	reply += info.term;
+	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, reply);
 }
 
 
@@ -1127,9 +1131,13 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
 	lock_shard lk_shard(endpoint, flags);
-	lk_shard->replace_document(did, std::move(document));
+	auto info = lk_shard->replace_document(did, std::move(document));
 
-	send_message(RemoteReplyType::REPLY_DONE, std::string());
+	std::string reply;
+	reply += serialise_length(info.did);
+	reply += serialise_length(info.version);
+	reply += info.term;
+	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, reply);
 }
 
 
@@ -1148,11 +1156,15 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 
 	lock_shard lk_shard(endpoint, flags);
 
-	auto did = lk_shard->replace_document_term(unique_term, std::move(document));
+	auto info = lk_shard->replace_document_term(unique_term, std::move(document));
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, serialise_length(did));
+	std::string reply;
+	reply += serialise_length(info.did);
+	reply += serialise_length(info.version);
+	reply += info.term;
+	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, reply);
 }
 
 

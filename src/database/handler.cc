@@ -423,7 +423,8 @@ DatabaseHandler::index(Xapian::docid did, const MsgPack& document_id, Xapian::re
 		assert(term_id != "QN\x80");
 		replace_document(did, std::move(doc), commit);
 	} else {
-		did = replace_document_term(term_id, std::move(doc), commit);
+		auto info = replace_document_term(term_id, std::move(doc), commit);
+		did = info.did;
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
@@ -1821,7 +1822,7 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 }
 
 
-Xapian::docid
+Xapian::DocumentInfo
 DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::add_document(<doc>, {}, {})", commit, wal);
@@ -1853,13 +1854,13 @@ DatabaseHandler::add_document(Xapian::Document&& doc, bool commit, bool wal, boo
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto shard_did = lk_shard->add_document(std::move(doc), commit, wal, version);
-	Xapian::docid did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-	return did;
+	auto info = lk_shard->add_document(std::move(doc), commit, wal, version);
+	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+	return info;
 }
 
 
-Xapian::docid
+Xapian::DocumentInfo
 DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>, {}, {})", did, commit, wal);
@@ -1870,12 +1871,13 @@ DatabaseHandler::replace_document(Xapian::docid did, Xapian::Document&& doc, boo
 	Xapian::docid shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
-	return did;
+	auto info = lk_shard->replace_document(shard_did, std::move(doc), commit, wal, version);
+	info.did = did;
+	return info;
 }
 
 
-Xapian::docid
+Xapian::DocumentInfo
 DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document_term({}, <doc>, {}, {})", repr(term), commit, wal);
@@ -1929,13 +1931,13 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
-	auto shard_did = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
-	did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-	return did;
+	auto info = lk_shard->replace_document_term(term, std::move(doc), commit, wal, version);
+	info.did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+	return info;
 }
 
 
-Xapian::docid
+Xapian::DocumentInfo
 DatabaseHandler::replace_document(std::string_view document_id, Xapian::Document&& doc, bool commit, bool wal, bool version)
 {
 	L_CALL("DatabaseHandler::replace_document({}, <doc>)", repr(document_id));
@@ -2301,7 +2303,9 @@ DocIndexer::operator()()
 			MsgPack obj;
 			if (!term_id.empty()) {
 				auto http_errors = catch_http_errors([&]{
-					auto did = db_handler.replace_document_term(term_id, std::move(doc), false);
+					auto info = db_handler.replace_document_term(term_id, std::move(doc), false);
+
+					auto did = info.did;
 
 					Document document(did, &db_handler);
 

@@ -1050,7 +1050,7 @@ Shard::storage_commit()
 #endif  // XAPIAND_DATA_STORAGE
 
 
-Xapian::docid
+Xapian::DocumentInfo
 Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 {
 	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
@@ -1071,28 +1071,27 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	Xapian::rev version = 0;
-	Xapian::docid shard_did = 0;
+	Xapian::DocumentInfo info;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Adding new document.  t: {}", t);
-		version = 0;
-		shard_did = 0;
+		info.version = 0;
+		info.did = 0;
 
 		try {
 			auto local = is_local();
 			if (local) {
-				shard_did = wdb->get_lastdocid() + 1;
-				auto ver_prefix = "V" + serialise_length(shard_did);
-				ver = sortable_serialise(++version);
+				info.did = wdb->get_lastdocid() + 1;
+				auto ver_prefix = "V" + serialise_length(info.did);
+				ver = sortable_serialise(++info.version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
-			}
-			if (shard_did) {
-				wdb->replace_document(shard_did, doc);
+
+				assert(info.did);
+				wdb->replace_document(info.did, doc);
 			} else {
-				shard_did = wdb->add_document(doc);
+				info = wdb->add_document(doc);
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
@@ -1121,7 +1120,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document(*this, shard_did, std::move(doc));
+		XapiandManager::wal_writer()->write_replace_document(*this, info.did, std::move(doc));
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
@@ -1129,11 +1128,11 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 		commit(wal_);
 	}
 
-	return shard_did;
+	return info;
 }
 
 
-Xapian::docid
+Xapian::DocumentInfo
 Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
@@ -1154,17 +1153,18 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
-	Xapian::rev version = 0;
+	Xapian::DocumentInfo info;
+	info.did = shard_did;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Replacing: {}  t: {}", shard_did, t);
-		version = 0;
+		// L_DATABASE("Replacing: {}  t: {}", info.did, t);
+		info.version = 0;
 
 		try {
 			auto local = is_local();
 			if (local) {
-				auto ver_prefix = "V" + serialise_length(shard_did);
+				auto ver_prefix = "V" + serialise_length(info.did);
 				auto ver_prefix_size = ver_prefix.size();
 				auto t_end = wdb->allterms_end(ver_prefix);
 				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1176,15 +1176,15 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 							// Throw error about wrong version!
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
-						version = sortable_unserialise(current_ver);
+						info.version = sortable_unserialise(current_ver);
 						break;
 					}
 				}
-				ver = sortable_serialise(++version);
+				ver = sortable_serialise(++info.version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 			}
-			wdb->replace_document(shard_did, doc);
+			wdb->replace_document(info.did, doc);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1212,7 +1212,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document(*this, shard_did, std::move(doc));
+		XapiandManager::wal_writer()->write_replace_document(*this, info.did, std::move(doc));
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
@@ -1220,11 +1220,11 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 		commit(wal_);
 	}
 
-	return shard_did;
+	return info;
 }
 
 
-Xapian::docid
+Xapian::DocumentInfo
 Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
@@ -1245,16 +1245,16 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 	}
 #endif  // XAPIAND_DATA_STORAGE
 
+	Xapian::DocumentInfo info;
 	std::string new_term;
-	Xapian::rev version = 0;
-	Xapian::docid shard_did = 0;
 	auto ver = doc.get_value(DB_SLOT_VERSION);
 	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Replacing: '{}'  t: {}", term, t);
-		version = 0;
-		shard_did = 0;
+		info.version = 0;
+		info.did = 0;
+		info.term = term;
 
 		try {
 			auto local = is_local();
@@ -1269,12 +1269,13 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					auto did_serialised = term.substr(2);
 					auto did = sortable_unserialise(did_serialised);
 					if (did == 0u) {
-						shard_did = wdb->get_lastdocid() + 1;
-						did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
-						ver_prefix = "V" + serialise_length(shard_did);
+						info.did = wdb->get_lastdocid() + 1;
+						did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
+						ver_prefix = "V" + serialise_length(info.did);
 						did_serialised = sortable_serialise(did);
 						new_term = "QN" + did_serialised;
 						doc.add_boolean_term(new_term);
+						info.term = did_serialised;
 						doc.add_value(DB_SLOT_ID, did_serialised);
 						// Set id inside serialized object:
 						Data data(doc.get_data());
@@ -1300,8 +1301,8 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 							doc.set_data(data.serialise());
 						}
 					} else {
-						shard_did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
-						ver_prefix = "V" + serialise_length(shard_did);
+						info.did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
+						ver_prefix = "V" + serialise_length(info.did);
 						auto ver_prefix_size = ver_prefix.size();
 						auto t_end = wdb->allterms_end(ver_prefix);
 						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1313,7 +1314,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 									// Throw error about wrong version!
 									throw Xapian::DocVersionConflictError("Version mismatch!");
 								}
-								version = sortable_unserialise(current_ver);
+								info.version = sortable_unserialise(current_ver);
 								break;
 							}
 						}
@@ -1321,11 +1322,11 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 				} else {
 					auto it = wdb->postlist_begin(term);
 					if (it == wdb->postlist_end(term)) {
-						shard_did = wdb->get_lastdocid() + 1;
-						ver_prefix = "V" + serialise_length(shard_did);
+						info.did = wdb->get_lastdocid() + 1;
+						ver_prefix = "V" + serialise_length(info.did);
 					} else {
-						shard_did = *it;
-						ver_prefix = "V" + serialise_length(shard_did);
+						info.did = *it;
+						ver_prefix = "V" + serialise_length(info.did);
 						auto ver_prefix_size = ver_prefix.size();
 						auto t_end = wdb->allterms_end(ver_prefix);
 						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
@@ -1337,21 +1338,21 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 									// Throw error about wrong version!
 									throw Xapian::DocVersionConflictError("Version mismatch!");
 								}
-								version = sortable_unserialise(current_ver);
+								info.version = sortable_unserialise(current_ver);
 								break;
 							}
 						}
 					}
 				}
-				ver = sortable_serialise(++version);
+				ver = sortable_serialise(++info.version);
 				doc.add_term(ver_prefix + ver);
 				doc.add_value(DB_SLOT_VERSION, ver);  // Update version
 				doc.add_value(DB_SLOT_SHARDS, "");  // remove shards slot
-			}
-			if (shard_did) {
-				wdb->replace_document(shard_did, doc);
+
+				assert(info.did);
+				wdb->replace_document(info.did, doc);
 			} else {
-				shard_did = wdb->replace_document(term, doc);
+				info = wdb->replace_document(term, doc);
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
@@ -1380,7 +1381,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document(*this, shard_did, std::move(doc));
+		XapiandManager::wal_writer()->write_replace_document(*this, info.did, std::move(doc));
 	}
 #endif
 
@@ -1388,7 +1389,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 		commit(wal_);
 	}
 
-	return shard_did;
+	return info;
 }
 
 
