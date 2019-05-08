@@ -409,7 +409,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 }
 
 
-DataType
+DocumentInfo
 DatabaseHandler::index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, <data>, {})", repr(document_id.to_string()), document_ver, repr(obj.to_string()), commit);
@@ -419,12 +419,12 @@ DatabaseHandler::index(Xapian::docid did, const MsgPack& document_id, Xapian::re
 	auto& doc = std::get<1>(prepared);
 	auto& data_obj = std::get<2>(prepared);
 
+	Xapian::DocumentInfo info;
 	if (did) {
 		assert(term_id != "QN\x80");
-		replace_document(did, std::move(doc), commit);
+		info = replace_document(did, std::move(doc), commit);
 	} else {
-		auto info = replace_document_term(term_id, std::move(doc), commit);
-		did = info.did;
+		info = replace_document_term(term_id, std::move(doc), commit);
 	}
 
 	auto it = data_obj.find(ID_FIELD_NAME);
@@ -432,11 +432,11 @@ DatabaseHandler::index(Xapian::docid did, const MsgPack& document_id, Xapian::re
 		data_obj.erase(it);
 	}
 
-	return std::make_pair(std::move(did), std::move(data_obj));
+	return std::make_pair(std::move(info), std::move(data_obj));
 }
 
 
-DataType
+DocumentInfo
 DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
@@ -486,7 +486,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 }
 
 
-DataType
+DocumentInfo
 DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit)
 {
 	L_CALL("DatabaseHandler::patch({}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit);
@@ -534,7 +534,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 }
 
 
-DataType
+DocumentInfo
 DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, enum_name(body.get_type()), commit, ct_type.first, ct_type.second);
@@ -2305,9 +2305,7 @@ DocIndexer::operator()()
 				auto http_errors = catch_http_errors([&]{
 					auto info = db_handler.replace_document_term(term_id, std::move(doc), false);
 
-					auto did = info.did;
-
-					Document document(did, &db_handler);
+					Document document(info.did, &db_handler);
 
 					auto it_id = data_obj.find(ID_FIELD_NAME);
 					if (it_id == data_obj.end()) {
@@ -2319,13 +2317,13 @@ DocIndexer::operator()()
 						auto& value = it_id.value();
 						switch (value.get_type()) {
 							case MsgPack::Type::POSITIVE_INTEGER:
-								value = static_cast<uint64_t>(did);
+								value = static_cast<uint64_t>(info.did);
 								break;
 							case MsgPack::Type::NEGATIVE_INTEGER:
-								value = static_cast<int64_t>(did);
+								value = static_cast<int64_t>(info.did);
 								break;
 							case MsgPack::Type::FLOAT:
-								value = static_cast<double>(did);
+								value = static_cast<double>(info.did);
 								break;
 							default:
 								break;
@@ -2345,14 +2343,14 @@ DocIndexer::operator()()
 								obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
 							}
 						} catch(...) {
-							L_EXC("Cannot retrieve document version for docid {}!", did);
+							L_EXC("Cannot retrieve document version for docid {}!", info.did);
 						}
 
 						if (comments) {
-							obj[RESPONSE_xDOCID] = did;
+							obj[RESPONSE_xDOCID] = info.did;
 
 							size_t n_shards = endpoints.size();
-							size_t shard_num = (did - 1) % n_shards;
+							size_t shard_num = (info.did - 1) % n_shards;
 							obj[RESPONSE_xSHARD] = shard_num + 1;
 							// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 						}

@@ -163,10 +163,10 @@ save_shared(std::string_view id, MsgPack schema, const Endpoint& endpoint, std::
 		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		auto did = _db_handler.update(id.substr(0, needle), 0, false, schema, false, msgpack_type).first;
+		auto info = _db_handler.update(id.substr(0, needle), 0, false, schema, false, msgpack_type).first;
 		context->erase(path);
 
-		Document document(did, &_db_handler);
+		Document document(info.did, &_db_handler);
 		auto version_ser = document.get_value(DB_SLOT_VERSION);
 		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
 		return version;

@@ -1527,10 +1527,10 @@ HttpClient::write_document_view(Request& request)
 
 	std::string location;
 
-	auto did = indexed.first;
+	auto info = indexed.first;
 	auto& response_obj = indexed.second;
 
-	Document document(did, &db_handler);
+	Document document(info.did, &db_handler);
 
 	if (request.echo) {
 		auto it = response_obj.find(ID_FIELD_NAME);
@@ -1554,10 +1554,10 @@ HttpClient::write_document_view(Request& request)
 		}
 
 		if (request.comments) {
-			response_obj[RESPONSE_xDOCID] = did;
+			response_obj[RESPONSE_xDOCID] = info.did;
 
 			size_t n_shards = endpoints.size();
-			size_t shard_num = (did - 1) % n_shards;
+			size_t shard_num = (info.did - 1) % n_shards;
 			response_obj[RESPONSE_xSHARD] = shard_num + 1;
 			// response_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 		}
@@ -1621,7 +1621,7 @@ HttpClient::update_document_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	std::string operation;
-	DataType indexed;
+	DocumentInfo indexed;
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
@@ -1637,10 +1637,10 @@ HttpClient::update_document_view(Request& request)
 	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
-		auto did = indexed.first;
+		auto info = indexed.first;
 		auto& response_obj = indexed.second;
 
-		Document document(did, &db_handler);
+		Document document(info.did, &db_handler);
 
 		if (response_obj.find(ID_FIELD_NAME) == response_obj.end()) {
 			response_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
@@ -1652,10 +1652,10 @@ HttpClient::update_document_view(Request& request)
 		}
 
 		if (request.comments) {
-			response_obj[RESPONSE_xDOCID] = did;
+			response_obj[RESPONSE_xDOCID] = info.did;
 
 			size_t n_shards = endpoints.size();
-			size_t shard_num = (did - 1) % n_shards;
+			size_t shard_num = (info.did - 1) % n_shards;
 			response_obj[RESPONSE_xSHARD] = shard_num + 1;
 			// response_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
 		}

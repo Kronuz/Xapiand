@@ -63,7 +63,7 @@ struct similar_field_t;
 
 Xapian::docid to_docid(std::string_view document_id);
 
-using DataType = std::pair<Xapian::docid, MsgPack>;
+using DocumentInfo = std::pair<Xapian::DocumentInfo, MsgPack>;
 
 class DatabaseHandler {
 	friend class Document;
@@ -86,7 +86,7 @@ class DatabaseHandler {
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);
 
-	DataType index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
+	DocumentInfo index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
 	std::unique_ptr<Xapian::ExpandDecider> get_edecider(const similar_field_t& similar);
 
@@ -111,9 +111,9 @@ public:
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
-	DataType index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
-	DataType patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit);
-	DataType update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DocumentInfo index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DocumentInfo patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit);
+	DocumentInfo update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void write_schema(const MsgPack& obj, bool replace);
 

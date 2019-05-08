@@ -695,7 +695,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 #endif
 				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				[[maybe_unused]] auto did = db_handler.update(local_node->lower_name(), 0, false, {
+				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), 0, false, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -709,7 +709,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					_discovery->raft_add_command(serialise_length(did) + serialise_string(local_node->name()));
+					_discovery->raft_add_command(serialise_length(info.did) + serialise_string(local_node->name()));
 				}
 #endif
 				break;
