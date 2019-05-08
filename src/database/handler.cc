@@ -1192,31 +1192,36 @@ DocMatcher::prepare_mset()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto final_query = query;
-			auto db = lk_shard->db();
-			enquire.set_database(*db);
-			enquire.set_collapse_key(collapse_key, collapse_max);
-			enquire.set_cutoff(percent_threshold, weight_threshold);
-			enquire.set_docid_order(order);
-			if (aggs) {
-				enquire.add_matchspy(aggs);
+			try {
+				auto final_query = query;
+				auto db = lk_shard->db();
+				enquire.set_database(*db);  // Set the database for Enquire
+				enquire.set_collapse_key(collapse_key, collapse_max);
+				enquire.set_cutoff(percent_threshold, weight_threshold);
+				enquire.set_docid_order(order);
+				if (aggs) {
+					enquire.add_matchspy(aggs);
+				}
+				if (sorter) {
+					enquire.set_sort_by_key_then_relevance(sorter.get(), false);
+				}
+				if (nearest) {
+					auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
+					final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
+				}
+				if (fuzzy) {
+					auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
+					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
+				}
+				enquire.set_query(final_query);
+				mset = enquire.prepare_mset(nullptr, nullptr);
+				revision = db->get_revision();
+				doccount += db->get_doccount();
+				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+			} catch (...) {
+				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+				throw;
 			}
-			if (sorter) {
-				enquire.set_sort_by_key_then_relevance(sorter.get(), false);
-			}
-			if (nearest) {
-				auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
-			}
-			if (fuzzy) {
-				auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
-				final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
-			}
-			enquire.set_query(final_query);
-			mset = enquire.prepare_mset(nullptr, nullptr);
-			revision = db->get_revision();
-			doccount += db->get_doccount();
-			enquire.set_database(Xapian::Database{});
 			break;
 		} catch (const Xapian::DatabaseModifiedError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
@@ -1259,14 +1264,20 @@ DocMatcher::get_mset()
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			auto db = lk_shard->db();
-			if (revision != db->get_revision()) {
-				throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
+			try {
+				auto db = lk_shard->db();
+				if (revision != db->get_revision()) {
+					throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
+				}
+				enquire.set_database(*db);  // Set the database for Enquire
+				enquire.set_prepared_mset(merger.get_prepared_mset());
+				mset = enquire.get_mset(first, maxitems, check_at_least);
+				mset.unshard_docids(shard_num, n_shards);
+				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+			} catch (...) {
+				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+				throw;
 			}
-			enquire.set_database(*db);
-			enquire.set_prepared_mset(merger.get_prepared_mset());
-			mset = enquire.get_mset(first, maxitems, check_at_least);
-			mset.unshard_docids(shard_num, n_shards);
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
 			if (t == 0) { lk_shard->do_close(); throw; }
