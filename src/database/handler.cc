@@ -1483,7 +1483,6 @@ DatabaseHandler::get_mset(
 		for (auto& matcher : matchers) {
 			matcher->eptr = nullptr;
 			matcher->dispatcher = &DocMatcher::prepare_mset;
-			matcher->query = Xapian::Query::unserialise(serialised_query, registry);  // FIXME: unserialise shouldn't be needed
 			if (nearest) {
 				matcher->nearest_edecider = get_edecider(*nearest);
 			}
