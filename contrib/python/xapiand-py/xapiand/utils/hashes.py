@@ -38,7 +38,7 @@ def jump_consistent_hash(key, num_buckets):
         raise ValueError("num_buckets must be a positive number")
     if not isinstance(key, integer_types):
         # calculates FNV-1a 64 bit hash (skipping slashes)
-        h = 0xcbf29ce484222325
+        h = 14695981039346656037
         for c in key:
             if c != '/':
                 h = ((h ^ ord(c)) * 0x100000001b3) & 0xffffffffffffffff
