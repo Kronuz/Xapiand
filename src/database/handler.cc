@@ -1816,17 +1816,18 @@ DatabaseHandler::delete_document_term(const std::string& term, bool commit, bool
 
 	assert(!endpoints.empty());
 
-	Xapian::docid did = 0;
-	try {
-		did = get_docid_term(term);
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
+	size_t n_shards = endpoints.size();
 
-	if (did != 0u) {
-		return delete_document(did, commit, wal, version);
+	if (n_shards > 1) {
+		try {
+			auto did = get_docid_term(term);
+			if (did != 0u) {
+				return delete_document(did, commit, wal, version);
+			}
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {}
 	}
 
-	size_t n_shards = endpoints.size();
 	size_t shard_num = fnv1ah64::hash(term) % n_shards;
 	auto& endpoint = endpoints[shard_num];
 	lock_shard lk_shard(endpoint, flags);
@@ -1929,16 +1930,15 @@ DatabaseHandler::replace_document_term(const std::string& term, Xapian::Document
 		} else {
 			shard_num = fnv1ah64::hash(term) % n_shards;
 		}
-	}
 
-	Xapian::docid did = 0;
-	try {
-		did = get_docid_term(term);
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
-
-	if (did != 0u) {
-		return replace_document(did, std::move(doc), commit, wal, version);
+		try {
+			// Figure out if the term alredy exists (across all shards)
+			auto did = get_docid_term(term);
+			if (did != 0u) {
+				return replace_document(did, std::move(doc), commit, wal, version);
+			}
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) {}
 	}
 
 	auto& endpoint = endpoints[shard_num];
