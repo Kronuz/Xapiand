@@ -1199,7 +1199,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 				auto vit = wdb->allterms_begin(ver_prefix);
 				auto vit_e = wdb->allterms_end(ver_prefix);
 				if (vit == vit_e) {
-					if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+					if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 						throw Xapian::DocVersionConflictError("Version mismatch!");
 					}
 				}
@@ -1320,7 +1320,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					auto did_serialised = term.substr(2);
 					auto did = sortable_unserialise(did_serialised);
 					if (did == 0u) {
-						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+						if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
 						info.did = wdb->get_lastdocid() + 1;
@@ -1357,7 +1357,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						auto vit = wdb->allterms_begin(ver_prefix);
 						auto vit_e = wdb->allterms_end(ver_prefix);
 						if (vit == vit_e) {
-							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 						}
@@ -1381,7 +1381,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					if (it == it_e) {
 						info.did = wdb->get_lastdocid() + 1;
 						ver_prefix = "V" + serialise_length(info.did);
-						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+						if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
 					} else {
@@ -1391,7 +1391,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						auto vit = wdb->allterms_begin(ver_prefix);
 						auto vit_e = wdb->allterms_end(ver_prefix);
 						if (vit == vit_e) {
-							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 						}
