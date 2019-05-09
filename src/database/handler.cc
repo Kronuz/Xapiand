@@ -949,7 +949,7 @@ DatabaseHandler::prepare_document(MsgPack& body)
 		Data data;
 		inject_data(data, body);
 
-		return prepare(document_id, 0, body, data);
+		return prepare(document_id, BAD_REVISION, body, data);
 	}
 
 	if (op_type == "patch") {
@@ -968,7 +968,7 @@ DatabaseHandler::prepare_document(MsgPack& body)
 		auto obj = data.get_obj();
 		apply_patch(body, obj);
 
-		return prepare(document_id, 0, body, data);
+		return prepare(document_id, BAD_REVISION, body, data);
 	}
 
 	if (op_type == "update" || op_type == "merge") {
@@ -988,11 +988,11 @@ DatabaseHandler::prepare_document(MsgPack& body)
 
 		if (obj.empty()) {
 			inject_data(data, body);
-			return prepare(document_id, 0, body, data);
+			return prepare(document_id, BAD_REVISION, body, data);
 		} else {
 			obj.update(body);
 			inject_data(data, obj);
-			return prepare(document_id, 0, obj, data);
+			return prepare(document_id, BAD_REVISION, obj, data);
 		}
 	}
 
