@@ -1,5 +1,5 @@
 
-POST /test/schemas/duplicated_uuid_field
+POST /test/schemas/duplicated_uuid_field/
 
 {
 	"_schema": {
@@ -18,11 +18,11 @@ POST /test/schemas/duplicated_uuid_field
 	"{00000000-0000-1000-8000-c97562616c75}": "D",
 }
 ###
-GET /test/duplicated_uuid_field/:schema
+GET /test/duplicated_uuid_field/._schema
 ###
 
 
-POST /test/duplicated_array_field
+POST /test/array/
 
 {
 	"_schema": {
@@ -36,16 +36,59 @@ POST /test/duplicated_array_field
 		}
 	},
 	"types": [
-		"A",
-		"B",
-		"C",
-		"D"
+		"A", "B", "C", "D",
+		"E", "F", "G", "H"
 	]
 }
 ###
-GET /test/duplicated_array_field/:schema
+GET /test/array/._schema
 ###
 
+
+POST /test/array_of_arrays/
+
+{
+	"_schema": {
+		"schema": {
+			"_id": {
+				"_type": "uuid",
+			},
+			"types": {
+				"_type": "array/keyword",
+			},
+		}
+	},
+	"types": [
+        [ "A", "B", "C", "D" ],
+        [ "E", "F", "G", "H" ]
+	]
+}
+###
+GET /test/array_of_arrays/._schema
+###
+
+
+POST /test/array_of_arrays_of_arrays/
+
+{
+	"_schema": {
+		"schema": {
+			"_id": {
+				"_type": "uuid",
+			},
+			"types": {
+				"_type": "array/keyword",
+			},
+		}
+	},
+	"types": [
+        [ [ "A", "B" ], [ "C", "D" ] ],
+        [ [ "E", "F" ], [ "G", "H" ] ]
+	]
+}
+###
+GET /test/array_of_arrays_of_arrays/._schema
+###
 
 
 PUT /test/merges/german
@@ -62,7 +105,7 @@ UPDATE /test/merges/german
 	"name": "German Mendez Bravo"
 }
 ###
-GET /test/merges/:schema
+GET /test/merges/._schema
 ###
 
 
@@ -87,7 +130,7 @@ PUT /test/accuracy/all
 	},
 }
 ###
-GET /test/accuracy/:schema
+GET /test/accuracy/._schema
 ###
 
 
@@ -95,17 +138,17 @@ GET /test/accuracy/:schema
 PUT /test/keyword_id/1
 
 {
-    "_id": {
-        "_type": "keyword"
-    },
-    "test": "Test 1"
+	"_id": {
+		"_type": "keyword"
+	},
+	"test": "Test 1"
 }
 ###
 PUT /test/keyword_id/2
 
 {
-    "test": "Test 2"
+	"test": "Test 2"
 }
 ###
-GET /test/keyword_id/:schema
+GET /test/keyword_id/._schema
 ###
