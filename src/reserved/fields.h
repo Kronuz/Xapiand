@@ -25,6 +25,7 @@
 #include "reserved/reserved.h"
 
 constexpr const char ID_FIELD_NAME[]                        = RESERVED__ "id";
+constexpr const char VERSION_FIELD_NAME[]                   = RESERVED__ "version";
 constexpr const char RESERVED_DOCID[]                       = RESERVED__ "docid";
 
 constexpr const char UUID_FIELD_NAME[]                      = "<uuid_field>";

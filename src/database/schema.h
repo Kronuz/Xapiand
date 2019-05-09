@@ -763,12 +763,12 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
-	void dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
-	void dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
-	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
-	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
-	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr);
+	void dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
 	void dispatch_set_default_spc(MsgPack& mut_properties);
 
 

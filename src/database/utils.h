@@ -58,6 +58,7 @@ constexpr Xapian::valueno DB_SLOT_TIMEDELTA       = 17; // Slot for saving globa
 
 // Default prefixes
 constexpr const char DOCUMENT_ID_TERM_PREFIX[]              = "Q";
+constexpr const char DOCUMENT_VERSION_TERM_PREFIX[]         = "V";
 constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[]    = "C";
 
 constexpr const char DOCUMENT_DB_MASTER[]         = "M";

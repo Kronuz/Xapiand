@@ -2788,6 +2788,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		FieldVector fields;
 		fields.reserve(object.size());
 		Field* id_field = nullptr;
+		Field* version_field = nullptr;
 		auto properties = &get_newest_properties();
 
 		if (object.empty()) {
@@ -2795,11 +2796,11 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		} else if (properties->empty()) {  // new schemas have empty properties
 			specification.flags.field_found = false;
 			auto mut_properties = &get_mutable_properties();
-			dispatch_write_properties(*mut_properties, object, fields, &id_field);
+			dispatch_write_properties(*mut_properties, object, fields, &id_field, &version_field);
 			properties = &*mut_properties;
 		} else {
 			dispatch_feed_properties(*properties);
-			dispatch_process_properties(object, fields, &id_field);
+			dispatch_process_properties(object, fields, &id_field, &version_field);
 		}
 
 		auto spc_id = get_data_id();
@@ -2961,6 +2962,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				fields.clear();
 				fields.reserve(mut_object->size());
 				id_field = nullptr;
+				version_field = nullptr;
 				const auto it_e = mut_object->end();
 				for (auto it = mut_object->begin(); it != it_e; ++it) {
 					auto str_key = it->str_view();
@@ -2971,6 +2973,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 								fields.emplace_back(str_key, &it.value());
 								if (key == hh(ID_FIELD_NAME)) {
 									id_field = &fields.back();
+								} else if (key == hh(VERSION_FIELD_NAME)) {
+									version_field = &fields.back();
 								}
 							}
 						}
@@ -2995,6 +2999,18 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		} else {
 			fields.emplace_back(ID_FIELD_NAME, &document_id);
 			id_field = &fields.back();
+		}
+
+		MsgPack version_field_obj = MsgPack::NIL();
+		if (version_field != nullptr && version_field->second != nullptr) {
+			if (version_field->second->is_map()) {
+				version_field_obj = *version_field->second;
+				version_field_obj[RESERVED_VALUE] = MsgPack::NIL();
+				version_field->second = &version_field_obj;
+			}
+		} else {
+			fields.emplace_back(VERSION_FIELD_NAME, &version_field_obj);
+			version_field = &fields.back();
 		}
 
 		Xapian::Document doc;
@@ -6296,7 +6312,7 @@ Schema::detect_dynamic(std::string_view field_name)
 
 
 inline void
-Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field)
+Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_process_concrete_properties({}, <fields>)", repr(object.to_string()));
 
@@ -6310,6 +6326,8 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 				fields.emplace_back(str_key, &value);
 				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 					*id_field = &fields.back();
+				} else if (version_field != nullptr && key == hh(VERSION_FIELD_NAME)) {
+					*version_field = &fields.back();
 				}
 			}
 		} else {
@@ -6324,7 +6342,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 
 
 inline void
-Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field)
+Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_process_all_properties({}, <fields>)", repr(object.to_string()));
 
@@ -6339,6 +6357,8 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 					fields.emplace_back(str_key, &value);
 					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 						*id_field = &fields.back();
+					} else if (version_field != nullptr && key == hh(VERSION_FIELD_NAME)) {
+						*version_field = &fields.back();
 					}
 				}
 			}
@@ -6354,18 +6374,18 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 
 
 inline void
-Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field)
+Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
 {
 	if (specification.flags.concrete) {
-		dispatch_process_concrete_properties(object, fields, id_field);
+		dispatch_process_concrete_properties(object, fields, id_field, version_field);
 	} else {
-		dispatch_process_all_properties(object, fields, id_field);
+		dispatch_process_all_properties(object, fields, id_field, version_field);
 	}
 }
 
 
 inline void
-Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field)
+Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_write_concrete_properties({}, {}, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
 
@@ -6380,6 +6400,8 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 					fields.emplace_back(str_key, &value);
 					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 						*id_field = &fields.back();
+					} else if (version_field != nullptr && key == hh(VERSION_FIELD_NAME)) {
+						*version_field = &fields.back();
 					}
 				}
 			}
@@ -7128,7 +7150,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 
 
 void
-Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field)
+Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_write_all_properties({}, {}, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
 
@@ -7144,6 +7166,8 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 						fields.emplace_back(str_key, &value);
 						if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 							*id_field = &fields.back();
+						} else if (version_field != nullptr && key == hh(VERSION_FIELD_NAME)) {
+							*version_field = &fields.back();
 						}
 					}
 				}
@@ -7160,14 +7184,14 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 
 
 inline void
-Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field)
+Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_write_properties({}, <object>, <fields>)", repr(mut_properties.to_string()));
 
 	if (specification.flags.concrete) {
-		dispatch_write_concrete_properties(mut_properties, object, fields, id_field);
+		dispatch_write_concrete_properties(mut_properties, object, fields, id_field, version_field);
 	} else {
-		dispatch_write_all_properties(mut_properties, object, fields, id_field);
+		dispatch_write_all_properties(mut_properties, object, fields, id_field, version_field);
 	}
 }
 
@@ -7177,7 +7201,7 @@ has_dispatch_set_default_spc(uint32_t key)
 {
 	constexpr static auto _ = phf::make_phf({
 		hh(ID_FIELD_NAME),
-		hh(RESERVED_VERSION),
+		hh(VERSION_FIELD_NAME),
 	});
 	return _.count(key) != 0u;
 }
@@ -7191,13 +7215,13 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 	auto key = hh(specification.full_meta_name);
 	constexpr static auto _ = phf::make_phf({
 		hh(ID_FIELD_NAME),
-		hh(RESERVED_VERSION),
+		hh(VERSION_FIELD_NAME),
 	});
 	switch (_.find(key)) {
 		case _.fhh(ID_FIELD_NAME):
 			set_default_spc_id(mut_properties);
 			break;
-		case _.fhh(RESERVED_VERSION):
+		case _.fhh(VERSION_FIELD_NAME):
 			set_default_spc_version(mut_properties);
 			break;
 	}
@@ -9534,9 +9558,8 @@ Schema::set_default_spc_version([[maybe_unused]] MsgPack& mut_properties)
 {
 	L_CALL("Schema::set_default_spc_version({})", repr(mut_properties.to_string()));
 
-	specification.flags.store = false;
-	specification.slot = DB_SLOT_VERSION;
 	specification.index = TypeIndex::FIELD_VALUES;
+	specification.slot = DB_SLOT_VERSION;
 	specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
 }
 
