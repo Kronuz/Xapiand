@@ -1063,7 +1063,7 @@ Shard::storage_commit()
 
 
 Xapian::DocumentInfo
-Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
+Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool version_)
 {
 	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
 
@@ -1094,6 +1094,9 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool)
 		try {
 			auto local = is_local();
 			if (local) {
+				if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+					throw Xapian::DocVersionConflictError("Version mismatch!");
+				}
 				bool data_modified = false;
 				Data data(doc.get_data());
 				auto data_obj = data.get_obj();
