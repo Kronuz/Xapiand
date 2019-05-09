@@ -525,6 +525,14 @@ Data::set_obj(const MsgPack& object)
 std::pair<const Locator*, const Accept*>
 Data::get_accepted(const accept_set_t& accept_set, const ct_type_t& mime_type) const
 {
+	L_CALL("Data::get_accepted({{{}}}, {})", [&]() {
+		std::vector<std::string> values;
+		for (auto& accept : accept_set) {
+			values.push_back(repr(accept.ct_type.to_string()));
+		}
+		return strings::join(values, ", ");
+	}, repr(mime_type.to_string()));
+
 	const Locator* accepted = nullptr;
 	const Accept* accepted_by = nullptr;
 	double accepted_priority = -1.0;
@@ -550,6 +558,7 @@ Data::get_accepted(const accept_set_t& accept_set, const ct_type_t& mime_type) c
 					) {
 						accepted = &locator;
 						accepted_by = &accept;
+						L_DEBUG("{} accepted (from mime-type)", repr(accepted_by->ct_type.to_string()));
 						return std::make_pair(accepted, accepted_by);
 					}
 					double priority = accept.priority;
@@ -562,5 +571,6 @@ Data::get_accepted(const accept_set_t& accept_set, const ct_type_t& mime_type) c
 			}
 		}
 	}
+	L_DEBUG("{} accepted", repr(accepted_by->ct_type.to_string()));
 	return std::make_pair(accepted, accepted_by);
 }
