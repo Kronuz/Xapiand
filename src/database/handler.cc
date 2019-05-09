@@ -2194,6 +2194,7 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
 {
 	L_CALL("DatabaseHandler::unserialise_term_id({})", repr(term_id));
 
+	assert(!term_id.empty());
 	if (term_id.size() < 3 || term_id[0] != 'Q') {
 		THROW(SerialisationError, "Term cannot be unserialised");
 	}
