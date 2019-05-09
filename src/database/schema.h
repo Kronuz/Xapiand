@@ -26,6 +26,7 @@
 
 #include <array>                                  // for std::array
 #include <cstdint>                                // for uint8_t
+#include <deque>                                  // for std::deque
 #include <memory>                                 // for std::shared_ptr
 #include <string>                                 // for std::string
 #include <string_view>                            // for std::string_view
@@ -560,7 +561,7 @@ class Schema {
 	using dispatcher_readable            = bool (*)(MsgPack&, MsgPack&);
 
 	using Field = std::pair<std::string, const MsgPack*>;
-	using FieldVector = std::vector<Field>;
+	using Fields = std::deque<Field>;
 
 	bool _dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value);
 	bool _dispatch_feed_properties(uint32_t key, const MsgPack& value);
@@ -645,7 +646,7 @@ class Schema {
 	 * Main functions to index objects and arrays
 	 */
 
-	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object = nullptr, FieldVector* fields = nullptr);
+	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object = nullptr, Fields* fields = nullptr);
 
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
@@ -653,33 +654,33 @@ class Schema {
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
 
-	void index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
+	void index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields);
 
 	/*
 	 * Main functions to update objects and arrays
 	 */
 
-	const MsgPack& update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, FieldVector& fields);
+	const MsgPack& update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, Fields& fields);
 	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name);
 
 	void update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
 	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
 
 	void update_item_value();
-	void update_item_value(const MsgPack*& properties, const FieldVector& fields);
+	void update_item_value(const MsgPack*& properties, const Fields& fields);
 
 	/*
 	 * Main functions to write objects and arrays
 	 */
 
-	MsgPack& write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, FieldVector& fields);
+	MsgPack& write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, Fields& fields);
 	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name);
 
 	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
 	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
 
 	void write_item_value(MsgPack*& mut_properties);
-	void write_item_value(MsgPack*& mut_properties, const FieldVector& fields);
+	void write_item_value(MsgPack*& mut_properties, const Fields& fields);
 
 
 	/*
@@ -763,12 +764,12 @@ class Schema {
 	 * Update specification using object's properties.
 	 */
 
-	void dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
-	void dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
-	void dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
-	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
-	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
-	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_process_concrete_properties(const MsgPack& object, Fields& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_process_all_properties(const MsgPack& object, Fields& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_process_properties(const MsgPack& object, Fields& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field = nullptr, Field** version_field = nullptr);
+	void dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field = nullptr, Field** version_field = nullptr);
 	void dispatch_set_default_spc(MsgPack& mut_properties);
 
 
@@ -776,7 +777,7 @@ class Schema {
 	 * Add new field to properties.
 	 */
 
-	void add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields);
+	void add_field(MsgPack*& mut_properties, const MsgPack& object, Fields& fields);
 	void add_field(MsgPack*& mut_properties);
 
 

@@ -2785,8 +2785,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		specification = default_spc;
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
-		FieldVector fields;
-		fields.reserve(object.size() + 2);  // Make sure fields vector isn't resized
+		Fields fields;
 		Field* id_field = nullptr;
 		Field* version_field = nullptr;
 		auto properties = &get_newest_properties();
@@ -2960,7 +2959,6 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				}
 				// Rebuild fields with new values.
 				fields.clear();
-				fields.reserve(mut_object->size() + 2);  // Make sure fields vector isn't resized
 				id_field = nullptr;
 				version_field = nullptr;
 				const auto it_e = mut_object->end();
@@ -2970,7 +2968,6 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto key = hh(str_key);
 						if (!has_dispatch_process_properties(key)) {
 							if (!has_dispatch_process_concrete_properties(key)) {
-								assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 								fields.emplace_back(str_key, &it.value());
 								if (key == hh(ID_FIELD_NAME)) {
 									id_field = &fields.back();
@@ -2998,7 +2995,6 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				id_field->second = &document_id;
 			}
 		} else {
-			assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 			fields.emplace_back(ID_FIELD_NAME, &document_id);
 			id_field = &fields.back();
 		}
@@ -3011,7 +3007,6 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				version_field->second = &version_field_obj;
 			}
 		} else {
-			assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 			fields.emplace_back(VERSION_FIELD_NAME, &version_field_obj);
 			version_field = &fields.back();
 		}
@@ -3042,7 +3037,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object, FieldVector* fields)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object, Fields* fields)
 {
 	L_CALL("Schema::index_subproperties({}, {}, {}, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), pos, object ? repr(object->to_string()) : "null", fields ? "<fields>" : "null");
 
@@ -3233,7 +3228,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::MAP: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			FieldVector fields;
+			Fields fields;
 			properties = &index_subproperties(properties, data, name, 0, &object, &fields);
 			index_fields(properties, doc, data, fields);
 			auto value = specification.value ? specification.value.get() : specification.value_rec.get();
@@ -3351,7 +3346,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				FieldVector fields;
+				Fields fields;
 				properties = &index_subproperties(properties, data, name, pos, &object, &fields);
 				index_fields(properties, doc, data_pos, fields);
 				auto value = specification.value ? specification.value.get() : specification.value_rec.get();
@@ -3497,9 +3492,9 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 
 
 inline void
-Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields)
+Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields)
 {
-	L_CALL("Schema::index_fields({}, <doc>, {}, <FieldVector>)", repr(properties->to_string()), repr(data->to_string()));
+	L_CALL("Schema::index_fields({}, <doc>, {}, <Fields>)", repr(properties->to_string()), repr(data->to_string()));
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -3583,7 +3578,7 @@ Schema::update(const MsgPack& object)
 
 			auto properties = &get_newest_properties();
 
-			FieldVector fields;
+			Fields fields;
 
 			if (properties->empty()) {  // new schemas have empty properties
 				specification.flags.field_found = false;
@@ -3620,7 +3615,7 @@ Schema::update(const MsgPack& object)
 
 
 const MsgPack&
-Schema::update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, FieldVector& fields)
+Schema::update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, Fields& fields)
 {
 	L_CALL("Schema::update_subproperties({}, {}, {}, <fields>)", repr(properties->to_string()), repr(name), repr(object.to_string()));
 
@@ -3816,7 +3811,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		case MsgPack::Type::MAP: {
 			auto spc_start = specification;
 			auto properties = &*parent_properties;
-			FieldVector fields;
+			Fields fields;
 			properties = &update_subproperties(properties, name, object, fields);
 			update_item_value(properties, fields);
 			specification = std::move(spc_start);
@@ -3863,7 +3858,7 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 		switch (item.get_type()) {
 			case MsgPack::Type::MAP: {
 				auto properties = &*parent_properties;
-				FieldVector fields;
+				Fields fields;
 				properties = &update_subproperties(properties, name, item, fields);
 				update_item_value(properties, fields);
 				specification = spc_start;
@@ -3936,9 +3931,9 @@ Schema::update_item_value()
 
 
 inline void
-Schema::update_item_value(const MsgPack*& properties, const FieldVector& fields)
+Schema::update_item_value(const MsgPack*& properties, const Fields& fields)
 {
-	L_CALL("Schema::update_item_value(<const MsgPack*>, <FieldVector>)");
+	L_CALL("Schema::update_item_value(<const MsgPack*>, <Fields>)");
 
 	const auto spc_start = specification;
 
@@ -4027,7 +4022,7 @@ Schema::write(const MsgPack& object, bool replace)
 				mut_properties->clear();
 			}
 
-			FieldVector fields;
+			Fields fields;
 
 			if (mut_properties->empty()) {  // new schemas have empty properties
 				specification.flags.field_found = false;
@@ -4062,7 +4057,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 
 MsgPack&
-Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, FieldVector& fields)
+Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, Fields& fields)
 {
 	L_CALL("Schema::write_subproperties({}, {}, {}, <fields>)", repr(mut_properties->to_string()), repr(name), repr(object.to_string()));
 
@@ -4254,7 +4249,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 		case MsgPack::Type::MAP: {
 			auto spc_start = specification;
 			auto properties = &*mut_parent_properties;
-			FieldVector fields;
+			Fields fields;
 			properties = &write_subproperties(properties, name, object, fields);
 			write_item_value(properties, fields);
 			specification = std::move(spc_start);
@@ -4302,7 +4297,7 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 		switch (item.get_type()) {
 			case MsgPack::Type::MAP: {
 				auto properties = &*mut_parent_properties;
-				FieldVector fields;
+				Fields fields;
 				properties = &write_subproperties(properties, name, item, fields);
 				write_item_value(properties, fields);
 				specification = spc_start;
@@ -4373,9 +4368,9 @@ Schema::write_item_value(MsgPack*& mut_properties)
 
 
 inline void
-Schema::write_item_value(MsgPack*& mut_properties, const FieldVector& fields)
+Schema::write_item_value(MsgPack*& mut_properties, const Fields& fields)
 {
-	L_CALL("Schema::write_item_value(<const MsgPack*>, <FieldVector>)");
+	L_CALL("Schema::write_item_value(<const MsgPack*>, <Fields>)");
 
 	const auto spc_start = specification;
 
@@ -6174,7 +6169,7 @@ Schema::detect_dynamic(std::string_view field_name)
 
 
 inline void
-Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
+Schema::dispatch_process_concrete_properties(const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_process_concrete_properties({}, <fields>)", repr(object.to_string()));
 
@@ -6185,7 +6180,6 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 		if (is_reserved(str_key)) {
 			auto key = hh(str_key);
 			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-				assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 				fields.emplace_back(str_key, &value);
 				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 					*id_field = &fields.back();
@@ -6205,7 +6199,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 
 
 inline void
-Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
+Schema::dispatch_process_all_properties(const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_process_all_properties({}, <fields>)", repr(object.to_string()));
 
@@ -6217,7 +6211,6 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 			auto key = hh(str_key);
 			if (!_dispatch_process_properties(key, str_key, value)) {
 				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-					assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 					fields.emplace_back(str_key, &value);
 					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 						*id_field = &fields.back();
@@ -6238,7 +6231,7 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 
 
 inline void
-Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
+Schema::dispatch_process_properties(const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
 	if (specification.flags.concrete) {
 		dispatch_process_concrete_properties(object, fields, id_field, version_field);
@@ -6249,7 +6242,7 @@ Schema::dispatch_process_properties(const MsgPack& object, FieldVector& fields, 
 
 
 inline void
-Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
+Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_write_concrete_properties({}, {}, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
 
@@ -6261,7 +6254,6 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 			auto key = hh(str_key);
 			if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-					assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 					fields.emplace_back(str_key, &value);
 					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 						*id_field = &fields.back();
@@ -7015,7 +7007,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 
 
 void
-Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
+Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_write_all_properties({}, {}, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
 
@@ -7028,7 +7020,6 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 			if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 				if (!_dispatch_process_properties(key, str_key, value)) {
 					if (!_dispatch_process_concrete_properties(key, str_key, value)) {
-						assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 						fields.emplace_back(str_key, &value);
 						if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 							*id_field = &fields.back();
@@ -7050,7 +7041,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 
 
 inline void
-Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, FieldVector& fields, Field** id_field, Field** version_field)
+Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
 	L_CALL("Schema::dispatch_write_properties({}, <object>, <fields>)", repr(mut_properties.to_string()));
 
@@ -7095,7 +7086,7 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 
 
 void
-Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, FieldVector& fields)
+Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, Fields& fields)
 {
 	L_CALL("Schema::add_field({}, {}, <fields>)", repr(mut_properties->to_string()), repr(object.to_string()));
 
