@@ -9559,8 +9559,9 @@ Schema::set_default_spc_version([[maybe_unused]] MsgPack& mut_properties)
 	L_CALL("Schema::set_default_spc_version({})", repr(mut_properties.to_string()));
 
 	specification.index = TypeIndex::FIELD_VALUES;
-	specification.slot = DB_SLOT_VERSION;
 	specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
+	specification.local_prefix.field = DOCUMENT_VERSION_TERM_PREFIX;
+	specification.slot = DB_SLOT_VERSION;
 }
 
 
