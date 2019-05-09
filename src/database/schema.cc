@@ -2786,7 +2786,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		FieldVector fields;
-		fields.reserve(object.size());
+		fields.reserve(object.size() + 2);  // Make sure fields vector isn't resized
 		Field* id_field = nullptr;
 		Field* version_field = nullptr;
 		auto properties = &get_newest_properties();
@@ -2960,7 +2960,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				}
 				// Rebuild fields with new values.
 				fields.clear();
-				fields.reserve(mut_object->size());
+				fields.reserve(mut_object->size() + 2);  // Make sure fields vector isn't resized
 				id_field = nullptr;
 				version_field = nullptr;
 				const auto it_e = mut_object->end();
@@ -2970,6 +2970,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto key = hh(str_key);
 						if (!has_dispatch_process_properties(key)) {
 							if (!has_dispatch_process_concrete_properties(key)) {
+								assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 								fields.emplace_back(str_key, &it.value());
 								if (key == hh(ID_FIELD_NAME)) {
 									id_field = &fields.back();
@@ -2997,6 +2998,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				id_field->second = &document_id;
 			}
 		} else {
+			assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 			fields.emplace_back(ID_FIELD_NAME, &document_id);
 			id_field = &fields.back();
 		}
@@ -3009,6 +3011,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				version_field->second = &version_field_obj;
 			}
 		} else {
+			assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 			fields.emplace_back(VERSION_FIELD_NAME, &version_field_obj);
 			version_field = &fields.back();
 		}
@@ -6182,6 +6185,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, FieldVector&
 		if (is_reserved(str_key)) {
 			auto key = hh(str_key);
 			if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+				assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 				fields.emplace_back(str_key, &value);
 				if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 					*id_field = &fields.back();
@@ -6213,6 +6217,7 @@ Schema::dispatch_process_all_properties(const MsgPack& object, FieldVector& fiel
 			auto key = hh(str_key);
 			if (!_dispatch_process_properties(key, str_key, value)) {
 				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+					assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 					fields.emplace_back(str_key, &value);
 					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 						*id_field = &fields.back();
@@ -6256,6 +6261,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 			auto key = hh(str_key);
 			if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 				if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+					assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 					fields.emplace_back(str_key, &value);
 					if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 						*id_field = &fields.back();
@@ -7022,6 +7028,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 			if (!_dispatch_write_properties(key, mut_properties, str_key, value)) {
 				if (!_dispatch_process_properties(key, str_key, value)) {
 					if (!_dispatch_process_concrete_properties(key, str_key, value)) {
+						assert(fields.size() < fields.capacity());  // Make sure fields vector still has room
 						fields.emplace_back(str_key, &value);
 						if (id_field != nullptr && key == hh(ID_FIELD_NAME)) {
 							*id_field = &fields.back();
