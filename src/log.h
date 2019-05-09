@@ -35,16 +35,10 @@
 #define ALERT_COL rgb(238,82,83)
 #define EMERG_COL rgb(238,82,83)
 
-#ifdef DEBUG
-#define L_OBJ_BEGIN L_DELAYED_1000
-#define L_OBJ_END L_DELAYED_N_UNLOG
-#define L_DATABASE_BEGIN L_DELAYED_600
-#define L_DATABASE_END L_DELAYED_N_UNLOG
-#define L_DATABASE_WRAP_BEGIN L_DELAYED_100
-#define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
-#define L_EV_BEGIN L_DELAYED_200
-#define L_EV_END L_DELAYED_N_UNLOG
-#else
+#define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
+
+///
+
 #define L_OBJ_BEGIN L_NOTHING
 #define L_OBJ_END L_NOTHING
 #define L_DATABASE_BEGIN L_NOTHING
@@ -53,13 +47,8 @@
 #define L_DATABASE_WRAP_END L_NOTHING
 #define L_EV_BEGIN L_NOTHING
 #define L_EV_END L_NOTHING
-#endif
 
-#define L_MARK _LOG(false, LOG_DEBUG, "🔥  " DEBUG_COL, args)
-
-////////////////////////////////////////////////////////////////////////////////
-// Enable the following when needed. Use L_* or L_STACKED_* or L_UNINDENTED_*
-// ex. L_STACKED_DIM_GREY, L_CYAN, L_STACKED_LOG or L_PURPLE
+///
 
 #define L_ERRNO L_NOTHING
 #define L_CALL L_NOTHING
@@ -90,3 +79,26 @@
 #define L_REPLICA_PROTO L_NOTHING
 #define L_INDEX L_NOTHING
 #define L_SEARCH L_NOTHING
+
+////////////////////////////////////////////////////////////////////////////////
+// Enable the following when needed.
+
+// #undef L_OBJ_BEGIN
+// #define L_OBJ_BEGIN L_DELAYED_1000
+// #undef L_OBJ_END
+// #define L_OBJ_END L_DELAYED_N_UNLOG
+// #undef L_DATABASE_BEGIN
+// #define L_DATABASE_BEGIN L_DELAYED_600
+// #undef L_DATABASE_END
+// #define L_DATABASE_END L_DELAYED_N_UNLOG
+// #undef L_DATABASE_WRAP_BEGIN
+// #define L_DATABASE_WRAP_BEGIN L_DELAYED_100
+// #undef L_DATABASE_WRAP_END
+// #define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
+// #undef L_EV_BEGIN
+// #define L_EV_BEGIN L_DELAYED_200
+// #undef L_EV_END
+// #define L_EV_END L_DELAYED_N_UNLOG
+
+// #undef L_CALL
+// #define L_CALL L_STACKED_DIM_GREY

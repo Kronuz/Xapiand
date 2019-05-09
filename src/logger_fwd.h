@@ -213,18 +213,21 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 
 #define L_PRINT(...) ::print(__VA_ARGS__)
 
-#ifdef DEBUG
-#define L_DEBUG(...) L(LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
-#define L_DEBUG_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
-#define L_DEBUG_NOW(name) auto name = std::chrono::steady_clock::now()
-#define L_TIMED _L_TIMED
-#define L_TIMED_VAR _L_TIMED_VAR
-#else
 #define L_DEBUG L_NOTHING
 #define L_DEBUG_HOOK L_NOTHING
 #define L_DEBUG_NOW(name)
 #define L_TIMED L_NOTHING
 #define L_TIMED_VAR L_NOTHING
-#endif
+
+// #undef L_DEBUG
+// #define L_DEBUG(...) L(LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
+// #undef L_DEBUG_HOOK
+// #define L_DEBUG_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_DEBUG, DEBUG_COL, __VA_ARGS__)
+// #undef L_DEBUG_NOW
+// #define L_DEBUG_NOW(name) auto name = std::chrono::steady_clock::now()
+// #undef L_TIMED
+// #define L_TIMED _L_TIMED
+// #undef L_TIMED_VAR
+// #define L_TIMED_VAR _L_TIMED_VAR
 
 #pragma clang diagnostic pop
