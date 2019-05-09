@@ -2538,7 +2538,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 	}
 
 	auto& schema = schema_it.value();
-	if (!schema.is_map()) {
+	if (!schema.is_map() && !schema.is_undefined()) {
 		THROW(ErrorType, "{}Schema field '{}' is not an object", prefix, SCHEMA_FIELD_NAME);
 	}
 	auto schema_it_end = schema.end();
