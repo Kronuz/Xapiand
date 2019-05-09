@@ -517,6 +517,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 			auto obj = data.get_obj();
+			obj.erase(VERSION_FIELD_NAME);  // discard any saved version
 
 			apply_patch(patches, obj);
 			auto it = obj.find(ID_FIELD_NAME);
@@ -561,6 +562,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 			} catch (const Xapian::DocNotFoundError&) {
 			} catch (const Xapian::DatabaseNotFoundError&) {}
 			auto obj = data.get_obj();
+			obj.erase(VERSION_FIELD_NAME);  // discard any saved version
 
 			switch (body.get_type()) {
 				case MsgPack::Type::STR:
