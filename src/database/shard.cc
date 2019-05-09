@@ -827,8 +827,12 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
-	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
-	auto ver = version ? sortable_serialise(version) : std::string();
+	Xapian::rev version = BAD_REVISION;  // TODO: Implement version check (version should have required version)
+
+	std::string ver;
+	if (version_) {
+		ver = version == BAD_REVISION ? std::string() : sortable_serialise(version);
+	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Deleting document: {}  t: {}", shard_did, t);
@@ -836,13 +840,13 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 		try {
 			auto local = is_local();
 			if (local) {
-				if (version && version_) {
+				if (!ver.empty()) {
 					auto ver_prefix = "V" + serialise_length(shard_did);
 					auto ver_prefix_size = ver_prefix.size();
 					auto vit = wdb->allterms_begin(ver_prefix);
 					auto vit_e = wdb->allterms_end(ver_prefix);
 					if (vit == vit_e) {
-						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+						if (ver != "\x80") {  // "\x80" = sortable_serialise(0)
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
 					}
@@ -851,7 +855,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
-							if (!ver.empty() && ver != current_ver) {
+							if (ver != current_ver) {
 								// Throw error about wrong version!
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
@@ -905,9 +909,13 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
-	Xapian::rev version = 0;  // TODO: Implement version check (version should have required version)
 	Xapian::docid shard_did = 0;
-	auto ver = version ? sortable_serialise(version) : std::string();
+	Xapian::rev version = BAD_REVISION;  // TODO: Implement version check (version should have required version)
+
+	std::string ver;
+	if (version_) {
+		ver = version == BAD_REVISION ? std::string() : sortable_serialise(version);
+	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Deleting document: '{}'  t: {}", term, t);
@@ -921,13 +929,13 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 					throw Xapian::DocNotFoundError("Document not found");
 				} else {
 					shard_did = *it;
-					if (version && version_) {
+					if (!ver.empty()) {
 						auto ver_prefix = "V" + serialise_length(shard_did);
 						auto ver_prefix_size = ver_prefix.size();
 						auto vit = wdb->allterms_begin(ver_prefix);
 						auto vit_e = wdb->allterms_end(ver_prefix);
 						if (vit == vit_e) {
-							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							if (ver != "\x80") {  // "\x80" = sortable_serialise(0)
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 						}
@@ -936,7 +944,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 							std::string_view current_ver(current_term);
 							current_ver.remove_prefix(ver_prefix_size);
 							if (!current_ver.empty()) {
-								if (!ver.empty() && ver != current_ver) {
+								if (ver != current_ver) {
 									// Throw error about wrong version!
 									throw Xapian::DocVersionConflictError("Version mismatch!");
 								}
@@ -1084,7 +1092,13 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 #endif  // XAPIAND_DATA_STORAGE
 
 	Xapian::DocumentInfo info;
-	auto ver = doc.get_value(DB_SLOT_VERSION);
+
+	std::string ver;
+	if (version_) {
+		ver = doc.get_value(DB_SLOT_VERSION);
+	} else {
+		doc.add_value(DB_SLOT_VERSION, "");
+	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Adding new document.  t: {}", t);
@@ -1094,7 +1108,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 		try {
 			auto local = is_local();
 			if (local) {
-				if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+				if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 					throw Xapian::DocVersionConflictError("Version mismatch!");
 				}
 				bool data_modified = false;
@@ -1185,7 +1199,13 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 
 	Xapian::DocumentInfo info;
 	info.did = shard_did;
-	auto ver = doc.get_value(DB_SLOT_VERSION);
+
+	std::string ver;
+	if (version_) {
+		ver = doc.get_value(DB_SLOT_VERSION);
+	} else {
+		doc.add_value(DB_SLOT_VERSION, "");
+	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		// L_DATABASE("Replacing: {}  t: {}", info.did, t);
@@ -1202,7 +1222,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 				auto vit = wdb->allterms_begin(ver_prefix);
 				auto vit_e = wdb->allterms_end(ver_prefix);
 				if (vit == vit_e) {
-					if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+					if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 						throw Xapian::DocVersionConflictError("Version mismatch!");
 					}
 				}
@@ -1211,7 +1231,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 					std::string_view current_ver(current_term);
 					current_ver.remove_prefix(ver_prefix_size);
 					if (!current_ver.empty()) {
-						if (version_ && !ver.empty() && ver != current_ver) {
+						if (!ver.empty() && ver != current_ver) {
 							// Throw error about wrong version!
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
@@ -1298,7 +1318,14 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 
 	Xapian::DocumentInfo info;
 	std::string new_term;
-	auto ver = doc.get_value(DB_SLOT_VERSION);
+
+	std::string ver;
+	if (version_) {
+		ver = doc.get_value(DB_SLOT_VERSION);
+	} else {
+		doc.add_value(DB_SLOT_VERSION, "");
+	}
+
 	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1323,7 +1350,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					auto did_serialised = term.substr(2);
 					auto did = sortable_unserialise(did_serialised);
 					if (did == 0u) {
-						if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
 						info.did = wdb->get_lastdocid() + 1;
@@ -1360,7 +1387,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						auto vit = wdb->allterms_begin(ver_prefix);
 						auto vit_e = wdb->allterms_end(ver_prefix);
 						if (vit == vit_e) {
-							if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 						}
@@ -1369,7 +1396,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 							std::string_view current_ver(current_term);
 							current_ver.remove_prefix(ver_prefix_size);
 							if (!current_ver.empty()) {
-								if (version_ && !ver.empty() && ver != current_ver) {
+								if (!ver.empty() && ver != current_ver) {
 									// Throw error about wrong version!
 									throw Xapian::DocVersionConflictError("Version mismatch!");
 								}
@@ -1384,7 +1411,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					if (it == it_e) {
 						info.did = wdb->get_lastdocid() + 1;
 						ver_prefix = "V" + serialise_length(info.did);
-						if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 							throw Xapian::DocVersionConflictError("Version mismatch!");
 						}
 					} else {
@@ -1394,7 +1421,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						auto vit = wdb->allterms_begin(ver_prefix);
 						auto vit_e = wdb->allterms_end(ver_prefix);
 						if (vit == vit_e) {
-							if (version_ && !ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
 								throw Xapian::DocVersionConflictError("Version mismatch!");
 							}
 						}
@@ -1403,7 +1430,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 							std::string_view current_ver(current_term);
 							current_ver.remove_prefix(ver_prefix_size);
 							if (!current_ver.empty()) {
-								if (version_ && !ver.empty() && ver != current_ver) {
+								if (!ver.empty() && ver != current_ver) {
 									// Throw error about wrong version!
 									throw Xapian::DocVersionConflictError("Version mismatch!");
 								}
