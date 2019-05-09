@@ -3345,9 +3345,9 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::MAP: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				Fields fields;
 				properties = &index_subproperties(properties, data, name, pos, &object, &fields);
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				index_fields(properties, doc, data_pos, fields);
 				auto value = specification.value ? specification.value.get() : specification.value_rec.get();
 				if (value) {
@@ -3369,8 +3369,8 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::UNDEFINED: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				index_subproperties(properties, data, name, pos);
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				if (!specification.flags.concrete) {
 					if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 						if (specification.flags.inside_namespace) {
@@ -3397,8 +3397,8 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			default: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				index_subproperties(properties, data, name, pos);
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				index_item_value(doc, *data_pos, object, pos);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
