@@ -3017,7 +3017,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		MsgPack data_obj;
 
 		auto data_ptr = &data_obj;
-		index_item_value(properties, doc, data_ptr, fields);
+		index_fields(properties, doc, data_ptr, fields);
 
 		for (const auto& elem : map_values) {
 			const auto val_ser = StringList::serialise(elem.second.begin(), elem.second.end());
@@ -3039,9 +3039,9 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack& object, FieldVector& fields, size_t pos)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object, FieldVector* fields)
 {
-	L_CALL("Schema::index_subproperties({}, {}, {}, {}, <fields>, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), repr(object.to_string()), pos);
+	L_CALL("Schema::index_subproperties({}, {}, {}, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), pos, object ? repr(object->to_string()) : "null", fields ? "<fields>" : "null");
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -3060,7 +3060,10 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			}
 		}
 		const auto& field_name = *it;
-		dispatch_process_properties(object, fields);
+		if (object) {
+			assert(fields);
+			dispatch_process_properties(*object, *fields);
+		}
 		detect_dynamic(field_name);
 		update_prefixes();
 		specification.flags.inside_namespace = true;
@@ -3122,152 +3125,12 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				} else {
 					detect_dynamic(n_field_name);
-					add_field(mut_properties, object, fields);
-					if (specification.flags.store) {
-						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
-						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-						}
-						data = &inserted.first.value();
-					}
-				}
-				return *mut_properties;
-			}
-		}
-
-		const auto& field_name = *it;
-		if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-			THROW(ClientError, "Field {} in {} is not valid", repr_field(name, field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		restart_specification();
-		if (feed_subproperties(properties, field_name)) {
-			dispatch_process_properties(object, fields);
-			update_prefixes();
-			if (specification.flags.store) {
-				auto inserted = data->insert(field_name);
-				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-				}
-				data = &inserted.first.value();
-			}
-		} else {
-			detect_dynamic(field_name);
-			if (specification.flags.uuid_field) {
-				if (feed_subproperties(properties, specification.meta_name)) {
-					dispatch_process_properties(object, fields);
-					update_prefixes();
-					if (specification.flags.store) {
-						auto inserted = data->insert(normalize_uuid(field_name));
-						if (!inserted.second && pos == 0) {
-							THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-						}
-						data = &inserted.first.value();
-					}
-					return *properties;
-				}
-			}
-
-			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			add_field(mut_properties, object, fields);
-			if (specification.flags.store) {
-				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-				if (!inserted.second && pos == 0) {
-					THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-				}
-				data = &inserted.first.value();
-			}
-			return *mut_properties;
-		}
-	}
-
-	return *properties;
-}
-
-
-const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos)
-{
-	L_CALL("Schema::index_subproperties({}, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), pos);
-
-	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
-
-	auto it = field_names.begin();
-	assert(it != field_names.end());
-
-	if (specification.flags.is_namespace) {
-		restart_namespace_specification();
-		for (; !it.last(); ++it) {
-			const auto& field_name = *it;
-			detect_dynamic(field_name);
-			update_prefixes();
-			if (specification.flags.store) {
-				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-				data = &inserted.first.value();
-			}
-		}
-		const auto& field_name = *it;
-		detect_dynamic(field_name);
-		update_prefixes();
-		specification.flags.inside_namespace = true;
-		if (specification.flags.store) {
-			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-			if (!inserted.second && pos == 0) {
-				THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-			}
-			data = &inserted.first.value();
-		}
-	} else {
-		for (; !it.last(); ++it) {
-			const auto& field_name = *it;
-			if (!is_valid(field_name) && !(specification.full_meta_name.empty() && has_dispatch_set_default_spc(hh(field_name)))) {
-				THROW(ClientError, "Field {} in {} is not valid", repr_field(name, field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-			}
-			restart_specification();
-			if (feed_subproperties(properties, field_name)) {
-				update_prefixes();
-				if (specification.flags.store) {
-					auto inserted = data->insert(field_name);
-					data = &inserted.first.value();
-				}
-			} else {
-				detect_dynamic(field_name);
-				if (specification.flags.uuid_field) {
-					if (feed_subproperties(properties, specification.meta_name)) {
-						update_prefixes();
-						if (specification.flags.store) {
-							auto inserted = data->insert(normalize_uuid(field_name));
-							data = &inserted.first.value();
-						}
-						continue;
-					}
-				}
-
-				auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-				add_field(mut_properties);
-				if (specification.flags.store) {
-					auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-					data = &inserted.first.value();
-				}
-
-				for (++it; !it.last(); ++it) {
-					const auto& n_field_name = *it;
-					if (!is_valid(n_field_name)) {
-						THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					if (object) {
+						assert(fields);
+						add_field(mut_properties, *object, *fields);
 					} else {
-						detect_dynamic(n_field_name);
 						add_field(mut_properties);
-						if (specification.flags.store) {
-							auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
-							data = &inserted.first.value();
-						}
 					}
-				}
-				const auto& n_field_name = *it;
-				if (!is_valid(n_field_name)) {
-					THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-				} else {
-					detect_dynamic(n_field_name);
-					add_field(mut_properties);
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
 						if (!inserted.second && pos == 0) {
@@ -3286,6 +3149,10 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		}
 		restart_specification();
 		if (feed_subproperties(properties, field_name)) {
+			if (object) {
+				assert(fields);
+				dispatch_process_properties(*object, *fields);
+			}
 			update_prefixes();
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
@@ -3298,6 +3165,10 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				if (feed_subproperties(properties, specification.meta_name)) {
+					if (object) {
+						assert(fields);
+						dispatch_process_properties(*object, *fields);
+					}
 					update_prefixes();
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
@@ -3311,7 +3182,12 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			}
 
 			auto mut_properties = &get_mutable_properties(specification.full_meta_name);
-			add_field(mut_properties);
+			if (object) {
+				assert(fields);
+				add_field(mut_properties, *object, *fields);
+			} else {
+				add_field(mut_properties);
+			}
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
 				if (!inserted.second && pos == 0) {
@@ -3321,7 +3197,6 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			}
 			return *mut_properties;
 		}
-
 	}
 
 	return *properties;
@@ -3344,14 +3219,24 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		return;
 	}
 
+	if (object.is_array()) {
+		index_array(parent_properties, object, parent_data, doc, name);
+		return;
+	}
+
+	auto spc_start = specification;
+
 	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
-			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
 			FieldVector fields;
-			properties = &index_subproperties(properties, data, name, object, fields, 0);
-			index_item_value(properties, doc, data, fields);
+			properties = &index_subproperties(properties, data, name, 0, &object, &fields);
+			index_fields(properties, doc, data, fields);
+			auto value = specification.value ? specification.value.get() : specification.value_rec.get();
+			if (value) {
+				index_item_value(doc, *data, *value);
+			}
 			if (specification.flags.store) {
 				if (data->is_map() && data->size() == 1) {
 					auto it = data->find(RESERVED_VALUE);
@@ -3367,19 +3252,23 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 		}
 
-		case MsgPack::Type::ARRAY: {
-			index_array(parent_properties, object, parent_data, doc, name);
-			break;
-		}
-
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED: {
-			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
 			index_subproperties(properties, data, name, 0);
+			if (!specification.flags.concrete) {
+				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+					if (specification.flags.inside_namespace) {
+						validate_required_namespace_data();
+					} else {
+						validate_required_data(get_mutable_properties(specification.full_meta_name));
+					}
+				}
+			}
 			index_partial_paths(doc);
 			if (specification.flags.store) {
+				*data = object;
 				if (data->is_map() && data->size() == 1) {
 					auto it = data->find(RESERVED_VALUE);
 					if (it != data->end()) {
@@ -3395,11 +3284,10 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		}
 
 		default: {
-			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			auto data = parent_data;
 			index_subproperties(properties, data, name, 0);
-			index_item_value(doc, *data, object, 0);
+			index_item_value(doc, *data, object);
 			if (specification.flags.store) {
 				if (data->is_map() && data->size() == 1) {
 					auto it = data->find(RESERVED_VALUE);
@@ -3423,8 +3311,9 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 {
 	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
 
+	set_type_to_array();
+
 	if (array.empty()) {
-		set_type_to_array();
 		if (specification.flags.store) {
 			parent_data->get(name) = MsgPack::ARRAY();
 		}
@@ -3432,28 +3321,40 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 	}
 
 	auto spc_start = specification;
-	size_t pos = 0;
-	for (const auto& item : array) {
-		switch (item.get_type()) {
-			case MsgPack::Type::MAP: {
-				auto properties = &*parent_properties;
-				auto data = parent_data;
-				FieldVector fields;
-				properties = &index_subproperties(properties, data, name, item, fields, pos);
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				set_type_to_array();
-				index_item_value(properties, doc, data_pos, fields);
-				specification = spc_start;
-				break;
-			}
 
+	size_t pos = 0;
+	for (const auto& object : array) {
+		switch (object.get_type()) {
 			case MsgPack::Type::ARRAY: {
+				// Nested array.
 				auto properties = &*parent_properties;
 				auto data = parent_data;
 				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				set_type_to_array();
-				index_item_value(doc, *data_pos, item);
+				index_item_value(doc, *data_pos, object, pos);
+				if (specification.flags.store) {
+					if (data_pos->is_map() && data_pos->size() == 1) {
+						auto it = data_pos->find(RESERVED_VALUE);
+						if (it != data_pos->end()) {
+							*data_pos = it.value();
+						}
+					}
+				}
+				specification = spc_start;
+				break;
+			}
+
+			case MsgPack::Type::MAP: {
+				auto properties = &*parent_properties;
+				auto data = parent_data;
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
+				FieldVector fields;
+				properties = &index_subproperties(properties, data, name, pos, &object, &fields);
+				index_fields(properties, doc, data_pos, fields);
+				auto value = specification.value ? specification.value.get() : specification.value_rec.get();
+				if (value) {
+					index_item_value(doc, *data_pos, *value, pos);
+				}
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
@@ -3470,12 +3371,20 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			case MsgPack::Type::UNDEFINED: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				set_type_to_array();
+				index_subproperties(properties, data, name, pos);
+				if (!specification.flags.concrete) {
+					if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+						if (specification.flags.inside_namespace) {
+							validate_required_namespace_data();
+						} else {
+							validate_required_data(get_mutable_properties(specification.full_meta_name));
+						}
+					}
+				}
 				index_partial_paths(doc);
 				if (specification.flags.store) {
-					*data_pos = item;
+					*data_pos = object;
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
 						if (it != data_pos->end()) {
@@ -3490,10 +3399,9 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			default: {
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				set_type_to_array();
-				index_item_value(doc, *data_pos, item, pos);
+				index_subproperties(properties, data, name, pos);
+				index_item_value(doc, *data_pos, object, pos);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
@@ -3550,52 +3458,12 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 {
 	L_CALL("Schema::index_item_value(<doc>, {}, {})", repr(data.to_string()), repr(item_value.to_string()));
 
-	switch (item_value.get_type()) {
-		case MsgPack::Type::ARRAY: {
-			bool valid = false;
-			for (const auto& item : item_value) {
-				if (!(item.is_null() || item.is_undefined())) {
-					if (!specification.flags.complete) {
-						if (specification.flags.inside_namespace) {
-							complete_namespace_specification(item);
-						} else {
-							complete_specification(item);
-						}
-					}
-					valid = true;
-					break;
-				}
-			}
-			if (valid) {
-				break;
-			}
+	if (!specification.flags.complete) {
+		if (specification.flags.inside_namespace) {
+			complete_namespace_specification(item_value);
+		} else {
+			complete_specification(item_value);
 		}
-		[[fallthrough]];
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED:
-			if (!specification.flags.concrete) {
-				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
-					if (specification.flags.inside_namespace) {
-						validate_required_namespace_data();
-					} else {
-						validate_required_data(get_mutable_properties(specification.full_meta_name));
-					}
-				}
-			}
-			index_partial_paths(doc);
-			if (specification.flags.store) {
-				data = item_value;
-			}
-			return;
-		default:
-			if (!specification.flags.complete) {
-				if (specification.flags.inside_namespace) {
-					complete_namespace_specification(item_value);
-				} else {
-					complete_specification(item_value);
-				}
-			}
-			break;
 	}
 
 	if (specification.partial_index_spcs.empty()) {
@@ -3612,6 +3480,11 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		specification.update(std::move(start_index_spc));
 	}
 
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
+		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
+		set_type_to_object();
+	}
 	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 		if (!specification.flags.static_endpoint) {
 			data[RESERVED_ENDPOINT] = specification.endpoint;
@@ -3621,9 +3494,9 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 
 
 inline void
-Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields)
+Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields)
 {
-	L_CALL("Schema::index_item_value({}, <doc>, {}, <FieldVector>)", repr(properties->to_string()), repr(data->to_string()));
+	L_CALL("Schema::index_fields({}, <doc>, {}, <FieldVector>)", repr(properties->to_string()), repr(data->to_string()));
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -3633,34 +3506,20 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-	}
-
-	auto val = specification.value ? specification.value.get() : specification.value_rec.get();
-
-	if (val != nullptr) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-			THROW(ClientError, "{} is a foreign type and as such it cannot have a value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		index_item_value(doc, *data, *val);
-	} else {
-		if (!specification.flags.concrete) {
-			if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
-				if (specification.flags.inside_namespace) {
-					validate_required_namespace_data();
-				} else {
-					validate_required_data(get_mutable_properties(specification.full_meta_name));
-				}
-			}
-		}
-		if (fields.empty()) {
-			index_partial_paths(doc);
-			if (specification.flags.store && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::object) {
-				*data = MsgPack::MAP();
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
 			}
 		}
 	}
 
 	if (fields.empty()) {
+		index_partial_paths(doc);
+		if (specification.flags.store && specification.sep_types[SPC_OBJECT_TYPE] == FieldType::object) {
+			*data = MsgPack::MAP();
+		}
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
 			specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
 			specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {

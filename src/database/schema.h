@@ -645,15 +645,15 @@ class Schema {
 	 * Main functions to index objects and arrays
 	 */
 
-	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack& object, FieldVector& fields, size_t pos);
-	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos);
+	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object = nullptr, FieldVector* fields = nullptr);
 
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos);
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value);
-	void index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
+
+	void index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const FieldVector& fields);
 
 	/*
 	 * Main functions to update objects and arrays
