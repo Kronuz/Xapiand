@@ -94,10 +94,10 @@ static const ct_type_t ndjson_type(NDJSON_CONTENT_TYPE);
 static const ct_type_t x_ndjson_type(X_NDJSON_CONTENT_TYPE);
 static const ct_type_t msgpack_type(MSGPACK_CONTENT_TYPE);
 static const ct_type_t x_msgpack_type(X_MSGPACK_CONTENT_TYPE);
-static const std::vector<ct_type_t> msgpack_serializers({
-	json_type, x_json_type,
-	yaml_type, x_yaml_type,
-	msgpack_type, x_msgpack_type,
+static const std::vector<const ct_type_t*> msgpack_serializers({
+	&json_type, &x_json_type,
+	&yaml_type, &x_yaml_type,
+	&msgpack_type, &x_msgpack_type,
 });
 
 

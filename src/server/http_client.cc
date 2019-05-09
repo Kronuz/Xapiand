@@ -2176,41 +2176,18 @@ HttpClient::dump_database_view(Request& request)
 
 	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
 
-	auto ct_type = resolve_ct_type(request, MSGPACK_CONTENT_TYPE);
-
+	auto& ct_type = resolve_ct_type(request);
 	if (ct_type.empty()) {
-		auto dump_ct_type = resolve_ct_type(request, ct_type_t("application/octet-stream"));
-		if (dump_ct_type.empty()) {
-			// No content type could be resolved, return NOT ACCEPTABLE.
-			enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-			if (request.comments) {
-				write_http_response(request, error_code, MsgPack({
-					{ RESPONSE_xSTATUS, (int)error_code },
-					{ RESPONSE_xMESSAGE, { MsgPack({ "Response type application/octet-stream not provided in the Accept header" }) } }
-				}));
-			} else {
-				write_http_response(request, error_code);
-			}
-			L_SEARCH("ABORTED SEARCH");
-			return;
+		// No content type could be resolved, return NOT ACCEPTABLE.
+		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
+		if (request.comments) {
+			write_http_response(request, error_code, MsgPack({
+				{ RESPONSE_xSTATUS, (int)error_code },
+				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
+			}));
+		} else {
+			write_http_response(request, error_code);
 		}
-
-		char path[] = "/tmp/xapian_dump.XXXXXX";
-		int file_descriptor = io::mkstemp(path);
-		try {
-			db_handler.dump_documents(file_descriptor);
-		} catch (...) {
-			io::close(file_descriptor);
-			io::unlink(path);
-			throw;
-		}
-
-		request.ready = std::chrono::steady_clock::now();
-
-		size_t content_length = io::lseek(file_descriptor, 0, SEEK_CUR);
-		io::close(file_descriptor);
-		write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE, "", "", dump_ct_type.to_string(), "", content_length));
-		write_file(path, true);
 		return;
 	}
 
@@ -2439,7 +2416,6 @@ HttpClient::retrieve_document_view(Request& request)
 		} else {
 			write_http_response(request, error_code);
 		}
-		L_SEARCH("ABORTED RETRIEVE");
 		return;
 	}
 
@@ -2481,7 +2457,7 @@ HttpClient::retrieve_document_view(Request& request)
 
 		request.ready = std::chrono::steady_clock::now();
 
-		write_http_response(request, HTTP_STATUS_OK, obj);
+		write_http_response(request, HTTP_STATUS_OK, obj, "", resolve_ct_type(request, selector_mime_type));
 	} else {
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
@@ -3255,83 +3231,82 @@ HttpClient::end_http_request(Request& request)
 }
 
 
-ct_type_t
-HttpClient::resolve_ct_type(Request& request, ct_type_t ct_type)
+const ct_type_t&
+HttpClient::resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types)
 {
 	L_CALL("HttpClient::resolve_ct_type({})", repr(ct_type.to_string()));
 
-	if (
-		ct_type == json_type || ct_type == x_json_type ||
-		ct_type == yaml_type || ct_type == x_yaml_type ||
-		ct_type == msgpack_type || ct_type == x_msgpack_type
-	) {
-		if (is_acceptable_type(get_acceptable_type(request, json_type), json_type) != nullptr) {
-			ct_type = json_type;
-		} else if (is_acceptable_type(get_acceptable_type(request, x_json_type), json_type) != nullptr) {
-			ct_type = x_json_type;
-		} else if (is_acceptable_type(get_acceptable_type(request, yaml_type), yaml_type) != nullptr) {
-			ct_type = yaml_type;
-		} else if (is_acceptable_type(get_acceptable_type(request, x_yaml_type), yaml_type) != nullptr) {
-			ct_type = x_yaml_type;
-		} else if (is_acceptable_type(get_acceptable_type(request, msgpack_type), msgpack_type) != nullptr) {
-			ct_type = msgpack_type;
-		} else if (is_acceptable_type(get_acceptable_type(request, x_msgpack_type), x_msgpack_type) != nullptr) {
-			ct_type = x_msgpack_type;
-		}
-	}
-
-	std::vector<ct_type_t> ct_types;
-	if (
-		ct_type == json_type || ct_type == x_json_type ||
-		ct_type == yaml_type || ct_type == x_yaml_type ||
-		ct_type == msgpack_type || ct_type == x_msgpack_type
-	) {
-		ct_types = msgpack_serializers;
-	} else {
-		ct_types.push_back(std::move(ct_type));
-	}
-
-	const auto& accepted_type = get_acceptable_type(request, ct_types);
-	const auto accepted_ct_type = is_acceptable_type(accepted_type, ct_types);
+	const auto& acceptable_type = get_acceptable_type(request, ct_types);
+	auto accepted_ct_type = is_acceptable_type(acceptable_type, ct_types);
 	if (accepted_ct_type == nullptr) {
-		return no_type;
+		accepted_ct_type = &no_type;
 	}
 
 	return *accepted_ct_type;
 }
 
 
-const ct_type_t*
-HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t& ct_type)
+const ct_type_t&
+HttpClient::resolve_ct_type(Request& request, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type({}, {})", repr(ct_type_pattern.to_string()), repr(ct_type.to_string()));
+	L_CALL("HttpClient::resolve_ct_type({})", repr(ct_type.to_string()));
+
+	std::vector<const ct_type_t*> ct_types;
+	if (!ct_type.empty()) {
+		if (ct_type == json_type || ct_type == x_json_type) {
+			ct_types.push_back(&json_type);
+			ct_types.push_back(&x_json_type);
+		} else if (ct_type == yaml_type || ct_type == x_yaml_type) {
+			ct_types.push_back(&yaml_type);
+			ct_types.push_back(&x_yaml_type);
+		} else if (ct_type == msgpack_type || ct_type == x_msgpack_type) {
+			ct_types.push_back(&msgpack_type);
+			ct_types.push_back(&x_msgpack_type);
+		} else if (ct_type == ndjson_type || ct_type == x_ndjson_type) {
+			ct_types.push_back(&ndjson_type);
+			ct_types.push_back(&x_ndjson_type);
+		} else {
+			ct_types.push_back(&ct_type);
+		}
+	} else {
+		ct_types = msgpack_serializers;
+	}
+
+	return resolve_ct_type(request, ct_types);
+}
+
+
+const ct_type_t*
+HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t* ct_type)
+{
+	L_CALL("HttpClient::is_acceptable_type({}, {})", repr(ct_type_pattern.to_string()), repr(ct_type->to_string()));
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
 		type_ok = true;
 	} else {
-		type_ok = ct_type_pattern.first == ct_type.first;
+		type_ok = ct_type_pattern.first == ct_type->first;
 	}
 	if (ct_type_pattern.second == "*") {
 		subtype_ok = true;
 	} else {
-		subtype_ok = ct_type_pattern.second == ct_type.second;
+		subtype_ok = ct_type_pattern.second == ct_type->second;
 	}
 	if (type_ok && subtype_ok) {
-		return &ct_type;
+		return ct_type;
 	}
 	return nullptr;
 }
 
 
 const ct_type_t*
-HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<ct_type_t>& ct_types)
+HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<const ct_type_t*>& ct_types)
 {
 	L_CALL("HttpClient::is_acceptable_type(({}, <ct_types>)", repr(ct_type_pattern.to_string()));
 
-	for (auto& ct_type : ct_types) {
+	for (auto ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type) != nullptr) {
-			return &ct_type;
+			return ct_type;
 		}
 	}
 	return nullptr;
@@ -3369,29 +3344,29 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 	if (ct_type == no_type) {
 		return std::make_pair("", "");
 	}
-	if (is_acceptable_type(ct_type, json_type) != nullptr) {
+	if (ct_type == json_type) {
 		return std::make_pair(obj.to_string(indent), json_type.to_string() + "; charset=utf-8");
 	}
-	if (is_acceptable_type(ct_type, x_json_type) != nullptr) {
+	if (ct_type == x_json_type) {
 		return std::make_pair(obj.to_string(indent), x_json_type.to_string() + "; charset=utf-8");
 	}
-	if (is_acceptable_type(ct_type, yaml_type) != nullptr) {
+	if (ct_type == yaml_type) {
 		return std::make_pair(obj.to_string(indent), yaml_type.to_string() + "; charset=utf-8");
 	}
-	if (is_acceptable_type(ct_type, x_yaml_type) != nullptr) {
+	if (ct_type == x_yaml_type) {
 		return std::make_pair(obj.to_string(indent), x_yaml_type.to_string() + "; charset=utf-8");
 	}
-	if (is_acceptable_type(ct_type, msgpack_type) != nullptr) {
+	if (ct_type == msgpack_type) {
 		return std::make_pair(obj.serialise(), msgpack_type.to_string() + "; charset=utf-8");
 	}
-	if (is_acceptable_type(ct_type, x_msgpack_type) != nullptr) {
+	if (ct_type == x_msgpack_type) {
 		return std::make_pair(obj.serialise(), x_msgpack_type.to_string() + "; charset=utf-8");
 	}
-	if (is_acceptable_type(ct_type, html_type) != nullptr) {
+	if (ct_type == html_type) {
 		std::function<std::string(const msgpack::object&)> html_serialize = serialize_error ? msgpack_to_html_error : msgpack_to_html;
 		return std::make_pair(obj.external(html_serialize), html_type.to_string() + "; charset=utf-8");
 	}
-	/*if (is_acceptable_type(ct_type, text_type)) {
+	/*if (ct_type == text_type)) {
 		error:
 			{{ ERROR_CODE }} - {{ MESSAGE }}
 
@@ -3408,7 +3383,7 @@ HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int
 
 
 void
-HttpClient::write_http_response(Request& request, enum http_status status, const MsgPack& obj, const std::string& location)
+HttpClient::write_http_response(Request& request, enum http_status status, const MsgPack& obj, const std::string& location, const ct_type_t& ct_type)
 {
 	L_CALL("HttpClient::write_http_response()");
 
@@ -3417,37 +3392,33 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		return;
 	}
 
-	std::vector<ct_type_t> ct_types;
-	if (
-		request.ct_type == json_type || request.ct_type == x_json_type ||
-		request.ct_type == yaml_type || request.ct_type == x_yaml_type ||
-		request.ct_type == msgpack_type || request.ct_type == x_msgpack_type ||
-		request.ct_type.empty()
-	) {
-		ct_types = msgpack_serializers;
-	} else {
-		ct_types.push_back(request.ct_type);
+	auto& resolved_ct_type = ct_type.empty() ? resolve_ct_type(request) : ct_type;
+
+	if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
+		if (resolved_ct_type.empty()) {
+			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+			return;
+		}
 	}
-	const auto& accepted_type = get_acceptable_type(request, ct_types);
 
 	try {
-		auto result = serialize_response(obj, accepted_type, request.indented, (int)status >= 400);
+		auto result = serialize_response(obj, resolved_ct_type, request.indented, (int)status >= 400);
 		if (Logging::log_level >= LOG_DEBUG && request.response.size <= 1024 * 10) {
-			if (is_acceptable_type(accepted_type, json_type) != nullptr) {
+			if (resolved_ct_type == json_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, x_json_type) != nullptr) {
+			} else if (resolved_ct_type == x_json_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, yaml_type) != nullptr) {
+			} else if (resolved_ct_type == yaml_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, x_yaml_type) != nullptr) {
+			} else if (resolved_ct_type == x_yaml_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, msgpack_type) != nullptr) {
+			} else if (resolved_ct_type == msgpack_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, x_msgpack_type) != nullptr) {
+			} else if (resolved_ct_type == x_msgpack_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, html_type) != nullptr) {
+			} else if (resolved_ct_type == html_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (is_acceptable_type(accepted_type, text_type) != nullptr) {
+			} else if (resolved_ct_type == text_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (!obj.empty()) {
 				request.response.text.append("...");
@@ -3464,24 +3435,17 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second));
 		}
 	} catch (const SerialisationError& exc) {
-		status = HTTP_STATUS_NOT_ACCEPTABLE;
-		std::string response_str;
-		if (request.comments) {
-			MsgPack response_err = MsgPack({
-				{ RESPONSE_xSTATUS, (int)status },
-				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type " + accepted_type.to_string() + " " + exc.what() }) } }
-			});
-			response_str = response_err.to_string(request.indented);
-		}
-		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(request.response, request.type_encoding, response_str, false, true, true);
-			if (!encoded.empty() && encoded.size() <= response_str.size()) {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, accepted_type.to_string(), readable_encoding(request.type_encoding)));
-			} else {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, response_str, location, accepted_type.to_string(), readable_encoding(Encoding::identity)));
-			}
+		if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
+			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 		} else {
-			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, response_str, location, accepted_type.to_string()));
+			if (request.comments) {
+				write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE, MsgPack({
+					{ RESPONSE_xSTATUS, (int)HTTP_STATUS_NOT_ACCEPTABLE },
+					{ RESPONSE_xMESSAGE, { MsgPack({ exc.what() }) } }
+				}), location);
+			} else {
+				write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE);
+			}
 		}
 		return;
 	}

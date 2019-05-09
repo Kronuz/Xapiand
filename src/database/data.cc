@@ -537,24 +537,24 @@ Data::get_accepted(const accept_set_t& accept_set, const ct_type_t& mime_type) c
 	const Accept* accepted_by = nullptr;
 	double accepted_priority = -1.0;
 	for (auto& locator : *this) {
-		std::vector<ct_type_t> ct_types;
+		std::vector<const ct_type_t*> ct_types;
 		if (locator.ct_type.empty()) {
 			ct_types = msgpack_serializers;
 		} else {
-			ct_types.push_back(locator.ct_type);
+			ct_types.push_back(&locator.ct_type);
 		}
-		for (auto& ct_type : ct_types) {
+		for (auto ct_type : ct_types) {
 			for (auto& accept : accept_set) {
 				if (
 					(accept.ct_type.first == "*" && accept.ct_type.second == "*") ||
-					(accept.ct_type.first == "*" && accept.ct_type.second == ct_type.second) ||
-					(accept.ct_type.first == ct_type.first && accept.ct_type.second == "*") ||
-					(accept.ct_type == ct_type)
+					(accept.ct_type.first == "*" && accept.ct_type.second == ct_type->second) ||
+					(accept.ct_type.first == ct_type->first && accept.ct_type.second == "*") ||
+					(accept.ct_type == *ct_type)
 				) {
 					if (
 						!mime_type.empty() &&
-						ct_type.first == mime_type.first &&
-						ct_type.second == mime_type.second
+						ct_type->first == mime_type.first &&
+						ct_type->second == mime_type.second
 					) {
 						accepted = &locator;
 						accepted_by = &accept;
