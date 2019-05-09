@@ -2366,11 +2366,7 @@ DocIndexer::operator()()
 					}
 
 					if (echo) {
-						try {
-							obj[RESERVED_VERSION] = info.version;
-						} catch(...) {
-							L_EXC("Cannot retrieve document version for docid {}!", info.did);
-						}
+						obj[VERSION_FIELD_NAME] = info.version;
 
 						if (comments) {
 							obj[RESPONSE_xDOCID] = info.did;

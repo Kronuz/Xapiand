@@ -70,7 +70,7 @@
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 #include "reserved/fields.h"                // for RESERVED_*
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
-#include "reserved/schema.h"                // for RESERVED_VERSION
+#include "reserved/schema.h"                // for RESERVED_SCHEMA
 #include "response.h"                       // for RESPONSE_*
 #include "serialise.h"                      // for Serialise::boolean
 #include "strings.hh"                       // for strings::from_delta
@@ -1548,7 +1548,7 @@ HttpClient::write_document_view(Request& request)
 			}
 		}
 
-		response_obj[RESERVED_VERSION] = info.version;
+		response_obj[VERSION_FIELD_NAME] = info.version;
 
 		if (request.comments) {
 			response_obj[RESPONSE_xDOCID] = info.did;
@@ -1643,7 +1643,7 @@ HttpClient::update_document_view(Request& request)
 			response_obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 		}
 
-		response_obj[RESERVED_VERSION] = info.version;
+		response_obj[VERSION_FIELD_NAME] = info.version;
 
 		if (request.comments) {
 			response_obj[RESPONSE_xDOCID] = info.did;
@@ -1949,7 +1949,7 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 		if (it != it_e) {
 			settings.erase(it);
 		}
-		it = settings.find(RESERVED_VERSION);
+		it = settings.find(VERSION_FIELD_NAME);
 		if (it != it_e) {
 			settings.erase(it);
 		}
@@ -2452,10 +2452,10 @@ HttpClient::retrieve_document_view(Request& request)
 			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
 
-		if (obj.find(RESERVED_VERSION) == obj.end()) {
+		if (obj.find(VERSION_FIELD_NAME) == obj.end()) {
 			auto version = document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+				obj[VERSION_FIELD_NAME] = static_cast<Xapian::rev>(sortable_unserialise(version));
 			}
 		}
 
@@ -2604,10 +2604,10 @@ HttpClient::search_view(Request& request)
 			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
 
-		if (hit_obj.find(RESERVED_VERSION) == hit_obj.end()) {
+		if (hit_obj.find(VERSION_FIELD_NAME) == hit_obj.end()) {
 			auto version = document.get_value(DB_SLOT_VERSION);
 			if (!version.empty()) {
-				hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+				hit_obj[VERSION_FIELD_NAME] = static_cast<Xapian::rev>(sortable_unserialise(version));
 			}
 		}
 
