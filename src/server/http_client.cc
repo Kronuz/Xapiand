@@ -2451,9 +2451,12 @@ HttpClient::retrieve_document_view(Request& request)
 		if (obj.find(ID_FIELD_NAME) == obj.end()) {
 			obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+
+		if (obj.find(RESERVED_VERSION) == obj.end()) {
+			auto version = document.get_value(DB_SLOT_VERSION);
+			if (!version.empty()) {
+				obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+			}
 		}
 
 		if (request.comments) {
@@ -2600,9 +2603,12 @@ HttpClient::search_view(Request& request)
 		if (hit_obj.find(ID_FIELD_NAME) == hit_obj.end()) {
 			hit_obj[ID_FIELD_NAME] = document.get_value(ID_FIELD_NAME);
 		}
-		auto version = document.get_value(DB_SLOT_VERSION);
-		if (!version.empty()) {
-			hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+
+		if (hit_obj.find(RESERVED_VERSION) == hit_obj.end()) {
+			auto version = document.get_value(DB_SLOT_VERSION);
+			if (!version.empty()) {
+				hit_obj[RESERVED_VERSION] = static_cast<Xapian::rev>(sortable_unserialise(version));
+			}
 		}
 
 		if (request.comments) {
