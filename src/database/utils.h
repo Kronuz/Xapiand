@@ -22,9 +22,10 @@
 
 #pragma once
 
-#include <string>                  // for string
+#include <string>                  // for std::string
 #include <string_view>             // for std::string_view
-#include <vector>                  // for vector
+#include <vector>                  // for std::vector
+#include <limits>                  // for std::numeric_limits
 
 #include "msgpack.h"               // for object
 #include "rapidjson/document.h"    // for Document
@@ -64,6 +65,9 @@ constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[]    = "C";
 constexpr const char DOCUMENT_DB_MASTER[]         = "M";
 constexpr const char DOCUMENT_DB_SLAVE[]          = "S";
 
+constexpr const Xapian::rev BAD_REVISION = std::numeric_limits<Xapian::rev>::max();
+
+
 enum class FieldType : uint8_t;
 
 
@@ -80,10 +84,10 @@ struct similar_field_t {
 
 
 struct query_field_t {
-	unsigned version;
-	unsigned offset;
-	unsigned limit;
-	unsigned check_at_least;
+	Xapian::rev version;
+	Xapian::doccount offset;
+	Xapian::doccount limit;
+	Xapian::doccount check_at_least;
 	bool writable;
 	bool primary;
 	bool spelling;
@@ -93,7 +97,7 @@ struct query_field_t {
 	bool is_fuzzy;
 	bool is_nearest;
 	std::string collapse;
-	unsigned collapse_max;
+	Xapian::doccount collapse_max;
 	std::vector<std::string> query;
 	std::vector<std::string> sort;
 	similar_field_t fuzzy;
@@ -107,7 +111,7 @@ struct query_field_t {
 	bool icase;
 
 	query_field_t()
-		: version(0), offset(0), limit(10), check_at_least(0),
+		: version(BAD_REVISION), offset(0), limit(10), check_at_least(0),
 		  writable(false), primary(false), spelling(true), synonyms(false),
 		  commit(false), unique_doc(false), is_fuzzy(false), is_nearest(false),
 		  collapse_max(1), icase(false) { }

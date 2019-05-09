@@ -839,9 +839,15 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 				if (version && version_) {
 					auto ver_prefix = "V" + serialise_length(shard_did);
 					auto ver_prefix_size = ver_prefix.size();
-					auto t_end = wdb->allterms_end(ver_prefix);
-					for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-						std::string current_term = *tit;
+					auto vit = wdb->allterms_begin(ver_prefix);
+					auto vit_e = wdb->allterms_end(ver_prefix);
+					if (vit == vit_e) {
+						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							throw Xapian::DocVersionConflictError("Version mismatch!");
+						}
+					}
+					for (; vit != vit_e; ++vit) {
+						std::string current_term = *vit;
 						std::string_view current_ver(current_term);
 						current_ver.remove_prefix(ver_prefix_size);
 						if (!current_ver.empty()) {
@@ -918,9 +924,15 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 					if (version && version_) {
 						auto ver_prefix = "V" + serialise_length(shard_did);
 						auto ver_prefix_size = ver_prefix.size();
-						auto t_end = wdb->allterms_end(ver_prefix);
-						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-							std::string current_term = *tit;
+						auto vit = wdb->allterms_begin(ver_prefix);
+						auto vit_e = wdb->allterms_end(ver_prefix);
+						if (vit == vit_e) {
+							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+								throw Xapian::DocVersionConflictError("Version mismatch!");
+							}
+						}
+						for (; vit != vit_e; ++vit) {
+							std::string current_term = *vit;
 							std::string_view current_ver(current_term);
 							current_ver.remove_prefix(ver_prefix_size);
 							if (!current_ver.empty()) {
@@ -1184,9 +1196,15 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 				auto data_obj = data.get_obj();
 				auto ver_prefix = "V" + serialise_length(info.did);
 				auto ver_prefix_size = ver_prefix.size();
-				auto t_end = wdb->allterms_end(ver_prefix);
-				for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-					std::string current_term = *tit;
+				auto vit = wdb->allterms_begin(ver_prefix);
+				auto vit_e = wdb->allterms_end(ver_prefix);
+				if (vit == vit_e) {
+					if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+						throw Xapian::DocVersionConflictError("Version mismatch!");
+					}
+				}
+				for (; vit != vit_e; ++vit) {
+					std::string current_term = *vit;
 					std::string_view current_ver(current_term);
 					current_ver.remove_prefix(ver_prefix_size);
 					if (!current_ver.empty()) {
@@ -1302,6 +1320,9 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					auto did_serialised = term.substr(2);
 					auto did = sortable_unserialise(did_serialised);
 					if (did == 0u) {
+						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							throw Xapian::DocVersionConflictError("Version mismatch!");
+						}
 						info.did = wdb->get_lastdocid() + 1;
 						did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 						ver_prefix = "V" + serialise_length(info.did);
@@ -1333,9 +1354,15 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						info.did = (did - 1) / n_shards + 1;  // docid in the multi-db to the docid in the shard
 						ver_prefix = "V" + serialise_length(info.did);
 						auto ver_prefix_size = ver_prefix.size();
-						auto t_end = wdb->allterms_end(ver_prefix);
-						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-							std::string current_term = *tit;
+						auto vit = wdb->allterms_begin(ver_prefix);
+						auto vit_e = wdb->allterms_end(ver_prefix);
+						if (vit == vit_e) {
+							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+								throw Xapian::DocVersionConflictError("Version mismatch!");
+							}
+						}
+						for (; vit != vit_e; ++vit) {
+							std::string current_term = *vit;
 							std::string_view current_ver(current_term);
 							current_ver.remove_prefix(ver_prefix_size);
 							if (!current_ver.empty()) {
@@ -1350,16 +1377,26 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 					}
 				} else {
 					auto it = wdb->postlist_begin(term);
-					if (it == wdb->postlist_end(term)) {
+					auto it_e = wdb->postlist_end(term);
+					if (it == it_e) {
 						info.did = wdb->get_lastdocid() + 1;
 						ver_prefix = "V" + serialise_length(info.did);
+						if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+							throw Xapian::DocVersionConflictError("Version mismatch!");
+						}
 					} else {
 						info.did = *it;
 						ver_prefix = "V" + serialise_length(info.did);
 						auto ver_prefix_size = ver_prefix.size();
-						auto t_end = wdb->allterms_end(ver_prefix);
-						for (auto tit = wdb->allterms_begin(ver_prefix); tit != t_end; ++tit) {
-							std::string current_term = *tit;
+						auto vit = wdb->allterms_begin(ver_prefix);
+						auto vit_e = wdb->allterms_end(ver_prefix);
+						if (vit == vit_e) {
+							if (!ver.empty() && ver != "\x80") {  // "\x80" = sortable_serialise(0)
+								throw Xapian::DocVersionConflictError("Version mismatch!");
+							}
+						}
+						for (; vit != vit_e; ++vit) {
+							std::string current_term = *vit;
 							std::string_view current_ver(current_term);
 							current_ver.remove_prefix(ver_prefix_size);
 							if (!current_ver.empty()) {

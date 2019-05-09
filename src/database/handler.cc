@@ -35,7 +35,7 @@
 #include "database/schema.h"                // for Schema, required_spc_t
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "database/shard.h"                 // for Shard
-#include "database/utils.h"                 // for split_path_id
+#include "database/utils.h"                 // for split_path_id, BAD_REVISION
 #include "database/wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
 #include "hash/sha256.h"                    // for SHA256
@@ -332,7 +332,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
-	if (document_ver && !data.version.empty()) {
+	if (document_ver != BAD_REVISION && !data.version.empty()) {
 		if (document_ver != sortable_unserialise(data.version)) {
 			throw Xapian::DocVersionConflictError("Version mismatch!");
 		}
@@ -364,7 +364,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 	}
 
 	// Request version
-	if (document_ver) {
+	if (document_ver != BAD_REVISION) {
 		doc.add_value(DB_SLOT_VERSION, sortable_serialise(document_ver));
 	} else if (!data.version.empty()) {
 		doc.add_value(DB_SLOT_VERSION, data.version);
@@ -480,7 +480,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 					THROW(ClientError, "Indexed object must be a JSON, a MsgPack or a blob, is {}", enum_name(body.get_type()));
 			}
 		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver) { throw; }
+			if (--t == 0 || document_ver != BAD_REVISION) { throw; }
 		}
 	}
 }
@@ -529,7 +529,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 			inject_data(data, obj);
 			return index(did, document_id, document_ver, obj, data, commit);
 		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver) { throw; }
+			if (--t == 0 || document_ver != BAD_REVISION) { throw; }
 		}
 	}
 }
@@ -604,7 +604,7 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 
 			return index(did, document_id, document_ver, obj, data, commit);
 		} catch (const Xapian::DocVersionConflictError&) {
-			if (--t == 0 || document_ver) { throw; }
+			if (--t == 0 || document_ver != BAD_REVISION) { throw; }
 		}
 	}
 }
