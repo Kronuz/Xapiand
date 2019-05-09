@@ -2350,7 +2350,7 @@ DocIndexer::operator()()
 			MsgPack obj;
 			if (!term_id.empty()) {
 				auto http_errors = catch_http_errors([&]{
-					auto info = db_handler.replace_document_term(term_id, std::move(doc), false);
+					auto info = db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
 
 					Document document(info.did, &db_handler);
 
