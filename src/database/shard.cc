@@ -827,11 +827,11 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
-	Xapian::rev version = BAD_REVISION;  // TODO: Implement version check (version should have required version)
+	Xapian::rev version = UNKNOWN_REVISION;  // TODO: Implement version check (version should have required version)
 
 	std::string ver;
 	if (version_) {
-		ver = version == BAD_REVISION ? std::string() : sortable_serialise(version);
+		ver = version == UNKNOWN_REVISION ? std::string() : sortable_serialise(version);
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -910,11 +910,11 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	Xapian::docid shard_did = 0;
-	Xapian::rev version = BAD_REVISION;  // TODO: Implement version check (version should have required version)
+	Xapian::rev version = UNKNOWN_REVISION;  // TODO: Implement version check (version should have required version)
 
 	std::string ver;
 	if (version_) {
-		ver = version == BAD_REVISION ? std::string() : sortable_serialise(version);
+		ver = version == UNKNOWN_REVISION ? std::string() : sortable_serialise(version);
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {

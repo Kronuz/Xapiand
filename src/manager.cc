@@ -695,7 +695,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 #endif
 				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), 0, false, {
+				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1474,7 +1474,7 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 	if (node && node->is_active()) {
 		Endpoint endpoint{strings::format(".xapiand/indices/.__{}", node->idx), node};
 		DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		db_handler.update(normalized_path, 0, false, {
+		db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
 			{ ID_FIELD_NAME, {
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1515,7 +1515,7 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 			if (node && node->is_active()) {
 				Endpoint endpoint{strings::format(".xapiand/indices/.__{}", node->idx), node};
 				DatabaseHandler db_handler(Endpoints{endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
-				db_handler.update(normalized_path, 0, false, {
+				db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
 					{ ID_FIELD_NAME, {
 						{ RESERVED_STORE, false },
 						{ RESERVED_TYPE,  KEYWORD_STR },

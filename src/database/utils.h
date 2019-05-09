@@ -65,7 +65,7 @@ constexpr const char DOCUMENT_CONTENT_TYPE_TERM_PREFIX[]    = "C";
 constexpr const char DOCUMENT_DB_MASTER[]         = "M";
 constexpr const char DOCUMENT_DB_SLAVE[]          = "S";
 
-constexpr const Xapian::rev BAD_REVISION = std::numeric_limits<Xapian::rev>::max();
+constexpr const Xapian::rev UNKNOWN_REVISION = std::numeric_limits<Xapian::rev>::max();
 
 
 enum class FieldType : uint8_t;
@@ -111,7 +111,7 @@ struct query_field_t {
 	bool icase;
 
 	query_field_t()
-		: version(BAD_REVISION), offset(0), limit(10), check_at_least(0),
+		: version(UNKNOWN_REVISION), offset(0), limit(10), check_at_least(0),
 		  writable(false), primary(false), spelling(true), synonyms(false),
 		  commit(false), unique_doc(false), is_fuzzy(false), is_nearest(false),
 		  collapse_max(1), icase(false) { }
