@@ -2426,7 +2426,8 @@ HttpClient::retrieve_document_view(Request& request)
 	auto document = db_handler.get_document(did);
 	auto document_data = document.get_data();
 	const Data data(document_data.empty() ? std::string(DATABASE_DATA_MAP) : std::move(document_data));
-	auto accepted = data.get_accepted(request.accept_set, mime_type(selector));
+	auto selector_mime_type = mime_type(selector);
+	auto accepted = data.get_accepted(request.accept_set, selector_mime_type);
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
 		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
@@ -2444,6 +2445,12 @@ HttpClient::retrieve_document_view(Request& request)
 
 	auto& locator = *accepted.first;
 	if (locator.ct_type.empty()) {
+		if (selector_mime_type == json_type || selector_mime_type == x_json_type ||
+			selector_mime_type == yaml_type || selector_mime_type == x_yaml_type ||
+			selector_mime_type == msgpack_type || selector_mime_type == x_msgpack_type) {
+			selector = "";
+		}
+
 		// Locator doesn't have a content type, serialize and return as document
 		auto obj = MsgPack::unserialise(locator.data());
 
