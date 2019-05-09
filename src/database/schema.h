@@ -730,9 +730,11 @@ class Schema {
 	 */
 
 	template <typename T>
-	void _index_item(Xapian::Document& doc, T&& values, size_t pos);
-	void index_item(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values=true);
-	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value=true);
+	void _index_items(Xapian::Document& doc, T&& values, size_t pos);
+	void _store_items(const MsgPack& values, MsgPack& data, bool add_values = true);
+	void index_items(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values = true);
+	void _store_item(const MsgPack& value, MsgPack& data, bool add_value = true);
+	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value = true);
 
 
 	static void index_simple_term(Xapian::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos);
