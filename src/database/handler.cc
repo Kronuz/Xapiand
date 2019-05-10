@@ -452,10 +452,12 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 		try {
 			Data data;
 			Xapian::docid did = 0;
-			try {
-				did = get_docid_term(term_id);
-			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {}
+			if (!term_id.empty()) {
+				try {
+					did = get_docid_term(term_id);
+				} catch (const Xapian::DocNotFoundError&) {
+				} catch (const Xapian::DatabaseNotFoundError&) {}
+			}
 
 			switch (body.get_type()) {
 				case MsgPack::Type::STR:
@@ -1735,6 +1737,7 @@ DatabaseHandler::get_docid_term(const std::string& term)
 {
 	L_CALL("DatabaseHandler::get_docid_term({})", repr(term));
 
+	assert(!term.empty());
 	assert(!endpoints.empty());
 
 	Xapian::docid did = 0;
