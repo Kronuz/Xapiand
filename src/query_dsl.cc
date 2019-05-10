@@ -704,12 +704,11 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
 				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
-				return Xapian::Query(Xapian::Query::OP_SYNONYM,
-					Xapian::Query(Xapian::Query::OP_WILDCARD,
-						wildcard_term,
-						wildcard_max_expansion,
-						wildcard_flags,
-						Xapian::Query::OP_OR));
+				return Xapian::Query(Xapian::Query::OP_WILDCARD,
+					wildcard_term,
+					wildcard_max_expansion,
+					wildcard_flags,
+					Xapian::Query::OP_SYNONYM);
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_PARTIAL) {
@@ -717,14 +716,12 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				Xapian::termcount partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
 				int partial_flags = Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT;
 				return Xapian::Query(Xapian::Query::OP_OR,
-					Xapian::Query(Xapian::Query::OP_SYNONYM,
-						Xapian::Query(Xapian::Query::OP_WILDCARD,
-							partial_term,
-							partial_max_expansion,
-							partial_flags,
-							Xapian::Query::OP_OR)),
-					Xapian::Query(Xapian::Query::OP_SYNONYM,
-						Xapian::Query(partial_term)));
+					Xapian::Query(Xapian::Query::OP_WILDCARD,
+						partial_term,
+						partial_max_expansion,
+						partial_flags,
+						Xapian::Query::OP_SYNONYM),
+					Xapian::Query(partial_term, 1, 1));
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
@@ -733,14 +730,13 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				int fuzzy_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
 				unsigned fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
 				size_t fuzzy_prefix_length = 0;
-				return Xapian::Query(Xapian::Query::OP_SYNONYM,
-					Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
-						fuzzy_term,
-						fuzzy_max_expansion,
-						fuzzy_flags,
-						Xapian::Query::OP_OR,
-						fuzzy_edit_distance,
-						field_spc.prefix().size() + 1 + fuzzy_prefix_length));
+				return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
+					fuzzy_term,
+					fuzzy_max_expansion,
+					fuzzy_flags,
+					Xapian::Query::OP_SYNONYM,
+					fuzzy_edit_distance,
+					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 
 			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
@@ -756,12 +752,11 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
 				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
-				return Xapian::Query(Xapian::Query::OP_SYNONYM,
-					Xapian::Query(Xapian::Query::OP_WILDCARD,
-						wildcard_term,
-						wildcard_max_expansion,
-						wildcard_flags,
-						Xapian::Query::OP_OR));
+				return Xapian::Query(Xapian::Query::OP_WILDCARD,
+					wildcard_term,
+					wildcard_max_expansion,
+					wildcard_flags,
+					Xapian::Query::OP_SYNONYM);
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_PARTIAL) {
@@ -769,14 +764,12 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				Xapian::termcount partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
 				int partial_flags = Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT;
 				return Xapian::Query(Xapian::Query::OP_OR,
-					Xapian::Query(Xapian::Query::OP_SYNONYM,
-						Xapian::Query(Xapian::Query::OP_WILDCARD,
-							partial_term,
-							partial_max_expansion,
-							partial_flags,
-							Xapian::Query::OP_OR),
-					Xapian::Query(Xapian::Query::OP_SYNONYM,
-						Xapian::Query(partial_term))));
+					Xapian::Query(Xapian::Query::OP_WILDCARD,
+						partial_term,
+						partial_max_expansion,
+						partial_flags,
+						Xapian::Query::OP_SYNONYM),
+					Xapian::Query(partial_term, 1, 1));
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
@@ -789,14 +782,13 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				int fuzzy_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
 				unsigned fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
 				size_t fuzzy_prefix_length = 0;
-				return Xapian::Query(Xapian::Query::OP_SYNONYM,
-					Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
-						fuzzy_term,
-						fuzzy_max_expansion,
-						fuzzy_flags,
-						Xapian::Query::OP_OR,
-						fuzzy_edit_distance,
-						field_spc.prefix().size() + 1 + fuzzy_prefix_length));
+				return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
+					fuzzy_term,
+					fuzzy_max_expansion,
+					fuzzy_flags,
+					Xapian::Query::OP_SYNONYM,
+					fuzzy_edit_distance,
+					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 
 			// There cannot be non-keyword fields with bool_term
