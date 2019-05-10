@@ -1752,7 +1752,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 			try {
 				auto rdb = lk_shard->db();
 				auto it = rdb->postlist_begin(term);
-				if (it != rdb->postlist_end(term)) {
+				auto it_e = rdb->postlist_end(term);
+				if (it != it_e) {
 					auto shard_did = *it;
 					did = (shard_did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 					return did;
