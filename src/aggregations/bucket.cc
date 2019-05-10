@@ -124,7 +124,8 @@ FilterAggregation::check_single(const Xapian::Document& doc)
 {
 	for (const auto& filter : _filters) {
 		std::set<std::string_view> values;
-		StringList::unserialise(doc.get_value(filter.first), std::inserter(values, values.begin()));
+		auto doc_value = doc.get_value(filter.first);
+		StringList::unserialise(doc_value, std::inserter(values, values.begin()));
 		if (values.find(*filter.second.begin()) != values.end()) {
 			return _agg(doc);
 		}
@@ -137,7 +138,8 @@ FilterAggregation::check_multiple(const Xapian::Document& doc)
 {
 	for (const auto& filter : _filters) {
 		std::set<std::string_view> values;
-		StringList::unserialise(doc.get_value(filter.first), std::inserter(values, values.begin()));
+		auto doc_value = doc.get_value(filter.first);
+		StringList::unserialise(doc_value, std::inserter(values, values.begin()));
 		Counter c;
 		std::set_intersection(values.begin(), values.end(), filter.second.begin(), filter.second.end(), std::back_inserter(c));
 		if (c.count != 0u) {
