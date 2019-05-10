@@ -3217,14 +3217,28 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		return;
 	}
 
-	if (object.is_array()) {
-		index_array(parent_properties, object, parent_data, doc, name);
-		return;
-	}
-
 	auto spc_start = specification;
 
 	switch (object.get_type()) {
+		case MsgPack::Type::ARRAY: {
+			auto properties = &*parent_properties;
+			auto data = parent_data;
+			properties = &index_subproperties(properties, data, name, 0);
+			index_array(properties, object, data, doc, name);
+			if (specification.flags.store) {
+				if (data->is_map() && data->size() == 1) {
+					auto it = data->find(RESERVED_VALUE);
+					if (it != data->end()) {
+						*data = it.value();
+					}
+				}
+				if (data->is_undefined() || (data->is_map() && data->empty())) {
+					parent_data->erase(name);
+				}
+			}
+			specification = std::move(spc_start);
+			break;
+		}
 		case MsgPack::Type::MAP: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
@@ -3327,9 +3341,12 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				// Nested array.
 				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name, pos);
+				properties = &index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				index_item_value(doc, *data_pos, object, pos);
+				MsgPack nested_data;
+				MsgPack* nested_data_ptr = &nested_data;
+				index_array(properties, object, nested_data_ptr, doc, name);
+				*data_pos = nested_data.get(name);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
