@@ -3037,9 +3037,9 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 
 const MsgPack&
-Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, size_t pos, const MsgPack* object, Fields* fields)
+Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack* object, Fields* fields)
 {
-	L_CALL("Schema::index_subproperties({}, {}, {}, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), pos, object ? repr(object->to_string()) : "null", fields ? "<fields>" : "null");
+	L_CALL("Schema::index_subproperties({}, {}, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), object ? repr(object->to_string()) : "null", fields ? "<fields>" : "null");
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -3067,7 +3067,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 		specification.flags.inside_namespace = true;
 		if (specification.flags.store) {
 			auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-			if (!inserted.second && pos == 0) {
+			if (!inserted.second) {
 				THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			data = &inserted.first.value();
@@ -3131,7 +3131,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					}
 					if (specification.flags.store) {
 						auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(n_field_name) : n_field_name);
-						if (!inserted.second && pos == 0) {
+						if (!inserted.second) {
 							THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
@@ -3154,7 +3154,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			update_prefixes();
 			if (specification.flags.store) {
 				auto inserted = data->insert(field_name);
-				if (!inserted.second && pos == 0) {
+				if (!inserted.second) {
 					THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
@@ -3170,7 +3170,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 					update_prefixes();
 					if (specification.flags.store) {
 						auto inserted = data->insert(normalize_uuid(field_name));
-						if (!inserted.second && pos == 0) {
+						if (!inserted.second) {
 							THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 						}
 						data = &inserted.first.value();
@@ -3188,7 +3188,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 			}
 			if (specification.flags.store) {
 				auto inserted = data->insert(specification.flags.uuid_field ? normalize_uuid(field_name) : field_name);
-				if (!inserted.second && pos == 0) {
+				if (!inserted.second) {
 					THROW(ClientError, "Field {} in {} is duplicated", repr_field(name, inserted.first->as_str()), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				data = &inserted.first.value();
@@ -3223,7 +3223,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::ARRAY: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name, 0);
+			index_subproperties(properties, data, name);
 			set_type_to_array();
 			index_array(object, data, doc);
 			specification = std::move(spc_start);
@@ -3233,7 +3233,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto properties = &*parent_properties;
 			auto data = parent_data;
 			Fields fields;
-			properties = &index_subproperties(properties, data, name, 0, &object, &fields);
+			properties = &index_subproperties(properties, data, name, &object, &fields);
 			index_fields(properties, doc, data, fields);
 			auto value = specification.value ? specification.value.get() : specification.value_rec.get();
 			if (value) {
@@ -3258,7 +3258,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::UNDEFINED: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name, 0);
+			index_subproperties(properties, data, name);
 			if (!specification.flags.concrete) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 					if (specification.flags.inside_namespace) {
@@ -3288,7 +3288,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		default: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name, 0);
+			index_subproperties(properties, data, name);
 			index_item_value(doc, *data, object);
 			if (specification.flags.store) {
 				if (data->is_map() && data->size() == 1) {
@@ -3410,41 +3410,6 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& it
 		for (const auto& index_spc : specification.partial_index_spcs) {
 			specification.update(index_spc);
 			index_item(doc, item_value, data, pos, add_value);
-			add_value = false;
-		}
-		specification.update(std::move(start_index_spc));
-	}
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty &&
-		specification.sep_types[SPC_OBJECT_TYPE] == FieldType::empty &&
-		specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
-		set_type_to_object();
-	}
-}
-
-
-inline void
-Schema::index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value)
-{
-	L_CALL("Schema::index_item_value(<doc>, {}, {})", repr(data.to_string()), repr(item_value.to_string()));
-
-	if (!specification.flags.complete) {
-		if (specification.flags.inside_namespace) {
-			complete_namespace_specification(item_value);
-		} else {
-			complete_specification(item_value);
-		}
-	}
-
-	if (specification.partial_index_spcs.empty()) {
-		index_items(doc, item_value, data);
-	} else {
-		bool add_value = true;
-		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot,
-			std::move(specification.accuracy), std::move(specification.acc_prefix));
-		for (const auto& index_spc : specification.partial_index_spcs) {
-			specification.update(index_spc);
-			index_items(doc, item_value, data, add_value);
 			add_value = false;
 		}
 		specification.update(std::move(start_index_spc));
@@ -5117,151 +5082,6 @@ Schema::guess_field_type(const MsgPack& item_doc)
 
 
 void
-Schema::_store_item(const MsgPack& value, MsgPack& data, bool add_value)
-{
-	L_CALL("Schema::_store_item({}, {}, {})", repr(value.to_string()), repr(data.to_string()), add_value);
-
-	if (specification.flags.store && add_value) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = normalize_uuid(value);
-					break;
-				case MsgPack::Type::ARRAY:
-					data_value.push_back(normalize_uuid(value));
-					break;
-				default:
-					data_value = MsgPack({ data_value, normalize_uuid(value) });
-					break;
-			}
-		} else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
-					break;
-				case MsgPack::Type::ARRAY:
-					data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
-					break;
-				default:
-					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
-					break;
-			}
-		} else {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = value;
-					break;
-				case MsgPack::Type::ARRAY:
-					data_value.push_back(value);
-					break;
-				default:
-					data_value = MsgPack({ data_value, value });
-					break;
-			}
-		}
-	}
-}
-
-
-void
-Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
-{
-	L_CALL("Schema::index_item(<doc>, {}, {}, {}, {})", repr(value.to_string()), repr(data.to_string()), pos, add_value);
-
-	L_SCHEMA("Final Specification: {}", specification.to_string(4));
-
-	_index_items(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
-	_store_item(value, data, add_value);
-}
-
-
-void
-Schema::_store_items(const MsgPack& values, MsgPack& data, bool add_values)
-{
-	L_CALL("Schema::_store_items({}, {}, {})", repr(values.to_string()), repr(data.to_string()), add_values);
-
-	if (specification.flags.store && add_values) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = MsgPack::ARRAY();
-					for (const auto& value : values) {
-						data_value.push_back(normalize_uuid(value));
-					}
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(normalize_uuid(value));
-					}
-					break;
-				default:
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(normalize_uuid(value));
-					}
-					break;
-			}
-		}  else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					for (const auto& value : values) {
-						data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
-					}
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
-					}
-					break;
-				default:
-					for (const auto& value : values) {
-						data_value.push_back(MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) }));
-					}
-					break;
-			}
-		} else {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = values;
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
-				default:
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
-			}
-		}
-	}
-}
-
-
-
-void
-Schema::index_items(Xapian::Document& doc, const MsgPack& values, MsgPack& data, bool add_values)
-{
-	L_CALL("Schema::index_items(<doc>, {}, {}, {})", repr(values.to_string()), repr(data.to_string()), add_values);
-
-	if (values.is_array()) {
-		set_type_to_array();
-		_index_items(doc, values, 0);
-		_store_items(values, data, add_values);
-	} else {
-		index_item(doc, values, data, 0, add_values);
-	}
-}
-
-
-void
 Schema::index_partial_paths(Xapian::Document& doc)
 {
 	L_CALL("Schema::index_partial_paths(<Xapian::Document>)");
@@ -5498,6 +5318,141 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 			}
 			break;
 		}
+	}
+}
+
+
+void
+Schema::_store_item(const MsgPack& value, MsgPack& data, bool add_value)
+{
+	L_CALL("Schema::_store_item({}, {}, {})", repr(value.to_string()), repr(data.to_string()), add_value);
+
+	if (specification.flags.store && add_value) {
+		// Add value to data.
+		auto& data_value = data[RESERVED_VALUE];
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = normalize_uuid(value);
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(normalize_uuid(value));
+					break;
+				default:
+					data_value = MsgPack({ data_value, normalize_uuid(value) });
+					break;
+			}
+		} else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					break;
+				default:
+					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
+					break;
+			}
+		} else {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = value;
+					break;
+				case MsgPack::Type::ARRAY:
+					data_value.push_back(value);
+					break;
+				default:
+					data_value = MsgPack({ data_value, value });
+					break;
+			}
+		}
+	}
+}
+
+
+void
+Schema::_store_items(const MsgPack& values, MsgPack& data, bool add_values)
+{
+	L_CALL("Schema::_store_items({}, {}, {})", repr(values.to_string()), repr(data.to_string()), add_values);
+
+	if (specification.flags.store && add_values) {
+		// Add value to data.
+		auto& data_value = data[RESERVED_VALUE];
+		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = MsgPack::ARRAY();
+					for (const auto& value : values) {
+						data_value.push_back(normalize_uuid(value));
+					}
+					break;
+				case MsgPack::Type::ARRAY:
+					for (const auto& value : values) {
+						data_value.push_back(normalize_uuid(value));
+					}
+					break;
+				default:
+					data_value = MsgPack({ data_value });
+					for (const auto& value : values) {
+						data_value.push_back(normalize_uuid(value));
+					}
+					break;
+			}
+		}  else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					for (const auto& value : values) {
+						data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					}
+					break;
+				case MsgPack::Type::ARRAY:
+					for (const auto& value : values) {
+						data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
+					}
+					break;
+				default:
+					for (const auto& value : values) {
+						data_value.push_back(MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) }));
+					}
+					break;
+			}
+		} else {
+			switch (data_value.get_type()) {
+				case MsgPack::Type::UNDEFINED:
+					data_value = values;
+					break;
+				case MsgPack::Type::ARRAY:
+					for (const auto& value : values) {
+						data_value.push_back(value);
+					}
+					break;
+				default:
+					data_value = MsgPack({ data_value });
+					for (const auto& value : values) {
+						data_value.push_back(value);
+					}
+					break;
+			}
+		}
+	}
+}
+
+
+void
+Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
+{
+	L_CALL("Schema::index_item(<doc>, {}, {}, {}, {})", repr(value.to_string()), repr(data.to_string()), pos, add_value);
+
+	L_SCHEMA("Final Specification: {}", specification.to_string(4));
+
+	if (value.is_array()) {
+		set_type_to_array();
+		_index_items(doc, value, pos);
+		_store_items(value, data, add_value);
+	} else {
+		_index_items(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
+		_store_item(value, data, add_value);
 	}
 }
 
