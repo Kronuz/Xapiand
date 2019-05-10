@@ -700,17 +700,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				flags |= Xapian::QueryParser::FLAG_FUZZY;
 			}
 
-			if (flags & Xapian::QueryParser::FLAG_WILDCARD) {
-				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
-				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
-				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
-				return Xapian::Query(Xapian::Query::OP_WILDCARD,
-					wildcard_term,
-					wildcard_max_expansion,
-					wildcard_flags,
-					Xapian::Query::OP_SYNONYM);
-			}
-
 			if (flags & Xapian::QueryParser::FLAG_PARTIAL) {
 				auto partial_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
@@ -722,6 +711,17 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 						partial_flags,
 						Xapian::Query::OP_SYNONYM),
 					Xapian::Query(partial_term, 1, 1));
+			}
+
+			if (flags & Xapian::QueryParser::FLAG_WILDCARD) {
+				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
+				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
+				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
+				return Xapian::Query(Xapian::Query::OP_WILDCARD,
+					wildcard_term,
+					wildcard_max_expansion,
+					wildcard_flags,
+					Xapian::Query::OP_SYNONYM);
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
@@ -757,19 +757,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 					wildcard_max_expansion,
 					wildcard_flags,
 					Xapian::Query::OP_SYNONYM);
-			}
-
-			if (flags & Xapian::QueryParser::FLAG_PARTIAL) {
-				auto partial_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
-				Xapian::termcount partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
-				int partial_flags = Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT;
-				return Xapian::Query(Xapian::Query::OP_OR,
-					Xapian::Query(Xapian::Query::OP_WILDCARD,
-						partial_term,
-						partial_max_expansion,
-						partial_flags,
-						Xapian::Query::OP_SYNONYM),
-					Xapian::Query(partial_term, 1, 1));
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
