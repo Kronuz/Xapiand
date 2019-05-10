@@ -881,6 +881,967 @@
         {
           "name": "Query DSL",
           "item": [
+             {
+              "name": "Leaf Queries",
+              "item": [
+                {
+                  "name": "Match All Query",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"_match_all\": \"{}\"\n    }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"match all count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10)",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Match None Query",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"_match_none\": \"{}\"\n    }\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"match none count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(0)",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Simple Query",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"favoriteFruit\": \"banana\"\n    },  \"_limit\": 1\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"simple query count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(1);",
+                          "});",
+                          "pm.test(\"simple query size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(1);",
+                          "});",
+                          "pm.test(\"simple query value is valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits[0].favoriteFruit).to.equal('banana');",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Text Queries",
+                  "item": [
+                    {
+                      "name": "Simple Query",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"_query\": {\n    \"personality\": \"responsive\"\n    },    \"_sort\": \"accountNumber\"\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"simple query count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(10);",
+                              "});",
+                              "pm.test(\"simple query size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(10);",
+                              "});",
+                              "pm.test(\"simple query value is valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [101253,109766,119292,121222,124835,134749,137909,152669,154831,163396];",
+                              "    for (var i = 0; i < 10; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Phrase",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"_query\": {\n    \"personality\": {\n \"_phrase\":    \"these days are few and far between\"    }\n},    \"_sort\": \"accountNumber\"\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"phrase query count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(10);",
+                              "});",
+                              "pm.test(\"phrase query size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(10);",
+                              "});",
+                              "pm.test(\"phrase query values are valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [123359,141204,155986,179019,206371,206641,208048,211583,223600,225744];",
+                              "    for (var i = 0; i < 10; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Partial",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"_query\": {\n    \"favoriteFruit\": \"ba*\"   \n},   \"_sort\": \"accountNumber\"\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"partial query count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(10);",
+                              "});",
+                              "pm.test(\"partial query size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(10);",
+                              "});",
+                              "pm.test(\"partial query values are valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [100481,103213,113400,117339,162080,165123,175116,180263,190548,191175];",
+                              "    for (var i = 0; i < 10; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Near",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"_query\": {\n    \"personality\": {\n \"_near\":    \"adventurous ambitious\"    }\n},    \"_sort\": \"accountNumber\"\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"near query count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(2);",
+                              "});",
+                              "pm.test(\"near query size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(2);",
+                              "});",
+                              "pm.test(\"near query values are valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [447943,605225];",
+                              "    for (var i = 0; i < 2; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Love and Hate",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"_query\": {\n    \"personality\": \"\\\"adventurous nature\\\" -ambitious\"   \n},    \"_sort\": \"accountNumber\"\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"Love and Hate count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(10);",
+                              "});",
+                              "pm.test(\"Love and Hate size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(10);",
+                              "});",
+                              "pm.test(\"Love and Hate values are valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [229817,348412,386529,413668,462693,504517,539397,576019,592913,594595];",
+                              "    for (var i = 0; i < 10; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "name": "Default Operator",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"_query\": {\n    \"personality\": {\n    \"_and\": \"these days are few and far between\"    \n}   \n},    \"_sort\": \"accountNumber\"\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"Default operator count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(10);",
+                              "});",
+                              "pm.test(\"Default operator size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(10);",
+                              "});",
+                              "pm.test(\"Default operator values are valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [100123, 100481, 101121, 103213, 103486, 103710, 107465, 112573, 114726, 114772];",
+                              "    for (var i = 0; i < 10; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "Casting values",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"contact.postcode\": {\n    \"_text\": 84535    \n}   \n}\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Casting count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(1);",
+                          "});",
+                          "pm.test(\"Casting size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(1);",
+                          "});",
+                          "pm.test(\"Casting value is valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [233733];",
+                          "    for (var i = 0; i < 1; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Namespace",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"style.footwear\": \"casual shoes\"   \n},    \"_sort\": \"accountNumber\"\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Namespace count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10);",
+                          "});",
+                          "pm.test(\"Namespace size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(10);",
+                          "});",
+                          "pm.test(\"Namespace values are valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [103486,111405,112573,114726,115447,116552,121222,121870,123013,123939];",
+                          "    for (var i = 0; i < 10; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "Compound Queries",
+              "item": [
+                {
+                  "name": "Logical Operators",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"_or\": [{\n    \"favoriteFruit\": \"banana\"    \n},  {\n    \"_and\": [{\n    \"gender\": \"female\"    \n}, {\n    \"eyeColor\": \"brown\"    \n}]    \n}]    \n},  \"_sort\": \"accountNumber\"    \n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Logical Operator count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10);",
+                          "});",
+                          "pm.test(\"Logical Operator size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(10);",
+                          "});",
+                          "pm.test(\"Logical Operator values are valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [100123,100481,101121,103213,112495,112573,113400,114772,117339,119292];",
+                          "    for (var i = 0; i < 10; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Maybe Operator",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"_and_maybe\": [{\n    \"favoriteFruit\": \"banana\"    \n},  {\n    \"_and\": [{\n    \"gender\": \"female\"    \n}, {\n    \"eyeColor\": \"brown\"    \n}]    \n}]    \n},  \"_sort\": \"accountNumber\"    \n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Maybe Operator count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10);",
+                          "});",
+                          "pm.test(\"Maybe Operator size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(10);",
+                          "});",
+                          "pm.test(\"Maybe Operator values are valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [100481,103213,113400,117339,162080,165123,175116,180263,190548,191175];",
+                          "    for (var i = 0; i < 10; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Filter Operator",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\n  \"_query\": {\n    \"_filter\": [{\n    \"favoriteFruit\": \"banana\"    \n},  {\n    \"_and\": [{\n    \"gender\": \"female\"    \n}, {\n    \"eyeColor\": \"brown\"    \n}]    \n}]    \n},  \"_sort\": \"accountNumber\"    \n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Filter Operator count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10);",
+                          "});",
+                          "pm.test(\"Filter Operator size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(10);",
+                          "});",
+                          "pm.test(\"Filter Operator values are valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [180263,281480,291815,352709,382741,411861,452560,673027,859730,876001];",
+                          "    for (var i = 0; i < 10; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Elite Set Operator",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": {\r\n    \"_elite_set\": [\r\n      { \"personality\": \"biggest\" },\r\n      { \"personality\": \"things\" },\r\n      { \"personality\": \"lovable\" },\r\n      { \"personality\": \"cooperative\" },\r\n      { \"personality\": \"course\" },\r\n      { \"personality\": \"also\" },\r\n      { \"personality\": \"kind\" },\r\n      { \"personality\": \"honest\" },\r\n      { \"personality\": \"considerate\" },\r\n      { \"personality\": \"prominent\" },\r\n      { \"personality\": \"especially\" },\r\n      { \"personality\": \"compared\" },\r\n      { \"personality\": \"impulses\" },\r\n      { \"personality\": \"shallow\" },\r\n      { \"personality\": \"well\" }\r\n    ]\r\n  },\r\n      \"_sort\": \"accountNumber\" \r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Elite Set Operator count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10);",
+                          "});",
+                          "pm.test(\"Elite Set Operator size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(10);",
+                          "});",
+                          "pm.test(\"Elite Set Operator values are valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [100123,100481,101294,103486,103710,107465,108731,109766,112495,113400];",
+                          "    for (var i = 0; i < 10; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Range Searches",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": {\r\n    \"_and\": [\r\n      { \"gender\": \"female\" },\r\n      {\r\n        \"age\": {\r\n          \"_in\": {\r\n            \"_range\": {\r\n              \"_from\": 20,\r\n              \"_to\": 30\r\n            }\r\n          }\r\n        }\r\n      }\r\n    ]\r\n  },\r\n  \"_sort\": \"accountNumber\"\r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"Range Searches count\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.count).to.equal(10);",
+                          "});",
+                          "pm.test(\"Range Searches size\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.hits.length).to.equal(10);",
+                          "});",
+                          "pm.test(\"Range Searches values are valid\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [100123,103710,104419,109766,112573,118960,124835,130906,134887,140681];",
+                          "    for (var i = 0; i < 10; ++i) {",
+                          "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Geospatial Searches",
+                  "item": [
+                    {
+                      "name": "Geospatial Point search",
+                      "request": {
+                        "method": "SEARCH",
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json",
+                            "type": "text"
+                          }
+                        ],
+                        "url": {
+                          "host": [
+                            "{{domain}}"
+                          ],
+                          "path": [
+                            "bank",
+                            ""
+                          ],
+                          "query": [
+                            {
+                              "key": "volatile",
+                              "value": null
+                            }
+                          ]
+                        },
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\r\n  \"_query\": {\r\n    \"checkin\": {\r\n      \"_point\": {\r\n        \"_latitude\": 41.50343,\r\n        \"_longitude\": -74.01042\r\n      }\r\n    }\r\n  },\r\n  \"_sort\": \"accountNumber\"\r\n}"
+                        }
+                      },
+                      "event": [
+                        {
+                          "listen": "test",
+                          "script": {
+                            "exec": [
+                              "pm.test(\"response is ok\", function() {",
+                              "    pm.response.to.be.ok;",
+                              "});",
+                              "pm.test(\"Geospatial Point count\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.count).to.equal(10);",
+                              "});",
+                              "pm.test(\"Geospatial Point size\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    pm.expect(jsonData.hits.length).to.equal(10);",
+                              "});",
+                              "pm.test(\"Geospatial Point values are valid\", function() {",
+                              "    var jsonData = pm.response.json();",
+                              "    var expected = [100123,100481,101121,101253,101294,103213,103486,103710,104419,107465];",
+                              "    for (var i = 0; i < 10; ++i) {",
+                              "        pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);",
+                              "    }",
+                              "});"
+                            ],
+                            "type": "text/javascript"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
           ]
         },
         {
@@ -1039,6 +2000,112 @@
                           "    }",
                           "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
                           "    expectEqualNumbers(jsonData.aggregations.avg_age._avg, 30.042);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Min",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": \"*\",\r\n  \"_limit\": 0,\r\n  \"_check_at_least\": 1000,\r\n  \"_aggs\": {\r\n    \"min_balance\": {\r\n      \"_min\": {\r\n        \"_field\": \"balance\"\r\n      }\r\n    }\r\n  }\r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.min_balance._min, 7.99);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Max",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": \"*\",\r\n  \"_limit\": 0,\r\n  \"_check_at_least\": 1000,\r\n  \"_aggs\": {\r\n    \"max_balance\": {\r\n      \"_max\": {\r\n        \"_field\": \"balance\"\r\n      }\r\n    }\r\n  }\r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    function expectEqualNumbers(a, b) {",
+                          "      pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);",
+                          "    }",
+                          "    expectEqualNumbers(jsonData.aggregations._doc_count, 1000);",
+                          "    expectEqualNumbers(jsonData.aggregations.max_balance._max, 12699.46);",
                           "});"
                         ],
                         "type": "text/javascript"
@@ -1219,6 +2286,161 @@
             {
               "name": "Bucket",
               "item": [
+                {
+                  "name": "Ordering",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": \"*\",\r\n  \"_limit\": 0,\r\n  \"_check_at_least\": 1000,\r\n  \"_aggs\": {\r\n    \"balance_by_state\": {\r\n      \"_values\": {\r\n        \"_field\": \"contact.state\",\r\n        \"_sort\": { \"max_balance_count._max\": \"asc\" }\r\n      },\r\n      \"_aggs\": {\r\n        \"max_balance_count\": {\r\n          \"_max\": {\r\n            \"_field\": \"balance\"\r\n          }\r\n        }\r\n      }\r\n    }\r\n  }\r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expected = [3199.28,3262.82,3308.57,3423.5,3554.94,3598.42,3630.51,3634.33,3673.84,3677.93,3736.69,3738.33,3747.21,3756.76,3769.42,3837.63,3838.83,3839.19,3856.99,3890.1,3902.81,3924.08,3929.65,3942.33,3945.77,3948.68,3960.1,3961.23,3982.79,3985.15,3985.47,3985.51,4809.86,5281.15,6691.46,6768.66,6984.37,7095.11,7129.27,7247.46,7304.17,7587.45,7659.66,7809.61,8043.18,8110.22,8881.1,8927.96,9138.89,10073.05,10087.41,10448.36,10513.99,10643.84,10663.25,10729.87,10819.51,10857.55,12699.46];",
+                          "    for (var i = 0; i < 59; ++i) {",
+                          "        pm.expect(jsonData.aggregations.balance_by_state[i].max_balance_count._max).to.equal(expected[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Filter",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": \"*\",\r\n  \"_limit\": 0,\r\n  \"_aggs\": {\r\n    \"strawberry_lovers\": {\r\n      \"_filter\": {\r\n        \"_term\": {\r\n          \"favoriteFruit\": \"strawberry\"\r\n        }\r\n      },\r\n      \"_aggs\": {\r\n        \"avg_balance\": {\r\n          \"_avg\": {\r\n            \"_field\": \"balance\"\r\n          }\r\n        }\r\n      }\r\n    }\r\n  }\r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    pm.expect(jsonData.aggregations.strawberry_lovers.avg_balance._avg).to.equal(1494.65);",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Values",
+                  "request": {
+                    "method": "SEARCH",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "url": {
+                      "host": [
+                        "{{domain}}"
+                      ],
+                      "path": [
+                        "bank",
+                        ""
+                      ],
+                      "query": [
+                        {
+                          "key": "volatile",
+                          "value": null
+                        }
+                      ]
+                    },
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n  \"_query\": \"*\",\r\n  \"_limit\": 0,\r\n  \"_check_at_least\": 1000,\r\n  \"_aggregations\": {\r\n    \"favorite_ruits\": {\r\n      \"_values\": {\r\n        \"_field\": \"favoriteFruit\",\r\n        \"_sort\": { \"_doc_count\": \"asc\" }\r\n      }\r\n    }\r\n  }\r\n}"
+                    }
+                  },
+                  "event": [
+                    {
+                      "listen": "test",
+                      "script": {
+                        "exec": [
+                          "pm.test(\"response is ok\", function() {",
+                          "    pm.response.to.be.ok;",
+                          "});",
+                          "pm.test(\"response is aggregation\", function() {",
+                          "    var jsonData = pm.response.json();",
+                          "    var expect1 = ['nectarine','grapefruit','plum','blackberry','raspberry','lime','cantaloupe','pineapple','cherry','peach','avocado','blueberry','pear','orange','lemon','banana','watermelon','grape','strawberry','apple']",
+                          "    var expect2 = [25,29,30,32,34,36,37,41,42,43,49,49,52,57,58,64,72,73,76,89]",
+                          "    for (var i = 0; i < 20; ++i) {",
+                          "      pm.expect(jsonData.aggregations.favorite_ruits[i]._doc_count).to.equal(expect2[i]);",
+                          "      pm.expect(jsonData.aggregations.favorite_ruits[i]._key).to.equal(expect1[i]);",
+                          "    }",
+                          "});"
+                        ],
+                        "type": "text/javascript"
+                      }
+                    }
+                  ]
+                }
               ]
             }
           ]
@@ -1404,6 +2626,70 @@
                       "    var expected = ['San Francisco','Oakland','Richmond','Berkeley','Vallejo'];",
                       "    for (var i = 0; i < expected.length; ++i) {",
                       "        pm.expect(jsonData.hits[i]).to.equal(expected[i]);",
+                      "    }",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Search North Dakota cities and closest",
+              "request": {
+                "method": "SEARCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "cities",
+                    ""
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n  \"_query\": {\r\n    \"location\": {\r\n      \"_in\": {\r\n        \"_circle\": {\r\n          \"_latitude\": 47.329220,\r\n          \"_longitude\": -100.395388,\r\n          \"_radius\": 328254.09\r\n        }\r\n      }\r\n    }\r\n  }\r\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"Geospatial Circle count\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.count).to.equal(5);",
+                      "});",
+                      "pm.test(\"Geospatial Circle size\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData.hits.length).to.equal(5);",
+                      "});",
+                      "pm.test(\"Geospatial Circle values are valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    for (var i = 0; i < 3; ++i) {",
+                      "       var lat1 = 47.329220 / 180 * Math.PI;",
+                      "       var lon1 = -100.395388 / 180 * Math.PI;",
+                      "       var lat2 = jsonData.hits[i].location._point._latitude / 180 * Math.PI;",
+                      "       var lon2 = jsonData.hits[i].location._point._longitude / 180 * Math.PI;",
+                      "       var d = Math.acos(Math.sin(lat1)*Math.sin(lat2)+Math.cos(lat1)*Math.cos(lat2)*Math.cos(lon1-lon2)) * 6371;",
+                      "       pm.expect(d).to.below(328.25409);",
                       "    }",
                       "});"
                     ],
