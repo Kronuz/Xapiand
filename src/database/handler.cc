@@ -445,7 +445,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 		THROW(Error, "Database is read-only");
 	}
 
-	const auto term_id = get_prefixed_term_id(document_id);
+	const auto term_id = document_id ? get_prefixed_term_id(document_id) : std::string();
 
 	int t = CONFLICT_RETRIES;
 	while (true) {
@@ -495,12 +495,12 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 		THROW(Error, "database is read-only");
 	}
 
-	if (!document_id) {
-		THROW(ClientError, "Document must have an 'id'");
-	}
-
 	if (!patches.is_map() && !patches.is_array()) {
 		THROW(ClientError, "Patches must be a JSON or MsgPack");
+	}
+
+	if (!document_id) {
+		THROW(ClientError, "Document must have an 'id'");
 	}
 
 	const auto term_id = get_prefixed_term_id(document_id);
@@ -1519,6 +1519,8 @@ std::string
 DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 {
 	L_CALL("DatabaseHandler::get_prefixed_term_id({})", repr(document_id.to_string()));
+
+	assert(!document_id.empty());
 
 	schema = get_schema();
 
