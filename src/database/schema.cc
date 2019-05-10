@@ -3223,19 +3223,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::ARRAY: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			properties = &index_subproperties(properties, data, name, 0);
-			index_array(properties, object, data, doc, name);
-			if (specification.flags.store) {
-				if (data->is_map() && data->size() == 1) {
-					auto it = data->find(RESERVED_VALUE);
-					if (it != data->end()) {
-						*data = it.value();
-					}
-				}
-				if (data->is_undefined() || (data->is_map() && data->empty())) {
-					parent_data->erase(name);
-				}
-			}
+			index_subproperties(properties, data, name, 0);
+			set_type_to_array();
+			index_array(object, data, doc);
 			specification = std::move(spc_start);
 			break;
 		}
@@ -3319,15 +3309,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 
 void
-Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_array(const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc)
 {
-	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
-
-	set_type_to_array();
+	L_CALL("Schema::index_array({}, <MsgPack*>, <Xapian::Document>)", repr(array.to_string()));
 
 	if (array.empty()) {
 		if (specification.flags.store) {
-			parent_data->get(name) = MsgPack::ARRAY();
+			*parent_data = MsgPack::ARRAY();
 		}
 		return;
 	}
@@ -3338,38 +3326,9 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 	for (const auto& object : array) {
 		switch (object.get_type()) {
 			case MsgPack::Type::ARRAY: {
-				// Nested array.
-				auto properties = &*parent_properties;
 				auto data = parent_data;
-				properties = &index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				MsgPack nested_data;
-				MsgPack* nested_data_ptr = &nested_data;
-				index_array(properties, object, nested_data_ptr, doc, name);
-				*data_pos = nested_data.get(name);
-				if (specification.flags.store) {
-					if (data_pos->is_map() && data_pos->size() == 1) {
-						auto it = data_pos->find(RESERVED_VALUE);
-						if (it != data_pos->end()) {
-							*data_pos = it.value();
-						}
-					}
-				}
-				specification = spc_start;
-				break;
-			}
-
-			case MsgPack::Type::MAP: {
-				auto properties = &*parent_properties;
-				auto data = parent_data;
-				Fields fields;
-				properties = &index_subproperties(properties, data, name, pos, &object, &fields);
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				index_fields(properties, doc, data_pos, fields);
-				auto value = specification.value ? specification.value.get() : specification.value_rec.get();
-				if (value) {
-					index_item_value(doc, *data_pos, *value, pos);
-				}
+				index_array(object, data_pos, doc);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
@@ -3384,9 +3343,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
-				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				if (!specification.flags.concrete) {
 					if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
@@ -3412,9 +3369,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			}
 
 			default: {
-				auto properties = &*parent_properties;
 				auto data = parent_data;
-				index_subproperties(properties, data, name, pos);
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
 				index_item_value(doc, *data_pos, object, pos);
 				if (specification.flags.store) {
