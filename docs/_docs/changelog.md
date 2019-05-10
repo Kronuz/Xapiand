@@ -16,6 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.22.0] - 2019-05-10
+{: #v0-22-0 }
+
+### Changed
+- **BREAKING**: Added _version to document data
+- **BREAKING**: Non-hashed prefixes for fields
+- Indexing optimizations (_id and _version values)
+- RESTORE now doesn't check _version
+
+### Fixed
+- Concurrency issues
+- Issues with document version checks
+- Fuzzy Queries fixed
+
+
+---
 ## [0.21.2] - 2019-05-06
 {: #v0-21-2 }
 
@@ -699,7 +715,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.21.2...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/Kronuz/Xapiand/compare/v0.21.2...v0.22.0
 [0.21.2]: https://github.com/Kronuz/Xapiand/compare/v0.21.1...v0.21.2
 [0.21.1]: https://github.com/Kronuz/Xapiand/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/Kronuz/Xapiand/compare/v0.20.1...v0.21.0
