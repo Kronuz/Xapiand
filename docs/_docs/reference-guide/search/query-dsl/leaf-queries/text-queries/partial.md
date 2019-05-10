@@ -11,8 +11,15 @@ keypress, or whenever the user pauses for a short period of time (or some other
 similar strategy).
 
 This allows for prefix matches, matching any number of trailing characters, so,
-for instance, `"_partial": "wildc"` or `"wildc*"` would match _**wildc**ard_,
-_**wildc**arded_, _**wildc**ards_, _**wildc**at_, _**wildc**ats_, etc.
+for instance, `"_partial": "wildc"` or `"wildc*"` would match _**wildc**_,
+_**wildc**ard_, _**wildc**arded_, _**wildc**ards_, _**wildc**at_,
+_**wildc**ats_, etc.
+
+{: .note .tip }
+This is a bit different from [Wildcard Query](../wildcard). Wildcard queries
+do not find the queried word as a whole. Partial is intended for "incremental
+search".
+
 
 ### Example
 
@@ -26,23 +33,6 @@ SEARCH /bank/
     "favoriteFruit": {
       "_partial": "ba"
     }
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-A similar effect could be obtained by using the wildcard ("`*`") character
-as part of the query text:
-
-{% capture req %}
-
-```json
-SEARCH /bank/
-
-{
-  "_query": {
-    "favoriteFruit": "ba*"
   }
 }
 ```

@@ -9,6 +9,7 @@ email, into tokens or terms which are added to the inverted index for searching.
 
 * [**_Simple Query_**](simple)
 * [**_Phrase Query_**](phrase)
+* [**_Wildcard Query_**](wildcard)
 * [**_Partial Query_**](partial)
 * [**_Fuzzy Query_**](fuzzy)
 * [**_Near Query_**](near)

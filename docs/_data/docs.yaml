@@ -81,6 +81,7 @@
                   docs:
                     - url: simple
                     - url: phrase
+                    - url: wildcard
                     - url: partial
                     - url: fuzzy
                     - url: near
