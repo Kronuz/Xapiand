@@ -1,5 +1,6 @@
 ---
 title: Namespace Queries
+short_title: Namespaced
 ---
 
 Namespace enabled fields allow efficiently searching for nested object names

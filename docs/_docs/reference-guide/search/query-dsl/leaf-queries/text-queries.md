@@ -10,6 +10,7 @@ email, into tokens or terms which are added to the inverted index for searching.
 * [**_Simple Query_**](simple)
 * [**_Phrase Query_**](phrase)
 * [**_Partial Query_**](partial)
+* [**_Fuzzy Query_**](fuzzy)
 * [**_Near Query_**](near)
 * [**_Love and Hate Query_**](love-and-hate)
 * [**_Default Operator_**](default-operator)

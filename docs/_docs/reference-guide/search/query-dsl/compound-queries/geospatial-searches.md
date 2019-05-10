@@ -1,5 +1,6 @@
 ---
 title: Geospatial Searches
+short_title: Geospatial
 ---
 
 Geospatial allow searching within arbitrary "geo-shapes" such as rectangles,
