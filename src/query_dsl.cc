@@ -717,6 +717,8 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
 				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
+				wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_SINGLE;
+				wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_MULTI;
 				return Xapian::Query(Xapian::Query::OP_WILDCARD,
 					wildcard_term,
 					wildcard_max_expansion,
@@ -752,6 +754,8 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
 				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
+				wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_SINGLE;
+				wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_MULTI;
 				return Xapian::Query(Xapian::Query::OP_WILDCARD,
 					wildcard_term,
 					wildcard_max_expansion,
@@ -819,7 +823,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 #endif
 			flags |= Xapian::QueryParser::FLAG_PHRASE;
 			flags |= Xapian::QueryParser::FLAG_LOVEHATE;
-			flags |= Xapian::QueryParser::FLAG_WILDCARD;
+			flags |= Xapian::QueryParser::FLAG_WILDCARD_GLOB;
 			flags |= Xapian::QueryParser::FLAG_FUZZY;
 
 			parser.set_max_expansion(DEFAULT_PARTIAL_MAX_EXPANSION, Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT, Xapian::QueryParser::FLAG_PARTIAL);
