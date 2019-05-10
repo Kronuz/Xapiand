@@ -743,13 +743,14 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				Xapian::termcount fuzzy_max_expansion = DEFAULT_FUZZY_MAX_EXPANSION;
 				int fuzzy_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
 				unsigned fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
+				size_t fuzzy_prefix_length = 0;
 				return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
 					fuzzy_term,
 					fuzzy_max_expansion,
 					fuzzy_flags,
 					Xapian::Query::OP_OR,
 					fuzzy_edit_distance,
-					field_spc.prefix().size() + 1);
+					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 		}
