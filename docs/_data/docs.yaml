@@ -82,6 +82,7 @@
                     - url: simple
                     - url: phrase
                     - url: partial
+                    - url: fuzzy
                     - url: near
                     - url: love-and-hate
                     - url: default-operator
