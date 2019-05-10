@@ -41,6 +41,7 @@
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
 #include "serialise.h"                               // for Serialise
+#include "strings.h"                                 // for strings::format
 #include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
 #include "y2j/y2j.h"                                 // for y2j::yamlParseBytes
 
@@ -69,14 +70,22 @@ Xapian::valueno get_slot(std::string_view field_prefix, char field_type)
 
 std::string get_prefix(unsigned long long field_number)
 {
+#ifdef XAPIAND_HASHED_PREFIXES
 	return serialise_length(field_number);
+#else
+	return strings::format("#{:x}.", field_number);
+#endif
 }
 
 
 std::string get_prefix(std::string_view field_name)
 {
+#ifdef XAPIAND_HASHED_PREFIXES
 	// Mask 0x1fffff for maximum length prefix of 4.
 	return serialise_length(xxh32::hash(field_name) & 0x1fffff);
+#else
+	return strings::format("{}.", field_name);
+#endif
 }
 
 
