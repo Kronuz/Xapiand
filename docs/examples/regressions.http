@@ -22,72 +22,98 @@ GET /test/duplicated_uuid_field/._schema
 ###
 
 
-POST /test/array/
+PUT /test/array/~notmet
 
 {
-	"_schema": {
-		"schema": {
-			"_id": {
-				"_type": "uuid",
-			},
-			"types": {
-				"_type": "array/keyword",
-			},
-		}
-	},
 	"types": [
 		"A", "B", "C", "D",
 		"E", "F", "G", "H"
 	]
 }
 ###
-GET /test/array/._schema
+INFO /test/array/~notmet?echo&pretty&comments
 ###
 
 
-POST /test/array_of_arrays/
+PUT /test/array_of_arrays/~notmet
 
 {
-	"_schema": {
-		"schema": {
-			"_id": {
-				"_type": "uuid",
-			},
-			"types": {
-				"_type": "array/keyword",
-			},
-		}
-	},
 	"types": [
-        [ "A", "B", "C", "D" ],
-        [ "E", "F", "G", "H" ]
+		[ "A", "B", "C", "D" ],
+		[ "E", "F", "G", "H" ]
 	]
 }
 ###
-GET /test/array_of_arrays/._schema
+INFO /test/array_of_arrays/~notmet?echo&pretty&comments
 ###
 
 
-POST /test/array_of_arrays_of_arrays/
+PUT /test/array_of_arrays_of_arrays/~notmet
 
 {
-	"_schema": {
-		"schema": {
-			"_id": {
-				"_type": "uuid",
-			},
-			"types": {
-				"_type": "array/keyword",
-			},
-		}
-	},
 	"types": [
-        [ [ "A", "B" ], [ "C", "D" ] ],
-        [ [ "E", "F" ], [ "G", "H" ] ]
+		[ [ "A", "B" ], [ "C", "D" ] ],
+		[ [ "E", "F" ], [ "G", "H" ] ]
 	]
 }
 ###
-GET /test/array_of_arrays_of_arrays/._schema
+INFO /test/array_of_arrays_of_arrays/~notmet
+###
+
+
+PUT /test/arrays/~notmet
+
+{
+	"types": [
+		"A", "B", [ "C", "D" ], [ "E", "F", [ "G", "H" ] ],
+		"I", [ "J", [ "K", [ "L", [ "M", "N" ]] ] ]
+	]
+}
+###
+INFO /test/arrays/~notmet
+###
+
+
+PUT /test/array_of_objects/~notmet
+
+{
+	"types": [
+		{
+			"name": "A",
+			"num": 1
+		},
+		{
+			"name": "B",
+			"num": 2
+		},
+		{
+			"name": "C",
+			"num": 3
+		},
+		{
+			"name": "D",
+			"num": 4
+		},
+		{
+			"name": "E",
+			"num": 5
+		},
+		{
+			"name": "F",
+			"num": 6
+		},
+		{
+			"name": "G",
+			"num": 7
+		},
+		{
+			"name": "H",
+			"num": 8
+		}
+	]
+}
+###
+INFO /test/array_of_objects/~notmet
 ###
 
 
