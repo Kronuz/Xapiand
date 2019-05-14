@@ -3371,10 +3371,8 @@ Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgP
 		if (!item_value.is_map()) {
 			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		const auto spc_object = specification;
 		for (auto& name : item_value) {
 			index_object(properties, item_value.at(name), data, doc, name.str());
-			specification = spc_object;
 		}
 		return;
 	}
@@ -3432,10 +3430,8 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		set_type_to_object();
-		const auto spc_object = specification;
 		for (const auto& field : fields) {
 			index_object(properties, *field.second, data, doc, field.first);
-			specification = spc_object;
 		}
 	}
 }
@@ -3827,10 +3823,8 @@ Schema::update_item_value(const MsgPack*& properties, const MsgPack& item_value)
 		if (!item_value.is_map()) {
 			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		const auto spc_object = specification;
 		for (auto& name : item_value) {
 			update_object(properties, item_value.at(name), name.str());
-			specification = spc_object;
 		}
 		return;
 	}
@@ -3879,10 +3873,8 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		set_type_to_object();
-		const auto spc_object = specification;
 		for (const auto& field : fields) {
 			update_object(properties, *field.second, field.first);
-			specification = spc_object;
 		}
 	}
 }
@@ -4278,10 +4270,8 @@ Schema::write_item_value(MsgPack*& mut_properties, const MsgPack& item_value)
 		if (!item_value.is_map()) {
 			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		const auto spc_object = specification;
 		for (auto& name : item_value) {
 			write_object(mut_properties, item_value.at(name), name.str());
-			specification = spc_object;
 		}
 		return;
 	}
@@ -4328,10 +4318,8 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		set_type_to_object();
-		const auto spc_object = specification;
 		for (const auto& field : fields) {
 			write_object(mut_properties, *field.second, field.first);
-			specification = spc_object;
 		}
 	}
 }
