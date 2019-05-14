@@ -2165,6 +2165,13 @@ specification_t::specification_t(const specification_t& o)
 	  positions(o.positions),
 	  index(o.index),
 	  index_uuid_field(o.index_uuid_field),
+	  value_rec(o.value_rec ? std::make_unique<const MsgPack>(*o.value_rec) : nullptr),
+	  value(o.value ? std::make_unique<const MsgPack>(*o.value) : nullptr),
+	  doc_acc(o.doc_acc ? std::make_unique<const MsgPack>(*o.doc_acc) : nullptr),
+#ifdef XAPIAND_CHAISCRIPT
+	  script(o.script ? std::make_unique<const MsgPack>(*o.script) : nullptr),
+#endif
+	  endpoint(o.endpoint),
 	  meta_name(o.meta_name),
 	  full_meta_name(o.full_meta_name),
 	  aux_stem_language(o.aux_stem_language),
@@ -2182,6 +2189,13 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  positions(std::move(o.positions)),
 	  index(std::move(o.index)),
 	  index_uuid_field(std::move(o.index_uuid_field)),
+	  value_rec(std::move(o.value_rec)),
+	  value(std::move(o.value)),
+	  doc_acc(std::move(o.doc_acc)),
+#ifdef XAPIAND_CHAISCRIPT
+	  script(std::move(o.script)),
+#endif
+	  endpoint(std::move(o.endpoint)),
 	  meta_name(std::move(o.meta_name)),
 	  full_meta_name(std::move(o.full_meta_name)),
 	  aux_stem_language(std::move(o.aux_stem_language)),
@@ -2200,12 +2214,13 @@ specification_t::operator=(const specification_t& o)
 	positions = o.positions;
 	index = o.index;
 	index_uuid_field = o.index_uuid_field;
-	value_rec.reset();
-	value.reset();
-	doc_acc.reset();
+	value_rec = o.value_rec ? std::make_unique<const MsgPack>(*o.value_rec) : nullptr;
+	value = o.value ? std::make_unique<const MsgPack>(*o.value) : nullptr;
+	doc_acc = o.doc_acc ? std::make_unique<const MsgPack>(*o.doc_acc) : nullptr;
 #ifdef XAPIAND_CHAISCRIPT
-	script.reset();
+	script = o.script ? std::make_unique<const MsgPack>(*o.script) : nullptr;
 #endif
+	endpoint = o.endpoint;
 	meta_name = o.meta_name;
 	full_meta_name = o.full_meta_name;
 	aux_stem_language = o.aux_stem_language;
@@ -2227,12 +2242,13 @@ specification_t::operator=(specification_t&& o) noexcept
 	positions = std::move(o.positions);
 	index = std::move(o.index);
 	index_uuid_field = std::move(o.index_uuid_field);
-	value_rec.reset();
-	value.reset();
-	doc_acc.reset();
+	value_rec = std::move(o.value_rec);
+	value = std::move(o.value);
+	doc_acc = std::move(o.doc_acc);
 #ifdef XAPIAND_CHAISCRIPT
-	script.reset();
+	script = std::move(o.script);
 #endif
+	endpoint = std::move(o.endpoint);
 	meta_name = std::move(o.meta_name);
 	full_meta_name = std::move(o.full_meta_name);
 	aux_stem_language = std::move(o.aux_stem_language);
