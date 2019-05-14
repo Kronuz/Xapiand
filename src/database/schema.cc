@@ -4587,7 +4587,7 @@ Schema::set_type_to_object()
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 			mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
 		} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object) {
-			THROW(ClientError, "Object type mismatch: '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "Type mismatch '{}' -> 'object'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 		}
 	}
 }
@@ -4604,7 +4604,7 @@ Schema::set_type_to_array()
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 			mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
 		} else if (specification.sep_types[SPC_ARRAY_TYPE] != FieldType::array) {
-			THROW(ClientError, "Array type mismatch: '{}'", enum_name(specification.sep_types[SPC_ARRAY_TYPE]));
+			THROW(ClientError, "Type mismatch '{}' -> 'array'", enum_name(specification.sep_types[SPC_ARRAY_TYPE]));
 		}
 	}
 }
@@ -4935,76 +4935,141 @@ Schema::guess_field_type(const MsgPack& item_doc)
 	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::positive) {
+					THROW(ClientError, "Type mismatch '{}' -> 'positive'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			break;
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::integer;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::integer;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::integer) {
+					THROW(ClientError, "Type mismatch '{}' -> 'integer'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			break;
 		case MsgPack::Type::FLOAT:
 			if (specification.flags.numeric_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::floating;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::floating;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::floating) {
+					THROW(ClientError, "Type mismatch '{}' -> 'floating'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			break;
 		case MsgPack::Type::BOOLEAN:
 			if (specification.flags.bool_detection) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
+					THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			break;
 		case MsgPack::Type::STR: {
 			const auto str_value = item_doc.str_view();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::uuid;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::uuid;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::uuid) {
+					THROW(ClientError, "Type mismatch '{}' -> 'uuid'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::date;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::date;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::date) {
+					THROW(ClientError, "Type mismatch '{}' -> 'date'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			if (specification.flags.datetime_detection && Datetime::isDatetime(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::datetime;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::datetime;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::datetime) {
+					THROW(ClientError, "Type mismatch '{}' -> 'datetime'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::time;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::time;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::time) {
+					THROW(ClientError, "Type mismatch '{}' -> 'time'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::timedelta;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::timedelta;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::timedelta) {
+					THROW(ClientError, "Type mismatch '{}' -> 'timedelta'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::geo;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::geo;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
+					THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
 			}
 			if (specification.flags.bool_detection) {
 				if (str_value == "true" || str_value == "false") {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
+					if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+						specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
+					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
+						THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+					}
 					return;
 				}
 			}
 			if (specification.flags.text_detection && !specification.flags.bool_term) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::text;
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::text;
+				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::text) {
+					THROW(ClientError, "Type mismatch '{}' -> 'text'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+				}
 				return;
+			}
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
+			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::keyword) {
+				THROW(ClientError, "Type mismatch '{}' -> 'keyword'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 			return;
 		}
 		case MsgPack::Type::MAP:
-			if (item_doc.size() == 1) {
-				auto item = item_doc.begin();
-				if (item->is_string()) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = Cast::get_field_type(item->str());
+			for (auto it = item_doc.begin(); it != item_doc.end(); ++it) {
+				auto str_key = it->str_view();
+				if (is_reserved(str_key)) {
+					auto field_type = Cast::get_field_type(str_key);
+					if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+						specification.sep_types[SPC_CONCRETE_TYPE] = field_type;
+					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != field_type) {
+						THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(field_type));
+					}
 					return;
+				} else if (!is_comment(str_key)) {
+					break;
 				}
 			}
-			THROW(ClientError, "'{}' cannot be a nested object", RESERVED_VALUE);
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::object;
+			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object) {
+				THROW(ClientError, "Type mismatch '{}' -> 'object'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+			}
+			return;
 		case MsgPack::Type::ARRAY:
 			THROW(ClientError, "'{}' cannot be a nested array", RESERVED_VALUE);
 		default:
