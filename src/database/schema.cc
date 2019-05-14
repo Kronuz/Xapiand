@@ -3494,7 +3494,7 @@ Schema::update(const MsgPack& object)
 				dispatch_process_properties(schema_obj, fields);
 			}
 
-			update_item_value(properties, fields);
+			update_fields(properties, fields);
 		}
 
 		// Inject remaining items from received object into the new schema
@@ -3711,24 +3711,28 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		return;
 	}
 
+	auto spc_start = specification;
+
 	switch (object.get_type()) {
-		case MsgPack::Type::MAP: {
-			auto spc_start = specification;
+		case MsgPack::Type::ARRAY: {
 			auto properties = &*parent_properties;
-			Fields fields;
-			properties = &update_subproperties(properties, name, object, fields);
-			update_item_value(properties, fields);
+			properties = &update_subproperties(properties, name);
+			update_array(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
 
-		case MsgPack::Type::ARRAY: {
-			return update_array(parent_properties, object, name);
+		case MsgPack::Type::MAP: {
+			auto properties = &*parent_properties;
+			Fields fields;
+			properties = &update_subproperties(properties, name, object, fields);
+			update_fields(properties, fields);
+			specification = std::move(spc_start);
+			return;
 		}
 
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED: {
-			auto spc_start = specification;
 			auto properties = &*parent_properties;
 			update_subproperties(properties, name);
 			specification = std::move(spc_start);
@@ -3736,10 +3740,9 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		}
 
 		default: {
-			auto spc_start = specification;
 			auto properties = &*parent_properties;
-			update_subproperties(properties, name);
-			update_item_value();
+			properties = &update_subproperties(properties, name);
+			update_item_value(properties, object);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -3757,32 +3760,30 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 		return;
 	}
 
-	auto spc_start = specification;
 	size_t pos = 0;
-	for (const auto& item : array) {
-		switch (item.get_type()) {
-			case MsgPack::Type::MAP: {
-				auto properties = &*parent_properties;
-				Fields fields;
-				properties = &update_subproperties(properties, name, item, fields);
-				update_item_value(properties, fields);
-				specification = spc_start;
+	for (const auto& object : array) {
+		switch (object.get_type()) {
+			case MsgPack::Type::ARRAY: {
+				update_array(parent_properties, object, name);
 				break;
 			}
 
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
-				auto properties = &*parent_properties;
-				update_subproperties(properties, name);
-				specification = spc_start;
+				if (!specification.flags.concrete) {
+					if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+						if (specification.flags.inside_namespace) {
+							validate_required_namespace_data();
+						} else {
+							validate_required_data(get_mutable_properties(specification.full_meta_name));
+						}
+					}
+				}
 				break;
 			}
 
 			default: {
-				auto properties = &*parent_properties;
-				update_subproperties(properties, name);
-				update_item_value();
-				specification = spc_start;
+				update_item_value(parent_properties, object);
 				break;
 			}
 		}
@@ -3792,9 +3793,9 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 
 
 void
-Schema::update_item_value()
+Schema::update_item_value(const MsgPack*& properties, const MsgPack& item_value)
 {
-	L_CALL("Schema::update_item_value()");
+	L_CALL("Schema::update_item_value()", repr(properties->to_string()), repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -3819,6 +3820,21 @@ Schema::update_item_value()
 		}
 	}
 
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		if (!item_value.is_map()) {
+			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		const auto spc_object = specification;
+		for (auto& name : item_value) {
+			update_object(properties, item_value.at(name), name.str());
+			specification = spc_object;
+		}
+		return;
+	}
+
 	if (!specification.partial_index_spcs.empty()) {
 		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
 		for (const auto& index_spc : specification.partial_index_spcs) {
@@ -3830,9 +3846,9 @@ Schema::update_item_value()
 
 
 inline void
-Schema::update_item_value(const MsgPack*& properties, const Fields& fields)
+Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 {
-	L_CALL("Schema::update_item_value(<const MsgPack*>, <Fields>)");
+	L_CALL("Schema::update_fields(<const MsgPack*>, <Fields>)");
 
 	const auto spc_start = specification;
 
@@ -3925,7 +3941,7 @@ Schema::write(const MsgPack& object, bool replace)
 
 			dispatch_write_properties(*mut_properties, schema_obj, fields);
 
-			write_item_value(mut_properties, fields);
+			write_fields(mut_properties, fields);
 		}
 
 		// Inject remaining items from received object into the new schema
@@ -4138,35 +4154,47 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 		return;
 	}
 
+	auto spc_start = specification;
+
 	switch (object.get_type()) {
-		case MsgPack::Type::MAP: {
-			auto spc_start = specification;
+		case MsgPack::Type::ARRAY: {
 			auto properties = &*mut_parent_properties;
-			Fields fields;
-			properties = &write_subproperties(properties, name, object, fields);
-			write_item_value(properties, fields);
+			properties = &write_subproperties(properties, name);
+			write_array(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
 
-		case MsgPack::Type::ARRAY: {
-			return write_array(mut_parent_properties, object, name);
+		case MsgPack::Type::MAP: {
+			auto properties = &*mut_parent_properties;
+			Fields fields;
+			properties = &write_subproperties(properties, name, object, fields);
+			write_fields(properties, fields);
+			specification = std::move(spc_start);
+			return;
 		}
 
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED: {
-			auto spc_start = specification;
 			auto properties = &*mut_parent_properties;
 			write_subproperties(properties, name);
+			if (!specification.flags.concrete) {
+				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+					if (specification.flags.inside_namespace) {
+						validate_required_namespace_data();
+					} else {
+						validate_required_data(get_mutable_properties(specification.full_meta_name));
+					}
+				}
+			}
 			specification = std::move(spc_start);
 			return;
 		}
 
 		default: {
-			auto spc_start = specification;
 			auto properties = &*mut_parent_properties;
 			write_subproperties(properties, name);
-			write_item_value(properties);
+			write_item_value(properties, object);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -4185,32 +4213,30 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 		return;
 	}
 
-	auto spc_start = specification;
 	size_t pos = 0;
-	for (const auto& item : array) {
-		switch (item.get_type()) {
-			case MsgPack::Type::MAP: {
-				auto properties = &*mut_parent_properties;
-				Fields fields;
-				properties = &write_subproperties(properties, name, item, fields);
-				write_item_value(properties, fields);
-				specification = spc_start;
+	for (const auto& object : array) {
+		switch (object.get_type()) {
+			case MsgPack::Type::ARRAY: {
+				write_array(mut_parent_properties, object, name);
 				break;
 			}
 
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
-				auto properties = &*mut_parent_properties;
-				write_subproperties(properties, name);
-				specification = spc_start;
+				if (!specification.flags.concrete) {
+					if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+						if (specification.flags.inside_namespace) {
+							validate_required_namespace_data();
+						} else {
+							validate_required_data(get_mutable_properties(specification.full_meta_name));
+						}
+					}
+				}
 				break;
 			}
 
 			default: {
-				auto properties = &*mut_parent_properties;
-				write_subproperties(properties, name);
-				write_item_value(properties);
-				specification = spc_start;
+				write_item_value(mut_parent_properties, object);
 				break;
 			}
 		}
@@ -4220,7 +4246,7 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 
 
 void
-Schema::write_item_value(MsgPack*& mut_properties)
+Schema::write_item_value(MsgPack*& mut_properties, const MsgPack& item_value)
 {
 	L_CALL("Schema::write_item_value()");
 
@@ -4245,6 +4271,21 @@ Schema::write_item_value(MsgPack*& mut_properties)
 		}
 	}
 
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		if (!item_value.is_map()) {
+			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		const auto spc_object = specification;
+		for (auto& name : item_value) {
+			write_object(mut_properties, item_value.at(name), name.str());
+			specification = spc_object;
+		}
+		return;
+	}
+
 	if (!specification.partial_index_spcs.empty()) {
 		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
 		for (const auto& index_spc : specification.partial_index_spcs) {
@@ -4256,9 +4297,9 @@ Schema::write_item_value(MsgPack*& mut_properties)
 
 
 inline void
-Schema::write_item_value(MsgPack*& mut_properties, const Fields& fields)
+Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 {
-	L_CALL("Schema::write_item_value(<const MsgPack*>, <Fields>)");
+	L_CALL("Schema::write_fields(<const MsgPack*>, <Fields>)");
 
 	const auto spc_start = specification;
 

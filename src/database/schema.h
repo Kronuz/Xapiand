@@ -663,8 +663,8 @@ class Schema {
 	void update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
 	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
 
-	void update_item_value();
-	void update_item_value(const MsgPack*& properties, const Fields& fields);
+	void update_item_value(const MsgPack*& properties, const MsgPack& item_value);
+	void update_fields(const MsgPack*& properties, const Fields& fields);
 
 	/*
 	 * Main functions to write objects and arrays
@@ -676,8 +676,8 @@ class Schema {
 	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
 	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
 
-	void write_item_value(MsgPack*& mut_properties);
-	void write_item_value(MsgPack*& mut_properties, const Fields& fields);
+	void write_item_value(MsgPack*& mut_properties, const MsgPack& item_value);
+	void write_fields(MsgPack*& mut_properties, const Fields& fields);
 
 
 	/*
