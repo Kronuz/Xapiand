@@ -649,7 +649,7 @@ class Schema {
 	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack* object = nullptr, Fields* fields = nullptr);
 
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
-	void index_array(const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc);
+	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
 	void index_item_value(Xapian::Document& doc, MsgPack& data, const MsgPack& item_value, size_t pos = 0);
 

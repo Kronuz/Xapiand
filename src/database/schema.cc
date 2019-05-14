@@ -3223,12 +3223,13 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::ARRAY: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name);
+			properties = &index_subproperties(properties, data, name);
 			set_type_to_array();
-			index_array(object, data, doc);
+			index_array(properties, object, data, doc, name);
 			specification = std::move(spc_start);
 			break;
 		}
+
 		case MsgPack::Type::MAP: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
@@ -3309,9 +3310,9 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 
 
 void
-Schema::index_array(const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc)
+Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_array({}, <MsgPack*>, <Xapian::Document>)", repr(array.to_string()));
+	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
 
 	if (array.empty()) {
 		if (specification.flags.store) {
@@ -3328,7 +3329,7 @@ Schema::index_array(const MsgPack& array, MsgPack*& parent_data, Xapian::Documen
 			case MsgPack::Type::ARRAY: {
 				auto data = parent_data;
 				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				index_array(object, data_pos, doc);
+				index_array(parent_properties, object, data_pos, doc, name);
 				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
