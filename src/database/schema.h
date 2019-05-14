@@ -120,10 +120,9 @@ constexpr size_t LIMIT_PARTIAL_PATHS_DEPTH        = 10; // 2^(n - 2) => 2^8 => 2
 
 
 constexpr size_t SPC_FOREIGN_TYPE  = 0;
-constexpr size_t SPC_OBJECT_TYPE   = 1;
-constexpr size_t SPC_ARRAY_TYPE    = 2;
-constexpr size_t SPC_CONCRETE_TYPE = 3;
-constexpr size_t SPC_TOTAL_TYPES   = 4;
+constexpr size_t SPC_ARRAY_TYPE    = 1;
+constexpr size_t SPC_CONCRETE_TYPE = 2;
+constexpr size_t SPC_TOTAL_TYPES   = 3;
 
 
 inline constexpr TypeIndex operator|(const uint8_t& a, const TypeIndex& b) {
@@ -193,10 +192,10 @@ constexpr uint8_t TIME_CHAR          = 'Z';
 ENUM_CLASS(FieldType, uint8_t,
 	empty         = EMPTY_CHAR,
 
-	array         = ARRAY_CHAR,
 	foreign       = FOREIGN_CHAR,
-	object        = OBJECT_CHAR,
+	array         = ARRAY_CHAR,
 
+	object        = OBJECT_CHAR,
 	boolean       = BOOLEAN_CHAR,
 	date          = DATE_CHAR,
 	datetime      = DATETIME_CHAR,
@@ -404,7 +403,7 @@ struct required_spc_t {
 		return sep_types[SPC_CONCRETE_TYPE];
 	}
 
-	const std::string& get_str_type() const {
+	std::string_view get_str_type() const {
 		return get_str_type(sep_types);
 	}
 
@@ -458,7 +457,7 @@ struct required_spc_t {
 	}
 
 	static const std::array<FieldType, SPC_TOTAL_TYPES>& get_types(std::string_view str_type);
-	static const std::string& get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
+	static std::string_view get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types);
 
 	void set_types(std::string_view str_type);
 };

@@ -34,7 +34,7 @@
 
 Script::Script(const MsgPack& _obj)
 	: type(Type::EMPTY),
-	  _sep_types({ { FieldType::empty, FieldType::empty, FieldType::empty, FieldType::empty } })
+	  _sep_types({ { FieldType::empty, FieldType::empty, FieldType::empty } })
 {
 	switch (_obj.get_type()) {
 		case MsgPack::Type::STR: {
