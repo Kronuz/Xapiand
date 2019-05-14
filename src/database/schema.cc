@@ -3473,7 +3473,7 @@ Schema::update(const MsgPack& object)
 		// Inject remaining items from received object into the new schema
 		const auto it_e = object.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
+			auto str_key = it->str_view();
 			if (str_key != SCHEMA_FIELD_NAME) {
 				if (!mut_schema) {
 					mut_schema = std::make_unique<MsgPack>(*schema);
@@ -3904,7 +3904,7 @@ Schema::write(const MsgPack& object, bool replace)
 		// Inject remaining items from received object into the new schema
 		const auto it_e = object.end();
 		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str();
+			auto str_key = it->str_view();
 			if (str_key != SCHEMA_FIELD_NAME) {
 				if (!mut_schema) {
 					mut_schema = std::make_unique<MsgPack>(*schema);
