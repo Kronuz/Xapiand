@@ -2752,7 +2752,13 @@ Document::get_terms()
 			auto doc = lk_shard->get_document(shard_did);
 			const auto it_e = doc.termlist_end();
 			for (auto it = doc.termlist_begin(); it != it_e; ++it) {
-				auto& term = terms[*it];
+				auto full_term = *it;
+				Split<std::string_view> term_split(full_term, '.');
+				auto* term_ptr = &terms;
+				for (const auto& term_part : term_split) {
+					term_ptr = &term_ptr->get(term_part);
+				}
+				auto& term = *term_ptr;
 				term[RESPONSE_WDF] = it.get_wdf();  // The within-document-frequency of the current term in the current document.
 				try {
 					auto _term_freq = it.get_termfreq();  // The number of documents which this term indexes.
