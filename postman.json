@@ -2856,6 +2856,94 @@
               ]
             }
           ]
+        },
+        {
+          "name": "UUID notmet",
+          "item": [
+            {
+              "name": "Index: notmet",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "00000000-0000-1000-8000-010000000000"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    },
+                    {
+                      "key": "echo",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"campo\": \"first\"\n}"
+                }
+              }
+            },
+            {
+              "name": "Get notmet",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "00000000-0000-1000-8000-010000000000"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"id is type UUID\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData._id).to.equal('~notmet');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }
