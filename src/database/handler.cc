@@ -1221,9 +1221,9 @@ DocMatcher::prepare_mset()
 				mset = enquire.prepare_mset(nullptr, nullptr);
 				revision = db->get_revision();
 				doccount += db->get_doccount();
-				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+				mset.set_database(Xapian::Database{});  // Make Enquire release the database
 			} catch (...) {
-				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+				mset.set_database(Xapian::Database{});  // Make Enquire release the database
 				throw;
 			}
 			break;
@@ -1277,9 +1277,9 @@ DocMatcher::get_mset()
 				enquire.set_prepared_mset(merger.get_prepared_mset());
 				mset = enquire.get_mset(first, maxitems, check_at_least);
 				mset.unshard_docids(shard_num, n_shards);
-				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+				mset.set_database(Xapian::Database{});  // Make Enquire release the database
 			} catch (...) {
-				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
+				mset.set_database(Xapian::Database{});  // Make Enquire release the database
 				throw;
 			}
 			break;
