@@ -38,7 +38,7 @@
 //   | || | | (_| | (__|   <  __/ (_| |
 //   |_||_|  \__,_|\___|_|\_\___|\__,_|
 //
-namespace allocator {
+namespace allocators {
 	class vanilla_allocator {
 	public:
 		static void* allocate(std::size_t __sz) noexcept;
@@ -128,7 +128,7 @@ namespace allocator {
 // | |  | |  __/ | | | | | (_) | |  | |_| | |  __/ (_) | (_) | |
 // |_|  |_|\___|_| |_| |_|\___/|_|   \__, | |_|   \___/ \___/|_|
 //                                   |___/
-namespace allocator {
+namespace allocators {
 	template <typename _Tp>
 	class memory_pool_allocator {
 	public:

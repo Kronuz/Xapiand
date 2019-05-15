@@ -22,7 +22,7 @@
 
 #include "config.h"
 
-#include "allocator.h"
+#include "allocators.h"
 
 #ifdef XAPIAND_TRACKED_MEM
 
@@ -47,7 +47,7 @@
 #endif
 
 
-namespace allocator {
+namespace allocators {
 	// Allocating Aligned Memory Blocks
 	// The address of a block returned by malloc or realloc is always a
 	// multiple of eight (or sixteen on 64-bit systems).
@@ -80,13 +80,13 @@ namespace allocator {
 
 	inline void* vanilla_allocator::allocate(std::size_t __sz) noexcept {
 		// fprintf(stderr, "{allocate %zu bytes}\n", __sz);
-		return ::allocator::malloc(__sz);
+		return ::allocators::malloc(__sz);
 	}
 
 	inline void vanilla_allocator::deallocate(void* __p) noexcept {
 		if (__p != nullptr) {
 			// fprintf(stderr, "{deallocate}\n");
-			::allocator::free(__p);
+			::allocators::free(__p);
 		}
 	}
 
@@ -146,7 +146,7 @@ namespace allocator {
 
 	inline void* tracked_allocator::allocate(std::size_t __sz) noexcept {
 		// fprintf(stderr, "[allocate %zu bytes]\n", __sz);
-		void* __p = ::allocator::malloc(__sz + alignment);
+		void* __p = ::allocators::malloc(__sz + alignment);
 		auto& t_allocated = _total_allocated();
 		auto& l_allocated = _local_allocated();
 		t_allocated += __sz;
@@ -167,7 +167,7 @@ namespace allocator {
 			t_allocated -= __sz;
 			l_allocated -= __sz;
 			// fprintf(stderr, "[deallocating %zu bytes at %__p, %lld [%lld] remain allocated]\n", __sz, __p, l_allocated, t_allocated.load());
-			::allocator::free(__p);
+			::allocators::free(__p);
 		}
 	}
 }
@@ -175,46 +175,46 @@ namespace allocator {
 // Operators overload for tracking
 
 void* operator new(std::size_t __sz) noexcept(false) {
-	return allocator::tracked_allocator::allocate(__sz);
+	return allocators::tracked_allocator::allocate(__sz);
 }
 
 
 void* operator new(std::size_t __sz, const std::nothrow_t& /*unused*/) noexcept {
-	return allocator::tracked_allocator::allocate(__sz);
+	return allocators::tracked_allocator::allocate(__sz);
 }
 
 
 void* operator new[](std::size_t __sz) noexcept(false) {
-	return allocator::tracked_allocator::allocate(__sz);
+	return allocators::tracked_allocator::allocate(__sz);
 }
 
 
 void* operator new[](std::size_t __sz, const std::nothrow_t& /*unused*/) noexcept {
-	return allocator::tracked_allocator::allocate(__sz);
+	return allocators::tracked_allocator::allocate(__sz);
 }
 
 
 void operator delete(void* __p) noexcept {
-	allocator::tracked_allocator::deallocate(__p);
+	allocators::tracked_allocator::deallocate(__p);
 }
 
 
 void operator delete[](void* __p) noexcept {
-	allocator::tracked_allocator::deallocate(__p);
+	allocators::tracked_allocator::deallocate(__p);
 }
 
 void operator delete(void* __p, std::size_t /*unused*/) noexcept {
-	allocator::tracked_allocator::deallocate(__p);
+	allocators::tracked_allocator::deallocate(__p);
 }
 
 
 void operator delete[](void* __p, std::size_t /*unused*/) noexcept {
-	allocator::tracked_allocator::deallocate(__p);
+	allocators::tracked_allocator::deallocate(__p);
 }
 
 #else  /* XAPIAND_TRACKED_MEM */
 
-namespace allocator {
+namespace allocators {
 	long long total_allocated() noexcept {
 		return 0;
 	}

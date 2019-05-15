@@ -49,7 +49,7 @@
 #include "chaiscript/chaiscript_defines.hpp"     // for chaiscript::Build_Info
 #endif
 
-#include "allocator.h"                           // for allocator::total_allocated
+#include "allocators.h"                          // for allocators::total_allocated
 #include "color_tools.hh"                        // for color
 #include "database/cleanup.h"                    // for DatabaseCleanup
 #include "database/handler.h"                    // for DatabaseHandler, DocPreparer, DocIndexer, committer
@@ -1968,7 +1968,7 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_resident_memory_bytes.Set(get_current_memory_by_process());
 	metrics.xapiand_virtual_memory_bytes.Set(get_current_memory_by_process(false));
 #ifdef XAPIAND_TRACKED_MEM
-	metrics.xapiand_tracked_memory_bytes.Set(allocator::total_allocated());
+	metrics.xapiand_tracked_memory_bytes.Set(allocators::total_allocated());
 #endif
 	metrics.xapiand_total_memory_system_bytes.Set(get_total_ram());
 	metrics.xapiand_total_virtual_memory_used.Set(get_total_virtual_memory());
