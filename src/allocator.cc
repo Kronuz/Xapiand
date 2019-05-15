@@ -27,6 +27,7 @@
 #ifdef XAPIAND_TRACKED_MEM
 
 #include <atomic>         // for std::atomic_llong
+#include <cstdlib>        // for std::malloc, std::free
 #include <functional>     // for std::hash
 #include <mutex>          // for std::mutex
 #include <thread>         // for std::this_thread
@@ -47,6 +48,34 @@
 
 
 namespace allocator {
+	// Allocating Aligned Memory Blocks
+	// The address of a block returned by malloc or realloc is always a
+	// multiple of eight (or sixteen on 64-bit systems).
+	constexpr std::size_t alignment = alignof(std::max_align_t);
+
+	// allocate using ::malloc
+	static inline void* malloc(std::size_t __sz) {
+		if (__sz == 0) {
+			__sz = 1;
+		}
+		void* __p;
+		while ((__p = std::malloc(__sz)) == nullptr) {
+			// If malloc fails and there is a new_handler, call it to try free up memory.
+			std::new_handler nh = std::get_new_handler();
+			if (nh != nullptr) {
+				nh();
+			} else {
+				throw std::bad_alloc();
+			}
+		}
+		return __p;
+	}
+
+	// deallocate using ::free
+	static inline void free(void* __p) noexcept {
+		std::free(__p);
+	}
+
 	// vanilla_allocator
 
 	inline void* vanilla_allocator::allocate(std::size_t __sz) noexcept {

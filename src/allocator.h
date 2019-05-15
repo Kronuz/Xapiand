@@ -27,43 +27,10 @@
 #pragma once
 
 #include <cstddef>        // for std::size_t
-#include <cstdlib>        // for std::malloc, std::free
+#include <deque>          // for std::deque
 #include <limits>         // for std::numeric_limits
 #include <new>            // for std::bad_alloc, std::nothrow_t, std::new_handler
 
-#include "likely.h"
-
-
-namespace allocator {
-	// Allocating Aligned Memory Blocks
-
-	// The address of a block returned by malloc or realloc is always a
-	// multiple of eight (or sixteen on 64-bit systems).
-	constexpr std::size_t alignment = alignof(std::max_align_t);
-
-	// allocate using ::malloc
-	static inline void* malloc(std::size_t __sz) {
-		if (__sz == 0) {
-			__sz = 1;
-		}
-		void* __p;
-		while ((__p = std::malloc(__sz)) == nullptr) {
-			// If malloc fails and there is a new_handler, call it to try free up memory.
-			std::new_handler nh = std::get_new_handler();
-			if (nh != nullptr) {
-				nh();
-			} else {
-				throw std::bad_alloc();
-			}
-		}
-		return __p;
-	}
-
-	// deallocate using ::free
-	static inline void free(void* __p) noexcept {
-		std::free(__p);
-	}
-}
 
 //  _____               _            _
 // |_   _| __ __ _  ___| | _____  __| |
@@ -97,14 +64,14 @@ namespace allocator {
 		typedef _Tp value_type;
 
 		// constructors and destructor - deleted copy
-		allocator() throw() = default;
-		allocator(const allocator&) throw() = delete;
-		allocator operator=(const allocator&) throw() = delete;
+		allocator() = default;
+		template<typename _Tp1>
+		allocator(const allocator<_Tp1, _Allocator>&) throw() { }
 
 		// rebind allocator to type _Tp1
-		template<typename _Tp1>
+		template <typename _Tp1>
 		struct rebind {
-			typedef allocator<_Tp1, _Allocator> other;
+			using other = allocator<_Tp1, _Allocator>;
 		};
 
 		// allocate but don't initialize n elements
@@ -148,9 +115,9 @@ namespace allocator {
 	long long total_allocated() noexcept;
 	long long local_allocated() noexcept;
 
-	template<typename _Tp, typename _Allocator>
+	template <typename _Tp, typename _Allocator>
 	inline bool operator==(const allocator<_Tp, _Allocator>&, const allocator<_Tp, _Allocator>&) { return true; }
-	template<typename _Tp, typename _Allocator>
+	template <typename _Tp, typename _Allocator>
 	inline bool operator!=(const allocator<_Tp, _Allocator>&, const allocator<_Tp, _Allocator>&) { return false; }
 }
 
@@ -175,47 +142,25 @@ namespace allocator {
 		typedef _Tp value_type;
 
 	private:
-		union alignas(alignment) memory_pool_block {
+		union alignas(alignof(std::max_align_t)) memory_pool_block {
 			char value[sizeof(value_type)];
 			memory_pool_block* next;
 		};
 
-		struct memory_pool_buffer {
-			memory_pool_buffer* const next;
-			memory_pool_block data[1];
-
-			memory_pool_buffer(memory_pool_buffer* next) :
-				next(next) {
-			}
-
-			pointer get_block(std::size_t index) {
-				return reinterpret_cast<pointer>(&data[index].value);
-			}
-		};
+		std::deque<memory_pool_block> buffer;
 
 		memory_pool_block* next_free_block = nullptr;
-		memory_pool_buffer* next_buffer = nullptr;
-		std::size_t reserved_blocks = 0;
-		std::size_t used_blocks = 0;
 
 	public:
 		// constructors and destructor - deleted copy
-		memory_pool_allocator() throw() = default;
-		memory_pool_allocator(const memory_pool_allocator&) throw() = delete;
-		memory_pool_allocator operator=(const memory_pool_allocator&) throw() = delete;
-
-		~memory_pool_allocator() {
-			while (next_buffer) {
-				memory_pool_buffer* buffer = next_buffer;
-				next_buffer = buffer->next;
-				::allocator::free(buffer);
-			}
-		}
+		memory_pool_allocator() = default;
+		template<typename _Tp1>
+		memory_pool_allocator(const memory_pool_allocator<_Tp1>&) throw() { }
 
 		// rebind allocator to type _Tp1
-		template <class _Tp1>
+		template <typename _Tp1>
 		struct rebind {
-			typedef memory_pool_allocator<_Tp1> other;
+			using other = memory_pool_allocator<_Tp1>;
 		};
 
 		// allocate but don't initialize n elements
@@ -230,15 +175,8 @@ namespace allocator {
 				return reinterpret_cast<pointer>(&block->value);
 			}
 
-			if (used_blocks >= reserved_blocks) {
-				reserved_blocks = (reserved_blocks + 1) * 1.5;  // Growth factor of 1.5
-				auto buffer = static_cast<memory_pool_buffer*>(::allocator::malloc(sizeof(memory_pool_buffer) + sizeof(memory_pool_block) * (reserved_blocks - 1)));
-				::new(buffer) memory_pool_buffer(next_buffer);
-				next_buffer = buffer;
-				used_blocks = 0;
-			}
-
-			return next_buffer->get_block(used_blocks++);
+			buffer.emplace_back();
+			return reinterpret_cast<pointer>(&buffer.back().value);
 		}
 
 		// deallocate storage __p of deleted elements
