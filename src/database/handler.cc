@@ -2293,8 +2293,12 @@ DocIndexer::_prepare(MsgPack&& obj)
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	if (bulk_cnt == bulk.size()) {
-		if unlikely(!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
-			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		if unlikely(!finished.load(std::memory_order_acquire)) {
+			auto already_running = running.load(std::memory_order_acquire);
+			while (already_running < opts.num_doc_indexers && !running.compare_exchange_weak(already_running, already_running + 1, std::memory_order_acq_rel)) { }
+			if (already_running < opts.num_doc_indexers) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
 		}
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
 		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
@@ -2340,73 +2344,78 @@ DocIndexer::operator()()
 		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
 		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
-		if (!ready_) {
+		if unlikely(!ready_) {
 			ready_ = ready.load(std::memory_order_relaxed);
 		}
 
 		size_t processed_;
-		if (valid) {
-			processed_ = _processed.fetch_add(1, std::memory_order_acq_rel) + 1;
-
-			auto& term_id = std::get<0>(prepared);
-			auto& doc = std::get<1>(prepared);
-			auto& data_obj = std::get<2>(prepared);
+		if likely(valid) {
 			auto& idx = std::get<3>(prepared);
+			if likely(idx != std::numeric_limits<size_t>::max()) {
+				auto& term_id = std::get<0>(prepared);
+				auto& doc = std::get<1>(prepared);
+				auto& data_obj = std::get<2>(prepared);
 
-			MsgPack obj;
-			if (!term_id.empty()) {
-				auto http_errors = catch_http_errors([&]{
-					auto info = db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+				processed_ = _processed.fetch_add(1, std::memory_order_acq_rel) + 1;
 
-					Document document(info.did, &db_handler);
+				MsgPack obj;
+				if (!term_id.empty()) {
+					auto http_errors = catch_http_errors([&]{
+						auto info = db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
 
-					if (term_id == "QN\x80") {
-						obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
-					} else {
-						auto it_id = data_obj.find(ID_FIELD_NAME);
-						if (it_id == data_obj.end()) {
+						Document document(info.did, &db_handler);
+
+						if (term_id == "QN\x80") {
 							obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 						} else {
-							obj[ID_FIELD_NAME] = it_id.value();
+							auto it_id = data_obj.find(ID_FIELD_NAME);
+							if (it_id == data_obj.end()) {
+								obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+							} else {
+								obj[ID_FIELD_NAME] = it_id.value();
+							}
 						}
-					}
 
-					if (echo) {
-						obj[VERSION_FIELD_NAME] = info.version;
+						if (echo) {
+							obj[VERSION_FIELD_NAME] = info.version;
 
+							if (comments) {
+								obj[RESPONSE_xDOCID] = info.did;
+
+								size_t n_shards = endpoints.size();
+								size_t shard_num = (info.did - 1) % n_shards;
+								obj[RESPONSE_xSHARD] = shard_num + 1;
+								// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+							}
+						}
+
+						++_indexed;
+						return 0;
+					});
+					if (http_errors.error_code != HTTP_STATUS_OK) {
 						if (comments) {
-							obj[RESPONSE_xDOCID] = info.did;
-
-							size_t n_shards = endpoints.size();
-							size_t shard_num = (info.did - 1) % n_shards;
-							obj[RESPONSE_xSHARD] = shard_num + 1;
-							// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+							obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
+							obj[RESPONSE_xMESSAGE] = strings::split(http_errors.error, '\n');
 						}
 					}
-
-					++_indexed;
-					return 0;
-				});
-				if (http_errors.error_code != HTTP_STATUS_OK) {
-					if (comments) {
-						obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
-						obj[RESPONSE_xMESSAGE] = strings::split(http_errors.error, '\n');
-					}
+				} else if (!data_obj.is_undefined()) {
+					obj = std::move(data_obj);
 				}
-			} else if (!data_obj.is_undefined()) {
-				obj = std::move(data_obj);
+				std::lock_guard<std::mutex> lk(_results_mtx);
+				if (_idx > _results.size()) {
+					_results.resize(_idx, MsgPack::MAP());
+				}
+				_results[idx] = std::move(obj);
+			} else {
+				processed_ = _processed.load(std::memory_order_acquire);
 			}
-			std::lock_guard<std::mutex> lk(_results_mtx);
-			if (_idx > _results.size()) {
-				_results.resize(_idx, MsgPack::MAP());
-			}
-			_results[idx] = std::move(obj);
 		} else {
 			processed_ = _processed.load(std::memory_order_acquire);
 		}
 
 		if (ready_) {
 			if (processed_ >= _total.load(std::memory_order_acquire)) {
+				finish();
 				break;
 			}
 		} else {
@@ -2422,8 +2431,9 @@ DocIndexer::operator()()
 		db_handler.commit();
 	}
 
-	running.store(false, std::memory_order_release);
-	done.notify_one();
+	if (running.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+		done.notify_one();
+	}
 }
 
 
@@ -2433,8 +2443,12 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
-		if unlikely(!finished.load(std::memory_order_acquire) && !running.exchange(true, std::memory_order_release)) {
-			XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		if unlikely(!finished.load(std::memory_order_acquire)) {
+			auto already_running = running.load(std::memory_order_acquire);
+			while (already_running == 0 && !running.compare_exchange_weak(already_running, already_running + 1, std::memory_order_acq_rel)) { }
+			if (already_running == 0) {
+				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+			}
 		}
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
 		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
@@ -2482,7 +2496,9 @@ DocIndexer::finish()
 	L_CALL("DocIndexer::finish()");
 
 	finished.store(true, std::memory_order_release);
-	ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, 0));
+	for (int i = 0; i < running.load(std::memory_order_acquire); ++i) {
+		ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
+	}
 }
 
 
