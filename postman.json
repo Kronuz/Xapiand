@@ -2933,9 +2933,397 @@
                       "pm.test(\"response is ok\", function() {",
                       "    pm.response.to.be.ok;",
                       "});",
-                      "pm.test(\"id is type UUID\", function() {",
+                      "pm.test(\"value is valid\", function() {",
                       "    var jsonData = pm.response.json();",
                       "    pm.expect(jsonData._id).to.equal('~notmet');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET notmet selector",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "00000000-0000-1000-8000-010000000000.campo"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"selector value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData).to.equal('first');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET notmet condense selector",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "~notmet"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData._id).to.equal('~notmet');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET notmet selector",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "~notmet.campo"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"selector value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData).to.equal('first');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET notmet schema",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "/"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"schema value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData._schema.schema._id._type).to.equal('uuid');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Index: path notmet",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "00000000-0000-1000-8000-010000000000",
+                    "00000000-0000-1000-8000-010000000000"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    },
+                    {
+                      "key": "echo",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"campo\": \"second\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData._id).to.equal('~notmet');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET path notmet selector",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "00000000-0000-1000-8000-010000000000",
+                    "00000000-0000-1000-8000-010000000000.campo"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"selector value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData).to.equal('second');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Index: path notmet condense",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "~notmet",
+                    "~notmet"
+                  ],
+                  "query": [
+                    {
+                      "key": "commit",
+                      "value": null
+                    },
+                    {
+                      "key": "echo",
+                      "value": null
+                    }
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"campo\": \"second\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData._id).to.equal('~notmet');",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "GET path notmet condense selector",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "host": [
+                    "{{domain}}"
+                  ],
+                  "path": [
+                    "test",
+                    "uuids",
+                    "~notmet",
+                    "~notmet.campo"
+                  ],
+                  "query": [
+                    {
+                      "key": "volatile",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"response is ok\", function() {",
+                      "    pm.response.to.be.ok;",
+                      "});",
+                      "pm.test(\"selector value is valid\", function() {",
+                      "    var jsonData = pm.response.json();",
+                      "    pm.expect(jsonData).to.equal('second');",
                       "});"
                     ],
                     "type": "text/javascript"
