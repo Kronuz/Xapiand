@@ -71,10 +71,12 @@ MSet::set_item_weight(Xapian::doccount i, double weight)
 void
 MSet::set_database(const Database& db) const
 {
-    if (internal->enquire.get() == NULL) {
-	return;
+    if (internal->stats.get() != NULL) {
+	internal->stats->db = db;
     }
-    internal->enquire->set_database(db);
+    if (internal->enquire.get() != NULL) {
+	internal->enquire->set_database(db);
+    }
 }
 
 void
