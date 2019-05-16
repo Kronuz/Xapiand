@@ -1286,266 +1286,266 @@ static inline std::string_view
 _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 {
 	constexpr static auto _ = phf::make_phf({
-		hh(EMPTY   + EMPTY  + EMPTY),
-		hh(EMPTY   + EMPTY  + OBJECT),
-		hh(EMPTY   + EMPTY  + BOOLEAN),
-		hh(EMPTY   + EMPTY  + DATE),
-		hh(EMPTY   + EMPTY  + DATETIME),
-		hh(EMPTY   + EMPTY  + FLOATING),
-		hh(EMPTY   + EMPTY  + GEO),
-		hh(EMPTY   + EMPTY  + INTEGER),
-		hh(EMPTY   + EMPTY  + POSITIVE),
-		hh(EMPTY   + EMPTY  + SCRIPT),
-		hh(EMPTY   + EMPTY  + KEYWORD),
-		hh(EMPTY   + EMPTY  + STRING),
-		hh(EMPTY   + EMPTY  + TEXT),
-		hh(EMPTY   + EMPTY  + TIME),
-		hh(EMPTY   + EMPTY  + TIMEDELTA),
-		hh(EMPTY   + EMPTY  + UUID),
+		hh(EMPTY + EMPTY + EMPTY),
+		hh(EMPTY + EMPTY + OBJECT),
+		hh(EMPTY + EMPTY + BOOLEAN),
+		hh(EMPTY + EMPTY + DATE),
+		hh(EMPTY + EMPTY + DATETIME),
+		hh(EMPTY + EMPTY + FLOATING),
+		hh(EMPTY + EMPTY + GEO),
+		hh(EMPTY + EMPTY + INTEGER),
+		hh(EMPTY + EMPTY + POSITIVE),
+		hh(EMPTY + EMPTY + SCRIPT),
+		hh(EMPTY + EMPTY + KEYWORD),
+		hh(EMPTY + EMPTY + STRING),
+		hh(EMPTY + EMPTY + TEXT),
+		hh(EMPTY + EMPTY + TIME),
+		hh(EMPTY + EMPTY + TIMEDELTA),
+		hh(EMPTY + EMPTY + UUID),
 
-		hh(EMPTY   + ARRAY  + EMPTY),
-		hh(EMPTY   + ARRAY  + OBJECT),
-		hh(EMPTY   + ARRAY  + BOOLEAN),
-		hh(EMPTY   + ARRAY  + DATE),
-		hh(EMPTY   + ARRAY  + DATETIME),
-		hh(EMPTY   + ARRAY  + FLOATING),
-		hh(EMPTY   + ARRAY  + GEO),
-		hh(EMPTY   + ARRAY  + INTEGER),
-		hh(EMPTY   + ARRAY  + POSITIVE),
-		hh(EMPTY   + ARRAY  + SCRIPT),
-		hh(EMPTY   + ARRAY  + KEYWORD),
-		hh(EMPTY   + ARRAY  + STRING),
-		hh(EMPTY   + ARRAY  + TEXT),
-		hh(EMPTY   + ARRAY  + TIME),
-		hh(EMPTY   + ARRAY  + TIMEDELTA),
-		hh(EMPTY   + ARRAY  + UUID),
+		hh(EMPTY + ARRAY + EMPTY),
+		hh(EMPTY + ARRAY + OBJECT),
+		hh(EMPTY + ARRAY + BOOLEAN),
+		hh(EMPTY + ARRAY + DATE),
+		hh(EMPTY + ARRAY + DATETIME),
+		hh(EMPTY + ARRAY + FLOATING),
+		hh(EMPTY + ARRAY + GEO),
+		hh(EMPTY + ARRAY + INTEGER),
+		hh(EMPTY + ARRAY + POSITIVE),
+		hh(EMPTY + ARRAY + SCRIPT),
+		hh(EMPTY + ARRAY + KEYWORD),
+		hh(EMPTY + ARRAY + STRING),
+		hh(EMPTY + ARRAY + TEXT),
+		hh(EMPTY + ARRAY + TIME),
+		hh(EMPTY + ARRAY + TIMEDELTA),
+		hh(EMPTY + ARRAY + UUID),
 
-		hh(FOREIGN + EMPTY  + EMPTY),
-		hh(FOREIGN + EMPTY  + OBJECT),
-		hh(FOREIGN + EMPTY  + BOOLEAN),
-		hh(FOREIGN + EMPTY  + DATE),
-		hh(FOREIGN + EMPTY  + DATETIME),
-		hh(FOREIGN + EMPTY  + FLOATING),
-		hh(FOREIGN + EMPTY  + GEO),
-		hh(FOREIGN + EMPTY  + INTEGER),
-		hh(FOREIGN + EMPTY  + POSITIVE),
-		hh(FOREIGN + EMPTY  + SCRIPT),
-		hh(FOREIGN + EMPTY  + KEYWORD),
-		hh(FOREIGN + EMPTY  + STRING),
-		hh(FOREIGN + EMPTY  + TEXT),
-		hh(FOREIGN + EMPTY  + TIME),
-		hh(FOREIGN + EMPTY  + TIMEDELTA),
-		hh(FOREIGN + EMPTY  + UUID),
+		hh(FOREIGN + EMPTY + EMPTY),
+		hh(FOREIGN + EMPTY + OBJECT),
+		hh(FOREIGN + EMPTY + BOOLEAN),
+		hh(FOREIGN + EMPTY + DATE),
+		hh(FOREIGN + EMPTY + DATETIME),
+		hh(FOREIGN + EMPTY + FLOATING),
+		hh(FOREIGN + EMPTY + GEO),
+		hh(FOREIGN + EMPTY + INTEGER),
+		hh(FOREIGN + EMPTY + POSITIVE),
+		hh(FOREIGN + EMPTY + SCRIPT),
+		hh(FOREIGN + EMPTY + KEYWORD),
+		hh(FOREIGN + EMPTY + STRING),
+		hh(FOREIGN + EMPTY + TEXT),
+		hh(FOREIGN + EMPTY + TIME),
+		hh(FOREIGN + EMPTY + TIMEDELTA),
+		hh(FOREIGN + EMPTY + UUID),
 
-		hh(FOREIGN + ARRAY  + EMPTY),
-		hh(FOREIGN + ARRAY  + OBJECT),
-		hh(FOREIGN + ARRAY  + BOOLEAN),
-		hh(FOREIGN + ARRAY  + DATE),
-		hh(FOREIGN + ARRAY  + DATETIME),
-		hh(FOREIGN + ARRAY  + FLOATING),
-		hh(FOREIGN + ARRAY  + GEO),
-		hh(FOREIGN + ARRAY  + INTEGER),
-		hh(FOREIGN + ARRAY  + POSITIVE),
-		hh(FOREIGN + ARRAY  + SCRIPT),
-		hh(FOREIGN + ARRAY  + KEYWORD),
-		hh(FOREIGN + ARRAY  + STRING),
-		hh(FOREIGN + ARRAY  + TEXT),
-		hh(FOREIGN + ARRAY  + TIME),
-		hh(FOREIGN + ARRAY  + TIMEDELTA),
-		hh(FOREIGN + ARRAY  + UUID),
+		hh(FOREIGN + ARRAY + EMPTY),
+		hh(FOREIGN + ARRAY + OBJECT),
+		hh(FOREIGN + ARRAY + BOOLEAN),
+		hh(FOREIGN + ARRAY + DATE),
+		hh(FOREIGN + ARRAY + DATETIME),
+		hh(FOREIGN + ARRAY + FLOATING),
+		hh(FOREIGN + ARRAY + GEO),
+		hh(FOREIGN + ARRAY + INTEGER),
+		hh(FOREIGN + ARRAY + POSITIVE),
+		hh(FOREIGN + ARRAY + SCRIPT),
+		hh(FOREIGN + ARRAY + KEYWORD),
+		hh(FOREIGN + ARRAY + STRING),
+		hh(FOREIGN + ARRAY + TEXT),
+		hh(FOREIGN + ARRAY + TIME),
+		hh(FOREIGN + ARRAY + TIMEDELTA),
+		hh(FOREIGN + ARRAY + UUID),
 	});
 
 	switch (_.fhh(std::string_view(reinterpret_cast<const char*>(sep_types.data()), SPC_TOTAL_TYPES))) {
-		case _.fhh(EMPTY   + EMPTY  + EMPTY): {
+		case _.fhh(EMPTY + EMPTY + EMPTY): {
 			return std::string_view("undefined");
 		}
-		case _.fhh(EMPTY   + EMPTY  + OBJECT): {
+		case _.fhh(EMPTY + EMPTY + OBJECT): {
 			return std::string_view("object");
 		}
-		case _.fhh(EMPTY   + EMPTY  + BOOLEAN): {
+		case _.fhh(EMPTY + EMPTY + BOOLEAN): {
 			return std::string_view("boolean");
 		}
-		case _.fhh(EMPTY   + EMPTY  + DATE): {
+		case _.fhh(EMPTY + EMPTY + DATE): {
 			return std::string_view("date");
 		}
-		case _.fhh(EMPTY   + EMPTY  + DATETIME): {
+		case _.fhh(EMPTY + EMPTY + DATETIME): {
 			return std::string_view("datetime");
 		}
-		case _.fhh(EMPTY   + EMPTY  + FLOATING): {
+		case _.fhh(EMPTY + EMPTY + FLOATING): {
 			return std::string_view("floating");
 		}
-		case _.fhh(EMPTY   + EMPTY  + GEO): {
+		case _.fhh(EMPTY + EMPTY + GEO): {
 			return std::string_view("geo");
 		}
-		case _.fhh(EMPTY   + EMPTY  + INTEGER): {
+		case _.fhh(EMPTY + EMPTY + INTEGER): {
 			return std::string_view("integer");
 		}
-		case _.fhh(EMPTY   + EMPTY  + POSITIVE): {
+		case _.fhh(EMPTY + EMPTY + POSITIVE): {
 			return std::string_view("positive");
 		}
-		case _.fhh(EMPTY   + EMPTY  + SCRIPT): {
+		case _.fhh(EMPTY + EMPTY + SCRIPT): {
 			return std::string_view("script");
 		}
-		case _.fhh(EMPTY   + EMPTY  + KEYWORD): {
+		case _.fhh(EMPTY + EMPTY + KEYWORD): {
 			return std::string_view("keyword");
 		}
-		case _.fhh(EMPTY   + EMPTY  + STRING): {
+		case _.fhh(EMPTY + EMPTY + STRING): {
 			return std::string_view("string");
 		}
-		case _.fhh(EMPTY   + EMPTY  + TEXT): {
+		case _.fhh(EMPTY + EMPTY + TEXT): {
 			return std::string_view("text");
 		}
-		case _.fhh(EMPTY   + EMPTY  + TIME): {
+		case _.fhh(EMPTY + EMPTY + TIME): {
 			return std::string_view("time");
 		}
-		case _.fhh(EMPTY   + EMPTY  + TIMEDELTA): {
+		case _.fhh(EMPTY + EMPTY + TIMEDELTA): {
 			return std::string_view("timedelta");
 		}
-		case _.fhh(EMPTY   + EMPTY  + UUID): {
+		case _.fhh(EMPTY + EMPTY + UUID): {
 			return std::string_view("uuid");
 		}
-		case _.fhh(EMPTY   + ARRAY  + EMPTY): {
+		case _.fhh(EMPTY + ARRAY + EMPTY): {
 			return std::string_view("array");
 		}
-		case _.fhh(EMPTY   + ARRAY  + OBJECT): {
+		case _.fhh(EMPTY + ARRAY + OBJECT): {
 			return std::string_view("array/object");
 		}
-		case _.fhh(EMPTY   + ARRAY  + BOOLEAN): {
+		case _.fhh(EMPTY + ARRAY + BOOLEAN): {
 			return std::string_view("array/boolean");
 		}
-		case _.fhh(EMPTY   + ARRAY  + DATE): {
+		case _.fhh(EMPTY + ARRAY + DATE): {
 			return std::string_view("array/date");
 		}
-		case _.fhh(EMPTY   + ARRAY  + DATETIME): {
+		case _.fhh(EMPTY + ARRAY + DATETIME): {
 			return std::string_view("array/datetime");
 		}
-		case _.fhh(EMPTY   + ARRAY  + FLOATING): {
+		case _.fhh(EMPTY + ARRAY + FLOATING): {
 			return std::string_view("array/floating");
 		}
-		case _.fhh(EMPTY   + ARRAY  + GEO): {
+		case _.fhh(EMPTY + ARRAY + GEO): {
 			return std::string_view("array/geo");
 		}
-		case _.fhh(EMPTY   + ARRAY  + INTEGER): {
+		case _.fhh(EMPTY + ARRAY + INTEGER): {
 			return std::string_view("array/integer");
 		}
-		case _.fhh(EMPTY   + ARRAY  + POSITIVE): {
+		case _.fhh(EMPTY + ARRAY + POSITIVE): {
 			return std::string_view("array/positive");
 		}
-		case _.fhh(EMPTY   + ARRAY  + SCRIPT): {
+		case _.fhh(EMPTY + ARRAY + SCRIPT): {
 			return std::string_view("array/script");
 		}
-		case _.fhh(EMPTY   + ARRAY  + KEYWORD): {
+		case _.fhh(EMPTY + ARRAY + KEYWORD): {
 			return std::string_view("array/keyword");
 		}
-		case _.fhh(EMPTY   + ARRAY  + STRING): {
+		case _.fhh(EMPTY + ARRAY + STRING): {
 			return std::string_view("array/string");
 		}
-		case _.fhh(EMPTY   + ARRAY  + TEXT): {
+		case _.fhh(EMPTY + ARRAY + TEXT): {
 			return std::string_view("array/text");
 		}
-		case _.fhh(EMPTY   + ARRAY  + TIME): {
+		case _.fhh(EMPTY + ARRAY + TIME): {
 			return std::string_view("array/time");
 		}
-		case _.fhh(EMPTY   + ARRAY  + TIMEDELTA): {
+		case _.fhh(EMPTY + ARRAY + TIMEDELTA): {
 			return std::string_view("array/timedelta");
 		}
-		case _.fhh(EMPTY   + ARRAY  + UUID): {
+		case _.fhh(EMPTY + ARRAY + UUID): {
 			return std::string_view("array/uuid");
 		}
-		case _.fhh(FOREIGN + EMPTY  + EMPTY): {
+		case _.fhh(FOREIGN + EMPTY + EMPTY): {
 			return std::string_view("foreign");
 		}
-		case _.fhh(FOREIGN + EMPTY  + OBJECT): {
+		case _.fhh(FOREIGN + EMPTY + OBJECT): {
 			return std::string_view("foreign/object");
 		}
-		case _.fhh(FOREIGN + EMPTY  + BOOLEAN): {
+		case _.fhh(FOREIGN + EMPTY + BOOLEAN): {
 			return std::string_view("foreign/boolean");
 		}
-		case _.fhh(FOREIGN + EMPTY  + DATE): {
+		case _.fhh(FOREIGN + EMPTY + DATE): {
 			return std::string_view("foreign/date");
 		}
-		case _.fhh(FOREIGN + EMPTY  + DATETIME): {
+		case _.fhh(FOREIGN + EMPTY + DATETIME): {
 			return std::string_view("foreign/datetime");
 		}
-		case _.fhh(FOREIGN + EMPTY  + FLOATING): {
+		case _.fhh(FOREIGN + EMPTY + FLOATING): {
 			return std::string_view("foreign/floating");
 		}
-		case _.fhh(FOREIGN + EMPTY  + GEO): {
+		case _.fhh(FOREIGN + EMPTY + GEO): {
 			return std::string_view("foreign/geo");
 		}
-		case _.fhh(FOREIGN + EMPTY  + INTEGER): {
+		case _.fhh(FOREIGN + EMPTY + INTEGER): {
 			return std::string_view("foreign/integer");
 		}
-		case _.fhh(FOREIGN + EMPTY  + POSITIVE): {
+		case _.fhh(FOREIGN + EMPTY + POSITIVE): {
 			return std::string_view("foreign/positive");
 		}
-		case _.fhh(FOREIGN + EMPTY  + SCRIPT): {
+		case _.fhh(FOREIGN + EMPTY + SCRIPT): {
 			return std::string_view("foreign/script");
 		}
-		case _.fhh(FOREIGN + EMPTY  + KEYWORD): {
+		case _.fhh(FOREIGN + EMPTY + KEYWORD): {
 			return std::string_view("foreign/keyword");
 		}
-		case _.fhh(FOREIGN + EMPTY  + STRING): {
+		case _.fhh(FOREIGN + EMPTY + STRING): {
 			return std::string_view("foreign/string");
 		}
-		case _.fhh(FOREIGN + EMPTY  + TEXT): {
+		case _.fhh(FOREIGN + EMPTY + TEXT): {
 			return std::string_view("foreign/text");
 		}
-		case _.fhh(FOREIGN + EMPTY  + TIME): {
+		case _.fhh(FOREIGN + EMPTY + TIME): {
 			return std::string_view("foreign/time");
 		}
-		case _.fhh(FOREIGN + EMPTY  + TIMEDELTA): {
+		case _.fhh(FOREIGN + EMPTY + TIMEDELTA): {
 			return std::string_view("foreign/timedelta");
 		}
-		case _.fhh(FOREIGN + EMPTY  + UUID): {
+		case _.fhh(FOREIGN + EMPTY + UUID): {
 			return std::string_view("foreign/uuid");
 		}
-		case _.fhh(FOREIGN + ARRAY  + EMPTY): {
+		case _.fhh(FOREIGN + ARRAY + EMPTY): {
 			return std::string_view("foreign/array");
 		}
-		case _.fhh(FOREIGN + ARRAY  + OBJECT): {
+		case _.fhh(FOREIGN + ARRAY + OBJECT): {
 			return std::string_view("foreign/array/object");
 		}
-		case _.fhh(FOREIGN + ARRAY  + BOOLEAN): {
+		case _.fhh(FOREIGN + ARRAY + BOOLEAN): {
 			return std::string_view("foreign/array/boolean");
 		}
-		case _.fhh(FOREIGN + ARRAY  + DATE): {
+		case _.fhh(FOREIGN + ARRAY + DATE): {
 			return std::string_view("foreign/array/date");
 		}
-		case _.fhh(FOREIGN + ARRAY  + DATETIME): {
+		case _.fhh(FOREIGN + ARRAY + DATETIME): {
 			return std::string_view("foreign/array/datetime");
 		}
-		case _.fhh(FOREIGN + ARRAY  + FLOATING): {
+		case _.fhh(FOREIGN + ARRAY + FLOATING): {
 			return std::string_view("foreign/array/floating");
 		}
-		case _.fhh(FOREIGN + ARRAY  + GEO): {
+		case _.fhh(FOREIGN + ARRAY + GEO): {
 			return std::string_view("foreign/array/geo");
 		}
-		case _.fhh(FOREIGN + ARRAY  + INTEGER): {
+		case _.fhh(FOREIGN + ARRAY + INTEGER): {
 			return std::string_view("foreign/array/integer");
 		}
-		case _.fhh(FOREIGN + ARRAY  + POSITIVE): {
+		case _.fhh(FOREIGN + ARRAY + POSITIVE): {
 			return std::string_view("foreign/array/positive");
 		}
-		case _.fhh(FOREIGN + ARRAY  + SCRIPT): {
+		case _.fhh(FOREIGN + ARRAY + SCRIPT): {
 			return std::string_view("foreign/array/script");
 		}
-		case _.fhh(FOREIGN + ARRAY  + KEYWORD): {
+		case _.fhh(FOREIGN + ARRAY + KEYWORD): {
 			return std::string_view("foreign/array/keyword");
 		}
-		case _.fhh(FOREIGN + ARRAY  + STRING): {
+		case _.fhh(FOREIGN + ARRAY + STRING): {
 			return std::string_view("foreign/array/string");
 		}
-		case _.fhh(FOREIGN + ARRAY  + TEXT): {
+		case _.fhh(FOREIGN + ARRAY + TEXT): {
 			return std::string_view("foreign/array/text");
 		}
-		case _.fhh(FOREIGN + ARRAY  + TIME): {
+		case _.fhh(FOREIGN + ARRAY + TIME): {
 			return std::string_view("foreign/array/time");
 		}
-		case _.fhh(FOREIGN + ARRAY  + TIMEDELTA): {
+		case _.fhh(FOREIGN + ARRAY + TIMEDELTA): {
 			return std::string_view("foreign/array/timedelta");
 		}
-		case _.fhh(FOREIGN + ARRAY  + UUID): {
+		case _.fhh(FOREIGN + ARRAY + UUID): {
 			return std::string_view("foreign/array/uuid");
 		}
 		default: {
