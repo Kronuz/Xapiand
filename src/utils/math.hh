@@ -88,59 +88,31 @@ T max(const std::vector<uint64_t>& accuracy);
 
 template<>
 inline double
-min<double>(const std::vector<uint64_t>& accuracy)
+min<double>(const std::vector<uint64_t>&)
 {
-	double min = std::numeric_limits<double>::min();
-
-	if (accuracy.empty()) {
-		return min;
-	}
-
-	uint64_t back = accuracy.back();
-	back = add(back, back);
-
-	if (back > static_cast<uint64_t>(-min)) {
-		return min;
-	}
-
-	return -static_cast<double>(back);
+	return std::numeric_limits<double>::min();
 }
 
 template<>
 inline double
-max<double>(const std::vector<uint64_t>& accuracy)
+max<double>(const std::vector<uint64_t>&)
 {
-	double max = std::numeric_limits<double>::max();
-
-	if (accuracy.empty()) {
-		return max;
-	}
-
-	uint64_t back = accuracy.back();
-	back = add(back, back);
-
-	if (back > static_cast<uint64_t>(max)) {
-		return max;
-	}
-
-	return static_cast<double>(back);
+	return std::numeric_limits<double>::max();
 }
 
 template<>
 inline long
 min<long>(const std::vector<uint64_t>& accuracy)
 {
-	long min = std::numeric_limits<long>::min();
-
 	if (accuracy.empty()) {
-		return min;
+		return std::numeric_limits<long>::min();
 	}
 
 	uint64_t back = accuracy.back();
 	back = add(back, back);
 
-	if (back > static_cast<uint64_t>(-min)) {
-		return min;
+	if (back > static_cast<uint64_t>(std::numeric_limits<long>::max())) {
+		return std::numeric_limits<long>::min();
 	}
 
 	return -static_cast<long>(back);
@@ -150,17 +122,15 @@ template<>
 inline long
 max<long>(const std::vector<uint64_t>& accuracy)
 {
-	long max = std::numeric_limits<long>::max();
-
 	if (accuracy.empty()) {
-		return max;
+		return std::numeric_limits<long>::max();
 	}
 
 	uint64_t back = accuracy.back();
 	back = add(back, back);
 
-	if (back > static_cast<uint64_t>(max)) {
-		return max;
+	if (back > static_cast<uint64_t>(std::numeric_limits<long>::max())) {
+		return std::numeric_limits<long>::max();
 	}
 
 	return static_cast<long>(back);
@@ -170,17 +140,15 @@ template<>
 inline long long
 min<long long>(const std::vector<uint64_t>& accuracy)
 {
-	long long min = std::numeric_limits<long long>::min();
-
 	if (accuracy.empty()) {
-		return min;
+		return std::numeric_limits<long long>::min();
 	}
 
 	uint64_t back = accuracy.back();
 	back = add(back, back);
 
-	if (back > static_cast<uint64_t>(-min)) {
-		return min;
+	if (back > static_cast<uint64_t>(std::numeric_limits<long long>::max())) {
+		return std::numeric_limits<long long>::min();
 	}
 
 	return -static_cast<long long>(back);
@@ -190,17 +158,15 @@ template<>
 inline long long
 max<long long>(const std::vector<uint64_t>& accuracy)
 {
-	long long max = std::numeric_limits<long long>::max();
-
 	if (accuracy.empty()) {
-		return max;
+		return std::numeric_limits<long long>::max();
 	}
 
 	uint64_t back = accuracy.back();
 	back = add(back, back);
 
-	if (back > static_cast<uint64_t>(max)) {
-		return max;
+	if (back > static_cast<uint64_t>(std::numeric_limits<long long>::max())) {
+		return std::numeric_limits<long long>::max();
 	}
 
 	return static_cast<long long>(back);
@@ -210,19 +176,15 @@ template<>
 inline unsigned long
 min<unsigned long>(const std::vector<uint64_t>&)
 {
-	unsigned long min = std::numeric_limits<unsigned long>::min();
-
-	return min;
+	return std::numeric_limits<unsigned long>::min();
 }
 
 template<>
 inline unsigned long
 max<unsigned long>(const std::vector<uint64_t>& accuracy)
 {
-	unsigned long max = std::numeric_limits<unsigned long>::max();
-
 	if (accuracy.empty()) {
-		return max;
+		return std::numeric_limits<unsigned long>::max();
 	}
 
 	uint64_t back = accuracy.back();
@@ -235,19 +197,15 @@ template<>
 inline unsigned long long
 min<unsigned long long>(const std::vector<uint64_t>&)
 {
-	unsigned long long min = std::numeric_limits<unsigned long long>::min();
-
-	return min;
+	return std::numeric_limits<unsigned long long>::min();
 }
 
 template<>
 inline unsigned long long
 max<unsigned long long>(const std::vector<uint64_t>& accuracy)
 {
-	unsigned long long max = std::numeric_limits<unsigned long long>::max();
-
 	if (accuracy.empty()) {
-		return max;
+		return std::numeric_limits<unsigned long long>::max();
 	}
 
 	uint64_t back = accuracy.back();
