@@ -2011,7 +2011,7 @@ required_spc_t::get_types(std::string_view str_type)
 	L_CALL("required_spc_t::get_types({})", repr(str_type));
 
 	const auto& type = _get_type(str_type);
-	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY + EMPTY)) {
+	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY)) {
 		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'datetime', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
