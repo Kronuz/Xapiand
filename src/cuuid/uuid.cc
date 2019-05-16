@@ -85,6 +85,33 @@ static constexpr uint8_t VL[13][2][2] = {
 };
 
 
+template <typename T>
+static inline void
+pack(char** p, T num)
+{
+	auto ptr = *p;
+	for (size_t i = 0; i < sizeof(num); ++i) {
+		*ptr++ = static_cast<char>(num & 0xff);
+		num >>= 8;
+	}
+	*p = ptr;
+}
+
+
+template <typename T>
+static inline T
+unpack(char** const p)
+{
+	T num = 0;
+	auto ptr = *p;
+	for (size_t i = 0; i < sizeof(num); ++i) {
+		num |= static_cast<T>(*ptr++) << (i * 8);
+	}
+	*p = ptr;
+	return num;
+}
+
+
 static inline uint64_t fnv_1a(uint64_t num) {
 	// calculate FNV-1a hash
 	uint64_t fnv = 0xcbf29ce484222325ULL;
@@ -112,6 +139,11 @@ static inline uint64_t xor_fold(uint64_t num, int bits) {
  * Union for condensed UUIDs
  */
 union UUIDCondenser {
+	struct value_t {
+		uint64_t val0;
+		uint64_t val1;
+	} value;
+
 	struct compact_t {
 		uint64_t time        : TIME_BITS;
 		uint64_t padding0    : PADDING_C0_BITS;
@@ -174,9 +206,6 @@ UUIDCondenser::serialise() const
 {
 	L_CALL("UUIDCondenser::serialise()");
 
-	uint64_t val0 = *(reinterpret_cast<const uint64_t*>(this));
-	uint64_t val1 = *(reinterpret_cast<const uint64_t*>(this) + 1);
-
 	uint64_t buf0, buf1;
 	if (compact.compacted != 0u) {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
@@ -184,25 +213,27 @@ UUIDCondenser::serialise() const
 	// b0:                                              TTTTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSSSC
 		assert(compact.padding0 == 0);
 		assert(compact.padding1 == 0);
-		buf0 = (val0 >> PADDING_C1_BITS);
-		buf1 = (val0 << (64 - PADDING_C1_BITS)) | (val1 >> PADDING_C1_BITS) | 1;
+		buf0 = (value.val0 >> PADDING_C1_BITS);
+		buf1 = (value.val0 << (64 - PADDING_C1_BITS)) | (value.val1 >> PADDING_C1_BITS) | 1;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
 		assert(expanded.padding0 == 0);
 		assert(expanded.padding1 == 0);
-		buf0 = (val0 >> PADDING_E1_BITS);
-		buf1 = (val0 << (64 - PADDING_E1_BITS)) | (val1 >> PADDING_E1_BITS);
+		buf0 = (value.val0 >> PADDING_E1_BITS);
+		buf1 = (value.val0 << (64 - PADDING_E1_BITS)) | (value.val1 >> PADDING_E1_BITS);
 	}
 
 	char buf[UUID_MAX_SERIALISED_LENGTH];
-	*(reinterpret_cast<uint64_t*>(buf + 1)) = htobe64(buf0);
-	*(reinterpret_cast<uint64_t*>(buf + 1) + 1) = htobe64(buf1);
-	buf[0] = '\0';
+
+	char* end = buf;
+	*end++ = '\0';
+	pack(&end, htobe64(buf0));
+	pack(&end, htobe64(buf1));
+	end -= 4; // serialized must be at least 4 bytes long.
 
 	auto ptr = buf;
-	const auto end = ptr + sizeof(buf) - 4; // serialized must be at least 4 bytes long.
 	while (ptr != end && (*++ptr == 0)) {}; // remove all leading zeros
 
 	auto length = end - ptr;
@@ -249,27 +280,24 @@ UUIDCondenser::unserialise(const char** ptr, const char* end)
 
 	*start &= ~VL[i][q][1];
 
-	auto buf0 = be64toh(*(reinterpret_cast<uint64_t*>(buf + 1)));
-	auto buf1 = be64toh(*(reinterpret_cast<uint64_t*>(buf + 1) + 1));
+	char* p = &buf[1];
+	auto buf0 = unpack<uint64_t>(&p);
+	auto buf1 = unpack<uint64_t>(&p);
 
-	uint64_t val0, val1;
+	UUIDCondenser condenser;
 	if ((buf1 & 1) != 0u) {  // compacted
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:                                                TTTTTTTTTTTTTTTT b1:ttttttttttttttttttttttttttttttttttttttttttttKKKKKKKKKKKKKKSSSSSC
 	// v0:PPPPTTTTTTTTTTTTTTTTtttttttttttttttttttttttttttttttttttttttttttt v1:KKKKKKKKKKKKKKSSSSSPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPC
-		val0 = (buf0 << PADDING_C1_BITS) | (buf1 >> (64 - PADDING_C1_BITS));
-		val1 = (buf1 << PADDING_C1_BITS) | 1;
+		condenser.value.val0 = (buf0 << PADDING_C1_BITS) | (buf1 >> (64 - PADDING_C1_BITS));
+		condenser.value.val1 = (buf1 << PADDING_C1_BITS) | 1;
 	} else {
 	//           .       .       .       .       .       .       .       .           .       .       .       .       .       .       .       .
 	// b0:     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT b1:tKKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNC
 	// v0:PPPPTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt v1:KKKKKKKKKKKKKKNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNPC
-		val0 = (buf0 << PADDING_E1_BITS) | (buf1 >> (64 - PADDING_E1_BITS));
-		val1 = (buf1 << PADDING_E1_BITS);
+		condenser.value.val0 = (buf0 << PADDING_E1_BITS) | (buf1 >> (64 - PADDING_E1_BITS));
+		condenser.value.val1 = (buf1 << PADDING_E1_BITS);
 	}
-
-	UUIDCondenser condenser;
-	*(reinterpret_cast<uint64_t*>(&condenser)) = val0;
-	*(reinterpret_cast<uint64_t*>(&condenser) + 1) = val1;
 
 	*ptr += length;
 	return condenser;
