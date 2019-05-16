@@ -16,6 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.22.1] - 2019-05-16
+{: #v0-22-1 }
+
+### Changed
+- Performance improvements with restore by launching parallel DocIndexers
+- Queries using glob wildcards
+
+### Fixed
+- Nested arrays and objects in arrays
+- Restoring for GCC compiled Xapiand
+
+
+---
 ## [0.22.0] - 2019-05-10
 {: #v0-22-0 }
 
@@ -715,7 +728,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.22.1...HEAD
+[0.22.1]: https://github.com/Kronuz/Xapiand/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/Kronuz/Xapiand/compare/v0.21.2...v0.22.0
 [0.21.2]: https://github.com/Kronuz/Xapiand/compare/v0.21.1...v0.21.2
 [0.21.1]: https://github.com/Kronuz/Xapiand/compare/v0.21.0...v0.21.1
