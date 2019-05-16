@@ -47,7 +47,7 @@ public:
 		I _it;
 
 	public:
-		iterator(F& fn, I it) : _fn{fn}, _it{it} { }
+		iterator(F& fn, I it) : _fn(fn), _it(it) { }
 		bool operator!=(const iterator& other) const {
 			return _it != other._it;
 		}
@@ -61,7 +61,7 @@ public:
 	};
 
 	Transform(F fn, I begin, I end) :
-		_fn{fn}, _begin{begin}, _end{end} { }
+		_fn(fn), _begin(begin), _end(end) { }
 
 	iterator begin() {
 		return {_fn, _begin};

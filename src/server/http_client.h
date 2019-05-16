@@ -240,7 +240,7 @@ public:
 
 	atomic_shared_ptr<DocIndexer> indexer;
 
-	Request() : view{nullptr} { }
+	Request() : view(nullptr) { }
 	Request(class HttpClient* client);
 	~Request() noexcept;
 

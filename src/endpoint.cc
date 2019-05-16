@@ -258,41 +258,41 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 
 
 Endpoint::Endpoint(const Endpoint& other) :
-	path{other.path},
-	node_name{other.node_name},
-	user{other.user},
-	password{other.password},
-	query{other.query}
+	path(other.path),
+	node_name(other.node_name),
+	user(other.user),
+	password(other.password),
+	query(other.query)
 {
 }
 
 
 Endpoint::Endpoint(Endpoint&& other) :
-	path{std::move(other.path)},
-	node_name{std::move(other.node_name)},
-	user{std::move(other.user)},
-	password{std::move(other.password)},
-	query{std::move(other.query)}
+	path(std::move(other.path)),
+	node_name(std::move(other.node_name)),
+	user(std::move(other.user)),
+	password(std::move(other.password)),
+	query(std::move(other.query))
 {
 }
 
 
 Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node) :
-	path{other.path},
-	node_name{node->lower_name()},
-	user{other.user},
-	password{other.password},
-	query{other.query}
+	path(other.path),
+	node_name(node->lower_name()),
+	user(other.user),
+	password(other.password),
+	query(other.query)
 {
 }
 
 
 Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
-	path{std::move(other.path)},
-	node_name{node->lower_name()},
-	user{std::move(other.user)},
-	password{std::move(other.password)},
-	query{std::move(other.query)}
+	path(std::move(other.path)),
+	node_name(node->lower_name()),
+	user(std::move(other.user)),
+	password(std::move(other.password)),
+	query(std::move(other.query))
 {
 }
 

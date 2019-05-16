@@ -438,7 +438,7 @@ Shard::reopen_readable()
 		try {
 			if (XapiandManager::state() == XapiandManager::State::READY) {
 				// If remote is master (it should be if we are here), try triggering replication
-				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, endpoint.path, Endpoint{endpoint}, Endpoint{endpoint.path});
+				trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint(endpoint), Endpoint(endpoint.path));
 			}
 		} catch (...) { }
 #endif  // XAPIAN_LOCAL_DB_FALLBACK

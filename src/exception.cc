@@ -26,29 +26,29 @@
 
 
 BaseException::BaseException()
-	: line{0}
+	: line(0)
 {
 }
 
 
 BaseException::BaseException(const BaseException& exc)
-	: type{exc.type},
-	  message{exc.message},
-	  context{exc.context},
-	  function{exc.function},
-	  filename{exc.filename},
-	  line{exc.line}
+	: type(exc.type),
+	  message(exc.message),
+	  context(exc.context),
+	  function(exc.function),
+	  filename(exc.filename),
+	  line(exc.line)
 {
 }
 
 
 BaseException::BaseException(BaseException&& exc)
-	: type{std::move(exc.type)},
-	  message{std::move(exc.message)},
-	  context{std::move(exc.context)},
-	  function{std::move(exc.function)},
-	  filename{std::move(exc.filename)},
-	  line{std::move(exc.line)}
+	: type(std::move(exc.type)),
+	  message(std::move(exc.message)),
+	  context(std::move(exc.context)),
+	  function(std::move(exc.function)),
+	  filename(std::move(exc.filename)),
+	  line(std::move(exc.line))
 {
 }
 

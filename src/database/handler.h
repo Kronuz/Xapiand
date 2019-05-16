@@ -262,9 +262,9 @@ class DocPreparer {
 	size_t idx;
 
 	DocPreparer(const std::shared_ptr<DocIndexer>& indexer, MsgPack&& obj, size_t idx) :
-		indexer{indexer},
-		obj{std::move(obj)},
-		idx{idx} { }
+		indexer(indexer),
+		obj(std::move(obj)),
+		idx(idx) { }
 
 public:
 	template <typename... Args>
@@ -317,20 +317,20 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	size_t bulk_cnt;
 
 	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, bool commit) :
-		running{0},
-		finished{false},
-		ready{false},
-		endpoints{endpoints},
-		flags{flags},
-		echo{echo},
-		comments{comments},
-		commit{commit},
-		_processed{0},
-		_indexed{0},
-		_total{0},
-		_idx{0},
-		limit_cnt{limit_max},
-		bulk_cnt{0} { }
+		running(0),
+		finished(false),
+		ready(false),
+		endpoints(endpoints),
+		flags(flags),
+		echo(echo),
+		comments(comments),
+		commit(commit),
+		_processed(0),
+		_indexed(0),
+		_total(0),
+		_idx(0),
+		limit_cnt(limit_max),
+		bulk_cnt(0) { }
 
 	void _prepare(MsgPack&& obj);
 

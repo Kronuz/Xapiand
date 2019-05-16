@@ -141,8 +141,8 @@ Node::dump_nodes(int level)
 }
 
 
-atomic_shared_ptr<const Node> Node::_local_node{std::make_shared<const Node>()};
-atomic_shared_ptr<const Node> Node::_leader_node{std::make_shared<const Node>()};
+atomic_shared_ptr<const Node> Node::_local_node(std::make_shared<const Node>());
+atomic_shared_ptr<const Node> Node::_leader_node(std::make_shared<const Node>());
 
 
 #ifndef XAPIAND_CLUSTERING

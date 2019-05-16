@@ -98,7 +98,7 @@ struct Tree {
 	// types (i.e. Tree<T>), so we use a std::unique_ptr here.
 	const std::unique_ptr<std::unordered_map<T, Tree<T>>> terms;
 
-	Tree() : leaf{false}, pos{0}, terms{std::make_unique<std::unordered_map<T, Tree<T>>>()} {}
+	Tree() : leaf(false), pos(0), terms(std::make_unique<std::unordered_map<T, Tree<T>>>()) {}
 };
 
 

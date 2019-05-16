@@ -118,9 +118,9 @@ public:
 		return _node;
 	}
 
-	auto relink(std::chrono::milliseconds max_age = std::chrono::milliseconds{0}) noexcept {
+	auto relink(std::chrono::milliseconds max_age = std::chrono::milliseconds(0)) noexcept {
 		_node->unlink();
-		_lru->_end.link(_node, max_age == std::chrono::milliseconds{0} ? _lru->_max_age : max_age);
+		_lru->_end.link(_node, max_age == std::chrono::milliseconds(0) ? _lru->_max_age : max_age);
 	}
 
 	auto expiration() const noexcept {
@@ -197,9 +197,9 @@ struct aging_base_node : public base_node
 	aging_base_node* _prev_by_age;
 
 	aging_base_node() :
-		_expiration{std::chrono::steady_clock::time_point::max()},
-		_next_by_age{this},
-		_prev_by_age{this} { }
+		_expiration(std::chrono::steady_clock::time_point::max()),
+		_next_by_age(this),
+		_prev_by_age(this) { }
 
 	bool expired(std::chrono::time_point<std::chrono::steady_clock> now) const noexcept {
 		return now > _expiration;
@@ -221,7 +221,7 @@ struct aging_base_node : public base_node
 	}
 
 	void link(aging_base_node* node, std::chrono::milliseconds timeout) noexcept {
-		if (timeout == std::chrono::milliseconds{0}) {
+		if (timeout == std::chrono::milliseconds(0)) {
 			node->_expiration = std::chrono::steady_clock::time_point::max();
 		} else {
 			node->_expiration = std::chrono::steady_clock::now() + timeout;
@@ -332,11 +332,11 @@ public:
 		evict,    // remove item
 	};
 
-	lru(size_t max_size = 0, std::chrono::milliseconds max_age = std::chrono::milliseconds{0}) {
+	lru(size_t max_size = 0, std::chrono::milliseconds max_age = std::chrono::milliseconds(0)) {
 		this->_max_size = max_size ? max_size : max;
 		this->_max_age = max_age;
 		if (typeid(typename Node::base_node_type) != typeid(aging_base_node)) {
-			assert(this->_max_age == std::chrono::milliseconds{0});
+			assert(this->_max_age == std::chrono::milliseconds(0));
 		}
 	}
 
@@ -683,7 +683,7 @@ public:
 		auto now = std::chrono::steady_clock::now();
 		auto size = _map.size();
 
-		if (this->_max_age != std::chrono::milliseconds{0}) {
+		if (this->_max_age != std::chrono::milliseconds(0)) {
 			auto it = iterator_by_age(this, &this->_end);
 			auto it_end = it++;
 			while (it != it_end) {

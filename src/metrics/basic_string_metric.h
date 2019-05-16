@@ -144,7 +144,7 @@ public:
  * Designed for using with std::set_intersection.
  */
 struct Counter {
-	size_t count{0};
+	size_t count = 0;
 
 	struct value_type {
 		template<typename T>

@@ -414,7 +414,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				// Foreign Schema needs to be read
 				L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try loading from {} id={}", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,", repr(foreign_path), repr(foreign_id));
 				try {
-					auto shared = get_shared(foreign_id, Endpoint{foreign_path}, read_flags, context);
+					auto shared = get_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
 					schema_ptr->set_flags(shared.first);
@@ -472,7 +472,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			// If we still need to save the schema document, we save it:
 			if (writable && schema_ptr->get_flags() == 0) {
 				try {
-					auto version = save_shared(foreign_id, *schema_ptr, Endpoint{foreign_path}, context);
+					auto version = save_shared(foreign_id, *schema_ptr, Endpoint(foreign_path), context);
 					schema_ptr->set_flags(version);
 					if (version) {
 						schema_updater()->debounce(foreign_uri, version, foreign_uri);
@@ -481,7 +481,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
 					try {
-						auto shared = get_shared(foreign_id, Endpoint{foreign_path}, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
+						auto shared = get_shared(foreign_id, Endpoint(foreign_path), DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_ptr->set_flags(shared.first);

@@ -54,7 +54,7 @@ std::chrono::milliseconds
 random_time(std::chrono::milliseconds initial, std::chrono::milliseconds last)
 {
 	std::uniform_int_distribution<std::chrono::milliseconds::rep> distribution(initial.count(), last.count());
-	return std::chrono::milliseconds{distribution(rng())};
+	return std::chrono::milliseconds(distribution(rng()));
 }
 
 

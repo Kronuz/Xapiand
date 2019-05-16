@@ -63,31 +63,31 @@ public:
 
 	mutable std::atomic_llong touched;
 
-	Node() : _addr{}, idx{0}, http_port{0}, remote_port{0}, replication_port{0}, touched{0} { }
+	Node() : _addr{}, idx(0), http_port(0), remote_port(0), replication_port(0), touched(0) { }
 
 	// Move constructor
-	Node(Node&& other)
-		: _host{std::move(other._host)},
-		  _name{std::move(other._name)},
-		  _lower_name{std::move(other._lower_name)},
-		  _addr{std::move(other._addr)},
-		  idx{std::move(other.idx)},
-		  http_port{std::move(other.http_port)},
-		  remote_port{std::move(other.remote_port)},
-		  replication_port{std::move(other.replication_port)},
-		  touched{other.touched.load(std::memory_order_relaxed)} { }
+	Node(Node&& other) :
+		_host(std::move(other._host)),
+		_name(std::move(other._name)),
+		_lower_name(std::move(other._lower_name)),
+		_addr(std::move(other._addr)),
+		idx(std::move(other.idx)),
+		http_port(std::move(other.http_port)),
+		remote_port(std::move(other.remote_port)),
+		replication_port(std::move(other.replication_port)),
+		touched(other.touched.load(std::memory_order_relaxed)) { }
 
 	// Copy Constructor
-	Node(const Node& other)
-		: _host{other._host},
-		  _name{other._name},
-		  _lower_name{other._lower_name},
-		  _addr{other._addr},
-		  idx{other.idx},
-		  http_port{other.http_port},
-		  remote_port{other.remote_port},
-		  replication_port{other.replication_port},
-		  touched{other.touched.load(std::memory_order_relaxed)} { }
+	Node(const Node& other) :
+		_host(other._host),
+		_name(other._name),
+		_lower_name(other._lower_name),
+		_addr(other._addr),
+		idx(other.idx),
+		http_port(other.http_port),
+		remote_port(other.remote_port),
+		replication_port(other.replication_port),
+		touched(other.touched.load(std::memory_order_relaxed)) { }
 
 	// Move assignment
 	Node& operator=(Node&& other) {

@@ -1137,8 +1137,8 @@ auto constexpr log2(T v) {
 
 template <typename ItemType, std::size_t NumItems>
 class phf {
-	constexpr const static std::size_t buckets_size{1 << log2(NumItems + 1)};  // Important to be a power of 2 (for speed)
-	constexpr const static std::size_t index_size{prime(find_prime(NumItems + NumItems / 4))};
+	constexpr const static std::size_t buckets_size = 1 << log2(NumItems + 1);  // Important to be a power of 2 (for speed)
+	constexpr const static std::size_t index_size = prime(find_prime(NumItems + NumItems / 4));
 
 	static_assert(NumItems > 0, "Must have at least one element");
 	static_assert(index_size <= std::numeric_limits<ItemType>::max(), "Too many elements");
@@ -1150,14 +1150,14 @@ class phf {
 		std::uint32_t mul;
 		std::uint32_t off;
 
-		constexpr bucket_type() : mul{0}, off{0} { }
+		constexpr bucket_type() : mul(0), off(0) { }
 	};
 
 	struct index_type {
 		ItemType item;
 		std::size_t pos;
 
-		constexpr index_type() : item{0}, pos{npos} { }
+		constexpr index_type() : item(0), pos(npos) { }
 	};
 
 	std::size_t _size;
@@ -1175,7 +1175,7 @@ class phf {
 	}
 
 public:
-	constexpr phf() : _size{0}, _buckets{}, _index{} { }
+	constexpr phf() : _size(0), _buckets{}, _index{} { }
 
 	template <typename... Args>
 	constexpr phf(Args&&... args) : phf() {
@@ -1213,7 +1213,7 @@ public:
 			std::size_t index_slot;
 			std::size_t pos;
 			ItemType item;
-			constexpr bucket_mapping_type() : cnt{nullptr}, bucket_slot{0}, index_slot{0}, pos{0}, item{0} { }
+			constexpr bucket_mapping_type() : cnt(nullptr), bucket_slot(0), index_slot(0), pos(0), item(0) { }
 			constexpr bool operator<(const bucket_mapping_type& other) const {
 				return (*cnt == *other.cnt) ? bucket_slot < other.bucket_slot : *cnt > *other.cnt;
 			}

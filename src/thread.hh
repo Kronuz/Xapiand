@@ -95,9 +95,9 @@ class Thread {
 
 public:
 	Thread() :
-		_future{_promise.get_future()},
-		_running{false},
-		_joined{false} {}
+		_future(_promise.get_future()),
+		_running(false),
+		_joined(false) { }
 
 	~Thread() noexcept {
 		try {
@@ -106,10 +106,10 @@ public:
 	}
 
 	Thread(Thread&& other) :
-		_promise{std::move(other._promise)},
-		_future{std::move(other._future)},
-		_running{other._running.load()},
-		_joined{other._joined.load()} {}
+		_promise(std::move(other._promise)),
+		_future(std::move(other._future)),
+		_running(other._running.load()),
+		_joined(other._joined.load()) {}
 
 	Thread& operator=(Thread&& other) {
 		_promise = std::move(other._promise);

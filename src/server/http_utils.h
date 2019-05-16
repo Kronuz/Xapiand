@@ -36,7 +36,7 @@ struct http_errors_t {
 	std::string error;
 	int ret;
 
-	http_errors_t() : error_code{HTTP_STATUS_INTERNAL_SERVER_ERROR}, ret{1} {}
+	http_errors_t() : error_code(HTTP_STATUS_INTERNAL_SERVER_ERROR), ret(1) {}
 };
 
 

@@ -64,7 +64,7 @@ T& Family<T>::Add(const std::map<std::string, std::string>& labels,
 #endif
 
   auto hash = hash_labels(labels);
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto metrics_iter = metrics_.find(hash);
 
   if (metrics_iter != metrics_.end()) {
@@ -99,7 +99,7 @@ std::size_t Family<T>::hash_labels(
 
 template <typename T>
 void Family<T>::Remove(T* metric) {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   if (labels_reverse_lookup_.count(metric) == 0) {
     return;
   }
@@ -112,7 +112,7 @@ void Family<T>::Remove(T* metric) {
 
 template <typename T>
 std::vector<MetricFamily> Family<T>::Collect() {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto family = MetricFamily{};
   family.name = name_;
   family.help = help_;

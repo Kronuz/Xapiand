@@ -2316,7 +2316,7 @@ HttpClient::wal_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler{endpoints};
+	DatabaseHandler db_handler(endpoints);
 
 	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
@@ -2351,7 +2351,7 @@ HttpClient::check_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler{endpoints};
+	DatabaseHandler db_handler(endpoints);
 
 	auto status = db_handler.check();
 
@@ -2807,7 +2807,7 @@ HttpClient::resolve_index_endpoints(Request& request, const query_field_t& query
 	endpoints.clear();
 	for (const auto& path : paths) {
 		auto index_endpoints = XapiandManager::resolve_index_endpoints(
-			Endpoint{path},
+			Endpoint(path),
 			query_field.writable,
 			query_field.primary,
 			settings);
@@ -2855,7 +2855,7 @@ HttpClient::expand_paths(Request& request)
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
 				if (node->idx) {
-					index_endpoints.add(Endpoint{strings::format(".xapiand/nodes/{}", node->lower_name())});
+					index_endpoints.add(Endpoint(strings::format(".xapiand/nodes/{}", node->lower_name())));
 				}
 			}
 			DatabaseHandler db_handler;
@@ -3565,24 +3565,24 @@ HttpClient::__repr__() const
 }
 
 
-Request::Request(HttpClient* client)
-	: mode{Mode::FULL},
-	  view{nullptr},
-	  type_encoding{Encoding::none},
-	  begining{true},
-	  ending{false},
-	  atom_ending{false},
-	  atom_ended{false},
-	  raw_peek{0},
-	  raw_offset{0},
-	  size{0},
-	  echo{false},
-	  human{false},
-	  comments{true},
-	  indented{-1},
-	  expect_100{false},
-	  closing{false},
-	  begins{std::chrono::steady_clock::now()}
+Request::Request(HttpClient* client) :
+	mode(Mode::FULL),
+	view(nullptr),
+	type_encoding(Encoding::none),
+	begining(true),
+	ending(false),
+	atom_ending(false),
+	atom_ended(false),
+	raw_peek(0),
+	raw_offset(0),
+	size(0),
+	echo(false),
+	human(false),
+	comments(true),
+	indented(-1),
+	expect_100(false),
+	closing(false),
+	begins(std::chrono::steady_clock::now())
 {
 	parser.data = client;
 	http_parser_init(&parser, HTTP_REQUEST);
@@ -4098,9 +4098,9 @@ Request::to_text(bool decode)
 }
 
 
-Response::Response()
-	: status{static_cast<http_status>(0)},
-	  size{0}
+Response::Response() :
+	status(static_cast<http_status>(0)),
+	size(0)
 {
 }
 

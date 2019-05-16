@@ -225,7 +225,7 @@ protected:
 public:
 	MetricCount(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
-		  _count{0.0} { }
+		  _count(0) { }
 
 	MsgPack get_result() const override {
 		return {
@@ -313,7 +313,7 @@ protected:
 public:
 	MetricSum(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
-		  _sum{0.0} { }
+		  _sum(0) { }
 
 	MsgPack get_result() const override {
 		return {
@@ -387,8 +387,8 @@ protected:
 public:
 	MetricAvg(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricSum(context, name, schema),
-		  _count{0.0},
-		  _avg{0.0} { }
+		  _count(0),
+		  _avg(0) { }
 
 	MsgPack get_result() const override {
 		return {
@@ -650,8 +650,8 @@ protected:
 public:
 	MetricVariance(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricAvg(context, name, schema),
-		  _sq_sum{0.0},
-		  _variance{0.0} { }
+		  _sq_sum(0),
+		  _variance(0) { }
 
 	MsgPack get_result() const override {
 		return {
@@ -742,9 +742,9 @@ protected:
 public:
 	MetricStdDeviation(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: MetricVariance(context, name, schema),
-		  _sigma{2.0},
-		  _upper{0.0},
-		  _lower{0.0} {
+		  _sigma(2),
+		  _upper(0),
+		  _lower(0) {
 		const auto it = _conf.find(RESERVED_AGGS_SIGMA);
 		if (it != _conf.end()) {
 			const auto& sigma_value = it.value();
@@ -843,7 +843,7 @@ class MetricMedian : public HandledSubAggregation<ValuesHandler> {
 public:
 	MetricMedian(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
-		  _median{0.0} { }
+		  _median(0) { }
 
 	MsgPack get_result() const override {
 		return {
@@ -946,7 +946,7 @@ class MetricMode : public HandledSubAggregation<ValuesHandler> {
 public:
 	MetricMode(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
-		  _mode{0.0} { }
+		  _mode(0) { }
 
 	MsgPack get_result() const override {
 		return {

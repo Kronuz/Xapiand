@@ -5,7 +5,7 @@ namespace prometheus {
 Family<Counter>& Registry::AddCounter(
     const std::string& name, const std::string& help,
     const std::map<std::string, std::string>& constant_labels) {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto counter_family = new Family<Counter>(name, help, constant_labels);
   collectables_.push_back(std::unique_ptr<Collectable>{counter_family});
   return *counter_family;
@@ -14,7 +14,7 @@ Family<Counter>& Registry::AddCounter(
 Family<Gauge>& Registry::AddGauge(
     const std::string& name, const std::string& help,
     const std::map<std::string, std::string>& constant_labels) {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto gauge_family = new Family<Gauge>(name, help, constant_labels);
   collectables_.push_back(std::unique_ptr<Collectable>{gauge_family});
   return *gauge_family;
@@ -23,7 +23,7 @@ Family<Gauge>& Registry::AddGauge(
 Family<Histogram>& Registry::AddHistogram(
     const std::string& name, const std::string& help,
     const std::map<std::string, std::string>& constant_labels) {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto histogram_family = new Family<Histogram>(name, help, constant_labels);
   collectables_.push_back(std::unique_ptr<Collectable>{histogram_family});
   return *histogram_family;
@@ -32,14 +32,14 @@ Family<Histogram>& Registry::AddHistogram(
 Family<Summary>& Registry::AddSummary(
     const std::string& name, const std::string& help,
     const std::map<std::string, std::string>& constant_labels) {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto summary_family = new Family<Summary>(name, help, constant_labels);
   collectables_.push_back(std::unique_ptr<Collectable>{summary_family});
   return *summary_family;
 }
 
 std::vector<MetricFamily> Registry::Collect() {
-  std::lock_guard<std::mutex> lock{mutex_};
+  std::lock_guard<std::mutex> lock(mutex_);
   auto results = std::vector<MetricFamily>{};
   for (auto&& collectable : collectables_) {
     auto metrics = collectable->Collect();

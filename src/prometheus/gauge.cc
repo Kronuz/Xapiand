@@ -3,9 +3,9 @@
 #include "gauge.h"
 
 namespace prometheus {
-Gauge::Gauge() : value_{0} {}
+Gauge::Gauge() : value_(0) { }
 
-Gauge::Gauge(double value) : value_{value} {}
+Gauge::Gauge(double value) : value_(value) { }
 
 void Gauge::Increment() { Increment(1.0); }
 void Gauge::Increment(double value) {

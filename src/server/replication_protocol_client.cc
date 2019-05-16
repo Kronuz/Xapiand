@@ -171,7 +171,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_REPLICA, false);
 		lk_shard_ptr->lock(0, [=] {
 			// If it cannot checkout because database is busy, retry when ready...
-			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
+			trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), dst_endpoint.path, src_endpoint, dst_endpoint);
 		});
 
 		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
@@ -188,7 +188,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 		lk_shard_ptr.reset();
 		try {
 			// If it cannot replicate because the other end is down, retry in a bit...
-			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, dst_endpoint.path, src_endpoint, dst_endpoint);
+			trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), dst_endpoint.path, src_endpoint, dst_endpoint);
 			L_REPLICATION("Replication deferred (cannot connect): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 			return false;
 		} catch (...) {
@@ -322,7 +322,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	Xapian::Database* db;
 
-	lock_shard lk_shard(Endpoint{endpoint_path}, DB_WRITABLE, false);
+	lock_shard lk_shard(Endpoint(endpoint_path), DB_WRITABLE, false);
 
 	db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
@@ -726,7 +726,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_shard) {
-				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_REPLICA | DB_SYNCHRONOUS_WAL);
+				switch_shard = XapiandManager::database_pool()->checkout(Endpoint(switch_shard_path), DB_REPLICA | DB_SYNCHRONOUS_WAL);
 			}
 			switch_shard->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_shard.get());

@@ -713,7 +713,7 @@ resolve_index_endpoints(const Endpoint& endpoint) {
 					}
 					// This is a valid directory
 					if (n[0] == '.' && n[1] == '_' && n[2] == '_') {
-						endpoints.add(Endpoint{base_path + n});
+						endpoints.add(Endpoint(base_path + n));
 					}
 				}
 			}

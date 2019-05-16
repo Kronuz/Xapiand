@@ -124,7 +124,7 @@ public:
 	double z;
 
 	// Scale factor.
-	double scale{1};
+	double scale = 1;
 
 	Cartesian();
 	Cartesian(double lat, double lon, double height, Units units, int _SRID=WGS84);

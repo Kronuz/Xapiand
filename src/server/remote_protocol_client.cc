@@ -512,7 +512,7 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 	if (p != p_end) {
 		size_t len;
 		len = unserialise_length_and_check(&p, p_end);
-		endpoint = Endpoint{std::string_view(p, len)};
+		endpoint = Endpoint(std::string_view(p, len));
 		p += len;
 		if (p != p_end) {
 			THROW(NetworkError, "only one database allowed on remote databases");
@@ -558,7 +558,7 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 	if (p != p_end) {
 		size_t len;
 		len = unserialise_length_and_check(&p, p_end);
-		endpoint = Endpoint{std::string_view(p, len)};
+		endpoint = Endpoint(std::string_view(p, len));
 		p += len;
 		if (p != p_end) {
 			THROW(NetworkError, "only one database allowed on remote databases");

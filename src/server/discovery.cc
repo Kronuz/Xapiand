@@ -428,7 +428,7 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 			if (XapiandManager::state() == XapiandManager::State::READY) {
 				// Replicate database from the other node
 				auto path = strings::format(".xapiand/indices/.__{}", node->idx);
-				trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, path, Endpoint{path, node}, Endpoint{path});
+				trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), path, Endpoint(path, node), Endpoint(path));
 			}
 			L_INFO("Node {}{}" + INFO_COL + " joined the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 			// L_DIM_GREY("{}", Node::dump_nodes());
@@ -946,7 +946,7 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 		} else {
 			// Replicate database from the other node
 			Endpoint remote_endpoint(path, node);
-			trigger_replication()->delayed_debounce(std::chrono::milliseconds{random_int(0, 3000)}, local_endpoint.path, remote_endpoint, local_endpoint);
+			trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), local_endpoint.path, remote_endpoint, local_endpoint);
 		}
 	}
 }

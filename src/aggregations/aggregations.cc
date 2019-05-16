@@ -36,20 +36,20 @@
 #include "reserved/aggregations.h"          // for RESERVED_AGGS_*
 
 
-Aggregation::Aggregation()
-	: _doc_count{0},
-	  value_ptr(nullptr),
-	  slot{0.0},
-	  idx{0}
+Aggregation::Aggregation() :
+	_doc_count(0),
+	value_ptr(nullptr),
+	slot(0),
+	idx(0)
 {
 }
 
 
-Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& schema)
-	: _doc_count{0},
-	  value_ptr(nullptr),
-	  slot{0.0},
-	  idx{0}
+Aggregation::Aggregation(const MsgPack& context, const std::shared_ptr<Schema>& schema) :
+	_doc_count(0),
+	value_ptr(nullptr),
+	slot(0),
+	idx(0)
 {
 	assert(context.is_map());
 
