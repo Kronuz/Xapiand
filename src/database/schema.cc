@@ -705,6 +705,7 @@ _get_type(std::string_view str_type)
 		hhl("boolean"),
 		hhl("date"),
 		hhl("datetime"),
+		hhl("float"),
 		hhl("floating"),
 		hhl("geo"),
 		hhl("integer"),
@@ -726,6 +727,8 @@ _get_type(std::string_view str_type)
 		hhl("date/array"),
 		hhl("array/datetime"),
 		hhl("datetime/array"),
+		hhl("array/float"),
+		hhl("float/array"),
 		hhl("array/floating"),
 		hhl("floating/array"),
 		hhl("array/geo"),
@@ -759,6 +762,8 @@ _get_type(std::string_view str_type)
 		hhl("date/foreign"),
 		hhl("foreign/datetime"),
 		hhl("datetime/foreign"),
+		hhl("foreign/float"),
+		hhl("float/foreign"),
 		hhl("foreign/floating"),
 		hhl("floating/foreign"),
 		hhl("foreign/geo"),
@@ -809,6 +814,12 @@ _get_type(std::string_view str_type)
 		hhl("array/datetime/foreign"),
 		hhl("datetime/foreign/array"),
 		hhl("datetime/array/foreign"),
+		hhl("foreign/array/float"),
+		hhl("foreign/float/array"),
+		hhl("array/foreign/float"),
+		hhl("array/float/foreign"),
+		hhl("float/foreign/array"),
+		hhl("float/array/foreign"),
 		hhl("foreign/array/floating"),
 		hhl("foreign/floating/array"),
 		hhl("array/foreign/floating"),
@@ -905,6 +916,7 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::datetime }};
 			return _;
 		}
+		case _.fhhl("float"):
 		case _.fhhl("floating"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::floating }};
 			return _;
@@ -974,6 +986,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::datetime }};
 			return _;
 		}
+		case _.fhhl("float/array"):
+		case _.fhhl("array/float"):
 		case _.fhhl("floating/array"):
 		case _.fhhl("array/floating"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::floating }};
@@ -1055,6 +1069,8 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::datetime }};
 			return _;
 		}
+		case _.fhhl("float/foreign"):
+		case _.fhhl("foreign/float"):
 		case _.fhhl("floating/foreign"):
 		case _.fhhl("foreign/floating"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::floating }};
@@ -1153,6 +1169,12 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::array, FieldType::datetime }};
 			return _;
 		}
+		case _.fhhl("float/array/foreign"):
+		case _.fhhl("float/foreign/array"):
+		case _.fhhl("array/float/foreign"):
+		case _.fhhl("array/foreign/float"):
+		case _.fhhl("foreign/float/array"):
+		case _.fhhl("foreign/array/float"):
 		case _.fhhl("floating/array/foreign"):
 		case _.fhhl("floating/foreign/array"):
 		case _.fhhl("array/floating/foreign"):
@@ -2012,7 +2034,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'datetime', 'float', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'datetime', 'floating', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
