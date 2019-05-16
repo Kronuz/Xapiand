@@ -8902,9 +8902,12 @@ Schema::consistency_type(std::string_view prop_name, const MsgPack& prop_obj)
 		}
 		const auto str_type = enum_name(specification.sep_types[SPC_CONCRETE_TYPE]);
 		if (_str_type.compare(init_pos, std::string::npos, str_type) != 0) {
-			auto str_concretr_type = _str_type.substr(init_pos);
-			if ((str_concretr_type != "term" || str_type != "keyword") && (str_concretr_type != "keyword" || str_type != "term")) {  // FIXME: remove legacy term
-				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_type), repr(str_concretr_type), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			auto str_concrete_type = _str_type.substr(init_pos);
+			if (((str_concrete_type != "string" || str_type != "text") && (str_concrete_type != "text" || str_type != "string")) &&
+				((str_concrete_type != "term" || str_type != "keyword") && (str_concrete_type != "keyword" || str_type != "term")) &&
+				((str_concrete_type != "float" || str_type != "floating") && (str_concrete_type != "floating" || str_type != "float"))) {
+				// FIXME: remove legacy types
+				THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_type), repr(str_concrete_type), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
 	} else {
