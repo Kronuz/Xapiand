@@ -762,9 +762,9 @@ Serialise::geospatial(std::string_view field_value)
 std::string
 Serialise::cartesian(const Cartesian& norm_cartesian)
 {
-	uint32_t x = htobe32(((uint32_t)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
-	uint32_t y = htobe32(((uint32_t)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
-	uint32_t z = htobe32(((uint32_t)(norm_cartesian.z * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t x = htobe32((uint32_t)((long long)(norm_cartesian.x * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t y = htobe32((uint32_t)((long long)(norm_cartesian.y * DOUBLE2INT) + MAXDOU2INT));
+	uint32_t z = htobe32((uint32_t)((long long)(norm_cartesian.z * DOUBLE2INT) + MAXDOU2INT));
 	const char serialised[] = { (char)(x & 0xFF), (char)((x >> 8) & 0xFF), (char)((x >> 16) & 0xFF), (char)((x >> 24) & 0xFF),
 								(char)(y & 0xFF), (char)((y >> 8) & 0xFF), (char)((y >> 16) & 0xFF), (char)((y >> 24) & 0xFF),
 								(char)(z & 0xFF), (char)((z >> 8) & 0xFF), (char)((z >> 16) & 0xFF), (char)((z >> 24) & 0xFF) };
@@ -1262,9 +1262,9 @@ Unserialise::cartesian(std::string_view serialised_val)
 		THROW(SerialisationError, "Cannot unserialise cartesian: {} [{}]", repr(serialised_val), serialised_val.size());
 	}
 
-	double x = (((unsigned)serialised_val[0] << 24) & 0xFF000000) | (((unsigned)serialised_val[1] << 16) & 0xFF0000) | (((unsigned)serialised_val[2] << 8) & 0xFF00)  | (((unsigned)serialised_val[3]) & 0xFF);
-	double y = (((unsigned)serialised_val[4] << 24) & 0xFF000000) | (((unsigned)serialised_val[5] << 16) & 0xFF0000) | (((unsigned)serialised_val[6] << 8) & 0xFF00)  | (((unsigned)serialised_val[7]) & 0xFF);
-	double z = (((unsigned)serialised_val[8] << 24) & 0xFF000000) | (((unsigned)serialised_val[9] << 16) & 0xFF0000) | (((unsigned)serialised_val[10] << 8) & 0xFF00) | (((unsigned)serialised_val[11]) & 0xFF);
+	double x = (((uint32_t)serialised_val[0] << 24) & 0xFF000000) | (((uint32_t)serialised_val[1] << 16) & 0xFF0000) | (((uint32_t)serialised_val[2] << 8) & 0xFF00)  | (((uint32_t)serialised_val[3]) & 0xFF);
+	double y = (((uint32_t)serialised_val[4] << 24) & 0xFF000000) | (((uint32_t)serialised_val[5] << 16) & 0xFF0000) | (((uint32_t)serialised_val[6] << 8) & 0xFF00)  | (((uint32_t)serialised_val[7]) & 0xFF);
+	double z = (((uint32_t)serialised_val[8] << 24) & 0xFF000000) | (((uint32_t)serialised_val[9] << 16) & 0xFF0000) | (((uint32_t)serialised_val[10] << 8) & 0xFF00) | (((uint32_t)serialised_val[11]) & 0xFF);
 	return {(x - MAXDOU2INT) / DOUBLE2INT, (y - MAXDOU2INT) / DOUBLE2INT, (z - MAXDOU2INT) / DOUBLE2INT};
 }
 
