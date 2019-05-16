@@ -3234,7 +3234,7 @@ HttpClient::end_http_request(Request& request)
 const ct_type_t&
 HttpClient::resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types)
 {
-	L_CALL("HttpClient::resolve_ct_type({})", repr(ct_type.to_string()));
+	L_CALL("HttpClient::resolve_ct_type(<request>, <ct_types>)");
 
 	const auto& acceptable_type = get_acceptable_type(request, ct_types);
 	auto accepted_ct_type = is_acceptable_type(acceptable_type, ct_types);
@@ -3249,7 +3249,7 @@ HttpClient::resolve_ct_type(Request& request, const std::vector<const ct_type_t*
 const ct_type_t&
 HttpClient::resolve_ct_type(Request& request, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::resolve_ct_type({})", repr(ct_type.to_string()));
+	L_CALL("HttpClient::resolve_ct_type(<request>, {})", repr(ct_type.to_string()));
 
 	std::vector<const ct_type_t*> ct_types;
 	if (!ct_type.empty()) {
