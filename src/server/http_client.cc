@@ -2142,7 +2142,7 @@ HttpClient::dump_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
+	DatabaseHandler db_handler(endpoints, DB_OPEN);
 
 	auto obj = db_handler.dump_document(document_id);
 
@@ -2174,7 +2174,7 @@ HttpClient::dump_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN | DB_DISABLE_WAL);
+	DatabaseHandler db_handler(endpoints, DB_OPEN);
 
 	auto& ct_type = resolve_ct_type(request);
 	if (ct_type.empty()) {

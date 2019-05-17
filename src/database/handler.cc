@@ -877,7 +877,7 @@ DatabaseHandler::restore_documents(int fd)
 
 	SHA256 sha256;
 	msgpack::unpacker unpacker;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, false, false, true);
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, false, false, true);
 	try {
 		while (true) {
 			if (XapiandManager::manager()->is_detaching()) {
