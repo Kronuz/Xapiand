@@ -3206,15 +3206,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 	auto spc_start = specification;
 
 	switch (object.get_type()) {
-		case MsgPack::Type::ARRAY: {
-			auto properties = &*parent_properties;
-			auto data = parent_data;
-			properties = &index_subproperties(properties, data, name);
-			index_array(properties, object, data, doc, name);
-			specification = std::move(spc_start);
-			break;
-		}
-
 		case MsgPack::Type::MAP: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
@@ -3272,6 +3263,15 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			break;
 		}
 
+		case MsgPack::Type::ARRAY: {
+			auto properties = &*parent_properties;
+			auto data = parent_data;
+			properties = &index_subproperties(properties, data, name);
+			index_array(properties, object, data, doc, name);
+			specification = std::move(spc_start);
+			break;
+		}
+
 		default: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
@@ -3312,21 +3312,6 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 	size_t pos = 0;
 	for (const auto& object : array) {
 		switch (object.get_type()) {
-			case MsgPack::Type::ARRAY: {
-				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				index_array(parent_properties, object, data_pos, doc, name);
-				if (specification.flags.store) {
-					if (data_pos->is_map() && data_pos->size() == 1) {
-						auto it = data_pos->find(RESERVED_VALUE);
-						if (it != data_pos->end()) {
-							*data_pos = it.value();
-						}
-					}
-				}
-				break;
-			}
-
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
 				auto data = parent_data;
@@ -3343,6 +3328,21 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				index_partial_paths(doc);
 				if (specification.flags.store) {
 					*data_pos = object;
+					if (data_pos->is_map() && data_pos->size() == 1) {
+						auto it = data_pos->find(RESERVED_VALUE);
+						if (it != data_pos->end()) {
+							*data_pos = it.value();
+						}
+					}
+				}
+				break;
+			}
+
+			case MsgPack::Type::ARRAY: {
+				auto data = parent_data;
+				auto data_pos = specification.flags.store ? &data->get(pos) : data;
+				index_array(parent_properties, object, data_pos, doc, name);
+				if (specification.flags.store) {
 					if (data_pos->is_map() && data_pos->size() == 1) {
 						auto it = data_pos->find(RESERVED_VALUE);
 						if (it != data_pos->end()) {
@@ -3732,14 +3732,6 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 	auto spc_start = specification;
 
 	switch (object.get_type()) {
-		case MsgPack::Type::ARRAY: {
-			auto properties = &*parent_properties;
-			properties = &update_subproperties(properties, name);
-			update_array(properties, object, name);
-			specification = std::move(spc_start);
-			return;
-		}
-
 		case MsgPack::Type::MAP: {
 			auto properties = &*parent_properties;
 			Fields fields;
@@ -3753,6 +3745,14 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		case MsgPack::Type::UNDEFINED: {
 			auto properties = &*parent_properties;
 			update_subproperties(properties, name);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			auto properties = &*parent_properties;
+			properties = &update_subproperties(properties, name);
+			update_array(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -3781,11 +3781,6 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 	size_t pos = 0;
 	for (const auto& object : array) {
 		switch (object.get_type()) {
-			case MsgPack::Type::ARRAY: {
-				update_array(parent_properties, object, name);
-				break;
-			}
-
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
 				if (!specification.flags.concrete) {
@@ -3797,6 +3792,11 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 						}
 					}
 				}
+				break;
+			}
+
+			case MsgPack::Type::ARRAY: {
+				update_array(parent_properties, object, name);
 				break;
 			}
 
@@ -4171,14 +4171,6 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 	auto spc_start = specification;
 
 	switch (object.get_type()) {
-		case MsgPack::Type::ARRAY: {
-			auto properties = &*mut_parent_properties;
-			properties = &write_subproperties(properties, name);
-			write_array(properties, object, name);
-			specification = std::move(spc_start);
-			return;
-		}
-
 		case MsgPack::Type::MAP: {
 			auto properties = &*mut_parent_properties;
 			Fields fields;
@@ -4201,6 +4193,14 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 					}
 				}
 			}
+			specification = std::move(spc_start);
+			return;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			auto properties = &*mut_parent_properties;
+			properties = &write_subproperties(properties, name);
+			write_array(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -4230,11 +4230,6 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 	size_t pos = 0;
 	for (const auto& object : array) {
 		switch (object.get_type()) {
-			case MsgPack::Type::ARRAY: {
-				write_array(mut_parent_properties, object, name);
-				break;
-			}
-
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
 				if (!specification.flags.concrete) {
@@ -4246,6 +4241,11 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 						}
 					}
 				}
+				break;
+			}
+
+			case MsgPack::Type::ARRAY: {
+				write_array(mut_parent_properties, object, name);
 				break;
 			}
 
@@ -5021,6 +5021,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			break;
+
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5031,6 +5032,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			break;
+
 		case MsgPack::Type::FLOAT:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5041,6 +5043,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			break;
+
 		case MsgPack::Type::BOOLEAN:
 			if (specification.flags.bool_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5051,6 +5054,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				return;
 			}
 			break;
+
 		case MsgPack::Type::STR: {
 			const auto str_value = item_doc.str_view();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
@@ -5127,6 +5131,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 			return;
 		}
+
 		case MsgPack::Type::MAP:
 			for (auto it = item_doc.begin(); it != item_doc.end(); ++it) {
 				auto str_key = it->str_view();
@@ -5148,8 +5153,10 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				THROW(ClientError, "Type mismatch '{}' -> 'object'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
 			return;
+
 		case MsgPack::Type::ARRAY:
 			THROW(ClientError, "'{}' cannot be a nested array", RESERVED_VALUE);
+
 		default:
 			break;
 	}
