@@ -27,8 +27,9 @@
 constexpr const char RESERVED_GEO_LATITUDE[]                = RESERVED__ "latitude";
 constexpr const char RESERVED_GEO_LAT[]                     = RESERVED__ "lat";
 constexpr const char RESERVED_GEO_LONGITUDE[]               = RESERVED__ "longitude";
-constexpr const char RESERVED_GEO_LNG[]                     = RESERVED__ "lng";
-constexpr const char RESERVED_GEO_HEIGHT[]                  = RESERVED__ "height";
+constexpr const char RESERVED_GEO_LON[]                     = RESERVED__ "lon";
+constexpr const char RESERVED_GEO_ALTITUDE[]                = RESERVED__ "altitude";
+constexpr const char RESERVED_GEO_ALT[]                     = RESERVED__ "alt";
 constexpr const char RESERVED_GEO_RADIUS[]                  = RESERVED__ "radius";
 constexpr const char RESERVED_GEO_UNITS[]                   = RESERVED__ "units";
 constexpr const char RESERVED_GEO_SRID[]                    = RESERVED__ "srid";

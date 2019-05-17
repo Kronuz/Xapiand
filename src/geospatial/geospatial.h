@@ -32,7 +32,7 @@ class GeoSpatial {
 	struct data_t {
 		const MsgPack* lat;
 		const MsgPack* lon;
-		const MsgPack* height;
+		const MsgPack* alt;
 		bool has_radius;
 		const MsgPack* radius;
 		Cartesian::Units units;
@@ -41,7 +41,7 @@ class GeoSpatial {
 		data_t(bool has_radius_)
 			: lat(nullptr),
 			  lon(nullptr),
-			  height(nullptr),
+			  alt(nullptr),
 			  has_radius(has_radius_),
 			  radius(nullptr),
 			  units(Cartesian::Units::DEGREES),
@@ -52,7 +52,7 @@ class GeoSpatial {
 
 	void process_latitude(data_t& data, const MsgPack& latitude);
 	void process_longitude(data_t& data, const MsgPack& longitude);
-	void process_height(data_t& data, const MsgPack& height);
+	void process_altitude(data_t& data, const MsgPack& altitude);
 	void process_radius(data_t& data, const MsgPack& radius);
 	void process_units(data_t& data, const MsgPack& units);
 	void process_srid(data_t& data, const MsgPack& srid);
