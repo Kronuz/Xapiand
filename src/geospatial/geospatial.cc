@@ -84,6 +84,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 				default:
 					THROW(GeoSpatialError, "Unknown geometry {}", str_key);
 			}
+			return;
 		}
 
 		case MsgPack::Type::ARRAY: {
@@ -92,7 +93,7 @@ GeoSpatial::GeoSpatial(const MsgPack& obj)
 		}
 
 		default:
-			THROW(GeoSpatialError, "Object must be string or map");
+			THROW(GeoSpatialError, "Object must be string, map or array not {}", enum_name(obj.get_type()));
 	}
 }
 
