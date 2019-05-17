@@ -109,8 +109,8 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  * 7. If there are values sent by user, fills the document to be indexed via
  *    index_item_value()
  * 8. If the path has uuid field name the values are indexed according to index_uuid_field.
- * 9. index_object() does step 2 to 8 and for each field it calls index_object(...).
- * 10. index() does steps 2 to 4 and for each field it calls index_object(...)
+ * 9. index_new_object() does step 2 to 8 and for each field it calls index_new_object(...).
+ * 10. index() does steps 2 to 4 and for each field it calls index_new_object(...)
  *
  * write_schema() algorithm outline:
  * 1. Try reading schema from the metadata.
@@ -118,7 +118,7 @@ const std::string NAMESPACE_PREFIX_ID_FIELD_NAME = get_prefix(ID_FIELD_NAME);
  *    using feed_*; sets field_found for all found fields.
  * 3. Write properties and feed specification_t using write_*, this step could
  *    use some process_* (for some properties).
- * 4. write_object() does step 2 to 3 and for each field it calls update_schema(...).
+ * 4. write_new_object() does step 2 to 3 and for each field it calls update_schema(...).
  */
 
 
@@ -3188,9 +3188,9 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 
 
 void
-Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_object({}, {}, {}, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(parent_data->to_string()), repr(name));
+	L_CALL("Schema::index_new_object({}, {}, {}, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(parent_data->to_string()), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -3214,19 +3214,11 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			index_fields(properties, doc, data, fields);
 			auto value = specification.value ? specification.value.get() : specification.value_rec.get();
 			if (value) {
-				auto item_value = *value;
-				index_item_value(properties, doc, data, item_value);
-			}
-			if (specification.flags.store) {
-				if (data->is_map() && data->size() == 1) {
-					auto it = data->find(RESERVED_VALUE);
-					if (it != data->end()) {
-						*data = it.value();
-					}
-				}
-				if (data->is_undefined() || (data->is_map() && data->empty())) {
-					parent_data->erase(name);
-				}
+				// Save a copy of the value and reset (this could be recursive)
+				auto value_object = std::move(*value);
+				specification.value.reset();
+				specification.value_rec.reset();
+				index_object(properties, value_object, data, doc, name);
 			}
 			specification = std::move(spc_start);
 			break;
@@ -3236,7 +3228,42 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::UNDEFINED: {
 			auto properties = &*parent_properties;
 			auto data = parent_data;
-			index_subproperties(properties, data, name);
+			properties = &index_subproperties(properties, data, name);
+			index_object(properties, object, data, doc, name);
+			specification = std::move(spc_start);
+			break;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			auto properties = &*parent_properties;
+			auto data = parent_data;
+			properties = &index_subproperties(properties, data, name);
+			index_object(properties, object, data, doc, name);
+			specification = std::move(spc_start);
+			break;
+		}
+
+		default: {
+			auto properties = &*parent_properties;
+			auto data = parent_data;
+			properties = &index_subproperties(properties, data, name);
+			index_object(properties, object, data, doc, name);
+			specification = std::move(spc_start);
+			break;
+		}
+	}
+}
+
+
+void
+Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
+{
+	L_CALL("Schema::index_object({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
+
+	switch (object.get_type()) {
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED: {
+			auto data = parent_data;
 			if (!specification.flags.concrete) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 					if (specification.flags.inside_namespace) {
@@ -3259,24 +3286,56 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					parent_data->erase(name);
 				}
 			}
-			specification = std::move(spc_start);
+			break;
+		}
+
+		case MsgPack::Type::MAP: {
+			auto data = parent_data;
+			auto concrete_type = guess_concrete_type(object);
+			if (concrete_type == FieldType::empty || concrete_type == FieldType::object) {
+				index_nested_object(parent_properties, doc, data, object);
+			} else {
+				index_item_value(doc, data, object);
+				if (specification.flags.store) {
+					if (data->is_map() && data->size() == 1) {
+						auto it = data->find(RESERVED_VALUE);
+						if (it != data->end()) {
+							*data = it.value();
+						}
+					}
+					if (data->is_undefined() || (data->is_map() && data->empty())) {
+						parent_data->erase(name);
+					}
+				}
+			}
 			break;
 		}
 
 		case MsgPack::Type::ARRAY: {
-			auto properties = &*parent_properties;
 			auto data = parent_data;
-			properties = &index_subproperties(properties, data, name);
-			index_array(properties, object, data, doc, name);
-			specification = std::move(spc_start);
+			auto concrete_type = guess_concrete_type(object);
+			if (concrete_type == FieldType::empty) {
+				index_array(parent_properties, object, data, doc, name);
+			} else {
+				index_item_value(doc, data, object);
+				if (specification.flags.store) {
+					if (data->is_map() && data->size() == 1) {
+						auto it = data->find(RESERVED_VALUE);
+						if (it != data->end()) {
+							*data = it.value();
+						}
+					}
+					if (data->is_undefined() || (data->is_map() && data->empty())) {
+						parent_data->erase(name);
+					}
+				}
+			}
 			break;
 		}
 
 		default: {
-			auto properties = &*parent_properties;
 			auto data = parent_data;
-			properties = &index_subproperties(properties, data, name);
-			index_item_value(properties, doc, data, object);
+			index_item_value(doc, data, object);
 			if (specification.flags.store) {
 				if (data->is_map() && data->size() == 1) {
 					auto it = data->find(RESERVED_VALUE);
@@ -3288,7 +3347,6 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 					parent_data->erase(name);
 				}
 			}
-			specification = std::move(spc_start);
 			break;
 		}
 	}
@@ -3300,12 +3358,11 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 {
 	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
 
-	set_type_to_array();
-
 	if (array.empty()) {
 		if (specification.flags.store) {
 			*parent_data = MsgPack::ARRAY();
 		}
+		set_type_to_array();  // this has to be done last
 		return;
 	}
 
@@ -3314,8 +3371,8 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 		switch (object.get_type()) {
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
-				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
+				auto data_array = parent_data;
+				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
 				if (!specification.flags.concrete) {
 					if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 						if (specification.flags.inside_namespace) {
@@ -3327,11 +3384,31 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				}
 				index_partial_paths(doc);
 				if (specification.flags.store) {
-					*data_pos = object;
-					if (data_pos->is_map() && data_pos->size() == 1) {
-						auto it = data_pos->find(RESERVED_VALUE);
-						if (it != data_pos->end()) {
-							*data_pos = it.value();
+					*data = object;
+					if (data->is_map() && data->size() == 1) {
+						auto it = data->find(RESERVED_VALUE);
+						if (it != data->end()) {
+							*data = it.value();
+						}
+					}
+				}
+				break;
+			}
+
+			case MsgPack::Type::MAP: {
+				auto data_array = parent_data;
+				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
+				auto concrete_type = guess_concrete_type(object);
+				if (concrete_type == FieldType::empty) {
+					index_nested_object(parent_properties, doc, data, object);
+				} else {
+					index_item_value(doc, data, object, pos);
+					if (specification.flags.store) {
+						if (data->is_map() && data->size() == 1) {
+							auto it = data->find(RESERVED_VALUE);
+							if (it != data->end()) {
+								*data = it.value();
+							}
 						}
 					}
 				}
@@ -3339,14 +3416,19 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			}
 
 			case MsgPack::Type::ARRAY: {
-				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				index_array(parent_properties, object, data_pos, doc, name);
-				if (specification.flags.store) {
-					if (data_pos->is_map() && data_pos->size() == 1) {
-						auto it = data_pos->find(RESERVED_VALUE);
-						if (it != data_pos->end()) {
-							*data_pos = it.value();
+				auto data_array = parent_data;
+				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
+				auto concrete_type = guess_concrete_type(object);
+				if (concrete_type == FieldType::empty) {
+					index_array(parent_properties, object, data, doc, name);
+				} else {
+					index_item_value(doc, data, object, pos);
+					if (specification.flags.store) {
+						if (data->is_map() && data->size() == 1) {
+							auto it = data->find(RESERVED_VALUE);
+							if (it != data->end()) {
+								*data = it.value();
+							}
 						}
 					}
 				}
@@ -3354,14 +3436,14 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 			}
 
 			default: {
-				auto data = parent_data;
-				auto data_pos = specification.flags.store ? &data->get(pos) : data;
-				index_item_value(parent_properties, doc, data_pos, object, pos);
+				auto data_array = parent_data;
+				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
+				index_item_value(doc, data, object, pos);
 				if (specification.flags.store) {
-					if (data_pos->is_map() && data_pos->size() == 1) {
-						auto it = data_pos->find(RESERVED_VALUE);
-						if (it != data_pos->end()) {
-							*data_pos = it.value();
+					if (data->is_map() && data->size() == 1) {
+						auto it = data->find(RESERVED_VALUE);
+						if (it != data->end()) {
+							*data = it.value();
 						}
 					}
 				}
@@ -3370,53 +3452,8 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 		}
 		++pos;
 	}
-}
 
-
-void
-Schema::index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos)
-{
-	L_CALL("Schema::index_item_value({}, <doc>, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(item_value.to_string()), pos);
-
-	if (!specification.flags.complete) {
-		if (specification.flags.inside_namespace) {
-			complete_namespace_specification(item_value);
-		} else {
-			complete_specification(item_value);
-		}
-	}
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		if (!item_value.is_map()) {
-			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		for (auto& name : item_value) {
-			index_object(properties, item_value.at(name), data, doc, name.str());
-		}
-		return;
-	}
-
-	if (specification.partial_index_spcs.empty()) {
-		index_item(doc, item_value, *data, pos);
-	} else {
-		bool add_value = true;
-		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
-		for (const auto& index_spc : specification.partial_index_spcs) {
-			specification.update(index_spc);
-			index_item(doc, item_value, *data, pos, add_value);
-			add_value = false;
-		}
-		specification.update(std::move(start_index_spc));
-	}
-
-	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-		if (!specification.flags.static_endpoint) {
-			data->get(RESERVED_ENDPOINT) = specification.endpoint;
-		}
-	}
+	set_type_to_array();  // this has to be done last
 }
 
 
@@ -3451,9 +3488,70 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		set_type_to_object();
+
 		for (const auto& field : fields) {
-			index_object(properties, *field.second, data, doc, field.first);
+			index_new_object(properties, *field.second, data, doc, field.first);
+		}
+
+		set_type_to_object();  // this has to be done last
+	}
+}
+
+
+void
+Schema::index_nested_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object)
+{
+	L_CALL("Schema::index_nested_object({}, <doc>, {}, <object>)", repr(properties->to_string()), repr(data->to_string()));
+
+	if (object.empty()) {
+		if (specification.flags.store) {
+			*data = MsgPack::MAP();
+		}
+		set_type_to_object();  // this has to be done last
+		return;
+	}
+
+	for (auto& key : object) {
+		index_new_object(properties, object.at(key), data, doc, key.str());
+	}
+
+	set_type_to_object();  // this has to be done last
+}
+
+
+void
+Schema::index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos)
+{
+	L_CALL("Schema::index_item_value(<doc>, {}, {}, {})", repr(data->to_string()), repr(item_value.to_string()), pos);
+
+	if (!specification.flags.complete) {
+		if (specification.flags.inside_namespace) {
+			complete_namespace_specification(item_value);
+		} else {
+			complete_specification(item_value);
+		}
+	}
+
+	if (specification.partial_index_spcs.empty()) {
+		index_item(doc, item_value, pos);
+		if (specification.flags.store) {
+			store_item(item_value, *data);
+		}
+	} else {
+		index_spc_t start_index_spc(specification.sep_types[SPC_CONCRETE_TYPE], std::move(specification.prefix.field), specification.slot, std::move(specification.accuracy), std::move(specification.acc_prefix));
+		for (const auto& index_spc : specification.partial_index_spcs) {
+			specification.update(index_spc);
+			index_item(doc, item_value, pos);
+		}
+		if (specification.flags.store) {
+			store_item(item_value, *data);
+		}
+		specification.update(std::move(start_index_spc));
+	}
+
+	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+		if (!specification.flags.static_endpoint) {
+			data->get(RESERVED_ENDPOINT) = specification.endpoint;
 		}
 	}
 }
@@ -3717,9 +3815,9 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 
 
 void
-Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
+Schema::update_new_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::update_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::update_new_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -3744,7 +3842,8 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED: {
 			auto properties = &*parent_properties;
-			update_subproperties(properties, name);
+			properties = &update_subproperties(properties, name);
+			update_object(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -3752,7 +3851,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		case MsgPack::Type::ARRAY: {
 			auto properties = &*parent_properties;
 			properties = &update_subproperties(properties, name);
-			update_array(properties, object, name);
+			update_object(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
@@ -3760,27 +3859,70 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 		default: {
 			auto properties = &*parent_properties;
 			properties = &update_subproperties(properties, name);
-			update_item_value(properties, object);
+			update_object(properties, object, name);
 			specification = std::move(spc_start);
 			return;
 		}
 	}
 }
 
+
+void
+Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
+{
+	L_CALL("Schema::update_new_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
+
+	switch (object.get_type()) {
+		case MsgPack::Type::MAP: {
+			update_nested_object(parent_properties, object);
+			break;
+		}
+
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED: {
+			if (!specification.flags.concrete) {
+				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+					if (specification.flags.inside_namespace) {
+						validate_required_namespace_data();
+					} else {
+						validate_required_data(get_mutable_properties(specification.full_meta_name));
+					}
+				}
+			}
+			break;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			update_array(parent_properties, object, name);
+			break;
+		}
+
+		default: {
+			update_item_value(object);
+			break;
+		}
+	}
+}
+
+
 void
 Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name)
 {
 	L_CALL("Schema::update_array({}, {}, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
 
-	set_type_to_array();
-
 	if (array.empty()) {
+		set_type_to_array();  // this has to be done last
 		return;
 	}
 
 	size_t pos = 0;
 	for (const auto& object : array) {
 		switch (object.get_type()) {
+			case MsgPack::Type::MAP: {
+				update_nested_object(parent_properties, object);
+				break;
+			}
+
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
 				if (!specification.flags.concrete) {
@@ -3801,19 +3943,21 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 			}
 
 			default: {
-				update_item_value(parent_properties, object);
+				update_item_value(object);
 				break;
 			}
 		}
 		++pos;
 	}
+
+	set_type_to_array();  // this has to be done last
 }
 
 
 void
-Schema::update_item_value(const MsgPack*& properties, const MsgPack& item_value)
+Schema::update_item_value([[maybe_unused]] const MsgPack& item_value)
 {
-	L_CALL("Schema::update_item_value()", repr(properties->to_string()), repr(item_value.to_string()));
+	L_CALL("Schema::update_item_value({})", repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -3836,19 +3980,6 @@ Schema::update_item_value(const MsgPack*& properties, const MsgPack& item_value)
 				validate_required_data(get_mutable_properties(specification.full_meta_name));
 			}
 		}
-	}
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		if (!item_value.is_map()) {
-			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		for (auto& name : item_value) {
-			update_object(properties, item_value.at(name), name.str());
-		}
-		return;
 	}
 
 	if (!specification.partial_index_spcs.empty()) {
@@ -3894,13 +4025,32 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		set_type_to_object();
+
 		for (const auto& field : fields) {
-			update_object(properties, *field.second, field.first);
+			update_new_object(properties, *field.second, field.first);
 		}
+
+		set_type_to_object();  // this has to be done last
 	}
 }
 
+
+inline void
+Schema::update_nested_object(const MsgPack*& properties, const MsgPack& object)
+{
+	L_CALL("Schema::update_nested_object(<const MsgPack*>, <object>)");
+
+	if (object.empty()) {
+		set_type_to_object();  // this has to be done last
+		return;
+	}
+
+	for (auto& key : object) {
+		update_new_object(properties, object.at(key), key.str());
+	}
+
+	set_type_to_object();  // this has to be done last
+}
 
 /*  _____ _____ _____ _____ _____ _____ _____ _____
  * |_____|_____|_____|_____|_____|_____|_____|_____|
@@ -4156,9 +4306,9 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 
 
 void
-Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
+Schema::write_new_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::write_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::write_new_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -4183,7 +4333,44 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED: {
 			auto properties = &*mut_parent_properties;
-			write_subproperties(properties, name);
+			properties = &write_subproperties(properties, name);
+			write_object(properties, object, name);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		case MsgPack::Type::ARRAY: {
+			auto properties = &*mut_parent_properties;
+			properties = &write_subproperties(properties, name);
+			write_object(properties, object, name);
+			specification = std::move(spc_start);
+			return;
+		}
+
+		default: {
+			auto properties = &*mut_parent_properties;
+			properties = &write_subproperties(properties, name);
+			write_object(properties, object, name);
+			specification = std::move(spc_start);
+			return;
+		}
+	}
+}
+
+
+void
+Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
+{
+	L_CALL("Schema::write_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
+
+	switch (object.get_type()) {
+		case MsgPack::Type::MAP: {
+			write_nested_object(mut_parent_properties, object);
+			break;
+		}
+
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED: {
 			if (!specification.flags.concrete) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 					if (specification.flags.inside_namespace) {
@@ -4193,27 +4380,21 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 					}
 				}
 			}
-			specification = std::move(spc_start);
-			return;
+			break;
 		}
 
 		case MsgPack::Type::ARRAY: {
-			auto properties = &*mut_parent_properties;
-			properties = &write_subproperties(properties, name);
-			write_array(properties, object, name);
-			specification = std::move(spc_start);
-			return;
+			write_array(mut_parent_properties, object, name);
+			break;
 		}
 
 		default: {
-			auto properties = &*mut_parent_properties;
-			write_subproperties(properties, name);
-			write_item_value(properties, object);
-			specification = std::move(spc_start);
-			return;
+			write_item_value(mut_parent_properties, object);
+			break;
 		}
 	}
 }
+
 
 
 void
@@ -4221,15 +4402,19 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 {
 	L_CALL("Schema::write_array({}, {}, {})", repr(mut_parent_properties->to_string()), repr(array.to_string()), repr(name));
 
-	set_type_to_array();
-
 	if (array.empty()) {
+		set_type_to_array();  // this has to be done last
 		return;
 	}
 
 	size_t pos = 0;
 	for (const auto& object : array) {
 		switch (object.get_type()) {
+			case MsgPack::Type::MAP: {
+				write_nested_object(mut_parent_properties, object);
+				break;
+			}
+
 			case MsgPack::Type::NIL:
 			case MsgPack::Type::UNDEFINED: {
 				if (!specification.flags.concrete) {
@@ -4256,13 +4441,15 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 		}
 		++pos;
 	}
+
+	set_type_to_array();  // this has to be done last
 }
 
 
 void
-Schema::write_item_value(MsgPack*& mut_properties, const MsgPack& item_value)
+Schema::write_item_value(MsgPack*& mut_properties, [[maybe_unused]] const MsgPack& item_value)
 {
-	L_CALL("Schema::write_item_value()");
+	L_CALL("Schema::write_item_value({})", repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -4283,19 +4470,6 @@ Schema::write_item_value(MsgPack*& mut_properties, const MsgPack& item_value)
 		} else {
 			validate_required_data(*mut_properties);
 		}
-	}
-
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		if (!item_value.is_map()) {
-			THROW(ClientError, "{} is an object type and as such it expects an object value", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-		for (auto& name : item_value) {
-			write_object(mut_properties, item_value.at(name), name.str());
-		}
-		return;
 	}
 
 	if (!specification.partial_index_spcs.empty()) {
@@ -4339,12 +4513,33 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-		set_type_to_object();
+
 		for (const auto& field : fields) {
-			write_object(mut_properties, *field.second, field.first);
+			write_new_object(mut_properties, *field.second, field.first);
 		}
+
+		set_type_to_object();  // this has to be done last
 	}
 }
+
+
+void
+Schema::write_nested_object(MsgPack*& mut_properties, const MsgPack& object)
+{
+	L_CALL("Schema::write_fields(<const MsgPack*>, <object>)");
+
+	if (object.empty()) {
+		set_type_to_object();  // this has to be done last
+		return;
+	}
+
+	for (auto& key : object) {
+		write_new_object(mut_properties, object.at(key), key.str());
+	}
+
+	set_type_to_object();  // this has to be done last
+}
+
 
 /*  _____ _____ _____ _____ _____ _____ _____ _____
  * |_____|_____|_____|_____|_____|_____|_____|_____|
@@ -5027,7 +5222,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::positive) {
 					THROW(ClientError, "Type mismatch '{}' -> 'positive'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::positive;
 			}
 			break;
 
@@ -5038,7 +5233,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::integer) {
 					THROW(ClientError, "Type mismatch '{}' -> 'integer'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::integer;
 			}
 			break;
 
@@ -5049,7 +5244,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::floating) {
 					THROW(ClientError, "Type mismatch '{}' -> 'floating'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::floating;
 			}
 			break;
 
@@ -5060,7 +5255,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
 					THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::boolean;
 			}
 			break;
 
@@ -5072,7 +5267,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::uuid) {
 					THROW(ClientError, "Type mismatch '{}' -> 'uuid'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::uuid;
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5080,7 +5275,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::date) {
 					THROW(ClientError, "Type mismatch '{}' -> 'date'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::date;
 			}
 			if (specification.flags.datetime_detection && Datetime::isDatetime(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5088,7 +5283,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::datetime) {
 					THROW(ClientError, "Type mismatch '{}' -> 'datetime'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::datetime;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5096,7 +5291,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::time) {
 					THROW(ClientError, "Type mismatch '{}' -> 'time'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::time;
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5104,7 +5299,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::timedelta) {
 					THROW(ClientError, "Type mismatch '{}' -> 'timedelta'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::timedelta;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5112,7 +5307,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
 					THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::geo;
 			}
 			if (specification.flags.bool_detection) {
 				if (str_value == "true" || str_value == "false") {
@@ -5121,7 +5316,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
 						THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
-					return specification.sep_types[SPC_CONCRETE_TYPE];
+					return FieldType::boolean;
 				}
 			}
 			if (specification.flags.text_detection && !specification.flags.bool_term) {
@@ -5130,14 +5325,14 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::text) {
 					THROW(ClientError, "Type mismatch '{}' -> 'text'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return specification.sep_types[SPC_CONCRETE_TYPE];
+				return FieldType::text;
 			}
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
 				return FieldType::keyword;
 			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::keyword) {
 				THROW(ClientError, "Type mismatch '{}' -> 'keyword'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
-			return specification.sep_types[SPC_CONCRETE_TYPE];
+			return FieldType::keyword;
 		}
 
 		case MsgPack::Type::MAP:
@@ -5150,7 +5345,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != field_type) {
 						THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(field_type));
 					}
-					return specification.sep_types[SPC_CONCRETE_TYPE];
+					return field_type;
 				} else if (!is_comment(str_key)) {
 					break;
 				}
@@ -5160,7 +5355,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object) {
 				THROW(ClientError, "Type mismatch '{}' -> 'object'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
-			return specification.sep_types[SPC_CONCRETE_TYPE];
+			return FieldType::object;
 
 		case MsgPack::Type::ARRAY:
 			if (specification.flags.geo_detection) {
@@ -5176,7 +5371,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 						} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
 							THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 						}
-						return specification.sep_types[SPC_CONCRETE_TYPE];
+						return FieldType::geo;
 					}
 				}
 			}
@@ -5186,7 +5381,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 			break;
 	}
 
-	return specification.sep_types[SPC_CONCRETE_TYPE];
+	return FieldType::empty;
 }
 
 
@@ -5238,11 +5433,10 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 }
 
 
-template <typename T>
 inline void
-Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
+Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 {
-	L_CALL("Schema::_index_items(<doc>, <values>, {})", pos);
+	L_CALL("Schema::index_item(<doc>, <value>, {})", pos);
 
 	assert(specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty);
 	assert(specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object);
@@ -5253,104 +5447,86 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 			return;
 
 		case TypeIndex::FIELD_TERMS: {
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_term(doc, Serialise::MsgPack(specification, value), specification, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_term(doc, Serialise::MsgPack(specification, value), specification, pos);
 			}
 			break;
 		}
 		case TypeIndex::FIELD_VALUES: {
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
 			}
 			break;
 		}
 		case TypeIndex::FIELD_ALL: {
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &specification);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos);
 			}
 			break;
 		}
 		case TypeIndex::TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_all_term(doc, value, specification, global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_all_term(doc, value, specification, global_spc, pos);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, nullptr, &global_spc);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, nullptr, &global_spc);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos++, &specification, &global_spc);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &specification, &global_spc);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &specification);
 			}
 			break;
 		}
@@ -5358,12 +5534,10 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
 			}
 			break;
 		}
@@ -5371,36 +5545,30 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, nullptr, &global_spc);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, nullptr, &global_spc);
 			}
 			break;
 		}
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos++, &specification, &global_spc);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &specification, &global_spc);
 			}
 			break;
 		}
@@ -5408,12 +5576,10 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
 			auto& s_f = map_values[specification.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					pos++; /* do nothing else (don't index any terms) */
-				} else {
-					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				/* do nothing else (don't index any terms) */
+			} else {
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
 			}
 			break;
 		}
@@ -5421,12 +5587,10 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_f = map_values[specification.slot];
 			auto& s_g = map_values[global_spc.slot];
-			for (const MsgPack& value : values) {
-				if (value.is_null() || value.is_undefined()) {
-					index_simple_term(doc, specification.prefix.field, specification, pos++);
-				} else {
-					index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos++);
-				}
+			if (value.is_null() || value.is_undefined()) {
+				index_simple_term(doc, specification.prefix.field, specification, pos);
+			} else {
+				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
 			}
 			break;
 		}
@@ -5435,14 +5599,15 @@ Schema::_index_items(Xapian::Document& doc, T&& values, size_t pos)
 
 
 void
-Schema::_store_item(const MsgPack& value, MsgPack& data, bool add_value)
+Schema::store_item(const MsgPack& value, MsgPack& data)
 {
-	L_CALL("Schema::_store_item({}, {}, {})", repr(value.to_string()), repr(data.to_string()), add_value);
+	L_CALL("Schema::store_item({}, {})", repr(value.to_string()), repr(data.to_string()));
 
-	if (specification.flags.store && add_value) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
+	// Add value to data.
+	auto& data_value = data[RESERVED_VALUE];
+
+	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+		case FieldType::uuid:
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = normalize_uuid(value);
@@ -5454,7 +5619,10 @@ Schema::_store_item(const MsgPack& value, MsgPack& data, bool add_value)
 					data_value = MsgPack({ data_value, normalize_uuid(value) });
 					break;
 			}
-		} else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
+			break;
+
+		case FieldType::date:
+		case FieldType::datetime:
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = Datetime::iso8601(Datetime::DatetimeParser(value));
@@ -5466,7 +5634,9 @@ Schema::_store_item(const MsgPack& value, MsgPack& data, bool add_value)
 					data_value = MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) });
 					break;
 			}
-		} else {
+			break;
+
+		default:
 			switch (data_value.get_type()) {
 				case MsgPack::Type::UNDEFINED:
 					data_value = value;
@@ -5478,92 +5648,7 @@ Schema::_store_item(const MsgPack& value, MsgPack& data, bool add_value)
 					data_value = MsgPack({ data_value, value });
 					break;
 			}
-		}
-	}
-}
-
-
-void
-Schema::_store_items(const MsgPack& values, MsgPack& data, bool add_values)
-{
-	L_CALL("Schema::_store_items({}, {}, {})", repr(values.to_string()), repr(data.to_string()), add_values);
-
-	if (specification.flags.store && add_values) {
-		// Add value to data.
-		auto& data_value = data[RESERVED_VALUE];
-		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::uuid) {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = MsgPack::ARRAY();
-					for (const auto& value : values) {
-						data_value.push_back(normalize_uuid(value));
-					}
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(normalize_uuid(value));
-					}
-					break;
-				default:
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(normalize_uuid(value));
-					}
-					break;
-			}
-		}  else if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::date || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::datetime) {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					for (const auto& value : values) {
-						data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
-					}
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(Datetime::iso8601(Datetime::DatetimeParser(value)));
-					}
-					break;
-				default:
-					for (const auto& value : values) {
-						data_value.push_back(MsgPack({ data_value, Datetime::iso8601(Datetime::DatetimeParser(value)) }));
-					}
-					break;
-			}
-		} else {
-			switch (data_value.get_type()) {
-				case MsgPack::Type::UNDEFINED:
-					data_value = values;
-					break;
-				case MsgPack::Type::ARRAY:
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
-				default:
-					data_value = MsgPack({ data_value });
-					for (const auto& value : values) {
-						data_value.push_back(value);
-					}
-					break;
-			}
-		}
-	}
-}
-
-
-void
-Schema::index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value)
-{
-	L_CALL("Schema::index_item(<doc>, {}, {}, {}, {})", repr(value.to_string()), repr(data.to_string()), pos, add_value);
-
-	L_SCHEMA("Final Specification: {}", specification.to_string(4));
-
-	if (value.is_array()) {
-		_index_items(doc, value, pos);
-		_store_items(value, data, add_value);
-	} else {
-		_index_items(doc, std::array<std::reference_wrapper<const MsgPack>, 1>({{ value }}), pos);
-		_store_item(value, data, add_value);
+			break;
 	}
 }
 
@@ -5680,7 +5765,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for floating type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::integer: {
@@ -5890,7 +5975,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for float type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for floating type: {}", repr(value.to_string()));
 			}
 		}
 		case FieldType::integer: {

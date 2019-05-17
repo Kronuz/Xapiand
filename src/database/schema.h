@@ -647,11 +647,14 @@ class Schema {
 
 	const MsgPack& index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack* object = nullptr, Fields* fields = nullptr);
 
+	void index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 	void index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
-	void index_item_value(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos = 0);
 	void index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields);
+	void index_nested_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object);
+
+	void index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos = 0);
 
 	/*
 	 * Main functions to update objects and arrays
@@ -660,11 +663,14 @@ class Schema {
 	const MsgPack& update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, Fields& fields);
 	const MsgPack& update_subproperties(const MsgPack*& properties, const std::string& name);
 
+	void update_new_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
 	void update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name);
 	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
 
-	void update_item_value(const MsgPack*& properties, const MsgPack& item_value);
 	void update_fields(const MsgPack*& properties, const Fields& fields);
+	void update_nested_object(const MsgPack*& properties, const MsgPack& object);
+
+	void update_item_value(const MsgPack& item_value);
 
 	/*
 	 * Main functions to write objects and arrays
@@ -673,11 +679,14 @@ class Schema {
 	MsgPack& write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, Fields& fields);
 	MsgPack& write_subproperties(MsgPack*& mut_properties, const std::string& name);
 
+	void write_new_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
 	void write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name);
 	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
 
-	void write_item_value(MsgPack*& mut_properties, const MsgPack& item_value);
 	void write_fields(MsgPack*& mut_properties, const Fields& fields);
+	void write_nested_object(MsgPack*& mut_properties, const MsgPack& object);
+
+	void write_item_value(MsgPack*& mut_properties, const MsgPack& item_value);
 
 
 	/*
@@ -727,11 +736,8 @@ class Schema {
 	 * Auxiliar functions for index fields in doc.
 	 */
 
-	template <typename T>
-	void _index_items(Xapian::Document& doc, T&& values, size_t pos);
-	void _store_items(const MsgPack& values, MsgPack& data, bool add_values = true);
-	void _store_item(const MsgPack& value, MsgPack& data, bool add_value = true);
-	void index_item(Xapian::Document& doc, const MsgPack& value, MsgPack& data, size_t pos, bool add_value = true);
+	void index_item(Xapian::Document& doc, const MsgPack& value, size_t pos);
+	void store_item(const MsgPack& value, MsgPack& data);
 
 
 	static void index_simple_term(Xapian::Document& doc, std::string_view term, const specification_t& field_spc, size_t pos);
