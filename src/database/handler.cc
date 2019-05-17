@@ -877,7 +877,9 @@ DatabaseHandler::restore_documents(int fd)
 
 	SHA256 sha256;
 	msgpack::unpacker unpacker;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, false, false, true);
+	query_field_t query_field;
+	query_field.commit = true;
+	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, false, false, query_field);
 	try {
 		while (true) {
 			if (XapiandManager::manager()->is_detaching()) {
@@ -2239,6 +2241,26 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
  *
  */
 
+DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field) :
+	running(0),
+	finished(false),
+	ready(false),
+	endpoints(endpoints),
+	flags(flags),
+	echo(echo),
+	comments(comments),
+	commit(query_field.commit),
+	first(query_field.offset),
+	maxitems(query_field.limit),
+	_processed(0),
+	_indexed(0),
+	_total(0),
+	_idx(0),
+	limit_cnt(limit_max),
+	bulk_cnt(0)
+{
+}
+
 void
 DocPreparer::operator()()
 {
@@ -2288,6 +2310,17 @@ DocIndexer::_prepare(MsgPack&& obj)
 
 	if (!obj.is_map()) {
 		L_ERR("Indexing object has an unsupported type: {}", enum_name(obj.get_type()));
+		return;
+	}
+
+	if (first) {
+		--first;
+		return;
+	}
+
+	if (maxitems) {
+		--maxitems;
+	} else {
 		return;
 	}
 

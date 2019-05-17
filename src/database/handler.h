@@ -299,6 +299,8 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	bool echo;
 	bool comments;
 	bool commit;
+	Xapian::doccount first;
+	Xapian::doccount maxitems;
 
 	std::atomic_size_t _processed;
 	std::atomic_size_t _indexed;
@@ -316,21 +318,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt;
 
-	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, bool commit) :
-		running(0),
-		finished(false),
-		ready(false),
-		endpoints(endpoints),
-		flags(flags),
-		echo(echo),
-		comments(comments),
-		commit(commit),
-		_processed(0),
-		_indexed(0),
-		_total(0),
-		_idx(0),
-		limit_cnt(limit_max),
-		bulk_cnt(0) { }
+	DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field);
 
 	void _prepare(MsgPack&& obj);
 
