@@ -5159,7 +5159,24 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 			return true;
 
 		case MsgPack::Type::ARRAY:
-			THROW(ClientError, "'{}' cannot be a nested array", RESERVED_VALUE);
+			if (specification.flags.geo_detection) {
+				auto items = item_doc.size();
+				if ((items == 2 && item_doc[0].is_number() && item_doc[1].is_number()) ||
+					(items == 3 && item_doc[0].is_number() && item_doc[1].is_number() && item_doc[2].is_number())) {
+					// GeoJSON requires longitude first, latutude second
+					auto longitude = item_doc[0].f64();
+					auto latitude = item_doc[1].f64();
+					if (longitude >= -180.0 && longitude <= 180.0 && latitude >= -90.0 && latitude <= 90.0) {
+						if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+							specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::geo;
+						} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
+							THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+						}
+						return true;
+					}
+				}
+			}
+			return false;
 
 		default:
 			break;
