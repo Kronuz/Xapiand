@@ -716,7 +716,7 @@ class Schema {
 	/*
 	 * Sets in specification the item_doc's type
 	 */
-	bool guess_concrete_type(const MsgPack& item_doc);
+	FieldType guess_concrete_type(const MsgPack& item_doc);
 
 	/*
 	 * Function to index paths namespace in doc.

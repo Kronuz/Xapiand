@@ -4425,24 +4425,25 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 	L_CALL("Schema::complete_namespace_specification({})", repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
-		if (!foreign_type && !specification.endpoint.empty()) {
+		if (!specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
-		if (!concrete_type && !foreign_type) {
-			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+				if (specification.flags.strict) {
+					THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+				}
+				specification.sep_types[SPC_CONCRETE_TYPE] = guess_concrete_type(item_value);
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+				}
 			}
-			if (!guess_concrete_type(item_value)) {
-				THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-			}
-		}
 
-		validate_required_namespace_data();
+			validate_required_namespace_data();
+		}
 	}
 
 	if (specification.partial_prefixes.size() > 2) {
@@ -4545,23 +4546,23 @@ Schema::complete_specification(const MsgPack& item_value)
 	L_CALL("Schema::complete_specification({})", repr(item_value.to_string()));
 
 	if (!specification.flags.concrete) {
-		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
-		if (!foreign_type && !specification.endpoint.empty()) {
+		if (!specification.endpoint.empty()) {
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		bool concrete_type = specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty;
-		if (!concrete_type && !foreign_type) {
-			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign) {
+			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+				if (specification.flags.strict) {
+					THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+				}
+				specification.sep_types[SPC_CONCRETE_TYPE] = guess_concrete_type(item_value);
+				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+					THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+				}
 			}
-			if (!guess_concrete_type(item_value)) {
-				THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-			}
-		}
-		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+
 			validate_required_data(get_mutable_properties(specification.full_meta_name));
 		}
 	}
@@ -5009,53 +5010,57 @@ Schema::validate_required_data(MsgPack& mut_properties)
 }
 
 
-bool
+FieldType
 Schema::guess_concrete_type(const MsgPack& item_doc)
 {
 	L_CALL("Schema::guess_concrete_type({})", repr(item_doc.to_string()));
+
+	if (specification.flags.complete || specification.flags.concrete) {
+		specification.sep_types[SPC_CONCRETE_TYPE];
+	}
 
 	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
+					return FieldType::positive;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::positive) {
 					THROW(ClientError, "Type mismatch '{}' -> 'positive'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			break;
 
 		case MsgPack::Type::NEGATIVE_INTEGER:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::integer;
+					return FieldType::integer;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::integer) {
 					THROW(ClientError, "Type mismatch '{}' -> 'integer'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			break;
 
 		case MsgPack::Type::FLOAT:
 			if (specification.flags.numeric_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::floating;
+					return FieldType::floating;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::floating) {
 					THROW(ClientError, "Type mismatch '{}' -> 'floating'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			break;
 
 		case MsgPack::Type::BOOLEAN:
 			if (specification.flags.bool_detection) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
+					return FieldType::boolean;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
 					THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			break;
 
@@ -5063,77 +5068,76 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 			const auto str_value = item_doc.str_view();
 			if (specification.flags.uuid_detection && Serialise::isUUID(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::uuid;
+					return FieldType::uuid;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::uuid) {
 					THROW(ClientError, "Type mismatch '{}' -> 'uuid'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::date;
+					return FieldType::date;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::date) {
 					THROW(ClientError, "Type mismatch '{}' -> 'date'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.flags.datetime_detection && Datetime::isDatetime(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::datetime;
+					return FieldType::datetime;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::datetime) {
 					THROW(ClientError, "Type mismatch '{}' -> 'datetime'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::time;
+					return FieldType::time;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::time) {
 					THROW(ClientError, "Type mismatch '{}' -> 'time'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::timedelta;
+					return FieldType::timedelta;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::timedelta) {
 					THROW(ClientError, "Type mismatch '{}' -> 'timedelta'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::geo;
+					return FieldType::geo;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
 					THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.flags.bool_detection) {
 				if (str_value == "true" || str_value == "false") {
 					if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-						specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::boolean;
+						return FieldType::boolean;
 					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
 						THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
-					return true;
+					return specification.sep_types[SPC_CONCRETE_TYPE];
 				}
 			}
 			if (specification.flags.text_detection && !specification.flags.bool_term) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::text;
+					return FieldType::text;
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::text) {
 					THROW(ClientError, "Type mismatch '{}' -> 'text'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return true;
+				return specification.sep_types[SPC_CONCRETE_TYPE];
 			}
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
+				return FieldType::keyword;
 			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::keyword) {
 				THROW(ClientError, "Type mismatch '{}' -> 'keyword'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
-			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
-			return true;
+			return specification.sep_types[SPC_CONCRETE_TYPE];
 		}
 
 		case MsgPack::Type::MAP:
@@ -5142,21 +5146,21 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 				if (is_reserved(str_key)) {
 					auto field_type = Cast::get_field_type(str_key);
 					if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-						specification.sep_types[SPC_CONCRETE_TYPE] = field_type;
+						return field_type;
 					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != field_type) {
 						THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(field_type));
 					}
-					return true;
+					return specification.sep_types[SPC_CONCRETE_TYPE];
 				} else if (!is_comment(str_key)) {
 					break;
 				}
 			}
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::object;
+				return FieldType::object;
 			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object) {
 				THROW(ClientError, "Type mismatch '{}' -> 'object'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
-			return true;
+			return specification.sep_types[SPC_CONCRETE_TYPE];
 
 		case MsgPack::Type::ARRAY:
 			if (specification.flags.geo_detection) {
@@ -5168,21 +5172,21 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 					auto latitude = item_doc[1].f64();
 					if (longitude >= -180.0 && longitude <= 180.0 && latitude >= -90.0 && latitude <= 90.0) {
 						if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-							specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::geo;
+							return FieldType::geo;
 						} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
 							THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 						}
-						return true;
+						return specification.sep_types[SPC_CONCRETE_TYPE];
 					}
 				}
 			}
-			return false;
+			break;
 
 		default:
 			break;
 	}
 
-	return false;
+	return specification.sep_types[SPC_CONCRETE_TYPE];
 }
 
 
