@@ -193,7 +193,7 @@ inline Log log(bool clears, int timeout, bool async, bool info, bool stacked, ui
 #define L_EMERG(...) LOG(true, 0, LOG_EMERG, EMERG_COL, __VA_ARGS__)
 #define L_EXC(format, ...) LAZY_LOG(false, 0ms, true, true, true, false, LOG_CRIT, std::current_exception(), nullptr, __func__, __FILE__, __LINE__, (ERR_COL + (format)), ##__VA_ARGS__)
 
-#define L_TRACEBACK(...) LOG(true, 0, LOG_DEBUG, DEBUG_COL, DEBUG_COL + TRACEBACK() + "", __VA_ARGS__)
+#define L_TRACEBACK(format, ...) LAZY_LOG(false, 0ms, true, true, true, 0, LOG_NOTICE, std::exception_ptr{}, nullptr, __func__, __FILE__, __LINE__, (NOTICE_COL + (format) + DEBUG_COL + TRACEBACK()), ##__VA_ARGS__)
 
 #define L_INFO_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_INFO, INFO_COL, __VA_ARGS__)
 #define L_NOTICE_HOOK(hook, ...) HOOK_LOG(hook, true, -LOG_NOTICE, NOTICE_COL, __VA_ARGS__)
