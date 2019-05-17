@@ -4437,7 +4437,9 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			guess_field_type(item_value);
+			if (!guess_concrete_type(item_value)) {
+				THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
 		}
 
 		validate_required_namespace_data();
@@ -4555,7 +4557,9 @@ Schema::complete_specification(const MsgPack& item_value)
 			if (specification.flags.strict) {
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
-			guess_field_type(item_value);
+			if (!guess_concrete_type(item_value)) {
+				THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
 		}
 		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 			validate_required_data(get_mutable_properties(specification.full_meta_name));
@@ -5005,10 +5009,10 @@ Schema::validate_required_data(MsgPack& mut_properties)
 }
 
 
-void
-Schema::guess_field_type(const MsgPack& item_doc)
+bool
+Schema::guess_concrete_type(const MsgPack& item_doc)
 {
-	L_CALL("Schema::guess_field_type({})", repr(item_doc.to_string()));
+	L_CALL("Schema::guess_concrete_type({})", repr(item_doc.to_string()));
 
 	switch (item_doc.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
@@ -5018,7 +5022,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::positive) {
 					THROW(ClientError, "Type mismatch '{}' -> 'positive'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			break;
 
@@ -5029,7 +5033,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::integer) {
 					THROW(ClientError, "Type mismatch '{}' -> 'integer'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			break;
 
@@ -5040,7 +5044,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::floating) {
 					THROW(ClientError, "Type mismatch '{}' -> 'floating'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			break;
 
@@ -5051,7 +5055,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
 					THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			break;
 
@@ -5063,7 +5067,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::uuid) {
 					THROW(ClientError, "Type mismatch '{}' -> 'uuid'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.flags.date_detection && Datetime::isDate(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5071,7 +5075,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::date) {
 					THROW(ClientError, "Type mismatch '{}' -> 'date'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.flags.datetime_detection && Datetime::isDatetime(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5079,7 +5083,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::datetime) {
 					THROW(ClientError, "Type mismatch '{}' -> 'datetime'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.flags.time_detection && Datetime::isTime(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5087,7 +5091,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::time) {
 					THROW(ClientError, "Type mismatch '{}' -> 'time'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.flags.timedelta_detection && Datetime::isTimedelta(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5095,7 +5099,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::timedelta) {
 					THROW(ClientError, "Type mismatch '{}' -> 'timedelta'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.flags.geo_detection && EWKT::isEWKT(str_value)) {
 				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
@@ -5103,7 +5107,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::geo) {
 					THROW(ClientError, "Type mismatch '{}' -> 'geo'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.flags.bool_detection) {
 				if (str_value == "true" || str_value == "false") {
@@ -5112,7 +5116,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::boolean) {
 						THROW(ClientError, "Type mismatch '{}' -> 'boolean'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 					}
-					return;
+					return true;
 				}
 			}
 			if (specification.flags.text_detection && !specification.flags.bool_term) {
@@ -5121,7 +5125,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::text) {
 					THROW(ClientError, "Type mismatch '{}' -> 'text'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 				}
-				return;
+				return true;
 			}
 			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
 				specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
@@ -5129,7 +5133,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 				THROW(ClientError, "Type mismatch '{}' -> 'keyword'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
-			return;
+			return true;
 		}
 
 		case MsgPack::Type::MAP:
@@ -5142,7 +5146,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 					} else if (specification.sep_types[SPC_CONCRETE_TYPE] != field_type) {
 						THROW(ClientError, "Type mismatch '{}' -> '{}'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), enum_name(field_type));
 					}
-					return;
+					return true;
 				} else if (!is_comment(str_key)) {
 					break;
 				}
@@ -5152,7 +5156,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			} else if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object) {
 				THROW(ClientError, "Type mismatch '{}' -> 'object'", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 			}
-			return;
+			return true;
 
 		case MsgPack::Type::ARRAY:
 			THROW(ClientError, "'{}' cannot be a nested array", RESERVED_VALUE);
@@ -5161,7 +5165,7 @@ Schema::guess_field_type(const MsgPack& item_doc)
 			break;
 	}
 
-	THROW(ClientError, "'{}': {} is ambiguous", RESERVED_VALUE, repr(item_doc.to_string()));
+	return false;
 }
 
 
