@@ -84,20 +84,20 @@ struct similar_field_t {
 
 
 struct query_field_t {
-	Xapian::rev version;
-	Xapian::doccount offset;
-	Xapian::doccount limit;
-	Xapian::doccount check_at_least;
-	bool writable;
-	bool primary;
-	bool spelling;
-	bool synonyms;
-	bool commit;
-	bool unique_doc;
-	bool is_fuzzy;
-	bool is_nearest;
+	Xapian::rev version = UNKNOWN_REVISION;
+	Xapian::doccount offset = 0;
+	Xapian::doccount limit = std::numeric_limits<Xapian::doccount>::max();
+	Xapian::doccount check_at_least = 0;
+	bool writable = false;
+	bool primary = false;
+	bool spelling = true;
+	bool synonyms = false;
+	bool commit = false;
+	bool unique_doc = false;
+	bool is_fuzzy = false;
+	bool is_nearest = false;
 	std::string collapse;
-	Xapian::doccount collapse_max;
+	Xapian::doccount collapse_max = 1;
 	std::vector<std::string> query;
 	std::vector<std::string> sort;
 	similar_field_t fuzzy;
@@ -108,13 +108,7 @@ struct query_field_t {
 
 	// Only used when the sort type is string.
 	std::string metric;
-	bool icase;
-
-	query_field_t()
-		: version(UNKNOWN_REVISION), offset(0), limit(10), check_at_least(0),
-		  writable(false), primary(false), spelling(true), synonyms(false),
-		  commit(false), unique_doc(false), is_fuzzy(false), is_nearest(false),
-		  collapse_max(1), icase(false) { }
+	bool icase = false;
 };
 
 

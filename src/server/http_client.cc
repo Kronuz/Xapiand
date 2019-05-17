@@ -2947,6 +2947,8 @@ HttpClient::query_field_maker(Request& request, int flags)
 		request.query_parser.rewind();
 		if (request.query_parser.next("limit") != -1) {
 			query_field.limit = strict_stou(nullptr, request.query_parser.get());
+		} else {
+			query_field.limit = 10; // Default limit
 		}
 	}
 
