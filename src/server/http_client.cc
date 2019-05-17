@@ -100,6 +100,7 @@
 #define QUERY_FIELD_TIME       (1 << 5)
 #define QUERY_FIELD_PERIOD     (1 << 6)
 #define QUERY_FIELD_VOLATILE   (1 << 7)
+#define QUERY_FIELD_OFFSET     (1 << 8)
 
 #define DEFAULT_INDENTATION 2
 
@@ -2227,7 +2228,7 @@ HttpClient::restore_database_view(Request& request)
 						settings = &settings_it.value();
 					}
 				}
-				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
+				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
 				if (resolve_index_endpoints(request, query_field, settings) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
@@ -2253,7 +2254,7 @@ HttpClient::restore_database_view(Request& request)
 						settings = &settings_it.value();
 					}
 				}
-				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
+				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
 				if (resolve_index_endpoints(request, query_field, settings) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
@@ -2935,20 +2936,22 @@ HttpClient::query_field_maker(Request& request, int flags)
 
 	if (((flags & QUERY_FIELD_ID) != 0) || ((flags & QUERY_FIELD_SEARCH) != 0)) {
 		request.query_parser.rewind();
+		if (request.query_parser.next("check_at_least") != -1) {
+			query_field.check_at_least = strict_stou(nullptr, request.query_parser.get());
+		}
+	}
+
+	if (((flags & QUERY_FIELD_ID) != 0) || ((flags & QUERY_FIELD_SEARCH) != 0) || ((flags & QUERY_FIELD_OFFSET) != 0)) {
+		request.query_parser.rewind();
 		if (request.query_parser.next("offset") != -1) {
 			query_field.offset = strict_stou(nullptr, request.query_parser.get());
 		}
 
 		request.query_parser.rewind();
-		if (request.query_parser.next("check_at_least") != -1) {
-			query_field.check_at_least = strict_stou(nullptr, request.query_parser.get());
-		}
-
-		request.query_parser.rewind();
 		if (request.query_parser.next("limit") != -1) {
 			query_field.limit = strict_stou(nullptr, request.query_parser.get());
-		} else {
-			query_field.limit = 10; // Default limit
+		} else if ((flags & QUERY_FIELD_OFFSET) == 0) {
+			query_field.limit = 10;  // Default is to limit to 10 items
 		}
 	}
 
