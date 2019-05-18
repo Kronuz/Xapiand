@@ -2685,7 +2685,6 @@ Schema::restart_namespace_specification()
 	specification.flags.complete             = default_spc.flags.complete;
 	specification.flags.uuid_field           = default_spc.flags.uuid_field;
 
-	specification.sep_types                  = default_spc.sep_types;
 	specification.endpoint                   = default_spc.endpoint;
 	specification.aux_stem_language          = default_spc.aux_stem_language;
 	specification.aux_language               = default_spc.aux_language;
@@ -3474,7 +3473,9 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 			index_new_object(properties, *field.second, data, doc, field.first);
 		}
 
-		set_type_to_object();  // this has to be done last
+		if (specification.flags.inside_namespace) {
+			set_type_to_object();  // this has to be done last
+		}
 	}
 }
 
@@ -3488,15 +3489,15 @@ Schema::index_nested_object(const MsgPack*& properties, Xapian::Document& doc, M
 		if (specification.flags.store) {
 			*data = MsgPack::MAP();
 		}
+	} else {
+		for (auto& key : object) {
+			index_new_object(properties, object.at(key), data, doc, key.str());
+		}
+	}
+
+	if (specification.flags.inside_namespace) {
 		set_type_to_object();  // this has to be done last
-		return;
 	}
-
-	for (auto& key : object) {
-		index_new_object(properties, object.at(key), data, doc, key.str());
-	}
-
-	set_type_to_object();  // this has to be done last
 }
 
 
@@ -4011,7 +4012,9 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 			update_new_object(properties, *field.second, field.first);
 		}
 
-		set_type_to_object();  // this has to be done last
+		if (specification.flags.inside_namespace) {
+			set_type_to_object();  // this has to be done last
+		}
 	}
 }
 
@@ -4021,16 +4024,15 @@ Schema::update_nested_object(const MsgPack*& properties, const MsgPack& object)
 {
 	L_CALL("Schema::update_nested_object(<const MsgPack*>, <object>)");
 
-	if (object.empty()) {
+	if (!object.empty()) {
+		for (auto& key : object) {
+			update_new_object(properties, object.at(key), key.str());
+		}
+	}
+
+	if (specification.flags.inside_namespace) {
 		set_type_to_object();  // this has to be done last
-		return;
 	}
-
-	for (auto& key : object) {
-		update_new_object(properties, object.at(key), key.str());
-	}
-
-	set_type_to_object();  // this has to be done last
 }
 
 /*  _____ _____ _____ _____ _____ _____ _____ _____
@@ -4499,7 +4501,9 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 			write_new_object(mut_properties, *field.second, field.first);
 		}
 
-		set_type_to_object();  // this has to be done last
+		if (specification.flags.inside_namespace) {
+			set_type_to_object();  // this has to be done last
+		}
 	}
 }
 
@@ -4509,16 +4513,15 @@ Schema::write_nested_object(MsgPack*& mut_properties, const MsgPack& object)
 {
 	L_CALL("Schema::write_fields(<const MsgPack*>, <object>)");
 
-	if (object.empty()) {
+	if (!object.empty()) {
+		for (auto& key : object) {
+			write_new_object(mut_properties, object.at(key), key.str());
+		}
+	}
+
+	if (specification.flags.inside_namespace) {
 		set_type_to_object();  // this has to be done last
-		return;
 	}
-
-	for (auto& key : object) {
-		write_new_object(mut_properties, object.at(key), key.str());
-	}
-
-	set_type_to_object();  // this has to be done last
 }
 
 
