@@ -3991,6 +3991,624 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Global index",
+      "item": [
+        {
+          "name": "Index global",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\t\"_id\": {\r\n\t\t\"_type\": \"keyword\",\r\n\t},\r\n\t\"ident\": {\r\n\t\t\"_type\": \"uuid\",\r\n\t\t\"_index\": \"global_terms\",\r\n\t\t\"_value\": \"~notmet\"\r\n\t},\r\n}"
+            }
+          }
+        },
+        {
+          "name": "Search for Global",
+          "request": {
+            "method": "SEARCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "/"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "~notmet"
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.hits[0].ident).to.equal('~notmet');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Null value",
+      "item": [
+        {
+          "name": "Index Null",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "schemas",
+                "implicit-_type",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_id\": {\r\n        \"_type\": \"keyword\",\r\n    },\r\n    \"campo\": {\r\n        \"_type\": \"keyword\",\r\n        \"_value\": null\r\n    }\r\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Null",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "schemas",
+                "implicit-_type",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "volatile",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.campo).to.equal(null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chai script",
+      "item": [
+        {
+          "name": "Counter",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "script",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_id\": {\r\n        \"_type\": \"keyword\"\r\n    },\r\n    \"cnt\": {\r\n        \"_type\": \"integer\",\r\n        \"_value\": 0\r\n    },\r\n    \"_script\": {\r\n        \"_type\": \"script\",\r\n        \"_value\": \"_doc[\\\"cnt\\\"] = _old_doc[\\\"cnt\\\"] + 1\"\r\n    }\r\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Counter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "script",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "volatile",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.cnt).to.equal(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Increase Counter",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "script",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n        \"_script\": {\r\n        \"_type\": \"script\",\r\n        \"_value\": \"_doc[\\\"cnt\\\"] = _old_doc[\\\"cnt\\\"] + 1\"\r\n    }\r\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.cnt).to.equal(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Using parameter",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "script-param",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_id\": {\r\n        \"_type\": \"keyword\"\r\n    },\r\n    \"cnt\": {\r\n        \"_type\": \"integer\",\r\n        \"_value\": 0\r\n    },\r\n    \"_script\": {\r\n        \"_type\": \"script\",\r\n        \"_value\": \"_doc[\\\"cnt\\\"] = _old_doc[\\\"cnt\\\"] + increment\",\r\n        \"_params\": {\r\n            \"increment\": 2\r\n        }\r\n    }\r\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.cnt).to.equal(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Counter",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "script-param",
+                "doc"
+              ],
+              "query": [
+                {
+                  "key": "volatile",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.cnt).to.equal(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Replace value for Null",
+      "item": [
+        {
+          "name": "Index value",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "replace-null",
+                "doc1"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_id\": {\r\n        \"_type\": \"keyword\"\r\n    },\r\n    \"campo\": {\r\n        \"_type\": \"integer\",\r\n        \"_value\": 12\r\n    }\r\n}"
+            }
+          }
+        },
+        {
+          "name": "Replace with null",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "replace-null",
+                "doc2"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"_id\": {\r\n        \"_type\": \"keyword\"\r\n    },\r\n    \"campo\": null\r\n}"
+            }
+          }
+        },
+        {
+          "name": "value is valid",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "replace-null",
+                "doc2"
+              ],
+              "query": [
+                {
+                  "key": "volatile",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.campo).to.equal(null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ignore comment",
+      "item": [
+        {
+          "name": "Index doc with comment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "host": [
+                "{{domain}}"
+              ],
+              "path": [
+                "test",
+                "comment-ignore",
+                "/"
+              ],
+              "query": [
+                {
+                  "key": "commit",
+                  "value": null
+                },
+                {
+                  "key": "echo",
+                  "value": null
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"_recurse\": false,\r\n  \"_id\": {\r\n    \"_type\": \"uuid\",\r\n  },\r\n  \"#comment\": \"This comment is ignored\",\r\n  \"schema\": {\r\n    \"_type\": \"object\"\r\n  }\r\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"response is ok\", function() {",
+                  "    pm.response.to.be.ok;",
+                  "});",
+                  "pm.test(\"value is valid\", function() {",
+                  "    var jsonData = pm.response.json();",
+                  "    for (key in jsonData.schema) {",
+                  "       pm.expect(key).to.not.include('#comment');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
