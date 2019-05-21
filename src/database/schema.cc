@@ -4863,9 +4863,10 @@ Schema::set_type_to_array()
 void
 Schema::validate_required_namespace_data()
 {
-	L_CALL("Schema::validate_required_namespace_data()");
+	L_CALL("Schema::validate_required_namespace_data() {{type:{}}}", _get_str_type(specification.sep_types));
 
-	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+	auto type = specification.sep_types[SPC_CONCRETE_TYPE];
+	switch (type) {
 		case FieldType::object:
 			specification.flags.concrete = true;
 			break;
@@ -4934,7 +4935,7 @@ Schema::validate_required_namespace_data()
 void
 Schema::validate_required_data(MsgPack& mut_properties)
 {
-	L_CALL("Schema::validate_required_data({})", repr(mut_properties.to_string()));
+	L_CALL("Schema::validate_required_data({}) {{type:{}}}", repr(mut_properties.to_string()), _get_str_type(specification.sep_types));
 
 	dispatch_set_default_spc(mut_properties);
 
@@ -5183,7 +5184,7 @@ Schema::guess_concrete_type(const MsgPack& item_doc)
 	L_CALL("Schema::guess_concrete_type({})", repr(item_doc.to_string()));
 
 	if (specification.flags.complete || specification.flags.concrete) {
-		specification.sep_types[SPC_CONCRETE_TYPE];
+		return specification.sep_types[SPC_CONCRETE_TYPE];
 	}
 
 	switch (item_doc.get_type()) {
