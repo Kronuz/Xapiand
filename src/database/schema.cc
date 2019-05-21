@@ -3273,7 +3273,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 			auto data = parent_data;
 			auto concrete_type = guess_concrete_type(object);
 			if (concrete_type == FieldType::empty || concrete_type == FieldType::object) {
-				index_nested_object(parent_properties, doc, data, object);
+				index_inner_object(parent_properties, doc, data, object);
 			} else {
 				index_item_value(doc, data, object);
 				if (specification.flags.store) {
@@ -3380,7 +3380,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
 				auto concrete_type = guess_concrete_type(object);
 				if (concrete_type == FieldType::empty) {
-					index_nested_object(parent_properties, doc, data, object);
+					index_inner_object(parent_properties, doc, data, object);
 				} else {
 					index_item_value(doc, data, object, pos);
 					if (specification.flags.store) {
@@ -3481,9 +3481,9 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 
 
 void
-Schema::index_nested_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object)
+Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object)
 {
-	L_CALL("Schema::index_nested_object({}, <doc>, {}, <object>)", repr(properties->to_string()), repr(data->to_string()));
+	L_CALL("Schema::index_inner_object({}, <doc>, {}, <object>)", repr(properties->to_string()), repr(data->to_string()));
 
 	if (object.empty()) {
 		if (specification.flags.store) {
@@ -3856,7 +3856,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 
 	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
-			update_nested_object(parent_properties, object);
+			update_inner_object(parent_properties, object);
 			break;
 		}
 
@@ -3901,7 +3901,7 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 	for (const auto& object : array) {
 		switch (object.get_type()) {
 			case MsgPack::Type::MAP: {
-				update_nested_object(parent_properties, object);
+				update_inner_object(parent_properties, object);
 				break;
 			}
 
@@ -4020,9 +4020,9 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 
 
 inline void
-Schema::update_nested_object(const MsgPack*& properties, const MsgPack& object)
+Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 {
-	L_CALL("Schema::update_nested_object(<const MsgPack*>, <object>)");
+	L_CALL("Schema::update_inner_object(<const MsgPack*>, <object>)");
 
 	if (!object.empty()) {
 		for (auto& key : object) {
@@ -4348,7 +4348,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 
 	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
-			write_nested_object(mut_parent_properties, object);
+			write_inner_object(mut_parent_properties, object);
 			break;
 		}
 
@@ -4394,7 +4394,7 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 	for (const auto& object : array) {
 		switch (object.get_type()) {
 			case MsgPack::Type::MAP: {
-				write_nested_object(mut_parent_properties, object);
+				write_inner_object(mut_parent_properties, object);
 				break;
 			}
 
@@ -4509,7 +4509,7 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 
 
 void
-Schema::write_nested_object(MsgPack*& mut_properties, const MsgPack& object)
+Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
 {
 	L_CALL("Schema::write_fields(<const MsgPack*>, <object>)");
 

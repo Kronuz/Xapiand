@@ -652,7 +652,7 @@ class Schema {
 	void index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name);
 
 	void index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields);
-	void index_nested_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object);
+	void index_inner_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object);
 
 	void index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos = 0);
 
@@ -668,7 +668,7 @@ class Schema {
 	void update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name);
 
 	void update_fields(const MsgPack*& properties, const Fields& fields);
-	void update_nested_object(const MsgPack*& properties, const MsgPack& object);
+	void update_inner_object(const MsgPack*& properties, const MsgPack& object);
 
 	void update_item_value(const MsgPack& item_value);
 
@@ -684,7 +684,7 @@ class Schema {
 	void write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name);
 
 	void write_fields(MsgPack*& mut_properties, const Fields& fields);
-	void write_nested_object(MsgPack*& mut_properties, const MsgPack& object);
+	void write_inner_object(MsgPack*& mut_properties, const MsgPack& object);
 
 	void write_item_value(MsgPack*& mut_properties, const MsgPack& item_value);
 
