@@ -2471,7 +2471,7 @@ template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
 Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root)
 {
-	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{})", repr(object.to_string()), allow_foreign, allow_root);
+	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{})", object.to_string(), allow_foreign, allow_root);
 
 	if (object.empty()) {
 		THROW(ErrorType, "{}Schema object is empty", prefix);
@@ -2704,7 +2704,7 @@ template <typename T>
 inline bool
 Schema::feed_subproperties(T& properties, std::string_view meta_name)
 {
-	L_CALL("Schema::feed_subproperties({}, {})", repr(properties->to_string()), repr(meta_name));
+	L_CALL("Schema::feed_subproperties({}, {})", properties->to_string(), repr(meta_name));
 
 	auto it = properties->find(meta_name);
 	if (it == properties->end()) {
@@ -2759,7 +2759,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
 std::tuple<std::string, Xapian::Document, MsgPack>
 Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data)
 {
-	L_CALL("Schema::index({}, {}, <db_handler>)", repr(object.to_string()), repr(document_id.to_string()));
+	L_CALL("Schema::index({}, {}, <db_handler>)", object.to_string(), document_id.to_string());
 
 	static UUIDGenerator generator;
 
@@ -3024,7 +3024,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 const MsgPack&
 Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::string_view name, const MsgPack* object, Fields* fields)
 {
-	L_CALL("Schema::index_subproperties({}, {}, {}, {}, {})", repr(properties->to_string()), repr(data->to_string()), repr(name), object ? repr(object->to_string()) : "null", fields ? "<fields>" : "null");
+	L_CALL("Schema::index_subproperties({}, {}, {}, {}, {})", properties->to_string(), data->to_string(), repr(name), object ? repr(object->to_string()) : "null", fields ? "<fields>" : "null");
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -3189,7 +3189,7 @@ Schema::index_subproperties(const MsgPack*& properties, MsgPack*& data, std::str
 void
 Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_new_object({}, {}, {}, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(parent_data->to_string()), repr(name));
+	L_CALL("Schema::index_new_object({}, {}, {}, <Xapian::Document>, {})", parent_properties->to_string(), object.to_string(), repr(parent_data->to_string()), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -3246,7 +3246,7 @@ Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& objec
 void
 Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_object({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::index_object({}, {}, <MsgPack*>, <Xapian::Document>, {})", parent_properties->to_string(), object.to_string(), repr(name));
 
 	switch (object.get_type()) {
 		case MsgPack::Type::NIL:
@@ -3344,7 +3344,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 void
 Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, MsgPack*& parent_data, Xapian::Document& doc, const std::string& name)
 {
-	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
+	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", parent_properties->to_string(), array.to_string(), repr(name));
 
 	if (array.empty()) {
 		if (specification.flags.store) {
@@ -3448,7 +3448,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 void
 Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields)
 {
-	L_CALL("Schema::index_fields({}, <doc>, {}, <Fields>)", repr(properties->to_string()), repr(data->to_string()));
+	L_CALL("Schema::index_fields({}, <doc>, {}, <Fields>)", properties->to_string(), data->to_string());
 
 	if (fields.empty()) {
 		index_partial_paths(doc);
@@ -3493,7 +3493,7 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 void
 Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object)
 {
-	L_CALL("Schema::index_inner_object({}, <doc>, {}, <object>)", repr(properties->to_string()), repr(data->to_string()));
+	L_CALL("Schema::index_inner_object({}, <doc>, {}, <object>)", properties->to_string(), data->to_string());
 
 	if (object.empty()) {
 		if (specification.flags.store) {
@@ -3533,7 +3533,7 @@ Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, Ms
 void
 Schema::index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& item_value, size_t pos)
 {
-	L_CALL("Schema::index_item_value(<doc>, {}, {}, {})", repr(data->to_string()), repr(item_value.to_string()), pos);
+	L_CALL("Schema::index_item_value(<doc>, {}, {}, {})", data->to_string(), item_value.to_string(), pos);
 
 	if (!specification.flags.complete) {
 		if (specification.flags.inside_namespace) {
@@ -3583,7 +3583,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& i
 bool
 Schema::update(const MsgPack& object)
 {
-	L_CALL("Schema::update({})", repr(object.to_string()));
+	L_CALL("Schema::update({})", object.to_string());
 
 	L_INDEX("Schema update: " + DIM_GREY + "{}", object.to_string());
 
@@ -3648,7 +3648,7 @@ Schema::update(const MsgPack& object)
 const MsgPack&
 Schema::update_subproperties(const MsgPack*& properties, std::string_view name, const MsgPack& object, Fields& fields)
 {
-	L_CALL("Schema::update_subproperties({}, {}, {}, <fields>)", repr(properties->to_string()), repr(name), repr(object.to_string()));
+	L_CALL("Schema::update_subproperties({}, {}, {}, <fields>)", properties->to_string(), repr(name), object.to_string());
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -3739,7 +3739,7 @@ Schema::update_subproperties(const MsgPack*& properties, std::string_view name, 
 const MsgPack&
 Schema::update_subproperties(const MsgPack*& properties, const std::string& name)
 {
-	L_CALL("Schema::update_subproperties({}, {})", repr(properties->to_string()), repr(name));
+	L_CALL("Schema::update_subproperties({}, {})", properties->to_string(), repr(name));
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -3828,7 +3828,7 @@ Schema::update_subproperties(const MsgPack*& properties, const std::string& name
 void
 Schema::update_new_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::update_new_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::update_new_object({}, {}, {})", parent_properties->to_string(), object.to_string(), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -3881,7 +3881,7 @@ Schema::update_new_object(const MsgPack*& parent_properties, const MsgPack& obje
 void
 Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::update_new_object({}, {}, {})", repr(parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::update_new_object({}, {}, {})", parent_properties->to_string(), object.to_string(), repr(name));
 
 	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
@@ -3919,7 +3919,7 @@ Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, 
 void
 Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, const std::string& name)
 {
-	L_CALL("Schema::update_array({}, {}, {})", repr(parent_properties->to_string()), repr(array.to_string()), repr(name));
+	L_CALL("Schema::update_array({}, {}, {})", parent_properties->to_string(), array.to_string(), repr(name));
 
 	if (array.empty()) {
 		set_type_to_array();  // this has to be done last
@@ -3968,7 +3968,7 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 void
 Schema::update_item_value([[maybe_unused]] const MsgPack& item_value)
 {
-	L_CALL("Schema::update_item_value({})", repr(item_value.to_string()));
+	L_CALL("Schema::update_item_value({})", item_value.to_string());
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -4090,7 +4090,7 @@ Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 bool
 Schema::write(const MsgPack& object, bool replace)
 {
-	L_CALL("Schema::write({}, {})", repr(object.to_string()), replace);
+	L_CALL("Schema::write({}, {})", object.to_string(), replace);
 
 	L_INDEX("Schema write: " + DIM_GREY + "{}", object.to_string());
 
@@ -4156,7 +4156,7 @@ Schema::write(const MsgPack& object, bool replace)
 MsgPack&
 Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, const MsgPack& object, Fields& fields)
 {
-	L_CALL("Schema::write_subproperties({}, {}, {}, <fields>)", repr(mut_properties->to_string()), repr(name), repr(object.to_string()));
+	L_CALL("Schema::write_subproperties({}, {}, {}, <fields>)", mut_properties->to_string(), repr(name), object.to_string());
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -4245,7 +4245,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 MsgPack&
 Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 {
-	L_CALL("Schema::write_subproperties({}, {})", repr(mut_properties->to_string()), repr(name));
+	L_CALL("Schema::write_subproperties({}, {})", mut_properties->to_string(), repr(name));
 
 	Split<std::string_view> field_names(name, DB_OFFSPRING_UNION);
 
@@ -4332,7 +4332,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 void
 Schema::write_new_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::write_new_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::write_new_object({}, {}, {})", mut_parent_properties->to_string(), object.to_string(), repr(name));
 
 	if (is_comment(name)) {
 		return;  // skip comments (empty fields or fields starting with '#')
@@ -4385,7 +4385,7 @@ Schema::write_new_object(MsgPack*& mut_parent_properties, const MsgPack& object,
 void
 Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::write_object({}, {}, {})", repr(mut_parent_properties->to_string()), repr(object.to_string()), repr(name));
+	L_CALL("Schema::write_object({}, {}, {})", mut_parent_properties->to_string(), object.to_string(), repr(name));
 
 	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
@@ -4424,7 +4424,7 @@ Schema::write_object(MsgPack*& mut_parent_properties, const MsgPack& object, con
 void
 Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const std::string& name)
 {
-	L_CALL("Schema::write_array({}, {}, {})", repr(mut_parent_properties->to_string()), repr(array.to_string()), repr(name));
+	L_CALL("Schema::write_array({}, {}, {})", mut_parent_properties->to_string(), array.to_string(), repr(name));
 
 	if (array.empty()) {
 		set_type_to_array();  // this has to be done last
@@ -4473,7 +4473,7 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 void
 Schema::write_item_value(MsgPack*& mut_properties, [[maybe_unused]] const MsgPack& item_value)
 {
-	L_CALL("Schema::write_item_value({})", repr(item_value.to_string()));
+	L_CALL("Schema::write_item_value({})", item_value.to_string());
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -4656,7 +4656,7 @@ Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_p
 void
 Schema::complete_namespace_specification(const MsgPack& item_value)
 {
-	L_CALL("Schema::complete_namespace_specification({})", repr(item_value.to_string()));
+	L_CALL("Schema::complete_namespace_specification({})", item_value.to_string());
 
 	if (!specification.flags.concrete) {
 		if (!specification.endpoint.empty()) {
@@ -4777,7 +4777,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 void
 Schema::complete_specification(const MsgPack& item_value)
 {
-	L_CALL("Schema::complete_specification({})", repr(item_value.to_string()));
+	L_CALL("Schema::complete_specification({})", item_value.to_string());
 
 	if (!specification.flags.concrete) {
 		if (!specification.endpoint.empty()) {
@@ -5002,7 +5002,7 @@ Schema::validate_required_namespace_data()
 void
 Schema::validate_required_data(MsgPack& mut_properties)
 {
-	L_CALL("Schema::validate_required_data({}) {{type:{}}}", repr(mut_properties.to_string()), _get_str_type(specification.sep_types));
+	L_CALL("Schema::validate_required_data({}) {{type:{}}}", mut_properties.to_string(), _get_str_type(specification.sep_types));
 
 	dispatch_set_default_spc(mut_properties);
 
@@ -5248,7 +5248,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 FieldType
 Schema::guess_concrete_type(const MsgPack& item_doc)
 {
-	L_CALL("Schema::guess_concrete_type({})", repr(item_doc.to_string()));
+	L_BLUE("Schema::guess_concrete_type({}) {{complete:{}, concrete:{}}}", item_doc.to_string(), !!specification.flags.complete, !!specification.flags.concrete);
 
 	if (specification.flags.complete || specification.flags.concrete) {
 		return specification.sep_types[SPC_CONCRETE_TYPE];
@@ -5655,7 +5655,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 void
 Schema::store_item(const MsgPack& value, MsgPack& data)
 {
-	L_CALL("Schema::store_item({}, {})", repr(value.to_string()), repr(data.to_string()));
+	L_CALL("Schema::store_item({}, {})", value.to_string(), data.to_string());
 
 	// Add value to data.
 	auto& data_value = data[RESERVED_VALUE];
@@ -5763,7 +5763,7 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 void
 Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
-	L_CALL("Schema::index_all_term(<Xapian::Document>, {}, <specification_t>, <specification_t>, {})", repr(value.to_string()), pos);
+	L_CALL("Schema::index_all_term(<Xapian::Document>, {}, <specification_t>, <specification_t>, {})", value.to_string(), pos);
 
 	auto serialise_val = Serialise::MsgPack(field_spc, value);
 	index_term(doc, serialise_val, field_spc, pos);
@@ -5802,7 +5802,7 @@ Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> r
 void
 Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
 {
-	L_CALL("Schema::index_value(<Xapian::Document>, {}, <std::set<std::string>>, <specification_t>, {}, <specification_t*>, <specification_t*>)", repr(value.to_string()), pos);
+	L_CALL("Schema::index_value(<Xapian::Document>, {}, <std::set<std::string>>, <specification_t>, {}, <specification_t*>, <specification_t*>)", value.to_string(), pos);
 
 	switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::floating: {
@@ -5819,7 +5819,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for floating type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for floating type: {}", value.to_string());
 			}
 		}
 
@@ -5949,7 +5949,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 			}
 		}
 
@@ -5969,7 +5969,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				}
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 			}
 		}
 
@@ -5997,7 +5997,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				s.insert(std::move(ser_value));
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for uuid type: {}", value.to_string());
 			}
 		}
 
@@ -6005,7 +6005,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			if (value.is_string()) {
 				return;
 			}
-			THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+			THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 
 		case FieldType::object:
 			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]));
@@ -6019,7 +6019,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 void
 Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s_f, std::set<std::string>& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
 {
-	L_CALL("Schema::index_all_value(<Xapian::Document>, {}, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, {})", repr(value.to_string()), pos);
+	L_CALL("Schema::index_all_value(<Xapian::Document>, {}, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, {})", value.to_string(), pos);
 
 	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
 		case FieldType::floating: {
@@ -6042,7 +6042,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for floating type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for floating type: {}", value.to_string());
 			}
 		}
 
@@ -6090,7 +6090,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
 
@@ -6212,7 +6212,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 			}
 		}
 
@@ -6233,7 +6233,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				}
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 			}
 		}
 
@@ -6263,7 +6263,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				s_g.insert(std::move(ser_value));
 				return;
 			} else {
-				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
+				THROW(ClientError, "Format invalid for uuid type: {}", value.to_string());
 			}
 		}
 
@@ -6271,7 +6271,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			if (value.is_string()) {
 				return;
 			}
-			THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+			THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 
 		case FieldType::object:
 			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]));
@@ -6388,7 +6388,7 @@ Schema::detect_dynamic(std::string_view field_name)
 inline void
 Schema::dispatch_process_concrete_properties(const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
-	L_CALL("Schema::dispatch_process_concrete_properties({}, <fields>)", repr(object.to_string()));
+	L_CALL("Schema::dispatch_process_concrete_properties({}, <fields>)", object.to_string());
 
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
@@ -6418,7 +6418,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, Fields& fiel
 inline void
 Schema::dispatch_process_all_properties(const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
-	L_CALL("Schema::dispatch_process_all_properties({}, <fields>)", repr(object.to_string()));
+	L_CALL("Schema::dispatch_process_all_properties({}, <fields>)", object.to_string());
 
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
@@ -6461,7 +6461,7 @@ Schema::dispatch_process_properties(const MsgPack& object, Fields& fields, Field
 inline void
 Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
-	L_CALL("Schema::dispatch_write_concrete_properties({}, {}, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
+	L_CALL("Schema::dispatch_write_concrete_properties({}, {}, <fields>)", mut_properties.to_string(), object.to_string());
 
 	const auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
@@ -6493,7 +6493,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 inline bool
 Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::string_view prop_name, const MsgPack& value)
 {
-	L_CALL("Schema::_dispatch_write_properties({})", repr(mut_properties.to_string()));
+	L_CALL("Schema::_dispatch_write_properties({})", mut_properties.to_string());
 
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_WEIGHT),
@@ -6608,7 +6608,7 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 inline bool
 Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 {
-	L_CALL("Schema::_dispatch_feed_properties({})", repr(value.to_string()));
+	L_CALL("Schema::_dispatch_feed_properties({})", value.to_string());
 
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_WEIGHT),
@@ -7226,7 +7226,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 void
 Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
-	L_CALL("Schema::dispatch_write_all_properties({}, {}, <fields>)", repr(mut_properties.to_string()), repr(object.to_string()));
+	L_CALL("Schema::dispatch_write_all_properties({}, {}, <fields>)", mut_properties.to_string(), object.to_string());
 
 	auto it_e = object.end();
 	for (auto it = object.begin(); it != it_e; ++it) {
@@ -7260,7 +7260,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 inline void
 Schema::dispatch_write_properties(MsgPack& mut_properties, const MsgPack& object, Fields& fields, Field** id_field, Field** version_field)
 {
-	L_CALL("Schema::dispatch_write_properties({}, <object>, <fields>)", repr(mut_properties.to_string()));
+	L_CALL("Schema::dispatch_write_properties({}, <object>, <fields>)", mut_properties.to_string());
 
 	if (specification.flags.concrete) {
 		dispatch_write_concrete_properties(mut_properties, object, fields, id_field, version_field);
@@ -7284,7 +7284,7 @@ has_dispatch_set_default_spc(uint32_t key)
 inline void
 Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 {
-	L_CALL("Schema::dispatch_set_default_spc({})", repr(mut_properties.to_string()));
+	L_CALL("Schema::dispatch_set_default_spc({})", mut_properties.to_string());
 
 	auto key = hh(specification.full_meta_name);
 	constexpr static auto _ = phf::make_phf({
@@ -7305,7 +7305,7 @@ Schema::dispatch_set_default_spc(MsgPack& mut_properties)
 void
 Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, Fields& fields)
 {
-	L_CALL("Schema::add_field({}, {}, <fields>)", repr(mut_properties->to_string()), repr(object.to_string()));
+	L_CALL("Schema::add_field({}, {}, <fields>)", mut_properties->to_string(), object.to_string());
 
 	specification.flags.field_found = false;
 
@@ -7339,7 +7339,7 @@ Schema::add_field(MsgPack*& mut_properties, const MsgPack& object, Fields& field
 void
 Schema::add_field(MsgPack*& mut_properties)
 {
-	L_CALL("Schema::add_field({})", repr(mut_properties->to_string()));
+	L_CALL("Schema::add_field({})", mut_properties->to_string());
 
 	mut_properties = &mut_properties->get(specification.meta_name);
 
@@ -7368,7 +7368,7 @@ Schema::add_field(MsgPack*& mut_properties)
 void
 Schema::dispatch_feed_properties(const MsgPack& properties)
 {
-	L_CALL("Schema::dispatch_feed_properties({})", repr(properties.to_string()));
+	L_CALL("Schema::dispatch_feed_properties({})", properties.to_string());
 
 	const auto it_e = properties.end();
 	for (auto it = properties.begin(); it != it_e; ++it) {
@@ -9561,7 +9561,7 @@ inline void
 Schema::write_script(MsgPack& mut_properties)
 {
 	// RESERVED_SCRIPT isn't heritable and can't change once fixed.
-	L_CALL("Schema::write_script({})", repr(mut_properties.to_string()));
+	L_CALL("Schema::write_script({})", mut_properties.to_string());
 
 	if (specification.script) {
 		Script script(*specification.script);
@@ -9604,7 +9604,7 @@ Schema::set_namespace_spc_id(required_spc_t& spc)
 void
 Schema::set_default_spc_id(MsgPack& mut_properties)
 {
-	L_CALL("Schema::set_default_spc_id({})", repr(mut_properties.to_string()));
+	L_CALL("Schema::set_default_spc_id({})", mut_properties.to_string());
 
 	specification.flags.bool_term = true;
 	specification.flags.has_bool_term = true;
@@ -9635,7 +9635,7 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 void
 Schema::set_default_spc_version([[maybe_unused]] MsgPack& mut_properties)
 {
-	L_CALL("Schema::set_default_spc_version({})", repr(mut_properties.to_string()));
+	L_CALL("Schema::set_default_spc_version({})", mut_properties.to_string());
 
 	specification.index = TypeIndex::FIELD_VALUES;
 	specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::positive;
@@ -9664,7 +9664,7 @@ Schema::get_full(bool readable) const
 inline bool
 Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
 {
-	L_CALL("Schema::_dispatch_readable({})", repr(value.to_string()));
+	L_CALL("Schema::_dispatch_readable({})", value.to_string());
 
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_TYPE),
@@ -10234,7 +10234,7 @@ Schema::get_slot_field(std::string_view field_name) const
 Schema::dynamic_spc_t
 Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view full_name) const
 {
-	L_CALL("Schema::get_dynamic_subproperties({}, {})", repr(properties.to_string()), repr(full_name));
+	L_CALL("Schema::get_dynamic_subproperties({}, {})", properties.to_string(), repr(full_name));
 
 	Split<std::string_view> field_names(full_name, DB_OFFSPRING_UNION);
 
