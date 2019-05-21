@@ -7874,6 +7874,9 @@ Schema::feed_namespace(const MsgPack& prop_obj)
 
 	if (prop_obj.is_boolean()) {
 		specification.flags.is_namespace = prop_obj.boolean();
+		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
+			specification.flags.partial_paths = true;  // namespaces with partial paths ON by default
+		}
 		specification.flags.has_namespace = true;
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_NAMESPACE, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
@@ -8234,7 +8237,7 @@ Schema::write_namespace(MsgPack& mut_properties, std::string_view prop_name, con
 		// Only save in Schema if RESERVED_NAMESPACE is true.
 		specification.flags.is_namespace = prop_obj.boolean();
 		if (specification.flags.is_namespace && !specification.flags.has_partial_paths) {
-			specification.flags.partial_paths = specification.flags.partial_paths;
+			specification.flags.partial_paths = true;  // namespaces with partial paths ON by default
 		}
 		specification.flags.has_namespace = true;
 		mut_properties[prop_name] = static_cast<bool>(specification.flags.is_namespace);
