@@ -3219,6 +3219,10 @@ Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& objec
 				specification.value_rec.reset();
 				index_object(properties, value_object, data, doc, name);
 			}
+			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
+				// Bubble the namespaced type up
+				spc_start.sep_types[SPC_CONCRETE_TYPE] = specification.sep_types[SPC_CONCRETE_TYPE];
+			}
 			specification = std::move(spc_start);
 			break;
 		}
@@ -3228,6 +3232,10 @@ Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& objec
 			auto data = parent_data;
 			properties = &index_subproperties(properties, data, name);
 			index_object(properties, object, data, doc, name);
+			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
+				// Bubble the namespaced type up
+				spc_start.sep_types[SPC_CONCRETE_TYPE] = specification.sep_types[SPC_CONCRETE_TYPE];
+			}
 			specification = std::move(spc_start);
 			break;
 		}
@@ -3437,10 +3445,26 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 }
 
 
-inline void
+void
 Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const Fields& fields)
 {
 	L_CALL("Schema::index_fields({}, <doc>, {}, <Fields>)", repr(properties->to_string()), repr(data->to_string()));
+
+	if (fields.empty()) {
+		index_partial_paths(doc);
+		if (specification.flags.store && specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
+			*data = MsgPack::MAP();
+		}
+		return;
+	}
+
+	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+		THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+	}
+
+	for (const auto& field : fields) {
+		index_new_object(properties, *field.second, data, doc, field.first);
+	}
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -3449,6 +3473,9 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
+		}
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 			if (specification.flags.inside_namespace) {
@@ -3459,22 +3486,7 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 		}
 	}
 
-	if (fields.empty()) {
-		index_partial_paths(doc);
-		if (specification.flags.store && specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
-			*data = MsgPack::MAP();
-		}
-	} else {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-
-		for (const auto& field : fields) {
-			index_new_object(properties, *field.second, data, doc, field.first);
-		}
-
-		set_type_to_object();  // this has to be done last
-	}
+	set_type_to_object();  // this has to be done last
 }
 
 
@@ -3487,9 +3499,30 @@ Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, Ms
 		if (specification.flags.store) {
 			*data = MsgPack::MAP();
 		}
-	} else {
-		for (auto& key : object) {
-			index_new_object(properties, object.at(key), data, doc, key.str());
+		return;
+	}
+
+	for (auto& key : object) {
+		index_new_object(properties, object.at(key), data, doc, key.str());
+	}
+
+	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
+		}
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			}
 		}
 	}
 
@@ -3975,7 +4008,13 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 {
 	L_CALL("Schema::update_fields(<const MsgPack*>, <Fields>)");
 
-	const auto spc_start = specification;
+	if (fields.empty()) {
+		return;
+	}
+
+	for (const auto& field : fields) {
+		update_new_object(properties, *field.second, field.first);
+	}
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -3984,6 +4023,9 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
+		}
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
 		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
 			if (specification.flags.inside_namespace) {
@@ -3994,22 +4036,7 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 		}
 	}
 
-	if (specification.flags.is_namespace && !fields.empty()) {
-		specification = std::move(spc_start);
-		return;
-	}
-
-	if (!fields.empty()) {
-		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-		}
-
-		for (const auto& field : fields) {
-			update_new_object(properties, *field.second, field.first);
-		}
-
-		set_type_to_object();  // this has to be done last
-	}
+	set_type_to_object();  // this has to be done last
 }
 
 
@@ -4018,9 +4045,31 @@ Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 {
 	L_CALL("Schema::update_inner_object(<const MsgPack*>, <object>)");
 
-	if (!object.empty()) {
-		for (auto& key : object) {
-			update_new_object(properties, object.at(key), key.str());
+	if (object.empty()) {
+		return;
+	}
+
+	for (auto& key : object) {
+		update_new_object(properties, object.at(key), key.str());
+	}
+
+	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
+		}
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			}
 		}
 	}
 
@@ -4462,7 +4511,13 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 {
 	L_CALL("Schema::write_fields(<const MsgPack*>, <Fields>)");
 
-	const auto spc_start = specification;
+	if (fields.empty()) {
+		return;
+	}
+
+	for (const auto& field : fields) {
+		write_new_object(mut_properties, *field.second, field.first);
+	}
 
 	if (!specification.flags.concrete) {
 		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
@@ -4472,29 +4527,19 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 			}
 			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
 		}
-		if (specification.flags.inside_namespace) {
-			validate_required_namespace_data();
-		} else {
-			validate_required_data(*mut_properties);
-		}
-	}
-
-	if (specification.flags.is_namespace && !fields.empty()) {
-		specification = std::move(spc_start);
-		return;
-	}
-
-	if (!fields.empty()) {
 		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 		}
-
-		for (const auto& field : fields) {
-			write_new_object(mut_properties, *field.second, field.first);
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(*mut_properties);
+			}
 		}
-
-		set_type_to_object();  // this has to be done last
 	}
+
+	set_type_to_object();  // this has to be done last
 }
 
 
@@ -4503,9 +4548,31 @@ Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
 {
 	L_CALL("Schema::write_fields(<const MsgPack*>, <object>)");
 
-	if (!object.empty()) {
-		for (auto& key : object) {
-			write_new_object(mut_properties, object.at(key), key.str());
+	if (object.empty()) {
+		return;
+	}
+
+	for (auto& key : object) {
+		write_new_object(mut_properties, object.at(key), key.str());
+	}
+
+	if (!specification.flags.concrete) {
+		bool foreign_type = specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign;
+		if (!foreign_type && !specification.endpoint.empty()) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
+			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
+		}
+		if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
+			THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		}
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(*mut_properties);
+			}
 		}
 	}
 
