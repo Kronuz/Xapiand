@@ -3473,9 +3473,7 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 			index_new_object(properties, *field.second, data, doc, field.first);
 		}
 
-		if (!specification.flags.is_namespace) {
-			set_type_to_object();  // this has to be done last
-		}
+		set_type_to_object();  // this has to be done last
 	}
 }
 
@@ -3495,9 +3493,7 @@ Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 	}
 
-	if (!specification.flags.is_namespace) {
-		set_type_to_object();  // this has to be done last
-	}
+	set_type_to_object();  // this has to be done last
 }
 
 
@@ -4012,9 +4008,7 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 			update_new_object(properties, *field.second, field.first);
 		}
 
-		if (!specification.flags.is_namespace) {
-			set_type_to_object();  // this has to be done last
-		}
+		set_type_to_object();  // this has to be done last
 	}
 }
 
@@ -4030,9 +4024,7 @@ Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 		}
 	}
 
-	if (!specification.flags.is_namespace) {
-		set_type_to_object();  // this has to be done last
-	}
+	set_type_to_object();  // this has to be done last
 }
 
 /*  _____ _____ _____ _____ _____ _____ _____ _____
@@ -4501,9 +4493,7 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 			write_new_object(mut_properties, *field.second, field.first);
 		}
 
-		if (!specification.flags.is_namespace) {
-			set_type_to_object();  // this has to be done last
-		}
+		set_type_to_object();  // this has to be done last
 	}
 }
 
@@ -4519,9 +4509,7 @@ Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
 		}
 	}
 
-	if (!specification.flags.is_namespace) {
-		set_type_to_object();  // this has to be done last
-	}
+	set_type_to_object();  // this has to be done last
 }
 
 
@@ -4843,7 +4831,7 @@ Schema::set_type_to_object()
 {
 	L_CALL("Schema::set_type_to_object()");
 
-	if (!specification.flags.inside_namespace) {
+	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::object;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
@@ -4860,7 +4848,7 @@ Schema::set_type_to_array()
 {
 	L_CALL("Schema::set_type_to_array()");
 
-	if (!specification.flags.inside_namespace) {
+	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::array;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
