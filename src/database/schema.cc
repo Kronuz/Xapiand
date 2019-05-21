@@ -2034,7 +2034,7 @@ required_spc_t::get_types(std::string_view str_type)
 
 	const auto& type = _get_type(str_type);
 	if (std::string_view(reinterpret_cast<const char*>(type.data()), SPC_TOTAL_TYPES) == (EMPTY + EMPTY + EMPTY)) {
-		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'date', 'datetime', 'floating', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'object/<type>', 'array/<type>', 'object/array/<type>', 'foreign/<type>', 'foreign/object/<type>,', 'foreign/array/<type>', 'foreign/object/array/<type>' }} variations.", repr(str_type), RESERVED_TYPE);
+		THROW(ClientError, "{} not supported, '{}' must be one of {{ 'object', 'date', 'datetime', 'floating', 'geospatial', 'integer', 'positive', 'script', 'keyword', 'string', 'text', 'time', 'timedelta', 'uuid' }} or any of their {{ 'array/<type>', 'foreign/<type>', 'foreign/array/<type>' }} variants.", repr(str_type), RESERVED_TYPE);
 	}
 	return type;
 }
@@ -3220,25 +3220,6 @@ Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& objec
 				specification.value_rec.reset();
 				index_object(properties, value_object, data, doc, name);
 			}
-			specification = std::move(spc_start);
-			break;
-		}
-
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED: {
-			auto properties = &*parent_properties;
-			auto data = parent_data;
-			properties = &index_subproperties(properties, data, name);
-			index_object(properties, object, data, doc, name);
-			specification = std::move(spc_start);
-			break;
-		}
-
-		case MsgPack::Type::ARRAY: {
-			auto properties = &*parent_properties;
-			auto data = parent_data;
-			properties = &index_subproperties(properties, data, name);
-			index_object(properties, object, data, doc, name);
 			specification = std::move(spc_start);
 			break;
 		}
@@ -5454,6 +5435,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::FIELD_VALUES: {
 			auto& s_f = map_values[specification.slot];
 			if (value.is_null() || value.is_undefined()) {
@@ -5463,6 +5445,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::FIELD_ALL: {
 			auto& s_f = map_values[specification.slot];
 			if (value.is_null() || value.is_undefined()) {
@@ -5472,6 +5455,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			if (value.is_null() || value.is_undefined()) {
@@ -5481,6 +5465,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			if (value.is_null() || value.is_undefined()) {
@@ -5490,6 +5475,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_f = map_values[specification.slot];
@@ -5500,6 +5486,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_f = map_values[specification.slot];
@@ -5510,6 +5497,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5520,6 +5508,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5530,6 +5519,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5541,6 +5531,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5552,6 +5543,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5562,6 +5554,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5572,6 +5565,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_g = map_values[global_spc.slot];
@@ -5583,6 +5577,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
 			}
 			break;
 		}
+
 		case TypeIndex::ALL: {
 			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
 			auto& s_f = map_values[specification.slot];
@@ -5768,6 +5763,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for floating type: {}", repr(value.to_string()));
 			}
 		}
+
 		case FieldType::integer: {
 			if (value.is_number()) {
 				const auto i_val = value.i64();
@@ -5785,6 +5781,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
+
 		case FieldType::positive: {
 			if (value.is_number()) {
 				const auto u_val = value.u64();
@@ -5802,6 +5799,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
 			}
 		}
+
 		case FieldType::date:
 		case FieldType::datetime: {
 			Datetime::tm_t tm;
@@ -5816,6 +5814,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			GenerateTerms::datetime(doc, spc.accuracy, spc.acc_prefix, tm);
 			return;
 		}
+
 		case FieldType::time: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
@@ -5829,6 +5828,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
 			return;
 		}
+
 		case FieldType::timedelta: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::timedelta(value, t_val);
@@ -5842,6 +5842,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
 			return;
 		}
+
 		case FieldType::geo: {
 			GeoSpatial geo(value);
 			const auto& geometry = geo.getGeometry();
@@ -5876,6 +5877,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
 			return;
 		}
+
 		case FieldType::keyword: {
 			if (value.is_string()) {
 				auto ser_value = value.str();
@@ -5891,6 +5893,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
+
 		case FieldType::string:
 		case FieldType::text: {
 			if (value.is_string()) {
@@ -5910,6 +5913,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
+
 		case FieldType::boolean: {
 			auto ser_value = Serialise::MsgPack(spc, value);
 			if (field_spc != nullptr) {
@@ -5921,6 +5925,7 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 			s.insert(std::move(ser_value));
 			return;
 		}
+
 		case FieldType::uuid: {
 			if (value.is_string()) {
 				auto ser_value = Serialise::uuid(value.str_view());
@@ -5936,13 +5941,16 @@ Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::s
 				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
 			}
 		}
+
 		case FieldType::script:
 			if (value.is_string()) {
 				return;
 			}
 			THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+
 		case FieldType::object:
-			THROW(ClientError, "Type: {} is an invalid value type", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]));
+
 		default:
 			THROW(ClientError, "Type: {:#04x} is an unknown value type", toUType(spc.sep_types[SPC_CONCRETE_TYPE]));
 	}
@@ -5978,6 +5986,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for floating type: {}", repr(value.to_string()));
 			}
 		}
+
 		case FieldType::integer: {
 			if (value.is_number()) {
 				const auto i_val = value.i64();
@@ -6001,6 +6010,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
 			}
 		}
+
 		case FieldType::positive: {
 			if (value.is_number()) {
 				const auto u_val = value.u64();
@@ -6024,6 +6034,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for positive type: {}", repr(value.to_string()));
 			}
 		}
+
 		case FieldType::date:
 		case FieldType::datetime: {
 			Datetime::tm_t tm;
@@ -6044,6 +6055,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
+
 		case FieldType::time: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
@@ -6063,6 +6075,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
+
 		case FieldType::timedelta: {
 			double t_val;
 			auto ser_value = Serialise::timedelta(value, t_val);
@@ -6082,6 +6095,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
+
 		case FieldType::geo: {
 			GeoSpatial geo(value);
 			const auto& geometry = geo.getGeometry();
@@ -6125,6 +6139,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			}
 			return;
 		}
+
 		case FieldType::keyword: {
 			if (value.is_string()) {
 				auto ser_value = value.str();
@@ -6141,6 +6156,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
+
 		case FieldType::string:
 		case FieldType::text: {
 			if (value.is_string()) {
@@ -6161,6 +6177,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
 			}
 		}
+
 		case FieldType::boolean: {
 			auto ser_value = Serialise::MsgPack(field_spc, value);
 			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
@@ -6173,6 +6190,7 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 			s_g.insert(std::move(ser_value));
 			return;
 		}
+
 		case FieldType::uuid: {
 			if (value.is_string()) {
 				auto ser_value = Serialise::uuid(value.str_view());
@@ -6189,13 +6207,16 @@ Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<st
 				THROW(ClientError, "Format invalid for uuid type: {}", repr(value.to_string()));
 			}
 		}
+
 		case FieldType::script:
 			if (value.is_string()) {
 				return;
 			}
 			THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), repr(value.to_string()));
+
 		case FieldType::object:
-			THROW(ClientError, "Type: {} is an invalid value type", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]));
+			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]));
+
 		default:
 			THROW(ClientError, "Type: {:#04x} is an unknown value type", toUType(field_spc.sep_types[SPC_CONCRETE_TYPE]));
 	}
