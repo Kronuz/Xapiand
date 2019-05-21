@@ -543,19 +543,18 @@ POST /test/schemas/namespace
 
 {
 	"A": {
-		"_value": "A de árbol",
-		"_namespace" : true
+		"_namespace": true,
+		"_value": "A de árbol"
 	},
 
 	"B": {
-		"_value": "B de barco",
-		"_namespace": true
+		"_namespace": true,
+		"_value": "B de barco"
 	},
 
 	"C": {
-		"_value": "C de casa",
 		"_namespace": true,
-		"_partial_paths": true,
+		"_value": "C de casa",
 		"D": {
 			"_value": "D de dedo",
 			"E": {

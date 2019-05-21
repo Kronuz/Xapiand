@@ -3,19 +3,18 @@ title: Namespace Queries
 short_title: Namespaced
 ---
 
-Namespace enabled fields allow efficiently searching for nested object names
-in use-cases where it's not feasible/convenient to create a new field in the
-schema for each name inside a tree. For example, this feature can be used for
-tags, file-system path names, or any tree-like structure for which contained
+In use-cases where it's not feasible/convenient to create a new field in the
+schema for each field inside a tree. Namespace enabled fields allow efficient
+searching of values within nested fields. For example, this feature can be used
+for tags, file-system path names, or any tree-like structure for which contained
 names can be many, dynamic and/or not known in advance.
 
-The `_namespace` keyword must be specified during Schema creation:
+The `_namespace` parameter must be enabled during Schema creation:
 
 ```json
 {
   "style": {
     "_namespace": true,
-    "_partial_paths": true,
     "clothing": {
       "pants": "khakis",
       "footwear": "casual shoes"
@@ -25,7 +24,7 @@ The `_namespace` keyword must be specified during Schema creation:
 }
 ```
 
-The above example is the document being indexed, the keyword `_namespace`
+The above example is the document being indexed, the parameter `_namespace`
 enables the Namespace Queries functionality.
 
 Searching can be done either specifying nesting field names objects or by using
@@ -56,7 +55,7 @@ SEARCH /bank/
 
 {
   "_query": {
-    "style.clothing.footwear": "casual shoes"
+    "style.hairstyle": "afro"
   }
 }
 ```
@@ -71,20 +70,18 @@ SEARCH /bank/
 
 {
   "_query": {
-    "style.hairstyle": "afro"
+    "style.clothing.footwear": "casual shoes"
   }
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
-## Skipping Fields
 
-We can see that all nested field names are listed in the object (without
-skipping any intermediate fields). If we want to skip fields, the keyword
-`_partial_path` should have been be set to `true` in advance, during Schema
-creation. Having make sure of that, you can perform searches like the following
-(note how `"clothing"` was skipped):
+## Partial Paths
+
+By default namespaced fields keep information for each level in the path. For
+example, you can also query `"footwear"` while skipping `"clothing"`:
 
 {% capture req %}
 
@@ -101,7 +98,21 @@ SEARCH /bank/
 {% include curl.html req=req %}
 
 
+This behaviour can be modified by setting `_partial_paths` to `false`, when
+creating the schema:
+
+```json
+{
+  "style": {
+    "_type": "keyword",
+    "_namespace": true,
+    "_partial_paths": false,
+  }, ...
+}
+```
+
+
 ## Datatype
 
-The concrete datatype for all nested objects must be of the same type as the
-field with the `_namespace` keyword.
+The concrete datatype for all nested objects must be of the same type as one
+declared in the object enabling the `_namespace`.

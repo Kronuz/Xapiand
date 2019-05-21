@@ -35,7 +35,6 @@ customer bank account information. Each document has the following form:
   "eyeColor": "blue",
   "style": {
     "_namespace": true,
-    "_partial_paths": true,
     "clothing": {
       "pants": "khakis",
       "shirt": "t-shirt"
