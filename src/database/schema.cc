@@ -3302,7 +3302,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::ARRAY: {
 			auto data = parent_data;
 			auto concrete_type = guess_concrete_type(object);
-			if (concrete_type == FieldType::empty) {
+			if (concrete_type == FieldType::empty || specification.sep_types[SPC_ARRAY_TYPE] == FieldType::array) {
 				index_array(parent_properties, object, data, doc, name);
 			} else {
 				index_item_value(doc, data, object);
@@ -3346,11 +3346,12 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 {
 	L_CALL("Schema::index_array({}, {}, <MsgPack*>, <Xapian::Document>, {})", parent_properties->to_string(), array.to_string(), repr(name));
 
+	set_type_to_array();  // this has to be done first
+
 	if (array.empty()) {
 		if (specification.flags.store) {
 			*parent_data = MsgPack::ARRAY();
 		}
-		set_type_to_array();  // this has to be done last
 		return;
 	}
 
@@ -3387,7 +3388,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data_array = parent_data;
 				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
 				auto concrete_type = guess_concrete_type(object);
-				if (concrete_type == FieldType::empty) {
+				if (concrete_type == FieldType::empty || concrete_type == FieldType::object) {
 					index_inner_object(parent_properties, doc, data, object);
 				} else {
 					index_item_value(doc, data, object, pos);
@@ -3407,7 +3408,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data_array = parent_data;
 				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
 				auto concrete_type = guess_concrete_type(object);
-				if (concrete_type == FieldType::empty) {
+				if (concrete_type == FieldType::empty || specification.sep_types[SPC_ARRAY_TYPE] == FieldType::array) {
 					index_array(parent_properties, object, data, doc, name);
 				} else {
 					index_item_value(doc, data, object, pos);
@@ -3440,8 +3441,6 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 		}
 		++pos;
 	}
-
-	set_type_to_array();  // this has to be done last
 }
 
 
@@ -3921,8 +3920,9 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 {
 	L_CALL("Schema::update_array({}, {}, {})", parent_properties->to_string(), array.to_string(), repr(name));
 
+	set_type_to_array();  // this has to be done first
+
 	if (array.empty()) {
-		set_type_to_array();  // this has to be done last
 		return;
 	}
 
@@ -3960,8 +3960,6 @@ Schema::update_array(const MsgPack*& parent_properties, const MsgPack& array, co
 		}
 		++pos;
 	}
-
-	set_type_to_array();  // this has to be done last
 }
 
 
@@ -4426,8 +4424,9 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 {
 	L_CALL("Schema::write_array({}, {}, {})", mut_parent_properties->to_string(), array.to_string(), repr(name));
 
+	set_type_to_array();  // this has to be done first
+
 	if (array.empty()) {
-		set_type_to_array();  // this has to be done last
 		return;
 	}
 
@@ -4465,8 +4464,6 @@ Schema::write_array(MsgPack*& mut_parent_properties, const MsgPack& array, const
 		}
 		++pos;
 	}
-
-	set_type_to_array();  // this has to be done last
 }
 
 
@@ -5248,7 +5245,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 FieldType
 Schema::guess_concrete_type(const MsgPack& item_doc)
 {
-	L_BLUE("Schema::guess_concrete_type({}) {{complete:{}, concrete:{}}}", item_doc.to_string(), !!specification.flags.complete, !!specification.flags.concrete);
+	L_CALL("Schema::guess_concrete_type({}) {{complete:{}, concrete:{}}}", item_doc.to_string(), !!specification.flags.complete, !!specification.flags.concrete);
 
 	if (specification.flags.complete || specification.flags.concrete) {
 		return specification.sep_types[SPC_CONCRETE_TYPE];
