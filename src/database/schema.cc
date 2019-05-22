@@ -3451,18 +3451,6 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 {
 	L_CALL("Schema::index_fields({}, <doc>, {}, <Fields>)", properties->to_string(), data->to_string());
 
-	if (fields.empty()) {
-		index_partial_paths(doc);
-		if (specification.flags.store && specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
-			*data = MsgPack::MAP();
-		}
-		return;
-	}
-
-	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-		THROW(ClientError, "{} is a foreign type and as such it cannot have extra fields", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-	}
-
 	for (const auto& field : fields) {
 		index_new_object(properties, *field.second, data, doc, field.first);
 	}
@@ -3487,7 +3475,15 @@ Schema::index_fields(const MsgPack*& properties, Xapian::Document& doc, MsgPack*
 		}
 	}
 
-	set_type_to_object();  // this has to be done last
+	if (!fields.empty()) {
+		set_type_to_object();  // this has to be done last
+	} else {
+		index_partial_paths(doc);
+		if (specification.flags.store && specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
+			*data = MsgPack::MAP();
+		}
+
+	}
 }
 
 
@@ -3495,13 +3491,6 @@ void
 Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, MsgPack*& data, const MsgPack& object)
 {
 	L_CALL("Schema::index_inner_object({}, <doc>, {}, <object>)", properties->to_string(), data->to_string());
-
-	if (object.empty()) {
-		if (specification.flags.store) {
-			*data = MsgPack::MAP();
-		}
-		return;
-	}
 
 	for (auto& key : object) {
 		index_new_object(properties, object.at(key), data, doc, key.str());
@@ -3527,7 +3516,14 @@ Schema::index_inner_object(const MsgPack*& properties, Xapian::Document& doc, Ms
 		}
 	}
 
-	set_type_to_object();  // this has to be done last
+	if (!object.empty()) {
+		set_type_to_object();  // this has to be done last
+	} else {
+		if (specification.flags.store) {
+			*data = MsgPack::MAP();
+		}
+	}
+
 }
 
 
@@ -4005,10 +4001,6 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 {
 	L_CALL("Schema::update_fields(<const MsgPack*>, <Fields>)");
 
-	if (fields.empty()) {
-		return;
-	}
-
 	for (const auto& field : fields) {
 		update_new_object(properties, *field.second, field.first);
 	}
@@ -4033,7 +4025,9 @@ Schema::update_fields(const MsgPack*& properties, const Fields& fields)
 		}
 	}
 
-	set_type_to_object();  // this has to be done last
+	if (!fields.empty()) {
+		set_type_to_object();  // this has to be done last
+	}
 }
 
 
@@ -4041,10 +4035,6 @@ inline void
 Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 {
 	L_CALL("Schema::update_inner_object(<const MsgPack*>, <object>)");
-
-	if (object.empty()) {
-		return;
-	}
 
 	for (auto& key : object) {
 		update_new_object(properties, object.at(key), key.str());
@@ -4070,7 +4060,9 @@ Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 		}
 	}
 
-	set_type_to_object();  // this has to be done last
+	if (!object.empty()) {
+		set_type_to_object();  // this has to be done last
+	}
 }
 
 /*  _____ _____ _____ _____ _____ _____ _____ _____
@@ -4499,10 +4491,6 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 {
 	L_CALL("Schema::write_fields(<const MsgPack*>, <Fields>)");
 
-	if (fields.empty()) {
-		return;
-	}
-
 	for (const auto& field : fields) {
 		write_new_object(mut_properties, *field.second, field.first);
 	}
@@ -4527,7 +4515,9 @@ Schema::write_fields(MsgPack*& mut_properties, const Fields& fields)
 		}
 	}
 
-	set_type_to_object();  // this has to be done last
+	if (!fields.empty()) {
+		set_type_to_object();  // this has to be done last
+	}
 }
 
 
@@ -4535,10 +4525,6 @@ void
 Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
 {
 	L_CALL("Schema::write_fields(<const MsgPack*>, <object>)");
-
-	if (object.empty()) {
-		return;
-	}
 
 	for (auto& key : object) {
 		write_new_object(mut_properties, object.at(key), key.str());
@@ -4564,7 +4550,9 @@ Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
 		}
 	}
 
-	set_type_to_object();  // this has to be done last
+	if (!object.empty()) {
+		set_type_to_object();  // this has to be done last
+	}
 }
 
 
