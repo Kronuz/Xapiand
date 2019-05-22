@@ -65,7 +65,7 @@
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_INDEX
-// #define L_INDEX L_CHOCOLATE
+// #define L_INDEX L_STACKED_CHOCOLATE
 
 
 constexpr static auto EMPTY      = static_string::string(EMPTY_CHAR);
@@ -2763,7 +2763,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 
 	static UUIDGenerator generator;
 
-	L_INDEX("Schema index({}): " + DIM_GREY + "{}", document_id.to_string(), object.to_string());
+	L_INDEX(">>> Index schema {} from: " + DIM_GREY + "{}", document_id.to_string(), object.to_string());
 
 	try {
 		map_values.clear();
@@ -3011,6 +3011,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		if (term_id != "QN\x80") {
 			doc.add_boolean_term(term_id);  // make sure the ID term is ALWAYS added!
 		}
+
+		// L_INDEX("Indexed schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
 
 		return std::make_tuple(std::move(term_id), std::move(doc), std::move(data_obj));
 	} catch (...) {
@@ -3584,7 +3586,7 @@ Schema::update(const MsgPack& object)
 {
 	L_CALL("Schema::update({})", object.to_string());
 
-	L_INDEX("Schema update: " + DIM_GREY + "{}", object.to_string());
+	L_INDEX(">>> Update schema from: " + DIM_GREY + "{}", object.to_string());
 
 	try {
 		map_values.clear();
@@ -3634,6 +3636,8 @@ Schema::update(const MsgPack& object)
 				mut_schema->get(str_key) = it.value();
 			}
 		}
+
+		// L_INDEX("Updated schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
 
 		return false;
 	} catch (...) {
@@ -3875,7 +3879,7 @@ Schema::update_new_object(const MsgPack*& parent_properties, const MsgPack& obje
 void
 Schema::update_object(const MsgPack*& parent_properties, const MsgPack& object, const std::string& name)
 {
-	L_CALL("Schema::update_new_object({}, {}, {})", parent_properties->to_string(), object.to_string(), repr(name));
+	L_CALL("Schema::update_object({}, {}, {})", parent_properties->to_string(), object.to_string(), repr(name));
 
 	switch (object.get_type()) {
 		case MsgPack::Type::MAP: {
@@ -4085,7 +4089,7 @@ Schema::write(const MsgPack& object)
 {
 	L_CALL("Schema::write({}, {})", object.to_string());
 
-	L_INDEX("Schema write: " + DIM_GREY + "{}", object.to_string());
+	L_INDEX(">>> Write schema from: " + DIM_GREY + "{}", object.to_string());
 
 	try {
 		map_values.clear();
@@ -4129,6 +4133,8 @@ Schema::write(const MsgPack& object)
 				mut_schema->get(str_key) = it.value();
 			}
 		}
+
+		// L_INDEX("Written schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
 
 		return false;
 	} catch (...) {
