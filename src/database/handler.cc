@@ -613,14 +613,51 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 
 
 void
-DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
+DatabaseHandler::update_schema(const MsgPack& obj)
 {
-	L_CALL("DatabaseHandler::write_schema({}, {})", repr(obj.to_string()), replace);
+	L_CALL("DatabaseHandler::update_schema({}, {})", repr(obj.to_string()));
 
 	bool was_foreign_obj;
 	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 		schema = get_schema();
-		was_foreign_obj = schema->write(obj, replace);
+		was_foreign_obj = schema->update(obj);
+		L_INDEX("Schema to update: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
+		if (update_schema()) {
+			break;
+		}
+		if (t == 0) {
+			THROW(Error, "Cannot update schema, too many retries");
+		}
+	}
+
+	if (was_foreign_obj) {
+		MsgPack o = obj;
+		o[RESERVED_TYPE] = "object";
+		o.erase(RESERVED_ENDPOINT);
+		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
+			schema = get_schema();
+			was_foreign_obj = schema->update(o);
+			L_INDEX("Schema to update: {} (local)", repr(schema->to_string()));
+			if (update_schema()) {
+				break;
+			}
+			if (t == 0) {
+				THROW(Error, "Cannot update foreign schema, too many retries");
+			}
+		}
+	}
+}
+
+
+void
+DatabaseHandler::write_schema(const MsgPack& obj)
+{
+	L_CALL("DatabaseHandler::write_schema({}, {})", repr(obj.to_string()));
+
+	bool was_foreign_obj;
+	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
+		schema = get_schema();
+		was_foreign_obj = schema->write(obj);
 		L_INDEX("Schema to write: {} {}", repr(schema->to_string()), was_foreign_obj ? "(foreign)" : "(local)");
 		if (update_schema()) {
 			break;
@@ -636,7 +673,7 @@ DatabaseHandler::write_schema(const MsgPack& obj, bool replace)
 		o.erase(RESERVED_ENDPOINT);
 		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 			schema = get_schema();
-			was_foreign_obj = schema->write(o, replace);
+			was_foreign_obj = schema->write(o);
 			L_INDEX("Schema to write: {} (local)", repr(schema->to_string()));
 			if (update_schema()) {
 				break;

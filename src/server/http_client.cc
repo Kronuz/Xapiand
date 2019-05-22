@@ -1082,7 +1082,7 @@ HttpClient::prepare()
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::write_document_view;
 			} else {
-				new_request->view = &HttpClient::update_database_view;
+				new_request->view = &HttpClient::write_database_view;
 			}
 			break;
 
@@ -1094,7 +1094,7 @@ HttpClient::prepare()
 			} else if (!id.empty()) {
 				new_request->view = &HttpClient::update_document_view;
 			} else {
-				new_request->view = &HttpClient::update_database_view;
+				new_request->view = &HttpClient::write_database_view;
 			}
 			break;
 
@@ -2024,9 +2024,9 @@ HttpClient::retrieve_database_view(Request& request)
 
 
 void
-HttpClient::update_database_view(Request& request)
+HttpClient::write_database_view(Request& request)
 {
-	L_CALL("HttpClient::update_database_view()");
+	L_CALL("HttpClient::write_database_view()");
 
 	assert(request.path_parser.get_id().empty());
 
@@ -2057,7 +2057,11 @@ HttpClient::update_database_view(Request& request)
 		auto schema_it = decoded_body.find(RESERVED_SCHEMA);
 		if (schema_it != decoded_body.end()) {
 			auto& schema = schema_it.value();
-			db_handler.write_schema(schema, false);
+			if (request.method == HTTP_UPDATE) {
+				db_handler.update_schema(schema);
+			} else {
+				db_handler.write_schema(schema);
+			}
 		}
 	}
 

@@ -115,7 +115,8 @@ public:
 	DocumentInfo patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit);
 	DocumentInfo update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
-	void write_schema(const MsgPack& obj, bool replace);
+	void update_schema(const MsgPack& obj);
+	void write_schema(const MsgPack& obj);
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	Xapian::MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);

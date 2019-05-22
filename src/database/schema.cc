@@ -4086,9 +4086,9 @@ Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
  */
 
 bool
-Schema::write(const MsgPack& object, bool replace)
+Schema::write(const MsgPack& object)
 {
-	L_CALL("Schema::write({}, {})", object.to_string(), replace);
+	L_CALL("Schema::write({}, {})", object.to_string());
 
 	L_INDEX("Schema write: " + DIM_GREY + "{}", object.to_string());
 
@@ -4113,18 +4113,11 @@ Schema::write(const MsgPack& object, bool replace)
 			const auto& schema_obj = *checked.second;
 
 			auto mut_properties = &get_mutable_properties();
-			if (replace) {
-				mut_properties->clear();
-			}
+			mut_properties->clear();
 
 			Fields fields;
 
-			if (mut_properties->empty()) {  // new schemas have empty properties
-				specification.flags.field_found = false;
-			} else {
-				dispatch_feed_properties(*mut_properties);
-			}
-
+			specification.flags.field_found = false;
 			dispatch_write_properties(*mut_properties, schema_obj, fields);
 
 			write_fields(mut_properties, fields);

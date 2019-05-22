@@ -331,6 +331,7 @@ class HttpClient : public BaseClient<HttpClient> {
 
 	void database_exists_view(Request& request);
 	void retrieve_database_view(Request& request);
+	void write_database_view(Request& request);
 	void update_database_view(Request& request);
 	void delete_database_view(Request& request);
 	void dump_database_view(Request& request);

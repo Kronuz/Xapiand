@@ -1026,7 +1026,7 @@ public:
 	 * Function to update the schema according to obj_schema.
 	 */
 	bool update(const MsgPack& object);
-	bool write(const MsgPack& object, bool replace);
+	bool write(const MsgPack& object);
 
 	/*
 	 * Returns underlying msgpack schema.
