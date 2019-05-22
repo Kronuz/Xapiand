@@ -753,11 +753,6 @@ class Schema {
 	void update_prefixes();
 
 	/*
-	 * Verify if field_name is the meta field used for dynamic types.
-	 */
-	void verify_dynamic(std::string_view field_name);
-
-	/*
 	 * Detect if field_name is dynamic type.
 	 */
 	void detect_dynamic(std::string_view field_name);

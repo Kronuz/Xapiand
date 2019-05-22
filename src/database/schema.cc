@@ -4158,12 +4158,12 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 		restart_namespace_specification();
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			verify_dynamic(field_name);
+			detect_dynamic(field_name);
 			update_prefixes();
 		}
 		const auto& field_name = *it;
 		dispatch_write_properties(*mut_properties, object, fields);
-		verify_dynamic(field_name);
+		detect_dynamic(field_name);
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 	} else {
@@ -4176,7 +4176,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 			if (feed_subproperties(mut_properties, field_name)) {
 				update_prefixes();
 			} else {
-				verify_dynamic(field_name);
+				detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					if (feed_subproperties(mut_properties, specification.meta_name)) {
 						update_prefixes();
@@ -4191,7 +4191,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 					if (!is_valid(n_field_name)) {
 						THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 					} else {
-						verify_dynamic(n_field_name);
+						detect_dynamic(n_field_name);
 						add_field(mut_properties);
 					}
 				}
@@ -4199,7 +4199,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 				if (!is_valid(n_field_name)) {
 					THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				} else {
-					verify_dynamic(n_field_name);
+					detect_dynamic(n_field_name);
 					add_field(mut_properties, object, fields);
 				}
 				return *mut_properties;
@@ -4215,7 +4215,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, std::string_view name, con
 			dispatch_write_properties(*mut_properties, object, fields);
 			update_prefixes();
 		} else {
-			verify_dynamic(field_name);
+			detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				if (feed_subproperties(mut_properties, specification.meta_name)) {
 					dispatch_write_properties(*mut_properties, object, fields);
@@ -4247,11 +4247,11 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 		restart_namespace_specification();
 		for (; !it.last(); ++it) {
 			const auto& field_name = *it;
-			verify_dynamic(field_name);
+			detect_dynamic(field_name);
 			update_prefixes();
 		}
 		const auto& field_name = *it;
-		verify_dynamic(field_name);
+		detect_dynamic(field_name);
 		update_prefixes();
 		specification.flags.inside_namespace = true;
 	} else {
@@ -4264,7 +4264,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 			if (feed_subproperties(mut_properties, field_name)) {
 				update_prefixes();
 			} else {
-				verify_dynamic(field_name);
+				detect_dynamic(field_name);
 				if (specification.flags.uuid_field) {
 					if (feed_subproperties(mut_properties, specification.meta_name)) {
 						update_prefixes();
@@ -4279,7 +4279,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 					if (!is_valid(n_field_name)) {
 						THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 					} else {
-						verify_dynamic(n_field_name);
+						detect_dynamic(n_field_name);
 						add_field(mut_properties);
 					}
 				}
@@ -4287,7 +4287,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 				if (!is_valid(n_field_name)) {
 					THROW(ClientError, "Field {} in {} is not valid", repr_field(name, n_field_name), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				} else {
-					verify_dynamic(n_field_name);
+					detect_dynamic(n_field_name);
 					add_field(mut_properties);
 				}
 				return *mut_properties;
@@ -4302,7 +4302,7 @@ Schema::write_subproperties(MsgPack*& mut_properties, const std::string& name)
 		if (feed_subproperties(mut_properties, field_name)) {
 			update_prefixes();
 		} else {
-			verify_dynamic(field_name);
+			detect_dynamic(field_name);
 			if (specification.flags.uuid_field) {
 				if (feed_subproperties(mut_properties, specification.meta_name)) {
 					update_prefixes();
@@ -6334,28 +6334,15 @@ Schema::update_prefixes()
 
 
 inline void
-Schema::verify_dynamic(std::string_view field_name)
+Schema::detect_dynamic(std::string_view field_name)
 {
-	L_CALL("Schema::verify_dynamic({})", repr(field_name));
+	L_CALL("Schema::detect_dynamic({})", repr(field_name));
 
 	if (field_name == UUID_FIELD_NAME) {
 		specification.meta_name.assign(UUID_FIELD_NAME);
 		specification.flags.uuid_field = true;
 		specification.flags.uuid_path = true;
-	} else {
-		specification.local_prefix.field.assign(get_prefix(field_name));
-		specification.meta_name.assign(field_name);
-		specification.flags.uuid_field = false;
-	}
-}
-
-
-inline void
-Schema::detect_dynamic(std::string_view field_name)
-{
-	L_CALL("Schema::detect_dynamic({})", repr(field_name));
-
-	if (Serialise::possiblyUUID(field_name)) {
+	} else if (Serialise::possiblyUUID(field_name)) {
 		try {
 			auto ser_uuid = Serialise::uuid(field_name);
 			specification.local_prefix.uuid.assign(ser_uuid);
