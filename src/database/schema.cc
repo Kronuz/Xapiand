@@ -5006,7 +5006,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::geo: {
+		case FieldType::geo:
 			// Set partials and error.
 			mut_properties[RESERVED_PARTIALS] = static_cast<bool>(specification.flags.partials);
 			mut_properties[RESERVED_ERROR] = specification.error;
@@ -5034,9 +5034,9 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			specification.flags.concrete = true;
 			break;
-		}
+
 		case FieldType::date:
-		case FieldType::datetime: {
+		case FieldType::datetime:
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					if (specification.doc_acc->is_array()) {
@@ -5068,9 +5068,9 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			specification.flags.concrete = true;
 			break;
-		}
+
 		case FieldType::time:
-		case FieldType::timedelta: {
+		case FieldType::timedelta:
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					if (specification.doc_acc->is_array()) {
@@ -5095,10 +5095,10 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			specification.flags.concrete = true;
 			break;
-		}
+
 		case FieldType::integer:
 		case FieldType::positive:
-		case FieldType::floating: {
+		case FieldType::floating:
 			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
 				if (specification.doc_acc) {
 					if (specification.doc_acc->is_array()) {
@@ -5118,9 +5118,9 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			specification.flags.concrete = true;
 			break;
-		}
+
 		case FieldType::string:
-		case FieldType::text: {
+		case FieldType::text:
 			mut_properties[RESERVED_NGRAM] = static_cast<bool>(specification.flags.ngram);
 			mut_properties[RESERVED_CJK_NGRAM] = static_cast<bool>(specification.flags.cjk_ngram);
 			mut_properties[RESERVED_CJK_WORDS] = static_cast<bool>(specification.flags.cjk_words);
@@ -5143,8 +5143,8 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 			specification.flags.concrete = true;
 			break;
-		}
-		case FieldType::keyword: {
+
+		case FieldType::keyword:
 			// Process RESERVED_BOOL_TERM
 			if (!specification.flags.has_bool_term) {
 				// By default, if normalized name has upper characters then it is consider bool term.
@@ -5158,8 +5158,8 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 			specification.flags.concrete = true;
 			break;
-		}
-		case FieldType::script: {
+
+		case FieldType::script:
 			if (!specification.flags.has_index) {
 				const auto index = TypeIndex::NONE; // Fallback to index anything.
 				if (specification.index != index) {
@@ -5170,7 +5170,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			}
 			specification.flags.concrete = true;
 			break;
-		}
+
 		case FieldType::boolean:
 		case FieldType::uuid:
 			specification.flags.concrete = true;
