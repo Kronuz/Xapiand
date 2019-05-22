@@ -3845,23 +3845,14 @@ Schema::update_new_object(const MsgPack*& parent_properties, const MsgPack& obje
 			Fields fields;
 			properties = &update_subproperties(properties, name, object, fields);
 			update_fields(properties, fields);
-			specification = std::move(spc_start);
-			return;
-		}
-
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED: {
-			auto properties = &*parent_properties;
-			properties = &update_subproperties(properties, name);
-			update_object(properties, object, name);
-			specification = std::move(spc_start);
-			return;
-		}
-
-		case MsgPack::Type::ARRAY: {
-			auto properties = &*parent_properties;
-			properties = &update_subproperties(properties, name);
-			update_object(properties, object, name);
+			auto value = specification.value ? specification.value.get() : specification.value_rec.get();
+			if (value) {
+				THROW(ClientError, "Schema objects cannot receive '{}'", RESERVED_VALUE);
+			}
+			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
+				// Bubble the namespaced type up
+				spc_start.sep_types[SPC_CONCRETE_TYPE] = specification.sep_types[SPC_CONCRETE_TYPE];
+			}
 			specification = std::move(spc_start);
 			return;
 		}
@@ -3870,6 +3861,10 @@ Schema::update_new_object(const MsgPack*& parent_properties, const MsgPack& obje
 			auto properties = &*parent_properties;
 			properties = &update_subproperties(properties, name);
 			update_object(properties, object, name);
+			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
+				// Bubble the namespaced type up
+				spc_start.sep_types[SPC_CONCRETE_TYPE] = specification.sep_types[SPC_CONCRETE_TYPE];
+			}
 			specification = std::move(spc_start);
 			return;
 		}
@@ -4341,23 +4336,14 @@ Schema::write_new_object(MsgPack*& mut_parent_properties, const MsgPack& object,
 			Fields fields;
 			properties = &write_subproperties(properties, name, object, fields);
 			write_fields(properties, fields);
-			specification = std::move(spc_start);
-			return;
-		}
-
-		case MsgPack::Type::NIL:
-		case MsgPack::Type::UNDEFINED: {
-			auto properties = &*mut_parent_properties;
-			properties = &write_subproperties(properties, name);
-			write_object(properties, object, name);
-			specification = std::move(spc_start);
-			return;
-		}
-
-		case MsgPack::Type::ARRAY: {
-			auto properties = &*mut_parent_properties;
-			properties = &write_subproperties(properties, name);
-			write_object(properties, object, name);
+			auto value = specification.value ? specification.value.get() : specification.value_rec.get();
+			if (value) {
+				THROW(ClientError, "Schema objects cannot receive '{}'", RESERVED_VALUE);
+			}
+			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
+				// Bubble the namespaced type up
+				spc_start.sep_types[SPC_CONCRETE_TYPE] = specification.sep_types[SPC_CONCRETE_TYPE];
+			}
 			specification = std::move(spc_start);
 			return;
 		}
@@ -4366,6 +4352,10 @@ Schema::write_new_object(MsgPack*& mut_parent_properties, const MsgPack& object,
 			auto properties = &*mut_parent_properties;
 			properties = &write_subproperties(properties, name);
 			write_object(properties, object, name);
+			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
+				// Bubble the namespaced type up
+				spc_start.sep_types[SPC_CONCRETE_TYPE] = specification.sep_types[SPC_CONCRETE_TYPE];
+			}
 			specification = std::move(spc_start);
 			return;
 		}
