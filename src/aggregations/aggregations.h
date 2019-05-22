@@ -153,5 +153,5 @@ public:
 	void merge_results(const AggregationMatchSpy& other);
 
 	std::string get_description() const override;
-	const MsgPack& get_aggregation() noexcept;
+	const MsgPack& get_aggregation();
 };

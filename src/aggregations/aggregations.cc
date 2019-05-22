@@ -381,6 +381,7 @@ AggregationMatchSpy::merge_results(const AggregationMatchSpy& other)
 	_aggregation.merge_results(&other._aggregation);
 }
 
+
 std::string
 AggregationMatchSpy::get_description() const
 {
@@ -391,7 +392,7 @@ AggregationMatchSpy::get_description() const
 
 
 const MsgPack&
-AggregationMatchSpy::get_aggregation() noexcept
+AggregationMatchSpy::get_aggregation()
 {
 	_aggregation.update();
 	_result[RESERVED_AGGS_AGGREGATIONS] = _aggregation.get_result();
