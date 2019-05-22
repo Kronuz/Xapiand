@@ -94,6 +94,8 @@ documents.
 This example shows how to update our previous document (ID of `John`) by adding
 a _gender_ field to it and leaving the _name_ intact:
 
+**Add gender to John:**
+
 {% capture req %}
 
 ```json
@@ -105,6 +107,25 @@ UPDATE /twitter/user/John
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is merged", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.name).to.be.an('string');
+  pm.expect(jsonData.gender).to.equal('male');
+});
+```
 
 And the following example shows how to update the same document by adding an
 _age_ field to it and at the same time changing the _name_ from simply
