@@ -1900,7 +1900,7 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 	// Get active schema
 	try {
 		DatabaseHandler db_handler;
-		if (query_field.primary) {
+		if (query_field.writable || query_field.primary) {
 			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
 			db_handler.reset(endpoints, DB_OPEN);
@@ -1922,12 +1922,12 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path).first);
 	endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/indices"},
-		false,
+		query_field.writable,
 		query_field.primary);
 
 	try {
 		DatabaseHandler db_handler;
-		if (query_field.primary) {
+		if (query_field.writable || query_field.primary) {
 			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
 			db_handler.reset(endpoints, DB_OPEN);
