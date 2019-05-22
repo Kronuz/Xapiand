@@ -4479,10 +4479,12 @@ Schema::write_item_value(MsgPack*& mut_properties, [[maybe_unused]] const MsgPac
 				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 		}
-		if (specification.flags.inside_namespace) {
-			validate_required_namespace_data();
-		} else {
-			validate_required_data(*mut_properties);
+		if (specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty) {
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(*mut_properties);
+			}
 		}
 	}
 
