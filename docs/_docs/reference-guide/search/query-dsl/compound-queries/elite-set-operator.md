@@ -63,8 +63,8 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -91,7 +91,7 @@ pm.test("Elite Set Operator size", function() {
 ```js
 pm.test("Elite Set Operator values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [593, 230, 622, 499, 661, 976, 807, 339, 64, 382];
+  var expected = [593, 230, 622, 499, 661, 976, 807, 339, 64, 950];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

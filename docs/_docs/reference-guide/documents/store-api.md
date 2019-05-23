@@ -31,8 +31,8 @@ Content-Type: image/png
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -50,8 +50,8 @@ Accept: image/png
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -86,8 +86,8 @@ Content-Type: application/pdf
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -107,8 +107,8 @@ Content-Type: image/jpeg
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -127,8 +127,8 @@ Accept: application/pdf
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -168,8 +168,8 @@ Accept: *
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -210,8 +210,8 @@ GET /assets/Lenna.png
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+pm.test("response is success", function() {
+    pm.response.to.be.success;
 });
 ```
 
@@ -251,8 +251,8 @@ INFO /assets/Lenna
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -324,8 +324,8 @@ Content-Length: 0
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 

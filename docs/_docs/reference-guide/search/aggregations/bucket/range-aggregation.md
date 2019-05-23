@@ -81,8 +81,8 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -154,8 +154,8 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 

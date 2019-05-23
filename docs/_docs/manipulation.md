@@ -28,8 +28,8 @@ PUT /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -53,8 +53,8 @@ PUT /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -80,8 +80,8 @@ PUT /twitter/user/Jane
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -109,8 +109,8 @@ POST /twitter/user/
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -143,8 +143,8 @@ UPDATE /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -178,8 +178,8 @@ UPDATE /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -205,8 +205,8 @@ UPDATE /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
 
@@ -249,7 +249,7 @@ DELETE /twitter/user/Jane
 {: .test }
 
 ```js
-pm.test("response is ok", function() {
-  pm.response.to.be.ok;
+pm.test("response is success", function() {
+  pm.response.to.be.success;
 });
 ```
