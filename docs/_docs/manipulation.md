@@ -23,7 +23,15 @@ PUT /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: PUT John -> John Doe" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
 
 The above will index the specified document into the user index, with the ID of
 `John`. If we then executed the above command again with a different (or same)
@@ -40,7 +48,15 @@ PUT /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: PUT John -> John" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
 
 The above completely overwrites the existent document with the ID of `John` with
 the new one.
@@ -59,7 +75,15 @@ PUT /twitter/user/Jane
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: PUT Jane -> Jane Doe" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
 
 The above indexes a new document with an ID of `Jane`.
 
@@ -80,7 +104,15 @@ POST /twitter/user/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: POST -> Richard Roe" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
 
 Note that in the above case, we are using the `POST` verb instead of `PUT`
 as we're not specifying an explicit ID.
@@ -105,14 +137,14 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Add gender to John" %}
+{% include curl.html req=req title="Index: UPDATE John -> male" %}
 
 
 {: .test }
 
 ```js
 pm.test("response is ok", function() {
-    pm.response.to.be.ok;
+  pm.response.to.be.ok;
 });
 ```
 
@@ -141,7 +173,15 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: UPDATE John -> Johnny Doe, 17" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
 
 
 ### Updating With Scripts
@@ -160,7 +200,34 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: UPDATE John -> John Doe, 22 (scripted)" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is merged", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.gender).to.be.an('string');
+  pm.expect(jsonData.name).to.equal('John Doe');
+});
+```
+
+{: .test }
+
+```js
+pm.test("response with script applied", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.age).to.equal(22);
+});
+```
 
 In the above example, `_doc` is the current document and `_old_doc` refers to
 the previous document that is about to be updated.
@@ -177,4 +244,12 @@ our previous user with the ID of `Jane`:
 DELETE /twitter/user/Jane
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Index: DELETE Jane" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```

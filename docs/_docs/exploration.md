@@ -68,7 +68,66 @@ Content-Type: application/x-ndjson
 @accounts.ndjson
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Load sample data" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.processed).to.be.an('number');
+  pm.expect(jsonData.indexed).to.be.an('number');
+  pm.expect(jsonData.total).to.be.an('number');
+  pm.expect(jsonData.items).to.be.an('array');
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore received all", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1000);
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore processed all", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.processed).to.equal(1000);
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore indexed all", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.indexed).to.equal(1000);
+  pm.expect(jsonData.items.length).to.equal(1000);
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore values are valid", function() {
+  var jsonData = pm.response.json();
+  for (var i = 0; i < 1000; ++i) {
+      pm.expect(jsonData.items[i]._id).to.equal(i + 1);
+  }
+});
+```
 
 {: .note .caution }
 When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
@@ -87,6 +146,23 @@ INFO /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response doc_count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.doc_count).to.equal(1000);
+});
+```
 
 Response should be something like:
 
@@ -130,10 +206,30 @@ returns all documents in the bank index:
 {% capture req %}
 
 ```json
-SEARCH /bank/?q=*&sort=accountNumber&pretty
+SEARCH /bank/?sort=accountNumber&pretty
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Search ordered by accountNumber" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [100123, 100481, 101121, 101253, 101294, 103213, 103486, 103710, 104419, 107465];
+  for (var i = 0; i < expected.length; ++i) {
+      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```
 
 Let's first dissect the search call. We are searching in the `/bank/` index,
 and the `q=*` query parameter instructs Xapiand to _match all_ documents in the
@@ -297,8 +393,27 @@ SEARCH /bank/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Search ordered by balance" %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [12699.46, 10857.55, 10819.51, 10729.87, 10663.25, 10643.84, 10513.99, 10448.36, 10087.41, 10073.05];
+  for (var i = 0; i < expected.length; ++i) {
+      pm.expect(jsonData.hits[i].balance).to.equal(expected[i]);
+  }
+});
+```
 
 ## Executing Searches
 
@@ -365,6 +480,7 @@ SEARCH /bank/
 SEARCH /bank/
 
 {
+  "_limit": 1000,
   "_query": {
     "balance": {
       "_in": {
@@ -378,8 +494,24 @@ SEARCH /bank/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Search filtered balance" %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(286);
+});
+```
 
 ## Executing Aggregations
 

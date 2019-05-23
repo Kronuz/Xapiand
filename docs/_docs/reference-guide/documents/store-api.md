@@ -26,7 +26,15 @@ Content-Type: image/png
 @Lenna.png
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Store PNG" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
 
 And getting it is just a matter of retreiving it using the `GET` HTTP method:
 
@@ -37,7 +45,15 @@ GET /assets/Lenna
 Accept: image/png
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Get PNG (using Accept)" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
 
 Or by visiting the link to it with your web browser:
 [http://localhost:8880/assets/Lenna](http://localhost:8880/assets/Lenna){:target="_blank"}
@@ -47,6 +63,7 @@ Or by visiting the link to it with your web browser:
 You can enable previews for images in the terminal using the "_very-very-very-very_"
 verbose command line option (`-vvvvv`). Note you a compatible terminal for this
 feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example).
+
 
 ## Multi-Content Documents
 
@@ -64,18 +81,36 @@ Content-Type: application/pdf
 @Lenna.pdf
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Store PDF (Using Content-Type)" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
+
+This time we also include the `.jpg` selector as a [File Extension](#file-extension):
 
 {% capture req %}
 
 ```json
-STORE /assets/Lenna
+STORE /assets/Lenna.jpg
 Content-Type: image/jpeg
 
 @Lenna.jpg
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Store JPG (Using .jpg selector)" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
 
 Then you can get either of them requesting the appropriate content type in
 the `Accept` header:
@@ -87,13 +122,73 @@ GET /assets/Lenna
 Accept: application/pdf
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Retrieve PDF (Using Accept)" %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response content type is PDF", function() {
+    pm.response.to.be.header('Content-Type', 'application/pdf');
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is stored PDF", function() {
+    pm.expect(pm.response.stream.length).to.equal(692615);
+    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('66bb6df2255f34e2be54344047dad389a94be873e53a0b4c46817a3ecaeb6a61')
+});
+```
+
+### Default Content Type
 
 {: .note .info }
 **_Default Content Type_**<br>
 In Multi-Content Documents, the last content that was stored is the
 _default content type_, if none is specified using the `Accept` header.
+
+{% capture req %}
+
+```json
+GET /assets/Lenna
+Accept: *
+```
+{% endcapture %}
+{% include curl.html req=req title="Retrieve PDF (Using Accept)" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response content type is JPG", function() {
+    pm.response.to.be.header('Content-Type', 'image/jpeg');
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is stored JPG", function() {
+    pm.expect(pm.response.stream.length).to.equal(570958);
+    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('820eae76e4639a059a1bc799763ad82961ffbc8d41b58920a3f7ac622455ed46')
+});
+```
 
 
 ### File Extension
@@ -101,19 +196,44 @@ _default content type_, if none is specified using the `Accept` header.
 If passing a file extension, the default content type is obtained from the
 `mime.types` file (usually in `/usr/local/share/xapiand/mime.types`).
 
-For example, this will return the content with `application/pdf` content
-type of the document with ID `Lenna`:
+For example, this will return the content with `image/png` content type of the
+document with ID `Lenna`:
 
 {% capture req %}
 
 ```json
-GET /assets/Lenna.pdf
+GET /assets/Lenna.png
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Retrieve PNG (Using .png selector)" %}
 
-Or visiting the link to the PDF content with your web browser:
-[http://localhost:8880/assets/Lenna.pdf](http://localhost:8880/assets/Lenna.pdf){:target="_blank"}
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+    pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response content type is PNG", function() {
+    pm.response.to.be.header('Content-Type', 'image/png');
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is stored PNG", function() {
+    pm.expect(pm.response.stream.length).to.equal(473831);
+    // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f')
+});
+```
+
+Or visiting the link to the PNG content with your web browser:
+[http://localhost:8880/assets/Lenna.png](http://localhost:8880/assets/Lenna.png){:target="_blank"}
 
 
 ## Retrieving Information
@@ -126,7 +246,29 @@ You can get the information about the document as usual:
 INFO /assets/Lenna
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Retrieve information" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response with proper data", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.data.length).to.equal(4);
+  pm.expect(jsonData.data[0].content_type).to.equal("application/msgpack");
+  pm.expect(jsonData.data[1].content_type).to.equal("image/png");
+  pm.expect(jsonData.data[2].content_type).to.equal("application/pdf");
+  pm.expect(jsonData.data[3].content_type).to.equal("image/jpeg");
+});
+```
+
 
 The result (partially shown) has the available content types listed inside
  `data`
@@ -164,6 +306,7 @@ The result (partially shown) has the available content types listed inside
 }
 ```
 
+
 ## Removing Content
 
 To remove stored content by storing an empty object:
@@ -176,7 +319,15 @@ Content-Type: image/jpeg
 Content-Length: 0
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Remove content" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
 
 {: .note .caution }
 Note removing content doesn't actually remove the blob from the volume, it
