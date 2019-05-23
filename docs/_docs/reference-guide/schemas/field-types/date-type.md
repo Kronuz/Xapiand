@@ -107,7 +107,7 @@ UPDATE /bank/2
 {
     "birthday": {
       "_value": "2011-01-01||+1y+3M",
-      "_type": "date"
+      "_type": "datetime"
     }
 }
 ```
