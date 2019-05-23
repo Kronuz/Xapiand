@@ -787,6 +787,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 				METHODS_OPTIONS()
 				#undef OPTION
 				default:
+					L_HTTP_PROTO("Invalid HTTP method override: {}", repr(_header_value));
 					parser->http_errno = HPE_INVALID_METHOD;
 					break;
 			}
@@ -1202,6 +1203,7 @@ HttpClient::prepare()
 #endif
 
 		default: {
+			L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(new_request->method));
 			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
 			return 1;
