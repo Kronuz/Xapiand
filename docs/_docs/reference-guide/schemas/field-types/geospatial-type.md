@@ -97,7 +97,7 @@ UPDATE /bank/1
 {% capture req %}
 
 ```json
-UPDATE /bank/1
+UPDATE /bank/2
 
 {
   "neighborhood": {
@@ -123,7 +123,7 @@ Calculate the convex hull for the coordinates using the
 {% capture req %}
 
 ```json
-UPDATE /bank/1
+UPDATE /bank/3
 
 {
   "neighborhood": {
