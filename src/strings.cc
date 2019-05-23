@@ -61,13 +61,14 @@ public:
 	}
 
 	std::string operator()(long double delta, const char* prefix, bool colored, long double rounding) const {
-		long double num = delta;
-		auto last = units.size();
-
 		if (delta < 0) {
 			delta = -delta;
 		}
-		size_t order = (delta == 0) ? last - 1 : -std::floor(std::log(delta) / div);
+
+		long double num = delta;
+		ssize_t last = units.size();
+
+		ssize_t order = (delta == 0) ? last - 1 : -std::floor(std::log(delta) / div);
 		order += needle;
 		if (order < 0) {
 			order = 0;
