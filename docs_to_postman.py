@@ -10,16 +10,19 @@ import email
 import urllib
 import urlparse
 
+
 PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\ntitle: ([^\n]+)|\n(#+)\s*([^\n]+)|title="(.+?)"', re.DOTALL)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def main():
     index = {}
     all_tests = []
 
-    for path, dirs, files in os.walk('docs/_docs'):
-        # print(path, files)
+    for path, dirs, files in os.walk(os.path.join(BASE_DIR, 'docs')):
         for f in files:
+            # print(path, f)
             if not f.endswith('.md'):
                 continue
             filename = os.path.join(path, f)
@@ -32,7 +35,7 @@ def main():
             }
             context = {}
             context.update(file_context)
-            while fnp:
+            while fnp and fnp != BASE_DIR and fnp != '/':
                 if fnp in index:
                     context['titles'].insert(0, (0, index.get(fnp)))
                 fnp = os.path.dirname(fnp)
@@ -174,7 +177,7 @@ def main():
                 request["body"] = {
                     "mode": "file",
                     "file": {
-                        "src": "docs/assets/" + body[1:]
+                        "src": os.path.join(BASE_DIR, 'docs', 'assets', body[1:])
                     }
                 }
             else:
