@@ -92,7 +92,7 @@ pm.test("Elite Set Operator size", function() {
 pm.test("Elite Set Operator values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [593, 230, 622, 499, 661, 976, 807, 339, 64, 382];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

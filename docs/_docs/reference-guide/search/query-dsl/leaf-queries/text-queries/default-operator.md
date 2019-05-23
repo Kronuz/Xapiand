@@ -67,7 +67,7 @@ pm.test("Default operator size", function() {
 pm.test("Default operator values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [298, 958, 234, 923, 132, 567, 906, 116, 182, 600];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

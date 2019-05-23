@@ -86,7 +86,7 @@ pm.test("phrase query size", function() {
 pm.test("phrase query values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [923, 553, 535, 393, 90, 156, 60, 302, 415, 424];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
       pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

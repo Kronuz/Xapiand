@@ -72,7 +72,7 @@ pm.test("simple query size", function() {
 pm.test("simple query value is valid", function() {
   var jsonData = pm.response.json();
   var expected = [477, 246, 274, 773, 523, 705, 272, 339, 631, 854];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
       pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

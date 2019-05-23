@@ -303,7 +303,7 @@ pm.test("response is aggregation", function() {
     "arroyo", "arnold", "ariel", "arellano", "april", "anne", "anita", "angelica", "angel", "andrews",
     "andre", "andrade", "amber", "alyssa", "allison", "alisha", "alexandria", "alexa", "albert",
     "alan", "aguilar", "adriana", "adam", "abbott"];
-  for (var i = 0; i < 1579; ++i) {
+  for (var i = 0; i < expected_doc_count.length; ++i) {
     pm.expect(jsonData.aggregations.most_used_terms[i]._doc_count).to.equal(expected_doc_count[i]);
     pm.expect(jsonData.aggregations.most_used_terms[i]._key).to.equal(expected_key[i]);
   }

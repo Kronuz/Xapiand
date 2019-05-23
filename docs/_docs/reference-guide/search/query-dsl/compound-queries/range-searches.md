@@ -74,7 +74,7 @@ pm.test("Range Searches size", function() {
 pm.test("Range Searches values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [62, 298, 379, 58, 390, 493, 10, 961, 328, 480];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

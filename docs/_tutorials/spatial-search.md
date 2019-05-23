@@ -294,12 +294,12 @@ pm.test("Geospatial Circle size", function() {
 pm.test("Geospatial Circle values are valid", function() {
   var jsonData = pm.response.json();
   for (var i = 0; i < 3; ++i) {
-      var lat1 = 47.329220 / 180 * Math.PI;
-      var lon1 = -100.395388 / 180 * Math.PI;
-      var lat2 = jsonData.hits[i].location._point._latitude / 180 * Math.PI;
-      var lon2 = jsonData.hits[i].location._point._longitude / 180 * Math.PI;
-      var d = Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2)) * 6371008.8;
-      pm.expect(d).to.below(328254.09);
+    var lat1 = 47.329220 / 180 * Math.PI;
+    var lon1 = -100.395388 / 180 * Math.PI;
+    var lat2 = jsonData.hits[i].location._point._latitude / 180 * Math.PI;
+    var lon2 = jsonData.hits[i].location._point._longitude / 180 * Math.PI;
+    var d = Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2)) * 6371008.8;
+    pm.expect(d).to.below(328254.09);
   }
 });
 ```

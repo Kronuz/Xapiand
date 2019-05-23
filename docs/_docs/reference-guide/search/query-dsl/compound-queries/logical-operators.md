@@ -87,7 +87,7 @@ pm.test("Logical Operator size", function() {
 pm.test("Logical Operator values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [665, 319, 735, 475, 934, 969, 284, 576, 999, 417];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

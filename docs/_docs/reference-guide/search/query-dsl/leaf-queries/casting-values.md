@@ -74,7 +74,7 @@ pm.test("Casting size", function() {
 pm.test("Casting value is valid", function() {
   var jsonData = pm.response.json();
   var expected = [768];
-  for (var i = 0; i < 1; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

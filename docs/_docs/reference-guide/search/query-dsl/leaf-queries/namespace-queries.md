@@ -129,7 +129,7 @@ pm.test("Namespace size", function() {
 pm.test("Namespace values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [978, 62, 471, 485, 649, 277, 537, 602, 689, 764];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

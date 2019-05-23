@@ -69,7 +69,7 @@ pm.test("partial query size", function() {
 pm.test("partial query values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [661, 806, 631, 711, 726, 986, 576, 836, 77, 527];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
       pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });

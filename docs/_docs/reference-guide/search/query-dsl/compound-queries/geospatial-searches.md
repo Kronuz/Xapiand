@@ -62,7 +62,7 @@ pm.test("Geospatial Point size", function() {
 pm.test("Geospatial Point values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [404, 85, 668, 383, 477, 978, 62, 361, 637, 38];
-  for (var i = 0; i < 10; ++i) {
+  for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
