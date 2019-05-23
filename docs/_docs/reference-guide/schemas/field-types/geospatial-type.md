@@ -98,6 +98,7 @@ UPDATE /bank/1
 
 ```json
 UPDATE /bank/1
+
 {
   "neighborhood": {
     "_circle": {
@@ -123,6 +124,7 @@ Calculate the convex hull for the coordinates using the
 
 ```json
 UPDATE /bank/1
+
 {
   "neighborhood": {
     "_chull": {
@@ -132,7 +134,7 @@ UPDATE /bank/1
         -102.026812,
         -109.034104
       ],
-      "_latitude":[
+      "_latitude": [
         40.993201,
         40.993201,
         36.993722,
