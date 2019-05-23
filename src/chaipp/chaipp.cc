@@ -136,11 +136,12 @@ Processor::Processor(const Script& script) :
 		split_path_id(foreign_uri, foreign_path_view, foreign_id_view);
 		foreign_path = urldecode(foreign_path_view);
 		foreign_id = urldecode(foreign_id_view);
+		std::string_view id = foreign_id;
 		std::string_view selector;
-		auto needle = foreign_id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
+		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		if (needle != std::string_view::npos) {
-			selector = foreign_id.substr(foreign_id[needle] == '.' ? needle + 1 : needle);
-			foreign_id = foreign_id.substr(0, needle);
+			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
+			id = id.substr(0, needle);
 		}
 		MsgPack o;
 		try {
@@ -150,10 +151,10 @@ Processor::Processor(const Script& script) :
 				THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 			}
 			DatabaseHandler _db_handler(endpoints, DB_OPEN);
-			auto doc = _db_handler.get_document(foreign_id);
+			auto doc = _db_handler.get_document(id);
 			o = doc.get_obj();
 		} catch (const Xapian::DocNotFoundError&) {
-			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, foreign_id);
+			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, id);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			THROW(ClientError, "Foreign script database {} doesn't exist", repr(foreign_path));
 		}
