@@ -9107,14 +9107,14 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj
 					THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
-					std::string str_accuracy, _str_accuracy;
+					std::vector<std::string> str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(strings::format("{}", acc)).push_back(' ');
+						str_accuracy.push_back(strings::format("{}", acc));
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(strings::format("{}", acc)).push_back(' ');
+						_str_accuracy.push_back(strings::format("{}", acc));
 					}
-					THROW(ClientError, "It is not allowed to change {} [{} ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [({})  ->  ({})] in {}", repr(prop_name), strings::join(str_accuracy, ", "), strings::join(_str_accuracy, ", "), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				return;
 			}
@@ -9144,14 +9144,14 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, DATE_STR, repr(str_set_acc_date));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
-					std::string str_accuracy, _str_accuracy;
+					std::vector<std::string> str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
+						str_accuracy.push_back(repr(_get_str_acc_date(static_cast<UnitTime>(acc))));
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
+						_str_accuracy.push_back(repr(_get_str_acc_date(static_cast<UnitTime>(acc))));
 					}
-					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [({})  ->  ({})] in {}", repr(prop_name), strings::join(str_accuracy, ", "), strings::join(_str_accuracy, ", "), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				return;
 			}
@@ -9174,14 +9174,14 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj
 					THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
-					std::string str_accuracy, _str_accuracy;
+					std::vector<std::string> str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
+						str_accuracy.push_back(repr(_get_str_acc_date(static_cast<UnitTime>(acc))));
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(_get_str_acc_date(static_cast<UnitTime>(acc))).push_back(' ');
+						_str_accuracy.push_back(repr(_get_str_acc_date(static_cast<UnitTime>(acc))));
 					}
-					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [({})  ->  ({})] in {}", repr(prop_name), strings::join(str_accuracy, ", "), strings::join(_str_accuracy, ", "), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				return;
 			}
@@ -9200,14 +9200,14 @@ Schema::consistency_accuracy(std::string_view prop_name, const MsgPack& prop_obj
 					THROW(ClientError, "Data inconsistency, {} in {} must be an array of positive numbers in {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				if (!std::equal(specification.accuracy.begin(), specification.accuracy.end(), set_acc.begin(), set_acc.end())) {
-					std::string str_accuracy, _str_accuracy;
+					std::vector<std::string> str_accuracy, _str_accuracy;
 					for (const auto& acc : set_acc) {
-						str_accuracy.append(strings::format("{}", acc)).push_back(' ');
+						str_accuracy.push_back(strings::format("{}", acc));
 					}
 					for (const auto& acc : specification.accuracy) {
-						_str_accuracy.append(strings::format("{}", acc)).push_back(' ');
+						_str_accuracy.push_back(strings::format("{}", acc));
 					}
-					THROW(ClientError, "It is not allowed to change {} [{}  ->  {}] in {}", repr(prop_name), repr(str_accuracy), repr(_str_accuracy), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+					THROW(ClientError, "It is not allowed to change {} [({})  ->  ({})] in {}", repr(prop_name), strings::join(str_accuracy, ", "), strings::join(_str_accuracy, ", "), specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 				}
 				return;
 			}
