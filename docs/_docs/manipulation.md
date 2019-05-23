@@ -94,7 +94,6 @@ documents.
 This example shows how to update our previous document (ID of `John`) by adding
 a _gender_ field to it and leaving the _name_ intact:
 
-**Add gender to John:**
 
 {% capture req %}
 
@@ -106,7 +105,7 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Add gender to John" %}
 
 
 {: .test }
