@@ -49,8 +49,47 @@ SEARCH /bank/
         ]
       }
     ]
-  }
+  },
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("Logical Operator count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Logical Operator size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Logical Operator values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [100123, 100481, 101121, 103213, 112495, 112573, 113400, 114772, 117339, 119292];
+  for (var i = 0; i < 10; ++i) {
+    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```

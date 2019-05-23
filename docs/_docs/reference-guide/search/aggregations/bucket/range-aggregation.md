@@ -78,6 +78,25 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations.balances_by_range["..2000.0"]["_doc_count"]).to.equal(384)
+  pm.expect(jsonData.aggregations.balances_by_range["2000.0..4000.0"]["_doc_count"]).to.equal(580)
+  pm.expect(jsonData.aggregations.balances_by_range["4000.0.."]["_doc_count"]).to.equal(36)
+});
+```
+
 Response:
 
 ```json
@@ -130,6 +149,26 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations.balances_by_range["poor"]["_doc_count"]).to.equal(384)
+  pm.expect(jsonData.aggregations.balances_by_range["average"]["_doc_count"]).to.equal(580)
+  pm.expect(jsonData.aggregations.balances_by_range["rich"]["_doc_count"]).to.equal(36)
+});
+```
 
 Response:
 

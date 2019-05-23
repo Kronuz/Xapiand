@@ -47,6 +47,7 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
+  "_check_at_least": 1000,
   "_aggs": {
     "balance_stats": {
       "_extended_stats": {
@@ -58,6 +59,36 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  function expectEqualNumbers(a, b) {
+    pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);
+  }
+  expectEqualNumbers(jsonData.aggregations._doc_count, 1000);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._count, 1000);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._min, 7.99);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._max, 12699.46);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._avg, 2565.03304);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._sum, 2565033.04);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._sum_of_squares, 8844461934.66);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._variance, 2267334.7731415);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation, 1505.7671709602053);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation_bounds._upper, 5576.56738192041);
+  expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation_bounds._lower, -446.50130192041049);
+});
+```
 
 The above aggregation computes the balance statistics over all documents. The
 above will return the following:

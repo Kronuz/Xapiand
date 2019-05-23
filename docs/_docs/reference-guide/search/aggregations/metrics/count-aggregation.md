@@ -55,6 +55,25 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  function expectEqualNumbers(a, b) {
+    pm.expect(Math.round(parseFloat(a) * 1000) / 1000).to.equal(Math.round(parseFloat(b) * 1000) / 1000);
+  }
+  expectEqualNumbers(jsonData.aggregations.indiana_city_count._count, 17);
+});
+```
 
 Response:
 

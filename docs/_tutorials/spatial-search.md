@@ -25,8 +25,66 @@ Content-Type: application/x-ndjson
 @cities.ndjson
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Load sample data" %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.processed).to.be.an('number')
+  pm.expect(jsonData.indexed).to.be.an('number')
+  pm.expect(jsonData.total).to.be.an('number')
+  pm.expect(jsonData.items).to.be.an('array')
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore received all", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1000)
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore processed all", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.processed).to.equal(1000)
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore indexed all", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.indexed).to.equal(1000)
+  pm.expect(jsonData.items.length).to.equal(1000);
+});
+```
+
+{: .test }
+
+```js
+pm.test("restore values are valid", function() {
+  var jsonData = pm.response.json();
+  for (var i = 0; i < 1000; ++i) {
+      pm.expect(jsonData.items[i]._id).to.equal(i + 1);
+  }
+});
+```
 
 ## Searching
 
@@ -70,7 +128,27 @@ SEARCH /cities/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Search near El Cerrito" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = ["Richmond", "Berkeley", "Oakland", "San Francisco", "Vallejo"];
+  for (var i = 0; i < expected.length; ++i) {
+      pm.expect(jsonData.hits[i]).to.equal(expected[i]);
+  }
+});
+```
 
 Sure enough, Xapiand returns a list of cities in the Bay Area, nearest first:
 
@@ -136,7 +214,27 @@ SEARCH /cities/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req %}
+{% include curl.html req=req title="Search near El Cerrito from San Francisco" %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = ["San Francisco", "Oakland", "Richmond", "Berkeley", "Vallejo"];
+  for (var i = 0; i < expected.length; ++i) {
+      pm.expect(jsonData.hits[i]).to.equal(expected[i]);
+  }
+});
+```
 
 Now Xapiand returns the same cities, but now nearest to _San Francisco_ first.
 
@@ -152,4 +250,56 @@ Now Xapiand returns the same cities, but now nearest to _San Francisco_ first.
     "Vallejo"
   ]
 }
+```
+
+
+{% capture req %}
+
+```json
+SEARCH /cities/
+
+{
+  "_query": {
+    "location": {
+      "_in": {
+        "_circle": {
+          "_latitude": 47.329220,
+          "_longitude": -100.395388,
+          "_radius": 328254.09
+        }
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{: .test }
+{% include curl.html req=req title="Search closest cities to North Dakota" %}
+
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+pm.test("Geospatial Circle count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(5);
+});
+pm.test("Geospatial Circle size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(5);
+});
+pm.test("Geospatial Circle values are valid", function() {
+  var jsonData = pm.response.json();
+  for (var i = 0; i < 3; ++i) {
+      var lat1 = 47.329220 / 180 * Math.PI;
+      var lon1 = -100.395388 / 180 * Math.PI;
+      var lat2 = jsonData.hits[i].location._point._latitude / 180 * Math.PI;
+      var lon2 = jsonData.hits[i].location._point._longitude / 180 * Math.PI;
+      var d = Math.acos(Math.sin(lat1) * Math.sin(lat2) + Math.cos(lat1) * Math.cos(lat2) * Math.cos(lon1 - lon2)) * 6371008.8;
+      pm.expect(d).to.below(328254.09);
+  }
+});
 ```

@@ -41,7 +41,7 @@ SEARCH /bank/
   "_limit": 0,
   "_check_at_least": 1000,
   "_aggregations": {
-    "favorite_ruits": {
+    "favorite_fruits": {
       "_values": {
         "_field": "favoriteFruit"
       }
@@ -52,13 +52,35 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  var expect_doc_count = [89, 76, 73, 72, 64, 58, 57, 52, 49, 49, 43, 42, 41, 37, 36, 34, 32, 30, 29, 25];
+  var expect_key = ["apple", "strawberry", "grape", "watermelon", "banana", "lemon", "orange", "pear", "blueberry", "avocado", "peach", "cherry", "pineapple", "cantaloupe", "lime", "raspberry", "blackberry", "plum", "grapefruit", "nectarine"];
+  for (var i = 0; i < 20; ++i) {
+    pm.expect(jsonData.aggregations.favorite_fruits[i]._doc_count).to.equal(expect_doc_count[i]);
+    pm.expect(jsonData.aggregations.favorite_fruits[i]._key).to.equal(expect_key[i]);
+  }
+});
+```
+
 Response:
 
 ```json
 {
   "aggregations": {
     "_doc_count": 1000,
-    "favorite_ruits": [
+    "favorite_fruits": [
       {
         "_doc_count": 76,
         "_key": "strawberry"

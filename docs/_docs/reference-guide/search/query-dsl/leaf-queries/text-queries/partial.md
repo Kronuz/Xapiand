@@ -31,8 +31,47 @@ SEARCH /bank/
     "favoriteFruit": {
       "_partial": "ba"
     }
-  }
+  },
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("partial query count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("partial query size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("partial query values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [100481, 103213, 113400, 117339, 162080, 165123, 175116, 180263, 190548, 191175];
+  for (var i = 0; i < 10; ++i) {
+      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```

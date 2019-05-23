@@ -24,12 +24,50 @@ SEARCH /bank/
 {
   "_query": {
     "personality": "\"adventurous nature\" -ambitious"
-  }
+  },
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("Love and Hate count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Love and Hate size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Love and Hate values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [229817, 348412, 386529, 413668, 462693, 504517, 539397, 576019, 592913, 594595];
+  for (var i = 0; i < 10; ++i) {
+    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```
 
 {: .note .caution }
 **_Caution_**<br>

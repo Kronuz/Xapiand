@@ -61,6 +61,7 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
+  "_check_at_least": 1000,
   "_aggs": {
     "balances": {
       "_histogram": {
@@ -73,6 +74,28 @@ SEARCH /bank/
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  var expect_doc_count = [55, 329, 9, 1, 286, 294, 1, 1, 4, 12, 7, 1];
+  var expect_key = ["0.0", "1000.0", "10000.0", "12000.0", "2000.0", "3000.0", "4000.0", "5000.0", "6000.0", "7000.0", "8000.0", "9000.0"]; // FIXME: 10000.0 and 12000.0 should be last!
+  for (var i = 0; i < 12; ++i) {
+    pm.expect(jsonData.aggregations.balances[i]._doc_count).to.equal(expect_doc_count[i]);
+    pm.expect(jsonData.aggregations.balances[i]._key).to.equal(expect_key[i]);
+  }
+});
+```
 
 And the following may be the response:
 
@@ -168,6 +191,27 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  var expect_doc_count = [243, 471, 286]
+  var expect_key = ["15", "25", "35"];
+  for (var i = 0; i < 3; ++i) {
+    pm.expect(jsonData.aggregations.ages[i]._doc_count).to.equal(expect_doc_count[i]);
+    pm.expect(jsonData.aggregations.ages[i]._key).to.equal(expect_key[i]);
+  }
+});
+```
 Response:
 
 ```json

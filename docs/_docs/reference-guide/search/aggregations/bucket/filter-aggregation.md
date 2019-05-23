@@ -62,6 +62,24 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("response is aggregation", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.aggregations.strawberry_lovers._doc_count).to.equal(76);
+  pm.expect(jsonData.aggregations.strawberry_lovers.avg_balance._avg).to.equal(2581.8072368421055);
+});
+```
+
 In the above example, we calculate the average balance of all the bank accounts
 with holders who fancy strawberries.
 

@@ -27,6 +27,41 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("simple query count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(1);
+});
+```
+
+{: .test }
+
+```js
+pm.test("simple query size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(1);
+});
+```
+
+{: .test }
+
+```js
+pm.test("simple query value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits[0].favoriteFruit).to.equal('banana');
+});
+```
+
 When a query is executed, the result is a list of documents that match the
 query, together with a **weight**, a **rank** and a **percent** for each which
 indicates how good a match for the query that particular document is.

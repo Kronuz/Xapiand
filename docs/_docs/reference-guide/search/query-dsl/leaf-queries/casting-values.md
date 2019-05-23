@@ -36,11 +36,50 @@ SEARCH /bank/
     "contact.postcode" : {
       "_text": 84535
     }
-  }
+  },
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("Casting count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(1);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Casting size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(1);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Casting value is valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [233733];
+  for (var i = 0; i < 1; ++i) {
+    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```
 
 
 ## Type Compatibility

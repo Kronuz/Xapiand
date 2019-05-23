@@ -21,8 +21,47 @@ SEARCH /bank/
     "personality": {
       "_near": "adventurous ambitious"
     }
-  }
+  },
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("near query count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(2);
+});
+```
+
+{: .test }
+
+```js
+pm.test("near query size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(2);
+});
+```
+
+{: .test }
+
+```js
+pm.test("near query values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [447943, 605225];
+  for (var i = 0; i < 2; ++i) {
+      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```

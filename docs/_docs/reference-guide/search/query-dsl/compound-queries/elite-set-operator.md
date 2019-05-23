@@ -54,11 +54,50 @@ SEARCH /bank/
       { "personality": "shallow" },
       { "personality": "well" }
     ]
-  }
+  },
+  "_sort": "accountNumber"
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
+
+```js
+pm.test("response is ok", function() {
+  pm.response.to.be.ok;
+});
+```
+
+{: .test }
+
+```js
+pm.test("Elite Set Operator count", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Elite Set Operator size", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits.length).to.equal(10);
+});
+```
+
+{: .test }
+
+```js
+pm.test("Elite Set Operator values are valid", function() {
+  var jsonData = pm.response.json();
+  var expected = [100123, 100481, 101294, 103486, 103710, 107465, 108731, 109766, 112495, 113400];
+  for (var i = 0; i < 10; ++i) {
+    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+  }
+});
+```
 
 A similar result can be achieved by setting the _default operator_ via the
 [Elite Set Modifier](../query-modifiers#elite-set-modifier).
