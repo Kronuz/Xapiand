@@ -75,6 +75,9 @@ def main():
                 elif groups[5]:
                     context['name'] = urllib.unquote(groups[5])
             PARSER_RE.sub(process, data)
+            # Flush:
+            if context and 'request' in context:
+                all_tests.append(dict(context))
 
     # print(json.dumps(all_tests, indent=4))
 
