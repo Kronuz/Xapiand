@@ -283,14 +283,29 @@ SEARCH /cities/
 pm.test("response is ok", function() {
   pm.response.to.be.ok;
 });
+```
+
+{: .test }
+
+```js
 pm.test("Geospatial Circle count", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.count).to.equal(5);
 });
+```
+
+{: .test }
+
+```js
 pm.test("Geospatial Circle size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(5);
 });
+```
+
+{: .test }
+
+```js
 pm.test("Geospatial Circle values are valid", function() {
   var jsonData = pm.response.json();
   for (var i = 0; i < 3; ++i) {
