@@ -35,7 +35,7 @@ Many examples of API calls that look something like this:
 PUT /twitter/user/Kronuz
 
 {
-  "name" : "German M. Bravo"
+  "name": "German M. Bravo"
 }
 ```
 {% endcapture %}

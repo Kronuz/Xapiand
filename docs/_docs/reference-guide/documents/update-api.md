@@ -22,11 +22,11 @@ For example, let’s index a simple doc:
 PUT /twitter/tweet/1
 
 {
-  "user" : "Kronuz",
-  "post_date" : "2019-03-22T14:35:26",
-  "message" : "Trying out Xapiand",
-  "likes" : 0,
-  "hashtags" : ["#xapiand"]
+  "user": "Kronuz",
+  "post_date": "2019-03-22T14:35:26",
+  "message": "Trying out Xapiand",
+  "likes": 0,
+  "hashtags": ["#xapiand"]
 }
 ```
 {% endcapture %}
@@ -69,7 +69,7 @@ passed fields (simple recursive merge, inner merging of objects, replacing core
 UPDATE /twitter/tweet/1
 
 {
-  "title" : "Xapiand Rocks!"
+  "title": "Xapiand Rocks!"
 }
 ```
 {% endcapture %}

@@ -13,9 +13,9 @@ _"twitter"_ index with an ID of `1`:
 PUT /twitter/tweet/1
 
 {
-    "user" : "Kronuz",
-    "post_date" : "2019-03-22T14:35:26",
-    "message" : "Trying out Xapiand"
+    "user": "Kronuz",
+    "post_date": "2019-03-22T14:35:26",
+    "message": "Trying out Xapiand"
 }
 ```
 {% endcapture %}
@@ -65,9 +65,9 @@ instead of `PUT`):
 POST /twitter/tweet/
 
 {
-    "user" : "Yosef",
-    "post_date" : "2019-03-22T14:46:10",
-    "message" : "Also trying out Xapiand!"
+    "user": "Yosef",
+    "post_date": "2019-03-22T14:46:10",
+    "message": "Also trying out Xapiand!"
 }
 ```
 {% endcapture %}

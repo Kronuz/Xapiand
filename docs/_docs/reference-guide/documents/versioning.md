@@ -24,7 +24,7 @@ a version to it:
 PUT /twitter/user/Kronuz
 
 {
-  "name" : "Germán Méndez Bravo"
+  "name": "Germán Méndez Bravo"
 }
 ```
 {% endcapture %}
@@ -34,7 +34,7 @@ This is all business as usual, the interesting bit is in the response:
 
 ```json
 {
-  "name" : "Germán Méndez Bravo",
+  "name": "Germán Méndez Bravo",
   "_id": "Kronuz",
   "_version": 1
 }

@@ -55,7 +55,7 @@ automatically):
 PUT /twitter/user/Kronuz
 
 {
-  "name" : "German M. Bravo"
+  "name": "German M. Bravo"
 }
 ```
 {% endcapture %}
