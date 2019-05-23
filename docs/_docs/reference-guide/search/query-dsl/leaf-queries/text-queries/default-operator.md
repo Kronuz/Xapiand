@@ -29,8 +29,7 @@ SEARCH /bank/
     "personality": {
       "_and": "these days are few and far between"
     }
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -67,9 +66,9 @@ pm.test("Default operator size", function() {
 ```js
 pm.test("Default operator values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [100123, 100481, 101121, 103213, 103486, 103710, 107465, 112573, 114726, 114772];
+  var expected = [298, 958, 234, 923, 132, 567, 906, 116, 182, 600];
   for (var i = 0; i < 10; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

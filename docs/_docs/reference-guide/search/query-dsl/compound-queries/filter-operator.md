@@ -36,8 +36,7 @@ SEARCH /bank/
         ]
       }
     ]
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -74,9 +73,9 @@ pm.test("Filter Operator size", function() {
 ```js
 pm.test("Filter Operator values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [180263, 281480, 291815, 352709, 382741, 411861, 452560, 673027, 859730, 876001];
+  var expected = [665, 319, 735, 475, 934, 969, 284, 576, 999, 417];
   for (var i = 0; i < 10; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

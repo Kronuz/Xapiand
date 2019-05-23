@@ -91,8 +91,7 @@ SEARCH /bank/
 {
   "_query": {
     "style.footwear": "casual shoes"
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -129,9 +128,9 @@ pm.test("Namespace size", function() {
 ```js
 pm.test("Namespace values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [103486, 111405, 112573, 114726, 115447, 116552, 121222, 121870, 123013, 123939];
+  var expected = [978, 62, 471, 485, 649, 277, 537, 602, 689, 764];
   for (var i = 0; i < 10; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

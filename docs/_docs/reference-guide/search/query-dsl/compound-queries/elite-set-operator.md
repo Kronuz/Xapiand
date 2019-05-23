@@ -54,8 +54,7 @@ SEARCH /bank/
       { "personality": "shallow" },
       { "personality": "well" }
     ]
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -92,9 +91,9 @@ pm.test("Elite Set Operator size", function() {
 ```js
 pm.test("Elite Set Operator values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [100123, 100481, 101294, 103486, 103710, 107465, 108731, 109766, 112495, 113400];
+  var expected = [593, 230, 622, 499, 661, 976, 807, 339, 64, 382];
   for (var i = 0; i < 10; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

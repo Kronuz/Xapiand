@@ -48,12 +48,13 @@ SEARCH /bank/
     "personality": {
       "_phrase": "these days are few and far between"
     }
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{: .test }
 
 ```js
 pm.test("response is ok", function() {
@@ -84,9 +85,9 @@ pm.test("phrase query size", function() {
 ```js
 pm.test("phrase query values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [123359, 141204, 155986, 179019, 206371, 206641, 208048, 211583, 223600, 225744];
+  var expected = [923, 553, 535, 393, 90, 156, 60, 302, 415, 424];
   for (var i = 0; i < 10; ++i) {
-      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

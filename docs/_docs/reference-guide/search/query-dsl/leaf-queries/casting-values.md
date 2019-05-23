@@ -36,8 +36,7 @@ SEARCH /bank/
     "contact.postcode" : {
       "_text": 84535
     }
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -74,9 +73,9 @@ pm.test("Casting size", function() {
 ```js
 pm.test("Casting value is valid", function() {
   var jsonData = pm.response.json();
-  var expected = [233733];
+  var expected = [768];
   for (var i = 0; i < 1; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

@@ -24,8 +24,7 @@ SEARCH /bank/
 {
   "_query": {
     "personality": "\"adventurous nature\" -ambitious"
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -62,9 +61,9 @@ pm.test("Love and Hate size", function() {
 ```js
 pm.test("Love and Hate values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [229817, 348412, 386529, 413668, 462693, 504517, 539397, 576019, 592913, 594595];
+  var expected = [978, 500, 268, 953, 609, 378, 380, 479, 628, 340];
   for (var i = 0; i < 10; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

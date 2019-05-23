@@ -34,8 +34,7 @@ SEARCH /bank/
 {
   "_query": {
     "personality": "responsive"
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -72,9 +71,9 @@ pm.test("simple query size", function() {
 ```js
 pm.test("simple query value is valid", function() {
   var jsonData = pm.response.json();
-  var expected = [101253, 109766, 119292, 121222, 124835, 134749, 137909, 152669, 154831, 163396];
+  var expected = [477, 246, 274, 773, 523, 705, 272, 339, 631, 854];
   for (var i = 0; i < 10; ++i) {
-      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

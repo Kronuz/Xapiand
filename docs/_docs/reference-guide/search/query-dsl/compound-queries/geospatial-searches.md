@@ -24,8 +24,7 @@ SEARCH /bank/
         "_longitude": -74.01042
       }
     }
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -62,9 +61,9 @@ pm.test("Geospatial Point size", function() {
 ```js
 pm.test("Geospatial Point values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [100123, 100481, 101121, 101253, 101294, 103213, 103486, 103710, 104419, 107465];
+  var expected = [404, 85, 668, 383, 477, 978, 62, 361, 637, 38];
   for (var i = 0; i < 10; ++i) {
-    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

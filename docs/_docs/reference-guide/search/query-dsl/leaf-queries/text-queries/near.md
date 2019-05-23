@@ -21,8 +21,7 @@ SEARCH /bank/
     "personality": {
       "_near": "adventurous ambitious"
     }
-  },
-  "_sort": "accountNumber"
+  }
 }
 ```
 {% endcapture %}
@@ -59,9 +58,9 @@ pm.test("near query size", function() {
 ```js
 pm.test("near query values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [447943, 605225];
+  var expected = [282, 494];
   for (var i = 0; i < 2; ++i) {
-      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```
