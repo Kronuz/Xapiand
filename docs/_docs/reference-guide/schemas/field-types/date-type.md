@@ -8,8 +8,8 @@ short_title: Date / Time
 JSON doesn't have a date, datetime, or time datatype, so dates in Xapiand can
 either be:
 
-* Strings containing formatted dates, e.g. `"2019-05-24T10:41:25.123Z"`,
-  `"2019-05-24"`, `"2019/05/24 10:41:25.123"` or ISO-8601.
+* Strings containing formatted dates, e.g. `"2001-05-24T10:41:25.123Z"`,
+  `"2001-05-24"`, `"2001/05/24 10:41:25.123"` or ISO-8601.
 * A floating point number representing seconds-since-the-epoch.
 * An object containing a `_datetime` or `_date` type.
 
@@ -26,7 +26,7 @@ back to a string depending on the date format that is associated with the field.
 UPDATE /bank/1
 
 {
-  "birthday": "2019-05-24T10:41:25.123Z"
+  "birthday": "2001-05-24T10:41:25.123Z"
 }
 ```
 {% endcapture %}
@@ -41,22 +41,14 @@ UPDATE /bank/1
 {
   "birthday": {
     "_datetime": {
-      "_year": 2019,
+      "_year": 2001,
       "_month": 5,
       "_day": 24,
       "_hour": 10,
       "_min": 41,
       "_sec": 25,
       "_fsec": 0.123
-    },
-    "_accuracy": [
-      "hour",
-      "day",
-      "month",
-      "year",
-      "decade",
-      "century"
-    ]
+    }
   }
 }
 ```
@@ -116,7 +108,7 @@ UPDATE /bank/2
 
 {
     "birthday": {
-      "_value": "2011-01-01||+1y+3M",
+      "_value": "2019-01-01||-18y+4M+23d",
       "_type": "datetime"
     }
 }
@@ -124,7 +116,7 @@ UPDATE /bank/2
 {% endcapture %}
 {% include curl.html req=req %}
 
-The adove example is indexed as "`2012-04-01`".
+The above example is indexed as "`2001-05-24`".
 
 
 ## Parameters
