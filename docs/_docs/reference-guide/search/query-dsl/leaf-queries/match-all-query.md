@@ -21,7 +21,7 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
@@ -29,14 +29,13 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("match all total", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(1000);
 });
 ```
+{% endcomment %}
 
 # Match None Query
 
@@ -59,7 +58,7 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
@@ -67,11 +66,10 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("match all total", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(0);
 });
 ```
+{% endcomment %}

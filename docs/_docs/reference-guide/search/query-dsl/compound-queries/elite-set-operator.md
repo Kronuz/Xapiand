@@ -58,17 +58,19 @@ SEARCH /bank/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req query="sort=_id" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Test name here
+params: sort=_id
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Elite Set Operator count", function() {
@@ -77,16 +79,12 @@ pm.test("Elite Set Operator count", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Elite Set Operator size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(10);
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Elite Set Operator values are valid", function() {
@@ -97,6 +95,7 @@ pm.test("Elite Set Operator values are valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 A similar result can be achieved by setting the _default operator_ via the
 [Elite Set Modifier](../query-modifiers#elite-set-modifier).

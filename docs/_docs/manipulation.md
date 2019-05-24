@@ -23,15 +23,19 @@ PUT /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: PUT John -> John Doe" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: PUT John -> John Doe
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 The above will index the specified document into the user index, with the ID of
 `John`. If we then executed the above command again with a different (or same)
@@ -48,15 +52,19 @@ PUT /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: PUT John -> John" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: PUT John -> John
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 The above completely overwrites the existent document with the ID of `John` with
 the new one.
@@ -75,15 +83,19 @@ PUT /twitter/user/Jane
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: PUT Jane -> Jane Doe" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: PUT Jane -> Jane Doe
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 The above indexes a new document with an ID of `Jane`.
 
@@ -104,15 +116,19 @@ POST /twitter/user/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: POST -> Richard Roe" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: POST -> Richard Roe
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 Note that in the above case, we are using the `POST` verb instead of `PUT`
 as we're not specifying an explicit ID.
@@ -137,18 +153,19 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: UPDATE John -> male" %}
+{% include curl.html req=req %}
 
 
-{: .test }
+{% comment %}
+---
+description: Index: UPDATE John -> male
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is merged", function() {
@@ -157,6 +174,7 @@ pm.test("Response is merged", function() {
   pm.expect(jsonData.gender).to.equal('male');
 });
 ```
+{% endcomment %}
 
 And the following example shows how to update the same document by adding an
 _age_ field to it and at the same time changing the _name_ from simply
@@ -173,15 +191,19 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: UPDATE John -> Johnny Doe, 17" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: UPDATE John -> Johnny Doe, 17
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 
 ### Updating With Scripts
@@ -200,17 +222,18 @@ UPDATE /twitter/user/John
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: UPDATE John -> John Doe, 22 (scripted)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: UPDATE John -> John Doe, 22 (scripted)
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is merged", function() {
@@ -220,14 +243,13 @@ pm.test("Response is merged", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Response with script applied", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.age).to.equal(22);
 });
 ```
+{% endcomment %}
 
 In the above example, `_doc` is the current document and `_old_doc` refers to
 the previous document that is about to be updated.
@@ -244,12 +266,16 @@ our previous user with the ID of `Jane`:
 DELETE /twitter/user/Jane
 ```
 {% endcapture %}
-{% include curl.html req=req title="Index: DELETE Jane" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Index: DELETE Jane
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}

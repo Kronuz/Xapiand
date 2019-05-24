@@ -68,17 +68,18 @@ Content-Type: application/x-ndjson
 @accounts.ndjson
 ```
 {% endcapture %}
-{% include curl.html req=req title="Load sample data" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Load sample data
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is valid", function() {
@@ -90,8 +91,6 @@ pm.test("Response is valid", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Restore received all", function() {
   var jsonData = pm.response.json();
@@ -99,16 +98,12 @@ pm.test("Restore received all", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Restore processed all", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.processed).to.equal(1000);
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Restore indexed all", function() {
@@ -118,8 +113,6 @@ pm.test("Restore indexed all", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Restore values are valid", function() {
   var jsonData = pm.response.json();
@@ -128,6 +121,7 @@ pm.test("Restore values are valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 {: .note .caution }
 When using _curl_, make sure to use `--data-binary`, not `-d` or `--data`
@@ -147,7 +141,7 @@ INFO /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
@@ -155,14 +149,13 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Response doc_count", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.doc_count).to.equal(1000);
 });
 ```
+{% endcomment %}
 
 Response should be something like:
 
@@ -209,17 +202,18 @@ returns all documents in the bank index:
 SEARCH /bank/?sort=accountNumber&pretty
 ```
 {% endcapture %}
-{% include curl.html req=req title="Search ordered by accountNumber" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Search ordered by accountNumber
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response values are valid", function() {
@@ -230,6 +224,7 @@ pm.test("Response values are valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 Let's first dissect the search call. We are searching in the `/bank/` index,
 and the `q=*` query parameter instructs Xapiand to _match all_ documents in the
@@ -393,17 +388,18 @@ SEARCH /bank/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Search ordered by balance" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Search ordered by balance
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response values are valid", function() {
@@ -414,6 +410,7 @@ pm.test("Response values are valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 ## Executing Searches
 
@@ -494,9 +491,12 @@ SEARCH /bank/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Search filtered balance" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Search filtered balance
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -504,14 +504,14 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Response is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(286);
 });
 ```
+{% endcomment %}
+
 
 ## Executing Aggregations
 

@@ -27,15 +27,13 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Simple query count", function() {
@@ -44,8 +42,6 @@ pm.test("Simple query count", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Simple query size", function() {
   var jsonData = pm.response.json();
@@ -53,14 +49,13 @@ pm.test("Simple query size", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Simple query value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits[0].favoriteFruit).to.equal('banana');
 });
 ```
+{% endcomment %}
 
 When a query is executed, the result is a list of documents that match the
 query, together with a **weight**, a **rank** and a **percent** for each which

@@ -55,15 +55,13 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is aggregation", function() {
@@ -74,6 +72,7 @@ pm.test("Response is aggregation", function() {
   expectEqualNumbers(jsonData.aggregations.indiana_city_count._count, 17);
 });
 ```
+{% endcomment %}
 
 Response:
 

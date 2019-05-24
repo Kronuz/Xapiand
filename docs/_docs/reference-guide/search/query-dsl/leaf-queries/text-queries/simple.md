@@ -40,15 +40,16 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+params: sort=_id
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Simple query count", function() {
@@ -57,16 +58,12 @@ pm.test("Simple query count", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Simple query size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(10);
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Simple query value is valid", function() {
@@ -77,6 +74,7 @@ pm.test("Simple query value is valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 Resulting in documents containing the word "_responsive_" in any part of the
 body of the "_personality_" field.

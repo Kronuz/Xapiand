@@ -50,15 +50,13 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is aggregation", function() {
@@ -70,6 +68,7 @@ pm.test("Response is aggregation", function() {
   expectEqualNumbers(jsonData.aggregations.avg_age._avg, 30.042);
 });
 ```
+{% endcomment %}
 
 The above aggregation computes the average grade over all documents. The above
 will return the following:

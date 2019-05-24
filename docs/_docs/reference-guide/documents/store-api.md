@@ -26,15 +26,19 @@ Content-Type: image/png
 @Lenna.png
 ```
 {% endcapture %}
-{% include curl.html req=req title="Store PNG" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Store PNG
+---
 
 ```js
 pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 And getting it is just a matter of retreiving it using the `GET` HTTP method:
 
@@ -45,15 +49,19 @@ GET /assets/Lenna
 Accept: image/png
 ```
 {% endcapture %}
-{% include curl.html req=req title="Get PNG (using Accept)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Get PNG (using Accept)
+---
 
 ```js
 pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 Or by visiting the link to it with your web browser:
 [http://localhost:8880/assets/Lenna](http://localhost:8880/assets/Lenna){:target="_blank"}
@@ -81,15 +89,19 @@ Content-Type: application/pdf
 @Lenna.pdf
 ```
 {% endcapture %}
-{% include curl.html req=req title="Store PDF (Using Content-Type)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Store PDF (Using Content-Type)
+---
 
 ```js
 pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 This time we also include the `.jpg` selector as a [File Extension](#file-extension):
 
@@ -102,15 +114,19 @@ Content-Type: image/jpeg
 @Lenna.jpg
 ```
 {% endcapture %}
-{% include curl.html req=req title="Store JPG (Using .jpg selector)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Store JPG (Using .jpg selector)
+---
 
 ```js
 pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 Then you can get either of them requesting the appropriate content type in
 the `Accept` header:
@@ -122,9 +138,12 @@ GET /assets/Lenna
 Accept: application/pdf
 ```
 {% endcapture %}
-{% include curl.html req=req title="Retrieve PDF (Using Accept)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Retrieve PDF (Using Accept)
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -132,15 +151,11 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Response content type is PDF", function() {
     pm.response.to.be.header('Content-Type', 'application/pdf');
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is stored PDF", function() {
@@ -148,6 +163,7 @@ pm.test("Response is stored PDF", function() {
     // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('66bb6df2255f34e2be54344047dad389a94be873e53a0b4c46817a3ecaeb6a61')
 });
 ```
+{% endcomment %}
 
 ### Default Content Type
 
@@ -163,9 +179,12 @@ GET /assets/Lenna
 Accept: *
 ```
 {% endcapture %}
-{% include curl.html req=req title="Retrieve PDF (Using Accept)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Retrieve PDF (Using Accept)
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -173,15 +192,11 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Response content type is JPG", function() {
     pm.response.to.be.header('Content-Type', 'image/jpeg');
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is stored JPG", function() {
@@ -189,6 +204,7 @@ pm.test("Response is stored JPG", function() {
     // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('820eae76e4639a059a1bc799763ad82961ffbc8d41b58920a3f7ac622455ed46')
 });
 ```
+{% endcomment %}
 
 
 ### File Extension
@@ -205,9 +221,12 @@ document with ID `Lenna`:
 GET /assets/Lenna.png
 ```
 {% endcapture %}
-{% include curl.html req=req title="Retrieve PNG (Using .png selector)" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Retrieve PNG (Using .png selector)
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -215,15 +234,11 @@ pm.test("Response is success", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Response content type is PNG", function() {
     pm.response.to.be.header('Content-Type', 'image/png');
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is stored PNG", function() {
@@ -231,6 +246,7 @@ pm.test("Response is stored PNG", function() {
     // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f')
 });
 ```
+{% endcomment %}
 
 Or visiting the link to the PNG content with your web browser:
 [http://localhost:8880/assets/Lenna.png](http://localhost:8880/assets/Lenna.png){:target="_blank"}
@@ -246,17 +262,18 @@ You can get the information about the document as usual:
 INFO /assets/Lenna
 ```
 {% endcapture %}
-{% include curl.html req=req title="Retrieve information" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Retrieve information
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response with proper data", function() {
@@ -268,7 +285,7 @@ pm.test("Response with proper data", function() {
   pm.expect(jsonData.data[3].content_type).to.equal("image/jpeg");
 });
 ```
-
+{% endcomment %}
 
 The result (partially shown) has the available content types listed inside
  `data`
@@ -319,15 +336,19 @@ Content-Type: image/jpeg
 Content-Length: 0
 ```
 {% endcapture %}
-{% include curl.html req=req title="Remove content" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Remove content
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 {: .note .caution }
 Note removing content doesn't actually remove the blob from the volume, it

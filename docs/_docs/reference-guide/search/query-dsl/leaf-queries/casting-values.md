@@ -42,15 +42,16 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+params: sort=_id
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Casting count", function() {
@@ -59,16 +60,12 @@ pm.test("Casting count", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Casting size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(1);
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Casting value is valid", function() {
@@ -79,6 +76,7 @@ pm.test("Casting value is valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 
 ## Type Compatibility

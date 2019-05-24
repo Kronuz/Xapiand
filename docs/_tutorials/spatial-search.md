@@ -25,17 +25,18 @@ Content-Type: application/x-ndjson
 @cities.ndjson
 ```
 {% endcapture %}
-{% include curl.html req=req title="Load sample data" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Load sample data
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is valid", function() {
@@ -47,8 +48,6 @@ pm.test("Response is valid", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Restore received all", function() {
   var jsonData = pm.response.json();
@@ -56,16 +55,12 @@ pm.test("Restore received all", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Restore processed all", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.processed).to.equal(1000)
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Restore indexed all", function() {
@@ -75,8 +70,6 @@ pm.test("Restore indexed all", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Restore values are valid", function() {
   var jsonData = pm.response.json();
@@ -85,6 +78,8 @@ pm.test("Restore values are valid", function() {
   }
 });
 ```
+{% endcomment %}
+
 
 ## Searching
 
@@ -128,17 +123,18 @@ SEARCH /cities/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Search near El Cerrito" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Search near El Cerrito
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response values are valid", function() {
@@ -149,6 +145,7 @@ pm.test("Response values are valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 Sure enough, Xapiand returns a list of cities in the Bay Area, nearest first:
 
@@ -214,17 +211,18 @@ SEARCH /cities/
 }
 ```
 {% endcapture %}
-{% include curl.html req=req title="Search near El Cerrito from San Francisco" %}
+{% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+description: Search near El Cerrito from San Francisco
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response values are valid", function() {
@@ -235,6 +233,7 @@ pm.test("Response values are valid", function() {
   }
 });
 ```
+{% endcomment %}
 
 Now Xapiand returns the same cities, but now nearest to _San Francisco_ first.
 
@@ -253,7 +252,7 @@ Now Xapiand returns the same cities, but now nearest to _San Francisco_ first.
 ```
 
 
-{% capture req %}
+{% comment %}
 
 ```json
 SEARCH /cities/
@@ -272,20 +271,16 @@ SEARCH /cities/
   }
 }
 ```
-{% endcapture %}
-{: .test }
-{% include curl.html req=req title="Search closest cities to North Dakota" %}
 
-
-{: .test }
+---
+description: Search closest cities to North Dakota
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Geospatial Circle count", function() {
@@ -294,16 +289,12 @@ pm.test("Geospatial Circle count", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("Geospatial Circle size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(5);
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Geospatial Circle values are valid", function() {
@@ -318,3 +309,4 @@ pm.test("Geospatial Circle values are valid", function() {
   }
 });
 ```
+{% endcomment %}

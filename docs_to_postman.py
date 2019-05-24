@@ -7,11 +7,10 @@ import os
 import sys
 import json
 import email
-import urllib
 import urlparse
 
 
-PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\ntitle: ([^\n]+)|\n(#+)\s*([^\n]+)|title="(.+?)"', re.DOTALL)
+PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\n(#+)\s*([^\n]+)|\n([a-z]+)\s*:\s*([^\n]+)', re.DOTALL)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -60,20 +59,22 @@ def main():
                     context.clear()
                     context.update(file_context)
                     # Add title:
-                    index[filename_path] = groups[2]
-                    context['titles'].append((0, groups[2]))
-                elif groups[3]:
-                    # Flush:
-                    if context and 'request' in context:
-                        all_tests.append(dict(context))
-                    context.clear()
-                    context.update(file_context)
-                    # Add title:
-                    level = len(groups[3])
+                    level = len(groups[2])
                     context['titles'] = [title for title in context.get('titles', []) if title[0] < level]
-                    context['titles'].append((level, groups[4]))
+                    context['titles'].append((level, groups[3]))
                 elif groups[5]:
-                    context['name'] = urllib.unquote(groups[5])
+                    name = groups[4]
+                    if name == 'title':
+                        # Flush:
+                        if context and 'request' in context:
+                            all_tests.append(dict(context))
+                        context.clear()
+                        context.update(file_context)
+                        # Add title:
+                        index[filename_path] = groups[5]
+                        context['titles'].append((0, groups[5]))
+                    else:
+                        context[name] = groups[5]
             PARSER_RE.sub(process, data)
             # Flush:
             if context and 'request' in context:
@@ -100,7 +101,7 @@ def main():
     for test in all_tests:
         items = collection["item"]
         title = []
-        for _, name in test["titles"]:
+        for _, name in test['titles']:
             for item in items:
                 if item.get("name") == name:
                     break
@@ -116,7 +117,7 @@ def main():
         method = None
         body = []
         headers = email.Message.Message()
-        for i, line in enumerate(test["request"].split('\n')):
+        for i, line in enumerate(test['request'].split('\n')):
             line = line.strip()
             if i == 0:
                 method, _, url = line.partition(' ')
@@ -129,7 +130,7 @@ def main():
                 else:
                     k, _, v = line.partition(':')
                     if not _:
-                        raise ValueError("Malformed header in {} ({}): {}".format(test["filename"], ' / '.join(title), repr(line)))
+                        raise ValueError("Malformed header in {} ({}): {}".format(test['filename'], ' / '.join(title), repr(line)))
                     headers.add_header(k.strip(), v.strip())
             else:
                 body.append(line)
@@ -150,12 +151,11 @@ def main():
         parsed = urlparse.urlparse(url)
         path = parsed.path[1:] if parsed.path.startswith('/') else parsed.path
         path = path.split('/')
-        qs = urlparse.parse_qs(parsed.query)
+        qs = urlparse.parse_qs(parsed.query + '&' + test.get('params', ''))
         for k, v in {
             "commit": None,
             "volatile": None,
             "echo": None,
-            "sort": "_id",
         }.items():
             if k not in qs:
                 qs[k] = v
@@ -193,14 +193,14 @@ def main():
                     "mode": "raw",
                     "raw": body,
                 }
-        name = test.get("name")
+        name = test.get('description')
         item = {
             "request": request,
         }
         if name:
             item["name"] = name
         items.append(item)
-        tests = test.get("tests")
+        tests = test.get('tests')
         if tests:
             scripts = []
             item["event"] = [{

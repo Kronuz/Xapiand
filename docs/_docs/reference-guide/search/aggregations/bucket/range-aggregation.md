@@ -78,15 +78,13 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is aggregation", function() {
@@ -96,6 +94,7 @@ pm.test("Response is aggregation", function() {
   pm.expect(jsonData.aggregations.balances_by_range["4000.0.."]["_doc_count"]).to.equal(36)
 });
 ```
+{% endcomment %}
 
 Response:
 
@@ -150,16 +149,13 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is aggregation", function() {
@@ -169,6 +165,7 @@ pm.test("Response is aggregation", function() {
   pm.expect(jsonData.aggregations.balances_by_range["rich"]["_doc_count"]).to.equal(36)
 });
 ```
+{% endcomment %}
 
 Response:
 

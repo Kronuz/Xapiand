@@ -27,15 +27,16 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
+---
+params: sort=_id
+---
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("near query count", function() {
@@ -44,16 +45,12 @@ pm.test("near query count", function() {
 });
 ```
 
-{: .test }
-
 ```js
 pm.test("near query size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(2);
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("near query values are valid", function() {
@@ -64,3 +61,4 @@ pm.test("near query values are valid", function() {
   }
 });
 ```
+{% endcomment %}

@@ -60,15 +60,13 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-{: .test }
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
-{: .test }
 
 ```js
 pm.test("Response is aggregation", function() {
@@ -89,6 +87,7 @@ pm.test("Response is aggregation", function() {
   expectEqualNumbers(jsonData.aggregations.balance_stats._std_deviation_bounds._lower, -446.50130192041049);
 });
 ```
+{% endcomment %}
 
 The above aggregation computes the balance statistics over all documents. The
 above will return the following:
