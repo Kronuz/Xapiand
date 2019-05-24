@@ -15,6 +15,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 {: #unreleased }
 
 
+---
+## [0.23.0] - 2019-05-24
+{: #v0-23-0 }
+
+### Changed
+- **BREAKING**: Geo: Renamed `height` to `altitude`
+- **BREAKING**: Geo: Renamed `lng` to `lon`
+
+### Fixed
+- Schema with nested arrays and objects
+
+
+---
 ## [0.22.2] - 2019-05-16
 {: #v0-22-2 }
 
@@ -739,8 +752,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.22.2...HEAD
-[0.22.2]: https://github.com/Kronuz/Xapiand/compare/v0.22.2...v0.22.2
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/Kronuz/Xapiand/compare/v0.22.2...v0.23.0
+[0.22.2]: https://github.com/Kronuz/Xapiand/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/Kronuz/Xapiand/compare/v0.22.0...v0.22.1
 [0.22.0]: https://github.com/Kronuz/Xapiand/compare/v0.21.2...v0.22.0
 [0.21.2]: https://github.com/Kronuz/Xapiand/compare/v0.21.1...v0.21.2
