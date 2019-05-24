@@ -8,13 +8,13 @@ short_title: Date / Time
 JSON doesn't have a date, datetime, or time datatype, so dates in Xapiand can
 either be:
 
-* Strings containing formatted dates, e.g. `"2001-11-15T13:12:00"`,
-  `"2001-11-15"`, `"2001/11/15 13:12:00"` or ISO-8601.
-* A number representing milliseconds-since-the-epoch.
-* An object containing a `_date` type.
+* Strings containing formatted dates, e.g. `"2019-05-24T10:41:25.123Z"`,
+  `"2019-05-24"`, `"2019/05/24 10:41:25.123"` or ISO-8601.
+* A floating point number representing seconds-since-the-epoch.
+* An object containing a `_datetime` or `_date` type.
 
 Internally, dates are converted to UTC (if the time-zone is specified) and
-stored as a number representing milliseconds-since-the-epoch.
+stored as a floating point number representing seconds-since-the-epoch.
 
 Queries on dates are internally converted to range queries on this
 representation, and the result of aggregations and stored fields is converted
@@ -26,7 +26,7 @@ back to a string depending on the date format that is associated with the field.
 UPDATE /bank/1
 
 {
-  "birthday": "2001-11-15T13:12:00"
+  "birthday": "2019-05-24T10:41:25.123Z"
 }
 ```
 {% endcapture %}
@@ -40,13 +40,23 @@ UPDATE /bank/1
 
 {
   "birthday": {
-    "_date": {
-      "_year": 2001,
-      "_month": 11,
-      "_day": 15,
-      "_time": "13:30:25.123"
+    "_datetime": {
+      "_year": 2019,
+      "_month": 5,
+      "_day": 24,
+      "_hour": 10,
+      "_min": 41,
+      "_sec": 25,
+      "_fsec": 0.123
     },
-    "_accuracy": [ "day", "month", "year" ]
+    "_accuracy": [
+      "hour",
+      "day",
+      "month",
+      "year",
+      "decade",
+      "century"
+    ]
   }
 }
 ```
