@@ -151,9 +151,14 @@ def main():
         path = parsed.path[1:] if parsed.path.startswith('/') else parsed.path
         path = path.split('/')
         qs = urlparse.parse_qs(parsed.query)
-        for q in ("commit", "echo", "volatile"):
-            if q not in qs:
-                qs[q] = None
+        for k, v in {
+            "commit": None,
+            "volatile": None,
+            "echo": None,
+            "sort": "_id",
+        }.items():
+            if k not in qs:
+                qs[k] = v
         query = []
         for k, v in qs.items():
             query.append({
