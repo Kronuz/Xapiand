@@ -27,3 +27,7 @@
 constexpr const char RESERVED_YEAR[]                        = RESERVED__ "year";
 constexpr const char RESERVED_MONTH[]                       = RESERVED__ "month";
 constexpr const char RESERVED_DAY[]                         = RESERVED__ "day";
+constexpr const char RESERVED_HOUR[]                        = RESERVED__ "hour";
+constexpr const char RESERVED_MIN[]                         = RESERVED__ "min";
+constexpr const char RESERVED_SEC[]                         = RESERVED__ "sec";
+constexpr const char RESERVED_FSEC[]                        = RESERVED__ "fsec";

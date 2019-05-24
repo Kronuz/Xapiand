@@ -56,7 +56,7 @@ static constexpr int cumdays[2][12] = {
 };
 
 
-static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
+static inline void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 	switch (year.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			tm.year = year.u64();
@@ -70,7 +70,7 @@ static void process_date_year(Datetime::tm_t& tm, const MsgPack& year) {
 }
 
 
-static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
+static inline void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 	switch (month.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			tm.mon = month.u64();
@@ -84,7 +84,7 @@ static void process_date_month(Datetime::tm_t& tm, const MsgPack& month) {
 }
 
 
-static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
+static inline void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 	switch (day.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
 			tm.day = day.u64();
@@ -98,7 +98,66 @@ static void process_date_day(Datetime::tm_t& tm, const MsgPack& day) {
 }
 
 
-static void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
+static inline void process_date_hour(Datetime::tm_t& tm, const MsgPack& hour) {
+	switch (hour.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.hour = hour.u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.hour = hour.i64();
+			return;
+		default:
+			THROW(DatetimeError, "'{}' must be a positive integer value", RESERVED_HOUR);
+	}
+}
+
+
+static inline void process_date_min(Datetime::tm_t& tm, const MsgPack& min) {
+	switch (min.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.min = min.u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.min = min.i64();
+			return;
+		default:
+			THROW(DatetimeError, "'{}' must be a positive integer value", RESERVED_MIN);
+	}
+}
+
+
+static inline void process_date_sec(Datetime::tm_t& tm, const MsgPack& sec) {
+	switch (sec.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.sec = sec.u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.sec = sec.i64();
+			return;
+		default:
+			THROW(DatetimeError, "'{}' must be a positive integer value", RESERVED_SEC);
+	}
+}
+
+
+static inline void process_date_fsec(Datetime::tm_t& tm, const MsgPack& fsec) {
+	switch (fsec.get_type()) {
+		case MsgPack::Type::POSITIVE_INTEGER:
+			tm.fsec = fsec.u64();
+			return;
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			tm.fsec = fsec.i64();
+			return;
+		case MsgPack::Type::FLOAT:
+			tm.fsec = fsec.f64();
+			return;
+		default:
+			THROW(DatetimeError, "'{}' must be a numeric value", RESERVED_FSEC);
+	}
+}
+
+
+static inline void process_date_time(Datetime::tm_t& tm, std::string_view str_time) {
 	int errno_save;
 	auto size = str_time.size();
 	switch (size) {
@@ -223,37 +282,32 @@ error_out_of_range:
 }
 
 
-/*
- * Returns struct tm according to the datetime specified by datetime.
- */
-Datetime::tm_t
-Datetime::DatetimeParser(std::string_view datetime)
-{
+static inline void process_date_datetime(Datetime::tm_t& tm, std::string_view str_datetime) {
 	std::cmatch m;
-	tm_t tm;
+
 	// Check if datetime is ISO 8601.
-	auto pos = datetime.find("||");
+	auto pos = str_datetime.find("||");
 	if (pos == std::string_view::npos) {
-		auto format = Iso8601Parser(datetime, tm);
+		auto format = Iso8601Parser(str_datetime, tm);
 		switch (format) {
-			case Format::VALID:
-				return tm;
-			case Format::INVALID:
+			case Datetime::Format::VALID:
+				return;
+			case Datetime::Format::INVALID:
 				break;
-			case Format::OUT_OF_RANGE:
+			case Datetime::Format::OUT_OF_RANGE:
 				goto error_out_of_range;
 			default:
 				goto error;
 		}
 	} else {
-		auto format = Iso8601Parser(datetime.substr(0, pos), tm);
+		auto format = Iso8601Parser(str_datetime.substr(0, pos), tm);
 		switch (format) {
-			case Format::VALID:
-				processDateMath(datetime.substr(pos + 2), tm);
-				return tm;
-			case Format::INVALID:
+			case Datetime::Format::VALID:
+				processDateMath(str_datetime.substr(pos + 2), tm);
+				return;
+			case Datetime::Format::INVALID:
 				break;
-			case Format::OUT_OF_RANGE:
+			case Datetime::Format::OUT_OF_RANGE:
 				goto error_out_of_range;
 			default:
 				goto error;
@@ -261,14 +315,14 @@ Datetime::DatetimeParser(std::string_view datetime)
 	}
 
 	int errno_save;
-	if (std::regex_match(datetime.begin(), datetime.end(), m, date_re) && static_cast<std::size_t>(m.length(0)) == datetime.size()) {
+	if (std::regex_match(str_datetime.begin(), str_datetime.end(), m, Datetime::date_re) && static_cast<std::size_t>(m.length(0)) == str_datetime.size()) {
 		tm.year = strict_stoi(&errno_save, m.str(1));
 		if (errno_save != 0) { goto error; }
 		tm.mon = strict_stoi(&errno_save, m.str(3));
 		if (errno_save != 0) { goto error; }
 		tm.day = strict_stoi(&errno_save, m.str(4));
 		if (errno_save != 0) { goto error; }
-		if (!isvalidDate(tm.year, tm.mon, tm.day)) {
+		if (!Datetime::isValidDate(tm.year, tm.mon, tm.day)) {
 			goto error_out_of_range;
 		}
 
@@ -294,11 +348,11 @@ Datetime::DatetimeParser(std::string_view datetime)
 					fs.insert(0, 1, '.');
 					auto fsec = strict_stod(&errno_save, fs);
 					if (errno_save != 0) { goto error; }
-					tm.fsec = normalize_fsec(fsec);
+					tm.fsec = Datetime::normalize_fsec(fsec);
 				}
 			}
 			if (m.length(12) != 0) {
-				computeTimeZone(tm, datetime[m.position(13) - 1], m.str(13), m.str(14));
+				computeTimeZone(tm, str_datetime[m.position(13) - 1], m.str(13), m.str(14));
 			}
 		}
 
@@ -307,14 +361,167 @@ Datetime::DatetimeParser(std::string_view datetime)
 			processDateMath(m.str(16), tm);
 		}
 
-		return tm;
+		return;
 	}
 
 error:
-	THROW(DatetimeError, "In DatetimeParser, format {} is incorrect", datetime);
+	THROW(DatetimeError, "Error format in _datetime: {}", str_datetime);
 
 error_out_of_range:
-	THROW(DatetimeError, "Datetime: {} is out of range", datetime);
+	THROW(DatetimeError, "Datetime: {} is out of range", str_datetime);
+}
+
+
+static inline void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
+	switch (time.get_type()) {
+		case MsgPack::Type::MAP: {
+			const auto it_e = time.end();
+			for (auto it = time.begin(); it != it_e; ++it) {
+				auto str_key = it->str_view();
+				auto& it_value = it.value();
+				constexpr static auto _ = phf::make_phf({
+					hh(RESERVED_HOUR),
+					hh(RESERVED_MIN),
+					hh(RESERVED_SEC),
+					hh(RESERVED_FSEC),
+				});
+				switch (_.fhh(str_key)) {
+					case _.fhh(RESERVED_HOUR):
+						process_date_hour(tm, it_value);
+						break;
+					case _.fhh(RESERVED_MIN):
+						process_date_min(tm, it_value);
+						break;
+					case _.fhh(RESERVED_SEC):
+						process_date_sec(tm, it_value);
+						break;
+					case _.fhh(RESERVED_FSEC):
+						process_date_fsec(tm, it_value);
+						break;
+					default:
+						THROW(DatetimeError, "Unsupported Key: {} in time", repr(str_key));
+				}
+			}
+			return;
+		}
+
+		case MsgPack::Type::STR:
+			process_date_time(tm, time.str_view());
+			return;
+
+		default:
+			THROW(DatetimeError, "'{}' must be a map or string value", RESERVED_TIME);
+	}
+}
+
+
+static inline void process_date_date(Datetime::tm_t& tm, const MsgPack& date) {
+	switch (date.get_type()) {
+		case MsgPack::Type::MAP: {
+			const auto it_e = date.end();
+			for (auto it = date.begin(); it != it_e; ++it) {
+				auto str_key = it->str_view();
+				auto& it_value = it.value();
+				constexpr static auto _ = phf::make_phf({
+					hh(RESERVED_YEAR),
+					hh(RESERVED_MONTH),
+					hh(RESERVED_DAY),
+				});
+				switch (_.fhh(str_key)) {
+					case _.fhh(RESERVED_YEAR):
+						process_date_year(tm, it_value);
+						break;
+					case _.fhh(RESERVED_MONTH):
+						process_date_month(tm, it_value);
+						break;
+					case _.fhh(RESERVED_DAY):
+						process_date_day(tm, it_value);
+						break;
+					default:
+						THROW(DatetimeError, "Unsupported Key: {} in date", repr(str_key));
+				}
+			}
+			return;
+		}
+
+		default:
+			THROW(DatetimeError, "'{}' must be a map value", RESERVED_DATE);
+	}
+}
+
+
+static inline void process_date_datetime(Datetime::tm_t& tm, const MsgPack& datetime) {
+	switch (datetime.get_type()) {
+		case MsgPack::Type::MAP: {
+			const auto it_e = datetime.end();
+			for (auto it = datetime.begin(); it != it_e; ++it) {
+				auto str_key = it->str_view();
+				auto& it_value = it.value();
+				constexpr static auto _ = phf::make_phf({
+					hh(RESERVED_TIME),
+					hh(RESERVED_DATE),
+					hh(RESERVED_YEAR),
+					hh(RESERVED_MONTH),
+					hh(RESERVED_DAY),
+					hh(RESERVED_HOUR),
+					hh(RESERVED_MIN),
+					hh(RESERVED_SEC),
+					hh(RESERVED_FSEC),
+				});
+				switch (_.fhh(str_key)) {
+					case _.fhh(RESERVED_TIME):
+						process_date_time(tm, it_value);
+						break;
+					case _.fhh(RESERVED_DATE):
+						process_date_date(tm, it_value);
+						break;
+					case _.fhh(RESERVED_YEAR):
+						process_date_year(tm, it_value);
+						break;
+					case _.fhh(RESERVED_MONTH):
+						process_date_month(tm, it_value);
+						break;
+					case _.fhh(RESERVED_DAY):
+						process_date_day(tm, it_value);
+						break;
+					case _.fhh(RESERVED_HOUR):
+						process_date_hour(tm, it_value);
+						break;
+					case _.fhh(RESERVED_MIN):
+						process_date_min(tm, it_value);
+						break;
+					case _.fhh(RESERVED_SEC):
+						process_date_sec(tm, it_value);
+						break;
+					case _.fhh(RESERVED_FSEC):
+						process_date_fsec(tm, it_value);
+						break;
+					default:
+						THROW(DatetimeError, "Unsupported Key: {} in datetime", repr(str_key));
+				}
+			}
+			return;
+		}
+
+		case MsgPack::Type::STR:
+			process_date_time(tm, datetime.str_view());
+			return;
+
+		default:
+			THROW(DatetimeError, "'{}' must be a map value", RESERVED_DATETIME);
+	}
+}
+
+
+/*
+ * Returns struct tm according to the datetime specified by datetime.
+ */
+Datetime::tm_t
+Datetime::DatetimeParser(std::string_view datetime)
+{
+	tm_t tm;
+	process_date_datetime(tm, datetime);
+	return tm;
 }
 
 
@@ -324,6 +531,8 @@ error_out_of_range:
 Datetime::tm_t
 Datetime::DatetimeParser(const MsgPack& value)
 {
+	L_CALL("Datetime::DatetimeParser({})", value.to_string());
+
 	double _timestamp;
 	switch (value.get_type()) {
 		case MsgPack::Type::POSITIVE_INTEGER:
@@ -339,18 +548,34 @@ Datetime::DatetimeParser(const MsgPack& value)
 			return Datetime::DatetimeParser(value.str_view());
 		case MsgPack::Type::MAP: {
 			Datetime::tm_t tm;
-			std::string_view str_time;
 			const auto it_e = value.end();
 			for (auto it = value.begin(); it != it_e; ++it) {
 				auto str_key = it->str_view();
 				auto& it_value = it.value();
 				constexpr static auto _ = phf::make_phf({
+					hh(RESERVED_TIME),
+					hh(RESERVED_DATE),
+					hh(RESERVED_DATETIME),
+
 					hh(RESERVED_YEAR),
 					hh(RESERVED_MONTH),
 					hh(RESERVED_DAY),
-					hh(RESERVED_TIME),
+					hh(RESERVED_HOUR),
+					hh(RESERVED_MIN),
+					hh(RESERVED_SEC),
+					hh(RESERVED_FSEC),
 				});
 				switch (_.fhh(str_key)) {
+					case _.fhh(RESERVED_TIME):
+						process_date_time(tm, it_value);
+						break;
+					case _.fhh(RESERVED_DATE):
+						process_date_date(tm, it_value);
+						break;
+					case _.fhh(RESERVED_DATETIME):
+						process_date_datetime(tm, it_value);
+						break;
+
 					case _.fhh(RESERVED_YEAR):
 						process_date_year(tm, it_value);
 						break;
@@ -360,24 +585,27 @@ Datetime::DatetimeParser(const MsgPack& value)
 					case _.fhh(RESERVED_DAY):
 						process_date_day(tm, it_value);
 						break;
-					case _.fhh(RESERVED_TIME):
-						try {
-							str_time = it_value.str_view();
-						} catch (const msgpack::type_error& exc) {
-							RETHROW(DatetimeError, "'{}' must be string", RESERVED_TIME);
-						}
+					case _.fhh(RESERVED_HOUR):
+						process_date_hour(tm, it_value);
 						break;
+					case _.fhh(RESERVED_MIN):
+						process_date_min(tm, it_value);
+						break;
+					case _.fhh(RESERVED_SEC):
+						process_date_sec(tm, it_value);
+						break;
+					case _.fhh(RESERVED_FSEC):
+						process_date_fsec(tm, it_value);
+						break;
+
 					default:
-						THROW(DatetimeError, "Unsupported Key: {} in datetime", repr(str_key));
+						THROW(Error, "Unsupported Datetime: {}", repr(str_key));
 				}
 			}
-			if (Datetime::isvalidDate(tm.year, tm.mon, tm.day)) {
-				if (!str_time.empty()) {
-					process_date_time(tm, str_time);
-				}
-				return tm;
+			if (!Datetime::isValidDate(tm.year, tm.mon, tm.day)) {
+				THROW(DatetimeError, "Datetime is out of range");
 			}
-			THROW(DatetimeError, "Datetime is out of range");
+			return tm;
 		}
 		default:
 			THROW(DatetimeError, "Datetime value must be numeric or string");
@@ -402,7 +630,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+				if (isValidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = 0;
 					tm.min  = 0;
 					tm.sec  = 0;
@@ -420,7 +648,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+				if (isValidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
@@ -448,7 +676,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+				if (isValidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
@@ -476,7 +704,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 				if (errno_save != 0) { return Format::ERROR; }
 				tm.day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(tm.year, tm.mon, tm.day)) {
+				if (isValidDate(tm.year, tm.mon, tm.day)) {
 					tm.hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (tm.hour < 24) {
@@ -583,7 +811,7 @@ Datetime::Iso8601Parser(std::string_view datetime)
 				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(year, mon, day)) {
+				if (isValidDate(year, mon, day)) {
 					return Format::VALID;
 				}
 				return Format::OUT_OF_RANGE;
@@ -597,7 +825,7 @@ Datetime::Iso8601Parser(std::string_view datetime)
 				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(year, mon, day)) {
+				if (isValidDate(year, mon, day)) {
 					auto hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
@@ -624,7 +852,7 @@ Datetime::Iso8601Parser(std::string_view datetime)
 				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(year, mon, day)) {
+				if (isValidDate(year, mon, day)) {
 					auto hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
@@ -651,7 +879,7 @@ Datetime::Iso8601Parser(std::string_view datetime)
 				if (errno_save != 0) { return Format::ERROR; }
 				auto day   = strict_stoul(&errno_save, datetime.substr(8, 2));
 				if (errno_save != 0) { return Format::ERROR; }
-				if (isvalidDate(year, mon, day)) {
+				if (isValidDate(year, mon, day)) {
 					auto hour = strict_stoul(&errno_save, datetime.substr(11, 2));
 					if (errno_save != 0) { return Format::ERROR; }
 					if (hour < 24) {
@@ -1133,7 +1361,7 @@ Datetime::timestamp(const tm_t& tm)
  * Validate Datetime.
  */
 bool
-Datetime::isvalidDate(int year, int month, int day)
+Datetime::isValidDate(int year, int month, int day)
 {
 	if (year < 1) {
 		return false;
@@ -1241,7 +1469,7 @@ Datetime::isDate(std::string_view date)
 				if (errno_save != 0) { return false; }
 				auto day   = strict_stoul(&errno_save, date.substr(8, 2));
 				if (errno_save != 0) { return false; }
-				if (isvalidDate(year, mon, day)) {
+				if (isValidDate(year, mon, day)) {
 					return true;
 				}
 				return false;
