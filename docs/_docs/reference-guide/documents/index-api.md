@@ -48,8 +48,9 @@ The index operation automatically creates an index if it does not already exist,
 and applies any index templates that are configured. The index operation also
 creates a dynamic schema for the index if one does not already exist. By
 default, new fields and objects will automatically be added to the schema
-definition if needed. Check out the [Schemas]({{ '/docs/reference-guide/schemas' }})
-section for more information on schema definitions, and the [put schema API]()
+definition if needed. Check out the [Schemas]({{ '/docs/reference-guide/schemas' | relative_url }})
+section for more information on schema definitions, and the
+[indices create API]({{ '/docs/reference-guide/indices/create-api' | relative_url }})
 for information about updating document schema manually.
 
 
