@@ -15,77 +15,92 @@ PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\n(#+)\s*([^\n]+)|\n([a-z]+)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+def parse_filename(filename, index, all_tests):
+    filename_path, _ = os.path.splitext(filename)
+    data = open(filename).read()
+    fnp = filename_path
+    file_context = {
+        'filename': filename,
+        'titles': [],
+    }
+    context = {}
+    context.update(file_context)
+    while fnp and fnp != BASE_DIR and fnp != '/':
+        if fnp in index:
+            context['titles'].insert(0, (0, index.get(fnp)))
+        fnp = os.path.dirname(fnp)
+    # print(filename_path, base_titles)
+
+    def process(m):
+        groups = m.groups()
+        # print(groups)
+        if groups[0] == 'json':
+            # Flush:
+            if context and 'request' in context:
+                all_tests.append(dict(context))
+            context.clear()
+            context.update(file_context)
+            context['request'] = groups[1].strip()
+        elif groups[0] == 'js':
+            context.setdefault('tests', []).append(groups[1].strip())
+        elif groups[2]:
+            # Flush:
+            if context and 'request' in context:
+                all_tests.append(dict(context))
+            context.clear()
+            context.update(file_context)
+            # Add title:
+            level = len(groups[2])
+            context['titles'] = [title for title in context.get('titles', []) if title[0] < level]
+            context['titles'].append((level, groups[3]))
+            # Clear description:
+            file_context.pop('description', None)
+            context.pop('description', None)
+        elif groups[5]:
+            name = groups[4]
+            if name == 'description':
+                # Persist description:
+                file_context[name] = groups[5]
+                context[name] = groups[5]
+            elif name == 'title':
+                # Flush:
+                if context and 'request' in context:
+                    all_tests.append(dict(context))
+                context.clear()
+                context.update(file_context)
+                # Add title:
+                index[filename_path] = groups[5]
+                context['titles'].append((0, groups[5]))
+            else:
+                context[name] = groups[5]
+    PARSER_RE.sub(process, data)
+    # Flush:
+    if context and 'request' in context:
+        all_tests.append(dict(context))
+
+
+def parse_directory(directory, index, all_tests):
+    for path, dirs, files in os.walk(directory):
+        for f in files:
+            if f.endswith('.md'):
+                # print(path, f)
+                filename = os.path.join(path, f)
+                parse_filename(filename, index, all_tests)
+
+
 def main():
     index = {}
     all_tests = []
 
-    for path, dirs, files in os.walk(os.path.join(BASE_DIR, 'docs')):
-        for f in files:
-            # print(path, f)
-            if not f.endswith('.md'):
-                continue
-            filename = os.path.join(path, f)
-            filename_path, _ = os.path.splitext(filename)
-            data = open(filename).read()
-            fnp = filename_path
-            file_context = {
-                'filename': filename,
-                'titles': [],
-            }
-            context = {}
-            context.update(file_context)
-            while fnp and fnp != BASE_DIR and fnp != '/':
-                if fnp in index:
-                    context['titles'].insert(0, (0, index.get(fnp)))
-                fnp = os.path.dirname(fnp)
-            # print(filename_path, base_titles)
-
-            def process(m):
-                groups = m.groups()
-                # print(groups)
-                if groups[0] == 'json':
-                    # Flush:
-                    if context and 'request' in context:
-                        all_tests.append(dict(context))
-                    context.clear()
-                    context.update(file_context)
-                    context['request'] = groups[1].strip()
-                elif groups[0] == 'js':
-                    context.setdefault('tests', []).append(groups[1].strip())
-                elif groups[2]:
-                    # Flush:
-                    if context and 'request' in context:
-                        all_tests.append(dict(context))
-                    context.clear()
-                    context.update(file_context)
-                    # Add title:
-                    level = len(groups[2])
-                    context['titles'] = [title for title in context.get('titles', []) if title[0] < level]
-                    context['titles'].append((level, groups[3]))
-                    # Clear description:
-                    file_context.pop('description', None)
-                    context.pop('description', None)
-                elif groups[5]:
-                    name = groups[4]
-                    if name == 'description':
-                        # Persist description:
-                        file_context[name] = groups[5]
-                        context[name] = groups[5]
-                    elif name == 'title':
-                        # Flush:
-                        if context and 'request' in context:
-                            all_tests.append(dict(context))
-                        context.clear()
-                        context.update(file_context)
-                        # Add title:
-                        index[filename_path] = groups[5]
-                        context['titles'].append((0, groups[5]))
-                    else:
-                        context[name] = groups[5]
-            PARSER_RE.sub(process, data)
-            # Flush:
-            if context and 'request' in context:
-                all_tests.append(dict(context))
+    if len(sys.argv) > 1:
+        for arg in sys.argv:
+            if os.path.isdir(arg):
+                parse_directory(arg, index, all_tests)
+            else:
+                parse_filename(arg, index, all_tests)
+    else:
+        directory = os.path.join(BASE_DIR, 'docs')
+        parse_directory(directory, index, all_tests)
 
     # print(json.dumps(all_tests, indent=4))
 
