@@ -64,7 +64,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -72,7 +72,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   var expected_doc_count = [
     1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 900, 894, 894, 883, 870, 839, 803,

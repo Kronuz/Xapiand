@@ -45,7 +45,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -73,7 +73,7 @@ pm.test("Range Searches size", function() {
 ```js
 pm.test("Range Searches values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [62, 298, 379, 58, 390, 493, 10, 961, 328, 480];
+  var expected = [4, 5, 10, 17, 23, 34, 43, 44, 58, 59];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

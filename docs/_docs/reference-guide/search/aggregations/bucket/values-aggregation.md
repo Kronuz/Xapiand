@@ -55,7 +55,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -63,7 +63,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   var expected_doc_count = [89, 76, 73, 72, 64, 58, 57, 52, 49, 49, 43, 42, 41, 37, 36, 34, 32, 30, 29, 25];
   var expected_key = ["apple", "strawberry", "grape", "watermelon", "banana", "lemon", "orange", "pear", "blueberry", "avocado", "peach", "cherry", "pineapple", "cantaloupe", "lime", "raspberry", "blackberry", "plum", "grapefruit", "nectarine"];

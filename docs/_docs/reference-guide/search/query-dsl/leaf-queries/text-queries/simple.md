@@ -43,7 +43,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -51,7 +51,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("simple query count", function() {
+pm.test("Simple query count", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.count).to.equal(10);
 });
@@ -60,7 +60,7 @@ pm.test("simple query count", function() {
 {: .test }
 
 ```js
-pm.test("simple query size", function() {
+pm.test("Simple query size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(10);
 });
@@ -69,9 +69,9 @@ pm.test("simple query size", function() {
 {: .test }
 
 ```js
-pm.test("simple query value is valid", function() {
+pm.test("Simple query value is valid", function() {
   var jsonData = pm.response.json();
-  var expected = [477, 246, 274, 773, 523, 705, 272, 339, 631, 854];
+  var expected = [20, 25, 27, 31, 37, 38, 52, 89, 106, 109];
   for (var i = 0; i < expected.length; ++i) {
       pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

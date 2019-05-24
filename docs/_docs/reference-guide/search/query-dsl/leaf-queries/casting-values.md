@@ -45,7 +45,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```

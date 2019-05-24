@@ -81,7 +81,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -89,7 +89,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.aggregations.balances_by_range["..2000.0"]["_doc_count"]).to.equal(384)
   pm.expect(jsonData.aggregations.balances_by_range["2000.0..4000.0"]["_doc_count"]).to.equal(580)
@@ -154,7 +154,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -162,7 +162,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.aggregations.balances_by_range["poor"]["_doc_count"]).to.equal(384)
   pm.expect(jsonData.aggregations.balances_by_range["average"]["_doc_count"]).to.equal(580)

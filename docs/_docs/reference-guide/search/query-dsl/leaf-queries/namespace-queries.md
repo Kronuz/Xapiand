@@ -100,7 +100,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -128,7 +128,7 @@ pm.test("Namespace size", function() {
 ```js
 pm.test("Namespace values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [978, 62, 471, 485, 649, 277, 537, 602, 689, 764];
+  var expected = [2, 6, 13, 17, 20, 23, 24, 25, 26, 29];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

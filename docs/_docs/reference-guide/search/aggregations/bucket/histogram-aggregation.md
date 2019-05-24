@@ -78,7 +78,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -86,7 +86,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   var expected_doc_count = [55, 329, 9, 1, 286, 294, 1, 1, 4, 12, 7, 1];
   var expected_key = ["0.0", "1000.0", "10000.0", "12000.0", "2000.0", "3000.0", "4000.0", "5000.0", "6000.0", "7000.0", "8000.0", "9000.0"]; // FIXME: 10000.0 and 12000.0 should be last!
@@ -194,7 +194,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -202,7 +202,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   var expected_doc_count = [243, 471, 286]
   var expected_key = ["15", "25", "35"];

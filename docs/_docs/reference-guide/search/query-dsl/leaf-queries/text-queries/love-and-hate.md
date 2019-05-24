@@ -33,7 +33,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -61,7 +61,7 @@ pm.test("Love and Hate size", function() {
 ```js
 pm.test("Love and Hate values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [978, 500, 268, 953, 609, 378, 380, 479, 628, 340];
+  var expected = [24, 37, 268, 340, 378, 380, 400, 448, 479, 492];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

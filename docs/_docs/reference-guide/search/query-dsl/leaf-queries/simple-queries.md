@@ -30,7 +30,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -38,7 +38,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("simple query count", function() {
+pm.test("Simple query count", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.count).to.equal(1);
 });
@@ -47,7 +47,7 @@ pm.test("simple query count", function() {
 {: .test }
 
 ```js
-pm.test("simple query size", function() {
+pm.test("Simple query size", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits.length).to.equal(1);
 });
@@ -56,7 +56,7 @@ pm.test("simple query size", function() {
 {: .test }
 
 ```js
-pm.test("simple query value is valid", function() {
+pm.test("Simple query value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.hits[0].favoriteFruit).to.equal('banana');
 });

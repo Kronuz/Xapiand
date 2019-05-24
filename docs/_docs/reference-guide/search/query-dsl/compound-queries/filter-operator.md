@@ -45,7 +45,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -73,7 +73,7 @@ pm.test("Filter Operator size", function() {
 ```js
 pm.test("Filter Operator values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [665, 319, 735, 475, 934, 969, 284, 576, 999, 417];
+  var expected = [284, 319, 417, 475, 576, 665, 735, 934, 969, 999];
   for (var i = 0; i < 10; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

@@ -33,7 +33,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -61,7 +61,7 @@ pm.test("Geospatial Point size", function() {
 ```js
 pm.test("Geospatial Point values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [404, 85, 668, 383, 477, 978, 62, 361, 637, 38];
+  var expected = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

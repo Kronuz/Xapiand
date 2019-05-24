@@ -151,7 +151,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -159,7 +159,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   var expected = [3199.28, 3262.82, 3308.57, 3423.5, 3554.94, 3598.42, 3630.51, 3634.33, 3673.84, 3677.93, 3736.69, 3738.33, 3747.21, 3756.76, 3769.42, 3837.63, 3838.83, 3839.19, 3856.99, 3890.1, 3902.81, 3924.08, 3929.65, 3942.33, 3945.77, 3948.68, 3960.1, 3961.23, 3982.79, 3985.15, 3985.47, 3985.51, 4809.86, 5281.15, 6691.46, 6768.66, 6984.37, 7095.11, 7129.27, 7247.46, 7304.17, 7587.45, 7659.66, 7809.61, 8043.18, 8110.22, 8881.1, 8927.96, 9138.89, 10073.05, 10087.41, 10448.36, 10513.99, 10643.84, 10663.25, 10729.87, 10819.51, 10857.55, 12699.46];
   for (var i = 0; i < expected.length; ++i) {

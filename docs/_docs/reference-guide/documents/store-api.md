@@ -31,7 +31,7 @@ Content-Type: image/png
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -50,7 +50,7 @@ Accept: image/png
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -86,7 +86,7 @@ Content-Type: application/pdf
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -107,7 +107,7 @@ Content-Type: image/jpeg
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -127,7 +127,7 @@ Accept: application/pdf
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -135,7 +135,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response content type is PDF", function() {
+pm.test("Response content type is PDF", function() {
     pm.response.to.be.header('Content-Type', 'application/pdf');
 });
 ```
@@ -143,7 +143,7 @@ pm.test("response content type is PDF", function() {
 {: .test }
 
 ```js
-pm.test("response is stored PDF", function() {
+pm.test("Response is stored PDF", function() {
     pm.expect(pm.response.stream.length).to.equal(692615);
     // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('66bb6df2255f34e2be54344047dad389a94be873e53a0b4c46817a3ecaeb6a61')
 });
@@ -168,7 +168,7 @@ Accept: *
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -176,7 +176,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response content type is JPG", function() {
+pm.test("Response content type is JPG", function() {
     pm.response.to.be.header('Content-Type', 'image/jpeg');
 });
 ```
@@ -184,7 +184,7 @@ pm.test("response content type is JPG", function() {
 {: .test }
 
 ```js
-pm.test("response is stored JPG", function() {
+pm.test("Response is stored JPG", function() {
     pm.expect(pm.response.stream.length).to.equal(570958);
     // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('820eae76e4639a059a1bc799763ad82961ffbc8d41b58920a3f7ac622455ed46')
 });
@@ -210,7 +210,7 @@ GET /assets/Lenna.png
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
     pm.response.to.be.success;
 });
 ```
@@ -218,7 +218,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response content type is PNG", function() {
+pm.test("Response content type is PNG", function() {
     pm.response.to.be.header('Content-Type', 'image/png');
 });
 ```
@@ -226,7 +226,7 @@ pm.test("response content type is PNG", function() {
 {: .test }
 
 ```js
-pm.test("response is stored PNG", function() {
+pm.test("Response is stored PNG", function() {
     pm.expect(pm.response.stream.length).to.equal(473831);
     // pm.expect(CryptoJS.SHA256(pm.response.stream).toString()).to.equal('7e497501a28bcf9a353ccadf6eb9216bf098ac32888fb542fb9bfe71d486761f')
 });
@@ -251,7 +251,7 @@ INFO /assets/Lenna
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -259,7 +259,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response with proper data", function() {
+pm.test("Response with proper data", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.data.length).to.equal(4);
   pm.expect(jsonData.data[0].content_type).to.equal("application/msgpack");
@@ -324,7 +324,7 @@ Content-Length: 0
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```

@@ -40,7 +40,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -68,7 +68,7 @@ pm.test("partial query size", function() {
 ```js
 pm.test("partial query values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [661, 806, 631, 711, 726, 986, 576, 836, 77, 527];
+  var expected = [77, 84, 120, 173, 234, 279, 280, 284, 289, 319];
   for (var i = 0; i < expected.length; ++i) {
       pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

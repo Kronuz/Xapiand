@@ -38,7 +38,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -66,7 +66,7 @@ pm.test("Default operator size", function() {
 ```js
 pm.test("Default operator values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [298, 958, 234, 923, 132, 567, 906, 116, 182, 600];
+  var expected = [2, 4, 8, 9, 11, 15, 16, 26, 27, 29];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }

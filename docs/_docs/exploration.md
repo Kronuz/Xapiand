@@ -73,7 +73,7 @@ Content-Type: application/x-ndjson
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -81,7 +81,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is valid", function() {
+pm.test("Response is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.processed).to.be.an('number');
   pm.expect(jsonData.indexed).to.be.an('number');
@@ -93,7 +93,7 @@ pm.test("response is valid", function() {
 {: .test }
 
 ```js
-pm.test("restore received all", function() {
+pm.test("Restore received all", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(1000);
 });
@@ -102,7 +102,7 @@ pm.test("restore received all", function() {
 {: .test }
 
 ```js
-pm.test("restore processed all", function() {
+pm.test("Restore processed all", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.processed).to.equal(1000);
 });
@@ -111,7 +111,7 @@ pm.test("restore processed all", function() {
 {: .test }
 
 ```js
-pm.test("restore indexed all", function() {
+pm.test("Restore indexed all", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.indexed).to.equal(1000);
   pm.expect(jsonData.items.length).to.equal(1000);
@@ -121,10 +121,10 @@ pm.test("restore indexed all", function() {
 {: .test }
 
 ```js
-pm.test("restore values are valid", function() {
+pm.test("Restore values are valid", function() {
   var jsonData = pm.response.json();
   for (var i = 0; i < 1000; ++i) {
-      pm.expect(jsonData.items[i]._id).to.equal(i + 1);
+    pm.expect(jsonData.items[i]._id).to.equal(i + 1);
   }
 });
 ```
@@ -150,7 +150,7 @@ INFO /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -158,7 +158,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response doc_count", function() {
+pm.test("Response doc_count", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.doc_count).to.equal(1000);
 });
@@ -214,7 +214,7 @@ SEARCH /bank/?sort=accountNumber&pretty
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -222,7 +222,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response values are valid", function() {
+pm.test("Response values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [100123, 100481, 101121, 101253, 101294, 103213, 103486, 103710, 104419, 107465];
   for (var i = 0; i < expected.length; ++i) {
@@ -398,7 +398,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -406,7 +406,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response values are valid", function() {
+pm.test("Response values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [12699.46, 10857.55, 10819.51, 10729.87, 10663.25, 10643.84, 10513.99, 10448.36, 10087.41, 10073.05];
   for (var i = 0; i < expected.length; ++i) {
@@ -499,7 +499,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -507,7 +507,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is valid", function() {
+pm.test("Response is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.total).to.equal(286);
 });

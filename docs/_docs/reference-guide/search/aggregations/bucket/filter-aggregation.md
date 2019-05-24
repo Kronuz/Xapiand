@@ -65,7 +65,7 @@ SEARCH /bank/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -73,7 +73,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is aggregation", function() {
+pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.aggregations.strawberry_lovers._doc_count).to.equal(76);
   pm.expect(jsonData.aggregations.strawberry_lovers.avg_balance._avg).to.equal(2581.8072368421055);

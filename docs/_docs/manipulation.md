@@ -28,7 +28,7 @@ PUT /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -53,7 +53,7 @@ PUT /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -80,7 +80,7 @@ PUT /twitter/user/Jane
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -109,7 +109,7 @@ POST /twitter/user/
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -143,7 +143,7 @@ UPDATE /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -151,7 +151,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is merged", function() {
+pm.test("Response is merged", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.name).to.be.an('string');
   pm.expect(jsonData.gender).to.equal('male');
@@ -178,7 +178,7 @@ UPDATE /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -205,7 +205,7 @@ UPDATE /twitter/user/John
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
@@ -213,7 +213,7 @@ pm.test("response is success", function() {
 {: .test }
 
 ```js
-pm.test("response is merged", function() {
+pm.test("Response is merged", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.gender).to.be.an('string');
   pm.expect(jsonData.name).to.equal('John Doe');
@@ -223,7 +223,7 @@ pm.test("response is merged", function() {
 {: .test }
 
 ```js
-pm.test("response with script applied", function() {
+pm.test("Response with script applied", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.age).to.equal(22);
 });
@@ -249,7 +249,7 @@ DELETE /twitter/user/Jane
 {: .test }
 
 ```js
-pm.test("response is success", function() {
+pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```

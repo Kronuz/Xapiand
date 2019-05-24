@@ -49,7 +49,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});"
                 ],
@@ -91,15 +91,15 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = [100,1000,10000,100000,1000000,100000000];",
                   "    pm.expect(jsonData._schema.schema['float']._type).to.equal('floating');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = [100,1000,10000,100000,1000000,100000000];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -145,14 +145,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['integer']._type).to.equal('integer');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = [100,1000,10000,100000,1000000,100000000];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -198,14 +198,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['positive']._type).to.equal('positive');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = [100,1000,10000,100000,1000000,100000000];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -251,10 +251,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['boolean']._type).to.equal('boolean');",
                   "});"
@@ -297,10 +297,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['keyword']._type).to.equal('keyword');",
                   "});"
@@ -343,10 +343,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['text']._type).to.equal('text');",
                   "});"
@@ -389,14 +389,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['date']._type).to.equal('date');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = ['hour','day','month','year','decade','century'];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -442,14 +442,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['datetime']._type).to.equal('datetime');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = ['hour','day','month','year','decade','century'];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -495,14 +495,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['time']._type).to.equal('time');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = ['minute','hour'];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -548,14 +548,14 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['timedelta']._type).to.equal('timedelta');",
                   "});",
-                  "pm.test(\"accuracy is valid\", function() {",
+                  "pm.test(\"Accuracy is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    var accuracy_expected = ['minute','hour'];",
                   "    for (var i = 0; i < 1000; ++i) {",
@@ -601,10 +601,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"schema type is valid\", function() {",
+                  "pm.test(\"Schema type is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema['uuid']._type).to.equal('uuid');",
                   "});"
@@ -691,10 +691,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.hits[0].ident).to.equal('~notmet');",
                   "});"
@@ -781,10 +781,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.campo).to.equal(null);",
                   "});"
@@ -869,10 +869,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.cnt).to.equal(1);",
                   "});"
@@ -923,10 +923,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.cnt).to.equal(2);",
                   "});"
@@ -977,10 +977,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.cnt).to.equal(2);",
                   "});"
@@ -1023,10 +1023,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.cnt).to.equal(2);",
                   "});"
@@ -1153,10 +1153,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.campo).to.equal(null);",
                   "});"
@@ -1214,10 +1214,10 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test(\"response is success\", function() {",
+              "pm.test(\"Response is success\", function() {",
               "    pm.response.to.be.success;",
               "});",
-              "pm.test(\"value is valid\", function() {",
+              "pm.test(\"Value is valid\", function() {",
               "    var jsonData = pm.response.json();",
               "    for (key in jsonData.schema) {",
               "       pm.expect(key).to.not.include('#comment');",
@@ -1302,10 +1302,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema.name).to.include({'_type': 'text' });",
                   "    pm.expect(jsonData._schema.schema.age).to.include({'_type': 'positive' });",
@@ -1391,10 +1391,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema).to.have.any.keys(['<uuid_field>']);",
                   "});"
@@ -1479,10 +1479,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._type).to.equal('array/text');",
                   "});"
@@ -1525,10 +1525,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.terms.types).to.have.any.keys(['Sa']);",
                   "    pm.expect(jsonData.values).to.include({'1680431078': 'A'});",
@@ -1614,10 +1614,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._type).to.equal('array/text');",
                   "});"
@@ -1660,10 +1660,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);",
                   "    pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});",
@@ -1749,10 +1749,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema.types._type).to.equal('array/text');",
                   "});"
@@ -1795,10 +1795,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);",
                   "    pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});",
@@ -1884,10 +1884,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema.types._type).to.equal('array/text');",
                   "});"
@@ -1930,10 +1930,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);",
                   "    pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});",
@@ -2019,10 +2019,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema.types._type).to.equal('array/text');",
                   "});"
@@ -2065,10 +2065,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh','Si','Sj','Sk','Sl','Sm','Sn']);",
                   "    pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H\u0001I\u0001J\u0001K\u0001L\u0001M\u0001N'});",
@@ -2154,10 +2154,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData._schema.schema.types._type).to.equal('array/object');",
                   "    pm.expect(jsonData._schema.schema.types.property._type).to.equal('text');",
@@ -2202,10 +2202,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test(\"response is success\", function() {",
+                  "pm.test(\"Response is success\", function() {",
                   "    pm.response.to.be.success;",
                   "});",
-                  "pm.test(\"value is valid\", function() {",
+                  "pm.test(\"Value is valid\", function() {",
                   "    var jsonData = pm.response.json();",
                   "    pm.expect(jsonData.terms.types.property).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);",
                   "    pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1666287912','3452157842']);",
