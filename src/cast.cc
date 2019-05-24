@@ -24,38 +24,44 @@
 
 #include "database/schema.h"
 #include "exception_xapian.h"                     // for CastError
+#include "reserved/reserved.h"                    // for is_comment
 #include "strings.hh"                             // for strings::format
 
 
 MsgPack
 Cast::cast(const MsgPack& obj)
 {
-	if (obj.size() == 1) {
-		const auto str_key = obj.begin()->str();
+	auto it = obj.begin();
+	auto it_e = obj.end();
+	for (; it != it_e; ++it) {
+		auto str_key = it->str_view();
+		if (is_comment(str_key)) {
+			continue;
+		}
 		switch (get_hash_type(str_key)) {
 			case HashType::INTEGER:
-				return integer(obj.at(str_key));
+				return integer(it.value());
 			case HashType::POSITIVE:
-				return positive(obj.at(str_key));
+				return positive(it.value());
 			case HashType::FLOAT:
-				return static_cast<double>(floating(obj.at(str_key)));
+				return static_cast<double>(floating(it.value()));
 			case HashType::BOOLEAN:
-				return boolean(obj.at(str_key));
+				return boolean(it.value());
 			case HashType::KEYWORD:
 			case HashType::TEXT:
 			case HashType::STRING:
-				return string(obj.at(str_key));
+				return string(it.value());
 			case HashType::UUID:
-				return uuid(obj.at(str_key));
+				return uuid(it.value());
 			case HashType::DATE:
 			case HashType::DATETIME:
-				return datetime(obj.at(str_key));
+				return datetime(it.value());
 			case HashType::TIME:
-				return time(obj.at(str_key));
+				return time(it.value());
 			case HashType::TIMEDELTA:
-				return timedelta(obj.at(str_key));
+				return timedelta(it.value());
 			case HashType::EWKT:
-				return ewkt(obj.at(str_key));
+				return ewkt(it.value());
 			case HashType::POINT:
 			case HashType::CIRCLE:
 			case HashType::CONVEX:
@@ -73,7 +79,7 @@ Cast::cast(const MsgPack& obj)
 		}
 	}
 
-	THROW(CastError, "Expected map with one element");
+	THROW(CastError, "Expected map with one valid cast");
 }
 
 
