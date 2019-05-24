@@ -38,17 +38,17 @@ such as `UPDATE` and `STORE`, for certain operations.
 
 ## HTTP Methods
 
-- **_Safe Methods_**
+- **_Safe Methods_**<br>
   Requests that use _safe_ HTTP methods won't alter a resource at all. Examples
   are `GET`, `OPTIONS` and `HEAD`.
 
-- **_Idempotent Methods_**
+- **_Idempotent Methods_**<br>
   An _idempotent_ HTTP method is a HTTP method that can be called many times
   without different outcomes. It would not matter if the method is called only
   once, twice or a hundred times over, the result should be the same. This only
   applies to the result, not the resource itself. Examples are `DELETE`, `PUT`.
 
-- **_Not Safe/Idempotent Methods_**
+- **_Not Safe/Idempotent Methods_**<br>
   This are requests that will alter the resource *and* potentially end up with
   different results every time. Examples are `POST`.
 

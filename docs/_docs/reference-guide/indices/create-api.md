@@ -65,7 +65,7 @@ The default for `number_of_shards` is `5`, and the default for
 command creates an index with `3` shards and `2` replicas.
 
 {: .note .info }
-**_New Indexes Only_**
+**_Only for New Indices_**<br>
 `number_of_shards` and `number_of_replicas` can be specified like this only
 for new indexes and any attempt to change the values during an update will
 result in a Bad Request error.
@@ -98,7 +98,7 @@ PUT /twitter/tweet/
 {% include curl.html req=req %}
 
 {: .note .info }
-**_New Indexes Only_**
+**_Only for New Indices_**<br>
 Some configurations about schemas can be set only the first time a field is
 created (`_type`, for example) and any attempt to change the values during an
 update will result in a Bad Request error.
