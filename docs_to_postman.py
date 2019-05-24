@@ -62,9 +62,16 @@ def main():
                     level = len(groups[2])
                     context['titles'] = [title for title in context.get('titles', []) if title[0] < level]
                     context['titles'].append((level, groups[3]))
+                    # Clear description:
+                    file_context.pop('description', None)
+                    context.pop('description', None)
                 elif groups[5]:
                     name = groups[4]
-                    if name == 'title':
+                    if name == 'description':
+                        # Persist description:
+                        file_context[name] = groups[5]
+                        context[name] = groups[5]
+                    elif name == 'title':
                         # Flush:
                         if context and 'request' in context:
                             all_tests.append(dict(context))
