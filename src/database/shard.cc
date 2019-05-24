@@ -1317,7 +1317,6 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 #endif  // XAPIAND_DATA_STORAGE
 
 	Xapian::DocumentInfo info;
-	std::string new_term;
 
 	std::string ver;
 	if (version_) {
@@ -1357,9 +1356,8 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 						did = (info.did - 1) * n_shards + shard_num + 1;  // unshard number and shard docid to docid in multi-db
 						ver_prefix = "V" + serialise_length(info.did);
 						did_serialised = sortable_serialise(did);
-						new_term = "QN" + did_serialised;
-						doc.add_boolean_term(new_term);
-						info.term = did_serialised;
+						info.term = "QN" + did_serialised;
+						doc.add_boolean_term(info.term);
 						doc.add_value(DB_SLOT_ID, did_serialised);
 						// Set id inside serialized object:
 						auto it = data_obj.find(ID_FIELD_NAME);
