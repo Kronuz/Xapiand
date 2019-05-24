@@ -47,6 +47,7 @@ SEARCH /bank/
 {
   "_query": "*",
   "_limit": 0,
+  "_check_at_least": 1000,
   "_aggs": {
     "balance_stats": {
       "_stats": {
