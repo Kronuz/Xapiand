@@ -14,6 +14,9 @@ INFO /twitter/tweet/
 {% include curl.html req=req %}
 
 {: .note .warning }
+`INFO /twitter/tweet/1` is not the same as `INFO /twitter/tweet/1/`, the
+former will retrieve information about document `1` inside index `/twitter/tweet/`
+and the later will retrieve information about thewhole index `/twitter/tweet/1/`.
 [Trailing slashes are important]({{ '/docs/reference-guide/api#trailing-slashes-are-important' | relative_url }}).
 
 The response will include the following information about the index:
