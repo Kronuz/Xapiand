@@ -3,10 +3,6 @@ title: Terms Aggregation
 short_title: Terms
 ---
 
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
 A _multi-bucket_ value source based aggregation where buckets are dynamically
 built - one per unique **term**.
 
