@@ -888,6 +888,9 @@ code.output {
 	color: #ddd;
 	a {
 		color: #ddd;
+		text-decoration: underline;
+		text-decoration-color: rgba(255, 255, 255, 0.5);
+		text-decoration-style: dotted;
 		&:hover {
 			color: #fff;
 		}
