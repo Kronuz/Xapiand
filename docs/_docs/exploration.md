@@ -362,7 +362,7 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-The `offset` parameter (0-based) specifies which document index to start from
+The `offset` parameter (`0`-based) specifies which document index to start from
 and the `limit` parameter specifies how many documents to return starting at the
 given `offset`. This feature is useful when implementing paging of search
 results. Note that if `offset` is not specified, it defaults to 0.
