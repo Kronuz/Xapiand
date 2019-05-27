@@ -6,6 +6,17 @@ short_title: Average
 A _single-value_ metrics aggregation that computes the average of numeric values
 that are extracted from the aggregated documents.
 
+arithmetic mean, also called the mathematical expectation or average, is the
+central value of a discrete set of numbers: specifically, the sum of the values
+divided by the number of values. <sup>[1](#footnote-1)</sup>
+
+| Type              | Description                                                         | Example                     | Result |
+|-------------------|---------------------------------------------------------------------|:---------------------------:|:------:|
+| Mean (or Average) | Sum of values of a data set divided by number of values             | (1+2+2+3+4+7+9) / 7         | 4      |
+| Median            | Middle value separating the greater and lesser halves of a data set | 1, 2, 2, **3**, 4, 7, 9     | 3      |
+| Mode              | Most frequent value in a data set                                   | 1, **2**, **2**, 3, 4, 7, 9 | 2      |
+
+
 ## Structuring
 
 The following snippet captures the structure of average aggregations:
@@ -86,3 +97,7 @@ will return the following:
 
 The name of the aggregation (`avg_grade` above) also serves as the key by which
 the aggregation result can be retrieved from the returned response.
+
+
+---
+<sup><a id="footnote-1">1</a></sup> [Mean](https://en.wikipedia.org/wiki/Mean){:target="_blank"}

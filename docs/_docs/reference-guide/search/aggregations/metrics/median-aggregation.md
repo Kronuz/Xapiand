@@ -3,8 +3,18 @@ title: Median Aggregation
 short_title: Median
 ---
 
-{: .note .construction }
-_This section is a **work in progress**..._
+A _single-value_ metrics aggregation that computes the median of numeric values
+that are extracted from the aggregated documents.
+
+The median is the value separating the higher half from the lower half of a
+data sample, it may be thought of as the "middle" value. <sup>[1](#footnote-1)</sup>
+
+| Type              | Description                                                         | Example                     | Result |
+|-------------------|---------------------------------------------------------------------|:---------------------------:|:------:|
+| Mean (or Average) | Sum of values of a data set divided by number of values             | (1+2+2+3+4+7+9) / 7         | 4      |
+| Median            | Middle value separating the greater and lesser halves of a data set | 1, 2, 2, **3**, 4, 7, 9     | 3      |
+| Mode              | Most frequent value in a data set                                   | 1, **2**, **2**, 3, 4, 7, 9 | 2      |
+
 
 {% capture req %}
 
@@ -46,3 +56,7 @@ pm.test("Response is aggregation", function() {
 });
 ```
 {% endcomment %}
+
+
+---
+<sup><a id="footnote-1">1</a></sup> [Median](https://en.wikipedia.org/wiki/Median){:target="_blank"}

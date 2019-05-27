@@ -3,8 +3,18 @@ title: Mode Aggregation
 short_title: Mode
 ---
 
-{: .note .construction }
-_This section is a **work in progress**..._
+A _single-value_ metrics aggregation that computes the mode of numeric values
+that are extracted from the aggregated documents.
+
+The mode of a set of data values is the value that appears most often, in other
+words, it is the value that is most likely to be sampled. <sup>[1](#footnote-1)</sup>
+
+| Type              | Description                                                         | Example                     | Result |
+|-------------------|---------------------------------------------------------------------|:---------------------------:|:------:|
+| Mean (or !verage) | Sum of values of a data set divided by number of values             | (1+2+2+3+4+7+9) / 7         | 4      |
+| Median            | Middle value separating the greater and lesser halves of a data set | 1, 2, 2, **3**, 4, 7, 9     | 3      |
+| Mode              | Most frequent value in a data set                                   | 1, **2**, **2**, 3, 4, 7, 9 | 2      |
+
 
 {% capture req %}
 
@@ -46,3 +56,7 @@ pm.test("Response is aggregation", function() {
 });
 ```
 {% endcomment %}
+
+
+---
+<sup><a id="footnote-1">1</a></sup> [Mode (statistics)](https://en.wikipedia.org/wiki/Mode_(statistics)){:target="_blank"}
