@@ -2117,8 +2117,8 @@ DatabaseHandler::get_database_info()
 	Xapian::docid lastdocid = 0;
 	bool has_positions = false;
 	Xapian::totallength total_length = 0;
-	Xapian::termcount doclength_lower_bound;
-	Xapian::termcount doclength_upper_bound;
+	Xapian::termcount doclength_lower_bound = 0;
+	Xapian::termcount doclength_upper_bound = 0;
 
 	size_t n_shards = endpoints.size();
 
