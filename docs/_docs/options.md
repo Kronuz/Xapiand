@@ -2,12 +2,16 @@
 title: Options
 ---
 
+An updated list of all available options for Xapiand can be retrieved using
+`xapiand --help`.
+
+
 ## Verbosity
 
 Verbosity of the servers logs can be set by using the `-v`, `--verbose` or
 `--verbosity` options. _*very-very-very* verbose_ output is usually enabled
-with `-vvvv` or `--verbosity=4`. This mode also enables `--echo`, `--pretty` and
-`--comments` options by default.
+with `-vvvv` or `--verbosity=4`. This mode also enables `--human`, `--echo`,
+`--pretty` and `--comments` options by default.
 
 
 ### Echo
@@ -26,12 +30,20 @@ option can be enabled with the `--pretty` option or by using a verbosity level
 higher or equal to 4.
 
 
+### Human
+
+Human makes Xapiand return humanized numbers for size and times in the output
+of the responses. This option can be enabled with the `--human` option, by
+setting output to be "pretty" or by using a verbosity level higher or equal to 4.
+
+
 ### Strict
 
-Schemas are normally automatically created by default, guessin gthe type of new
-fields being indexed. The `--strict` option disables this dynamic fields feature
-and forces the user to specify a type for all new fields, making the request
-fail with `412 Precondition Failed` if the datatype is missing.
+Schemas are normally automatically created by default, guessin the type of new
+fields being indexed. The `--strict` option disables this
+[Dynamic Typing]({{ '/docs/reference-guide/schemas/dynamic-typing' | relative_url }})
+feature and forces the user to specify a type for all new fields, making the
+request fail with `412 Precondition Failed` if the datatype is missing.
 
 
 {: .note .construction }
