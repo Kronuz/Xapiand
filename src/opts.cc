@@ -51,45 +51,83 @@
 
 #define NUM_HTTP_SERVERS             1.0          // Number of servers per CPU
 #define MAX_HTTP_SERVERS              10
+#define MIN_HTTP_SERVERS               1
 
 #define NUM_HTTP_CLIENTS             1.5          // Number of http client threads per CPU
 #define MAX_HTTP_CLIENTS              20
+#define MIN_HTTP_CLIENTS               2
 
 #define NUM_REMOTE_SERVERS           1.0          // Number of remote protocol client threads per CPU
 #define MAX_REMOTE_SERVERS            10
+#define MIN_REMOTE_SERVERS             1
 
 #define NUM_REMOTE_CLIENTS           2.0          // Number of remote protocol client threads per CPU
 #define MAX_REMOTE_CLIENTS            20
+#define MIN_REMOTE_CLIENTS             2
 
 #define NUM_REPLICATION_SERVERS      1.0          // Number of replication protocol client threads per CPU
 #define MAX_REPLICATION_SERVERS       10
+#define MIN_REPLICATION_SERVERS        1
 
 #define NUM_REPLICATION_CLIENTS      0.5          // Number of replication protocol client threads per CPU
 #define MAX_REPLICATION_CLIENTS       10
+#define MIN_REPLICATION_CLIENTS        1
 
 #define NUM_ASYNC_WAL_WRITERS        0.5          // Number of database async WAL writers per CPU
 #define MAX_ASYNC_WAL_WRITERS         10
+#define MIN_ASYNC_WAL_WRITERS          1
 
 #define NUM_DOC_MATCHERS             2.0          // Number of threads handling parallel matching of documents per CPU
 #define MAX_DOC_MATCHERS              20
+#define MIN_DOC_MATCHERS               2
 
 #define NUM_DOC_PREPARERS            1.0          // Number of threads handling bulk documents preparing per CPU
 #define MAX_DOC_PREPARERS             10
+#define MIN_DOC_PREPARERS              1
 
 #define NUM_DOC_INDEXERS             2.0          // Number of threads handling bulk documents indexing per CPU
 #define MAX_DOC_INDEXERS              20
+#define MIN_DOC_INDEXERS               2
 
 #define NUM_COMMITTERS               1.0          // Number of threads handling the commits per CPU
 #define MAX_COMMITTERS                10
+#define MIN_COMMITTERS                 1
 
 #define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
 #define MAX_FSYNCHERS                 10
+#define MIN_FSYNCHERS                  1
 
 #define NUM_REPLICATORS              0.5          // Number of threads handling the replication per CPU
 #define MAX_REPLICATORS               10
+#define MIN_REPLICATORS                1
 
 #define NUM_DISCOVERERS              0.5          // Number of threads handling the discoverers per CPU
 #define MAX_DISCOVERERS               10
+#define MIN_DISCOVERERS                1
+
+#define COMMITTER_THROTTLE_TIME                            0
+#define COMMITTER_DEBOUNCE_TIMEOUT                      1000
+#define COMMITTER_DEBOUNCE_BUSY_TIMEOUT                 3000
+#define COMMITTER_DEBOUNCE_MIN_FORCE_TIMEOUT            8000
+#define COMMITTER_DEBOUNCE_MAX_FORCE_TIMEOUT           10000
+
+#define FSYNCHER_THROTTLE_TIME                          1000
+#define FSYNCHER_DEBOUNCE_TIMEOUT                        500
+#define FSYNCHER_DEBOUNCE_BUSY_TIMEOUT                   800
+#define FSYNCHER_DEBOUNCE_MIN_FORCE_TIMEOUT             2500
+#define FSYNCHER_DEBOUNCE_MAX_FORCE_TIMEOUT             3500
+
+#define DB_UPDATER_THROTTLE_TIME                        1000
+#define DB_UPDATER_DEBOUNCE_TIMEOUT                      100
+#define DB_UPDATER_DEBOUNCE_BUSY_TIMEOUT                 500
+#define DB_UPDATER_DEBOUNCE_MIN_FORCE_TIMEOUT           4900
+#define DB_UPDATER_DEBOUNCE_MAX_FORCE_TIMEOUT           5100
+
+#define TRIGGER_REPLICATION_THROTTLE_TIME               1000
+#define TRIGGER_REPLICATION_DEBOUNCE_TIMEOUT             100
+#define TRIGGER_REPLICATION_DEBOUNCE_BUSY_TIMEOUT        500
+#define TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT  4900
+#define TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT  5100
 
 
 #define EV_SELECT_NAME  "select"
@@ -451,31 +489,31 @@ parseOptions(int argc, char** argv)
 		o.scripts_cache_size = scripts_cache_size.getValue();
 		o.resolver_cache_size = resolver_cache_size.getValue();
 #if XAPIAND_DATABASE_WAL
-		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors))));
+		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif
 #ifdef XAPIAND_CLUSTERING
 		o.num_shards = num_shards.getValue();
 		o.num_replicas = num_replicas.getValue();
-		o.num_replicators = fallback(num_replicators.getValue(), std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors))));
-		o.num_discoverers = fallback(num_discoverers.getValue(), std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors))));
+		o.num_replicators = fallback(num_replicators.getValue(), std::max(MIN_REPLICATORS, std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors)))));
+		o.num_discoverers = fallback(num_discoverers.getValue(), std::max(MIN_DISCOVERERS, std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors)))));
 #endif
-		o.num_doc_matchers = fallback(num_doc_matchers.getValue(), std::min(MAX_DOC_MATCHERS, static_cast<int>(std::ceil(NUM_DOC_MATCHERS * o.processors))));
-		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors))));
-		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors))));
-		o.num_committers = fallback(num_committers.getValue(), std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors))));
-		o.num_fsynchers = fallback(num_fsynchers.getValue(), std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors))));
+		o.num_doc_matchers = fallback(num_doc_matchers.getValue(), std::max(MIN_DOC_MATCHERS, std::min(MAX_DOC_MATCHERS, static_cast<int>(std::ceil(NUM_DOC_MATCHERS * o.processors)))));
+		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::max(MIN_DOC_PREPARERS, std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors)))));
+		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::max(MIN_DOC_INDEXERS, std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors)))));
+		o.num_committers = fallback(num_committers.getValue(), std::max(MIN_COMMITTERS, std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)))));
+		o.num_fsynchers = fallback(num_fsynchers.getValue(), std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)))));
 
 		o.max_clients = max_clients.getValue();
 		o.max_database_readers = max_database_readers.getValue();
 		o.max_files = max_files.getValue();
 		o.flush_threshold = flush_threshold.getValue();
-		o.num_http_clients = fallback(num_http_clients.getValue(), std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors))));
-		o.num_http_servers = fallback(num_http_servers.getValue(), std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors))));
+		o.num_http_clients = fallback(num_http_clients.getValue(), std::max(MIN_HTTP_CLIENTS, std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)))));
+		o.num_http_servers = fallback(num_http_servers.getValue(), std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));
 #ifdef XAPIAND_CLUSTERING
-		o.num_remote_clients = fallback(num_remote_clients.getValue(), std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors))));
-		o.num_remote_servers = fallback(num_remote_servers.getValue(), std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors))));
-		o.num_replication_clients = fallback(num_replication_clients.getValue(), std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors))));
-		o.num_replication_servers = fallback(num_replication_servers.getValue(), std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors))));
+		o.num_remote_clients = fallback(num_remote_clients.getValue(), std::max(MIN_REMOTE_CLIENTS, std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors)))));
+		o.num_remote_servers = fallback(num_remote_servers.getValue(), std::max(MIN_REMOTE_SERVERS, std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors)))));
+		o.num_replication_clients = fallback(num_replication_clients.getValue(), std::max(MIN_REPLICATION_CLIENTS, std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors)))));
+		o.num_replication_servers = fallback(num_replication_servers.getValue(), std::max(MIN_REPLICATION_SERVERS, std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors)))));
 #endif
 		if (o.detach) {
 			if (o.logfile.empty()) {
@@ -562,29 +600,29 @@ parseOptions(int argc, char** argv)
 		std::exit(EX_USAGE);
 	}
 
-	o.committer_throttle_time = 0;
-	o.committer_debounce_timeout = 1000;
-	o.committer_debounce_busy_timeout = 3000;
-	o.committer_debounce_min_force_timeout = 5000;
-	o.committer_debounce_max_force_timeout = 15000;
+	o.committer_throttle_time = COMMITTER_THROTTLE_TIME;
+	o.committer_debounce_timeout = COMMITTER_DEBOUNCE_TIMEOUT;
+	o.committer_debounce_busy_timeout = COMMITTER_DEBOUNCE_BUSY_TIMEOUT;
+	o.committer_debounce_min_force_timeout = COMMITTER_DEBOUNCE_MIN_FORCE_TIMEOUT;
+	o.committer_debounce_max_force_timeout = COMMITTER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
-	o.fsyncher_throttle_time = 1000;
-	o.fsyncher_debounce_timeout = 500;
-	o.fsyncher_debounce_busy_timeout = 500;
-	o.fsyncher_debounce_min_force_timeout = 1000;
-	o.fsyncher_debounce_max_force_timeout = 6000;
+	o.fsyncher_throttle_time = FSYNCHER_THROTTLE_TIME;
+	o.fsyncher_debounce_timeout = FSYNCHER_DEBOUNCE_TIMEOUT;
+	o.fsyncher_debounce_busy_timeout = FSYNCHER_DEBOUNCE_BUSY_TIMEOUT;
+	o.fsyncher_debounce_min_force_timeout = FSYNCHER_DEBOUNCE_MIN_FORCE_TIMEOUT;
+	o.fsyncher_debounce_max_force_timeout = FSYNCHER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
-	o.db_updater_throttle_time = 1000;
-	o.db_updater_debounce_timeout = 100;
-	o.db_updater_debounce_busy_timeout = 500;
-	o.db_updater_debounce_min_force_timeout = 2000;
-	o.db_updater_debounce_max_force_timeout = 10000;
+	o.db_updater_throttle_time = DB_UPDATER_THROTTLE_TIME;
+	o.db_updater_debounce_timeout = DB_UPDATER_DEBOUNCE_TIMEOUT;
+	o.db_updater_debounce_busy_timeout = DB_UPDATER_DEBOUNCE_BUSY_TIMEOUT;
+	o.db_updater_debounce_min_force_timeout = DB_UPDATER_DEBOUNCE_MIN_FORCE_TIMEOUT;
+	o.db_updater_debounce_max_force_timeout = DB_UPDATER_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
-	o.trigger_replication_throttle_time = 1000;
-	o.trigger_replication_debounce_timeout = 100;
-	o.trigger_replication_debounce_busy_timeout = 500;
-	o.trigger_replication_debounce_min_force_timeout = 2000;
-	o.trigger_replication_debounce_max_force_timeout = 10000;
+	o.trigger_replication_throttle_time = TRIGGER_REPLICATION_THROTTLE_TIME;
+	o.trigger_replication_debounce_timeout = TRIGGER_REPLICATION_DEBOUNCE_TIMEOUT;
+	o.trigger_replication_debounce_busy_timeout = TRIGGER_REPLICATION_DEBOUNCE_BUSY_TIMEOUT;
+	o.trigger_replication_debounce_min_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT;
+	o.trigger_replication_debounce_max_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT;
 
 	return o;
 }
