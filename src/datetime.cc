@@ -382,7 +382,9 @@ static inline void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 				constexpr static auto _ = phf::make_phf({
 					hh(RESERVED_HOUR),
 					hh(RESERVED_MIN),
+					hh(RESERVED_MINUTE),
 					hh(RESERVED_SEC),
+					hh(RESERVED_SECOND),
 					hh(RESERVED_FSEC),
 				});
 				switch (_.fhh(str_key)) {
@@ -390,9 +392,11 @@ static inline void process_date_time(Datetime::tm_t& tm, const MsgPack& time) {
 						process_date_hour(tm, it_value);
 						break;
 					case _.fhh(RESERVED_MIN):
+					case _.fhh(RESERVED_MINUTE):
 						process_date_min(tm, it_value);
 						break;
 					case _.fhh(RESERVED_SEC):
+					case _.fhh(RESERVED_SECOND):
 						process_date_sec(tm, it_value);
 						break;
 					case _.fhh(RESERVED_FSEC):
@@ -465,7 +469,9 @@ static inline void process_date_datetime(Datetime::tm_t& tm, const MsgPack& date
 					hh(RESERVED_DAY),
 					hh(RESERVED_HOUR),
 					hh(RESERVED_MIN),
+					hh(RESERVED_MINUTE),
 					hh(RESERVED_SEC),
+					hh(RESERVED_SECOND),
 					hh(RESERVED_FSEC),
 				});
 				switch (_.fhh(str_key)) {
@@ -488,9 +494,11 @@ static inline void process_date_datetime(Datetime::tm_t& tm, const MsgPack& date
 						process_date_hour(tm, it_value);
 						break;
 					case _.fhh(RESERVED_MIN):
+					case _.fhh(RESERVED_MINUTE):
 						process_date_min(tm, it_value);
 						break;
 					case _.fhh(RESERVED_SEC):
+					case _.fhh(RESERVED_SECOND):
 						process_date_sec(tm, it_value);
 						break;
 					case _.fhh(RESERVED_FSEC):
@@ -562,7 +570,9 @@ Datetime::DatetimeParser(const MsgPack& value)
 					hh(RESERVED_DAY),
 					hh(RESERVED_HOUR),
 					hh(RESERVED_MIN),
+					hh(RESERVED_MINUTE),
 					hh(RESERVED_SEC),
+					hh(RESERVED_SECNOD),
 					hh(RESERVED_FSEC),
 				});
 				switch (_.fhh(str_key)) {
@@ -589,9 +599,11 @@ Datetime::DatetimeParser(const MsgPack& value)
 						process_date_hour(tm, it_value);
 						break;
 					case _.fhh(RESERVED_MIN):
+					case _.fhh(RESERVED_MINUTE):
 						process_date_min(tm, it_value);
 						break;
 					case _.fhh(RESERVED_SEC):
+					case _.fhh(RESERVED_SECOND):
 						process_date_sec(tm, it_value);
 						break;
 					case _.fhh(RESERVED_FSEC):
