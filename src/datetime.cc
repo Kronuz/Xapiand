@@ -572,7 +572,7 @@ Datetime::DatetimeParser(const MsgPack& value)
 					hh(RESERVED_MIN),
 					hh(RESERVED_MINUTE),
 					hh(RESERVED_SEC),
-					hh(RESERVED_SECNOD),
+					hh(RESERVED_SECOND),
 					hh(RESERVED_FSEC),
 				});
 				switch (_.fhh(str_key)) {

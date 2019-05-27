@@ -34,17 +34,13 @@ customer bank account information. Each document has the following form:
   "favoriteFruit": "lemon",
   "eyeColor": "blue",
   "style": {
-    "_namespace": true,
     "clothing": {
       "pants": "khakis",
       "shirt": "t-shirt"
     },
     "hairstyle": "slick back"
   },
-  "personality": {
-    "_language": "en",
-    "_value": "A lot can be assumed..."
-  }
+  "personality": "A lot can be assumed..."
 }
 ```
 
@@ -328,7 +324,8 @@ JSON-style query request body to the `SEARCH` method.
 
 Dissecting the above, the query part tells us what our query definition is and
 the `_query` part is simply the type of query that we want to run. The
-`*` query is simply a search for all documents in the specified index.
+`*` query is simply a search for all documents in the specified index (the
+default).
 
 In addition to the query parameter, we also can pass other parameters to
 influence the search results. In the example in the section above we passed in
