@@ -116,9 +116,9 @@ namespace allocators {
 	long long local_allocated() noexcept;
 
 	template <typename _Tp, typename _Allocator>
-	inline bool operator==(const allocator<_Tp, _Allocator>&, const allocator<_Tp, _Allocator>&) { return true; }
+	inline bool operator==(const allocator<_Tp, _Allocator>&, const allocator<_Tp, _Allocator>&) noexcept { return true; }
 	template <typename _Tp, typename _Allocator>
-	inline bool operator!=(const allocator<_Tp, _Allocator>&, const allocator<_Tp, _Allocator>&) { return false; }
+	inline bool operator!=(const allocator<_Tp, _Allocator>&, const allocator<_Tp, _Allocator>&) noexcept { return false; }
 }
 
 
@@ -196,4 +196,9 @@ namespace allocators {
 			__p->~value_type();
 		}
 	};
+
+	template <typename _Tp>
+	inline bool operator==(const memory_pool_allocator<_Tp>& a, const memory_pool_allocator<_Tp>& b) noexcept { return &a == &b; }
+	template <typename _Tp>
+	inline bool operator!=(const memory_pool_allocator<_Tp>& a, const memory_pool_allocator<_Tp>& b) noexcept { return &a != &b; }
 }
