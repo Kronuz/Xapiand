@@ -309,6 +309,8 @@ parseOptions(int argc, char** argv)
 		SwitchArg comments("", "comments", "Enables result comments.", cmd, false);
 		SwitchArg no_echo("", "no-echo", "Disables objects echo in results.", cmd, false);
 		SwitchArg echo("", "echo", "Enables objects echo in results.", cmd, false);
+		SwitchArg no_human("", "no-human", "Disables objects humanizer in results.", cmd, false);
+		SwitchArg human("", "human", "Enables objects humanizer in results.", cmd, false);
 
 		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
 #ifdef XAPIAND_CLUSTERING
@@ -374,6 +376,9 @@ parseOptions(int argc, char** argv)
 
 		o.echo = echo.getValue();
 		o.no_echo = no_echo.getValue();
+
+		o.human = human.getValue();
+		o.no_human = no_human.getValue();
 
 		o.comments = comments.getValue();
 		o.no_comments = no_comments.getValue();

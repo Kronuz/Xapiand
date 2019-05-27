@@ -40,6 +40,8 @@ extern struct opts_t {
 	bool no_pretty = false;
 	bool echo = false;
 	bool no_echo = false;
+	bool human = false;
+	bool no_human = false;
 	bool comments = false;
 	bool no_comments = false;
 	bool admin_commands = false;

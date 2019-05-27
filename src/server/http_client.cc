@@ -2761,6 +2761,7 @@ HttpClient::url_resolve(Request& request)
 		}
 	}
 
+	bool human = !opts.no_human && (opts.human || opts.verbosity >= 4 || pretty);
 	request.query_parser.rewind();
 	if (request.query_parser.next("human") != -1) {
 		if (request.query_parser.len != 0u) {
@@ -2771,7 +2772,7 @@ HttpClient::url_resolve(Request& request)
 			request.human = true;
 		}
 	} else {
-		request.human = pretty;
+		request.human = human;
 	}
 
 	bool echo = !opts.no_echo && (opts.echo || opts.verbosity >= 4);
