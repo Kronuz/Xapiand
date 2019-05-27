@@ -105,7 +105,7 @@ SEARCH /bank/
 {% include curl.html req=req %}
 
 In the example above we are searching inside a circle with it's center is given
-by `_latitude`, `_longitude` and a `_radius` (in meters).
+by `_latitude`, `_longitude` and a `_radius` (see [Supported Distance Units]({{ '/docs/reference-guide/schemas/field-types/geospatial-type/#distance-units' | relative_url }})).
 
 {: .note .caution }
 **_Caution_**<br>

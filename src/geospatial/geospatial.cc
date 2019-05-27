@@ -27,6 +27,80 @@
 #include "repr.hh"                                // for repr
 #include "reserved/geo.h"                         // for RESERVED_*
 #include "reserved/types.h"                       // for RESERVED_*
+#include "strict_stox.hh"                         // for strict_stoull
+
+
+static inline double
+distance(std::string_view str)
+{
+	auto size = str.size();
+	std::string_view s1, s2, s3;
+	if (size > 3) {
+		s1 = str.substr(size - 1, 1);
+		s2 = str.substr(size - 2, 2);
+		s3 = str.substr(size - 3, 3);
+	} else if (size > 2) {
+		s1 = str.substr(size - 1, 1);
+		s2 = str.substr(size - 2, 2);
+	} else if (size > 1) {
+		s1 = str.substr(size - 1, 1);
+	}
+
+	double mul = 1;
+	if (s3 == "nmi") {
+		str.remove_suffix(3);
+		mul = 1852.0;
+	} else if (s2 == "mm") {
+		str.remove_suffix(2);
+		mul = 1.0 / 1000.0;
+	} else if (s2 == "cm") {
+		str.remove_suffix(2);
+		mul = 1.0 / 100.0;
+	} else if (s2 == "km") {
+		str.remove_suffix(2);
+		mul = 1000.0;
+	} else if (s2 == "in") {
+		str.remove_suffix(2);
+		mul = 1.0 / 39.37;
+	} else if (s2 == "ft") {
+		str.remove_suffix(2);
+		mul = 1.0 / 3.2808;
+	} else if (s2 == "yd") {
+		str.remove_suffix(2);
+		mul = 1.0 / 1.0936;
+	} else if (s2 == "mi") {
+		str.remove_suffix(2);
+		mul = 1609.344;
+	} else if (s2 == "NM") {
+		str.remove_suffix(2);
+		mul = 1852.0;
+	} else if (s1 == "m") {
+		str.remove_suffix(1);
+	}
+
+	int errno_save;
+	auto d = strict_stoi(&errno_save, str);
+	if (errno_save != 0) {
+		THROW(GeoSpatialError, "Object must be a valid metric or imperial distance string");
+	}
+	return d * mul;
+}
+
+
+static inline double
+distance(const MsgPack& obj)
+{
+	switch (obj.get_type()) {
+		case MsgPack::Type::STR:
+			return distance(obj.str_view());
+		case MsgPack::Type::POSITIVE_INTEGER:
+		case MsgPack::Type::NEGATIVE_INTEGER:
+		case MsgPack::Type::FLOAT:
+			return obj.f64();
+		default:
+			THROW(GeoSpatialError, "Distance object must be string, numeric {}", enum_name(obj.get_type()));
+	}
+}
 
 
 GeoSpatial::GeoSpatial(const MsgPack& obj)
@@ -249,7 +323,7 @@ GeoSpatial::make_point(const MsgPack& o)
 				THROW(GeoSpatialError, "{} must contain {} and {}", RESERVED_POINT, RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE);
 			}
 			try {
-				return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.alt != nullptr ? data.alt->f64() : 0, data.units, data.srid));
+				return Point(Cartesian(data.lat->f64(), data.lon->f64(), data.alt != nullptr ? distance(*data.alt) : 0, data.units, data.srid));
 			} catch (const msgpack::type_error&) {
 				THROW(GeoSpatialError, "{}, {} and {} must be numeric", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE);
 			}
@@ -293,7 +367,7 @@ GeoSpatial::make_circle(const MsgPack& o)
 		THROW(GeoSpatialError, "{} must contain {}, {} and {}", RESERVED_CIRCLE, RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_RADIUS);
 	}
 	try {
-		return Circle(Cartesian(data.lat->f64(), data.lon->f64(), data.alt != nullptr ? data.alt->f64() : 0, data.units, data.srid), data.radius->f64());
+		return Circle(Cartesian(data.lat->f64(), data.lon->f64(), data.alt != nullptr ? distance(*data.alt) : 0, data.units, data.srid), distance(*data.radius));
 	} catch (const msgpack::type_error&) {
 		THROW(GeoSpatialError, "{}, {}, {} and {} must be numeric", RESERVED_GEO_LATITUDE, RESERVED_GEO_LONGITUDE, RESERVED_GEO_ALTITUDE, RESERVED_GEO_RADIUS);
 	}
@@ -327,7 +401,7 @@ GeoSpatial::make_convex(const MsgPack& o)
 			auto it_radius = data.radius->begin();
 			convex.reserve(data.lat->size());
 			for (const auto& latitude : *data.lat) {
-				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), it_radius->f64()));
+				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), distance(*it_radius)));
 				++it;
 				++hit;
 				++it_radius;
@@ -340,7 +414,7 @@ GeoSpatial::make_convex(const MsgPack& o)
 			auto it_radius = data.radius->begin();
 			convex.reserve(data.lat->size());
 			for (const auto& latitude : *data.lat) {
-				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), it_radius->f64()));
+				convex.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), distance(*it_radius)));
 				++it;
 				++it_radius;
 			}
@@ -456,16 +530,18 @@ GeoSpatial::make_multicircle(const MsgPack& o)
 			auto it = data.lon->begin();
 			auto hit = data.alt->begin();
 			multicircle.reserve(data.lat->size());
+			auto radius = distance(*data.radius);
 			for (const auto& latitude : *data.lat) {
-				multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), data.radius->f64()));
+				multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), hit->f64(), data.units, data.srid), radius));
 				++it;
 				++hit;
 			}
 		} else {
 			auto it = data.lon->begin();
 			multicircle.reserve(data.lat->size());
+			auto radius = distance(*data.radius);
 			for (const auto& latitude : *data.lat) {
-				multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), data.radius->f64()));
+				multicircle.add(Circle(Cartesian(latitude.f64(), it->f64(), 0, data.units, data.srid), radius));
 				++it;
 			}
 		}

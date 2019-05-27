@@ -234,6 +234,31 @@ Notice that for points in array mode, the correct coordinate order is
 `[ longitude, latitude]`, "longitude" first.
 
 
+## Distance Units
+Whenever distances need to be specified, e.g. for a radius or altitude, the
+distance unit can be specified as a double number representing distance in
+meters or as a string of the form number and distance unit e.g. "2.72km"
+
+### Supported Units
+
+A number of distance units are supported, from millimeters to nautical miles
+
+#### Metric
+
+* `mm` (Millimeters)
+* `cm` (Centimeters)
+* `m` (Meters)
+* `km` (Kilometers)
+
+#### Imperial
+
+* `in` (Inches)
+* `ft` (Feet)
+* `yd` (Yards)
+* `mi` (Miles)
+* `nmi` or `NM` (Nautical Miles)
+
+
 ## Accuracy
 
 Xapiand handles numerical ranges by **trie indexing** numerical values in a
