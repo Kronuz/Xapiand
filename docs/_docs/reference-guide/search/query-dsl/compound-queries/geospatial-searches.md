@@ -70,8 +70,9 @@ pm.test("Geospatial Point values are valid", function() {
 ## Circle
 
 Although you certainly can use `_circle` the same way we used [Point](#point),
-to directly match an specific circle, you will probably more likely need to find
-documents within the given circle. For that, the `_in` keyword is needed:
+to directly match an specific exact circle, you will probably more likely need
+to find documents _within_ the given circle. For that, the `_in` keyword is
+needed:
 
 {% capture req %}
 
@@ -105,7 +106,8 @@ Otherwise you'd be searching for the circle itself, not what's in it.
 
 ## Polygon
 
-Use `_polygon`.
+Similarly to Circle, above, you can use Polygon to find documents _within_ the
+given convex polygon:
 
 {% capture req %}
 
@@ -143,64 +145,6 @@ _**Concave Polygons**_<br>
 Notice you _**must**_ provide [convex polygons](https://en.wikipedia.org/wiki/Convex_polygon){:target="_blank"}; at the moment, [concave polygons](https://en.wikipedia.org/wiki/Concave_polygon){:target="_blank"}
 are not supported.
 
-{% if site.serving %}
-
-## Convex
-
-Use `_convex`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
-## Chull
-
-Use `_chull`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
-## Multipoint
-
-Use `_multipoint`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
-## Multicircle
-
-Use `_multicircle`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
-## Multiconvex
-
-Use `_multiconvex`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
-## Multipolygon
-
-Use `_multipolygon`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-
-## Multichull
-
-Use `_multichull`.
-
-{: .note .construction }
-_This section is a **work in progress**..._
-
-{% endif %}
 
 ## Extended Well-Known Text
 
@@ -247,26 +191,30 @@ Notice that for points in EWKT expressions, the correct coordinate order is
 
 ## Accepted Coordinates
 
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+Additionally to the object formats exemplified above, coordinates also accept
+array formats and text formats.
 
-Here are examples of text formats that work:
+Here are examples of formats that work:
 
 * Degrees, minutes, and seconds (DMS): `41°30'12.348"N 74°0'37.512"W`
 * Degrees and decimal minutes (DMM): `41 30.2058, -74 0.6252`
 * Decimal degrees (DD): `41.50343, -74.01042`
 * Extended Well-Known Text (EWKT): `POINT(-74.01042 41.50343)`
+* JSON array of longitude and latitude pairs: `[ -74.01042, 41.50343 ]`
 
 Here are some tips for formatting your coordinates so they work:
 
 * Use the degree symbol instead of "`d`".
 * Use double quoted symbol (`"`) instead of two single quoted symbols
   (and escape, in JSON strings).
-* Use periods as decimals, not commas.
+* Use _periods_ as decimals, not _commas_.
   - Incorrect: `41,50343, -74,01042`.
   - Correct: `41.50343, -74.01042`.
 * List your latitude coordinates before longitude coordinates.
 * Check that the first number in your latitude coordinate is between -90 and 90.
 * Check that the first number in your longitude coordinate is between -180 and 180.
+
+{: .note .unimplemented }
+**_Unimplemented Feature!_**<br>
+DMS, DMM and DD text formats  haven't yet been implemented...
+[Pull requests are welcome!]({{ site.repository }}/pulls)
