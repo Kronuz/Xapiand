@@ -6,10 +6,18 @@ short_title: Geospatial
 Geospatial allow searching within arbitrary "geo-shapes" such as rectangles,
 polygons, circles, points etc.
 
+for querying geospatial searches, you can use any of the supported shapes:
 
-## Point
+* [Point]({{ 'docs/reference-guide/schemas/field-types/geospatial-type#point' | relative_url }})
+* [Circle]({{ 'docs/reference-guide/schemas/field-types/geospatial-type#circle' | relative_url }})
+* [Convex Polygon]({{ 'docs/reference-guide/schemas/field-types/geospatial-type#convex-polygon' | relative_url }})
+* [Convex Hull]({{ 'docs/reference-guide/schemas/field-types/geospatial-type#convex-hull' | relative_url }})
+* [EWKT]({{ 'docs/reference-guide/schemas/field-types/geospatial-type#extended-well-known-text' | relative_url }})
 
-Use `_point` to directly match an specific point:
+
+## Exact Matching
+
+Use `_point` to directly match an specific exact point:
 
 {% capture req %}
 
@@ -67,12 +75,12 @@ pm.test("Geospatial Point values are valid", function() {
 {% endcomment %}
 
 
-## Circle
+## Match Within
 
-Although you certainly can use `_circle` the same way we used [Point](#point),
-to directly match an specific exact circle, you will probably more likely need
-to find documents _within_ the given circle. For that, the `_in` keyword is
-needed:
+Although you certainly can use any of the geospatial shapes in the same way we
+used Point for [Exact Matching](#exact-matching), to directly match an specific
+exact shape, you will probably more likely need to find documents _within_ the
+given shape. For that, the `_in` keyword is needed:
 
 {% capture req %}
 
@@ -96,125 +104,10 @@ SEARCH /bank/
 {% endcapture %}
 {% include curl.html req=req %}
 
-The `_radius` in the example is in meters.
+In the example above we are searching inside a circle with it's center is given
+by `_latitude`, `_longitude` and a `_radius` (in meters).
 
 {: .note .caution }
 **_Caution_**<br>
-For searching **inside** the given circle you _**must**_ use `_in` keyword.
-Otherwise you'd be searching for the circle itself, not what's in it.
-
-
-## Polygon
-
-Similarly to Circle, above, you can use Polygon to find documents _within_ the
-given convex polygon:
-
-{% capture req %}
-
-```json
-SEARCH /bank/
-
-{
-  "_query": {
-    "checkin": {
-      "_in": {
-        "_polygon": {
-          "_latitude": [
-            41.502530,
-            41.507152,
-            41.506734,
-            41.502121,
-          ],
-          "_longitude": [
-            -74.015237,
-            -74.015061,
-            -74.009160,
-            -74.009489,
-          ]
-        }
-      }
-    }
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-{: .note .warning }
-_**Concave Polygons**_<br>
-Notice you _**must**_ provide [convex polygons](https://en.wikipedia.org/wiki/Convex_polygon){:target="_blank"}; at the moment, [concave polygons](https://en.wikipedia.org/wiki/Concave_polygon){:target="_blank"}
-are not supported.
-
-
-## Extended Well-Known Text
-
-Use `_ewkt`.
-
-Shapes can be represented using the Extended Well-Known Text (EWKT) format.
-The following shapes are allowed types:
-
-* POINT         - Finds documents with the given point
-* CIRCLE        - Finds documents inside or with the given circle.
-* CONVEX        - Finds documents inside or with the given convex.
-* POLYGON       - Finds documents inside or with the given polygon.
-* CHULL         - Finds documents inside or with the given convex hull.
-* MULTIPOINT    - Finds documents inside the given vector of points.
-* MULTIPCIRCLE  - Finds documents inside the given vector of circles.
-* MULTICONVEX   - Finds documents inside the given vector of convexs.
-* MULTIPOLYGON  - Finds documents inside the given vector of polygons.
-* MULTICHULL    - Finds documents inside the given vector of convexs hull.
-
-The following example search a point with _latitude_ of **41.50343** and
-_longitude_ of **-74.01042**.
-
-{% capture req %}
-
-```json
-SEARCH /bank/
-
-{
-  "_query": {
-    "checkin": {
-      "_ewkt": "POINT(-74.01042 41.50343)"
-    }
-  }
-}
-```
-{% endcapture %}
-{% include curl.html req=req %}
-
-{: .note .caution }
-**_Caution_**<br>
-Notice that for points in EWKT expressions, the correct coordinate order is
-`(longitude, latitude)`, "longitude" first.
-
-
-## Accepted Coordinates
-
-Additionally to the object formats exemplified above, coordinates also accept
-array formats and text formats.
-
-Here are examples of formats that work:
-
-* Degrees, minutes, and seconds (DMS): `41°30'12.348"N 74°0'37.512"W`
-* Degrees and decimal minutes (DMM): `41 30.2058, -74 0.6252`
-* Decimal degrees (DD): `41.50343, -74.01042`
-* Extended Well-Known Text (EWKT): `POINT(-74.01042 41.50343)`
-* JSON array of longitude and latitude pairs: `[ -74.01042, 41.50343 ]`
-
-Here are some tips for formatting your coordinates so they work:
-
-* Use the degree symbol instead of "`d`".
-* Use double quoted symbol (`"`) instead of two single quoted symbols
-  (and escape, in JSON strings).
-* Use _periods_ as decimals, not _commas_.
-  - Incorrect: `41,50343, -74,01042`.
-  - Correct: `41.50343, -74.01042`.
-* List your latitude coordinates before longitude coordinates.
-* Check that the first number in your latitude coordinate is between -90 and 90.
-* Check that the first number in your longitude coordinate is between -180 and 180.
-
-{: .note .unimplemented }
-**_Unimplemented Feature!_**<br>
-DMS, DMM and DD text formats  haven't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+For searching **inside** the given shape you _**must**_ use `_in` keyword.
+Otherwise you'd be searching for the shape itself, not what's in it.
