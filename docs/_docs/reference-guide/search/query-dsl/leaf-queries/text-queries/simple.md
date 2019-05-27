@@ -70,7 +70,7 @@ pm.test("Simple query value is valid", function() {
   var jsonData = pm.response.json();
   var expected = [20, 25, 27, 31, 37, 38, 52, 89, 106, 109];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

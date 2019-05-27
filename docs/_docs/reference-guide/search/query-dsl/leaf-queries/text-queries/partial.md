@@ -67,7 +67,7 @@ pm.test("partial query values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [77, 84, 120, 173, 234, 279, 280, 284, 289, 319];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

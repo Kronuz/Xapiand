@@ -220,7 +220,7 @@ pm.test("Response values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [100123, 100481, 101121, 101253, 101294, 103213, 103486, 103710, 104419, 107465];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i].accountNumber).to.equal(expected[i]);
   }
 });
 ```
@@ -406,7 +406,7 @@ pm.test("Response values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [12699.46, 10857.55, 10819.51, 10729.87, 10663.25, 10643.84, 10513.99, 10448.36, 10087.41, 10073.05];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i].balance).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i].balance).to.equal(expected[i]);
   }
 });
 ```

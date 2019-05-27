@@ -84,7 +84,7 @@ pm.test("phrase query values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [26, 39, 44, 52, 60, 72, 82, 90, 119, 156];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

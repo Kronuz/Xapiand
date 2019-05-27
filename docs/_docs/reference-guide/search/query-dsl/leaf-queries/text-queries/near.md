@@ -57,7 +57,7 @@ pm.test("near query values are valid", function() {
   var jsonData = pm.response.json();
   var expected = [282, 494];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
 });
 ```

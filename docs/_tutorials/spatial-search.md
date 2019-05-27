@@ -74,7 +74,7 @@ pm.test("Restore indexed all", function() {
 pm.test("Restore values are valid", function() {
   var jsonData = pm.response.json();
   for (var i = 0; i < 1000; ++i) {
-      pm.expect(jsonData.items[i]._id).to.equal(i + 1);
+    pm.expect(jsonData.items[i]._id).to.equal(i + 1);
   }
 });
 ```
@@ -141,7 +141,7 @@ pm.test("Response values are valid", function() {
   var jsonData = pm.response.json();
   var expected = ["Richmond", "Berkeley", "Oakland", "San Francisco", "Vallejo"];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i]).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -229,7 +229,7 @@ pm.test("Response values are valid", function() {
   var jsonData = pm.response.json();
   var expected = ["San Francisco", "Oakland", "Richmond", "Berkeley", "Vallejo"];
   for (var i = 0; i < expected.length; ++i) {
-      pm.expect(jsonData.hits[i]).to.equal(expected[i]);
+    pm.expect(jsonData.hits[i]).to.equal(expected[i]);
   }
 });
 ```
