@@ -30,6 +30,7 @@
 
 #include "callable_traits.hh"                // for callable_traits
 #include "log.h"                             // for L_CALL, L_DEBUG_HOOK
+#include "random.hh"                         // for random_int
 #include "scheduler.h"                       // for ScheduledTask, ThreadedScheduler
 #include "time_point.hh"                     // for time_point_to_ullong
 
@@ -54,23 +55,27 @@ class Debouncer : public ThreadedScheduler<DebouncerTask<Key, Func, Tuple, threa
 	std::chrono::milliseconds throttle_time;
 	std::chrono::milliseconds debounce_timeout;
 	std::chrono::milliseconds debounce_busy_timeout;
-	std::chrono::milliseconds debounce_force_timeout;
+	std::chrono::milliseconds debounce_min_force_timeout;
+	std::chrono::milliseconds debounce_max_force_timeout;
 
 	void release(const Key& key);
 	void throttle(const Key& key);
 
 public:
-	Debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_force_timeout) :
+	Debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_min_force_timeout, std::chrono::milliseconds debounce_max_force_timeout) :
 		ThreadedScheduler<DebouncerTask<Key, Func, Tuple, thread_policy>>(name, format, num_threads),
 		func(std::move(func)),
 		throttle_time(throttle_time),
 		debounce_timeout(debounce_timeout),
 		debounce_busy_timeout(debounce_busy_timeout),
-		debounce_force_timeout(debounce_force_timeout)
+		debounce_min_force_timeout(debounce_min_force_timeout),
+		debounce_max_force_timeout(debounce_max_force_timeout)
 	{
 		assert(throttle_time == std::chrono::milliseconds(0) || throttle_time >= debounce_timeout);
 		assert(debounce_busy_timeout >= debounce_timeout);
-		assert(debounce_force_timeout >= debounce_busy_timeout);
+		assert(debounce_min_force_timeout >= debounce_busy_timeout);
+		assert(debounce_max_force_timeout >= debounce_busy_timeout);
+		assert(debounce_min_force_timeout <= debounce_max_force_timeout);
 	}
 
 	template <typename... Args>
@@ -216,7 +221,7 @@ Debouncer<Key, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::millis
 			// status doesn't exists, initialize:
 			auto& status_ref = statuses[key] = {
 				nullptr,
-				time_point_to_ullong(now + debounce_force_timeout + delay)
+				time_point_to_ullong(now + random_time(debounce_min_force_timeout, debounce_max_force_timeout) + delay)
 			};
 			status = &status_ref;
 			next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
@@ -227,7 +232,7 @@ Debouncer<Key, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::millis
 				next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout + delay);
 			} else {
 				// status exists but is a throttler (max_wakeup_time == 0), initialize:
-				status->max_wakeup_time = time_point_to_ullong(now + debounce_force_timeout + delay);
+				status->max_wakeup_time = time_point_to_ullong(now + random_time(debounce_min_force_timeout, debounce_max_force_timeout) + delay);
 				next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
 			}
 		}
@@ -261,22 +266,22 @@ Debouncer<Key, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::millis
 
 template <typename Key, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
 inline auto
-make_debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_force_timeout)
+make_debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_min_force_timeout, std::chrono::milliseconds debounce_max_force_timeout)
 {
-	return Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>(name, format, num_threads, func, throttle_time, debounce_timeout, debounce_busy_timeout, debounce_force_timeout);
+	return Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>(name, format, num_threads, func, throttle_time, debounce_timeout, debounce_busy_timeout, debounce_min_force_timeout, debounce_max_force_timeout);
 }
 
 template <typename Key, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
 inline auto
-make_unique_debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_force_timeout)
+make_unique_debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_min_force_timeout, std::chrono::milliseconds debounce_max_force_timeout)
 {
-	return std::make_unique<Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func, throttle_time, debounce_timeout, debounce_busy_timeout, debounce_force_timeout);
+	return std::make_unique<Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func, throttle_time, debounce_timeout, debounce_busy_timeout, debounce_min_force_timeout, debounce_max_force_timeout);
 }
 
 
 template <typename Key, ThreadPolicyType thread_policy = ThreadPolicyType::regular, typename Func>
 inline auto
-make_shared_debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_force_timeout)
+make_shared_debouncer(std::string name, const char* format, size_t num_threads, Func func, std::chrono::milliseconds throttle_time, std::chrono::milliseconds debounce_timeout, std::chrono::milliseconds debounce_busy_timeout, std::chrono::milliseconds debounce_min_force_timeout, std::chrono::milliseconds debounce_max_force_timeout)
 {
-	return std::make_shared<Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func, throttle_time, debounce_timeout, debounce_busy_timeout, debounce_force_timeout);
+	return std::make_shared<Debouncer<Key, decltype(func), typename callable_traits<decltype(func)>::arguments_type, thread_policy>>(name, format, num_threads, func, throttle_time, debounce_timeout, debounce_busy_timeout, debounce_min_force_timeout, debounce_max_force_timeout);
 }

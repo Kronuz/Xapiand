@@ -397,7 +397,7 @@ void committer_commit(std::weak_ptr<Shard> weak_shard);
 
 
 inline auto& committer(bool create = true) {
-	static auto committer = create ? make_unique_debouncer<Endpoint, ThreadPolicyType::committers>("AC--", "AC{:02}", opts.num_committers, committer_commit, std::chrono::milliseconds(opts.committer_throttle_time), std::chrono::milliseconds(opts.committer_debounce_timeout), std::chrono::milliseconds(opts.committer_debounce_busy_timeout), std::chrono::milliseconds(opts.committer_debounce_force_timeout)) : nullptr;
+	static auto committer = create ? make_unique_debouncer<Endpoint, ThreadPolicyType::committers>("AC--", "AC{:02}", opts.num_committers, committer_commit, std::chrono::milliseconds(opts.committer_throttle_time), std::chrono::milliseconds(opts.committer_debounce_timeout), std::chrono::milliseconds(opts.committer_debounce_busy_timeout), std::chrono::milliseconds(opts.committer_debounce_min_force_timeout), std::chrono::milliseconds(opts.committer_debounce_max_force_timeout)) : nullptr;
 	assert(!create || committer);
 	return committer;
 }

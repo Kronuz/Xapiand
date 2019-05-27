@@ -565,22 +565,26 @@ parseOptions(int argc, char** argv)
 	o.committer_throttle_time = 0;
 	o.committer_debounce_timeout = 1000;
 	o.committer_debounce_busy_timeout = 3000;
-	o.committer_debounce_force_timeout = 9000;
+	o.committer_debounce_min_force_timeout = 5000;
+	o.committer_debounce_max_force_timeout = 15000;
 
 	o.fsyncher_throttle_time = 1000;
 	o.fsyncher_debounce_timeout = 500;
 	o.fsyncher_debounce_busy_timeout = 500;
-	o.fsyncher_debounce_force_timeout = 3000;
+	o.fsyncher_debounce_min_force_timeout = 1000;
+	o.fsyncher_debounce_max_force_timeout = 6000;
 
 	o.db_updater_throttle_time = 1000;
 	o.db_updater_debounce_timeout = 100;
 	o.db_updater_debounce_busy_timeout = 500;
-	o.db_updater_debounce_force_timeout = 5000;
+	o.db_updater_debounce_min_force_timeout = 2000;
+	o.db_updater_debounce_max_force_timeout = 10000;
 
 	o.trigger_replication_throttle_time = 1000;
 	o.trigger_replication_debounce_timeout = 100;
 	o.trigger_replication_debounce_busy_timeout = 500;
-	o.trigger_replication_debounce_force_timeout = 5000;
+	o.trigger_replication_debounce_min_force_timeout = 2000;
+	o.trigger_replication_debounce_max_force_timeout = 10000;
 
 	return o;
 }

@@ -207,7 +207,7 @@ public:
 void db_updated_send(Xapian::rev revision, std::string path);
 
 inline auto& db_updater(bool create = true) {
-	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_force_timeout)) : nullptr;
+	static auto db_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("DU--", "DU{:02}", opts.num_discoverers, db_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
 	assert(!create || db_updater);
 	return db_updater;
 }
@@ -215,7 +215,7 @@ inline auto& db_updater(bool create = true) {
 void schema_updated_send(Xapian::rev revision, std::string path);
 
 inline auto& schema_updater(bool create = true) {
-	static auto schema_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, schema_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_force_timeout)) : nullptr;
+	static auto schema_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, schema_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
 	assert(!create || schema_updater);
 	return schema_updater;
 }
