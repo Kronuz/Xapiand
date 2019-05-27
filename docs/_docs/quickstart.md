@@ -37,8 +37,8 @@ section for more details.
 **_High Verbosity_**<br>
 For testing, we recommend running with _*very-very-very* verbose_ output, which
 can be specified by using `-vvvv` or `--verbosity=4`. This will log all full
-requests and will also turn on `pretty`, `echo` and `comments` options. See
-[Options](/docs/options) for more details.
+requests and will also turn on `pretty`, `human`, `echo` and `comments` options.
+See [Options](/docs/options) for more details.
 
 
 ---
