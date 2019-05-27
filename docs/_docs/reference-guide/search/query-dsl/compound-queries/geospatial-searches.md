@@ -140,9 +140,10 @@ SEARCH /bank/
 
 {: .note .warning }
 _**Concave Polygons**_<br>
-Notice you _**must**_ provide convex polygons; at the moment, concave polygons
+Notice you _**must**_ provide [convex polygons](https://en.wikipedia.org/wiki/Convex_polygon){:target="_blank"}; at the moment, [concave polygons](https://en.wikipedia.org/wiki/Concave_polygon){:target="_blank"}
 are not supported.
 
+{% if site.serving %}
 
 ## Convex
 
@@ -199,6 +200,7 @@ Use `_multichull`.
 {: .note .construction }
 _This section is a **work in progress**..._
 
+{% endif %}
 
 ## Extended Well-Known Text
 
