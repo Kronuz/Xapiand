@@ -89,9 +89,9 @@
 #define MAX_DOC_INDEXERS              20
 #define MIN_DOC_INDEXERS               2
 
-#define NUM_COMMITTERS               1.0          // Number of threads handling the commits per CPU
-#define MAX_COMMITTERS                10
-#define MIN_COMMITTERS                 1
+#define NUM_COMMITTERS               2.0          // Number of threads handling the commits per CPU
+#define MAX_COMMITTERS                20
+#define MIN_COMMITTERS                 2
 
 #define NUM_FSYNCHERS                0.5          // Number of threads handling the fsyncs per CPU
 #define MAX_FSYNCHERS                 10
