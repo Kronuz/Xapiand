@@ -35,7 +35,7 @@ RemoteDocument::fetch_value(Xapian::valueno) const
 }
 
 void
-RemoteDocument::fetch_all_values(map<Xapian::valueno, string> &) const
+RemoteDocument::fetch_all_values(btree::map<Xapian::valueno, string>&) const
 {
     LOGCALL_VOID(DB, "RemoteDocument::fetch_all_values", Literal("[&values_]"));
     // Our ctor sets the values, so we should never get here.

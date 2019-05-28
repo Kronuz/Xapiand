@@ -25,6 +25,8 @@
 #ifndef XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 #define XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 
+#include "btree.h"
+
 #include "xapian/api/leafpostlist.h"
 #include "xapian/api/smallvector.h"
 #include "xapian/api/termlist.h"
@@ -250,7 +252,7 @@ class InMemoryDatabase : public Xapian::Database::Internal {
     map<string, InMemoryTerm> postlists;
     vector<InMemoryDoc> termlists;
     vector<std::string> doclists;
-    vector<std::map<Xapian::valueno, string>> valuelists;
+    vector<btree::map<Xapian::valueno, string>> valuelists;
     std::map<Xapian::valueno, ValueStats> valuestats;
 
     vector<Xapian::termcount> doclengths;
@@ -277,7 +279,7 @@ class InMemoryDatabase : public Xapian::Database::Internal {
 
     /* The common parts of add_doc and replace_doc */
     void finish_add_doc(Xapian::docid did, const Xapian::Document &document);
-    void add_values(Xapian::docid did, const map<Xapian::valueno, string> &values_);
+    void add_values(Xapian::docid did, const btree::map<Xapian::valueno, string> &values_);
 
     void make_posting(InMemoryDoc * doc,
 		      const string & tname,

@@ -21,6 +21,8 @@
 #ifndef XAPIAN_INCLUDED_HONEY_INVERTER_H
 #define XAPIAN_INCLUDED_HONEY_INVERTER_H
 
+#include "btree.h"
+
 #include "xapian/types.h"
 
 #include "xapian/api/smallvector.h"
@@ -58,21 +60,23 @@ class HoneyInverter {
 	Xapian::termcount_diff cf_delta;
 
 	/// Changes to this term's postlist.
-	std::map<Xapian::docid, Xapian::termcount> pl_changes;
+	btree::map<Xapian::docid, Xapian::termcount> pl_changes;
 
       public:
+	PostingChanges() : tf_delta(-1), cf_delta(-1) { }
+
 	/// Constructor for an added posting.
 	PostingChanges(Xapian::docid did, Xapian::termcount wdf)
 	    : tf_delta(1), cf_delta(Xapian::termcount_diff(wdf))
 	{
-	    pl_changes.insert(std::make_pair(did, wdf));
+	    pl_changes.try_emplace(did, wdf);
 	}
 
 	/// Constructor for a removed posting.
 	PostingChanges(Xapian::docid did, Xapian::termcount wdf, bool)
 	    : tf_delta(-1), cf_delta(-Xapian::termcount_diff(wdf))
 	{
-	    pl_changes.insert(std::make_pair(did, DELETED_POSTING));
+	    pl_changes.try_emplace(did, DELETED_POSTING);
 	}
 
 	/// Constructor for an updated posting.
@@ -80,7 +84,7 @@ class HoneyInverter {
 		       Xapian::termcount new_wdf)
 	    : tf_delta(0), cf_delta(Xapian::termcount_diff(new_wdf - old_wdf))
 	{
-	    pl_changes.insert(std::make_pair(did, new_wdf));
+	    pl_changes.try_emplace(did, new_wdf);
 	}
 
 	/// Add a posting.
@@ -114,7 +118,7 @@ class HoneyInverter {
     };
 
     /// Buffered changes to postlists.
-    std::map<std::string, PostingChanges> postlist_changes;
+    btree::map<std::string, PostingChanges> postlist_changes;
 
     /// Buffered changes to positional data.
     std::map<std::string, std::map<Xapian::docid, std::string>> pos_changes;
@@ -136,38 +140,26 @@ class HoneyInverter {
   public:
     void add_posting(Xapian::docid did, const std::string & term,
 		     Xapian::doccount wdf) {
-	std::map<std::string, PostingChanges>::iterator i;
-	i = postlist_changes.find(term);
-	if (i == postlist_changes.end()) {
-	    postlist_changes.insert(
-		std::make_pair(term, PostingChanges(did, wdf)));
-	} else {
-	    i->second.add_posting(did, wdf);
+	auto emplaced = postlist_changes.try_emplace(term, did, wdf);
+	if (!emplaced.second) {
+	    emplaced.first->second.add_posting(did, wdf);
 	}
     }
 
     void remove_posting(Xapian::docid did, const std::string & term,
 			Xapian::doccount wdf) {
-	std::map<std::string, PostingChanges>::iterator i;
-	i = postlist_changes.find(term);
-	if (i == postlist_changes.end()) {
-	    postlist_changes.insert(
-		std::make_pair(term, PostingChanges(did, wdf, false)));
-	} else {
-	    i->second.remove_posting(did, wdf);
+	auto emplaced = postlist_changes.try_emplace(term, did, wdf, false);
+	if (!emplaced.second) {
+	    emplaced.first->second.remove_posting(did, wdf);
 	}
     }
 
     void update_posting(Xapian::docid did, const std::string & term,
 			Xapian::termcount old_wdf,
 			Xapian::termcount new_wdf) {
-	std::map<std::string, PostingChanges>::iterator i;
-	i = postlist_changes.find(term);
-	if (i == postlist_changes.end()) {
-	    postlist_changes.insert(
-		std::make_pair(term, PostingChanges(did, old_wdf, new_wdf)));
-	} else {
-	    i->second.update_posting(did, old_wdf, new_wdf);
+	auto emplaced = postlist_changes.try_emplace(term, did, old_wdf, new_wdf);
+	if (!emplaced.second) {
+	    emplaced.first->second.update_posting(did, old_wdf, new_wdf);
 	}
     }
 
@@ -238,7 +230,7 @@ class HoneyInverter {
     bool get_deltas(const std::string & term,
 		    Xapian::termcount_diff & tf_delta,
 		    Xapian::termcount_diff & cf_delta) const {
-	std::map<std::string, PostingChanges>::const_iterator i;
+	btree::map<std::string, PostingChanges>::const_iterator i;
 	i = postlist_changes.find(term);
 	if (i == postlist_changes.end()) {
 	    return false;

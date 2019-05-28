@@ -1117,7 +1117,7 @@ GlassPostListTable::get_chunk(const string &tname,
 }
 
 void
-GlassPostListTable::merge_doclen_changes(const map<Xapian::docid, Xapian::termcount> & doclens)
+GlassPostListTable::merge_doclen_changes(const btree::map<Xapian::docid, Xapian::termcount> & doclens)
 {
     LOGCALL_VOID(DB, "GlassPostListTable::merge_doclen_changes", doclens);
 
@@ -1136,7 +1136,7 @@ GlassPostListTable::merge_doclen_changes(const map<Xapian::docid, Xapian::termco
 	add(current_key, newtag);
     }
 
-    map<Xapian::docid, Xapian::termcount>::const_iterator j;
+    btree::map<Xapian::docid, Xapian::termcount>::const_iterator j;
     j = doclens.begin();
     Assert(j != doclens.end()); // This case is caught above.
 
@@ -1248,7 +1248,7 @@ GlassPostListTable::merge_changes(const string &term,
 	    add(current_key, tag);
 	}
     }
-    map<Xapian::docid, Xapian::termcount>::const_iterator j;
+    btree::map<Xapian::docid, Xapian::termcount>::const_iterator j;
     j = changes.pl_changes.begin();
     Assert(j != changes.pl_changes.end()); // This case is caught above.
 

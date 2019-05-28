@@ -22,6 +22,8 @@
 #ifndef XAPIAN_INCLUDED_GLASS_VALUES_H
 #define XAPIAN_INCLUDED_GLASS_VALUES_H
 
+#include "btree.h"
+
 #include "xapian/common/pack.h"
 #include "xapian/backends/valuestats.h"
 
@@ -131,7 +133,7 @@ class GlassValueManager {
 
     std::string get_value(Xapian::docid did, Xapian::valueno slot) const;
 
-    void get_all_values(std::map<Xapian::valueno, std::string> & values,
+    void get_all_values(btree::map<Xapian::valueno, std::string>& values,
 			Xapian::docid did) const;
 
     Xapian::doccount get_value_freq(Xapian::valueno slot) const {

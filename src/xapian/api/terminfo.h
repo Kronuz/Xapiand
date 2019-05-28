@@ -60,6 +60,8 @@ class TermInfo {
     void merge() const;
 
   public:
+    TermInfo() : wdf(-1) {}
+
     /** Constructor.
      *
      *  @param wdf_   Within-document frequency

@@ -25,6 +25,8 @@
 #ifndef XAPIAN_INCLUDED_GLASS_POSTLIST_H
 #define XAPIAN_INCLUDED_GLASS_POSTLIST_H
 
+#include "btree.h"
+
 #include "xapian/database.h"
 
 #include "xapian/backends/glass/glass_defs.h"
@@ -34,7 +36,6 @@
 #include "xapian/common/omassert.h"
 
 #include <memory>
-#include <map>
 #include <string>
 
 using namespace std;
@@ -89,7 +90,7 @@ class GlassPostListTable : public GlassTable {
 	void merge_changes(const string &term, const Inverter::PostingChanges & changes);
 
 	/// Merge document length changes.
-	void merge_doclen_changes(const map<Xapian::docid, Xapian::termcount> & doclens);
+	void merge_doclen_changes(const btree::map<Xapian::docid, Xapian::termcount> & doclens);
 
 	Xapian::docid get_chunk(const string &tname,
 				Xapian::docid did, bool adding,

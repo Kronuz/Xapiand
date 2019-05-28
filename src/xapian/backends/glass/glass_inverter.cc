@@ -44,7 +44,7 @@ Inverter::store_positions(const GlassPositionListTable & position_table,
     if (modifying) {
 	auto i = pos_changes.find(tname);
 	if (i != pos_changes.end()) {
-	    map<Xapian::docid, string> & m = i->second;
+	    btree::map<Xapian::docid, string> & m = i->second;
 	    auto j = m.find(did);
 	    if (j != m.end()) {
 		// Update existing entry.
@@ -98,8 +98,7 @@ Inverter::set_positionlist(Xapian::docid did,
 			   const string & term,
 			   const string & s)
 {
-    pos_changes.insert(make_pair(term, map<Xapian::docid, string>()))
-	.first->second[did] = s;
+    pos_changes.try_emplace(term).first->second[did] = s;
 }
 
 void
@@ -117,7 +116,7 @@ Inverter::get_positionlist(Xapian::docid did,
     auto i = pos_changes.find(term);
     if (i == pos_changes.end())
 	return false;
-    const map<Xapian::docid, string> & m = i->second;
+    const btree::map<Xapian::docid, string> & m = i->second;
     auto j = m.find(did);
     if (j == m.end())
 	return false;
@@ -135,7 +134,7 @@ Inverter::has_positions(const GlassPositionListTable & position_table) const
     // efficient?  E.g. how many sets and deletes we had in total perhaps.
     glass_tablesize_t changes = 0;
     for (auto i : pos_changes) {
-	const map<Xapian::docid, string>& m = i.second;
+	const btree::map<Xapian::docid, string>& m = i.second;
 	for (auto j : m) {
 	    const string & s = j.second;
 	    if (!s.empty())
@@ -158,7 +157,7 @@ Inverter::flush_doclengths(GlassPostListTable & table)
 void
 Inverter::flush_post_list(GlassPostListTable & table, const string & term)
 {
-    map<string, PostingChanges>::iterator i;
+    btree::map<string, PostingChanges>::iterator i;
     i = postlist_changes.find(term);
     if (i == postlist_changes.end()) return;
 
@@ -170,7 +169,7 @@ Inverter::flush_post_list(GlassPostListTable & table, const string & term)
 void
 Inverter::flush_all_post_lists(GlassPostListTable & table)
 {
-    map<string, PostingChanges>::const_iterator i;
+    btree::map<string, PostingChanges>::const_iterator i;
     for (i = postlist_changes.begin(); i != postlist_changes.end(); ++i) {
 	table.merge_changes(i->first, i->second);
     }
@@ -183,7 +182,7 @@ Inverter::flush_post_lists(GlassPostListTable & table, const string & pfx)
     if (pfx.empty())
 	return flush_all_post_lists(table);
 
-    map<string, PostingChanges>::iterator i, begin, end;
+    btree::map<string, PostingChanges>::iterator i, begin, end;
     begin = postlist_changes.lower_bound(pfx);
     string pfxinc = pfx;
     while (true) {
@@ -220,7 +219,7 @@ Inverter::flush_pos_lists(GlassPositionListTable & table)
 {
     for (auto i : pos_changes) {
 	const string & term = i.first;
-	const map<Xapian::docid, string> & m = i.second;
+	const btree::map<Xapian::docid, string> & m = i.second;
 	for (auto j : m) {
 	    Xapian::docid did = j.first;
 	    const string & s = j.second;

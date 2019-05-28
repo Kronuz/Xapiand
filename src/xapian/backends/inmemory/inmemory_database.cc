@@ -666,7 +666,7 @@ InMemoryDatabase::open_position_list(Xapian::docid did,
 
 void
 InMemoryDatabase::add_values(Xapian::docid did,
-			     const map<Xapian::valueno, string> &values_)
+			     const btree::map<Xapian::valueno, string> &values_)
 {
     if (closed) InMemoryDatabase::throw_database_closed();
     if (did > valuelists.size()) {
@@ -675,7 +675,7 @@ InMemoryDatabase::add_values(Xapian::docid did,
     valuelists[did - 1] = values_;
 
     // Update the statistics.
-    map<Xapian::valueno, string>::const_iterator j;
+    btree::map<Xapian::valueno, string>::const_iterator j;
     for (j = values_.begin(); j != values_.end(); ++j) {
 	std::pair<map<Xapian::valueno, ValueStats>::iterator, bool> i;
 	i = valuestats.insert(make_pair(j->first, ValueStats()));
@@ -720,7 +720,7 @@ InMemoryDatabase::delete_document(Xapian::docid did)
     }
     termlists[did - 1].is_valid = false;
     doclists[did - 1] = string();
-    map<Xapian::valueno, string>::const_iterator j;
+    btree::map<Xapian::valueno, string>::const_iterator j;
     for (j = valuelists[did - 1].begin(); j != valuelists[did - 1].end(); ++j) {
 	map<Xapian::valueno, ValueStats>::iterator i;
 	i = valuestats.find(j->first);
@@ -770,7 +770,7 @@ InMemoryDatabase::replace_document(Xapian::docid did,
     if (closed) InMemoryDatabase::throw_database_closed();
 
     if (doc_exists(did)) {
-	map<Xapian::valueno, string>::const_iterator j;
+	btree::map<Xapian::valueno, string>::const_iterator j;
 	for (j = valuelists[did - 1].begin(); j != valuelists[did - 1].end(); ++j) {
 	    map<Xapian::valueno, ValueStats>::iterator i;
 	    i = valuestats.find(j->first);
@@ -842,7 +842,7 @@ void
 InMemoryDatabase::finish_add_doc(Xapian::docid did, const Xapian::Document &document)
 {
     {
-	map<Xapian::valueno, string> values;
+	btree::map<Xapian::valueno, string> values;
 	Xapian::ValueIterator k = document.values_begin();
 	for ( ; k != document.values_end(); ++k) {
 	    values.insert(make_pair(k.get_valueno(), *k));

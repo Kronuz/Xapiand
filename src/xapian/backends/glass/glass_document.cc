@@ -32,7 +32,7 @@ GlassDocument::fetch_value(Xapian::valueno slot) const
 }
 
 void
-GlassDocument::fetch_all_values(map<Xapian::valueno, string>& values_) const
+GlassDocument::fetch_all_values(btree::map<Xapian::valueno, string>& values_) const
 {
     value_manager->get_all_values(values_, did);
 }
