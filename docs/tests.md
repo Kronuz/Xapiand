@@ -242,3 +242,676 @@ pm.test("Schema uuid type is valid", function() {
 ```
 
 {% endcomment %}
+
+
+{% comment %}
+
+```json
+PUT /test/doc
+
+{
+  "_id": {
+    "_type": "keyword",
+  },
+  "ident": {
+    "_type": "uuid",
+    "_index": "global_terms",
+    "_value": "~notmet"
+  }
+}
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+---
+description: Index for Global
+---
+
+```json
+SEARCH /test/
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.hits[0].ident).to.equal('~notmet');
+});
+```
+
+---
+description: Search for Global
+---
+
+{% endcomment %}
+
+
+{% comment %}
+
+```json
+PUT /test/schemas/implicit-_type/doc
+
+{
+    "_id": {
+        "_type": "keyword",
+    },
+    "campo": {
+        "_type": "keyword",
+        "_value": null
+    }
+}
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+---
+description: Index Null
+---
+
+
+```json
+GET /test/schemas/implicit-_type/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.campo).to.equal(null);
+});
+```
+---
+description: Get Null
+---
+
+{% endcomment %}
+
+
+{% comment %}
+
+```json
+PUT /test/replace-null/doc1
+
+{
+    "_id": {
+        "_type": "keyword"
+    },
+    "campo": {
+        "_type": "integer",
+        "_value": 12
+    }
+}
+```
+---
+description: Index value
+---
+
+
+```json
+PUT /test/replace-null/doc2
+
+{
+    "_id": {
+        "_type": "keyword"
+    },
+    "campo": null
+}
+```
+---
+description: Replace value with null
+---
+
+
+```json
+GET /test/replace-null/doc2
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.campo).to.equal(null);
+});
+```
+---
+description: Get replaced value with null
+---
+
+{% endcomment %}
+
+
+{% comment %}
+```json
+POST /test/comment-ignore/
+
+{
+  "_recurse": false,
+  "_id": {
+    "_type": "uuid",
+  },
+  "#comment": "This comment is ignored",
+  "schema": {
+    "_type": "object"
+  }
+}
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  for (key in jsonData.schema) {
+      pm.expect(key).to.not.include('#comment');
+  }
+});
+```
+---
+description: Ignore comment
+---
+
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/create-schema/
+
+{
+  "_schema": {
+    "schema": {
+      "name": {
+        "_type": "text"
+      },
+      "age": {
+        "_type": "positive"
+      }
+    }
+  }
+}
+```
+---
+description: Create schema
+---
+
+```json
+GET /test/create-schema/
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._schema.schema.name).to.include({'_type': 'text' });
+  pm.expect(jsonData._schema.schema.age).to.include({'_type': 'positive' });
+});
+```
+---
+description: Schema values are valid
+---
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/create-schema-uuid-field/doc
+
+{
+  "_schema": {
+    "schema": {
+      "_id": {
+      "_type": "keyword",
+      },
+      "<uuid_field>": {
+        "meta": {
+          "_recurse": false,
+        },
+        "roles": {
+          "_type": "array/keyword",
+        }
+      }
+    }
+  },
+  "~3pZyPcFqGq": {
+    "meta": {
+      "scope": "read write"
+    },
+    "roles": [
+      "myself"
+    ]
+  }
+}
+```
+---
+description: Create schema uuid field
+---
+
+```json
+GET /test/create-schema-uuid-field/
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._schema.schema).to.have.any.keys(['<uuid_field>']);
+});
+```
+---
+description: Schema uuid field value is valid
+---
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/array_single/doc
+
+{
+  "types": [ "A" ]
+}
+```
+---
+description: Index single array
+---
+
+```json
+GET /test/array_single/._schema.schema.types
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._type).to.equal('array/text');
+});
+```
+---
+description: Get single array
+---
+
+
+```json
+INFO /test/array_single/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.types).to.have.any.keys(['Sa']);
+  pm.expect(jsonData.values).to.include({'1680431078': 'A'});
+});
+```
+---
+description: Info single array
+---
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/array/doc
+
+{
+  "types": [
+    "A", "B", "C", "D",
+    "E", "F", "G", "H"
+  ]
+}
+```
+---
+description: Index Array
+---
+
+```json
+GET /test/array/._schema.schema.types
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._type).to.equal('array/text');
+});
+```
+---
+description: Get array
+---
+
+
+```json
+INFO /test/array/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);
+  pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
+});
+```
+---
+description: Info array
+---
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/array-of-array/doc
+
+{
+  "types": [
+    [ "A", "B", "C", "D" ],
+    [ "E", "F", "G", "H" ]
+  ]
+}
+```
+---
+description: Index Array of Arrays
+---
+
+```json
+GET /test/array-of-array/._schema.schema.types
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._type).to.equal('array/text');
+});
+```
+---
+description: Get Array of Arrays
+---
+
+```json
+INFO /test/array-of-array/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);
+  pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
+});
+```
+---
+description: Info Array of Arrays
+---
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/array-of-arrays-of-arrays/doc
+
+{
+  "types": [
+    [ [ "A", "B" ], [ "C", "D" ] ],
+    [ [ "E", "F" ], [ "G", "H" ] ]
+  ]
+}
+```
+---
+description: Index Array of Arrays of Arrays
+---
+
+```json
+GET /test/array-of-arrays-of-arrays/._schema.schema.types
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._type).to.equal('array/text');
+});
+```
+---
+description: Get Array of Arrays of Arrays
+---
+
+```json
+INFO /test/array-of-arrays-of-arrays/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);
+  pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
+});
+```
+---
+description: Info Array of Arrays of Arrays
+---
+{% endcomment %}
+
+
+{% comment %}
+```json
+PUT /test/arrays/doc
+
+{
+  "types": [
+    "A", "B", [ "C", "D" ], [ "E", "F", [ "G", "H" ] ],
+    "I", [ "J", [ "K", [ "L", [ "M", "N" ]] ] ]
+  ]
+}
+```
+---
+description: Index Arrays mixed with text
+---
+
+```json
+GET /test/arrays/._schema.schema.types
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._type).to.equal('array/text');
+});
+```
+---
+description: Get Arrays mixed with text
+---
+
+```json
+INFO /test/arrays/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.types).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh','Si','Sj','Sk','Sl','Sm','Sn']);
+  pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H\u0001I\u0001J\u0001K\u0001L\u0001M\u0001N'});
+});
+```
+---
+description: Info Arrays mixed with text
+---
+{% endcomment %}
+
+{% comment %}
+```json
+PUT /test/array_of_objects/doc
+
+{
+  "types": [
+    {
+      "property": "A",
+      "number": 1
+    },
+    {
+      "property": "B",
+      "number": 2
+    },
+    {
+      "property": "C",
+      "number": 3
+    },
+    {
+      "property": "D",
+      "number": 4
+    },
+    {
+      "property": "E",
+      "number": 5
+    },
+    {
+      "property": "F",
+      "number": 6
+    },
+    {
+      "property": "G",
+      "number": 7
+    },
+    {
+      "property": "H",
+      "number": 8
+    }
+  ]
+}
+```
+---
+description: Index Array of Objects
+---
+
+```json
+GET /test/array_of_objects/
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._schema.schema.types._type).to.equal('array/object');
+  pm.expect(jsonData._schema.schema.types.property._type).to.equal('text');
+  pm.expect(jsonData._schema.schema.types.number._type).to.equal('integer');
+});
+```
+---
+description: Get Array of Objects
+---
+
+```json
+INFO /test/array_of_objects/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.types.property).to.have.all.keys(['Sa','Sb','Sc','Sd','Se','Sf','Sg','Sh']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1666287912','3452157842']);
+});
+```
+---
+description: Info Array of Objects
+---
+{% endcomment %}
