@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTTERMLIST_H
 #define XAPIAN_INCLUDED_DOCUMENTTERMLIST_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/api/termlist.h"
 

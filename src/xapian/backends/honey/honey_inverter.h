@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_HONEY_INVERTER_H
 #define XAPIAN_INCLUDED_HONEY_INVERTER_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/types.h"
 

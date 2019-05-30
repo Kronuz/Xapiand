@@ -25,7 +25,7 @@
 #ifndef XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 #define XAPIAN_INCLUDED_INMEMORY_DATABASE_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/api/leafpostlist.h"
 #include "xapian/api/smallvector.h"

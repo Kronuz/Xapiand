@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_GLASS_VALUES_H
 #define XAPIAN_INCLUDED_GLASS_VALUES_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/common/pack.h"
 #include "xapian/backends/valuestats.h"

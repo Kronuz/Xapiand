@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTVALUELIST_H
 #define XAPIAN_INCLUDED_DOCUMENTVALUELIST_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/backends/valuelist.h"
 

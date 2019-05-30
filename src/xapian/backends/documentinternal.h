@@ -21,7 +21,7 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTINTERNAL_H
 #define XAPIAN_INCLUDED_DOCUMENTINTERNAL_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/document.h"
 #include "xapian/intrusive_ptr.h"

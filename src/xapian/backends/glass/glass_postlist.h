@@ -25,7 +25,7 @@
 #ifndef XAPIAN_INCLUDED_GLASS_POSTLIST_H
 #define XAPIAN_INCLUDED_GLASS_POSTLIST_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/database.h"
 

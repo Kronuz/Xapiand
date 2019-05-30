@@ -22,7 +22,7 @@
 #ifndef XAPIAN_INCLUDED_HONEY_VALUES_H
 #define XAPIAN_INCLUDED_HONEY_VALUES_H
 
-#include "btree.h"
+#include "btree/map.h"
 
 #include "xapian/backends/honey/honey_cursor.h"
 #include "xapian/backends/valuestats.h"
