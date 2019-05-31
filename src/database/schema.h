@@ -1015,7 +1015,7 @@ public:
 	/*
 	 * Function to index object in doc.
 	 */
-	std::tuple<std::string, Xapian::Document, MsgPack> index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data);
+	std::tuple<std::string, Xapian::Document, MsgPack> index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq = 0);
 
 	/*
 	 * Function to update the schema according to obj_schema.

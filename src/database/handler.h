@@ -84,7 +84,7 @@ class DatabaseHandler {
 	std::unique_ptr<MsgPack> call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data);
 #endif
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t idx = 0);
 
 	DocumentInfo index(Xapian::docid did, const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, bool commit);
 
@@ -141,7 +141,7 @@ public:
 	std::string dump_documents(int fd);
 	std::string restore_documents(int fd);
 
-	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj);
+	std::tuple<std::string, Xapian::Document, MsgPack> prepare_document(MsgPack& obj, size_t idx);
 
 	std::string get_prefixed_term_id(const MsgPack& document_id);
 

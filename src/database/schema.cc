@@ -2758,7 +2758,7 @@ Schema::feed_subproperties(T& properties, std::string_view meta_name)
  */
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data)
+Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_handler, const Data& data, size_t seq)
 {
 	L_CALL("Schema::index({}, {}, <db_handler>)", object.to_string(), document_id.to_string());
 
@@ -2806,25 +2806,30 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					properties = &get_mutable_properties();
 				[[fallthrough]];
 				case FieldType::uuid: {
+					// Try getting a new ID which can currently be indexed (active node)
 					size_t n_shards = db_handler.endpoints.size();
-					size_t shard_num = random_int(0, n_shards - 1);
-					// // Try getting a new ID which can currently be indexed (active node)
-					// // Get the least used shard:
-					// auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
-					// for (size_t n = 0; n < n_shards; ++n) {
-					// 	auto& endpoint = db_handler.endpoints[n];
-					// 	if (endpoint.is_active()) {
-					// 		try {
-					// 			lock_shard lk_shard(endpoint, db_handler.flags, false);
-					// 			lk_shard.lock(0);
-					// 			auto doccount = lk_shard->db()->get_doccount();
-					// 			if (min_doccount > doccount) {
-					// 				min_doccount = doccount;
-					// 				shard_num = n;
-					// 			}
-					// 		} catch (...) {}
-					// 	}
-					// }
+					size_t shard_num;
+					if (seq) {
+						shard_num = seq % n_shards;
+					} else {
+						shard_num = random_int(0, n_shards - 1);
+						// Get the least used shard:
+						auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+						for (size_t n = 0; n < n_shards; ++n) {
+							auto& endpoint = db_handler.endpoints[n];
+							if (endpoint.is_active()) {
+								try {
+									lock_shard lk_shard(endpoint, db_handler.flags, false);
+									lk_shard.lock(0);
+									auto doccount = lk_shard->db()->get_doccount();
+									if (min_doccount > doccount) {
+										min_doccount = doccount;
+										shard_num = n;
+									}
+								} catch (...) {}
+							}
+						}
+					}
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_unprefixed_term_id = generator(opts.uuid_compact).serialise();
@@ -2859,25 +2864,30 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::text:
 				case FieldType::string:
 				case FieldType::keyword: {
+					// Try getting a new ID which can currently be indexed (active node)
 					size_t n_shards = db_handler.endpoints.size();
-					size_t shard_num = random_int(0, n_shards - 1);
-					// // Try getting a new ID which can currently be indexed (active node)
-					// // Get the least used shard:
-					// auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
-					// for (size_t n = 0; n < n_shards; ++n) {
-					// 	auto& endpoint = db_handler.endpoints[n];
-					// 	if (endpoint.is_active()) {
-					// 		try {
-					// 			lock_shard lk_shard(endpoint, db_handler.flags, false);
-					// 			lk_shard.lock(0);
-					// 			auto doccount = lk_shard->db()->get_doccount();
-					// 			if (min_doccount > doccount) {
-					// 				min_doccount = doccount;
-					// 				shard_num = n;
-					// 			}
-					// 		} catch (...) {}
-					// 	}
-					// }
+					size_t shard_num;
+					if (seq) {
+						shard_num = seq % n_shards;
+					} else {
+						shard_num = random_int(0, n_shards - 1);
+						// Get the least used shard:
+						auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
+						for (size_t n = 0; n < n_shards; ++n) {
+							auto& endpoint = db_handler.endpoints[n];
+							if (endpoint.is_active()) {
+								try {
+									lock_shard lk_shard(endpoint, db_handler.flags, false);
+									lk_shard.lock(0);
+									auto doccount = lk_shard->db()->get_doccount();
+									if (min_doccount > doccount) {
+										min_doccount = doccount;
+										shard_num = n;
+									}
+								} catch (...) {}
+							}
+						}
+					}
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
 						auto tmp_unprefixed_term_id = generator(opts.uuid_compact).serialise();

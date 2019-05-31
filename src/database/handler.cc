@@ -327,9 +327,9 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data)
+DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t seq)
 {
-	L_CALL("DatabaseHandler::prepare({}, {}, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
+	L_CALL("DatabaseHandler::prepare({}, {}, <data>, <seq>)", repr(document_id.to_string()), repr(obj.to_string()));
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
@@ -342,7 +342,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 		schema = get_schema(&obj);
 		L_INDEX("Schema: {}", repr(schema->to_string()));
-		prepared = schema->index(obj, document_id, *this, data);
+		prepared = schema->index(obj, document_id, *this, data, seq);
 		if (update_schema()) {
 			break;
 		}
@@ -952,9 +952,9 @@ DatabaseHandler::restore_documents(int fd)
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare_document(MsgPack& body)
+DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 {
-	L_CALL("DatabaseHandler::prepare_document(<body>)");
+	L_CALL("DatabaseHandler::prepare_document(<body>, <seq>)");
 
 	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 		THROW(Error, "Database is read-only");
@@ -991,7 +991,7 @@ DatabaseHandler::prepare_document(MsgPack& body)
 		Data data;
 		inject_data(data, body);
 
-		return prepare(document_id, UNKNOWN_REVISION, body, data);
+		return prepare(document_id, UNKNOWN_REVISION, body, data, seq);
 	}
 
 	if (op_type == "patch") {
@@ -1010,7 +1010,7 @@ DatabaseHandler::prepare_document(MsgPack& body)
 		auto obj = data.get_obj();
 		apply_patch(body, obj);
 
-		return prepare(document_id, UNKNOWN_REVISION, body, data);
+		return prepare(document_id, UNKNOWN_REVISION, body, data, seq);
 	}
 
 	if (op_type == "update" || op_type == "merge") {
@@ -1030,11 +1030,11 @@ DatabaseHandler::prepare_document(MsgPack& body)
 
 		if (obj.empty()) {
 			inject_data(data, body);
-			return prepare(document_id, UNKNOWN_REVISION, body, data);
+			return prepare(document_id, UNKNOWN_REVISION, body, data, seq);
 		} else {
 			obj.update(body);
 			inject_data(data, obj);
-			return prepare(document_id, UNKNOWN_REVISION, obj, data);
+			return prepare(document_id, UNKNOWN_REVISION, obj, data, seq);
 		}
 	}
 
@@ -2310,7 +2310,7 @@ DocPreparer::operator()()
 	if (indexer->running.load(std::memory_order_acquire)) {
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
-			auto prepared = db_handler.prepare_document(obj);
+			auto prepared = db_handler.prepare_document(obj, idx + 1);
 			// Route document to proper indexer:
 			auto n_shards = indexer->endpoints.size();
 			auto& term_id = std::get<0>(prepared);
