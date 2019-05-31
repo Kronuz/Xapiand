@@ -2490,8 +2490,12 @@ DocIndexer::operator()()
 		}
 
 		if (ready_) {
-			if (processed_ >= _total.load(std::memory_order_acquire)) {
+			auto total = _total.load(std::memory_order_acquire);
+			if (processed_ >= total) {
 				finish();
+				break;
+			}
+			if (_prepared.load(std::memory_order_relaxed) >= total && ready_queue.empty()) {
 				break;
 			}
 		}
