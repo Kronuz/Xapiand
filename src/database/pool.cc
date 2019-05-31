@@ -42,6 +42,12 @@
 
 #undef L_POOL_TIMED
 #define L_POOL_TIMED(delay, format_timeout, format_done, ...) { \
+	auto __log_timed = L_DELAYED_BACKTRACE(true, (delay), LOG_WARNING, WARNING_COL, (format_timeout), ##__VA_ARGS__); \
+	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
+}
+
+#undef L_SHARD_LOG_TIMED
+#define L_SHARD_LOG_TIMED(delay, format_timeout, format_done, ...) { \
 	if (shard->log) { \
 		shard->log->clear(); \
 		shard->log.reset(); \
@@ -50,14 +56,13 @@
 	__log_timed.L_DELAYED_UNLOG(LOG_NOTICE, NOTICE_COL, (format_done), ##__VA_ARGS__); \
 	shard->log = __log_timed.release(); \
 }
-#undef L_POOL_TIMED_CLEAR
-#define L_POOL_TIMED_CLEAR() { \
+#undef L_SHARD_LOG_TIMED_CLEAR
+#define L_SHARD_LOG_TIMED_CLEAR() { \
 	if (shard->log) { \
 		shard->log->clear(); \
 		shard->log.reset(); \
 	} \
 }
-
 
 #define REMOTE_DATABASE_UPDATE_TIME 3
 #define LOCAL_DATABASE_UPDATE_TIME 10
@@ -251,6 +256,12 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 {
 	L_CALL("ShardEndpoint::checkout({} ({}), {}, {})", repr(to_string()), readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
+	L_POOL_TIMED(3s,
+		"Checking out of shard is taking too long: {} ({})",
+		"Checking out of shard took too long: {} ({})",
+		repr(to_string()),
+		readable_flags(flags));
+
 	auto now = std::chrono::steady_clock::now();
 
 	std::shared_ptr<Shard> shard;
@@ -300,7 +311,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 		shard = shard_ref;
 	}
 
-	L_POOL_TIMED(shard->is_replica() ? 81s : shard->is_writable() ? 9s : 3s,
+	L_SHARD_LOG_TIMED(shard->is_replica() ? 81s : shard->is_writable() ? 9s : 3s,
 		"Checked out shard is taking too long: {} ({})",
 		"Checked out shard was out for too long: {} ({})",
 		repr(shard->to_string()),
@@ -332,7 +343,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			Shard::autocommit(shard);
 		}
-		L_POOL_TIMED_CLEAR();
+		L_SHARD_LOG_TIMED_CLEAR();
 		shard->busy.store(false);
 		writable_cond.notify_one();
 	} else {
@@ -346,7 +357,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			++readables_available;
 		}
-		L_POOL_TIMED_CLEAR();
+		L_SHARD_LOG_TIMED_CLEAR();
 		shard->busy.store(false);
 		readables_cond.notify_one();
 	}
