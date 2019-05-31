@@ -1381,3 +1381,361 @@ pm.test("Values are valid", function() {
 description: Info Complex Object
 ---
 {% endcomment %}
+
+
+### Reserved Subfield
+
+{% comment %}
+```json
+PUT /test/reserved_subfield/doc
+
+{
+  "name": {
+    "_type": "text",
+    "_reserved": "this is reserved, should fail"
+  }
+}
+```
+---
+description: Index Misuse Reserved Subfield
+---
+
+```js
+pm.test("Response is success", function() {
+  pm.expect(pm.response.code).to.equal(400);
+});
+```
+{% endcomment %}
+
+
+### Namespace
+
+{% comment %}
+```json
+PUT /test/namespace/doc
+
+{
+  "style": {
+    "_namespace": true,
+    "clothing": {
+      "pants": "khakis",
+      "shirt": "t-shirt"
+    },
+    "hairstyle": "slick back"
+  }
+}
+```
+---
+description: Index Namespace
+---
+
+```json
+GET /test/namespace/._schema.schema.style
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._namespace).to.equal(true);
+});
+```
+---
+description: Get Namespace
+---
+
+```json
+INFO /test/namespace/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.style.clothing.pants).to.have.all.keys(['Skhakis']);
+  pm.expect(jsonData.terms.style.clothing.shirt).to.have.all.keys(['Sshirt', 'St']);
+  pm.expect(jsonData.terms.style.hairstyle).to.have.all.keys(['Sback', 'Sslick']);
+  pm.expect(jsonData.terms.style.pants).to.have.all.keys(['Skhakis']);
+  pm.expect(jsonData.terms.style.shirt).to.have.all.keys(['Sshirt', 'St']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '271287252', '439783812', '1032232283', '2821621140', '4294967295']);
+});
+```
+---
+description: Info Namespace
+---
+{% endcomment %}
+
+
+### Strict Namespace
+
+{% comment %}
+```json
+PUT /test/strict_namespace/doc
+
+{
+  "_strict": true,
+  "tags": {
+    "_namespace": true,
+    "_type": "keyword",
+    "field": {
+      "subfield": {
+        "_value": "value",
+      }
+    }
+  }
+}
+```
+---
+description: Index Strict Namespace
+---
+
+```json
+GET /test/strict_namespace/._schema.schema.tags
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._namespace).to.equal(true);
+  pm.expect(jsonData._type).to.equal('keyword');
+});
+```
+---
+description: Get Strict Namespace
+---
+
+```json
+INFO /test/strict_namespace/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.tags.field.subfield).to.have.any.keys(['Kvalue']);
+  pm.expect(jsonData.terms.tags.subfield).to.have.any.keys(['Kvalue']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
+});
+```
+---
+description: Info Strict Namespace
+---
+{% endcomment %}
+
+
+### Strict Namespace Array
+
+{% comment %}
+```json
+PUT /test/strict_namespace_array/doc
+
+{
+  "_strict": true,
+  "tags": {
+    "_namespace": true,
+    "_type": "array/keyword",
+    "field": {
+      "subfield": {
+        "_value": ["value1", "value2", "value3"],
+      }
+    }
+  }
+}
+```
+---
+description: Index Strict Namespace Array
+---
+
+```json
+GET /test/strict_namespace_array/._schema.schema.tags
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._namespace).to.equal(true);
+  pm.expect(jsonData._type).to.equal('array/keyword');
+});
+```
+---
+description: Get Strict Namespace Array
+---
+
+```json
+INFO /test/strict_namespace_array/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.tags.field.subfield).to.have.any.keys(['Kvalue1', 'Kvalue2', 'Kvalue3']);
+  pm.expect(jsonData.terms.tags.subfield).to.have.any.keys(['Kvalue1', 'Kvalue2', 'Kvalue3']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
+});
+```
+---
+description: Info Strict Namespace Array
+---
+{% endcomment %}
+
+
+### Date type
+
+{% comment %}
+```json
+PUT /test/date/doc
+
+{
+  "date": "2015/01/01 12:10:30"
+}
+```
+
+---
+description: Index date type format yyyy/mm/dd hh:mm:ss
+---
+```json
+GET /test/date/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.date).to.equal('2015-01-01T12:10:30');
+});
+```
+---
+description: Get date type format yyyy/mm/dd hh:mm:ss
+---
+
+```json
+PUT /test/date/doc
+
+{
+  "date": "2015-01-01"
+}
+```
+
+---
+description: Index date type format yyyy-mm-dd
+---
+```json
+GET /test/date/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.date).to.equal('2015-01-01T00:00:00');
+});
+```
+---
+description: Get date type format yyyy-mm-dd
+---
+
+```json
+PUT /test/date/doc
+
+{
+  "date": "2015-01-01T12:10:30Z"
+}
+```
+
+---
+description: Index date type format yyyy-mm-ddThh:mm:ss
+---
+```json
+GET /test/date/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.date).to.equal('2015-01-01T12:10:30');
+});
+```
+---
+description: Get date type format yyyy-mm-ddThh:mm:ss
+---
+
+```json
+PUT /test/date/doc
+
+{
+"date": 1420070400.001
+}
+```
+
+---
+description: Index date type format epoch
+---
+```json
+GET /test/date/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.date).to.equal('2015-01-01T00:00:00.001');
+});
+```
+---
+description: Get date type format epoch
+---
+{% endcomment %}
