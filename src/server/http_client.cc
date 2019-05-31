@@ -2284,6 +2284,7 @@ HttpClient::restore_database_view(Request& request)
 
 		MsgPack response_obj = {
 			// { RESPONSE_ENDPOINT, endpoints.to_string() },
+			{ RESPONSE_PREPARED, indexer ? indexer->prepared() : 0 },
 			{ RESPONSE_PROCESSED, indexer ? indexer->processed() : 0 },
 			{ RESPONSE_INDEXED, indexer ? indexer->indexed() : 0 },
 			{ RESPONSE_TOTAL, indexer ? indexer->total() : 0 },

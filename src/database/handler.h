@@ -301,6 +301,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	Xapian::doccount first;
 	Xapian::doccount maxitems;
 
+	std::atomic_size_t _prepared;
 	std::atomic_size_t _processed;
 	std::atomic_size_t _indexed;
 	std::atomic_size_t _total;
@@ -338,6 +339,10 @@ public:
 	bool wait(double timeout = -1.0);
 
 	void finish();
+
+	size_t prepared() {
+		return _prepared.load(std::memory_order_relaxed);
+	}
 
 	size_t processed() {
 		return _processed.load(std::memory_order_relaxed);

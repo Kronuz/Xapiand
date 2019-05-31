@@ -2291,6 +2291,7 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 	commit(query_field.commit),
 	first(query_field.offset),
 	maxitems(query_field.limit),
+	_prepared(0),
 	_processed(0),
 	_indexed(0),
 	_total(0),
@@ -2325,6 +2326,7 @@ DocPreparer::operator()()
 				L_ERR("Prepared document: cannot enqueue to index!");
 				return 1;
 			}
+			indexer->_prepared.fetch_add(1, std::memory_order_relaxed);
 			return 0;
 		});
 		if (http_errors.ret) {

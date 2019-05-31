@@ -41,6 +41,7 @@ constexpr const char RESPONSE_AGGREGATIONS[]                = "aggregations";
 constexpr const char RESPONSE_HITS[]                        = "hits";
 
 constexpr const char RESPONSE_ENDPOINT[]                    = "endpoint";
+constexpr const char RESPONSE_PREPARED[]                    = "prepared";
 constexpr const char RESPONSE_PROCESSED[]                   = "processed";
 constexpr const char RESPONSE_INDEXED[]                     = "indexed";
 constexpr const char RESPONSE_ITEMS[]                       = "items";
