@@ -21,8 +21,6 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTINTERNAL_H
 #define XAPIAN_INCLUDED_DOCUMENTINTERNAL_H
 
-#include "btree/map.h"
-
 #include "xapian/document.h"
 #include "xapian/intrusive_ptr.h"
 #include "xapian/types.h"
@@ -73,7 +71,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *  invalidates existing iterators upon insert() if rehashing occurs,
      *  whereas existing iterators remain valid for std::map<>.
      */
-    mutable std::unique_ptr<btree::map<std::string, TermInfo>> terms;
+    mutable std::unique_ptr<std::map<std::string, TermInfo>> terms;
 
     /** The number of distinct terms in @a terms.
      *
@@ -118,7 +116,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *  invalidates existing iterators upon insert() if rehashing occurs,
      *  whereas existing iterators remain valid for std::map<>.
      */
-    mutable std::unique_ptr<btree::map<Xapian::valueno, std::string>> values;
+    mutable std::unique_ptr<std::map<Xapian::valueno, std::string>> values;
 
     /** Database this document came from.
      *
@@ -144,9 +142,9 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
     Internal(const Xapian::Database::Internal* database_,
 	     Xapian::docid did_,
 	     const std::string& data_,
-	     btree::map<Xapian::valueno, std::string>&& values_)
+	     std::map<Xapian::valueno, std::string>&& values_)
 	: data(new std::string(data_)),
-	  values(new btree::map<Xapian::valueno, std::string>(std::move(values_))),
+	  values(new std::map<Xapian::valueno, std::string>(std::move(values_))),
 	  database(database_),
 	  did(did_) {}
 
@@ -162,7 +160,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *  The default implementation (used when there's no associated database)
      *  clears @a values_.
      */
-    virtual void fetch_all_values(btree::map<Xapian::valueno,
+    virtual void fetch_all_values(std::map<Xapian::valueno,
 				  std::string>& values_) const;
 
     /** Fetch a single value from the database.
@@ -253,7 +251,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
 	auto i = terms->find(term);
 	if (i == terms->end()) {
 	    ++termlist_size;
-	    terms->emplace(term, TermInfo(wdf_inc));
+	    terms->emplace(make_pair(term, TermInfo(wdf_inc)));
 	} else {
 	    if (i->second.increase_wdf(wdf_inc))
 		++termlist_size;
@@ -353,7 +351,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
     void clear_terms() {
 	if (!terms) {
 	    if (database.get()) {
-		terms.reset(new btree::map<string, TermInfo>());
+		terms.reset(new map<string, TermInfo>());
 		termlist_size = 0;
 	    } else {
 		// We didn't come from a database, so there are no unfetched
@@ -419,7 +417,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
     void clear_values() {
 	if (!values) {
 	    if (database.get()) {
-		values.reset(new btree::map<Xapian::valueno, string>());
+		values.reset(new map<Xapian::valueno, string>());
 	    } else {
 		// We didn't come from a database, so there are no unfetched
 		// values to clear.

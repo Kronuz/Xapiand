@@ -41,7 +41,7 @@ Document::Internal::ensure_terms_fetched() const
     if (terms)
 	return;
 
-    terms.reset(new btree::map<string, TermInfo>());
+    terms.reset(new map<string, TermInfo>());
     termlist_size = 0;
     if (!database.get())
 	return;
@@ -66,7 +66,7 @@ Document::Internal::ensure_values_fetched() const
     if (values)
 	return;
 
-    values.reset(new btree::map<Xapian::valueno, string>());
+    values.reset(new map<Xapian::valueno, string>());
     if (database.get()) {
 	fetch_all_values(*values);
     }
@@ -79,8 +79,8 @@ Document::Internal::fetch_data() const
 }
 
 void
-Document::Internal::fetch_all_values(btree::map<Xapian::valueno,
-				    string>& values_) const
+Document::Internal::fetch_all_values(map<Xapian::valueno,
+				     string>& values_) const
 {
     values_.clear();
 }
@@ -119,7 +119,7 @@ Xapian::ValueIterator
 Document::Internal::values_begin() const
 {
     if (!values && database.get()) {
-	values.reset(new btree::map<Xapian::valueno, string>());
+	values.reset(new map<Xapian::valueno, string>());
 	fetch_all_values(*values);
     }
 

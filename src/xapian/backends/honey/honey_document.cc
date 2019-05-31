@@ -32,7 +32,7 @@ HoneyDocument::fetch_value(Xapian::valueno slot) const
 }
 
 void
-HoneyDocument::fetch_all_values(btree::map<Xapian::valueno, string>& values_) const
+HoneyDocument::fetch_all_values(map<Xapian::valueno, string>& values_) const
 {
     value_manager->get_all_values(values_, did);
 }

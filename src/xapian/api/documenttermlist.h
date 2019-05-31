@@ -21,8 +21,6 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTTERMLIST_H
 #define XAPIAN_INCLUDED_DOCUMENTTERMLIST_H
 
-#include "btree/map.h"
-
 #include "xapian/api/termlist.h"
 
 #include "xapian/backends/documentinternal.h"
@@ -44,7 +42,7 @@ class DocumentTermList : public TermList {
      *
      *  If we haven't started yet, this will be set to: doc->terms.end()
      */
-    btree::map<std::string, TermInfo>::const_iterator it;
+    std::map<std::string, TermInfo>::const_iterator it;
 
   public:
     explicit

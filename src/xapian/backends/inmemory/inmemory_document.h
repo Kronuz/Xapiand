@@ -42,7 +42,7 @@ class InMemoryDocument : public Xapian::Document::Internal {
   protected:
     /** Implementation of virtual methods @{ */
     string fetch_value(Xapian::valueno slot) const;
-    void fetch_all_values(btree::map<Xapian::valueno, string>& values_) const;
+    void fetch_all_values(map<Xapian::valueno, string> & values_) const;
     string fetch_data() const;
     /** @} */
 };

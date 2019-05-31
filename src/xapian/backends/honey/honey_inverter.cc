@@ -99,7 +99,8 @@ HoneyInverter::set_positionlist(Xapian::docid did,
 				const string& term,
 				const string& s)
 {
-    pos_changes.try_emplace(term).first->second[did] = s;
+    pos_changes.insert(make_pair(term, map<Xapian::docid, string>()))
+	.first->second[did] = s;
 }
 
 void
@@ -158,7 +159,7 @@ HoneyInverter::flush_doclengths(HoneyPostListTable& table)
 void
 HoneyInverter::flush_post_list(HoneyPostListTable& table, const string& term)
 {
-    btree::map<string, PostingChanges>::iterator i;
+    map<string, PostingChanges>::iterator i;
     i = postlist_changes.find(term);
     if (i == postlist_changes.end()) return;
 
@@ -170,7 +171,7 @@ HoneyInverter::flush_post_list(HoneyPostListTable& table, const string& term)
 void
 HoneyInverter::flush_all_post_lists(HoneyPostListTable& table)
 {
-    btree::map<string, PostingChanges>::const_iterator i;
+    map<string, PostingChanges>::const_iterator i;
     for (i = postlist_changes.begin(); i != postlist_changes.end(); ++i) {
 	table.merge_changes(i->first, i->second);
     }
@@ -183,7 +184,7 @@ HoneyInverter::flush_post_lists(HoneyPostListTable& table, const string& pfx)
     if (pfx.empty())
 	return flush_all_post_lists(table);
 
-    btree::map<string, PostingChanges>::iterator i, begin, end;
+    map<string, PostingChanges>::iterator i, begin, end;
     begin = postlist_changes.lower_bound(pfx);
     string pfxinc = pfx;
     while (true) {

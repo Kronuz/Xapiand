@@ -21,8 +21,6 @@
 #ifndef XAPIAN_INCLUDED_DOCUMENTVALUELIST_H
 #define XAPIAN_INCLUDED_DOCUMENTVALUELIST_H
 
-#include "btree/map.h"
-
 #include "xapian/backends/valuelist.h"
 
 #include "xapian/backends/documentinternal.h"
@@ -44,7 +42,7 @@ class DocumentValueList : public ValueList {
      *
      *  If we haven't started yet, this will be set to: doc->values.end()
      */
-    btree::map<Xapian::valueno, std::string>::const_iterator it;
+    std::map<Xapian::valueno, std::string>::const_iterator it;
 
   public:
     explicit DocumentValueList(const Xapian::Document::Internal* doc_)

@@ -520,7 +520,7 @@ HoneyValueManager::get_value(Xapian::docid did, Xapian::valueno slot) const
 }
 
 void
-HoneyValueManager::get_all_values(btree::map<Xapian::valueno, string>& values,
+HoneyValueManager::get_all_values(map<Xapian::valueno, string> & values,
 				  Xapian::docid did) const
 {
     Assert(values.empty());

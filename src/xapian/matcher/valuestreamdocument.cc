@@ -87,7 +87,7 @@ ValueStreamDocument::fetch_value(Xapian::valueno slot) const
 }
 
 void
-ValueStreamDocument::fetch_all_values(btree::map<Xapian::valueno, string>& v) const
+ValueStreamDocument::fetch_all_values(map<Xapian::valueno, string> & v) const
 {
     if (!doc) {
 	doc = database->open_document(did, true);

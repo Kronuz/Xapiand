@@ -34,8 +34,8 @@ InMemoryDocument::fetch_value(Xapian::valueno slot) const
     db = static_cast<const InMemoryDatabase*>(database.get());
     if (rare(did > db->valuelists.size()))
 	RETURN(string());
-    btree::map<Xapian::valueno, string> values_ = db->valuelists[did - 1];
-    btree::map<Xapian::valueno, string>::const_iterator i;
+    map<Xapian::valueno, string> values_ = db->valuelists[did - 1];
+    map<Xapian::valueno, string>::const_iterator i;
     i = values_.find(slot);
     if (i == values_.end())
 	RETURN(string());
@@ -43,7 +43,7 @@ InMemoryDocument::fetch_value(Xapian::valueno slot) const
 }
 
 void
-InMemoryDocument::fetch_all_values(btree::map<Xapian::valueno, string>& values_) const
+InMemoryDocument::fetch_all_values(map<Xapian::valueno, string> &values_) const
 {
     LOGCALL_VOID(DB, "InMemoryDocument::fetch_all_values", values_);
     const InMemoryDatabase * db;

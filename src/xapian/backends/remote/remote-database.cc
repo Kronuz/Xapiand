@@ -279,7 +279,7 @@ RemoteDatabase::open_document(Xapian::docid did, bool /*lazy*/) const
 
     send_message(MSG_DOCUMENT, encode_length(did));
     string doc_data;
-    btree::map<Xapian::valueno, string> values;
+    map<Xapian::valueno, string> values;
     get_message(doc_data, REPLY_DOCDATA);
 
     string message;
