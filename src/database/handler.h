@@ -287,9 +287,7 @@ public:
 class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	friend DocPreparer;
 
-	static constexpr size_t limit_max = 16;
-	static constexpr size_t limit_signal = 8;
-
+	size_t indexers;
 	std::atomic_int running;
 	std::atomic_bool finished;
 	std::atomic_bool ready;
@@ -314,7 +312,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	std::mutex _results_mtx;
 	std::vector<MsgPack> _results;
-	BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>> ready_queue;
+	std::vector<std::unique_ptr<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>> ready_queues;
 
 	std::array<std::unique_ptr<DocPreparer>, ConcurrentQueueDefaultTraits::BLOCK_SIZE> bulk;
 	size_t bulk_cnt;

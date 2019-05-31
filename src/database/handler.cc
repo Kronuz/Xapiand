@@ -50,6 +50,7 @@
 #include "multivalue/keymaker.h"            // for Multi_MultiValueKeyMaker
 #include "opts.h"                           // for opts::
 #include "query_dsl.h"                      // for QueryDSL
+#include "random.hh"                        // for random_int
 #include "rapidjson/document.h"             // for Document
 #include "repr.hh"                          // for repr
 #include "reserved/query_dsl.h"             // for RESERVED_QUERYDSL_*
@@ -77,6 +78,9 @@ constexpr int SCHEMA_RETRIES   = 10;   // Number of tries for schema operations
 constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
 
 constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
+
+constexpr size_t limit_max = 16;
+constexpr size_t limit_signal = 8;
 
 const std::string dump_documents_header("xapiand-dump-docs");
 
@@ -2279,6 +2283,7 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
  */
 
 DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field) :
+	indexers(0),
 	running(0),
 	finished(false),
 	ready(false),
@@ -2298,6 +2303,7 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 {
 }
 
+
 void
 DocPreparer::operator()()
 {
@@ -2308,9 +2314,13 @@ DocPreparer::operator()()
 		auto http_errors = catch_http_errors([&]{
 			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
 			auto prepared = db_handler.prepare_document(obj);
-			if unlikely(!indexer->ready_queue.enqueue(
+			// Route document to proper indexer:
+			auto n_shards = indexer->endpoints.size();
+			auto& term_id = std::get<0>(prepared);
+			auto shard_num = fnv1ah64::hash(term_id) % n_shards;
+			if unlikely(!indexer->ready_queues[shard_num % indexer->indexers]->enqueue(
 				std::make_tuple(
-					std::move(std::get<0>(prepared)),
+					std::move(term_id),
 					std::move(std::get<1>(prepared)),
 					std::move(std::get<2>(prepared)),
 					idx
@@ -2322,7 +2332,7 @@ DocPreparer::operator()()
 			return 0;
 		});
 		if (http_errors.ret) {
-			if unlikely(!indexer->ready_queue.enqueue(
+			if unlikely(!indexer->ready_queues[random_int(0, indexer->indexers - 1)]->enqueue(
 				std::make_tuple(
 					std::string{},
 					Xapian::Document{},
@@ -2363,13 +2373,15 @@ DocIndexer::_prepare(MsgPack&& obj)
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	if (bulk_cnt == bulk.size()) {
-		if unlikely(!finished.load(std::memory_order_acquire)) {
-			auto already_running = running.load(std::memory_order_acquire);
-			while (already_running < opts.num_doc_indexers && !running.compare_exchange_weak(already_running, already_running + 1, std::memory_order_acq_rel)) { }
-			if (already_running < opts.num_doc_indexers) {
+		if (!indexers) {
+			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
+			ready_queues.reserve(indexers);
+			for (size_t i = 0; i < indexers; ++i) {
+				ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
 				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 			}
 		}
+
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
 		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
@@ -2408,6 +2420,9 @@ DocIndexer::operator()()
 	L_CALL("DocIndexer::operator()()");
 
 	DatabaseHandler db_handler(endpoints, flags);
+
+	auto indexer = running.fetch_add(1, std::memory_order_relaxed);
+	auto& ready_queue = *ready_queues[indexer];
 
 	bool ready_ = false;
 	while (!finished.load(std::memory_order_acquire)) {
@@ -2513,13 +2528,15 @@ DocIndexer::wait(double timeout)
 	L_CALL("DocIndexer::wait(<timeout>)");
 
 	if (bulk_cnt != 0) {
-		if unlikely(!finished.load(std::memory_order_acquire)) {
-			auto already_running = running.load(std::memory_order_acquire);
-			while (already_running == 0 && !running.compare_exchange_weak(already_running, already_running + 1, std::memory_order_acq_rel)) { }
-			if (already_running == 0) {
+		if (!indexers) {
+			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
+			ready_queues.reserve(indexers);
+			for (size_t i = 0; i < indexers; ++i) {
+				ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
 				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 			}
 		}
+
 		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
 		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
 			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
@@ -2566,8 +2583,8 @@ DocIndexer::finish()
 	L_CALL("DocIndexer::finish()");
 
 	finished.store(true, std::memory_order_release);
-	for (int i = 0; i < running.load(std::memory_order_acquire); ++i) {
-		ready_queue.enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
+	for (auto& ready_queue : ready_queues) {
+		ready_queue->enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
 	}
 }
 
