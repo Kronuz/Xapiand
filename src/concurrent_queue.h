@@ -86,4 +86,14 @@ public:
 		}
 		return dequeued;
 	}
+
+	size_t size() {
+		std::lock_guard<std::mutex> lk(*mtx);
+		return queue.size();
+	}
+
+	bool empty() {
+		std::lock_guard<std::mutex> lk(*mtx);
+		return queue.empty();
+	}
 };
