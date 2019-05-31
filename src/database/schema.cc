@@ -49,6 +49,7 @@
 #include "manager.h"                              // for XapiandManager, XapiandMan...
 #include "multivalue/generate_terms.h"            // for integer, geo, datetime, positive
 #include "opts.h"                                 // for opts::*
+#include "random.hh"                              // for random_int
 #include "reserved/schema.h"                      // for RESERVED_
 #include "script.h"                               // for Script
 #include "serialise_list.h"                       // for StringList
@@ -2806,7 +2807,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				[[fallthrough]];
 				case FieldType::uuid: {
 					size_t n_shards = db_handler.endpoints.size();
-					size_t shard_num = 0;
+					size_t shard_num = random_int(0, n_shards - 1);
 					// Try getting a new ID which can currently be indexed (active node)
 					// Get the least used shard:
 					auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
@@ -2815,7 +2816,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto node = endpoint.node();
 						if (node && node->is_active()) {
 							try {
-								lock_shard lk_shard(endpoint, db_handler.flags);
+								lock_shard lk_shard(endpoint, db_handler.flags, false);
+								lk_shard.lock(0);
 								auto doccount = lk_shard->db()->get_doccount();
 								if (min_doccount > doccount) {
 									min_doccount = doccount;
@@ -2861,7 +2863,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::string:
 				case FieldType::keyword: {
 					size_t n_shards = db_handler.endpoints.size();
-					size_t shard_num = 0;
+					size_t shard_num = random_int(0, n_shards - 1);
 					// Try getting a new ID which can currently be indexed (active node)
 					// Get the least used shard:
 					auto min_doccount = std::numeric_limits<Xapian::doccount>::max();
@@ -2870,7 +2872,8 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 						auto node = endpoint.node();
 						if (node && node->is_active()) {
 							try {
-								lock_shard lk_shard(endpoint, db_handler.flags);
+								lock_shard lk_shard(endpoint, db_handler.flags, false);
+								lk_shard.lock(0);
 								auto doccount = lk_shard->db()->get_doccount();
 								if (min_doccount > doccount) {
 									min_doccount = doccount;
