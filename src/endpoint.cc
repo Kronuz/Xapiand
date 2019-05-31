@@ -414,6 +414,14 @@ Endpoint::node() const
 
 
 bool
+Endpoint::is_active() const
+{
+	auto n = Node::get_node(node_name);
+	return n && n->is_active();
+}
+
+
+bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::local_node();
