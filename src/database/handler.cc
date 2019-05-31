@@ -79,9 +79,6 @@ constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version 
 
 constexpr size_t NON_STORED_SIZE_LIMIT = 1024 * 1024;
 
-constexpr size_t limit_max = 16;
-constexpr size_t limit_signal = 8;
-
 const std::string dump_documents_header("xapiand-dump-docs");
 
 
@@ -2298,7 +2295,6 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 	_indexed(0),
 	_total(0),
 	_idx(0),
-	limit_cnt(limit_max),
 	bulk_cnt(0)
 {
 }
@@ -2388,13 +2384,6 @@ DocIndexer::_prepare(MsgPack&& obj)
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		bulk_cnt = 0;
-
-		// throttle the prepare
-		std::unique_lock<std::mutex> limit_lk(limit_mtx);
-		while (!limit.wait_for(limit_lk, 1s, [this]() {
-			return finished.load(std::memory_order_acquire) || limit_cnt > 0;
-		})) {}
-		--limit_cnt;
 	}
 }
 
@@ -2502,12 +2491,6 @@ DocIndexer::operator()()
 			if (processed_ >= _total.load(std::memory_order_acquire)) {
 				finish();
 				break;
-			}
-		} else {
-			if (processed_ % (limit_signal * 32) == 0) {
-				std::lock_guard<std::mutex> limit_lk(limit_mtx);
-				limit_cnt += limit_signal;
-				limit.notify_one();
 			}
 		}
 	}

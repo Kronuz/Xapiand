@@ -306,9 +306,6 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::atomic_size_t _total;
 	std::atomic_size_t _idx;
 	std::condition_variable done;
-	std::condition_variable limit;
-	std::mutex limit_mtx;
-	size_t limit_cnt;
 
 	std::mutex _results_mtx;
 	std::vector<MsgPack> _results;
