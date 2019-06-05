@@ -474,9 +474,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				try {
 					auto version = save_shared(foreign_id, *schema_ptr, Endpoint(foreign_path), context);
 					schema_ptr->set_flags(version);
+#ifdef XAPIAND_CLUSTERING
 					if (version) {
 						schema_updater()->debounce(foreign_uri, version, foreign_uri);
 					}
+#endif
 					L_SCHEMA("{}" + YELLOW_GREEN + "Foreign Schema [{}] was saved to {} id={}: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()));
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
