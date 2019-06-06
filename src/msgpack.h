@@ -935,7 +935,10 @@ inline MsgPack* MsgPack::_init_map(size_t pos) {
 		if (pit == _body->map.end()) {
 			auto last_key = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, true, 0, nullptr, &p->key));
 			auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos++, last_key._body, &p->val));
-			pit = _body->map.emplace(str_key, std::make_pair(std::move(last_key), std::move(last_val))).first;
+			pit = _body->map.emplace(
+				std::piecewise_construct,
+				std::forward_as_tuple(std::move(str_key)),
+				std::forward_as_tuple(std::move(last_key), std::move(last_val))).first;
 		} else {
 			*pit->second.first._body->_obj = p->key;
 			*pit->second.second._body->_obj = p->val;
@@ -987,7 +990,7 @@ inline MsgPack* MsgPack::_init_array(size_t pos) {
 	const auto pend = &_body->_obj->via.array.ptr[_body->_obj->via.array.size];
 	for (auto p = &_body->_obj->via.array.ptr[pos]; p < pend; ++p, ++pos) {
 		auto last_val = MsgPack(std::make_shared<Body>(_body->_zone, _body->_base, _body, false, pos, nullptr, p));
-		ret = &*_body->array.insert(_body->array.end(), std::move(last_val));
+		ret = &*_body->array.emplace(_body->array.end(), std::move(last_val));
 	}
 	assert(_body->_obj->via.array.size == _body->array.size());
 	_body->_initialized = true;
