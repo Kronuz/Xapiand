@@ -829,9 +829,6 @@ inline MsgPack::MsgPack(MsgPack&& other)
 	: _body(std::move(other._body)),
 	  _const_body(std::move(other._const_body))
 {
-#ifndef NDEBUG
-	other._const_body = nullptr;
-#endif
 }
 
 
@@ -895,62 +892,32 @@ inline MsgPack::MsgPack(Type type)
 
 
 inline MsgPack& MsgPack::operator=(const MsgPack& other) {
-	_assignment(msgpack::object(other, *_body->_zone));
+	if (!_body) {
+		_body = std::make_shared<Body>(*other._body->_obj, false);
+		_const_body = _body.get();
+	} else {
+		_assignment(msgpack::object(other, *_body->_zone));
+	}
 	return *this;
 }
 
 
 inline MsgPack& MsgPack::operator=(MsgPack&& other) {
-	if (_body) {
-		assert(other._body);
-		if (_body->_const) {
-			THROW(msgpack::const_error, "Constant object");
-		}
-		if (_body->_lock) {
-			assert(!_body->_lock);
-			THROW(msgpack::const_error, "Locked object");
-		}
-		if (_body->_is_key) {
-			// Rename key, if the assignment is acting on a map key...
-			// We expect obj to be a string:
-			if (other._body->_obj->type != msgpack::type::STR) {
-				THROW(msgpack::type_error, "MAP keys must be of type STR");
-			}
-			if (auto parent_body = _body->_parent.lock()) {
-				// If there's a parent, and it's initialized...
-				if (parent_body->_initialized) {
-					// Change key in the parent's map:
-					auto val = std::string_view(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-					auto str_key = std::string_view(other._body->_obj->via.str.ptr, other._body->_obj->via.str.size);
-					if (str_key != val) {
-						auto it = parent_body->map.find(val);
-						if (it != parent_body->map.end()) {
-							auto pit = parent_body->map.find(str_key);
-							if (pit == parent_body->map.end()) {
-								parent_body->map.emplace(str_key, std::move(it->second));
-							} else {
-								pit->second = std::move(it->second);
-							}
-							parent_body->map.erase(it);
-							assert(parent_body->_obj->via.map.size == parent_body->map.size());
-						}
-					}
-				}
-				other._body->_parent = parent_body;
-			}
-			other._body->_is_key = true;
-		}
+	if (!_body) {
+		_body = std::move(other._body);
+		_const_body = std::move(other._const_body);
+	} else {
+		_assignment(msgpack::object(std::move(other), *_body->_zone));
 	}
-	_body = std::move(other._body);
-	_const_body = std::move(other._const_body);
-#ifndef NDEBUG
-	other._const_body = nullptr;
-#endif
 	return *this;
 }
 
 
 inline MsgPack& MsgPack::operator=(std::initializer_list<MsgPack> list) {
+	if (!_body) {
+		_body = std::make_shared<Body>(_undefined(), false);
+		_const_body = _body.get();
+	}
 	_initializer(list);
 	return *this;
 }
@@ -958,7 +925,12 @@ inline MsgPack& MsgPack::operator=(std::initializer_list<MsgPack> list) {
 
 template <typename T>
 inline MsgPack& MsgPack::operator=(T&& v) {
-	_assignment(msgpack::object(std::forward<T>(v), *_body->_zone));
+	if (!_body) {
+		_body = std::make_shared<Body>(std::forward<T>(v), false);
+		_const_body = _body.get();
+	} else {
+		_assignment(msgpack::object(std::forward<T>(v), *_body->_zone));
+	}
 	return *this;
 }
 
