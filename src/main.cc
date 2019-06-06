@@ -306,7 +306,7 @@ void setup_signal_handlers() {
 	sigaction(SIGSYS, &sa, nullptr);
 #endif
 
-	sa.sa_flags |= SA_SIGINFO | SA_NODEFER;
+	sa.sa_flags |= SA_SIGINFO;
 	sa.sa_sigaction = collect_callstack_sig_handler;
 	sigaction(SIGUSR2, &sa, nullptr);
 }
