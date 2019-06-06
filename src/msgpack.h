@@ -637,7 +637,7 @@ struct MsgPack::Body {
 			_capacity(size()) { }
 
 	template <typename T>
-	Body(T&& v, bool _const = false)
+	Body(T&& v, bool _const)
 		: _flags(0),
 		  _lock(false),
 		  _initialized(false),
@@ -820,17 +820,16 @@ inline MsgPack::MsgPack()
 
 
 inline MsgPack::MsgPack(const MsgPack& other)
-	: _body(std::make_shared<Body>(other)),
+	: _body(std::make_shared<Body>(other, false)),
 	  _const_body(_body.get())
-{
-}
+{ }
 
 
 inline MsgPack::MsgPack(MsgPack&& other)
 	: _body(std::move(other._body)),
 	  _const_body(_body.get())
 {
-	other._body = std::make_shared<Body>(_undefined());
+	other._body = std::make_shared<Body>(_undefined(), false);
 	other._const_body = other._body.get();
 }
 
@@ -842,7 +841,7 @@ inline MsgPack::MsgPack(msgpack::object&& _object, bool _const)
 
 template <typename T, typename>
 inline MsgPack::MsgPack(T&& v)
-	: _body(std::make_shared<Body>(std::forward<T>(v))),
+	: _body(std::make_shared<Body>(std::forward<T>(v), false)),
 	  _const_body(_body.get()) { }
 
 
