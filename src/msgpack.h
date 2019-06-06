@@ -1518,7 +1518,7 @@ inline void MsgPack::_clear() {
 
 template <typename T, std::enable_if_t<std::is_arithmetic<std::remove_reference_t<T>>::value or std::is_same<std::decay_t<T>, MsgPack>::value, int>>
 inline void MsgPack::_append(T&& o) {
-	_append(std::to_string(std::forward<T>(o)));
+	_append(std::string_view(std::to_string(std::forward<T>(o))));
 }
 
 
