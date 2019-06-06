@@ -114,6 +114,15 @@ protected:
 
 	void close();
 
+	ssize_t on_read(const char* buf, ssize_t received);
+
+	void on_read_file(const char* buf, ssize_t received);
+
+	void on_read_file_done();
+
+	bool send_file(int fd, size_t offset = 0);
+
+public:
 	bool is_waiting() const {
 		return waiting.load(std::memory_order_relaxed);
 	}
@@ -132,15 +141,6 @@ protected:
 
 	bool is_idle();
 
-	ssize_t on_read(const char* buf, ssize_t received);
-
-	void on_read_file(const char* buf, ssize_t received);
-
-	void on_read_file_done();
-
-	bool send_file(int fd, size_t offset = 0);
-
-public:
 	bool init(int sock_) noexcept;
 
 	bool write(const char *buf, size_t buf_size);

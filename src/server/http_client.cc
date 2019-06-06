@@ -3580,6 +3580,7 @@ HttpClient::__repr__() const
 
 Request::Request(HttpClient* client) :
 	mode(Mode::FULL),
+	client(client),
 	view(nullptr),
 	type_encoding(Encoding::none),
 	begining(true),
@@ -3805,7 +3806,7 @@ Request::wait()
 		// checking for empty/ended requests or closed connections.
 		std::unique_lock<std::mutex> pending_lk(pending_mtx);
 		while (!pending.wait_for(pending_lk, 1s, [this]() {
-			return has_pending;
+			return has_pending || (client && client->is_closed());
 		})) {}
 		has_pending = false;
 	}
