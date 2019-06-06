@@ -28,6 +28,7 @@
 #ifndef ENUM_H
 #define ENUM_H
 
+#pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
 #define _ENUM_M1(c, m, d, x) m(d, c-1, x)
 #define _ENUM_M2(c, m, d, x, ...) m(d, c-2, x) _ENUM_M1(c, m, d, __VA_ARGS__)
