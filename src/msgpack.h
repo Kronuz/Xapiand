@@ -827,10 +827,11 @@ inline MsgPack::MsgPack(const MsgPack& other)
 
 inline MsgPack::MsgPack(MsgPack&& other)
 	: _body(std::move(other._body)),
-	  _const_body(_body.get())
+	  _const_body(std::move(other._const_body))
 {
-	other._body = std::make_shared<Body>(_undefined(), false);
-	other._const_body = other._body.get();
+#ifndef NDEBUG
+	other._const_body = nullptr;
+#endif
 }
 
 
@@ -900,7 +901,11 @@ inline MsgPack& MsgPack::operator=(const MsgPack& other) {
 
 
 inline MsgPack& MsgPack::operator=(MsgPack&& other) {
-	_assignment(msgpack::object(std::move(other), *_body->_zone));
+	_body = std::move(other._body);
+	_const_body = std::move(other._const_body);
+#ifndef NDEBUG
+	other._const_body = nullptr;
+#endif
 	return *this;
 }
 
