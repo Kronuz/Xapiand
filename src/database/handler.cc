@@ -1361,8 +1361,7 @@ DocMatcher::operator()()
 		eptr = std::current_exception();
 	}
 
-	if (pending.fetch_sub(1, std::memory_order_release) == 1) {
-		std::atomic_thread_fence(std::memory_order_acquire);
+	if (pending.fetch_sub(1, std::memory_order_acq_rel) == 1) {
 		ready.notify_one();
 	}
 }
@@ -2507,13 +2506,11 @@ DocIndexer::operator()()
 			}
 		}
 
-		if (running.fetch_sub(1, std::memory_order_release) == 1) {
-			std::atomic_thread_fence(std::memory_order_acquire);
+		if (running.fetch_sub(1, std::memory_order_acq_rel) == 1) {
 			done.notify_one();
 		}
 	} catch (...) {
-		if (running.fetch_sub(1, std::memory_order_release) == 1) {
-			std::atomic_thread_fence(std::memory_order_acquire);
+		if (running.fetch_sub(1, std::memory_order_acq_rel) == 1) {
 			done.notify_one();
 		}
 		throw;
