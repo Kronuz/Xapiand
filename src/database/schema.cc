@@ -2890,11 +2890,13 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					}
 					// Figure out a term which goes into the least used shard:
 					for (int t = 100; t >= 0; --t) {
-						auto tmp_unprefixed_term_id = generator(opts.uuid_compact).serialise();
+						auto tmp_document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
+						auto tmp_unprefixed_term_id = Serialise::serialise(spc_id, tmp_document_id);
 						auto tmp_term_id = prefixed(tmp_unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 						auto tmp_shard_num = fnv1ah64::hash(tmp_term_id) % n_shards;
 						if (db_handler.endpoints[tmp_shard_num].is_active()) {
 							if (shard_num == tmp_shard_num || !db_handler.endpoints[shard_num].is_active()) {
+								document_id = std::move(tmp_document_id);
 								unprefixed_term_id = std::move(tmp_unprefixed_term_id);
 								term_id = std::move(tmp_term_id);
 								break;
