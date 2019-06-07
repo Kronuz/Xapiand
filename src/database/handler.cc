@@ -1485,7 +1485,7 @@ DatabaseHandler::get_mset(
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			ready.wait(ready_lk, [&]() {
+			ready.wait(ready_lk, [&]{
 				return !pending.load(std::memory_order_acquire);
 			});
 
@@ -1502,7 +1502,7 @@ DatabaseHandler::get_mset(
 				XapiandManager::doc_matcher_pool()->enqueue(matcher);
 			}
 
-			ready.wait(ready_lk, [&]() {
+			ready.wait(ready_lk, [&]{
 				return !pending.load(std::memory_order_acquire);
 			});
 
