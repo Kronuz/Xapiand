@@ -2326,7 +2326,7 @@ DocPreparer::operator()()
 				L_ERR("Prepared document: cannot enqueue to index!");
 				return 1;
 			}
-			indexer->_prepared.fetch_add(1, std::memory_order_relaxed);
+			indexer->_prepared.fetch_add(1, std::memory_order_acq_rel);
 			return 0;
 		});
 		if (http_errors.ret) {
@@ -2380,9 +2380,9 @@ DocIndexer::_prepare(MsgPack&& obj)
 			}
 		}
 
-		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
+		_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
 		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
+			_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		bulk_cnt = 0;
@@ -2421,7 +2421,7 @@ DocIndexer::operator()()
 		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
 		if unlikely(!ready_) {
-			ready_ = ready.load(std::memory_order_relaxed);
+			ready_ = ready.load(std::memory_order_acquire);
 		}
 
 		size_t processed_;
@@ -2495,7 +2495,7 @@ DocIndexer::operator()()
 				finish();
 				break;
 			}
-			if (_prepared.load(std::memory_order_relaxed) >= total && ready_queue.empty()) {
+			if (_prepared.load(std::memory_order_acquire) >= total && ready_queue.empty()) {
 				break;
 			}
 		}
@@ -2505,7 +2505,8 @@ DocIndexer::operator()()
 		db_handler.commit();
 	}
 
-	if (running.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+	if (running.fetch_sub(1, std::memory_order_release) == 1) {
+		std::atomic_thread_fence(std::memory_order_acquire);
 		done.notify_one();
 	}
 }
@@ -2526,9 +2527,9 @@ DocIndexer::wait(double timeout)
 			}
 		}
 
-		_total.fetch_add(bulk_cnt, std::memory_order_relaxed);
+		_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
 		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total.fetch_sub(bulk_cnt, std::memory_order_relaxed);
+			_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
 			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
 		}
 		bulk_cnt = 0;
