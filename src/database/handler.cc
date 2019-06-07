@@ -2413,102 +2413,110 @@ DocIndexer::operator()()
 	DatabaseHandler db_handler(endpoints, flags);
 
 	running.fetch_add(1, std::memory_order_acq_rel);
-	auto indexer = started.fetch_add(1, std::memory_order_acq_rel);
-	if (indexer == indexers - 1) {
-		all_started.notify_one();
-	}
-	auto& ready_queue = *ready_queues[indexer];
-
-	bool ready_ = false;
-	while (!finished.load(std::memory_order_acquire)) {
-		std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
-		auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
-
-		if unlikely(!ready_) {
-			ready_ = ready.load(std::memory_order_acquire);
+	try {
+		auto indexer = started.fetch_add(1, std::memory_order_acq_rel);
+		if (indexer == indexers - 1) {
+			all_started.notify_one();
 		}
+		auto& ready_queue = *ready_queues[indexer];
 
-		size_t processed_;
-		if likely(valid) {
-			auto& idx = std::get<3>(prepared);
-			if likely(idx != std::numeric_limits<size_t>::max()) {
-				auto& term_id = std::get<0>(prepared);
-				auto& doc = std::get<1>(prepared);
-				auto& data_obj = std::get<2>(prepared);
+		bool ready_ = false;
+		while (!finished.load(std::memory_order_acquire)) {
+			std::tuple<std::string, Xapian::Document, MsgPack, size_t> prepared;
+			auto valid = ready_queue.wait_dequeue_timed(prepared, 100000);  // wait 100ms
 
-				processed_ = _processed.fetch_add(1, std::memory_order_acq_rel) + 1;
+			if unlikely(!ready_) {
+				ready_ = ready.load(std::memory_order_acquire);
+			}
 
-				MsgPack obj;
-				if (!term_id.empty()) {
-					auto http_errors = catch_http_errors([&]{
-						auto info = db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+			size_t processed_;
+			if likely(valid) {
+				auto& idx = std::get<3>(prepared);
+				if likely(idx != std::numeric_limits<size_t>::max()) {
+					auto& term_id = std::get<0>(prepared);
+					auto& doc = std::get<1>(prepared);
+					auto& data_obj = std::get<2>(prepared);
 
-						Document document(info.did, &db_handler);
+					processed_ = _processed.fetch_add(1, std::memory_order_acq_rel) + 1;
 
-						if (term_id == "QN\x80") {
-							obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
-						} else {
-							auto it_id = data_obj.find(ID_FIELD_NAME);
-							if (it_id == data_obj.end()) {
+					MsgPack obj;
+					if (!term_id.empty()) {
+						auto http_errors = catch_http_errors([&]{
+							auto info = db_handler.replace_document_term(term_id, std::move(doc), false, true, false);
+
+							Document document(info.did, &db_handler);
+
+							if (term_id == "QN\x80") {
 								obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
 							} else {
-								obj[ID_FIELD_NAME] = it_id.value();
+								auto it_id = data_obj.find(ID_FIELD_NAME);
+								if (it_id == data_obj.end()) {
+									obj[ID_FIELD_NAME] = db_handler.unserialise_term_id(info.term);
+								} else {
+									obj[ID_FIELD_NAME] = it_id.value();
+								}
 							}
-						}
 
-						if (echo) {
-							obj[VERSION_FIELD_NAME] = info.version;
+							if (echo) {
+								obj[VERSION_FIELD_NAME] = info.version;
 
+								if (comments) {
+									obj[RESPONSE_xDOCID] = info.did;
+
+									size_t n_shards = endpoints.size();
+									size_t shard_num = (info.did - 1) % n_shards;
+									obj[RESPONSE_xSHARD] = shard_num + 1;
+									// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+								}
+							}
+
+							_indexed.fetch_add(1, std::memory_order_acq_rel);
+							return 0;
+						});
+						if (http_errors.error_code != HTTP_STATUS_OK) {
 							if (comments) {
-								obj[RESPONSE_xDOCID] = info.did;
-
-								size_t n_shards = endpoints.size();
-								size_t shard_num = (info.did - 1) % n_shards;
-								obj[RESPONSE_xSHARD] = shard_num + 1;
-								// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+								obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
+								obj[RESPONSE_xMESSAGE] = strings::split(http_errors.error, '\n');
 							}
 						}
-
-						_indexed.fetch_add(1, std::memory_order_acq_rel);
-						return 0;
-					});
-					if (http_errors.error_code != HTTP_STATUS_OK) {
-						if (comments) {
-							obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
-							obj[RESPONSE_xMESSAGE] = strings::split(http_errors.error, '\n');
-						}
+					} else if (!data_obj.is_undefined()) {
+						obj = std::move(data_obj);
 					}
-				} else if (!data_obj.is_undefined()) {
-					obj = std::move(data_obj);
+					std::lock_guard<std::mutex> lk(_results_mtx);
+					if (_idx > _results.size()) {
+						_results.resize(_idx, MsgPack::MAP());
+					}
+					_results[idx] = std::move(obj);
+				} else {
+					processed_ = _processed.load(std::memory_order_acquire);
 				}
-				std::lock_guard<std::mutex> lk(_results_mtx);
-				if (_idx > _results.size()) {
-					_results.resize(_idx, MsgPack::MAP());
-				}
-				_results[idx] = std::move(obj);
 			} else {
 				processed_ = _processed.load(std::memory_order_acquire);
 			}
-		} else {
-			processed_ = _processed.load(std::memory_order_acquire);
-		}
 
-		if (ready_) {
-			auto total_ = _total.load(std::memory_order_acquire);
-			if (processed_ == total_) {
-				finish();
-				break;
-			}
-			auto prepared_ = _prepared.load(std::memory_order_acquire);
-			if (prepared_ == total_ && ready_queue.empty()) {
-				break;
+			if (ready_) {
+				auto total_ = _total.load(std::memory_order_acquire);
+				if (processed_ == total_) {
+					finish();
+					break;
+				}
+				auto prepared_ = _prepared.load(std::memory_order_acquire);
+				if (prepared_ == total_ && ready_queue.empty()) {
+					break;
+				}
 			}
 		}
-	}
 
-	if (running.fetch_sub(1, std::memory_order_release) == 1) {
-		std::atomic_thread_fence(std::memory_order_acquire);
-		done.notify_one();
+		if (running.fetch_sub(1, std::memory_order_release) == 1) {
+			std::atomic_thread_fence(std::memory_order_acquire);
+			done.notify_one();
+		}
+	} catch (...) {
+		if (running.fetch_sub(1, std::memory_order_release) == 1) {
+			std::atomic_thread_fence(std::memory_order_acquire);
+			done.notify_one();
+		}
+		throw;
 	}
 }
 
