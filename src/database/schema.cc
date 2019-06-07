@@ -4915,6 +4915,8 @@ Schema::validate_required_namespace_data()
 {
 	L_CALL("Schema::validate_required_namespace_data() {{type:{}}}", _get_str_type(specification.sep_types));
 
+	std::set<uint64_t> set_acc;
+
 	auto type = specification.sep_types[SPC_CONCRETE_TYPE];
 	switch (type) {
 		case FieldType::object:
@@ -4979,6 +4981,36 @@ Schema::validate_required_namespace_data()
 		default:
 			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
+
+	// If field is namespace fallback to index anything but values.
+	if (!specification.flags.has_index && specification.flags.is_namespace) {
+		const auto index = specification.index & ~TypeIndex::VALUES;
+		if (specification.index != index) {
+			specification.index = index;
+		}
+		specification.flags.has_index = true;
+	}
+
+	if (specification.index != TypeIndex::NONE) {
+		if (specification.flags.concrete) {
+			if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
+				// Write RESERVED_SLOT in properties (if it has values).
+				if (specification.slot == Xapian::BAD_VALUENO) {
+					specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+				}
+
+				// Write RESERVED_ACCURACY and RESERVED_ACC_PREFIX in properties.
+				if (!set_acc.empty()) {
+					specification.acc_prefix.clear();
+					for (const auto& acc : set_acc) {
+						specification.acc_prefix.push_back(get_prefix(acc));
+					}
+					specification.accuracy.assign(set_acc.begin(), set_acc.end());
+				}
+			}
+		}
+	}
+
 }
 
 
@@ -5176,7 +5208,7 @@ Schema::validate_required_data(MsgPack& mut_properties)
 	}
 
 	// If field is namespace fallback to index anything but values.
-	if (!specification.flags.has_index && !specification.partial_prefixes.empty()) {
+	if (!specification.flags.has_index && specification.flags.is_namespace) {
 		const auto index = specification.index & ~TypeIndex::VALUES;
 		if (specification.index != index) {
 			specification.index = index;
