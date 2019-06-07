@@ -525,33 +525,36 @@ XapiandManager::init()
 	local_node = std::shared_ptr<const Node>(node_copy.release());
 	local_node = Node::local_node(local_node);
 
-	if (opts.solo) {
-		Node::leader_node(local_node);
-	}
-
 	// If restoring documents, fill all the nodes from the cluster database:
-	if (snooping) {
-		try {
-			DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand/nodes"}});
-			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-				auto mset = db_handler.get_mset();
-				const auto m_e = mset.end();
-				for (auto m = mset.begin(); m != m_e; ++m) {
-					auto did = *m;
-					auto document = db_handler.get_document(did);
-					auto obj = document.get_obj();
-					#ifdef XAPIAND_CLUSTERING
-					if (!opts.solo) {
+#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		if (snooping) {
+			try {
+				DatabaseHandler db_handler(Endpoints{Endpoint{".xapiand/nodes"}});
+				if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
+					auto mset = db_handler.get_mset();
+					const auto m_e = mset.end();
+					for (auto m = mset.begin(); m != m_e; ++m) {
+						auto did = *m;
+						auto document = db_handler.get_document(did);
+						auto obj = document.get_obj();
 						Node node;
 						node.idx = did;
 						node.name(obj["name"].str_view());
 						Node::touch_node(node, false);
 					}
-					#endif
 				}
-			}
-		} catch (const Xapian::DocNotFoundError&) {
-		} catch (const Xapian::DatabaseNotFoundError&) {}
+			} catch (const Xapian::DocNotFoundError&) {
+			} catch (const Xapian::DatabaseNotFoundError&) {}
+		}
+	} else
+#endif
+	{
+		Node::leader_node(local_node);
+		Node node;
+		node.idx = 1;
+		node.name(local_node->name());
+		Node::touch_node(node, true);
 	}
 }
 
@@ -1441,7 +1444,7 @@ XapiandManager::load_nodes()
 
 #endif
 
-#ifdef XAPIAND_CLUSTERING
+
 std::vector<std::vector<std::string>>
 calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, size_t num_replicas_plus_master)
 {
@@ -1588,9 +1591,7 @@ load_shards(const std::string& normalized_path)
 	std::vector<std::vector<std::string>> shards;
 
 	auto nodes = Node::nodes();
-	if (nodes.empty()) {
-		return shards;
-	}
+	assert(!nodes.empty());
 
 	Endpoints index_endpoints;
 	for (auto& node : nodes) {
@@ -1598,6 +1599,7 @@ load_shards(const std::string& normalized_path)
 			index_endpoints.add(Endpoint(strings::format(".xapiand/indices/.__{}", node->idx)));
 		}
 	}
+	assert(!index_endpoints.empty());
 
 	try {
 		DatabaseHandler db_handler(index_endpoints);
@@ -1676,8 +1678,6 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 	return nodes;
 }
 
-#endif
-
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
 XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] const MsgPack* settings)
@@ -1686,133 +1686,65 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		if (normalized_path == ".xapiand/nodes") {
-			// Cluster database is always in the master
-			std::vector<std::shared_ptr<const Node>> node_replicas;
-			node_replicas.push_back(Node::leader_node());
+	if (normalized_path == ".xapiand/nodes") {
+		// Cluster database is always in the master
+		std::vector<std::shared_ptr<const Node>> node_replicas;
+		node_replicas.push_back(Node::leader_node());
+		node_replicas.push_back(Node::local_node());
+		nodes.push_back(std::move(node_replicas));
+		return nodes;
+	}
+
+	if (normalized_path == ".xapiand/indices") {
+		for (auto& node : Node::nodes()) {
+			if (node->idx) {
+				std::vector<std::shared_ptr<const Node>> node_replicas;
+				node_replicas.push_back(node);
+				node_replicas.push_back(Node::local_node());
+				nodes.push_back(std::move(node_replicas));
+			}
+		}
+		return nodes;
+	}
+
+	if (strings::startswith(normalized_path, ".xapiand/indices/.__")) {
+		// Index databases are always in their specified node
+		std::vector<std::shared_ptr<const Node>> node_replicas;
+		int errno_save;
+		size_t idx = strict_stoull(&errno_save, normalized_path.substr(std::string_view(".xapiand/indices/.__").size()));
+		assert(errno_save == 0);
+		if (errno_save == 0) {
+			assert(idx > 0);
+			node_replicas.push_back(Node::get_node(idx));
 			node_replicas.push_back(Node::local_node());
 			nodes.push_back(std::move(node_replicas));
 			return nodes;
 		}
+	}
 
-		if (normalized_path == ".xapiand/indices") {
-			for (auto& node : Node::nodes()) {
-				if (node->idx) {
-					std::vector<std::shared_ptr<const Node>> node_replicas;
-					node_replicas.push_back(node);
-					node_replicas.push_back(Node::local_node());
-					nodes.push_back(std::move(node_replicas));
-				}
-			}
-			return nodes;
-		}
+	static std::mutex resolve_index_lru_mtx;
+	static lru::lru<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
 
-		if (strings::startswith(normalized_path, ".xapiand/indices/.__")) {
-			// Index databases are always in their specified node
-			std::vector<std::shared_ptr<const Node>> node_replicas;
-			int errno_save;
-			size_t idx = strict_stoull(&errno_save, normalized_path.substr(std::string_view(".xapiand/indices/.__").size()));
-			assert(errno_save == 0);
-			if (errno_save == 0) {
-				assert(idx > 0);
-				node_replicas.push_back(Node::get_node(idx));
-				node_replicas.push_back(Node::local_node());
-				nodes.push_back(std::move(node_replicas));
-				return nodes;
-			}
-		}
+	std::vector<std::vector<std::string>> shards;
 
-		static std::mutex resolve_index_lru_mtx;
-		static lru::lru<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
-
-		std::vector<std::vector<std::string>> shards;
-
-		std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
-		auto it = resolve_index_lru.find(normalized_path);
-		if (it != resolve_index_lru.end()) {
-			shards = it->second;
-			lk.unlock();
+	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
+	auto it = resolve_index_lru.find(normalized_path);
+	if (it != resolve_index_lru.end()) {
+		shards = it->second;
+		lk.unlock();
+		nodes = shards_to_nodes(shards);
+	} else {
+		lk.unlock();
+		shards = load_shards(normalized_path);
+		if (!shards.empty()) {
 			nodes = shards_to_nodes(shards);
-		} else {
-			lk.unlock();
-			shards = load_shards(normalized_path);
-			if (!shards.empty()) {
-				nodes = shards_to_nodes(shards);
-				lk.lock();
-				size_t shard_num = 0;
-				for (auto& replicas : shards) {
-					if (replicas.empty()) {
-						nodes.clear();  // There were missing replicas, abort!
-						break;
-					}
-					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-					std::vector<std::vector<std::string>> shard_shards;
-					shard_shards.push_back(replicas);
-					resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
-				}
-				if (!nodes.empty()) {
-					resolve_index_lru.insert(std::make_pair(normalized_path, shards));
-				}
-				lk.unlock();
-			}
-		}
-
-		if (nodes.empty()) {
-			auto indexed_nodes = Node::indexed_nodes();
-			if (!indexed_nodes) {
-				return nodes;
-			}
-
-			auto num_shards = opts.num_shards;
-			auto num_replicas_plus_master = opts.num_replicas + 1;
-
-			if (settings && settings->is_map()) {
-				auto num_shards_it = settings->find("number_of_shards");
-				if (num_shards_it != settings->end()) {
-					auto& num_shards_val = num_shards_it.value();
-					if (num_shards_val.is_number()) {
-						num_shards = num_shards_val.u64();
-					}
-				}
-
-				auto num_replicas_it = settings->find("number_of_replicas");
-				if (num_replicas_it != settings->end()) {
-					auto& num_replicas_val = num_replicas_it.value();
-					if (num_replicas_val.is_number()) {
-						num_replicas_plus_master = num_replicas_val.u64() + 1;
-					}
-				}
-			}
-
-			// Some validations:
-			if (num_shards > 9999UL) {
-				num_shards = 9999UL;
-			}
-			if (num_replicas_plus_master > indexed_nodes) {
-				num_replicas_plus_master = indexed_nodes;
-			}
-
-			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
-
-			shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
-			assert(!shards.empty());
-
-			if (writable) {
-				try {
-					index_shards(normalized_path, shards);
-				} catch (...) {
-					L_EXC("Cannot save database index settings: {}", normalized_path);
-				}
-			}
-
-			nodes = shards_to_nodes(shards);
-
 			lk.lock();
 			size_t shard_num = 0;
 			for (auto& replicas : shards) {
-				assert(!replicas.empty());
+				if (replicas.empty()) {
+					nodes.clear();  // There were missing replicas, abort!
+					break;
+				}
 				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
 				std::vector<std::vector<std::string>> shard_shards;
 				shard_shards.push_back(replicas);
@@ -1822,15 +1754,24 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
 			}
 			lk.unlock();
-		} else if (settings && settings->is_map()) {
+		}
+	}
+
+	if (nodes.empty()) {
+		auto indexed_nodes = Node::indexed_nodes();
+		if (!indexed_nodes) {
+			return nodes;
+		}
+
+		auto num_shards = opts.num_shards;
+		auto num_replicas_plus_master = opts.num_replicas + 1;
+
+		if (settings && settings->is_map()) {
 			auto num_shards_it = settings->find("number_of_shards");
 			if (num_shards_it != settings->end()) {
 				auto& num_shards_val = num_shards_it.value();
 				if (num_shards_val.is_number()) {
-					size_t num_shards = num_shards_val.u64();
-					if (nodes.size() != num_shards) {
-						THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
-					}
+					num_shards = num_shards_val.u64();
 				}
 			}
 
@@ -1838,20 +1779,69 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			if (num_replicas_it != settings->end()) {
 				auto& num_replicas_val = num_replicas_it.value();
 				if (num_replicas_val.is_number()) {
-					size_t num_replicas_plus_master = num_replicas_val.u64() + 1;
-					if (nodes.front().size() != num_replicas_plus_master) {
-						THROW(ClientError, "It is not allowed to change 'number_of_replicas' setting.");
-					}
+					num_replicas_plus_master = num_replicas_val.u64() + 1;
 				}
 			}
 		}
-	}
-	else
-#endif
-	{
-		std::vector<std::shared_ptr<const Node>> node_replicas;
-		node_replicas.push_back(Node::local_node());
-		nodes.push_back(std::move(node_replicas));
+
+		// Some validations:
+		if (num_shards > 9999UL) {
+			num_shards = 9999UL;
+		}
+		if (num_replicas_plus_master > indexed_nodes) {
+			num_replicas_plus_master = indexed_nodes;
+		}
+
+		size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
+
+		shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
+		assert(!shards.empty());
+
+		if (writable) {
+			try {
+				index_shards(normalized_path, shards);
+			} catch (...) {
+				L_EXC("Cannot save database index settings: {}", normalized_path);
+			}
+		}
+
+		nodes = shards_to_nodes(shards);
+
+		lk.lock();
+		size_t shard_num = 0;
+		for (auto& replicas : shards) {
+			assert(!replicas.empty());
+			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
+			std::vector<std::vector<std::string>> shard_shards;
+			shard_shards.push_back(replicas);
+			resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
+		}
+		if (!nodes.empty()) {
+			resolve_index_lru.insert(std::make_pair(normalized_path, shards));
+		}
+		lk.unlock();
+	} else if (settings && settings->is_map()) {
+		auto num_shards_it = settings->find("number_of_shards");
+		if (num_shards_it != settings->end()) {
+			auto& num_shards_val = num_shards_it.value();
+			if (num_shards_val.is_number()) {
+				size_t num_shards = num_shards_val.u64();
+				if (nodes.size() != num_shards) {
+					THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+				}
+			}
+		}
+
+		auto num_replicas_it = settings->find("number_of_replicas");
+		if (num_replicas_it != settings->end()) {
+			auto& num_replicas_val = num_replicas_it.value();
+			if (num_replicas_val.is_number()) {
+				size_t num_replicas_plus_master = num_replicas_val.u64() + 1;
+				if (nodes.front().size() != num_replicas_plus_master) {
+					THROW(ClientError, "It is not allowed to change 'number_of_replicas' setting.");
+				}
+			}
+		}
 	}
 
 	return nodes;
