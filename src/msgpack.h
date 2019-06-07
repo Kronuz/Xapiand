@@ -93,7 +93,7 @@ class MsgPack {
 	void _initializer(std::initializer_list<MsgPack> list);
 
 	template <typename T>
-	void _assignment(T&& v, msgpack::zone& zone);
+	void _assignment(T&& v);
 
 	static msgpack::object _undefined() {
 		msgpack::object obj;
@@ -775,7 +775,7 @@ inline void MsgPack::_initializer(std::initializer_list<MsgPack> list) {
 
 
 template <typename T>
-inline void MsgPack::_assignment(T&& v, msgpack::zone& zone) {
+inline void MsgPack::_assignment(T&& v) {
 	if (_body->_const) {
 		THROW(msgpack::const_error, "Constant object");
 	}
@@ -783,7 +783,7 @@ inline void MsgPack::_assignment(T&& v, msgpack::zone& zone) {
 		assert(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
-	msgpack::object obj(std::forward<T>(v), zone);
+	msgpack::object obj(std::forward<T>(v), *_body->_zone);
 	if (_body->_is_key) {
 		// Rename key, if the assignment is acting on a map key...
 		// We expect obj to be a string:
@@ -905,7 +905,7 @@ inline MsgPack& MsgPack::operator=(MsgPack&& other) {
 		_body = std::move(other._body);
 		_const_body = std::move(other._const_body);
 	} else {
-		_assignment(std::move(other), *_body->_zone);
+		_assignment(std::move(other));
 	}
 	return *this;
 }
@@ -916,7 +916,7 @@ inline MsgPack& MsgPack::operator=(const MsgPack& other) {
 		_body = std::make_shared<Body>(*other._body->_obj);
 		_const_body = _body.get();
 	} else {
-		_assignment(other, *_body->_zone);
+		_assignment(other);
 	}
 	return *this;
 }
@@ -928,7 +928,7 @@ inline MsgPack& MsgPack::operator=(T&& v) {
 		_body = std::make_shared<Body>(std::forward<T>(v));
 		_const_body = _body.get();
 	} else {
-		_assignment(std::forward<T>(v), *_body->_zone);
+		_assignment(std::forward<T>(v));
 	}
 	return *this;
 }
