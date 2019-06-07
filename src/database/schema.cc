@@ -4915,6 +4915,9 @@ Schema::validate_required_namespace_data()
 {
 	L_CALL("Schema::validate_required_namespace_data() {{type:{}}}", _get_str_type(specification.sep_types));
 
+	// This should be the exact same as validate_required_data(),
+	// except this doesn't write to the mut_properties.
+
 	std::set<uint64_t> set_acc;
 
 	auto type = specification.sep_types[SPC_CONCRETE_TYPE];
@@ -4925,50 +4928,147 @@ Schema::validate_required_namespace_data()
 
 		case FieldType::geo:
 			// Set partials and error.
-			specification.flags.partials = default_spc.flags.partials;
-			specification.error = default_spc.error;
-			specification.flags.concrete = true;
-			break;
-
-		case FieldType::string:
-		case FieldType::text:
-			specification.flags.ngram = default_spc.flags.ngram;
-			specification.flags.cjk_ngram = default_spc.flags.cjk_ngram;
-			specification.flags.cjk_words = default_spc.flags.cjk_words;
-			specification.language = default_spc.language;
-			if (!specification.language.empty()) {
-				specification.stop_strategy = default_spc.stop_strategy;
-			}
-			specification.stem_language = default_spc.stem_language;
-			if (!specification.stem_language.empty()) {
-				specification.stem_strategy = default_spc.stem_strategy;
-			}
-			specification.flags.concrete = true;
-			break;
-
-		case FieldType::keyword:
-			if (!specification.flags.has_bool_term) {
-				specification.flags.bool_term = strings::hasupper(specification.meta_name);
-				specification.flags.has_bool_term = specification.flags.bool_term;
-			}
-			specification.flags.concrete = true;
-			break;
-
-		case FieldType::script:
-			if (!specification.flags.has_index) {
-				specification.index = TypeIndex::NONE; // Fallback to index anything.
-				specification.flags.has_index = true;
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					if (specification.doc_acc->is_array()) {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							if (_accuracy.is_number()) {
+								const auto val_acc = _accuracy.u64();
+								if (val_acc <= HTM_MAX_LEVEL) {
+									set_acc.insert(val_acc);
+								} else {
+									THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {} ({} not supported)", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL, val_acc);
+								}
+							} else {
+								THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+							}
+						}
+					} else {
+						THROW(ClientError, "Data inconsistency, level value in '{}': '{}' must be a positive number between 0 and {}", RESERVED_ACCURACY, GEO_STR, HTM_MAX_LEVEL);
+					}
+				} else {
+					set_acc.insert(def_accuracy_geo.begin(), def_accuracy_geo.end());
+				}
 			}
 			specification.flags.concrete = true;
 			break;
 
 		case FieldType::date:
 		case FieldType::datetime:
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					if (specification.doc_acc->is_array()) {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							uint64_t accuracy;
+							if (_accuracy.is_string()) {
+								auto accuracy_date = _get_accuracy_datetime(_accuracy.str_view());
+								if (accuracy_date != UnitTime::INVALID) {
+									accuracy = toUType(accuracy_date);
+								} else {
+									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+								}
+							} else if (_accuracy.is_number()) {
+								accuracy = _accuracy.u64();
+								if (!validate_acc_date(static_cast<UnitTime>(accuracy))) {
+									THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
+								}
+							} else {
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date), repr(_accuracy.str_view()));
+							}
+							set_acc.insert(accuracy);
+						}
+					} else {
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, type == FieldType::datetime ? DATETIME_STR : DATE_STR, repr(str_set_acc_date));
+					}
+				} else {
+					set_acc.insert(def_accuracy_datetime.begin(), def_accuracy_datetime.end());
+				}
+			}
+			specification.flags.concrete = true;
+			break;
+
 		case FieldType::time:
 		case FieldType::timedelta:
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					if (specification.doc_acc->is_array()) {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							if (_accuracy.is_string()) {
+								auto accuracy_time = _get_accuracy_time(_accuracy.str_view());
+								if (accuracy_time != UnitTime::INVALID) {
+									set_acc.insert(toUType(accuracy_time));
+								} else {
+									THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+								}
+							} else {
+								THROW(ClientError, "Data inconsistency, '{}': '{}' must be a subset of {} ({} not supported)", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time), repr(_accuracy.str_view()));
+							}
+						}
+					} else {
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be a subset of {}", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), repr(str_set_acc_time));
+					}
+				} else {
+					set_acc.insert(def_accuracy_time.begin(), def_accuracy_time.end());
+				}
+			}
+			specification.flags.concrete = true;
+			break;
+
 		case FieldType::integer:
 		case FieldType::positive:
 		case FieldType::floating:
+			if (toUType(specification.index & TypeIndex::TERMS) != 0u) {
+				if (specification.doc_acc) {
+					if (specification.doc_acc->is_array()) {
+						for (const auto& _accuracy : *specification.doc_acc) {
+							if (_accuracy.is_number()) {
+								set_acc.insert(_accuracy.u64());
+							} else {
+								THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+							}
+						}
+					} else {
+						THROW(ClientError, "Data inconsistency, '{}' in '{}' must be an array of positive numbers", RESERVED_ACCURACY, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
+					}
+				} else {
+					set_acc.insert(def_accuracy_num.begin(), def_accuracy_num.end());
+				}
+			}
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::string:
+		case FieldType::text:
+			// Language could be needed, for soundex.
+			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
+				specification.language = specification.aux_stem_language;
+			}
+			if (specification.aux_stem_language.empty() && !specification.aux_language.empty()) {
+				specification.stem_language = specification.aux_language;
+			}
+
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::keyword:
+			// Process RESERVED_BOOL_TERM
+			if (!specification.flags.has_bool_term) {
+				// By default, if normalized name has upper characters then it is consider bool term.
+				specification.flags.bool_term = strings::hasupper(specification.meta_name);
+				specification.flags.has_bool_term = true;
+			}
+
+			specification.flags.concrete = true;
+			break;
+
+		case FieldType::script:
+			if (!specification.flags.has_index) {
+				specification.index = TypeIndex::NONE;  // Fallback to index anything.
+				specification.flags.has_index = true;
+			}
+			specification.flags.concrete = true;
+			break;
+
 		case FieldType::boolean:
 		case FieldType::uuid:
 			specification.flags.concrete = true;
@@ -4984,10 +5084,7 @@ Schema::validate_required_namespace_data()
 
 	// If field is namespace fallback to index anything but values.
 	if (!specification.flags.has_index && specification.flags.is_namespace) {
-		const auto index = specification.index & ~TypeIndex::VALUES;
-		if (specification.index != index) {
-			specification.index = index;
-		}
+		specification.index = specification.index & ~TypeIndex::VALUES;
 		specification.flags.has_index = true;
 	}
 
@@ -5010,7 +5107,6 @@ Schema::validate_required_namespace_data()
 			}
 		}
 	}
-
 }
 
 
