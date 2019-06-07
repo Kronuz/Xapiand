@@ -92,7 +92,8 @@ class MsgPack {
 	void _initializer_map(std::initializer_list<MsgPack> list);
 	void _initializer(std::initializer_list<MsgPack> list);
 
-	void _assignment(const msgpack::object& obj);
+	template <typename T>
+	void _assignment(T&& v, msgpack::zone& zone);
 
 	static msgpack::object _undefined() {
 		msgpack::object obj;
@@ -637,11 +638,11 @@ struct MsgPack::Body {
 			_capacity(size()) { }
 
 	template <typename T>
-	Body(T&& v, bool _const)
+	Body(T&& v)
 		: _flags(0),
 		  _lock(false),
 		  _initialized(false),
-		  _const(_const),
+		  _const(false),
 		  _zone(std::make_shared<msgpack::zone>()),
 		  _base(std::make_shared<msgpack::object>(std::forward<T>(v), *_zone)),
 		  _parent(std::shared_ptr<Body>()),
@@ -772,7 +773,8 @@ inline void MsgPack::_initializer(std::initializer_list<MsgPack> list) {
 }
 
 
-inline void MsgPack::_assignment(const msgpack::object& obj) {
+template <typename T>
+inline void MsgPack::_assignment(T&& v, msgpack::zone& zone) {
 	if (_body->_const) {
 		THROW(msgpack::const_error, "Constant object");
 	}
@@ -780,6 +782,7 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 		assert(!_body->_lock);
 		THROW(msgpack::const_error, "Locked object");
 	}
+	msgpack::object obj(std::forward<T>(v), zone);
 	if (_body->_is_key) {
 		// Rename key, if the assignment is acting on a map key...
 		// We expect obj to be a string:
@@ -790,39 +793,41 @@ inline void MsgPack::_assignment(const msgpack::object& obj) {
 			// If there's a parent, and it's initialized...
 			if (parent_body->_initialized) {
 				// Change key in the parent's map:
-				auto val = std::string_view(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
-				auto str_key = std::string_view(obj.via.str.ptr, obj.via.str.size);
-				if (str_key == val) {
-					return;
-				}
-				auto it = parent_body->map.find(val);
-				if (it != parent_body->map.end()) {
-					auto pit = parent_body->map.find(str_key);
-					if (pit == parent_body->map.end()) {
-						parent_body->map.emplace(str_key, std::move(it->second));
-					} else {
-						pit->second = std::move(it->second);
+				auto old_key = std::string_view(_body->_obj->via.str.ptr, _body->_obj->via.str.size);
+				auto new_key = std::string_view(obj.via.str.ptr, obj.via.str.size);
+				if (new_key != old_key) {
+					auto it = parent_body->map.find(old_key);
+					if (it != parent_body->map.end()) {
+						auto pit = parent_body->map.find(new_key);
+						if (pit == parent_body->map.end()) {
+							parent_body->map.emplace(new_key, std::move(it->second));
+						} else {
+							pit->second = std::move(it->second);
+						}
+						parent_body->map.erase(it);
+						assert(parent_body->_obj->via.map.size == parent_body->map.size());
 					}
-					parent_body->map.erase(it);
-					assert(parent_body->_obj->via.map.size == parent_body->map.size());
 				}
 			}
 		}
 	}
 	_deinitialize();
-	*_body->_obj = obj;
+	*_body->_obj = std::move(obj);
 	_body->_capacity = _body->size();
 }
 
 
 inline MsgPack::MsgPack()
-	: MsgPack(_undefined()) { }
+	: MsgPack(_undefined())
+{
+}
 
 
 inline MsgPack::MsgPack(const MsgPack& other)
-	: _body(std::make_shared<Body>(other, false)),
+	: _body(std::make_shared<Body>(other)),
 	  _const_body(_body.get())
-{ }
+{
+}
 
 
 inline MsgPack::MsgPack(MsgPack&& other)
@@ -832,15 +837,18 @@ inline MsgPack::MsgPack(MsgPack&& other)
 }
 
 
-inline MsgPack::MsgPack(msgpack::object&& _object, bool _const)
-	: _body(std::make_shared<Body>(std::forward<msgpack::object>(_object), _const)),
-	  _const_body(_body.get()) { }
-
-
 template <typename T, typename>
 inline MsgPack::MsgPack(T&& v)
-	: _body(std::make_shared<Body>(std::forward<T>(v), false)),
+	: _body(std::make_shared<Body>(std::forward<T>(v))),
 	  _const_body(_body.get()) { }
+
+
+inline MsgPack::MsgPack(msgpack::object&& _object, bool _const)
+	: _body(std::make_shared<Body>(std::forward<msgpack::object>(_object))),
+	  _const_body(_body.get())
+{
+	_body->_const = _const;
+}
 
 
 inline MsgPack::MsgPack(std::initializer_list<MsgPack> list)
@@ -891,34 +899,24 @@ inline MsgPack::MsgPack(Type type)
 }
 
 
-inline MsgPack& MsgPack::operator=(const MsgPack& other) {
-	if (!_body) {
-		_body = std::make_shared<Body>(*other._body->_obj, false);
-		_const_body = _body.get();
-	} else {
-		_assignment(msgpack::object(other, *_body->_zone));
-	}
-	return *this;
-}
-
-
 inline MsgPack& MsgPack::operator=(MsgPack&& other) {
 	if (!_body) {
 		_body = std::move(other._body);
 		_const_body = std::move(other._const_body);
 	} else {
-		_assignment(msgpack::object(std::move(other), *_body->_zone));
+		_assignment(std::move(other), *_body->_zone);
 	}
 	return *this;
 }
 
 
-inline MsgPack& MsgPack::operator=(std::initializer_list<MsgPack> list) {
+inline MsgPack& MsgPack::operator=(const MsgPack& other) {
 	if (!_body) {
-		_body = std::make_shared<Body>(_undefined(), false);
+		_body = std::make_shared<Body>(*other._body->_obj);
 		_const_body = _body.get();
+	} else {
+		_assignment(other, *_body->_zone);
 	}
-	_initializer(list);
 	return *this;
 }
 
@@ -926,11 +924,21 @@ inline MsgPack& MsgPack::operator=(std::initializer_list<MsgPack> list) {
 template <typename T>
 inline MsgPack& MsgPack::operator=(T&& v) {
 	if (!_body) {
-		_body = std::make_shared<Body>(std::forward<T>(v), false);
+		_body = std::make_shared<Body>(std::forward<T>(v));
 		_const_body = _body.get();
 	} else {
-		_assignment(msgpack::object(std::forward<T>(v), *_body->_zone));
+		_assignment(std::forward<T>(v), *_body->_zone);
 	}
+	return *this;
+}
+
+
+inline MsgPack& MsgPack::operator=(std::initializer_list<MsgPack> list) {
+	if (!_body) {
+		_body = std::make_shared<Body>(_undefined());
+		_const_body = _body.get();
+	}
+	_initializer(list);
 	return *this;
 }
 
