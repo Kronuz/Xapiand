@@ -2281,6 +2281,7 @@ DatabaseHandler::unserialise_term_id(std::string_view term_id)
 
 DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool comments, const query_field_t& query_field) :
 	indexers(0),
+	started(0),
 	running(0),
 	finished(false),
 	ready(false),
@@ -2307,42 +2308,40 @@ DocPreparer::operator()()
 	L_CALL("DocPreparer::operator()()");
 
 	assert(indexer);
-	if (indexer->running.load(std::memory_order_acquire)) {
-		auto http_errors = catch_http_errors([&]{
-			DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
-			auto prepared = db_handler.prepare_document(obj, idx + 1);
-			// Route document to proper indexer:
-			auto n_shards = indexer->endpoints.size();
-			auto& term_id = std::get<0>(prepared);
-			auto shard_num = fnv1ah64::hash(term_id) % n_shards;
-			if unlikely(!indexer->ready_queues[shard_num % indexer->indexers]->enqueue(
-				std::make_tuple(
-					std::move(term_id),
-					std::move(std::get<1>(prepared)),
-					std::move(std::get<2>(prepared)),
-					idx
-				)
-			)) {
-				L_ERR("Prepared document: cannot enqueue to index!");
-				return 1;
-			}
-			indexer->_prepared.fetch_add(1, std::memory_order_acq_rel);
-			return 0;
-		});
-		if (http_errors.ret) {
-			if unlikely(!indexer->ready_queues[random_int(0, indexer->indexers - 1)]->enqueue(
-				std::make_tuple(
-					std::string{},
-					Xapian::Document{},
-					indexer->comments ? MsgPack{
-						{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-						{ RESPONSE_xMESSAGE, strings::split(http_errors.error, '\n') }
-					} : MsgPack::MAP(),
-					idx
-				)
-			)) {
-				L_ERR("Prepared document: cannot enqueue to index!");
-			}
+	auto http_errors = catch_http_errors([&]{
+		DatabaseHandler db_handler(indexer->endpoints, indexer->flags);
+		auto prepared = db_handler.prepare_document(obj, idx + 1);
+		// Route document to proper indexer:
+		auto n_shards = indexer->endpoints.size();
+		auto& term_id = std::get<0>(prepared);
+		auto shard_num = fnv1ah64::hash(term_id) % n_shards;
+		if unlikely(!indexer->ready_queues[shard_num % indexer->indexers]->enqueue(
+			std::make_tuple(
+				std::move(term_id),
+				std::move(std::get<1>(prepared)),
+				std::move(std::get<2>(prepared)),
+				idx
+			)
+		)) {
+			L_ERR("Prepared document: cannot enqueue to index!");
+			return 1;
+		}
+		indexer->_prepared.fetch_add(1, std::memory_order_acq_rel);
+		return 0;
+	});
+	if (http_errors.ret) {
+		if unlikely(!indexer->ready_queues[random_int(0, indexer->indexers - 1)]->enqueue(
+			std::make_tuple(
+				std::string{},
+				Xapian::Document{},
+				indexer->comments ? MsgPack{
+					{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
+					{ RESPONSE_xMESSAGE, strings::split(http_errors.error, '\n') }
+				} : MsgPack::MAP(),
+				idx
+			)
+		)) {
+			L_ERR("Prepared document: cannot enqueue to index!");
 		}
 	}
 }
@@ -2370,11 +2369,12 @@ DocIndexer::_prepare(MsgPack&& obj)
 	}
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
+	// Add documents in the bulk buffer as soon as is filled.
 	if (bulk_cnt == bulk.size()) {
 		if (!indexers) {
 			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
 			ready_queues.reserve(indexers);
-			for (size_t i = 0; i < indexers; ++i) {
+			for (int i = 0; i < indexers; ++i) {
 				ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
 				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 			}
@@ -2412,7 +2412,11 @@ DocIndexer::operator()()
 
 	DatabaseHandler db_handler(endpoints, flags);
 
-	auto indexer = running.fetch_add(1, std::memory_order_relaxed);
+	running.fetch_add(1, std::memory_order_acq_rel);
+	auto indexer = started.fetch_add(1, std::memory_order_acq_rel);
+	if (indexer == indexers - 1) {
+		all_started.notify_one();
+	}
 	auto& ready_queue = *ready_queues[indexer];
 
 	bool ready_ = false;
@@ -2465,7 +2469,7 @@ DocIndexer::operator()()
 							}
 						}
 
-						++_indexed;
+						_indexed.fetch_add(1, std::memory_order_acq_rel);
 						return 0;
 					});
 					if (http_errors.error_code != HTTP_STATUS_OK) {
@@ -2490,19 +2494,16 @@ DocIndexer::operator()()
 		}
 
 		if (ready_) {
-			auto total = _total.load(std::memory_order_acquire);
-			if (processed_ >= total) {
+			auto total_ = _total.load(std::memory_order_acquire);
+			if (processed_ == total_) {
 				finish();
 				break;
 			}
-			if (_prepared.load(std::memory_order_acquire) >= total && ready_queue.empty()) {
+			auto prepared_ = _prepared.load(std::memory_order_acquire);
+			if (prepared_ == total_ && ready_queue.empty()) {
 				break;
 			}
 		}
-	}
-
-	if (commit) {
-		db_handler.commit();
 	}
 
 	if (running.fetch_sub(1, std::memory_order_release) == 1) {
@@ -2517,11 +2518,12 @@ DocIndexer::wait(double timeout)
 {
 	L_CALL("DocIndexer::wait(<timeout>)");
 
+	// Add any missing documents in the bulk buffer.
 	if (bulk_cnt != 0) {
 		if (!indexers) {
 			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
 			ready_queues.reserve(indexers);
-			for (size_t i = 0; i < indexers; ++i) {
+			for (int i = 0; i < indexers; ++i) {
 				ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
 				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
 			}
@@ -2535,8 +2537,7 @@ DocIndexer::wait(double timeout)
 		bulk_cnt = 0;
 	}
 
-	ready.store(true, std::memory_order_release);
-
+	// Initialize results with empty MAPs.
 	{
 		std::lock_guard<std::mutex> lk(_results_mtx);
 		if (_idx > _results.size()) {
@@ -2544,25 +2545,44 @@ DocIndexer::wait(double timeout)
 		}
 	}
 
-	std::mutex done_mtx;
-	std::unique_lock<std::mutex> done_lk(done_mtx);
-	auto wait_pred = [this]() {
+	// Flag as ready and wake up indexers which could have missed the "ready" check.
+	ready.store(true, std::memory_order_release);
+	for (auto& ready_queue : ready_queues) {
+		ready_queue->enqueue(std::make_tuple(std::string{}, Xapian::Document{}, MsgPack{}, std::numeric_limits<size_t>::max()));
+	}
+
+	std::mutex cond_mtx;
+	std::unique_lock<std::mutex> cond_lk(cond_mtx);
+
+	// Wait for all indexers to start.
+	while (!all_started.wait_for(cond_lk, 1s, [this]{
+		return started.load(std::memory_order_acquire) == indexers;
+	})) { }
+
+	// Wait for the indexers to end.
+	auto wait_done_pred = [this]{
 		return !running.load(std::memory_order_acquire);
 	};
 	if (timeout) {
 		if (timeout > 0.0) {
 			auto timeout_tp = std::chrono::steady_clock::now() + std::chrono::duration<double>(timeout);
-			if (!done.wait_until(done_lk, timeout_tp, wait_pred)) {
+			if (!done.wait_until(cond_lk, timeout_tp, wait_done_pred)) {
 				return false;
 			}
 		} else {
-			while (!done.wait_for(done_lk, 1s, wait_pred)) {}
+			while (!done.wait_for(cond_lk, 1s, wait_done_pred)) { }
 		}
 	} else {
-		if (!wait_pred()) {
+		if (!wait_done_pred()) {
 			return false;
 		}
 	}
+
+	if (commit) {
+		DatabaseHandler db_handler(endpoints, flags);
+		db_handler.commit();
+	}
+
 	return true;
 }
 

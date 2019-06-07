@@ -287,7 +287,8 @@ public:
 class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	friend DocPreparer;
 
-	size_t indexers;
+	int indexers;
+	std::atomic_int started;
 	std::atomic_int running;
 	std::atomic_bool finished;
 	std::atomic_bool ready;
@@ -307,6 +308,7 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	std::atomic_size_t _total;
 	std::atomic_size_t _idx;
 	std::condition_variable done;
+	std::condition_variable all_started;
 
 	std::mutex _results_mtx;
 	std::vector<MsgPack> _results;
