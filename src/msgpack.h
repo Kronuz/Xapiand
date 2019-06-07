@@ -103,7 +103,8 @@ class MsgPack {
 		return obj;
 	}
 
-	MsgPack(msgpack::object&& _object, bool _const);
+	struct undefined_ctor {};
+	MsgPack(undefined_ctor);
 
 public:
 	struct Data {};
@@ -151,7 +152,7 @@ public:
 
 	static MsgPack& undefined() {
 		// MsgPack::undefined() always returns a reference to the const "undefined" object
-		static MsgPack undefined(_undefined(), true);
+		static MsgPack undefined(undefined_ctor{});
 		return undefined;
 	}
 
@@ -843,11 +844,11 @@ inline MsgPack::MsgPack(T&& v)
 	  _const_body(_body.get()) { }
 
 
-inline MsgPack::MsgPack(msgpack::object&& _object, bool _const)
-	: _body(std::make_shared<Body>(std::forward<msgpack::object>(_object))),
+inline MsgPack::MsgPack(undefined_ctor)
+	: _body(std::make_shared<Body>(_undefined())),
 	  _const_body(_body.get())
 {
-	_body->_const = _const;
+	_body->_const = true;
 }
 
 
