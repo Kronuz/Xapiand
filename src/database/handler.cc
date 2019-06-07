@@ -2361,15 +2361,16 @@ DocIndexer::_prepare(MsgPack&& obj)
 		return;
 	}
 
+	bool last = false;
 	if (maxitems) {
-		--maxitems;
+		last = !--maxitems;
 	} else {
 		return;
 	}
 
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	// Add documents in the bulk buffer as soon as is filled.
-	if (bulk_cnt == bulk.size()) {
+	if (bulk_cnt == bulk.size() || last) {
 		if (!indexers) {
 			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
 			ready_queues.reserve(indexers);
