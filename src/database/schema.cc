@@ -5091,9 +5091,11 @@ Schema::validate_required_namespace_data()
 	if (specification.index != TypeIndex::NONE) {
 		if (specification.flags.concrete) {
 			if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-				// Write RESERVED_SLOT in properties (if it has values).
-				if (specification.slot == Xapian::BAD_VALUENO) {
-					specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+				if (!specification.flags.is_namespace) {
+					// Write RESERVED_SLOT in properties (if it has values).
+					if (specification.slot == Xapian::BAD_VALUENO) {
+						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+					}
 				}
 
 				// Write RESERVED_ACCURACY and RESERVED_ACC_PREFIX in properties.
@@ -5316,11 +5318,13 @@ Schema::validate_required_data(MsgPack& mut_properties)
 	if (specification.index != TypeIndex::NONE) {
 		if (specification.flags.concrete) {
 			if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-				// Write RESERVED_SLOT in properties (if it has values).
-				if (specification.slot == Xapian::BAD_VALUENO) {
-					specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+				if (!specification.flags.is_namespace) {
+					// Write RESERVED_SLOT in properties (if it has values).
+					if (specification.slot == Xapian::BAD_VALUENO) {
+						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
+					}
+					mut_properties[RESERVED_SLOT] = specification.slot;
 				}
-				mut_properties[RESERVED_SLOT] = specification.slot;
 
 				// Write RESERVED_ACCURACY and RESERVED_ACC_PREFIX in properties.
 				if (!set_acc.empty()) {
