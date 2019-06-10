@@ -1467,7 +1467,7 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.terms.style.hairstyle).to.have.all.keys(['Sback', 'Sslick']);
   pm.expect(jsonData.terms.style.pants).to.have.all.keys(['Skhakis']);
   pm.expect(jsonData.terms.style.shirt).to.have.all.keys(['Sshirt', 'St']);
-  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '271287252', '439783812', '1032232283', '2821621140', '4294967295']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1']);
 });
 ```
 ---
@@ -1535,7 +1535,7 @@ pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.terms.tags.field.subfield).to.have.any.keys(['Kvalue']);
   pm.expect(jsonData.terms.tags.subfield).to.have.any.keys(['Kvalue']);
-  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1']);
 });
 ```
 ---
@@ -1603,7 +1603,7 @@ pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData.terms.tags.field.subfield).to.have.any.keys(['Kvalue1', 'Kvalue2', 'Kvalue3']);
   pm.expect(jsonData.terms.tags.subfield).to.have.any.keys(['Kvalue1', 'Kvalue2', 'Kvalue3']);
-  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1']);
 });
 ```
 ---
