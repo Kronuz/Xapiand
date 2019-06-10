@@ -4663,7 +4663,7 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		}
 	}
 
-	if (specification.partial_prefixes.size() > 2) {
+	if (specification.partial_prefixes.size() >= 2) {
 		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 		specification.partial_index_spcs.reserve(paths.size());
 
@@ -4784,7 +4784,7 @@ Schema::complete_specification(const MsgPack& item_value)
 		}
 	}
 
-	if (specification.partial_prefixes.size() > 2) {
+	if (specification.partial_prefixes.size() >= 2) {
 		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 		specification.partial_index_spcs.reserve(paths.size());
 		paths.erase(specification.prefix.field);
@@ -5543,7 +5543,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 
 	if (specification.flags.partial_paths) {
 		if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
-			if (specification.partial_prefixes.size() > 2) {
+			if (specification.partial_prefixes.size() >= 2) {
 				const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
 				for (const auto& path : paths) {
 					doc.add_boolean_term(path);
