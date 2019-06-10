@@ -1202,12 +1202,16 @@ HttpClient::prepare()
 			break;
 #endif
 
-		default: {
+		case HTTP_OPEN:
+		case HTTP_CLOSE:
+			write_status_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
+			break;
+
+		default:
 			L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(new_request->method));
 			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			new_request->parser.http_errno = HPE_INVALID_METHOD;
 			return 1;
-		}
 	}
 
 	if (!new_request->view && Logging::log_level < LOG_DEBUG) {
@@ -1800,7 +1804,7 @@ HttpClient::update_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::update_metadata_view()");
 
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
@@ -1809,7 +1813,7 @@ HttpClient::delete_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::delete_metadata_view()");
 
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
@@ -2100,7 +2104,7 @@ HttpClient::delete_database_view(Request& request)
 {
 	L_CALL("HttpClient::delete_database_view()");
 
-	write_http_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
 
 
