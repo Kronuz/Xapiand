@@ -145,39 +145,6 @@ atomic_shared_ptr<const Node> Node::_local_node(std::make_shared<const Node>());
 atomic_shared_ptr<const Node> Node::_leader_node(std::make_shared<const Node>());
 
 
-#ifndef XAPIAND_CLUSTERING
-
-std::mutex Node::_nodes_mtx;
-std::unordered_map<std::string, std::shared_ptr<const Node>> Node::_nodes;
-std::vector<std::shared_ptr<const Node>> Node::_nodes_indexed;
-
-std::atomic_size_t Node::_total_nodes;
-std::atomic_size_t Node::_active_nodes;
-std::atomic_size_t Node::_indexed_nodes;
-
-
-std::shared_ptr<const Node>
-Node::local_node(std::shared_ptr<const Node> node)
-{
-	if (node) {
-		set_as_title(node);
-		_local_node.store(node, std::memory_order_relaxed);
-	}
-	return _local_node.load(std::memory_order_relaxed);
-}
-
-
-std::shared_ptr<const Node>
-Node::leader_node(std::shared_ptr<const Node> node)
-{
-	if (node) {
-		_leader_node.store(node, std::memory_order_relaxed);
-	}
-	return _leader_node.load(std::memory_order_relaxed);
-}
-
-#else
-
 std::mutex Node::_nodes_mtx;
 std::unordered_map<std::string, std::shared_ptr<const Node>> Node::_nodes;
 std::vector<std::shared_ptr<const Node>> Node::_nodes_indexed;
@@ -267,7 +234,6 @@ Node::leader_node(std::shared_ptr<const Node> node)
 	}
 	return _leader_node.load(std::memory_order_relaxed);
 }
-#endif
 
 
 inline void
