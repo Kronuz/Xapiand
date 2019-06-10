@@ -814,12 +814,14 @@ HttpClient::on_headers_complete([[maybe_unused]] http_parser* parser)
 		return err;
 	}
 
-	if likely(!closed && !new_request->atom_ending) {
-		if likely(new_request->view) {
-			if (new_request->mode != Request::Mode::FULL) {
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				if (requests.empty() || new_request != requests.front()) {
-					requests.push_back(new_request);  // Enqueue streamed request
+	if likely(!closed) {
+		if likely(!new_request->atom_ending) {
+			if likely(new_request->view) {
+				if (new_request->mode != Request::Mode::FULL) {
+					std::lock_guard<std::mutex> lk(runner_mutex);
+					if (requests.empty() || new_request != requests.front()) {
+						requests.push_back(new_request);  // Enqueue streamed request
+					}
 				}
 			}
 		}
@@ -841,23 +843,25 @@ HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t
 
 	new_request->size += length;
 
-	if likely(!closed && !new_request->atom_ending) {
-		bool signal_pending = false;
-		if (Logging::log_level >= LOG_DEBUG || new_request->view) {
-			signal_pending = new_request->append(at, length);
-		}
-		if (new_request->view) {
-			if (signal_pending) {
-				{
-					std::lock_guard<std::mutex> pending_lk(new_request->pending_mtx);
-					new_request->has_pending = true;
-					new_request->pending.notify_one();
-				}
+	if likely(!closed) {
+		if likely(!new_request->atom_ending) {
+			bool signal_pending = false;
+			if (Logging::log_level >= LOG_DEBUG || new_request->view) {
+				signal_pending = new_request->append(at, length);
+			}
+			if likely(new_request->view) {
+				if (signal_pending) {
+					{
+						std::lock_guard<std::mutex> pending_lk(new_request->pending_mtx);
+						new_request->has_pending = true;
+						new_request->pending.notify_one();
+					}
 
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				if (!running) {  // Start a runner if not running
-					running = true;
-					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+					std::lock_guard<std::mutex> lk(runner_mutex);
+					if (!running) {  // Start a runner if not running
+						running = true;
+						XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+					}
 				}
 			}
 		}
@@ -880,37 +884,39 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 		log_request(*new_request);
 	}
 
-	if likely(!closed && !new_request->atom_ending) {
-		new_request->atom_ending = true;
-
+	if likely(!closed) {
 		std::shared_ptr<Request> request = std::make_shared<Request>(this);
 		std::swap(new_request, request);
 
-		bool signal_pending = false;
-		if (Logging::log_level >= LOG_DEBUG || request->view) {
-			request->append(nullptr, 0);  // flush pending stuff
-			signal_pending = true;  // always signal pending
-		}
-		if (request->view) {
-			if (signal_pending) {
-				{
-					// always signal, so view continues ending
-					std::lock_guard<std::mutex> pending_lk(request->pending_mtx);
-					request->has_pending = true;
-					request->pending.notify_one();
-				}
+		if likely(!request->atom_ending) {
+			request->atom_ending = true;
 
-				std::lock_guard<std::mutex> lk(runner_mutex);
-				if (requests.empty() || request != requests.front()) {
-					requests.push_back(std::move(request));  // Enqueue request
-				}
-				if (!running) {  // Start a runner if not running
-					running = true;
-					XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
-				}
+			bool signal_pending = false;
+			if (Logging::log_level >= LOG_DEBUG || request->view) {
+				request->append(nullptr, 0);  // flush pending stuff
+				signal_pending = true;  // always signal pending
 			}
-		} else {
-			end_http_request(*request);
+			if likely(request->view) {
+				if (signal_pending) {
+					{
+						// always signal, so view continues ending
+						std::lock_guard<std::mutex> pending_lk(request->pending_mtx);
+						request->has_pending = true;
+						request->pending.notify_one();
+					}
+
+					std::lock_guard<std::mutex> lk(runner_mutex);
+					if (requests.empty() || request != requests.front()) {
+						requests.push_back(std::move(request));  // Enqueue request
+					}
+					if (!running) {  // Start a runner if not running
+						running = true;
+						XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+					}
+				}
+			} else {
+				end_http_request(*request);
+			}
 		}
 	}
 
