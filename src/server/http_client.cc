@@ -3881,27 +3881,10 @@ Request::to_text(bool decode)
 	auto request_text_color = no_col.c_str();
 
 	switch (method) {
-		case HTTP_OPTIONS: {
-			// rgb(13, 90, 167)
-			static constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(30, 77, 124);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(30, 77, 124);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_INFO: {
-			// rgb(13, 90, 167)
-			static constexpr auto _request_headers_color = rgba(30, 77, 124, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(30, 77, 124);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(30, 77, 124);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_HEAD: {
+		case HTTP_OPTIONS:
+		case HTTP_INFO:
+		case HTTP_HEAD:
+		{
 			// rgb(144, 18, 254)
 			static constexpr auto _request_headers_color = rgba(100, 64, 131, 0.6);
 			request_headers_color = _request_headers_color.c_str();
@@ -3911,7 +3894,11 @@ Request::to_text(bool decode)
 			request_text_color = _request_text_color.c_str();
 			break;
 		}
-		case HTTP_GET: {
+		case HTTP_GET:
+		case HTTP_SEARCH:
+		case HTTP_COUNT:
+		case HTTP_DUMP:
+		{
 			// rgb(101, 177, 251)
 			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
 			request_headers_color = _request_headers_color.c_str();
@@ -3921,88 +3908,36 @@ Request::to_text(bool decode)
 			request_text_color = _request_text_color.c_str();
 			break;
 		}
-		case HTTP_SEARCH: {
-			// rgb(101, 177, 251)
-			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(34, 113, 191);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(34, 113, 191);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_COUNT: {
-			// rgb(101, 177, 251)
-			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(34, 113, 191);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(34, 113, 191);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_POST: {
-			// rgb(80, 203, 146)
-			static constexpr auto _request_headers_color = rgba(55, 100, 79, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(55, 100, 79);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(55, 100, 79);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_DUMP: {
-			// rgb(101, 177, 251)
-			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(34, 113, 191);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(34, 113, 191);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_RESTORE: {
-			// rgb(80, 203, 146)
-			static constexpr auto _request_headers_color = rgba(55, 100, 79, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(55, 100, 79);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(55, 100, 79);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_OPEN: {
-			// rgb(80, 203, 146)
-			static constexpr auto _request_headers_color = rgba(55, 100, 79, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(55, 100, 79);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(55, 100, 79);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_CLOSE: {
-			// rgb(227, 32, 40)
-			static constexpr auto _request_headers_color = rgba(101, 31, 34, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(101, 31, 34);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(101, 31, 34);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_PATCH: {
-			// rgb(88, 226, 194)
-			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(51, 136, 116);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(51, 136, 116);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
+		case HTTP_POST:
+		case HTTP_RESTORE:
+		case HTTP_PATCH:
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
-		case HTTP_UPDATE: {
+		case HTTP_UPDATE:
+		case HTTP_STORE:
+		case HTTP_PUT:
+		{
+			// rgb(250, 153, 63)
+			static constexpr auto _request_headers_color = rgba(158, 90, 28, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(158, 90, 28);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_text_color = rgb(158, 90, 28);
+			request_text_color = _request_text_color.c_str();
+			break;
+		}
+		case HTTP_DELETE:
+		{
+			// rgb(250, 104, 63)
+			static constexpr auto _request_headers_color = rgba(158, 56, 28, 0.6);
+			request_headers_color = _request_headers_color.c_str();
+			static constexpr auto _request_head_color = brgb(158, 56, 28);
+			request_head_color = _request_head_color.c_str();
+			static constexpr auto _request_text_color = rgb(158, 56, 28);
+			request_text_color = _request_text_color.c_str();
+			break;
+		}
+		case HTTP_COMMIT:
+		{
 			// rgb(88, 226, 194)
 			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
 			request_headers_color = _request_headers_color.c_str();
@@ -4012,43 +3947,15 @@ Request::to_text(bool decode)
 			request_text_color = _request_text_color.c_str();
 			break;
 		}
-		case HTTP_STORE: {
-			// rgb(88, 226, 194)
-			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
+		case HTTP_OPEN:
+		case HTTP_CLOSE:
+		{
+			// rgb(250, 63, 125)
+			static constexpr auto _request_headers_color = rgba(158, 28, 71, 0.6);
 			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(51, 136, 116);
+			static constexpr auto _request_head_color = brgb(158, 28, 71);
 			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(51, 136, 116);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_PUT: {
-			// rgb(250, 160, 63)
-			static constexpr auto _request_headers_color = rgba(158, 95, 28, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(158, 95, 28);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(158, 95, 28);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_COMMIT: {
-			// rgb(250, 160, 63)
-			static constexpr auto _request_headers_color = rgba(158, 95, 28, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(158, 95, 28);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(158, 95, 28);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_DELETE: {
-			// rgb(246, 64, 68)
-			static constexpr auto _request_headers_color = rgba(151, 31, 34, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(151, 31, 34);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(151, 31, 34);
+			static constexpr auto _request_text_color = rgb(158, 28, 71);
 			request_text_color = _request_text_color.c_str();
 			break;
 		}
