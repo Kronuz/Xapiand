@@ -163,10 +163,10 @@ Node::local_node(std::shared_ptr<const Node> node)
 		auto now = epoch::now<std::chrono::milliseconds>();
 		node->touched.store(now, std::memory_order_relaxed);
 		set_as_title(node);
-		_local_node.store(node, std::memory_order_relaxed);
-		auto leader_node_ = _leader_node.load(std::memory_order_relaxed);
+		_local_node.store(node, std::memory_order_release);
+		auto leader_node_ = _leader_node.load(std::memory_order_acquire);
 		if (node->lower_name() == leader_node_->lower_name()) {
-			_leader_node.store(node, std::memory_order_relaxed);
+			_leader_node.store(node, std::memory_order_release);
 		}
 
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
@@ -190,7 +190,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 	} else {
 		L_CALL("Node::local_node()");
 	}
-	return _local_node.load(std::memory_order_relaxed);
+	return _local_node.load(std::memory_order_acquire);
 }
 
 
@@ -202,13 +202,13 @@ Node::leader_node(std::shared_ptr<const Node> node)
 
 		auto now = epoch::now<std::chrono::milliseconds>();
 		node->touched.store(now, std::memory_order_relaxed);
-		_leader_node.store(node, std::memory_order_relaxed);
-		auto local_node_ = _local_node.load(std::memory_order_relaxed);
+		_leader_node.store(node, std::memory_order_release);
+		auto local_node_ = _local_node.load(std::memory_order_acquire);
 		if (node->lower_name() == local_node_->lower_name()) {
 			if (node->idx != local_node_->idx) {
 				set_as_title(node);
 			}
-			_local_node.store(node, std::memory_order_relaxed);
+			_local_node.store(node, std::memory_order_release);
 		}
 
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
@@ -232,27 +232,27 @@ Node::leader_node(std::shared_ptr<const Node> node)
 	} else {
 		L_CALL("Node::leader_node()");
 	}
-	return _leader_node.load(std::memory_order_relaxed);
+	return _leader_node.load(std::memory_order_acquire);
 }
 
 
 inline void
 Node::_update_nodes(const std::shared_ptr<const Node>& node)
 {
-	auto local_node_ = _local_node.load(std::memory_order_relaxed);
+	auto local_node_ = _local_node.load(std::memory_order_acquire);
 	if (node != local_node_) {
 		if (node->lower_name() == local_node_->lower_name()) {
 			if (node->idx != local_node_->idx) {
 				set_as_title(node);
 			}
-			_local_node.store(node, std::memory_order_relaxed);
+			_local_node.store(node, std::memory_order_release);
 		}
 	}
 
-	auto leader_node_ = _leader_node.load(std::memory_order_relaxed);
+	auto leader_node_ = _leader_node.load(std::memory_order_acquire);
 	if (node != leader_node_) {
 		if (node->lower_name() == leader_node_->lower_name()) {
-			_leader_node.store(node, std::memory_order_relaxed);
+			_leader_node.store(node, std::memory_order_release);
 		}
 	}
 
