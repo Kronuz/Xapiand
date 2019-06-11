@@ -73,7 +73,7 @@ std::string get_prefix(unsigned long long field_number)
 #ifdef XAPIAND_HASHED_PREFIXES
 	return serialise_length(field_number);
 #else
-	return strings::format("#{:x}.", field_number);
+	return strings::format("<{:x}>.", field_number);
 #endif
 }
 
