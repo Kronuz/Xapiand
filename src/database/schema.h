@@ -692,7 +692,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	static std::unordered_set<std::string> get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes, bool uuid_path);
+	std::unordered_set<std::string> get_partial_paths();
 
 	/*
 	 * Complete specification of a namespace.

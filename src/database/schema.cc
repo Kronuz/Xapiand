@@ -4568,67 +4568,140 @@ Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
  */
 
 std::unordered_set<std::string>
-Schema::get_partial_paths(const std::vector<required_spc_t::prefix_t>& partial_prefixes, bool uuid_path)
+Schema::get_partial_paths()
 {
-	L_CALL("Schema::get_partial_paths({}, {})", partial_prefixes.size(), uuid_path);
-
-	if (partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
-		THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, partial_prefixes.size());
-	}
+	L_CALL("Schema::get_partial_paths()");
 
 	std::vector<std::string> paths;
-	paths.reserve(std::pow(2, partial_prefixes.size() - 2));
-	auto it = partial_prefixes.begin();
-	paths.push_back(it->field);
 
-	if (uuid_path) {
-		if (!it->uuid.empty() && it->field != it->uuid) {
-			paths.push_back(it->uuid);
+	if (specification.partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
+		THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, specification.partial_prefixes.size());
+	} else if (specification.partial_prefixes.size() >= 2) {
+		auto it = specification.partial_prefixes.begin();
+
+		if (specification.flags.uuid_path) {
+			switch (specification.index_uuid_field) {
+				case UUIDFieldIndex::uuid:
+					if (!it->uuid.empty()) {
+						paths.push_back(it->uuid);
+					} else if (!it->field.empty()) {
+						paths.push_back(it->field);
+					}
+					break;
+				case UUIDFieldIndex::uuid_field:
+					if (!it->field.empty()) {
+						paths.push_back(it->field);
+					}
+					break;
+				case UUIDFieldIndex::both:
+					if (!it->uuid.empty() && it->field != it->uuid) {
+						paths.push_back(it->uuid);
+					}
+					if (!it->field.empty()) {
+						paths.push_back(it->field);
+					}
+					break;
+				case UUIDFieldIndex::INVALID:
+					break;
+			}
+		} else if (!it->field.empty()) {
+			paths.push_back(it->field);
 		}
-		const auto it_last = partial_prefixes.end() - 1;
+
+		const auto it_last = specification.partial_prefixes.end() - 1;
 		for (++it; it != it_last; ++it) {
 			const auto size = paths.size();
 			for (size_t i = 0; i < size; ++i) {
-				std::string path;
-				path.reserve(paths[i].length() + it->field.length());
-				path.assign(paths[i]).append(it->field);
-				paths.push_back(std::move(path));
-				if (!it->uuid.empty() && it->field != it->uuid) {
-					path.reserve(paths[i].length() + it->uuid.length());
-					path.assign(paths[i]).append(it->uuid);
-					paths.push_back(std::move(path));
+				if (specification.flags.uuid_path) {
+					switch (specification.index_uuid_field) {
+						case UUIDFieldIndex::uuid:
+							if (!it->uuid.empty()) {
+								paths.push_back(paths[i] + it->uuid);
+							} else if (!it->field.empty()) {
+								paths.push_back(paths[i] + it->field);
+							}
+							break;
+						case UUIDFieldIndex::uuid_field:
+							if (!it->field.empty()) {
+								paths.push_back(paths[i] + it->field);
+							}
+							break;
+						case UUIDFieldIndex::both:
+							if (!it->uuid.empty() && it->field != it->uuid) {
+								paths.push_back(paths[i] + it->uuid);
+							}
+							if (!it->field.empty()) {
+								paths.push_back(paths[i] + it->field);
+							}
+							break;
+						case UUIDFieldIndex::INVALID:
+							break;
+					}
+				} else if (!it->field.empty()) {
+					paths.push_back(paths[i] + it->field);
 				}
 			}
 		}
 
-		if (!it_last->uuid.empty() && it_last->field != it_last->uuid) {
-			const auto size = paths.size();
-			for (size_t i = 0; i < size; ++i) {
-				std::string path;
-				path.reserve(paths[i].length() + it_last->uuid.length());
-				path.assign(paths[i]).append(it_last->uuid);
-				paths.push_back(std::move(path));
-				paths[i].append(it_last->field);
-			}
-		} else {
-			for (auto& path : paths) {
-				path.append(it_last->field);
+		const auto size = paths.size();
+		for (size_t i = 0; i < size; ++i) {
+			if (specification.flags.uuid_path) {
+				switch (specification.index_uuid_field) {
+					case UUIDFieldIndex::uuid:
+						if (!it->uuid.empty()) {
+							paths[i].append(it->uuid);
+						} else if (!it->field.empty()) {
+							paths[i].append(it->field);
+						}
+						break;
+					case UUIDFieldIndex::uuid_field:
+						if (!it->field.empty()) {
+							paths[i].append(it->field);
+						}
+						break;
+					case UUIDFieldIndex::both:
+						if (!it->uuid.empty() && it->field != it->uuid) {
+							paths.push_back(paths[i] + it->uuid);
+						}
+						if (!it->field.empty()) {
+							paths[i].append(it->field);
+						}
+						break;
+					case UUIDFieldIndex::INVALID:
+						break;
+				}
+			} else if (!it->field.empty()) {
+				paths[i].append(it->field);
 			}
 		}
 	} else {
-		const auto it_last = partial_prefixes.end() - 1;
-		for (++it; it != it_last; ++it) {
-			const auto size = paths.size();
-			for (size_t i = 0; i < size; ++i) {
-				std::string path;
-				path.reserve(paths[i].length() + it->field.length());
-				path.assign(paths[i]).append(it->field);
-				paths.push_back(std::move(path));
+		if (specification.flags.uuid_path) {
+			switch (specification.index_uuid_field) {
+				case UUIDFieldIndex::uuid:
+					if (!specification.prefix.uuid.empty()) {
+						paths.push_back(specification.prefix.uuid);
+					} else if (!specification.prefix.field.empty()) {
+						paths.push_back(specification.prefix.field);
+					}
+					break;
+				case UUIDFieldIndex::uuid_field:
+					if (!specification.prefix.field.empty()) {
+						paths.push_back(specification.prefix.field);
+					}
+					break;
+				case UUIDFieldIndex::both:
+					if (!specification.prefix.uuid.empty() && specification.prefix.field != specification.prefix.uuid) {
+						paths.push_back(specification.prefix.uuid);
+					}
+					if (!specification.prefix.field.empty()) {
+						paths.push_back(specification.prefix.field);
+					}
+					break;
+				case UUIDFieldIndex::INVALID:
+					break;
 			}
-		}
-
-		for (auto& path : paths) {
-			path.append(it_last->field);
+		} else if (!specification.prefix.field.empty()) {
+			paths.push_back(specification.prefix.field);
 		}
 	}
 
@@ -4663,93 +4736,17 @@ Schema::complete_namespace_specification(const MsgPack& item_value)
 		}
 	}
 
-	if (specification.partial_prefixes.size() >= 2) {
-		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
-		specification.partial_index_spcs.reserve(paths.size());
+	auto paths = get_partial_paths();
+	specification.partial_index_spcs.reserve(paths.size());
 
-		if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
-			}
-		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(global_type, std::move(path));
-			}
+	if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
+		for (auto& path : paths) {
+			specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
 		}
 	} else {
-		if (specification.flags.uuid_path) {
-			switch (specification.index_uuid_field) {
-				case UUIDFieldIndex::uuid: {
-					if (specification.prefix.uuid.empty()) {
-						auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-						if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
-							// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH and type is the same as global_type.
-							if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
-								for (auto& acc_prefix : specification.acc_prefix) {
-									acc_prefix.insert(0, specification.prefix.field);
-								}
-							}
-						} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-							specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
-						} else {
-							specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
-						}
-					} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
-					} else {
-						specification.partial_index_spcs.emplace_back(specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]), specification.prefix.uuid);
-					}
-					break;
-				}
-				case UUIDFieldIndex::uuid_field: {
-					auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-					if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
-						// Use specification directly because type is the same as global_type.
-						if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-							if (specification.flags.has_uuid_prefix) {
-								specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
-							}
-							for (auto& acc_prefix : specification.acc_prefix) {
-								acc_prefix.insert(0, specification.prefix.field);
-							}
-						}
-					} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
-					} else {
-						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
-					}
-					break;
-				}
-				case UUIDFieldIndex::both: {
-					if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
-						specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid));
-					} else {
-						auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-						specification.partial_index_spcs.emplace_back(global_type, std::move(specification.prefix.field));
-						specification.partial_index_spcs.emplace_back(global_type, specification.prefix.uuid);
-					}
-					break;
-				}
-				case UUIDFieldIndex::INVALID:
-					break;
-			}
-		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-			if (specification.sep_types[SPC_CONCRETE_TYPE] == global_type) {
-				// Use specification directly because path is not uuid and type is the same as global_type.
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-					for (auto& acc_prefix : specification.acc_prefix) {
-						acc_prefix.insert(0, specification.prefix.field);
-					}
-				}
-			} else if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field));
-			} else {
-				specification.partial_index_spcs.emplace_back(global_type, specification.prefix.field);
-			}
+		auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
+		for (auto& path : paths) {
+			specification.partial_index_spcs.emplace_back(global_type, std::move(path));
 		}
 	}
 
@@ -4784,91 +4781,25 @@ Schema::complete_specification(const MsgPack& item_value)
 		}
 	}
 
-	if (specification.partial_prefixes.size() >= 2) {
-		auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
-		specification.partial_index_spcs.reserve(paths.size());
-		paths.erase(specification.prefix.field);
-		if (!specification.local_prefix.uuid.empty()) {
-			// local_prefix.uuid tell us if the last field is indexed as UIDFieldIndex::BOTH.
-			paths.erase(specification.prefix.uuid);
-		}
+	auto paths = get_partial_paths();
+	specification.partial_index_spcs.reserve(paths.size());
 
-		if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
+	if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
+		for (auto& path : paths) {
+			index_spc_t spc_uuid(
+				specification.sep_types[SPC_CONCRETE_TYPE],
+				path,
+				specification.slot == Xapian::BAD_VALUENO ? get_slot(path, specification.get_ctype()) : specification.slot,
+				specification.accuracy,
+				specification.acc_prefix);
+			for (auto& acc_prefix : spc_uuid.acc_prefix) {
+				acc_prefix.insert(0, spc_uuid.prefix);
 			}
-		} else {
-			auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-			for (auto& path : paths) {
-				specification.partial_index_spcs.emplace_back(global_type, std::move(path));
-			}
-		}
-	}
-
-	if (specification.flags.uuid_path) {
-		switch (specification.index_uuid_field) {
-			case UUIDFieldIndex::uuid: {
-				if (specification.prefix.uuid.empty()) {
-					// Use specification directly because path has never been indexed as UIDFieldIndex::BOTH.
-					if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
-						for (auto& acc_prefix : specification.acc_prefix) {
-							acc_prefix.insert(0, specification.prefix.field);
-						}
-					}
-				} else if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-					index_spc_t spc_uuid(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
-						specification.accuracy, specification.acc_prefix);
-					for (auto& acc_prefix : spc_uuid.acc_prefix) {
-						acc_prefix.insert(0, spc_uuid.prefix);
-					}
-					specification.partial_index_spcs.push_back(std::move(spc_uuid));
-				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid);
-				}
-				break;
-			}
-			case UUIDFieldIndex::uuid_field: {
-				// Use specification directly.
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-					if (specification.flags.has_uuid_prefix) {
-						specification.slot = get_slot(specification.prefix.field, specification.get_ctype());
-					}
-					for (auto& acc_prefix : specification.acc_prefix) {
-						acc_prefix.insert(0, specification.prefix.field);
-					}
-				}
-				break;
-			}
-			case UUIDFieldIndex::both: {
-				if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-					index_spc_t spc_field(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field,
-						specification.flags.has_uuid_prefix ? get_slot(specification.prefix.field, specification.get_ctype()) : specification.slot,
-						specification.accuracy, specification.acc_prefix);
-					for (auto& acc_prefix : spc_field.acc_prefix) {
-						acc_prefix.insert(0, spc_field.prefix);
-					}
-					index_spc_t spc_uuid(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid, get_slot(specification.prefix.uuid, specification.get_ctype()),
-						specification.accuracy, specification.acc_prefix);
-					for (auto& acc_prefix : spc_uuid.acc_prefix) {
-						acc_prefix.insert(0, spc_uuid.prefix);
-					}
-					specification.partial_index_spcs.push_back(std::move(spc_field));
-					specification.partial_index_spcs.push_back(std::move(spc_uuid));
-				} else {
-					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.field);
-					specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], specification.prefix.uuid);
-				}
-				break;
-			}
-			case UUIDFieldIndex::INVALID:
-				break;
+			specification.partial_index_spcs.push_back(std::move(spc_uuid));
 		}
 	} else {
-		if (toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u) {
-			for (auto& acc_prefix : specification.acc_prefix) {
-				acc_prefix.insert(0, specification.prefix.field);
-			}
+		for (auto& path : paths) {
+			specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], path);
 		}
 	}
 
@@ -5547,13 +5478,9 @@ Schema::index_partial_paths(Xapian::Document& doc)
 
 	if (specification.flags.partial_paths) {
 		if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
-			if (specification.partial_prefixes.size() >= 2) {
-				const auto paths = get_partial_paths(specification.partial_prefixes, specification.flags.uuid_path);
-				for (const auto& path : paths) {
-					doc.add_boolean_term(path);
-				}
-			} else {
-				doc.add_boolean_term(specification.prefix.field);
+			const auto paths = get_partial_paths();
+			for (const auto& path : paths) {
+				doc.add_boolean_term(path);
 			}
 		}
 	}
