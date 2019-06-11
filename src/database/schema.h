@@ -125,6 +125,16 @@ constexpr size_t SPC_CONCRETE_TYPE = 2;
 constexpr size_t SPC_TOTAL_TYPES   = 3;
 
 
+namespace std {
+	template<>
+	struct hash<std::pair<std::string, bool>> {
+		size_t operator()(const std::pair<std::string, bool>& p) const {
+			return std::hash<std::string>()(p.first) ^ std::hash<bool>()(p.second);
+		}
+	};
+}
+
+
 inline constexpr TypeIndex operator|(const uint8_t& a, const TypeIndex& b) {
 	return static_cast<TypeIndex>(a | static_cast<uint8_t>(b));
 }
@@ -692,7 +702,7 @@ class Schema {
 	/*
 	 * Get the prefixes for a namespace.
 	 */
-	std::unordered_set<std::string> get_partial_paths();
+	std::unordered_set<std::pair<std::string, bool>> get_partial_paths();
 
 	/*
 	 * Complete specification of a normal field.

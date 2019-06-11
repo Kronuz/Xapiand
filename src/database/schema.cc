@@ -4563,145 +4563,61 @@ Schema::write_inner_object(MsgPack*& mut_properties, const MsgPack& object)
  * |_____|_____|_____|_____|_____|_____|_____|_____|
  */
 
-std::unordered_set<std::string>
+std::unordered_set<std::pair<std::string, bool>>
 Schema::get_partial_paths()
 {
 	L_CALL("Schema::get_partial_paths()");
 
-	std::vector<std::string> paths;
-
 	if (specification.partial_prefixes.size() > LIMIT_PARTIAL_PATHS_DEPTH) {
 		THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, specification.partial_prefixes.size());
-	} else if (specification.partial_prefixes.size() >= 2) {
+	}
+
+	std::vector<std::pair<std::string, bool>> paths;
+	bool do_get_uuid_slot = toUType(specification.index & TypeIndex::VALUES) != 0u;
+	bool do_get_slot = do_get_uuid_slot && (specification.flags.has_uuid_prefix || specification.flags.inside_namespace);
+
+	if (specification.partial_prefixes.size() >= 2) {
 		auto it = specification.partial_prefixes.begin();
 
-		if (specification.flags.uuid_path) {
-			switch (specification.index_uuid_field) {
-				case UUIDFieldIndex::uuid:
-					if (!it->uuid.empty()) {
-						paths.push_back(it->uuid);
-					} else if (!it->field.empty()) {
-						paths.push_back(it->field);
-					}
-					break;
-				case UUIDFieldIndex::uuid_field:
-					if (!it->field.empty()) {
-						paths.push_back(it->field);
-					}
-					break;
-				case UUIDFieldIndex::both:
-					if (!it->uuid.empty() && it->field != it->uuid) {
-						paths.push_back(it->uuid);
-					}
-					if (!it->field.empty()) {
-						paths.push_back(it->field);
-					}
-					break;
-				case UUIDFieldIndex::INVALID:
-					break;
-			}
-		} else if (!it->field.empty()) {
-			paths.push_back(it->field);
+		if (!it->uuid.empty() && it->field != it->uuid) {
+			paths.emplace_back(it->uuid, do_get_uuid_slot);
+		}
+		if (!it->field.empty()) {
+			paths.emplace_back(it->field, do_get_slot);
 		}
 
 		const auto it_last = specification.partial_prefixes.end() - 1;
 		for (++it; it != it_last; ++it) {
 			const auto size = paths.size();
 			for (size_t i = 0; i < size; ++i) {
-				if (specification.flags.uuid_path) {
-					switch (specification.index_uuid_field) {
-						case UUIDFieldIndex::uuid:
-							if (!it->uuid.empty()) {
-								paths.push_back(paths[i] + it->uuid);
-							} else if (!it->field.empty()) {
-								paths.push_back(paths[i] + it->field);
-							}
-							break;
-						case UUIDFieldIndex::uuid_field:
-							if (!it->field.empty()) {
-								paths.push_back(paths[i] + it->field);
-							}
-							break;
-						case UUIDFieldIndex::both:
-							if (!it->uuid.empty() && it->field != it->uuid) {
-								paths.push_back(paths[i] + it->uuid);
-							}
-							if (!it->field.empty()) {
-								paths.push_back(paths[i] + it->field);
-							}
-							break;
-						case UUIDFieldIndex::INVALID:
-							break;
-					}
-				} else if (!it->field.empty()) {
-					paths.push_back(paths[i] + it->field);
+				if (!it->uuid.empty() && it->field != it->uuid) {
+					paths.emplace_back(paths[i].first + it->uuid, paths[i].second || do_get_uuid_slot);
+				}
+				if (!it->field.empty()) {
+					paths.emplace_back(paths[i].first + it->field, paths[i].second || do_get_slot);
 				}
 			}
 		}
 
 		const auto size = paths.size();
 		for (size_t i = 0; i < size; ++i) {
-			if (specification.flags.uuid_path) {
-				switch (specification.index_uuid_field) {
-					case UUIDFieldIndex::uuid:
-						if (!it->uuid.empty()) {
-							paths[i].append(it->uuid);
-						} else if (!it->field.empty()) {
-							paths[i].append(it->field);
-						}
-						break;
-					case UUIDFieldIndex::uuid_field:
-						if (!it->field.empty()) {
-							paths[i].append(it->field);
-						}
-						break;
-					case UUIDFieldIndex::both:
-						if (!it->uuid.empty() && it->field != it->uuid) {
-							paths.push_back(paths[i] + it->uuid);
-						}
-						if (!it->field.empty()) {
-							paths[i].append(it->field);
-						}
-						break;
-					case UUIDFieldIndex::INVALID:
-						break;
-				}
-			} else if (!it->field.empty()) {
-				paths[i].append(it->field);
+			if (!it->uuid.empty() && it->field != it->uuid) {
+				paths.emplace_back(paths[i].first + it->uuid, paths[i].second || do_get_uuid_slot);
+			}
+			if (!it->field.empty()) {
+				paths[i].first.append(it->field);
 			}
 		}
 	} else {
-		if (specification.flags.uuid_path) {
-			switch (specification.index_uuid_field) {
-				case UUIDFieldIndex::uuid:
-					if (!specification.prefix.uuid.empty()) {
-						paths.push_back(specification.prefix.uuid);
-					} else if (!specification.prefix.field.empty()) {
-						paths.push_back(specification.prefix.field);
-					}
-					break;
-				case UUIDFieldIndex::uuid_field:
-					if (!specification.prefix.field.empty()) {
-						paths.push_back(specification.prefix.field);
-					}
-					break;
-				case UUIDFieldIndex::both:
-					if (!specification.prefix.uuid.empty() && specification.prefix.field != specification.prefix.uuid) {
-						paths.push_back(specification.prefix.uuid);
-					}
-					if (!specification.prefix.field.empty()) {
-						paths.push_back(specification.prefix.field);
-					}
-					break;
-				case UUIDFieldIndex::INVALID:
-					break;
-			}
-		} else if (!specification.prefix.field.empty()) {
-			paths.push_back(specification.prefix.field);
+		if (!specification.prefix.uuid.empty() && specification.prefix.field != specification.prefix.uuid) {
+			paths.emplace_back(specification.prefix.uuid, do_get_uuid_slot);
+		}
+		if (!specification.prefix.field.empty()) {
+			paths.emplace_back(specification.prefix.field, do_get_slot);
 		}
 	}
 
-	return std::unordered_set<std::string>(std::make_move_iterator(paths.begin()), std::make_move_iterator(paths.end()));
+	return std::unordered_set<std::pair<std::string, bool>>(std::make_move_iterator(paths.begin()), std::make_move_iterator(paths.end()));
 }
 
 
@@ -4740,19 +4656,10 @@ Schema::complete_specification(const MsgPack& item_value)
 	specification.partial_index_spcs.reserve(paths.size());
 
 	for (auto& path : paths) {
-		Xapian::valueno slot = specification.slot;
-		if (toUType(specification.index & TypeIndex::VALUES) != 0u && (
-			specification.flags.has_uuid_prefix ||
-			specification.flags.inside_namespace ||
-			slot == Xapian::BAD_VALUENO
-		)) {
-			slot = get_slot(path, specification.get_ctype());
-		}
-
 		index_spc_t spc(
 			specification.sep_types[SPC_CONCRETE_TYPE],
-			std::move(path),
-			slot,
+			std::move(path.first),
+			path.second ? get_slot(path.first, specification.get_ctype()) : specification.slot,
 			specification.accuracy,
 			specification.acc_prefix);
 
@@ -5440,7 +5347,7 @@ Schema::index_partial_paths(Xapian::Document& doc)
 		if (toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u) {
 			const auto paths = get_partial_paths();
 			for (const auto& path : paths) {
-				doc.add_boolean_term(path);
+				doc.add_boolean_term(path.first);
 			}
 		}
 	}
