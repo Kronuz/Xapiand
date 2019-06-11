@@ -4880,12 +4880,6 @@ Schema::validate_required_namespace_data()
 			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 
-	// If field is namespace fallback to index anything but values.
-	if (!specification.flags.has_index && specification.flags.is_namespace) {
-		specification.index = specification.index & ~TypeIndex::VALUES;
-		specification.flags.has_index = true;
-	}
-
 	if (specification.index != TypeIndex::NONE) {
 		if (specification.flags.concrete) {
 			if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
@@ -5101,16 +5095,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 
 		default:
 			THROW(ClientError, "{}: '{}' is not supported", RESERVED_TYPE, enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
-	}
-
-	// If field is namespace fallback to index anything but values.
-	if (!specification.flags.has_index && specification.flags.is_namespace) {
-		const auto index = specification.index & ~TypeIndex::VALUES;
-		if (specification.index != index) {
-			specification.index = index;
-			mut_properties[RESERVED_INDEX] = _get_str_index(index);
-		}
-		specification.flags.has_index = true;
 	}
 
 	if (specification.index != TypeIndex::NONE) {
