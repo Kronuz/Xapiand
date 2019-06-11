@@ -6226,6 +6226,9 @@ Schema::update_prefixes()
 	}
 
 	if (specification.flags.partial_paths) {
+		if (!specification.flags.is_namespace) {
+			THROW(ClientError, "Cannot use '{}' without '{}'.", RESERVED_PARTIAL_PATHS, RESERVED_NAMESPACE);
+		}
 		if (specification.partial_prefixes.empty()) {
 			specification.partial_prefixes.push_back(specification.prefix);
 		} else {
