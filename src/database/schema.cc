@@ -9471,20 +9471,6 @@ Schema::normalize_script()
 
 
 void
-Schema::set_namespace_spc_id(required_spc_t& spc)
-{
-	L_CALL("Schema::set_namespace_spc_id(<spc>)");
-
-	// ID_FIELD_NAME cannot be text or string.
-	if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::text || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::string) {
-		spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
-	}
-	spc.prefix.field = NAMESPACE_PREFIX_ID_FIELD_NAME;
-	spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
-}
-
-
-void
 Schema::set_default_spc_id(MsgPack& mut_properties)
 {
 	L_CALL("Schema::set_default_spc_id({})", mut_properties.to_string());
@@ -10232,4 +10218,44 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 	}
 
 	return spc;
+}
+
+
+required_spc_t
+Schema::get_prefixed_global(FieldType namespace_type, const std::string& prefix_namespace)
+{
+	L_CALL("Schema::get_prefixed_global('{}', {})", toUType(namespace_type), repr(prefix_namespace));
+
+	auto spc = specification_t::get_global(namespace_type);
+
+	if (!prefix_namespace.empty()) {
+		spc.prefix.field = prefix_namespace;
+
+		// If the namespace field is ID_FIELD_NAME, restart its default values.
+		if (prefix_namespace == NAMESPACE_PREFIX_ID_FIELD_NAME) {
+			// ID_FIELD_NAME cannot be text or string.
+			if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::text || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::string) {
+				spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
+			}
+		}
+
+		spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
+
+		switch (spc.get_type()) {
+			case FieldType::integer:
+			case FieldType::positive:
+			case FieldType::floating:
+			case FieldType::date:
+			case FieldType::datetime:
+			case FieldType::time:
+			case FieldType::timedelta:
+			case FieldType::geo:
+				for (auto& acc_prefix : spc.acc_prefix) {
+					acc_prefix.insert(0, spc.prefix.field);
+				}
+				[[fallthrough]];
+			default:
+				return std::move(spc);
+		}
+	}
 }

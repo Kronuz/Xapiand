@@ -1049,46 +1049,6 @@ public:
 	const MsgPack get_full(bool readable = false) const;
 
 	/*
-	 * Set default specification in namespace FIELD_ID_NAME
-	 */
-	static void set_namespace_spc_id(required_spc_t& spc);
-
-	/*
-	 * Update namespace specification according to prefix_namespace.
-	 */
-	template <typename S, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value>>
-	static required_spc_t get_namespace_specification(FieldType namespace_type, S&& prefix_namespace) {
-		L_CALL("Schema::get_namespace_specification('{}', {})", toUType(namespace_type), repr(prefix_namespace));
-
-		auto spc = specification_t::get_global(namespace_type);
-
-		// If the namespace field is ID_FIELD_NAME, restart its default values.
-		if (prefix_namespace == NAMESPACE_PREFIX_ID_FIELD_NAME) {
-			set_namespace_spc_id(spc);
-		} else {
-			spc.prefix.field = std::forward<S>(prefix_namespace);
-			spc.slot = get_slot(spc.prefix.field, spc.get_ctype());
-		}
-
-		switch (spc.get_type()) {
-			case FieldType::integer:
-			case FieldType::positive:
-			case FieldType::floating:
-			case FieldType::date:
-			case FieldType::datetime:
-			case FieldType::time:
-			case FieldType::timedelta:
-			case FieldType::geo:
-				for (auto& acc_prefix : spc.acc_prefix) {
-					acc_prefix.insert(0, spc.prefix.field);
-				}
-				[[fallthrough]];
-			default:
-				return std::move(spc);
-		}
-	}
-
-	/*
 	 * Returns type, slot and prefix of ID_FIELD_NAME
 	 */
 	required_spc_t get_data_id() const;
@@ -1106,4 +1066,9 @@ public:
 
 	std::pair<required_spc_t, std::string> get_data_field(std::string_view field_name, bool is_range=true) const;
 	required_spc_t get_slot_field(std::string_view field_name) const;
+
+	/*
+	 * Update specification according to prefix_namespace.
+	 */
+	static required_spc_t get_prefixed_global(FieldType namespace_type, const std::string& prefix_namespace);
 };

@@ -438,7 +438,7 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query:
 	L_CALL("QueryDSL::get_in_query({}, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (path.empty()) {
-		return get_namespace_in_query(default_spc, obj, default_op, wqf, flags);
+		return get_global_in_query(default_spc, obj, default_op, wqf, flags);
 	}
 
 	auto data_field = schema->get_data_field(path, true);
@@ -451,7 +451,7 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query:
 	try {
 		return get_regular_in_query(field_spc, obj, default_op, wqf, flags);
 	} catch (const SerialisationError&) {
-		return get_namespace_in_query(field_spc, obj, default_op, wqf, flags);
+		return get_global_in_query(field_spc, obj, default_op, wqf, flags);
 	}
 }
 
@@ -462,7 +462,7 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Que
 	L_CALL("QueryDSL::get_value_query({}, {}, <default_op>, <wqf>, ({}))", repr(path), repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (path.empty()) {
-		return get_namespace_query(default_spc, obj, default_op, wqf, flags);
+		return get_global_query(default_spc, obj, default_op, wqf, flags);
 	}
 	auto data_field = schema->get_data_field(path, false);
 	const auto& field_spc = data_field.first;
@@ -474,7 +474,7 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Que
 	try {
 		return get_regular_query(field_spc, obj, default_op, wqf, flags);
 	} catch (const SerialisationError&) {
-		return get_namespace_query(field_spc, obj, default_op, wqf, flags);
+		return get_global_query(field_spc, obj, default_op, wqf, flags);
 	}
 }
 
@@ -618,9 +618,9 @@ QueryDSL::get_accuracy_query(const required_spc_t& field_spc, std::string_view f
 
 
 inline Xapian::Query
-QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
 {
-	L_CALL("QueryDSL::get_namespace_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
+	L_CALL("QueryDSL::get_global_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	switch (obj.get_type()) {
 		case MsgPack::Type::NIL:
@@ -640,7 +640,7 @@ QueryDSL::get_namespace_query(const required_spc_t& field_spc, const MsgPack& ob
 	}
 
 	auto ser_type = Serialise::guess_serialise(obj);
-	auto spc = Schema::get_namespace_specification(std::get<0>(ser_type), field_spc.prefix());
+	auto spc = Schema::get_prefixed_global(std::get<0>(ser_type), field_spc.prefix());
 
 	return get_term_query(spc, std::get<1>(ser_type), default_op, wqf, flags);
 }
@@ -841,28 +841,22 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 
 
 inline Xapian::Query
-QueryDSL::get_namespace_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
+QueryDSL::get_global_in_query(const required_spc_t& field_spc, const MsgPack& obj, Xapian::Query::op default_op, Xapian::termcount wqf, unsigned flags)
 {
-	L_CALL("QueryDSL::get_namespace_in_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
+	L_CALL("QueryDSL::get_global_in_query(<field_spc>, {}, <default_op>, <wqf>, ({}))", repr(obj.to_string()), readable_query_parser_flags(flags));
 
 	if (obj.is_string()) {
 		auto parsed = parse_guess_range(field_spc, obj.str_view());
 		if (parsed.first == FieldType::empty) {
 			return Xapian::Query(std::string());
 		}
-		if (field_spc.prefix().empty()) {
-			return get_in_query(specification_t::get_global(parsed.first), parsed.second, default_op, wqf, flags);
-		}
-		return get_in_query(Schema::get_namespace_specification(parsed.first, field_spc.prefix()), parsed.second, default_op, wqf, flags);
+		return get_in_query(Schema::get_prefixed_global(parsed.first, field_spc.prefix()), parsed.second, default_op, wqf, flags);
 	}
 	auto field_type = get_in_type(obj);
 	if (field_type == FieldType::empty) {
 		return Xapian::Query(std::string());
 	}
-	if (field_spc.prefix().empty()) {
-		return get_in_query(specification_t::get_global(field_type), obj, default_op, wqf, flags);
-	}
-	return get_in_query(Schema::get_namespace_specification(field_type, field_spc.prefix()), obj, default_op, wqf, flags);
+	return get_in_query(Schema::get_prefixed_global(field_type, field_spc.prefix()), obj, default_op, wqf, flags);
 }
 
 
