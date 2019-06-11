@@ -448,10 +448,6 @@ QueryDSL::get_in_query(std::string_view path, const MsgPack& obj, Xapian::Query:
 	// 	return get_accuracy_in_query(field_spc, data_field.second, obj, default_op, wqf, flags);
 	// }
 
-	if (field_spc.flags.inside_namespace) {
-		return get_namespace_in_query(field_spc, obj, default_op, wqf, flags);
-	}
-
 	try {
 		return get_regular_in_query(field_spc, obj, default_op, wqf, flags);
 	} catch (const SerialisationError&) {
@@ -473,10 +469,6 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Que
 
 	if (!data_field.second.empty()) {
 		return get_accuracy_query(field_spc, data_field.second, obj, default_op, wqf, flags);
-	}
-
-	if (field_spc.flags.inside_namespace) {
-		return get_namespace_query(field_spc, obj, default_op, wqf, flags);
 	}
 
 	try {

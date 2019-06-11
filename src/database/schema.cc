@@ -9830,218 +9830,29 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 		return std::make_pair(res, std::move(spc.acc_field));
 	}
 
-	if (!res.flags.inside_namespace) {
-		const auto& properties = *spc.properties;
-		auto it_e = properties.end();
+	const auto& properties = *spc.properties;
+	auto it_e = properties.end();
 
-		auto type_it = properties.find(RESERVED_TYPE);
-		if (type_it != it_e) {
-			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(type_it.value().str_view())[SPC_CONCRETE_TYPE];
-		}
-		if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-			return std::make_pair(std::move(res), "");
-		}
-
-		if (is_range) {
-			if (spc.has_uuid_prefix) {
-				res.slot = get_slot(res.prefix.field, res.get_ctype());
-			} else {
-				auto slot_it = properties.find(RESERVED_SLOT);
-				if (slot_it != it_e) {
-					res.slot = static_cast<Xapian::valueno>(slot_it.value().u64());
-				}
-			}
-
-			// Get required specification.
-			switch (res.sep_types[SPC_CONCRETE_TYPE]) {
-				case FieldType::geo: {
-					auto partials_it = properties.find(RESERVED_PARTIALS);
-					if (partials_it != it_e) {
-						res.flags.partials = partials_it.value().boolean();
-					}
-					auto error_it = properties.find(RESERVED_ERROR);
-					if (error_it != it_e) {
-						res.error = error_it.value().f64();
-					}
-				}
-				[[fallthrough]];
-				case FieldType::floating:
-				case FieldType::integer:
-				case FieldType::positive:
-				case FieldType::date:
-				case FieldType::datetime:
-				case FieldType::time:
-				case FieldType::timedelta: {
-					auto accuracy_it = properties.find(RESERVED_ACCURACY);
-					if (accuracy_it != it_e) {
-						for (const auto& acc : accuracy_it.value()) {
-							uint64_t accuracy;
-							if (acc.is_string()) {
-								auto accuracy_date = _get_accuracy_datetime(acc.str_view());
-								if (accuracy_date != UnitTime::INVALID) {
-									accuracy = toUType(accuracy_date);
-								} else {
-									THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-								}
-							} else {
-								accuracy = acc.u64();
-							}
-							res.accuracy.push_back(accuracy);
-						}
-					}
-					auto acc_prefix_it = properties.find(RESERVED_ACC_PREFIX);
-					if (acc_prefix_it != it_e) {
-						for (const auto& acc_p : acc_prefix_it.value()) {
-							res.acc_prefix.push_back(res.prefix.field + acc_p.str());
-						}
-					}
-					break;
-				}
-				case FieldType::string:
-				case FieldType::text: {
-					auto ngram_it = properties.find(RESERVED_NGRAM);
-					if (ngram_it != it_e) {
-						res.flags.ngram = ngram_it.value().boolean();
-					}
-					auto cjk_ngram_it = properties.find(RESERVED_CJK_NGRAM);
-					if (cjk_ngram_it != it_e) {
-						res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
-					}
-					auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
-					if (cjk_words_it != it_e) {
-						res.flags.cjk_words = cjk_words_it.value().boolean();
-					}
-					auto language_it = properties.find(RESERVED_LANGUAGE);
-					if (language_it != it_e) {
-						res.language = language_it.value().str();
-					}
-					if (!res.language.empty()) {
-						auto stop_strategy_it = properties.find(RESERVED_STOP_STRATEGY);
-						if (stop_strategy_it != it_e) {
-							res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
-						}
-					}
-					auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
-					if (stem_language_it != it_e) {
-						res.stem_language = stem_language_it.value().str();
-					}
-					if (!res.stem_language.empty()) {
-						auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
-						if (stem_strategy_it != it_e) {
-							res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
-						}
-					}
-					break;
-				}
-				case FieldType::keyword: {
-					auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
-					if (bool_term_it != it_e) {
-						res.flags.bool_term = bool_term_it.value().boolean();
-					}
-					break;
-				}
-				default:
-					break;
-			}
-		} else {
-			// Get required specification.
-			switch (res.sep_types[SPC_CONCRETE_TYPE]) {
-				case FieldType::geo: {
-					auto partials_it = properties.find(RESERVED_PARTIALS);
-					if (partials_it != it_e) {
-						res.flags.partials = partials_it.value().boolean();
-					}
-					auto error_it = properties.find(RESERVED_ERROR);
-					if (error_it != it_e) {
-						res.error = error_it.value().f64();
-					}
-					break;
-				}
-				case FieldType::string:
-				case FieldType::text: {
-					auto ngram_it = properties.find(RESERVED_NGRAM);
-					if (ngram_it != it_e) {
-						res.flags.ngram = ngram_it.value().boolean();
-					}
-					auto cjk_ngram_it = properties.find(RESERVED_CJK_NGRAM);
-					if (cjk_ngram_it != it_e) {
-						res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
-					}
-					auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
-					if (cjk_words_it != it_e) {
-						res.flags.cjk_words = cjk_words_it.value().boolean();
-					}
-					auto language_it = properties.find(RESERVED_LANGUAGE);
-					if (language_it != it_e) {
-						res.language = language_it.value().str();
-					}
-					if (!res.language.empty()) {
-						auto stop_strategy_it = properties.find(RESERVED_STOP_STRATEGY);
-						if (stop_strategy_it != it_e) {
-							res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
-						}
-					}
-					auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
-					if (stem_language_it != it_e) {
-						res.stem_language = stem_language_it.value().str();
-					}
-					if (!res.stem_language.empty()) {
-						auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
-						if (stem_strategy_it != it_e) {
-							res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
-						}
-					}
-					break;
-				}
-				case FieldType::keyword: {
-					auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
-					if (bool_term_it != it_e) {
-						res.flags.bool_term = bool_term_it.value().boolean();
-					}
-					break;
-				}
-				default:
-					break;
-			}
-		}
+	auto type_it = properties.find(RESERVED_TYPE);
+	if (type_it != it_e) {
+		res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(type_it.value().str_view())[SPC_CONCRETE_TYPE];
+	}
+	if (res.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+		return std::make_pair(std::move(res), "");
 	}
 
-	return std::make_pair(std::move(res), "");
-}
-
-
-required_spc_t
-Schema::get_slot_field(std::string_view field_name) const
-{
-	L_CALL("Schema::get_slot_field({})", repr(field_name));
-
-	required_spc_t res;
-
-	if (field_name.empty()) {
-		return res;
-	}
-
-	auto spc = get_dynamic_subproperties(get_properties(), field_name);
-	res.flags.inside_namespace = spc.inside_namespace;
-
-	if (!spc.acc_field.empty()) {
-		THROW(ClientError, "Field {} is an accuracy, therefore does not have slot", repr(field_name));
-	}
-
-	if (res.flags.inside_namespace) {
-		res.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
-		res.slot = get_slot(spc.prefix, res.get_ctype());
+	if (spc.has_uuid_prefix || spc.inside_namespace) {
+		res.slot = get_slot(res.prefix.field, res.get_ctype());
 	} else {
-		const auto& properties = *spc.properties;
-		auto it_e = properties.end();
-
-		auto type_it = properties.find(RESERVED_TYPE);
-		if (type_it != it_e) {
-			res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(type_it.value().str_view())[SPC_CONCRETE_TYPE];
+		auto slot_it = properties.find(RESERVED_SLOT);
+		if (slot_it != it_e) {
+			res.slot = static_cast<Xapian::valueno>(slot_it.value().u64());
 		}
+	}
 
+	if (is_range) {
 		if (spc.has_uuid_prefix) {
-			res.slot = get_slot(spc.prefix, res.get_ctype());
+			res.slot = get_slot(res.prefix.field, res.get_ctype());
 		} else {
 			auto slot_it = properties.find(RESERVED_SLOT);
 			if (slot_it != it_e) {
@@ -10049,6 +9860,98 @@ Schema::get_slot_field(std::string_view field_name) const
 			}
 		}
 
+		// Get required specification.
+		switch (res.sep_types[SPC_CONCRETE_TYPE]) {
+			case FieldType::geo: {
+				auto partials_it = properties.find(RESERVED_PARTIALS);
+				if (partials_it != it_e) {
+					res.flags.partials = partials_it.value().boolean();
+				}
+				auto error_it = properties.find(RESERVED_ERROR);
+				if (error_it != it_e) {
+					res.error = error_it.value().f64();
+				}
+			}
+			[[fallthrough]];
+			case FieldType::floating:
+			case FieldType::integer:
+			case FieldType::positive:
+			case FieldType::date:
+			case FieldType::datetime:
+			case FieldType::time:
+			case FieldType::timedelta: {
+				auto accuracy_it = properties.find(RESERVED_ACCURACY);
+				if (accuracy_it != it_e) {
+					for (const auto& acc : accuracy_it.value()) {
+						uint64_t accuracy;
+						if (acc.is_string()) {
+							auto accuracy_date = _get_accuracy_datetime(acc.str_view());
+							if (accuracy_date != UnitTime::INVALID) {
+								accuracy = toUType(accuracy_date);
+							} else {
+								THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ACCURACY, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+							}
+						} else {
+							accuracy = acc.u64();
+						}
+						res.accuracy.push_back(accuracy);
+					}
+				}
+				auto acc_prefix_it = properties.find(RESERVED_ACC_PREFIX);
+				if (acc_prefix_it != it_e) {
+					for (const auto& acc_p : acc_prefix_it.value()) {
+						res.acc_prefix.push_back(res.prefix.field + acc_p.str());
+					}
+				}
+				break;
+			}
+			case FieldType::string:
+			case FieldType::text: {
+				auto ngram_it = properties.find(RESERVED_NGRAM);
+				if (ngram_it != it_e) {
+					res.flags.ngram = ngram_it.value().boolean();
+				}
+				auto cjk_ngram_it = properties.find(RESERVED_CJK_NGRAM);
+				if (cjk_ngram_it != it_e) {
+					res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
+				}
+				auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
+				if (cjk_words_it != it_e) {
+					res.flags.cjk_words = cjk_words_it.value().boolean();
+				}
+				auto language_it = properties.find(RESERVED_LANGUAGE);
+				if (language_it != it_e) {
+					res.language = language_it.value().str();
+				}
+				if (!res.language.empty()) {
+					auto stop_strategy_it = properties.find(RESERVED_STOP_STRATEGY);
+					if (stop_strategy_it != it_e) {
+						res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
+					}
+				}
+				auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
+				if (stem_language_it != it_e) {
+					res.stem_language = stem_language_it.value().str();
+				}
+				if (!res.stem_language.empty()) {
+					auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
+					if (stem_strategy_it != it_e) {
+						res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
+					}
+				}
+				break;
+			}
+			case FieldType::keyword: {
+				auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
+				if (bool_term_it != it_e) {
+					res.flags.bool_term = bool_term_it.value().boolean();
+				}
+				break;
+			}
+			default:
+				break;
+		}
+	} else {
 		// Get required specification.
 		switch (res.sep_types[SPC_CONCRETE_TYPE]) {
 			case FieldType::geo: {
@@ -10110,6 +10013,106 @@ Schema::get_slot_field(std::string_view field_name) const
 		}
 	}
 
+	return std::make_pair(std::move(res), "");
+}
+
+
+required_spc_t
+Schema::get_slot_field(std::string_view field_name) const
+{
+	L_CALL("Schema::get_slot_field({})", repr(field_name));
+
+	required_spc_t res;
+
+	if (field_name.empty()) {
+		return res;
+	}
+
+	auto spc = get_dynamic_subproperties(get_properties(), field_name);
+	res.flags.inside_namespace = spc.inside_namespace;
+	res.prefix.field = std::move(spc.prefix);
+
+	if (!spc.acc_field.empty()) {
+		THROW(ClientError, "Field {} is an accuracy, therefore does not have slot", repr(field_name));
+	}
+
+	const auto& properties = *spc.properties;
+	auto it_e = properties.end();
+
+	auto type_it = properties.find(RESERVED_TYPE);
+	if (type_it != it_e) {
+		res.sep_types[SPC_CONCRETE_TYPE] = required_spc_t::get_types(type_it.value().str_view())[SPC_CONCRETE_TYPE];
+	}
+
+	if (spc.has_uuid_prefix || spc.inside_namespace) {
+		res.slot = get_slot(res.prefix.field, res.get_ctype());
+	} else {
+		auto slot_it = properties.find(RESERVED_SLOT);
+		if (slot_it != it_e) {
+			res.slot = static_cast<Xapian::valueno>(slot_it.value().u64());
+		}
+	}
+
+	// Get required specification.
+	switch (res.sep_types[SPC_CONCRETE_TYPE]) {
+		case FieldType::geo: {
+			auto partials_it = properties.find(RESERVED_PARTIALS);
+			if (partials_it != it_e) {
+				res.flags.partials = partials_it.value().boolean();
+			}
+			auto error_it = properties.find(RESERVED_ERROR);
+			if (error_it != it_e) {
+				res.error = error_it.value().f64();
+			}
+			break;
+		}
+		case FieldType::string:
+		case FieldType::text: {
+			auto ngram_it = properties.find(RESERVED_NGRAM);
+			if (ngram_it != it_e) {
+				res.flags.ngram = ngram_it.value().boolean();
+			}
+			auto cjk_ngram_it = properties.find(RESERVED_CJK_NGRAM);
+			if (cjk_ngram_it != it_e) {
+				res.flags.cjk_ngram = cjk_ngram_it.value().boolean();
+			}
+			auto cjk_words_it = properties.find(RESERVED_CJK_WORDS);
+			if (cjk_words_it != it_e) {
+				res.flags.cjk_words = cjk_words_it.value().boolean();
+			}
+			auto language_it = properties.find(RESERVED_LANGUAGE);
+			if (language_it != it_e) {
+				res.language = language_it.value().str();
+			}
+			if (!res.language.empty()) {
+				auto stop_strategy_it = properties.find(RESERVED_STOP_STRATEGY);
+				if (stop_strategy_it != it_e) {
+					res.stop_strategy = _get_stop_strategy(stop_strategy_it.value().str_view());
+				}
+			}
+			auto stem_language_it = properties.find(RESERVED_STEM_LANGUAGE);
+			if (stem_language_it != it_e) {
+				res.stem_language = stem_language_it.value().str();
+			}
+			if (!res.stem_language.empty()) {
+				auto stem_strategy_it = properties.find(RESERVED_STEM_STRATEGY);
+				if (stem_strategy_it != it_e) {
+					res.stem_strategy = enum_type<StemStrategy>(stem_strategy_it.value().str_view());
+				}
+			}
+			break;
+		}
+		case FieldType::keyword: {
+			auto bool_term_it = properties.find(RESERVED_BOOL_TERM);
+			if (bool_term_it != it_e) {
+				res.flags.bool_term = bool_term_it.value().boolean();
+			}
+			break;
+		}
+		default:
+			break;
+	}
+
 	return res;
 }
 
@@ -10122,6 +10125,8 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 	Split<std::string_view> field_names(full_name, DB_OFFSPRING_UNION);
 
 	dynamic_spc_t spc(&properties);
+
+	bool is_namespace = false;
 
 	const auto it_e = field_names.end();
 	const auto it_b = field_names.begin();
@@ -10154,11 +10159,27 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 		auto field_it = spc.properties->find(field_name);
 		if (field_it != spc.properties->end()) {
 			spc.properties = &field_it.value();
+			// Get configured prefix:
 			auto prefix_it = spc.properties->find(RESERVED_PREFIX);
 			if (prefix_it != spc.properties->end()) {
-				spc.prefix.append(prefix_it.value().str());
+				auto& prop_obj = prefix_it.value();
+				if (prop_obj.is_string()) {
+					spc.prefix.append(prop_obj.str_view());
+				} else {
+					THROW(Error, "Schema is corrupt: '{}' is not valid.", RESERVED_PREFIX);
+				}
 			} else {
 				spc.prefix.append(get_prefix(field_name));
+			}
+			// Get namespace:
+			auto namespace_it = spc.properties->find(RESERVED_NAMESPACE);
+			if (namespace_it != spc.properties->end()) {
+				auto& prop_obj = namespace_it.value();
+				if (prop_obj.is_boolean()) {
+					is_namespace = prop_obj.boolean();
+				} else {
+					THROW(Error, "Schema is corrupt: '{}' is not valid.", RESERVED_NAMESPACE);
+				}
 			}
 		} else {
 			if (Serialise::possiblyUUID(field_name)) {
@@ -10182,7 +10203,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 			if (depth_partials > LIMIT_PARTIAL_PATHS_DEPTH) {
 				THROW(ClientError, "Partial paths limit depth is {}, and partial paths provided has a depth of {}", LIMIT_PARTIAL_PATHS_DEPTH, depth_partials);
 			}
-			spc.inside_namespace = true;
+			spc.inside_namespace = is_namespace;
 			for (++it; it != it_e; ++it) {
 				auto partial_field = *it;
 				if (is_valid(partial_field)) {
