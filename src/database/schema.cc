@@ -8838,10 +8838,10 @@ Schema::process_index_uuid_field(std::string_view prop_name, const MsgPack& prop
 		auto str_index_uuid_field = prop_obj.str_view();
 		specification.index_uuid_field = _get_index_uuid_field(str_index_uuid_field);
 		if (specification.index_uuid_field == UUIDFieldIndex::INVALID) {
-			THROW(ClientError, "{} not supported, {} must be one of {} ({} not supported)", repr(str_index_uuid_field), repr(prop_name), str_set_index_uuid_field);
+			THROW(ClientError, "{} not supported, {} must be one of {}", repr(str_index_uuid_field), repr(prop_name), str_set_index_uuid_field);
 		}
 	} else {
-		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
+		THROW(ClientError, "Type not supported, {} must be one of {}", repr(prop_name), str_set_index_uuid_field);
 	}
 }
 
