@@ -472,7 +472,7 @@ struct index_spc_t {
 
 	template <typename S=std::string, typename Uint64Vector=std::vector<uint64_t>, typename StringVector=std::vector<std::string>, typename = std::enable_if_t<std::is_same<std::string, std::decay_t<S>>::value &&
 		std::is_same<std::vector<uint64_t>, std::decay_t<Uint64Vector>>::value && std::is_same<std::vector<std::string>, std::decay_t<StringVector>>::value>>
-	explicit index_spc_t(FieldType type, S&& prefix=S{}, Xapian::valueno slot=Xapian::BAD_VALUENO, Uint64Vector&& accuracy=Uint64Vector(), StringVector&& acc_prefix=StringVector())
+	explicit index_spc_t(FieldType type, S&& prefix = S{}, Xapian::valueno slot = Xapian::BAD_VALUENO, Uint64Vector&& accuracy = Uint64Vector(), StringVector&& acc_prefix = StringVector())
 		: type(type),
 		  prefix(std::forward<S>(prefix)),
 		  slot(slot),
@@ -693,11 +693,6 @@ class Schema {
 	 * Get the prefixes for a namespace.
 	 */
 	std::unordered_set<std::string> get_partial_paths();
-
-	/*
-	 * Complete specification of a namespace.
-	 */
-	void complete_namespace_specification(const MsgPack& item_value);
 
 	/*
 	 * Complete specification of a normal field.

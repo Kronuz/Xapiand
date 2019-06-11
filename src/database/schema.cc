@@ -3540,11 +3540,7 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& i
 	L_CALL("Schema::index_item_value(<doc>, {}, {}, {})", data->to_string(), item_value.to_string(), pos);
 
 	if (!specification.flags.complete) {
-		if (specification.flags.inside_namespace) {
-			complete_namespace_specification(item_value);
-		} else {
-			complete_specification(item_value);
-		}
+		complete_specification(item_value);
 	}
 
 	if (specification.partial_index_spcs.empty()) {
@@ -4710,51 +4706,6 @@ Schema::get_partial_paths()
 
 
 void
-Schema::complete_namespace_specification(const MsgPack& item_value)
-{
-	L_CALL("Schema::complete_namespace_specification({})", item_value.to_string());
-
-	if (!specification.flags.concrete) {
-		if (!specification.endpoint.empty()) {
-			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-			}
-			specification.sep_types[SPC_FOREIGN_TYPE] = FieldType::foreign;
-		}
-		if (specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign) {
-			if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-				if (specification.flags.strict) {
-					THROW(MissingTypeError, "Type of field {} is missing", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-				}
-				specification.sep_types[SPC_CONCRETE_TYPE] = guess_concrete_type(item_value);
-				if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-					THROW(MissingTypeError, "Type of field {} cannot be guessed", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-				}
-			}
-
-			validate_required_namespace_data();
-		}
-	}
-
-	auto paths = get_partial_paths();
-	specification.partial_index_spcs.reserve(paths.size());
-
-	if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-		for (auto& path : paths) {
-			specification.partial_index_spcs.emplace_back(get_namespace_specification(specification.sep_types[SPC_CONCRETE_TYPE], std::move(path)));
-		}
-	} else {
-		auto global_type = specification_t::global_type(specification.sep_types[SPC_CONCRETE_TYPE]);
-		for (auto& path : paths) {
-			specification.partial_index_spcs.emplace_back(global_type, std::move(path));
-		}
-	}
-
-	specification.flags.complete = true;
-}
-
-
-void
 Schema::complete_specification(const MsgPack& item_value)
 {
 	L_CALL("Schema::complete_specification({})", item_value.to_string());
@@ -4777,30 +4728,39 @@ Schema::complete_specification(const MsgPack& item_value)
 				}
 			}
 
-			validate_required_data(get_mutable_properties(specification.full_meta_name));
+			if (specification.flags.inside_namespace) {
+				validate_required_namespace_data();
+			} else {
+				validate_required_data(get_mutable_properties(specification.full_meta_name));
+			}
 		}
 	}
 
 	auto paths = get_partial_paths();
 	specification.partial_index_spcs.reserve(paths.size());
 
-	if (toUType(specification.index & TypeIndex::VALUES) != 0u) {
-		for (auto& path : paths) {
-			index_spc_t spc_uuid(
-				specification.sep_types[SPC_CONCRETE_TYPE],
-				path,
-				specification.slot == Xapian::BAD_VALUENO ? get_slot(path, specification.get_ctype()) : specification.slot,
-				specification.accuracy,
-				specification.acc_prefix);
-			for (auto& acc_prefix : spc_uuid.acc_prefix) {
-				acc_prefix.insert(0, spc_uuid.prefix);
-			}
-			specification.partial_index_spcs.push_back(std::move(spc_uuid));
+	for (auto& path : paths) {
+		Xapian::valueno slot = specification.slot;
+		if (toUType(specification.index & TypeIndex::VALUES) != 0u && (
+			specification.flags.has_uuid_prefix ||
+			specification.flags.inside_namespace ||
+			slot == Xapian::BAD_VALUENO
+		)) {
+			slot = get_slot(path, specification.get_ctype());
 		}
-	} else {
-		for (auto& path : paths) {
-			specification.partial_index_spcs.emplace_back(specification.sep_types[SPC_CONCRETE_TYPE], path);
+
+		index_spc_t spc(
+			specification.sep_types[SPC_CONCRETE_TYPE],
+			std::move(path),
+			slot,
+			specification.accuracy,
+			specification.acc_prefix);
+
+		for (auto& acc_prefix : spc.acc_prefix) {
+			acc_prefix.insert(0, spc.prefix);
 		}
+
+		specification.partial_index_spcs.push_back(std::move(spc));
 	}
 
 	specification.flags.complete = true;
