@@ -66,6 +66,7 @@
                 link: '#time-delta-datatype'
             - url: boolean-type
             - url: geospatial-type
+            - url: uuid-type
         - url: dynamic-typing
     - url: search
       docs:

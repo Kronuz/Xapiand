@@ -9,8 +9,8 @@ in a document:
 
 ### String datatypes
 
-* [Keyword](../field-types/keyword-type)
 * [Text](../field-types/text-type)
+* [Keyword](../field-types/keyword-type)
 
 ### Numeric datatypes
 
@@ -34,7 +34,7 @@ in a document:
 
 ### UUID datatype
 
-* `UUID`
+* [UUID](../field-types/uuid-type)
 
 ### Script datatype
 
