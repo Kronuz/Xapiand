@@ -76,6 +76,13 @@ namespace GenerateTerms {
 	void geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix,
 		const std::vector<std::string>& acc_global_prefix, const std::vector<range_t>& ranges);
 
+	void text(Xapian::Document& doc,
+		const std::string& prefix, const std::string& value,
+		bool positions, Xapian::termcount weight,
+		bool cjk_ngram, bool cjk_words,
+		const std::string& language, const std::string& stem_language,
+		Xapian::TermGenerator::stop_strategy stop_strategy,
+		Xapian::TermGenerator::stem_strategy stem_strategy);
 
 	/*
 	 * Generate terms for numerical ranges.

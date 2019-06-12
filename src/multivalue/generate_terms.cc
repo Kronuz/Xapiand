@@ -33,8 +33,8 @@
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "utils/math.hh"                          // for modulus
 #include "reversed.hh"                            // for reversed
+#include "stopper.h"                              // for getStopper
 #include "utype.hh"                               // for toUType
-
 
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
@@ -488,6 +488,43 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 			doc.add_term(prefixed(term_s, prefix, ctype_geo));
 			doc.add_term(prefixed(term_s, gprefix, ctype_geo));
 		}
+	}
+}
+
+
+void
+GenerateTerms::text(Xapian::Document& doc,
+	const std::string& prefix, const std::string& value,
+	bool positions, Xapian::termcount weight,
+	bool cjk_ngram, bool cjk_words,
+	const std::string& language, const std::string& stem_language,
+	Xapian::TermGenerator::stop_strategy stop_strategy,
+	Xapian::TermGenerator::stem_strategy stem_strategy)
+{
+	Xapian::TermGenerator term_generator;
+	Xapian::TermGenerator::flags flags = 0;
+	if (cjk_ngram) {
+		flags |= Xapian::TermGenerator::FLAG_CJK_NGRAM;
+	}
+#ifdef USE_ICU
+	if (cjk_words) {
+		flags |= Xapian::TermGenerator::FLAG_CJK_WORDS;
+	}
+#endif
+	term_generator.set_flags(flags);
+	term_generator.set_document(doc);
+	if (!language.empty()) {
+		term_generator.set_stopper(getStopper(language).get());
+		term_generator.set_stopper_strategy(stop_strategy);
+	}
+	if (!stem_language.empty()) {
+		term_generator.set_stemmer(Xapian::Stem(stem_language));
+		term_generator.set_stemming_strategy(stem_strategy);
+	}
+	if (positions) {
+		term_generator.index_text(value, weight, prefix);
+	} else {
+		term_generator.index_text_without_positions(value, weight, prefix);
 	}
 }
 
