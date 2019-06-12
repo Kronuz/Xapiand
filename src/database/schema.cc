@@ -5865,17 +5865,6 @@ Schema::index_term(Xapian::Document& doc, std::string serialise_val, const speci
 
 
 void
-Schema::index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
-{
-	L_CALL("Schema::index_all_term(<Xapian::Document>, {}, <specification_t>, <specification_t>, {})", value.to_string(), pos);
-
-	auto serialise_val = Serialise::MsgPack(field_spc, value);
-	index_term(doc, serialise_val, field_spc, pos);
-	index_term(doc, serialise_val, global_spc, pos);
-}
-
-
-void
 Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> ranges, std::vector<Cartesian> centroids)
 {
 	L_CALL("Schema::merge_geospatial_values(...)");
