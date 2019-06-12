@@ -9984,9 +9984,11 @@ Schema::get_prefixed_global(FieldType namespace_type, const std::string& prefix_
 				for (auto& acc_prefix : spc.acc_prefix) {
 					acc_prefix.insert(0, spc.prefix.field);
 				}
-				[[fallthrough]];
+				break;
 			default:
-				return std::move(spc);
+				break;
 		}
 	}
+
+	return std::move(spc);
 }
