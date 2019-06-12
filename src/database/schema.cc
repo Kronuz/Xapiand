@@ -5340,6 +5340,11 @@ Schema::index_term(Xapian::Document& doc, std::string_view term, const specifica
 {
 	L_CALL("Schema::index_term(<doc>, {}, <field_spc>, {})", repr(term), pos);
 
+	if (term == "QN\x80") {
+		// Term reserved for numeric (autoincremented) IDs
+		return;
+	}
+
 	if (term.size() > 245) {
 		if (field_spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::keyword) {
 			THROW(ClientError, "Keyword too long");
@@ -5347,13 +5352,8 @@ Schema::index_term(Xapian::Document& doc, std::string_view term, const specifica
 		return;
 	}
 
-	if (term == "QN\x80") {
-		// Term reserved for numeric (autoincremented) IDs
-		return;
-	}
-
-	const auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
-	const auto position = field_spc.position[getPos(pos, field_spc.position.size())];
+	auto weight = field_spc.flags.bool_term ? 0 : field_spc.weight[getPos(pos, field_spc.weight.size())];
+	auto position = field_spc.position[getPos(pos, field_spc.position.size())];
 	if (position != 0u) {
 		doc.add_posting(std::string(term), position, weight);
 	} else {
@@ -5613,7 +5613,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, field_ranges);
 						}
 						if (field_values) {
-							merge_geospatial_values(map_values[specification.slot], field_ranges, geometry->getCentroids());
+							merge_geospatial_values(map_values[specification.slot], std::move(field_ranges), geometry->getCentroids());
 						}
 					}
 					auto global_ranges = geometry->getRanges(g_specification.flags.partials, g_specification.error);
@@ -5693,7 +5693,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 					GenerateTerms::text(doc,
 						specification.prefix.field + specification.get_ctype(), ser_value,
 						specification.positions[getPos(pos, specification.positions.size())],
-						specification.weight[getPos(pos, specification.weight.size())],
+						specification.flags.bool_term ? 0 : specification.weight[getPos(pos, specification.weight.size())],
 						specification.flags.cjk_ngram, specification.flags.cjk_words,
 						specification.language, specification.stem_language,
 						getGeneratorStopStrategy(specification.stop_strategy),
@@ -5703,7 +5703,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 					GenerateTerms::text(doc,
 						g_specification.prefix.field + g_specification.get_ctype(), ser_value,
 						g_specification.positions[getPos(pos, g_specification.positions.size())],
-						g_specification.weight[getPos(pos, g_specification.weight.size())],
+						g_specification.flags.bool_term ? 0 : g_specification.weight[getPos(pos, g_specification.weight.size())],
 						g_specification.flags.cjk_ngram, g_specification.flags.cjk_words,
 						g_specification.language, g_specification.stem_language,
 						getGeneratorStopStrategy(g_specification.stop_strategy),
