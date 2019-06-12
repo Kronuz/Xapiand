@@ -2,9 +2,6 @@
 title: Dynamic Typing
 ---
 
-{: .note .construction }
-_This section is a **work in progress**..._
-
 One of the most important features of Xapiand is that it tries to get out of
 your way and let you start exploring your data as quickly as possible. To index
 a document, you don't have to first create an index, define a schema, and
@@ -23,6 +20,39 @@ PUT /my_index/1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```json
+GET /my_index/
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Field 'name' is text", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._schema.schema.name._type).to.equal("text");
+});
+```
+
+```js
+pm.test("Field 'age' is integer", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._schema.schema.age._type).to.equal("integer");
+});
+```
+{% endcomment %}
 
 Creates the `/my_index/` index, a schema with two fields: a field called `name`
 with datatype `text` and a field called `count` with datatype `integer`.
