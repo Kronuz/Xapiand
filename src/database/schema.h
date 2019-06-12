@@ -741,7 +741,7 @@ class Schema {
 	 * Auxiliar functions for index fields in doc.
 	 */
 
-	void index_item(Xapian::Document& doc, const MsgPack& value, size_t pos);
+	void index_item(Xapian::Document& doc, const MsgPack& item, size_t pos);
 	void store_item(const MsgPack& value, MsgPack& data);
 
 
@@ -749,8 +749,6 @@ class Schema {
 	static void index_term(Xapian::Document& doc, std::string serialise_val, const specification_t& field_spc, size_t pos);
 	static void index_all_term(Xapian::Document& doc, const MsgPack& value, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
 	static void merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> ranges, std::vector<Cartesian> centroids);
-	static void index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc=nullptr, const specification_t* global_spc=nullptr);
-	static void index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s_f, std::set<std::string>& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos);
 
 	/*
 	 * Add partial prefix in specification.partials_prefixes or clear it.

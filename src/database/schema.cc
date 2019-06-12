@@ -5365,180 +5365,393 @@ Schema::index_simple_term(Xapian::Document& doc, std::string_view term, const sp
 
 
 inline void
-Schema::index_item(Xapian::Document& doc, const MsgPack& value, size_t pos)
+Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 {
-	L_CALL("Schema::index_item(<doc>, <value>, {})", pos);
+	L_CALL("Schema::index_item(<doc>, <item>, {})", pos);
 
 	assert(specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty);
 	assert(specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object);
 
-	switch (specification.index) {
-		case TypeIndex::INVALID:
-		case TypeIndex::NONE:
+	bool field_terms = toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u;
+	bool field_values = toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u;
+
+	bool global_terms = toUType(specification.index & TypeIndex::GLOBAL_TERMS) != 0u;
+	bool global_values = toUType(specification.index & TypeIndex::GLOBAL_VALUES) != 0u;
+
+	const auto& g_specification = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
+
+	if (item.is_null() || item.is_undefined()) {
+		if (field_terms) {
+			index_simple_term(doc, specification.prefix.field, specification, pos);
+		}
+		return;
+	}
+
+	MsgPack value_holder;
+	const MsgPack& value = item.is_map() ? value_holder = Cast::cast(item) : item;
+
+	switch (specification.sep_types[SPC_CONCRETE_TYPE]) {
+		case FieldType::floating: {
+			if (value.is_number()) {
+				const auto f_val = value.f64();
+				auto ser_value = Serialise::floating(f_val);
+				if (field_terms && global_terms) {
+					index_term(doc, ser_value, specification, pos);
+					index_term(doc, ser_value, g_specification, pos);
+					if (specification.accuracy == g_specification.accuracy) {
+						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(f_val));
+					} else {
+						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(f_val));
+						GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(f_val));
+					}
+				} else if (field_terms) {
+					index_term(doc, ser_value, specification, pos);
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(f_val));
+				} else if (global_terms) {
+					index_term(doc, ser_value, g_specification, pos);
+					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(f_val));
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(ser_value);
+				}
+				if (global_values) {
+					map_values[g_specification.slot].insert(std::move(ser_value));
+				}
+				return;
+			} else {
+				THROW(ClientError, "Format invalid for floating type: {}", value.to_string());
+			}
+		}
+
+		case FieldType::integer: {
+			if (value.is_number()) {
+				const auto i_val = value.i64();
+				auto ser_value = Serialise::integer(i_val);
+				if (field_terms && global_terms) {
+					index_term(doc, ser_value, specification, pos);
+					index_term(doc, ser_value, g_specification, pos);
+					if (specification.accuracy == g_specification.accuracy) {
+						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(i_val));
+					} else {
+						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
+						GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
+					}
+				} else if (field_terms) {
+					index_term(doc, ser_value, specification, pos);
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
+				} else if (global_terms) {
+					index_term(doc, ser_value, g_specification, pos);
+					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(ser_value);
+				}
+				if (global_values) {
+					map_values[g_specification.slot].insert(std::move(ser_value));
+				}
+				return;
+			} else {
+				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
+			}
+		}
+
+		case FieldType::positive: {
+			if (value.is_number()) {
+				const auto u_val = value.u64();
+				auto ser_value = Serialise::positive(u_val);
+				if (field_terms && global_terms) {
+					index_term(doc, ser_value, specification, pos);
+					index_term(doc, ser_value, g_specification, pos);
+					if (specification.accuracy == g_specification.accuracy) {
+						GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(u_val));
+					} else {
+						GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
+						GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
+					}
+				} else if (field_terms) {
+					index_term(doc, ser_value, specification, pos);
+					GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
+				} else if (global_terms) {
+					index_term(doc, ser_value, g_specification, pos);
+					GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(ser_value);
+				}
+				if (global_values) {
+					map_values[g_specification.slot].insert(std::move(ser_value));
+				}
+				return;
+			} else {
+				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
+			}
+		}
+
+		case FieldType::date:
+		case FieldType::datetime: {
+			Datetime::tm_t tm;
+			auto ser_value = Serialise::datetime(value, tm);
+			if (field_terms && global_terms) {
+				index_term(doc, ser_value, specification, pos);
+				index_term(doc, ser_value, g_specification, pos);
+				if (specification.accuracy == g_specification.accuracy) {
+					GenerateTerms::datetime(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, tm);
+				} else {
+					GenerateTerms::datetime(doc, specification.accuracy, specification.acc_prefix, tm);
+					GenerateTerms::datetime(doc, g_specification.accuracy, g_specification.acc_prefix, tm);
+				}
+			} else if (field_terms) {
+				index_term(doc, ser_value, specification, pos);
+				GenerateTerms::datetime(doc, specification.accuracy, specification.acc_prefix, tm);
+			} else if (global_terms) {
+				index_term(doc, ser_value, g_specification, pos);
+				GenerateTerms::datetime(doc, g_specification.accuracy, g_specification.acc_prefix, tm);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(ser_value);
+			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(std::move(ser_value));
+			}
 			return;
-
-		case TypeIndex::FIELD_TERMS: {
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_term(doc, Serialise::MsgPack(specification, value), specification, pos);
-			}
-			break;
 		}
 
-		case TypeIndex::FIELD_VALUES: {
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
-			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos);
+		case FieldType::time: {
+			double t_val = 0.0;
+			auto ser_value = Serialise::time(value, t_val);
+			if (field_terms && global_terms) {
+				index_term(doc, ser_value, specification, pos);
+				index_term(doc, ser_value, g_specification, pos);
+				if (specification.accuracy == g_specification.accuracy) {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(t_val));
+				} else {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
+					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
+				}
+			} else if (field_terms) {
+				index_term(doc, ser_value, specification, pos);
+				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
+			} else if (global_terms) {
+				index_term(doc, ser_value, g_specification, pos);
+				GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
 			}
-			break;
+			if (field_values) {
+				map_values[specification.slot].insert(ser_value);
+			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(std::move(ser_value));
+			}
+			return;
 		}
 
-		case TypeIndex::FIELD_ALL: {
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &specification);
+		case FieldType::timedelta: {
+			double t_val = 0.0;
+			auto ser_value = Serialise::timedelta(value, t_val);
+			if (field_terms && global_terms) {
+				index_term(doc, ser_value, specification, pos);
+				index_term(doc, ser_value, g_specification, pos);
+				if (specification.accuracy == g_specification.accuracy) {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, static_cast<int64_t>(t_val));
+				} else {
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
+					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
+				}
+			} else if (field_terms) {
+				index_term(doc, ser_value, specification, pos);
+				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
+			} else if (global_terms) {
+				index_term(doc, ser_value, g_specification, pos);
+				GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
 			}
-			break;
+			if (field_values) {
+				map_values[specification.slot].insert(ser_value);
+			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(std::move(ser_value));
+			}
+			return;
 		}
 
-		case TypeIndex::GLOBAL_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
-			} else {
-				index_term(doc, Serialise::MsgPack(global_spc, value), global_spc, pos);
+		case FieldType::geo: {
+			GeoSpatial geo(value);
+			const auto& geometry = geo.getGeometry();
+			if ((field_terms || field_values) && (global_terms || global_values)) {
+				if (specification.flags.partials == g_specification.flags.partials && specification.error == g_specification.error) {
+					auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
+					if (!ranges.empty()) {
+						if (field_terms && global_terms) {
+							auto ser_value = Serialise::ranges_hash(ranges);
+							index_term(doc, ser_value, specification, pos);
+							index_term(doc, ser_value, g_specification, pos);
+							if (specification.accuracy == g_specification.accuracy) {
+								GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, g_specification.acc_prefix, ranges);
+							} else {
+								GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
+								GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
+							}
+						} else if (field_terms) {
+							auto ser_value = Serialise::ranges_hash(ranges);
+							index_term(doc, ser_value, specification, pos);
+							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
+						} else if (global_terms) {
+							auto ser_value = Serialise::ranges_hash(ranges);
+							index_term(doc, ser_value, g_specification, pos);
+							GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
+						}
+						if (field_values) {
+							merge_geospatial_values(map_values[specification.slot], ranges, geometry->getCentroids());
+						}
+						if (global_values) {
+							merge_geospatial_values(map_values[g_specification.slot], std::move(ranges), geometry->getCentroids());
+						}
+					}
+				} else {
+					auto field_ranges = geometry->getRanges(specification.flags.partials, specification.error);
+					if (!field_ranges.empty()) {
+						if (field_terms) {
+							auto field_ser_value = Serialise::ranges_hash(field_ranges);
+							index_term(doc, field_ser_value, specification, pos);
+							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, field_ranges);
+						}
+						if (field_values) {
+							merge_geospatial_values(map_values[specification.slot], field_ranges, geometry->getCentroids());
+						}
+					}
+					auto global_ranges = geometry->getRanges(g_specification.flags.partials, g_specification.error);
+					if (!global_ranges.empty()) {
+						if (global_terms) {
+							auto global_ser_value = Serialise::ranges_hash(global_ranges);
+							index_term(doc, global_ser_value, g_specification, pos);
+							GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, global_ranges);
+						}
+						if (global_values) {
+							merge_geospatial_values(map_values[g_specification.slot], std::move(global_ranges), geometry->getCentroids());
+						}
+					}
+				}
+			} else if (field_terms || field_values) {
+				auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
+				if (!ranges.empty()) {
+					if (field_terms) {
+						auto ser_value = Serialise::ranges_hash(ranges);
+						index_term(doc, ser_value, specification, pos);
+						GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
+					}
+					if (field_values) {
+						merge_geospatial_values(map_values[specification.slot], ranges, geometry->getCentroids());
+					}
+				}
+			} else if (global_terms || global_values) {
+				auto ranges = geometry->getRanges(g_specification.flags.partials, g_specification.error);
+				if (!ranges.empty()) {
+					if (global_terms) {
+						auto ser_value = Serialise::ranges_hash(ranges);
+						index_term(doc, ser_value, g_specification, pos);
+						GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
+					}
+					if (global_values) {
+						merge_geospatial_values(map_values[g_specification.slot], std::move(ranges), geometry->getCentroids());
+					}
+				}
 			}
-			break;
+			return;
 		}
 
-		case TypeIndex::TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
+		case FieldType::keyword: {
+			if (value.is_string()) {
+				auto ser_value = value.str();
+				if (field_terms) {
+					index_term(doc, ser_value, specification, pos);
+				}
+				if (global_terms) {
+					index_term(doc, ser_value, g_specification, pos);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(ser_value);
+				}
+				if (global_values) {
+					map_values[g_specification.slot].insert(std::move(ser_value));
+				}
+				return;
 			} else {
-				index_all_term(doc, value, specification, global_spc, pos);
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 			}
-			break;
 		}
 
-		case TypeIndex::GLOBAL_TERMS_FIELD_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
+		case FieldType::string:
+		case FieldType::text: {
+			if (value.is_string()) {
+				auto ser_value = value.str();
+				if (field_terms) {
+					index_term(doc, ser_value, specification, pos);
+				}
+				if (global_terms) {
+					index_term(doc, ser_value, g_specification, pos);
+				}
+				if (ser_value.size() <= 100) {
+					// For text and string, only add relatively short values
+					if (field_values) {
+						map_values[specification.slot].insert(ser_value);
+					}
+					if (global_values) {
+						map_values[g_specification.slot].insert(std::move(ser_value));
+					}
+				}
+				return;
 			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, nullptr, &global_spc);
+				THROW(ClientError, "Format invalid for {} type: {}", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 			}
-			break;
 		}
 
-		case TypeIndex::GLOBAL_TERMS_FIELD_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, specification, pos, &specification, &global_spc);
+		case FieldType::boolean: {
+			auto ser_value = Serialise::MsgPack(specification, value);
+			if (field_terms) {
+				index_term(doc, ser_value, specification, pos);
 			}
-			break;
+			if (global_terms) {
+				index_term(doc, ser_value, g_specification, pos);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(ser_value);
+			}
+			if (global_values) {
+				map_values[g_specification.slot].insert(std::move(ser_value));
+			}
+			return;
 		}
 
-		case TypeIndex::GLOBAL_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
+		case FieldType::uuid: {
+			if (value.is_string()) {
+				auto ser_value = Serialise::uuid(value.str_view());
+				if (field_terms) {
+					index_term(doc, ser_value, specification, pos);
+				}
+				if (global_terms) {
+					index_term(doc, ser_value, g_specification, pos);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(ser_value);
+				}
+				if (global_values) {
+					map_values[g_specification.slot].insert(std::move(ser_value));
+				}
+				return;
 			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos);
+				THROW(ClientError, "Format invalid for uuid type: {}", value.to_string());
 			}
-			break;
 		}
 
-		case TypeIndex::GLOBAL_VALUES_FIELD_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &specification);
+		case FieldType::script:
+			if (value.is_string()) {
+				return;
 			}
-			break;
-		}
+			THROW(ClientError, "Format invalid for {} type: {}", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
 
-		case TypeIndex::VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
-			} else {
-				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
-			}
-			break;
-		}
+		case FieldType::object:
+			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(specification.sep_types[SPC_CONCRETE_TYPE]));
 
-		case TypeIndex::GLOBAL_VALUES_FIELD_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
-			}
-			break;
-		}
-
-		case TypeIndex::GLOBAL_ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
-			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, nullptr, &global_spc);
-			}
-			break;
-		}
-
-		case TypeIndex::GLOBAL_ALL_FIELD_TERMS: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_value(doc, value.is_map() ? Cast::cast(value) : value, s_g, global_spc, pos, &specification, &global_spc);
-			}
-			break;
-		}
-
-		case TypeIndex::GLOBAL_ALL_FIELD_VALUES: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_g = map_values[global_spc.slot];
-			auto& s_f = map_values[specification.slot];
-			if (value.is_null() || value.is_undefined()) {
-				/* do nothing else (don't index any terms) */
-			} else {
-				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
-			}
-			break;
-		}
-
-		case TypeIndex::ALL: {
-			const auto& global_spc = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-			auto& s_f = map_values[specification.slot];
-			auto& s_g = map_values[global_spc.slot];
-			if (value.is_null() || value.is_undefined()) {
-				index_simple_term(doc, specification.prefix.field, specification, pos);
-			} else {
-				index_all_value(doc, value.is_map() ? Cast::cast(value) : value, s_f, s_g, specification, global_spc, pos);
-			}
-			break;
-		}
+		default:
+			THROW(ClientError, "Type: {:#04x} is an unknown value type", toUType(specification.sep_types[SPC_CONCRETE_TYPE]));
 	}
 }
 
@@ -5686,489 +5899,6 @@ Schema::merge_geospatial_values(std::set<std::string>& s, std::vector<range_t> r
 			centroids.insert(centroids.end(), missing.begin(), missing.end());
 		}
 		s.insert(Serialise::ranges_centroids(ranges, centroids));
-	}
-}
-
-
-void
-Schema::index_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s, const specification_t& spc, size_t pos, const specification_t* field_spc, const specification_t* global_spc)
-{
-	L_CALL("Schema::index_value(<Xapian::Document>, {}, <std::set<std::string>>, <specification_t>, {}, <specification_t*>, <specification_t*>)", value.to_string(), pos);
-
-	switch (spc.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::floating: {
-			if (value.is_number()) {
-				const auto f_val = value.f64();
-				auto ser_value = Serialise::floating(f_val);
-				if (field_spc != nullptr) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc != nullptr) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, static_cast<int64_t>(f_val));
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for floating type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::integer: {
-			if (value.is_number()) {
-				const auto i_val = value.i64();
-				auto ser_value = Serialise::integer(i_val);
-				if (field_spc != nullptr) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc != nullptr) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, i_val);
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::positive: {
-			if (value.is_number()) {
-				const auto u_val = value.u64();
-				auto ser_value = Serialise::positive(u_val);
-				if (field_spc != nullptr) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc != nullptr) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				GenerateTerms::positive(doc, spc.accuracy, spc.acc_prefix, u_val);
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::date:
-		case FieldType::datetime: {
-			Datetime::tm_t tm;
-			auto ser_value = Serialise::datetime(value, tm);
-			if (field_spc != nullptr) {
-				index_term(doc, ser_value, *field_spc, pos);
-			}
-			if (global_spc != nullptr) {
-				index_term(doc, ser_value, *global_spc, pos);
-			}
-			s.insert(std::move(ser_value));
-			GenerateTerms::datetime(doc, spc.accuracy, spc.acc_prefix, tm);
-			return;
-		}
-
-		case FieldType::time: {
-			double t_val = 0.0;
-			auto ser_value = Serialise::time(value, t_val);
-			if (field_spc != nullptr) {
-				index_term(doc, ser_value, *field_spc, pos);
-			}
-			if (global_spc != nullptr) {
-				index_term(doc, ser_value, *global_spc, pos);
-			}
-			s.insert(std::move(ser_value));
-			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
-			return;
-		}
-
-		case FieldType::timedelta: {
-			double t_val = 0.0;
-			auto ser_value = Serialise::timedelta(value, t_val);
-			if (field_spc != nullptr) {
-				index_term(doc, ser_value, *field_spc, pos);
-			}
-			if (global_spc != nullptr) {
-				index_term(doc, ser_value, *global_spc, pos);
-			}
-			s.insert(std::move(ser_value));
-			GenerateTerms::integer(doc, spc.accuracy, spc.acc_prefix, t_val);
-			return;
-		}
-
-		case FieldType::geo: {
-			GeoSpatial geo(value);
-			const auto& geometry = geo.getGeometry();
-			auto ranges = geometry->getRanges(spc.flags.partials, spc.error);
-			if (ranges.empty()) {
-				return;
-			}
-			std::string term;
-			if (field_spc != nullptr) {
-				if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
-					term = Serialise::ranges_hash(ranges);
-					index_term(doc, term, *field_spc, pos);
-				} else {
-					const auto f_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-					term = Serialise::ranges_hash(f_ranges);
-					index_term(doc, term, *field_spc, pos);
-				}
-			}
-			if (global_spc != nullptr) {
-				if (field_spc != nullptr) {
-					index_term(doc, std::move(term), *global_spc, pos);
-				} else {
-					if (spc.flags.partials == DEFAULT_GEO_PARTIALS && spc.error == DEFAULT_GEO_ERROR) {
-						index_term(doc, Serialise::ranges_hash(ranges), *global_spc, pos);
-					} else {
-						const auto g_ranges = geometry->getRanges(DEFAULT_GEO_PARTIALS, DEFAULT_GEO_ERROR);
-						index_term(doc, Serialise::ranges_hash(g_ranges), *global_spc, pos);
-					}
-				}
-			}
-			GenerateTerms::geo(doc, spc.accuracy, spc.acc_prefix, ranges);
-			merge_geospatial_values(s, std::move(ranges), geometry->getCentroids());
-			return;
-		}
-
-		case FieldType::keyword: {
-			if (value.is_string()) {
-				auto ser_value = value.str();
-				if (field_spc != nullptr) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc != nullptr) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
-			}
-		}
-
-		case FieldType::string:
-		case FieldType::text: {
-			if (value.is_string()) {
-				auto ser_value = value.str();
-				if (field_spc != nullptr) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc != nullptr) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				if (ser_value.size() <= 100) {
-					// For text and string, only add relatively short values
-					s.insert(std::move(ser_value));
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
-			}
-		}
-
-		case FieldType::boolean: {
-			auto ser_value = Serialise::MsgPack(spc, value);
-			if (field_spc != nullptr) {
-				index_term(doc, ser_value, *field_spc, pos);
-			}
-			if (global_spc != nullptr) {
-				index_term(doc, ser_value, *global_spc, pos);
-			}
-			s.insert(std::move(ser_value));
-			return;
-		}
-
-		case FieldType::uuid: {
-			if (value.is_string()) {
-				auto ser_value = Serialise::uuid(value.str_view());
-				if (field_spc != nullptr) {
-					index_term(doc, ser_value, *field_spc, pos);
-				}
-				if (global_spc != nullptr) {
-					index_term(doc, ser_value, *global_spc, pos);
-				}
-				s.insert(std::move(ser_value));
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for uuid type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::script:
-			if (value.is_string()) {
-				return;
-			}
-			THROW(ClientError, "Format invalid for {} type: {}", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
-
-		case FieldType::object:
-			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(spc.sep_types[SPC_CONCRETE_TYPE]));
-
-		default:
-			THROW(ClientError, "Type: {:#04x} is an unknown value type", toUType(spc.sep_types[SPC_CONCRETE_TYPE]));
-	}
-}
-
-
-void
-Schema::index_all_value(Xapian::Document& doc, const MsgPack& value, std::set<std::string>& s_f, std::set<std::string>& s_g, const specification_t& field_spc, const specification_t& global_spc, size_t pos)
-{
-	L_CALL("Schema::index_all_value(<Xapian::Document>, {}, <std::set<std::string>>, <std::set<std::string>>, <specification_t>, <specification_t>, {})", value.to_string(), pos);
-
-	switch (field_spc.sep_types[SPC_CONCRETE_TYPE]) {
-		case FieldType::floating: {
-			if (value.is_number()) {
-				const auto f_val = value.f64();
-				auto ser_value = Serialise::floating(f_val);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, static_cast<int64_t>(f_val));
-				} else {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, static_cast<int64_t>(f_val));
-					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, static_cast<int64_t>(f_val));
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for floating type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::integer: {
-			if (value.is_number()) {
-				const auto i_val = value.i64();
-				auto ser_value = Serialise::integer(i_val);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, i_val);
-				} else {
-					GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, i_val);
-					GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, i_val);
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for integer type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::positive: {
-			if (value.is_number()) {
-				const auto u_val = value.u64();
-				auto ser_value = Serialise::positive(u_val);
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::positive(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, u_val);
-				} else {
-					GenerateTerms::positive(doc, field_spc.accuracy, field_spc.acc_prefix, u_val);
-					GenerateTerms::positive(doc, global_spc.accuracy, global_spc.acc_prefix, u_val);
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for positive type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::date:
-		case FieldType::datetime: {
-			Datetime::tm_t tm;
-			auto ser_value = Serialise::datetime(value, tm);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-				index_term(doc, ser_value, field_spc, pos);
-			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-				index_term(doc, ser_value, global_spc, pos);
-			}
-			s_f.insert(ser_value);
-			s_g.insert(std::move(ser_value));
-			if (field_spc.accuracy == global_spc.accuracy) {
-				GenerateTerms::datetime(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, tm);
-			} else {
-				GenerateTerms::datetime(doc, field_spc.accuracy, field_spc.acc_prefix, tm);
-				GenerateTerms::datetime(doc, global_spc.accuracy, global_spc.acc_prefix, tm);
-			}
-			return;
-		}
-
-		case FieldType::time: {
-			double t_val = 0.0;
-			auto ser_value = Serialise::time(value, t_val);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-				index_term(doc, ser_value, field_spc, pos);
-			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-				index_term(doc, ser_value, global_spc, pos);
-			}
-			s_f.insert(ser_value);
-			s_g.insert(std::move(ser_value));
-			if (field_spc.accuracy == global_spc.accuracy) {
-				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
-			} else {
-				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
-				GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
-			}
-			return;
-		}
-
-		case FieldType::timedelta: {
-			double t_val;
-			auto ser_value = Serialise::timedelta(value, t_val);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-				index_term(doc, ser_value, field_spc, pos);
-			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-				index_term(doc, ser_value, global_spc, pos);
-			}
-			s_f.insert(ser_value);
-			s_g.insert(std::move(ser_value));
-			if (field_spc.accuracy == global_spc.accuracy) {
-				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, t_val);
-			} else {
-				GenerateTerms::integer(doc, field_spc.accuracy, field_spc.acc_prefix, t_val);
-				GenerateTerms::integer(doc, global_spc.accuracy, global_spc.acc_prefix, t_val);
-			}
-			return;
-		}
-
-		case FieldType::geo: {
-			GeoSpatial geo(value);
-			const auto& geometry = geo.getGeometry();
-			auto ranges = geometry->getRanges(field_spc.flags.partials, field_spc.error);
-			if (ranges.empty()) {
-				return;
-			}
-			if (field_spc.flags.partials == global_spc.flags.partials && field_spc.error == global_spc.error) {
-				if (toUType(field_spc.index & TypeIndex::TERMS) != 0u) {
-					auto ser_value = Serialise::ranges_hash(ranges);
-					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-						index_term(doc, ser_value, field_spc, pos);
-					}
-					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-						index_term(doc, std::move(ser_value), global_spc, pos);
-					}
-				}
-				if (field_spc.accuracy == global_spc.accuracy) {
-					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, global_spc.acc_prefix, ranges);
-				} else {
-					GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
-					GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, ranges);
-				}
-				merge_geospatial_values(s_f, ranges, geometry->getCentroids());
-				merge_geospatial_values(s_g, std::move(ranges), geometry->getCentroids());
-			} else {
-				auto g_ranges = geometry->getRanges(global_spc.flags.partials, global_spc.error);
-				if (toUType(field_spc.index & TypeIndex::TERMS) != 0u) {
-					const auto ser_value = Serialise::ranges_hash(g_ranges);
-					if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-						index_term(doc, ser_value, field_spc, pos);
-					}
-					if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-						index_term(doc, std::move(ser_value), global_spc, pos);
-					}
-				}
-				GenerateTerms::geo(doc, field_spc.accuracy, field_spc.acc_prefix, ranges);
-				GenerateTerms::geo(doc, global_spc.accuracy, global_spc.acc_prefix, g_ranges);
-				merge_geospatial_values(s_f, std::move(ranges), geometry->getCentroids());
-				merge_geospatial_values(s_g, std::move(g_ranges), geometry->getCentroids());
-			}
-			return;
-		}
-
-		case FieldType::keyword: {
-			if (value.is_string()) {
-				auto ser_value = value.str();
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
-			}
-		}
-
-		case FieldType::string:
-		case FieldType::text: {
-			if (value.is_string()) {
-				auto ser_value = value.str();
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				if (ser_value.size() <= 100) {
-					// For text and string, only add relatively short values
-					s_f.insert(ser_value);
-					s_g.insert(std::move(ser_value));
-				}
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
-			}
-		}
-
-		case FieldType::boolean: {
-			auto ser_value = Serialise::MsgPack(field_spc, value);
-			if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-				index_term(doc, ser_value, field_spc, pos);
-			}
-			if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-				index_term(doc, ser_value, global_spc, pos);
-			}
-			s_f.insert(ser_value);
-			s_g.insert(std::move(ser_value));
-			return;
-		}
-
-		case FieldType::uuid: {
-			if (value.is_string()) {
-				auto ser_value = Serialise::uuid(value.str_view());
-				if (toUType(field_spc.index & TypeIndex::FIELD_TERMS) != 0u) {
-					index_term(doc, ser_value, field_spc, pos);
-				}
-				if (toUType(field_spc.index & TypeIndex::GLOBAL_TERMS) != 0u) {
-					index_term(doc, ser_value, global_spc, pos);
-				}
-				s_f.insert(ser_value);
-				s_g.insert(std::move(ser_value));
-				return;
-			} else {
-				THROW(ClientError, "Format invalid for uuid type: {}", value.to_string());
-			}
-		}
-
-		case FieldType::script:
-			if (value.is_string()) {
-				return;
-			}
-			THROW(ClientError, "Format invalid for {} type: {}", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]), value.to_string());
-
-		case FieldType::object:
-			THROW(ClientError, "Type: '{}' is an invalid value type", enum_name(field_spc.sep_types[SPC_CONCRETE_TYPE]));
-
-		default:
-			THROW(ClientError, "Type: {:#04x} is an unknown value type", toUType(field_spc.sep_types[SPC_CONCRETE_TYPE]));
 	}
 }
 
