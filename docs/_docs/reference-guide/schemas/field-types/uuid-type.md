@@ -29,6 +29,11 @@ as the string "~notmet".
 
 ## UUIDs as Field Names
 
+Objects which contain UUIDs as field names are detected as a objects with
+[Dynamic Field Names](../../dynamic-field-names) by default. This means, in the
+following example, all fields will add a single field specification and that
+will be shared among all four field values.
+
 {% capture req %}
 
 ```json
@@ -46,7 +51,8 @@ UPDATE /bank/1
 {% endcapture %}
 {% include curl.html req=req %}
 
-`_index_uuid_field` can be used to specify how the UUID fields will be indexed:
+`_index_uuid_field` can be used to specify how the UUID field namess will be
+indexed:
 
 + The default, type "uuid", stores the field name as the UUID value itself.
 + The type "uuid_field" stores the field name as the string "<uuid_field>".

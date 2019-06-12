@@ -68,6 +68,13 @@
             - url: geospatial-type
             - url: uuid-type
         - url: dynamic-typing
+        - url: explicit-types
+        - url: casting-types
+        - url: accuracy
+        - url: indexing-mode
+        - url: dynamic-field-names
+        - url: namespaces
+        - url: foreign-schemas
     - url: search
       docs:
         - url: search-api
