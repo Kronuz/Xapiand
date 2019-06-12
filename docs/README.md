@@ -10,8 +10,9 @@ For information about contributing, see the [Contributing page](https://kronuz.i
 
 ## Running locally
 
-1. `gem install bundler`
-2. `bundle exec jekyll serve --livereload`
+1. `gem install bundler --user-install`
+2. `bundle install --path ~/.gem`
+3. `bundle exec jekyll serve --livereload --incremental`
 
 
 ## Updating Font Awesome
