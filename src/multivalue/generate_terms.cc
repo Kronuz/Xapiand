@@ -495,8 +495,12 @@ GenerateTerms::geo(Xapian::Document& doc, const std::vector<uint64_t>& accuracy,
 Xapian::Query
 GenerateTerms::datetime(double start_, double end_, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
 {
-	if (accuracy.empty() || end_ < start_) {
+	if (end_ < start_) {
 		return Xapian::Query();
+	}
+
+	if (accuracy.empty()) {
+		return Xapian::Query(std::string());
 	}
 
 	auto tm_s = Datetime::to_tm_t(static_cast<std::time_t>(start_));
@@ -791,8 +795,12 @@ Xapian::Query
 GenerateTerms::geo(const std::vector<range_t>& ranges, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf)
 {
 	// The user does not specify the accuracy.
-	if (acc_prefix.empty() || ranges.empty()) {
+	if (ranges.empty()) {
 		return Xapian::Query();
+	}
+
+	if (acc_prefix.empty()) {
+		return Xapian::Query(std::string());
 	}
 
 	const auto last_acc_pos = accuracy.size() - 1;
@@ -873,8 +881,12 @@ template <typename T>
 Xapian::Query
 _numeric(T start, T end, const std::vector<uint64_t>& accuracy, const std::vector<std::string>& acc_prefix, Xapian::termcount wqf, size_t max_terms, size_t max_terms_level)
 {
-	if (accuracy.empty() || end < start) {
+	if (end < start) {
 		return Xapian::Query();
+	}
+
+	if (accuracy.empty()) {
+		return Xapian::Query(std::string());
 	}
 
 	const auto last_acc_pos = accuracy.size() - 1;

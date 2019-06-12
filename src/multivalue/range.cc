@@ -95,52 +95,60 @@ getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const Msg
 
 	auto query = GenerateTerms::numeric(value_s, value_e, field_spc.accuracy, field_spc.acc_prefix);
 
-	if (!start) {
-		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
-		if (query.empty()) {
-			return Xapian::Query(mvle->release());
+	if (field_spc.slot != Xapian::BAD_VALUENO) {
+		if (!start) {
+			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			if (query.empty()) {
+				return Xapian::Query(mvle->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+
+		if (!end) {
+			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			if (query.empty()) {
+				return Xapian::Query(mvge->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+		}
+
+		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvr->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 	}
 
-	if (!end) {
-		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
-		if (query.empty()) {
-			return Xapian::Query(mvge->release());
-		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
-	}
-
-	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
-	if (query.empty()) {
-		return Xapian::Query(mvr->release());
-	}
-	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+	return query;
 }
 
 
 Xapian::Query
 getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	std::string start_s = start ? Serialise::MsgPack(field_spc, *start) : "";
-	std::string end_s = end ? Serialise::MsgPack(field_spc, *end) : "";
+	if (field_spc.slot != Xapian::BAD_VALUENO) {
+		std::string start_s = start ? Serialise::MsgPack(field_spc, *start) : "";
+		std::string end_s = end ? Serialise::MsgPack(field_spc, *end) : "";
 
-	if (!start) {
-		auto mvle = new MultipleValueLE(field_spc.slot, std::move(end_s));
-		return Xapian::Query(mvle->release());
+		if (start_s > end_s) {
+			return Xapian::Query();
+		}
+
+		if (!start) {
+			auto mvle = new MultipleValueLE(field_spc.slot, std::move(end_s));
+			return Xapian::Query(mvle->release());
+		}
+
+		if (!end) {
+			auto mvge = new MultipleValueGE(field_spc.slot, std::move(start_s));
+			return Xapian::Query(mvge->release());
+		}
+
+		auto mvr = new MultipleValueRange(field_spc.slot, std::move(start_s), std::move(end_s));
+		return Xapian::Query(mvr->release());
 	}
 
-	if (!end) {
-		auto mvge = new MultipleValueGE(field_spc.slot, std::move(start_s));
-		return Xapian::Query(mvge->release());
-	}
-
-	if (start_s > end_s) {
-		return Xapian::Query();
-	}
-
-	auto mvr = new MultipleValueRange(field_spc.slot, std::move(start_s), std::move(end_s));
-	return Xapian::Query(mvr->release());
+	return Xapian::Query();
 }
 
 
@@ -159,27 +167,31 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
 
-	if (!start) {
-		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
-		if (query.empty()) {
-			return Xapian::Query(mvle->release());
+	if (field_spc.slot != Xapian::BAD_VALUENO) {
+		if (!start) {
+			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			if (query.empty()) {
+				return Xapian::Query(mvle->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+
+		if (!end) {
+			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			if (query.empty()) {
+				return Xapian::Query(mvge->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+		}
+
+		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvr->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 	}
 
-	if (!end) {
-		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
-		if (query.empty()) {
-			return Xapian::Query(mvge->release());
-		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
-	}
-
-	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
-	if (query.empty()) {
-		return Xapian::Query(mvr->release());
-	}
-	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+	return query;
 }
 
 
@@ -198,27 +210,31 @@ getTimeQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(time_s), static_cast<int64_t>(time_e), field_spc.accuracy, field_spc.acc_prefix);
 
-	if (!start) {
-		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
-		if (query.empty()) {
-			return Xapian::Query(mvle->release());
+	if (field_spc.slot != Xapian::BAD_VALUENO) {
+		if (!start) {
+			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			if (query.empty()) {
+				return Xapian::Query(mvle->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+
+		if (!end) {
+			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			if (query.empty()) {
+				return Xapian::Query(mvge->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+		}
+
+		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvr->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 	}
 
-	if (!end) {
-		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
-		if (query.empty()) {
-			return Xapian::Query(mvge->release());
-		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
-	}
-
-	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
-	if (query.empty()) {
-		return Xapian::Query(mvr->release());
-	}
-	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+	return query;
 }
 
 
@@ -236,27 +252,31 @@ getTimedeltaQuery(const required_spc_t& field_spc, const MsgPack* start, const M
 
 	auto query = GenerateTerms::numeric(static_cast<int64_t>(timedelta_s), static_cast<int64_t>(timedelta_e), field_spc.accuracy, field_spc.acc_prefix);
 
-	if (!start) {
-		auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
-		if (query.empty()) {
-			return Xapian::Query(mvle->release());
+	if (field_spc.slot != Xapian::BAD_VALUENO) {
+		if (!start) {
+			auto mvle = new MultipleValueLE(field_spc.slot, std::move(ser_end));
+			if (query.empty()) {
+				return Xapian::Query(mvle->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
 		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvle->release()), query);
+
+		if (!end) {
+			auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
+			if (query.empty()) {
+				return Xapian::Query(mvge->release());
+			}
+			return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
+		}
+
+		auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
+		if (query.empty()) {
+			return Xapian::Query(mvr->release());
+		}
+		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
 	}
 
-	if (!end) {
-		auto mvge = new MultipleValueGE(field_spc.slot, std::move(ser_start));
-		if (query.empty()) {
-			return Xapian::Query(mvge->release());
-		}
-		return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvge->release()), query);
-	}
-
-	auto mvr = new MultipleValueRange(field_spc.slot, std::move(ser_start), std::move(ser_end));
-	if (query.empty()) {
-		return Xapian::Query(mvr->release());
-	}
-	return Xapian::Query(Xapian::Query::OP_FILTER, Xapian::Query(mvr->release()), query);
+	return query;
 }
 
 
