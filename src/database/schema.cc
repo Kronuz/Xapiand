@@ -5371,20 +5371,25 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 	assert(specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::empty);
 	assert(specification.sep_types[SPC_CONCRETE_TYPE] != FieldType::object);
 
+	if (item.is_undefined()) {
+		return;
+	}
+
 	bool field_terms = toUType(specification.index & TypeIndex::FIELD_TERMS) != 0u;
+
+	if (item.is_null()) {
+		if (field_terms) {
+			index_term(doc, specification.prefix.field, specification, pos);
+		}
+		return;
+	}
+
 	bool field_values = toUType(specification.index & TypeIndex::FIELD_VALUES) != 0u;
 
 	bool global_terms = toUType(specification.index & TypeIndex::GLOBAL_TERMS) != 0u;
 	bool global_values = toUType(specification.index & TypeIndex::GLOBAL_VALUES) != 0u;
 
 	const auto& g_specification = specification_t::get_global(specification.sep_types[SPC_CONCRETE_TYPE]);
-
-	if (item.is_null() || item.is_undefined()) {
-		if (field_terms) {
-			index_term(doc, specification.prefix.field, specification, pos);
-		}
-		return;
-	}
 
 	MsgPack value_holder;
 	const MsgPack& value = item.is_map() ? value_holder = Cast::cast(item) : item;
@@ -5394,7 +5399,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 			if (value.is_number()) {
 				const auto f_val = value.f64();
 				auto ser_value = Serialise::floating(f_val);
-				if (field_terms && global_terms) {
+				if (global_terms && field_terms) {
 					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					if (specification.accuracy == g_specification.accuracy) {
@@ -5403,18 +5408,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(f_val));
 						GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(f_val));
 					}
-				} else if (field_terms) {
-					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(f_val));
 				} else if (global_terms) {
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(f_val));
-				}
-				if (field_values) {
-					map_values[specification.slot].insert(ser_value);
+				} else if (field_terms) {
+					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(f_val));
 				}
 				if (global_values) {
-					map_values[g_specification.slot].insert(std::move(ser_value));
+					map_values[g_specification.slot].insert(ser_value);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(std::move(ser_value));
 				}
 				return;
 			} else {
@@ -5426,7 +5431,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 			if (value.is_number()) {
 				const auto i_val = value.i64();
 				auto ser_value = Serialise::integer(i_val);
-				if (field_terms && global_terms) {
+				if (global_terms && field_terms) {
 					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					if (specification.accuracy == g_specification.accuracy) {
@@ -5435,18 +5440,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 						GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
 						GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
 					}
-				} else if (field_terms) {
-					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
 				} else if (global_terms) {
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(i_val));
-				}
-				if (field_values) {
-					map_values[specification.slot].insert(ser_value);
+				} else if (field_terms) {
+					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(i_val));
 				}
 				if (global_values) {
-					map_values[g_specification.slot].insert(std::move(ser_value));
+					map_values[g_specification.slot].insert(ser_value);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(std::move(ser_value));
 				}
 				return;
 			} else {
@@ -5458,7 +5463,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 			if (value.is_number()) {
 				const auto u_val = value.u64();
 				auto ser_value = Serialise::positive(u_val);
-				if (field_terms && global_terms) {
+				if (global_terms && field_terms) {
 					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					if (specification.accuracy == g_specification.accuracy) {
@@ -5467,18 +5472,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 						GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
 						GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
 					}
-				} else if (field_terms) {
-					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-					GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
 				} else if (global_terms) {
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					GenerateTerms::positive(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(u_val));
-				}
-				if (field_values) {
-					map_values[specification.slot].insert(ser_value);
+				} else if (field_terms) {
+					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+					GenerateTerms::positive(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(u_val));
 				}
 				if (global_values) {
-					map_values[g_specification.slot].insert(std::move(ser_value));
+					map_values[g_specification.slot].insert(ser_value);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(std::move(ser_value));
 				}
 				return;
 			} else {
@@ -5490,7 +5495,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::datetime: {
 			Datetime::tm_t tm;
 			auto ser_value = Serialise::datetime(value, tm);
-			if (field_terms && global_terms) {
+			if (global_terms && field_terms) {
 				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				if (specification.accuracy == g_specification.accuracy) {
@@ -5499,18 +5504,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 					GenerateTerms::datetime(doc, specification.accuracy, specification.acc_prefix, tm);
 					GenerateTerms::datetime(doc, g_specification.accuracy, g_specification.acc_prefix, tm);
 				}
-			} else if (field_terms) {
-				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-				GenerateTerms::datetime(doc, specification.accuracy, specification.acc_prefix, tm);
 			} else if (global_terms) {
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				GenerateTerms::datetime(doc, g_specification.accuracy, g_specification.acc_prefix, tm);
-			}
-			if (field_values) {
-				map_values[specification.slot].insert(ser_value);
+			} else if (field_terms) {
+				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+				GenerateTerms::datetime(doc, specification.accuracy, specification.acc_prefix, tm);
 			}
 			if (global_values) {
-				map_values[g_specification.slot].insert(std::move(ser_value));
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
 			}
 			return;
 		}
@@ -5518,7 +5523,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::time: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::time(value, t_val);
-			if (field_terms && global_terms) {
+			if (global_terms && field_terms) {
 				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				if (specification.accuracy == g_specification.accuracy) {
@@ -5527,18 +5532,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
 					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
 				}
-			} else if (field_terms) {
-				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
 			} else if (global_terms) {
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
-			}
-			if (field_values) {
-				map_values[specification.slot].insert(ser_value);
+			} else if (field_terms) {
+				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
 			}
 			if (global_values) {
-				map_values[g_specification.slot].insert(std::move(ser_value));
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
 			}
 			return;
 		}
@@ -5546,7 +5551,7 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::timedelta: {
 			double t_val = 0.0;
 			auto ser_value = Serialise::timedelta(value, t_val);
-			if (field_terms && global_terms) {
+			if (global_terms && field_terms) {
 				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				if (specification.accuracy == g_specification.accuracy) {
@@ -5555,18 +5560,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 					GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
 					GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
 				}
-			} else if (field_terms) {
-				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
 			} else if (global_terms) {
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				GenerateTerms::integer(doc, g_specification.accuracy, g_specification.acc_prefix, static_cast<int64_t>(t_val));
-			}
-			if (field_values) {
-				map_values[specification.slot].insert(ser_value);
+			} else if (field_terms) {
+				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+				GenerateTerms::integer(doc, specification.accuracy, specification.acc_prefix, static_cast<int64_t>(t_val));
 			}
 			if (global_values) {
-				map_values[g_specification.slot].insert(std::move(ser_value));
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
 			}
 			return;
 		}
@@ -5574,11 +5579,11 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::geo: {
 			GeoSpatial geo(value);
 			const auto& geometry = geo.getGeometry();
-			if ((field_terms || field_values) && (global_terms || global_values)) {
+			if ((global_terms || global_values) && (field_terms || field_values)) {
 				if (specification.flags.partials == g_specification.flags.partials && specification.error == g_specification.error) {
 					auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
 					if (!ranges.empty()) {
-						if (field_terms && global_terms) {
+						if (global_terms && field_terms) {
 							auto ser_value = Serialise::ranges_hash(ranges);
 							index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 							index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
@@ -5588,34 +5593,23 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 								GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
 								GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
 							}
-						} else if (field_terms) {
-							auto ser_value = Serialise::ranges_hash(ranges);
-							index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
 						} else if (global_terms) {
 							auto ser_value = Serialise::ranges_hash(ranges);
 							index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 							GenerateTerms::geo(doc, g_specification.accuracy, g_specification.acc_prefix, ranges);
-						}
-						if (field_values) {
-							merge_geospatial_values(map_values[specification.slot], ranges, geometry->getCentroids());
+						} else if (field_terms) {
+							auto ser_value = Serialise::ranges_hash(ranges);
+							index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
 						}
 						if (global_values) {
-							merge_geospatial_values(map_values[g_specification.slot], std::move(ranges), geometry->getCentroids());
+							merge_geospatial_values(map_values[g_specification.slot], ranges, geometry->getCentroids());
+						}
+						if (field_values) {
+							merge_geospatial_values(map_values[specification.slot], std::move(ranges), geometry->getCentroids());
 						}
 					}
 				} else {
-					auto field_ranges = geometry->getRanges(specification.flags.partials, specification.error);
-					if (!field_ranges.empty()) {
-						if (field_terms) {
-							auto ser_value = Serialise::ranges_hash(field_ranges);
-							index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, field_ranges);
-						}
-						if (field_values) {
-							merge_geospatial_values(map_values[specification.slot], std::move(field_ranges), geometry->getCentroids());
-						}
-					}
 					auto global_ranges = geometry->getRanges(g_specification.flags.partials, g_specification.error);
 					if (!global_ranges.empty()) {
 						if (global_terms) {
@@ -5627,17 +5621,16 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 							merge_geospatial_values(map_values[g_specification.slot], std::move(global_ranges), geometry->getCentroids());
 						}
 					}
-				}
-			} else if (field_terms || field_values) {
-				auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
-				if (!ranges.empty()) {
-					if (field_terms) {
-						auto ser_value = Serialise::ranges_hash(ranges);
-						index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-						GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
-					}
-					if (field_values) {
-						merge_geospatial_values(map_values[specification.slot], ranges, geometry->getCentroids());
+					auto field_ranges = geometry->getRanges(specification.flags.partials, specification.error);
+					if (!field_ranges.empty()) {
+						if (field_terms) {
+							auto ser_value = Serialise::ranges_hash(field_ranges);
+							index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+							GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, field_ranges);
+						}
+						if (field_values) {
+							merge_geospatial_values(map_values[specification.slot], std::move(field_ranges), geometry->getCentroids());
+						}
 					}
 				}
 			} else if (global_terms || global_values) {
@@ -5652,6 +5645,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 						merge_geospatial_values(map_values[g_specification.slot], std::move(ranges), geometry->getCentroids());
 					}
 				}
+			} else if (field_terms || field_values) {
+				auto ranges = geometry->getRanges(specification.flags.partials, specification.error);
+				if (!ranges.empty()) {
+					if (field_terms) {
+						auto ser_value = Serialise::ranges_hash(ranges);
+						index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+						GenerateTerms::geo(doc, specification.accuracy, specification.acc_prefix, ranges);
+					}
+					if (field_values) {
+						merge_geospatial_values(map_values[specification.slot], std::move(ranges), geometry->getCentroids());
+					}
+				}
 			}
 			return;
 		}
@@ -5659,13 +5664,6 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::keyword: {
 			if (value.is_string()) {
 				auto ser_value = value.str();
-				if (field_terms) {
-					if (specification.flags.bool_term) {
-						index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-					} else {
-						index_term(doc, prefixed(strings::lower(ser_value), specification.prefix.field, specification.get_ctype()), specification, pos);
-					}
-				}
 				if (global_terms) {
 					if (g_specification.flags.bool_term) {
 						index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
@@ -5673,11 +5671,18 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 						index_term(doc, prefixed(strings::lower(ser_value), g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 					}
 				}
-				if (field_values) {
-					map_values[specification.slot].insert(ser_value);
+				if (field_terms) {
+					if (specification.flags.bool_term) {
+						index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
+					} else {
+						index_term(doc, prefixed(strings::lower(ser_value), specification.prefix.field, specification.get_ctype()), specification, pos);
+					}
 				}
 				if (global_values) {
-					map_values[g_specification.slot].insert(std::move(ser_value));
+					map_values[g_specification.slot].insert(ser_value);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(std::move(ser_value));
 				}
 				return;
 			} else {
@@ -5689,16 +5694,6 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::text: {
 			if (value.is_string()) {
 				auto ser_value = value.str();
-				if (field_terms) {
-					GenerateTerms::text(doc,
-						specification.prefix.field + specification.get_ctype(), ser_value,
-						specification.positions[getPos(pos, specification.positions.size())],
-						specification.flags.bool_term ? 0 : specification.weight[getPos(pos, specification.weight.size())],
-						specification.flags.cjk_ngram, specification.flags.cjk_words,
-						specification.language, specification.stem_language,
-						getGeneratorStopStrategy(specification.stop_strategy),
-						getGeneratorStemStrategy(specification.stem_strategy));
-				}
 				if (global_terms) {
 					GenerateTerms::text(doc,
 						g_specification.prefix.field + g_specification.get_ctype(), ser_value,
@@ -5709,13 +5704,23 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 						getGeneratorStopStrategy(g_specification.stop_strategy),
 						getGeneratorStemStrategy(g_specification.stem_strategy));
 				}
+				if (field_terms) {
+					GenerateTerms::text(doc,
+						specification.prefix.field + specification.get_ctype(), ser_value,
+						specification.positions[getPos(pos, specification.positions.size())],
+						specification.flags.bool_term ? 0 : specification.weight[getPos(pos, specification.weight.size())],
+						specification.flags.cjk_ngram, specification.flags.cjk_words,
+						specification.language, specification.stem_language,
+						getGeneratorStopStrategy(specification.stop_strategy),
+						getGeneratorStemStrategy(specification.stem_strategy));
+				}
 				if (ser_value.size() <= 100) {
 					// For text and string, only add relatively short values
-					if (field_values) {
-						map_values[specification.slot].insert(ser_value);
-					}
 					if (global_values) {
-						map_values[g_specification.slot].insert(std::move(ser_value));
+						map_values[g_specification.slot].insert(ser_value);
+					}
+					if (field_values) {
+						map_values[specification.slot].insert(std::move(ser_value));
 					}
 				}
 				return;
@@ -5726,17 +5731,17 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 
 		case FieldType::boolean: {
 			auto ser_value = Serialise::MsgPack(specification, value);
-			if (field_terms) {
-				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-			}
 			if (global_terms) {
 				index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 			}
-			if (field_values) {
-				map_values[specification.slot].insert(ser_value);
+			if (field_terms) {
+				index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 			}
 			if (global_values) {
-				map_values[g_specification.slot].insert(std::move(ser_value));
+				map_values[g_specification.slot].insert(ser_value);
+			}
+			if (field_values) {
+				map_values[specification.slot].insert(std::move(ser_value));
 			}
 			return;
 		}
@@ -5744,17 +5749,17 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 		case FieldType::uuid: {
 			if (value.is_string()) {
 				auto ser_value = Serialise::uuid(value.str_view());
-				if (field_terms) {
-					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
-				}
 				if (global_terms) {
 					index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
 				}
-				if (field_values) {
-					map_values[specification.slot].insert(ser_value);
+				if (field_terms) {
+					index_term(doc, prefixed(ser_value, specification.prefix.field, specification.get_ctype()), specification, pos);
 				}
 				if (global_values) {
-					map_values[g_specification.slot].insert(std::move(ser_value));
+					map_values[g_specification.slot].insert(ser_value);
+				}
+				if (field_values) {
+					map_values[specification.slot].insert(std::move(ser_value));
 				}
 				return;
 			} else {
