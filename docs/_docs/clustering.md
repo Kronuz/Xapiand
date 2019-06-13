@@ -20,8 +20,8 @@ need to care about it.
 ## What is a Cluster?
 
 A node is a running instance of Xapiand, while a cluster consists of one or
-more nodes in the same cluster (with the same cluster name) that are working
-together to share their data and workload.
+more nodes running under the same _cluster name_ that are working together to
+share their data and workload.
 
 One node in the cluster is elected to be the master node, which is in charge of
 managing cluster-wide changes like creating or deleting an index, or adding or
