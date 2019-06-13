@@ -687,4 +687,70 @@ pm.test("Value is valid", function() {
 ---
 description: Info Namespace Numeric Type
 ---
+
+```json
+SEARCH /test/namespace/types/integer/
+
+{
+  "_query": {
+    "style.clothing.footwear": 456
+  }
+}
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+  pm.expect(jsonData.hits[0]._id).to.eql('doc');
+  pm.expect(jsonData.hits[0]).to.have.property('style');
+});
+```
+
+---
+description: Search Namespace Numeric type
+---
+
+
+```json
+SEARCH /test/namespace/types/integer/
+
+{
+  "_query": {
+    "style.clothing.footwear": {
+      "_in": {
+        "_range": {
+          "_from": 450,
+          "_to": 460
+        }
+      }
+    }
+  }
+}
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.total).to.equal(1);
+  pm.expect(jsonData.hits[0]._id).to.eql('doc');
+  pm.expect(jsonData.hits[0]).to.have.property('style');
+});
+```
+
+---
+description: Search Namespace Numeric type by Range
+---
 {% endcomment %}
