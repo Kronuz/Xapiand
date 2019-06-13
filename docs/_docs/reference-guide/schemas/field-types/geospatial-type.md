@@ -211,7 +211,7 @@ Here are some tips for formatting your coordinates so they work:
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 DMS, DMM and DD text formats  haven't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 For example, the following example indexes a point using an array of
 `[ longitude, latitude ]`:

@@ -6,7 +6,7 @@ short_title: Open/Close APIs
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 The _Open / Close Index APIs_ allow to close an index, and later on opening it.
 A closed index has almost _no overhead_ on the cluster, and is blocked for

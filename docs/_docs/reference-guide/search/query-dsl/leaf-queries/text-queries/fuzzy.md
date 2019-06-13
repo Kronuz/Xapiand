@@ -54,7 +54,7 @@ Edit distance defaults to 2, so `"banna~"` and `"banna~2"` are equivalent.
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 QueryDSL parameters are not implemented yet.
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 The following parameters are accepted by _Boolean_ fields:
 

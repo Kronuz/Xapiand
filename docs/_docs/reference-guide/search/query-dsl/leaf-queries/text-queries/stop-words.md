@@ -53,7 +53,7 @@ The above example is equivalent to:
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 {% capture req %}
 

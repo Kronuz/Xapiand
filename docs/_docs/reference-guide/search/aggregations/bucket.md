@@ -37,7 +37,7 @@ Available bucket aggregations:
 {: .note .unimplemented }
 **_Unimplemented Features!_**<br>
 Some features haven't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 
 ## Structuring
@@ -205,7 +205,7 @@ SEARCH /bank/
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 It is also possible to order the buckets based on a "deeper" aggregation in the
 hierarchy. This is supported as long as the aggregations path are of a
@@ -366,7 +366,7 @@ or more. Default value is 1.
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 It is possible to filter the values for which buckets will be created. This can
 be done using the include and exclude parameters which are based on regular
@@ -379,7 +379,7 @@ filter using partition expressions.
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 Deferring calculation of child aggregations
 
@@ -395,7 +395,7 @@ In some scenarios this can be very wasteful and can hit memory constraints.
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 The `_missing` parameter defines how documents that are missing a value should
 be treated. By default they will be ignored but it is also possible to treat

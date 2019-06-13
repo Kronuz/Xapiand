@@ -40,7 +40,7 @@ Available metrics aggregations:
 {: .note .unimplemented }
 **_Unimplemented Features!_**<br>
 Some features haven't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 
 ## Structuring

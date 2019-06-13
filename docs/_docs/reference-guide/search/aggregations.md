@@ -90,7 +90,7 @@ field will define the _field_ on which the average will be calculated).
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 At the same level of the aggregation type definition, one can optionally
 associate a piece of metadata with individual aggregations at request time
@@ -116,7 +116,7 @@ set using the field key for the aggregations.
 {: .note .unimplemented }
 **_Unimplemented Feature!_**<br>
 This feature hasn't yet been implemented...
-[Pull requests are welcome!]({{ site.repository }}/pulls)
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 Xapiand uses the type of the field in the schema in order to figure out
 how to run the aggregation and format the response. However there are two cases
