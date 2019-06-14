@@ -127,8 +127,8 @@ be retrieved from a primary shard or from any of its replicas.
 # Scaling Out
 
 {: .note .unimplemented }
-**_Unimplemented Nodes Reallocation!_**<br>
-Node reallocation during _scaling out_ is not yet implemented.
+**_Unimplemented Feature!_**<br>
+Node reorganization during _scaling out_ is not yet implemented.
 <br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
 
 If we start a third node, our cluster reorganizes itself to look like
@@ -194,16 +194,20 @@ nodes elected a new master: `Node 2`.
 Primary shards `P1` and `P2` were lost when we killed `Node 1`, and our index
 cannot function properly if it is missing primary shards.
 
+{: .note .unimplemented }
+**_Unimplemented Feature!_**<br>
+Promoting a _replica shard_ to a _primary shard_ is not yet implemented.
+<br>[Pull requests are welcome!]({{ site.repository }}/pulls){:target="_blank"}
+
 Fortunately, a complete copy of the two lost primary shards exists on other
 nodes, so the first thing that the new master node did was to promote the
-replicas of these shards on `Node 2` and `Node 3` to be primaries. This
-promotion process is instantaneous, like the flick of a switch.
+replicas of these shards on `Node 2` and `Node 3` to be primaries.
 
 If we restart `Node 1`, The **cluster after restarting node one** would be able
 to allocate the missing replica shards:
 
 ![Cluster after restarting node one]({{ '/assets/cluster7.png' | absolute_url }})
 
-If `Node 1` still had copies of the old shards, it would try to reuse them,
+If `Node 1` still has copies of the old shards, it will try to reuse them,
 copying over from the primary shard only the missing parts that have changed in
 the meantime.
