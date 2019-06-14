@@ -95,6 +95,7 @@
 #endif
 
 #define L_MANAGER L_NOTHING
+#define L_SHARDS L_NOTHING
 
 
 // #undef L_DEBUG
@@ -103,6 +104,8 @@
 // #define L_CALL L_STACKED_DIM_GREY
 // #undef L_MANAGER
 // #define L_MANAGER L_DARK_CYAN
+// #undef L_SHARDS
+// #define L_SHARDS L_DARK_SLATE_BLUE
 
 
 #define NODE_LABEL "node"
@@ -1445,21 +1448,58 @@ XapiandManager::load_nodes()
 #endif
 
 
-std::vector<std::vector<std::string>>
-calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, size_t num_replicas_plus_master)
+struct NodeSettings {
+	size_t num_shards;
+	size_t num_replicas_plus_master;
+	std::vector<std::vector<std::string>> shards;
+
+	NodeSettings() : num_shards(0), num_replicas_plus_master(0) { }
+
+	NodeSettings(size_t num_shards, size_t num_replicas_plus_master, const std::vector<std::vector<std::string>>& shards) :
+		num_shards(num_shards),
+		num_replicas_plus_master(num_replicas_plus_master),
+		shards(shards) { }
+};
+
+
+void
+settle_replicas(std::vector<std::vector<std::string>>& shards, size_t indexed_nodes, size_t num_replicas_plus_master)
 {
-	L_CALL("calculate_shards({}, {}, {}, {})", routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
+	L_CALL("settle_replicas(<shards>, {}, {})", indexed_nodes, num_replicas_plus_master);
+
+	if (num_replicas_plus_master > indexed_nodes) {
+		num_replicas_plus_master = indexed_nodes;
+	}
+	for (auto& replicas : shards) {
+		assert(!replicas.empty());
+		auto n = replicas.size();
+		auto node = Node::get_node(replicas[n - 1]);
+		assert(node);
+		size_t idx = node->idx;
+		for (; n < num_replicas_plus_master; ++n) {
+			idx = (idx % indexed_nodes) + 1;
+			node = Node::get_node(idx);
+			assert(node);
+			replicas.push_back(node->name());
+		}
+		replicas.resize(num_replicas_plus_master);
+	}
+}
+
+
+std::vector<std::vector<std::string>>
+calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards)
+{
+	L_CALL("calculate_shards({}, {}, {})", routing_key, indexed_nodes, num_shards);
 
 	std::vector<std::vector<std::string>> shards;
 	if (indexed_nodes) {
 		for (size_t s = 0; s < num_shards; ++s) {
 			std::vector<std::string> replicas;
-			for (size_t r = 0; r < num_replicas_plus_master; ++r) {
-				size_t idx = ((routing_key - s + r) % indexed_nodes) + 1;
-				auto node = Node::get_node(idx);
-				assert(node);
-				replicas.push_back(node->name());
-			}
+			size_t idx = ((routing_key - s) % indexed_nodes) + 1;
+			auto node = Node::get_node(idx);
+			assert(node);
+			replicas.push_back(node->name());
 			shards.push_back(std::move(replicas));
 		}
 	}
@@ -1468,11 +1508,11 @@ calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards, si
 
 
 void
-index_replicas(const std::string& normalized_path, const std::vector<std::string>& replicas)
+index_replicas(const std::string& normalized_path, size_t num_replicas_plus_master, const std::vector<std::string>& shards)
 {
-	L_CALL("index_replicas(<replicas>)");
+	L_CALL("index_replicas(<shards>)");
 
-	auto idx = replicas.front();  // The very first node is the shard master
+	auto idx = shards.front();  // The very first node is the master shard
 	auto node = Node::get_node(idx);
 	if (node && node->is_active()) {
 		Endpoint endpoint(strings::format(".xapiand/indices/.__{}", node->idx), node);
@@ -1482,19 +1522,19 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 				{ RESERVED_STORE, false },
 				{ RESERVED_TYPE,  KEYWORD_STR },
 			} },
-			{ "number_of_shards", {
-				{ RESERVED_INDEX, "none" },
-				{ RESERVED_TYPE,  "positive" },
-			} },
+			// { "number_of_shards", {
+			// 	{ RESERVED_INDEX, "none" },
+			// 	{ RESERVED_TYPE,  "positive" },
+			// } },
 			{ "number_of_replicas", {
 				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "positive" },
-				{ RESERVED_VALUE, replicas.size() - 1 },
+				{ RESERVED_VALUE, num_replicas_plus_master - 1 },
 			} },
-			{ "replicas", {
+			{ "shards", {
 				{ RESERVED_INDEX, "none" },
 				{ RESERVED_TYPE,  "array/string" },
-				{ RESERVED_VALUE, replicas },
+				{ RESERVED_VALUE, shards },
 			} },
 			{ RESERVED_IGNORE, "schema" },
 		}, false, msgpack_type);
@@ -1503,15 +1543,16 @@ index_replicas(const std::string& normalized_path, const std::vector<std::string
 
 
 void
-index_shards(const std::string& normalized_path, const std::vector<std::vector<std::string>>& shards)
+index_settings(const std::string& normalized_path, const NodeSettings& node_settings)
 {
-	L_CALL("index_shards(<shards>)");
+	L_CALL("index_settings(<node_settings>)");
 
-	auto n_shards = shards.size();
-	if (n_shards == 1) {
-		index_replicas(normalized_path, shards.front());
-	} else if (n_shards != 0) {
-		auto& replicas = shards.front();
+	assert(node_settings.shards.size() == node_settings.num_shards);
+
+	if (node_settings.num_shards == 1) {
+		index_replicas(normalized_path, node_settings.num_replicas_plus_master, node_settings.shards.front());
+	} else if (node_settings.num_shards != 0) {
+		auto& replicas = node_settings.shards.front();
 		if (!replicas.empty()) {
 			auto& main_master_name = replicas.front();  // The very first node is the main master
 			auto node = Node::get_node(main_master_name);
@@ -1526,26 +1567,26 @@ index_shards(const std::string& normalized_path, const std::vector<std::vector<s
 					{ "number_of_shards", {
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_VALUE, n_shards },
+						{ RESERVED_VALUE, node_settings.num_shards },
 					} },
 					{ "number_of_replicas", {
 						{ RESERVED_INDEX, "none" },
 						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_VALUE, replicas.size() - 1 },
+						{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
 					} },
-					{ "replicas", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  "array/string" },
-					} },
+					// { "shards", {
+					// 	{ RESERVED_INDEX, "none" },
+					// 	{ RESERVED_TYPE,  "array/string" },
+					// } },
 					{ RESERVED_IGNORE, "schema" },
 				}, false, msgpack_type);
 			}
 		}
 		size_t shard_num = 0;
-		for (auto& shard_replicas : shards) {
+		for (auto& shard_replicas : node_settings.shards) {
 			if (!shard_replicas.empty()) {
 				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-				index_replicas(shard_normalized_path, shard_replicas);
+				index_replicas(shard_normalized_path, node_settings.num_replicas_plus_master, shard_replicas);
 			}
 		}
 	}
@@ -1563,7 +1604,7 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 		DatabaseHandler db_handler(index_endpoints);
 		auto document = db_handler.get_document(normalized_path);
 		auto obj = document.get_obj();
-		auto it = obj.find("replicas");
+		auto it = obj.find("shards");
 		if (it != obj.end()) {
 			auto& replicas_val = it.value();
 			if (replicas_val.is_array()) {
@@ -1583,12 +1624,10 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 }
 
 
-std::vector<std::vector<std::string>>
-load_shards(const std::string& normalized_path)
+NodeSettings
+load_settings(const std::string& normalized_path)
 {
-	L_CALL("load_shards({})", repr(normalized_path));
-
-	std::vector<std::vector<std::string>> shards;
+	L_CALL("load_settings(<index_endpoints>, {})", repr(normalized_path));
 
 	auto nodes = Node::nodes();
 	assert(!nodes.empty());
@@ -1601,6 +1640,8 @@ load_shards(const std::string& normalized_path)
 	}
 	assert(!index_endpoints.empty());
 
+	NodeSettings settings;
+
 	try {
 		DatabaseHandler db_handler(index_endpoints);
 		auto document = db_handler.get_document(normalized_path);
@@ -1609,15 +1650,15 @@ load_shards(const std::string& normalized_path)
 		if (it != obj.end()) {
 			auto& n_shards_val = it.value();
 			if (n_shards_val.is_number()) {
-				size_t n_shards = n_shards_val.u64();
-				for (size_t shard_num = 1; shard_num <= n_shards; ++shard_num) {
+				settings.num_shards = n_shards_val.u64();
+				for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
 					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
-					shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
+					settings.shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
 				}
 			}
 		} else {
 			std::vector<std::string> replicas;
-			it = obj.find("replicas");
+			it = obj.find("shards");
 			if (it != obj.end()) {
 				auto& replicas_val = it.value();
 				if (replicas_val.is_array()) {
@@ -1630,7 +1671,17 @@ load_shards(const std::string& normalized_path)
 					}
 				}
 			}
-			shards.push_back(std::move(replicas));
+			settings.shards.push_back(std::move(replicas));
+		}
+		if (!settings.shards.empty()) {
+			settings.num_replicas_plus_master = settings.shards.front().size();
+		}
+		it = obj.find("number_of_replicas");
+		if (it != obj.end()) {
+			auto& n_replicas_val = it.value();
+			if (n_replicas_val.is_number()) {
+				settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
+			}
 		}
 	} catch (const Xapian::DocNotFoundError&) {
 	} catch (const Xapian::DatabaseNotFoundError&) {
@@ -1638,7 +1689,7 @@ load_shards(const std::string& normalized_path)
 		L_EXC("Cannot load database index settings: {}", normalized_path);
 	}
 
-	return shards;
+	return settings;
 }
 
 
@@ -1723,24 +1774,25 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 	}
 
 	static std::mutex resolve_index_lru_mtx;
-	static lru::lru<std::string, std::vector<std::vector<std::string>>> resolve_index_lru(opts.resolver_cache_size);
+	static lru::lru<std::string, NodeSettings> resolve_index_lru(opts.resolver_cache_size);
 
-	std::vector<std::vector<std::string>> shards;
+	NodeSettings node_settings;
 
 	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 	auto it = resolve_index_lru.find(normalized_path);
 	if (it != resolve_index_lru.end()) {
-		shards = it->second;
+		node_settings = it->second;
 		lk.unlock();
-		nodes = shards_to_nodes(shards);
+		nodes = shards_to_nodes(node_settings.shards);
+		L_SHARDS("Node settings for {} loaded from LRU", normalized_path);
 	} else {
 		lk.unlock();
-		shards = load_shards(normalized_path);
-		if (!shards.empty()) {
-			nodes = shards_to_nodes(shards);
+		node_settings = load_settings(normalized_path);
+		if (!node_settings.shards.empty()) {
+			nodes = shards_to_nodes(node_settings.shards);
 			lk.lock();
 			size_t shard_num = 0;
-			for (auto& replicas : shards) {
+			for (auto& replicas : node_settings.shards) {
 				if (replicas.empty()) {
 					nodes.clear();  // There were missing replicas, abort!
 					break;
@@ -1748,86 +1800,40 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
 				std::vector<std::vector<std::string>> shard_shards;
 				shard_shards.push_back(replicas);
-				resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
+				resolve_index_lru[shard_normalized_path] = NodeSettings(
+					1,
+					node_settings.num_replicas_plus_master,
+					shard_shards);
 			}
 			if (!nodes.empty()) {
-				resolve_index_lru.insert(std::make_pair(normalized_path, shards));
+				resolve_index_lru[normalized_path] = NodeSettings(
+					node_settings.num_shards,
+					node_settings.num_replicas_plus_master,
+					node_settings.shards);
 			}
 			lk.unlock();
+			L_SHARDS("Node settings for {} loaded", normalized_path);
+		} else {
+			node_settings.num_shards = opts.num_shards;
+			node_settings.num_replicas_plus_master = opts.num_replicas + 1;
+			L_SHARDS("Node settings for {} initialized", normalized_path);
 		}
 	}
 
-	if (nodes.empty()) {
-		auto indexed_nodes = Node::indexed_nodes();
-		if (!indexed_nodes) {
-			return nodes;
-		}
+	auto indexed_nodes = Node::indexed_nodes();
+	assert(indexed_nodes);
 
-		auto num_shards = opts.num_shards;
-		auto num_replicas_plus_master = opts.num_replicas + 1;
+	if (settings && settings->is_map()) {
+		auto num_shards = node_settings.num_shards;
+		auto num_replicas_plus_master = node_settings.num_replicas_plus_master;
 
-		if (settings && settings->is_map()) {
-			auto num_shards_it = settings->find("number_of_shards");
-			if (num_shards_it != settings->end()) {
-				auto& num_shards_val = num_shards_it.value();
-				if (num_shards_val.is_number()) {
-					num_shards = num_shards_val.u64();
-				}
-			}
-
-			auto num_replicas_it = settings->find("number_of_replicas");
-			if (num_replicas_it != settings->end()) {
-				auto& num_replicas_val = num_replicas_it.value();
-				if (num_replicas_val.is_number()) {
-					num_replicas_plus_master = num_replicas_val.u64() + 1;
-				}
-			}
-		}
-
-		// Some validations:
-		if (num_shards > 9999UL) {
-			num_shards = 9999UL;
-		}
-		if (num_replicas_plus_master > indexed_nodes) {
-			num_replicas_plus_master = indexed_nodes;
-		}
-
-		size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
-
-		shards = calculate_shards(routing_key, indexed_nodes, num_shards, num_replicas_plus_master);
-		assert(!shards.empty());
-
-		if (writable) {
-			try {
-				index_shards(normalized_path, shards);
-			} catch (...) {
-				L_EXC("Cannot save database index settings: {}", normalized_path);
-			}
-		}
-
-		nodes = shards_to_nodes(shards);
-
-		lk.lock();
-		size_t shard_num = 0;
-		for (auto& replicas : shards) {
-			assert(!replicas.empty());
-			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-			std::vector<std::vector<std::string>> shard_shards;
-			shard_shards.push_back(replicas);
-			resolve_index_lru.insert(std::make_pair(shard_normalized_path, shard_shards));
-		}
-		if (!nodes.empty()) {
-			resolve_index_lru.insert(std::make_pair(normalized_path, shards));
-		}
-		lk.unlock();
-	} else if (settings && settings->is_map()) {
 		auto num_shards_it = settings->find("number_of_shards");
 		if (num_shards_it != settings->end()) {
 			auto& num_shards_val = num_shards_it.value();
 			if (num_shards_val.is_number()) {
-				size_t num_shards = num_shards_val.u64();
-				if (nodes.size() != num_shards) {
-					THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+				num_shards = num_shards_val.u64();
+				if (num_shards == 0 || num_shards > 9999UL) {
+					THROW(ClientError, "Invalid 'number_of_shards' setting.");
 				}
 			}
 		}
@@ -1836,12 +1842,65 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		if (num_replicas_it != settings->end()) {
 			auto& num_replicas_val = num_replicas_it.value();
 			if (num_replicas_val.is_number()) {
-				size_t num_replicas_plus_master = num_replicas_val.u64() + 1;
-				if (nodes.front().size() != num_replicas_plus_master) {
-					THROW(ClientError, "It is not allowed to change 'number_of_replicas' setting.");
+				num_replicas_plus_master = num_replicas_val.u64() + 1;
+				if (num_replicas_plus_master == 0 || num_replicas_plus_master > 9999UL) {
+					THROW(ClientError, "Invalid 'number_of_replicas' setting.");
 				}
 			}
 		}
+
+		if (!nodes.empty()) {
+			if (num_shards != node_settings.num_shards) {
+				THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+			}
+			if (num_replicas_plus_master != node_settings.num_replicas_plus_master) {
+				nodes.clear();
+			}
+		}
+
+		node_settings.num_replicas_plus_master = num_replicas_plus_master;
+		node_settings.num_shards = num_shards;
+	}
+
+	if (nodes.empty()) {
+		L_SHARDS("    Configuring {} replicas for {} shards", node_settings.num_replicas_plus_master - 1, node_settings.num_shards);
+
+		if (node_settings.shards.empty()) {
+			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
+			node_settings.shards = calculate_shards(routing_key, indexed_nodes, node_settings.num_shards);
+			assert(!node_settings.shards.empty());
+		}
+		settle_replicas(node_settings.shards, indexed_nodes, node_settings.num_replicas_plus_master);
+
+		if (writable) {
+			try {
+				index_settings(normalized_path, node_settings);
+			} catch (...) {
+				L_EXC("Cannot save database index settings: {}", normalized_path);
+			}
+		}
+
+		nodes = shards_to_nodes(node_settings.shards);
+
+		lk.lock();
+		size_t shard_num = 0;
+		for (auto& replicas : node_settings.shards) {
+			assert(!replicas.empty());
+			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
+			std::vector<std::vector<std::string>> shard_shards;
+			shard_shards.push_back(replicas);
+			resolve_index_lru[shard_normalized_path] = NodeSettings(
+				1,
+				node_settings.num_replicas_plus_master,
+				shard_shards);
+		}
+		if (!nodes.empty()) {
+			resolve_index_lru[normalized_path] = NodeSettings(
+				node_settings.num_shards,
+				node_settings.num_replicas_plus_master,
+				node_settings.shards);
+		}
+		lk.unlock();
 	}
 
 	return nodes;
