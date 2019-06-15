@@ -1471,18 +1471,30 @@ settle_replicas(std::vector<std::vector<std::string>>& shards, size_t indexed_no
 		num_replicas_plus_master = indexed_nodes;
 	}
 	for (auto& replicas : shards) {
-		assert(!replicas.empty());
-		auto n = replicas.size();
-		auto node = Node::get_node(replicas[n - 1]);
-		assert(node);
-		size_t idx = node->idx;
-		for (; n < num_replicas_plus_master; ++n) {
-			idx = (idx % indexed_nodes) + 1;
-			node = Node::get_node(idx);
+		auto replicas_size = replicas.size();
+		assert(replicas_size);
+		if (replicas_size < num_replicas_plus_master) {
+			std::unordered_set<size_t> used;
+			for (size_t i = 0; i < replicas.size(); ++i) {
+				auto node = Node::get_node(replicas[i]);
+				assert(node);
+				size_t idx = node->idx;
+				used.insert(idx);
+			}
+			auto node = Node::get_node(replicas.front());
 			assert(node);
-			replicas.push_back(node->name());
+			size_t idx = node->idx;
+			for (auto n = replicas_size; n < num_replicas_plus_master; ++n) {
+				do {
+					idx = (idx % indexed_nodes) + 1;
+				} while (used.count(idx));
+				node = Node::get_node(idx);
+				assert(node);
+				replicas.push_back(node->name());
+			}
+		} else {
+			replicas.resize(num_replicas_plus_master);
 		}
-		replicas.resize(num_replicas_plus_master);
 	}
 }
 
