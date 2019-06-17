@@ -202,7 +202,7 @@ private:
 	void node_added(size_t idx, std::string_view name);
 #endif
 
-	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, bool primary, const MsgPack* settings);
+	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, bool reload);
 	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings);
 
 	std::string server_metrics_impl();
@@ -244,7 +244,7 @@ public:
 
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
 		assert(_manager);
-		return _manager->resolve_index_nodes_impl(normalized_path, writable, primary, settings);
+		return _manager->resolve_index_nodes_impl(normalized_path, writable, primary, settings, false);
 	}
 
 	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
