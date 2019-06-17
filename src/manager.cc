@@ -1699,7 +1699,7 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 
 
 std::vector<std::string>
-load_replicas(const MsgPack& obj)
+load_replicas(const Endpoint& endpoint, const MsgPack& obj)
 {
 	L_CALL("load_replicas(<obj>)");
 
@@ -1708,14 +1708,14 @@ load_replicas(const MsgPack& obj)
 	auto it = obj.find("shards");
 	if (it != obj.end()) {
 		auto& replicas_val = it.value();
-		if (replicas_val.is_array()) {
-			for (auto& node_name_val : replicas_val) {
-				if (!node_name_val.is_string()) {
-					replicas.clear();
-					break;
-				}
-				replicas.push_back(node_name_val.str());
+		if (!replicas_val.is_array()) {
+			THROW(Error, "Inconsistency in 'shards' configured for {}: Invalid array", repr(endpoint.to_string()));
+		}
+		for (auto& node_name_val : replicas_val) {
+			if (!node_name_val.is_string()) {
+				THROW(Error, "Inconsistency in 'shards' configured for {}: Invalid node name", repr(endpoint.to_string()));
 			}
+			replicas.push_back(node_name_val.str());
 		}
 	}
 
@@ -1744,33 +1744,35 @@ load_settings(const std::string& normalized_path)
 		auto it = obj.find("number_of_replicas");
 		if (it != obj.end()) {
 			auto& n_replicas_val = it.value();
-			if (n_replicas_val.is_number()) {
-				settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
+			if (!n_replicas_val.is_number()) {
+				THROW(Error, "Inconsistency in 'number_of_replicas' configured for {}: Invalid number", repr(endpoint.to_string()));
 			}
+			settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
 		}
 
 		it = obj.find("number_of_shards");
 		if (it != obj.end()) {
 			auto& n_shards_val = it.value();
-			if (n_shards_val.is_number()) {
-				settings.num_shards = n_shards_val.u64();
-				size_t replicas_size = 0;
-				for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
-					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
-					auto replica_document = db_handler.get_document(shard_normalized_path);
-					auto replicas = load_replicas(replica_document.get_obj());
-					auto replicas_size_ = replicas.size();
-					if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
-						THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
-					}
-					replicas_size = replicas_size_;
-					settings.shards.push_back(std::move(replicas));
+			if (!n_shards_val.is_number()) {
+				THROW(Error, "Inconsistency in 'number_of_shards' configured for {}: Invalid number", repr(endpoint.to_string()));
+			}
+			settings.num_shards = n_shards_val.u64();
+			size_t replicas_size = 0;
+			for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
+				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
+				auto replica_document = db_handler.get_document(shard_normalized_path);
+				auto replicas = load_replicas(endpoint, replica_document.get_obj());
+				auto replicas_size_ = replicas.size();
+				if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
+					THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 				}
+				replicas_size = replicas_size_;
+				settings.shards.push_back(std::move(replicas));
 			}
 		}
 
 		if (!settings.num_shards) {
-			auto replicas = load_replicas(obj);
+			auto replicas = load_replicas(endpoint, obj);
 			auto replicas_size_ = replicas.size();
 			if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master) {
 				THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
