@@ -81,15 +81,16 @@ ENUM_CLASS(DiscoveryMessage, int,
 	CLUSTER_SNEER,                // Nodes telling the client they don't agree with the new node's name
 	CLUSTER_ENTER,                // Node enters the room
 	CLUSTER_BYE,                  // Node says goodbye
-	RAFT_HEARTBEAT,               // same as RAFT_APPEND_ENTRIES
-	RAFT_HEARTBEAT_RESPONSE,      // same as RAFT_APPEND_ENTRIES_RESPONSE
+	RAFT_HEARTBEAT,               // Same as RAFT_APPEND_ENTRIES
+	RAFT_HEARTBEAT_RESPONSE,      // Same as RAFT_APPEND_ENTRIES_RESPONSE
 	RAFT_APPEND_ENTRIES,          // Node saying hello when it become leader
 	RAFT_APPEND_ENTRIES_RESPONSE, // Request information from leader
 	RAFT_REQUEST_VOTE,            // Invoked by candidates to gather votes
 	RAFT_REQUEST_VOTE_RESPONSE,   // Gather votes
-	RAFT_ADD_COMMAND,             //
-	DB_UPDATED,                   //
-	SCHEMA_UPDATED,               //
+	RAFT_ADD_COMMAND,             // Tell the leader to add a command to the log
+	DB_UPDATED,                   // Database has been updated, trigger replication
+	SCHEMA_UPDATED,               // Schema has been updated, invalidate schema from LRU
+	PRIMARY_UPDATED,              // Primary node has been updated, invalidate index from LRU
 	MAX                           //
 )
 
@@ -154,6 +155,7 @@ private:
 	void raft_add_command(Message type, const std::string& message);
 	void db_updated(Message type, const std::string& message);
 	void schema_updated(Message type, const std::string& message);
+	void primary_updated(Message type, const std::string& message);
 
 	void cluster_discovery_cb(ev::timer& watcher, int revents);
 
@@ -198,6 +200,7 @@ public:
 	void raft_request_vote();
 	void db_updated_send(Xapian::rev revision, std::string_view path);
 	void schema_updated_send(Xapian::rev revision, std::string_view path);
+	void primary_updated_send(size_t shards, std::string_view path);
 
 	std::string __repr__() const override;
 
@@ -218,6 +221,14 @@ inline auto& schema_updater(bool create = true) {
 	static auto schema_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, schema_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
 	assert(!create || schema_updater);
 	return schema_updater;
+}
+
+void primary_updated_send(size_t shards, std::string path);
+
+inline auto& primary_updater(bool create = true) {
+	static auto primary_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("PU--", "PU{:02}", opts.num_discoverers, primary_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
+	assert(!create || primary_updater);
+	return primary_updater;
 }
 
 #endif

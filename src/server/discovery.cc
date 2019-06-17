@@ -308,6 +308,9 @@ Discovery::discovery_server(Message type, const std::string& message)
 		case Message::SCHEMA_UPDATED:
 			schema_updated(type, message);
 			return;
+		case Message::PRIMARY_UPDATED:
+			primary_updated(type, message);
+			return;
 		default: {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
@@ -1029,6 +1032,34 @@ Discovery::schema_updated([[maybe_unused]] Message type, const std::string& mess
 
 
 void
+Discovery::primary_updated([[maybe_unused]] Message type, const std::string& message)
+{
+	L_CALL("Discovery::primary_updated({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
+
+	if (XapiandManager::state() != XapiandManager::State::READY) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = Node::unserialise(&p, p_end);
+
+	auto local_node = Node::local_node();
+	if (Node::is_superset(local_node, remote_node)) {
+		// It's just me, do nothing!
+		return;
+	}
+
+	size_t shards = unserialise_length(&p, p_end);
+
+	auto path = std::string(p, p_end - p);
+
+	XapiandManager::sweep_primary(shards, path);
+}
+
+
+void
 Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 {
 	auto state = XapiandManager::state().load();
@@ -1396,7 +1427,7 @@ Discovery::raft_add_command(const std::string& command)
 void
 Discovery::_message_send(Message type, const std::string& message)
 {
-	assert(type == Message::DB_UPDATED || type == Message::SCHEMA_UPDATED);
+	assert(type == Message::DB_UPDATED || type == Message::SCHEMA_UPDATED || type == Message::PRIMARY_UPDATED);
 
 	auto local_node = Node::local_node();
 	send_message(type,
@@ -1472,6 +1503,20 @@ Discovery::schema_updated_send(Xapian::rev revision, std::string_view path)
 }
 
 
+void
+Discovery::primary_updated_send(size_t shards, std::string_view path)
+{
+	L_CALL("Discovery::primary_updated_send({}, {})", shards, repr(path));
+
+	auto message = serialise_length(shards);
+	message.append(path);
+
+	message_send_args.enqueue(std::make_pair(Message::PRIMARY_UPDATED, message));
+
+	message_send_async.send();
+}
+
+
 std::string
 Discovery::__repr__() const
 {
@@ -1504,6 +1549,12 @@ void
 schema_updated_send(Xapian::rev revision, std::string path)
 {
 	XapiandManager::discovery()->schema_updated_send(revision, path);
+}
+
+void
+primary_updated_send(size_t shards, std::string path)
+{
+	XapiandManager::discovery()->primary_updated_send(shards, path);
 }
 
 #endif

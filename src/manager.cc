@@ -904,6 +904,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	db_updater();
 	schema_updater();
+	primary_updater();
 	trigger_replication();
 #endif
 }
@@ -1232,8 +1233,23 @@ XapiandManager::join()
 		schema_updater_obj->finish();
 
 		L_MANAGER("Waiting for {} schema updater{}...", schema_updater_obj->running_size(), (schema_updater_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the schema updaters...", "Database updaters finished!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the schema updaters...", "Schema updaters finished!");
 		while (!schema_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	auto& primary_updater_obj = primary_updater(false);
+	if (primary_updater_obj) {
+		L_MANAGER("Finishing primary shard updater!");
+		primary_updater_obj->finish();
+
+		L_MANAGER("Waiting for {} primary shard updater{}...", primary_updater_obj->running_size(), (primary_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the primary shard updaters...", "Primary shard updaters finished!");
+		while (!primary_updater_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1532,6 +1548,21 @@ XapiandManager::node_added(size_t idx, std::string_view name)
 	}
 }
 
+
+void
+XapiandManager::sweep_primary_impl(size_t shards, const std::string& normalized_path)
+{
+	L_CALL("XapiandManager::sweep_primary_impl(<shards>, {})", repr(normalized_path));
+
+	if (shards > 1) {
+		for (size_t shard_num = 0; shard_num < shards; ++shard_num) {
+			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
+			resolve_index_nodes_impl(shard_normalized_path, false, false,  nullptr, false, true);
+		}
+	}
+	resolve_index_nodes_impl(normalized_path, false, false,  nullptr, false, true);
+}
+
 #endif
 
 
@@ -1617,11 +1648,15 @@ calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards)
 
 
 void
-update_primary(std::vector<std::vector<std::string>>& shards)
+update_primary(const std::string& normalized_path, std::vector<std::vector<std::string>>& shards)
 {
-	L_CALL("update_primary(<shards>)");
+	L_CALL("update_primary({}, <shards>)", repr(normalized_path));
 
+	bool updated = false;
+
+	size_t shard_num = 0;
 	for (auto& replicas : shards) {
+		++shard_num;
 		auto it_b = replicas.begin();
 		auto it_e = replicas.end();
 		auto it = it_b;
@@ -1633,9 +1668,25 @@ update_primary(std::vector<std::vector<std::string>>& shards)
 			}
 		}
 		if (it != it_b && it != it_e) {
+			auto from_node = Node::get_node(*it_b);
+			auto to_node = Node::get_node(*it);
+			auto path = shards.size() > 1 ? strings::format("{}/.__{}", normalized_path, shard_num) : normalized_path;
+			L_INFO("Primary shard {} moved from node {}{}" + INFO_COL + " to {}{}",
+				repr(path),
+				from_node->col().ansi(), from_node->name(),
+				to_node->col().ansi(), to_node->name());
 			std::swap(*it, *it_b);
+			updated = true;
 		}
 	}
+
+#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		if (updated) {
+			primary_updater()->debounce(normalized_path, shards.size(), normalized_path);
+		}
+	}
+#endif
 }
 
 
@@ -1850,9 +1901,9 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] bool primary, [[maybe_unused]] const MsgPack* settings, bool reload)
+XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] bool primary, [[maybe_unused]] const MsgPack* settings, bool reload, bool clear)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null");
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", reload, clear);
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
@@ -1889,7 +1940,11 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 
 	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
 	auto it = resolve_index_lru.find(normalized_path);
-	if (it != resolve_index_lru.end() && !reload) {
+	if (it != resolve_index_lru.end()) {
+		if (clear) {
+			resolve_index_lru.erase(it);
+			return nodes;
+		}
 		node_settings = it->second;
 		lk.unlock();
 		nodes = shards_to_nodes(node_settings.shards);
@@ -1971,7 +2026,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		node_settings.num_shards = num_shards;
 	}
 
-	if (nodes.empty()) {
+	if (nodes.empty() || reload) {
 		L_SHARDS("    Configuring {} replicas for {} shards", node_settings.num_replicas_plus_master - 1, node_settings.num_shards);
 
 		if (node_settings.shards.empty()) {
@@ -1983,7 +2038,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		settle_replicas(node_settings.shards, indexed_nodes, node_settings.num_replicas_plus_master);
 
 		if (writable) {
-			update_primary(node_settings.shards);
+			update_primary(normalized_path, node_settings.shards);
 			index_settings(normalized_path, node_settings);
 		}
 
@@ -2019,8 +2074,6 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 {
 	L_CALL("XapiandManager::resolve_index_endpoints_impl({}, {}, {}, {})", repr(endpoint.to_string()), writable, primary, settings ? settings->to_string() : "null");
 
-	Endpoints endpoints;
-
 	auto unsharded = unsharded_path(endpoint.path);
 	std::string unsharded_endpoint_path;
 	if (unsharded.second) {
@@ -2029,8 +2082,10 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 	auto& endpoint_path = unsharded.second ? unsharded_endpoint_path : endpoint.path;
 
 	bool reload = false;
-	do {
-		auto nodes = resolve_index_nodes_impl(endpoint_path, writable, primary, settings, reload);
+	while (true) {
+		Endpoints endpoints;
+
+		auto nodes = resolve_index_nodes_impl(endpoint_path, writable, primary, settings, reload, false);
 		bool retry = !reload;
 		reload = false;
 
@@ -2043,30 +2098,35 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 				for (const auto& node : shard_nodes) {
 					node_endpoint = Endpoint(path, node);
 					if (writable) {
-						L_MANAGER("Writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+						if (Node::is_active(node)) {
+							L_SHARDS("Active writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+							break;
+						}
 						reload = retry;
 						break;
 					} else {
 						if (Node::is_active(node)) {
-							L_MANAGER("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 							break;
 						}
 						if (primary) {
-							L_MANAGER("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 							break;
 						}
-						L_MANAGER("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+						L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
 					}
 				}
 				endpoints.add(node_endpoint);
-				if (unsharded.second) {
+				if (reload || unsharded.second) {
 					break;
 				}
 			}
 		}
-	} while (reload);
 
-	return endpoints;
+		if (!reload) {
+			return endpoints;
+		}
+	}
 }
 
 

@@ -101,8 +101,8 @@
 #define MAX_REPLICATORS               10
 #define MIN_REPLICATORS                1
 
-#define NUM_DISCOVERERS              0.5          // Number of threads handling the discoverers per CPU
-#define MAX_DISCOVERERS               10
+#define NUM_DISCOVERERS             0.25          // Number of threads handling the discoverers per CPU
+#define MAX_DISCOVERERS                5
 #define MIN_DISCOVERERS                1
 
 #define COMMITTER_THROTTLE_TIME                            0
