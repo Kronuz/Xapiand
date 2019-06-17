@@ -757,7 +757,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 						// apply raft_log[lastApplied] to state machine
 						if (raft_last_applied - 1 < 0 || raft_last_applied - 1 >= raft_log.size()) {
 							// FIXME: Remove this block once asserts() below get fixed!
-							L_ERR("leader_commit:{}, entry_index:{}, raft_commit_index:{}, raft_last_applied:{}, raft_log.size:{}",
+							L_ERR("Raft ERROR: leader_commit:{}, entry_index:{}, raft_commit_index:{}, raft_last_applied:{}, raft_log.size:{}",
 								leader_commit, entry_index, raft_commit_index, raft_last_applied, raft_log.size());
 						}
 						assert(raft_last_applied - 1 >= 0);
@@ -1236,6 +1236,11 @@ Discovery::_raft_commit_log()
 					// increment lastApplied,
 					++raft_last_applied;
 					// apply raft_log[lastApplied] to state machine
+					if (raft_last_applied - 1 < 0 || raft_last_applied - 1 >= raft_log.size()) {
+						// FIXME: Remove this block once asserts() below get fixed!
+						L_ERR("Raft ERROR: index:{}, raft_commit_index:{}, raft_last_applied:{}, raft_log.size:{}",
+							index, raft_commit_index, raft_last_applied, raft_log.size());
+					}
 					assert(raft_last_applied - 1 >= 0);
 					assert(raft_last_applied - 1 < raft_log.size());
 					const auto& command = raft_log[raft_last_applied - 1].command;
