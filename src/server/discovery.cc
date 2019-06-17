@@ -428,11 +428,6 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 		auto node = put.first;
 		L_DEBUG("Added node {}{}" + INFO_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 		if (put.second) {
-			if (XapiandManager::state() == XapiandManager::State::READY) {
-				// Replicate database from the other node
-				auto path = strings::format(".xapiand/indices/.__{}", node->idx);
-				trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), path, Endpoint(path, node), Endpoint(path));
-			}
 			L_INFO("Node {}{}" + INFO_COL + " joined the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
 			// L_DIM_GREY("{}", Node::dump_nodes());
 		}

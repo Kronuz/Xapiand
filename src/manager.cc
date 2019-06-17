@@ -750,19 +750,17 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			load_nodes();
 			set_cluster_database_ready_impl();
 		} else {
-			// Replicate cluster database from the leader
-			L_INFO("Synchronizing cluster database from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->to_string());
+			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->to_string());
 			_new_cluster = 2;
+			// Replicate cluster database from the leader
 			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
-		}
-
-		// Request updates from indexes databases
-		for (auto& node : Node::nodes()) {
-			if (node->idx && !node->is_local()) {
-				auto index = strings::format(".xapiand/indices/.__{}", node->idx);
-				Endpoint endpoint(index);
-				Endpoint remote_endpoint(index, node);
-				_replication->trigger_replication({remote_endpoint, endpoint, false});
+			// Request updates from indices database shards
+			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"});
+			assert(!endpoints.empty());
+			for (auto& endpoint : endpoints) {
+				Endpoint remote_endpoint{endpoint.path, leader_node};
+				Endpoint local_endpoint{endpoint.path};
+				_replication->trigger_replication({remote_endpoint, local_endpoint, false});
 			}
 		}
 	} else
@@ -1613,33 +1611,31 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 {
 	L_CALL("index_replicas(<shards>)");
 
-	auto idx = shards.front();  // The very first node is the master shard
-	auto node = Node::get_node(idx);
-	if (node && node->is_active()) {
-		Endpoint endpoint(strings::format(".xapiand/indices/.__{}", node->idx), node);
-		DatabaseHandler db_handler(Endpoints(endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
-		db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
-			{ ID_FIELD_NAME, {
-				{ RESERVED_STORE, false },
-				{ RESERVED_TYPE,  KEYWORD_STR },
-			} },
-			// { "number_of_shards", {
-			// 	{ RESERVED_INDEX, "none" },
-			// 	{ RESERVED_TYPE,  "positive" },
-			// } },
-			{ "number_of_replicas", {
-				{ RESERVED_INDEX, "none" },
-				{ RESERVED_TYPE,  "positive" },
-				{ RESERVED_VALUE, num_replicas_plus_master - 1 },
-			} },
-			{ "shards", {
-				{ RESERVED_INDEX, "none" },
-				{ RESERVED_TYPE,  "array/string" },
-				{ RESERVED_VALUE, shards },
-			} },
-			{ RESERVED_IGNORE, "schema" },
-		}, false, msgpack_type);
-	}
+	Endpoint endpoint(".xapiand/indices");
+	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+	assert(!endpoints.empty());
+	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
+		{ ID_FIELD_NAME, {
+			{ RESERVED_STORE, false },
+			{ RESERVED_TYPE,  KEYWORD_STR },
+		} },
+		// { "number_of_shards", {
+		// 	{ RESERVED_INDEX, "none" },
+		// 	{ RESERVED_TYPE,  "positive" },
+		// } },
+		{ "number_of_replicas", {
+			{ RESERVED_INDEX, "none" },
+			{ RESERVED_TYPE,  "positive" },
+			{ RESERVED_VALUE, num_replicas_plus_master - 1 },
+		} },
+		{ "shards", {
+			{ RESERVED_INDEX, "none" },
+			{ RESERVED_TYPE,  "array/string" },
+			{ RESERVED_VALUE, shards },
+		} },
+		{ RESERVED_IGNORE, "schema" },
+	}, false, msgpack_type);
 }
 
 
@@ -1655,33 +1651,31 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 	} else if (node_settings.num_shards != 0) {
 		auto& replicas = node_settings.shards.front();
 		if (!replicas.empty()) {
-			auto& main_master_name = replicas.front();  // The very first node is the main master
-			auto node = Node::get_node(main_master_name);
-			if (node && node->is_active()) {
-				Endpoint endpoint(strings::format(".xapiand/indices/.__{}", node->idx), node);
-				DatabaseHandler db_handler(Endpoints(endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
-				db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
-					{ ID_FIELD_NAME, {
-						{ RESERVED_STORE, false },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-					{ "number_of_shards", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_VALUE, node_settings.num_shards },
-					} },
-					{ "number_of_replicas", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  "positive" },
-						{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
-					} },
-					// { "shards", {
-					// 	{ RESERVED_INDEX, "none" },
-					// 	{ RESERVED_TYPE,  "array/string" },
-					// } },
-					{ RESERVED_IGNORE, "schema" },
-				}, false, msgpack_type);
-			}
+			Endpoint endpoint(".xapiand/indices");
+			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+			assert(!endpoints.empty());
+			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+			db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
+				{ ID_FIELD_NAME, {
+					{ RESERVED_STORE, false },
+					{ RESERVED_TYPE,  KEYWORD_STR },
+				} },
+				{ "number_of_shards", {
+					{ RESERVED_INDEX, "none" },
+					{ RESERVED_TYPE,  "positive" },
+					{ RESERVED_VALUE, node_settings.num_shards },
+				} },
+				{ "number_of_replicas", {
+					{ RESERVED_INDEX, "none" },
+					{ RESERVED_TYPE,  "positive" },
+					{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
+				} },
+				// { "shards", {
+				// 	{ RESERVED_INDEX, "none" },
+				// 	{ RESERVED_TYPE,  "array/string" },
+				// } },
+				{ RESERVED_IGNORE, "schema" },
+			}, false, msgpack_type);
 		}
 		size_t shard_num = 0;
 		for (auto& shard_replicas : node_settings.shards) {
@@ -1733,18 +1727,13 @@ load_settings(const std::string& normalized_path)
 	auto nodes = Node::nodes();
 	assert(!nodes.empty());
 
-	Endpoints index_endpoints;
-	for (auto& node : nodes) {
-		if (node->idx) {
-			index_endpoints.add(Endpoint(strings::format(".xapiand/indices/.__{}", node->idx)));
-		}
-	}
-	assert(!index_endpoints.empty());
-
 	NodeSettings settings;
 
 	try {
-		DatabaseHandler db_handler(index_endpoints);
+		Endpoint endpoint(".xapiand/indices");
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		assert(!endpoints.empty());
+		DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		auto document = db_handler.get_document(normalized_path);
 		auto obj = document.get_obj();
 		auto it = obj.find("number_of_shards");
@@ -1754,7 +1743,7 @@ load_settings(const std::string& normalized_path)
 				settings.num_shards = n_shards_val.u64();
 				for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
 					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
-					settings.shards.push_back(load_replicas(index_endpoints, shard_normalized_path));
+					settings.shards.push_back(load_replicas(endpoints, shard_normalized_path));
 				}
 			}
 		} else {
@@ -1838,40 +1827,30 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
-	if (normalized_path == ".xapiand/nodes") {
-		// Cluster database is always in the master
+	if (strings::startswith(normalized_path, ".xapiand/")) {
+		// Everything inside .xapiand has the primary shard inside
+		// the current leader and replicas everywhere.
+		if (settings && settings->is_map()) {
+			THROW(ClientError, "Cannot modify settings of cluster indices.");
+		}
+
+		// Primary databases in .xapiand are always in the master
 		std::vector<std::shared_ptr<const Node>> node_replicas;
 		node_replicas.push_back(Node::leader_node());
 		node_replicas.push_back(Node::local_node());
-		nodes.push_back(std::move(node_replicas));
-		return nodes;
-	}
 
-	if (normalized_path == ".xapiand/indices") {
-		for (auto& node : Node::nodes()) {
-			if (node->idx) {
-				std::vector<std::shared_ptr<const Node>> node_replicas;
-				node_replicas.push_back(node);
-				node_replicas.push_back(Node::local_node());
-				nodes.push_back(std::move(node_replicas));
+		if (normalized_path == ".xapiand/indices") {
+			// .xapiand/indices have the default number of shards
+			for (size_t i = 0; i < opts.num_shards; ++i) {
+				nodes.push_back(node_replicas);
 			}
+		} else {
+			// Everything else inside .xapiand has a single shard
+			// (.xapiand/nodes, .xapiand/indices/.__N, .xapiand/* etc.)
+			nodes.push_back(node_replicas);
 		}
-		return nodes;
-	}
 
-	if (strings::startswith(normalized_path, ".xapiand/indices/.__")) {
-		// Index databases are always in their specified node
-		std::vector<std::shared_ptr<const Node>> node_replicas;
-		int errno_save;
-		size_t idx = strict_stoull(&errno_save, normalized_path.substr(std::string_view(".xapiand/indices/.__").size()));
-		assert(errno_save == 0);
-		if (errno_save == 0) {
-			assert(idx > 0);
-			node_replicas.push_back(Node::get_node(idx));
-			node_replicas.push_back(Node::local_node());
-			nodes.push_back(std::move(node_replicas));
-			return nodes;
-		}
+		return nodes;
 	}
 
 	static std::mutex resolve_index_lru_mtx;
@@ -2024,9 +2003,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 
 	auto nodes = resolve_index_nodes_impl(endpoint_path, writable, settings);
 
-	int n_shards = endpoint_path == ".xapiand/indices"
-		? 0  // unknown number of shards for .xapiand/indices, always use .__ notation
-		: nodes.size();
+	int n_shards = nodes.size();
 	size_t shard_num = 0;
 	for (const auto& shard_nodes : nodes) {
 		auto path = n_shards == 1 ? endpoint_path : strings::format("{}/.__{}", endpoint_path, ++shard_num);
