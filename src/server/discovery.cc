@@ -515,7 +515,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		if (raft_voted_for.empty()) {
 			if (Node::is_local(node)) {
 				raft_voted_for = *node;
-				L_RAFT("I vote for {} (1)", raft_voted_for.to_string());
+				L_RAFT("I vote for {} (1)", repr(raft_voted_for.to_string()));
 			} else if (raft_role == Role::RAFT_FOLLOWER) {
 				uint64_t remote_last_log_term = unserialise_length(&p, p_end);
 				size_t remote_last_log_index = unserialise_length(&p, p_end);
@@ -526,22 +526,22 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 					// If the logs have last entries with different terms, then the
 					// raft_log with the later term is more up-to-date.
 					raft_voted_for = *node;
-					L_RAFT("I vote for {} (raft_log term is newer)", raft_voted_for.to_string());
+					L_RAFT("I vote for {} (raft_log term is newer)", repr(raft_voted_for.to_string()));
 				} else if (last_log_term == remote_last_log_term) {
 					// If the logs end with the same term, then whichever
 					// raft_log is longer is more up-to-date.
 					if (raft_log.size() <= remote_last_log_index) {
 						raft_voted_for = *node;
-						L_RAFT("I vote for {} (raft_log index size concurs)", raft_voted_for.to_string());
+						L_RAFT("I vote for {} (raft_log index size concurs)", repr(raft_voted_for.to_string()));
 					} else {
-						L_RAFT("I don't vote for {} (raft_log index is shorter)", raft_voted_for.to_string());
+						L_RAFT("I don't vote for {} (raft_log index is shorter)", repr(node->to_string()));
 					}
 				} else {
-					L_RAFT("I don't vote for {} (raft_log term is older)", raft_voted_for.to_string());
+					L_RAFT("I don't vote for {} (raft_log term is older)", repr(node->to_string()));
 				}
 			}
 		} else {
-			L_RAFT("I already voted for {}", raft_voted_for.to_string());
+			L_RAFT("I already voted for {}", repr(raft_voted_for.to_string()));
 		}
 		granted = raft_voted_for == *node;
 	}
