@@ -106,7 +106,7 @@ pm.test("Namespace size", function() {
 ```js
 pm.test("Namespace values are valid", function() {
   var jsonData = pm.response.json();
-  var expected = [2, 6, 13, 17, 20, 23, 24, 25, 26, 29];
+  var expected = [1, 2, 6, 13, 17, 20, 23, 24, 25, 26];
   for (var i = 0; i < expected.length; ++i) {
     pm.expect(jsonData.hits[i]._id).to.equal(expected[i]);
   }
