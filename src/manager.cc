@@ -1481,17 +1481,21 @@ XapiandManager::_raft_apply_command(const std::string& command)
 	const char *p = command.data();
 	const char *p_end = p + command.size();
 	if (p == p_end) {
+		L_ERR("Empty raft command ignored");
 		return;
 	}
 
 	char cmd = *p++;
 	switch (cmd) {
 		case 'N': {
-			node_added(unserialise_length(&p, p_end), unserialise_string(&p, p_end));
+			size_t idx = unserialise_length(&p, p_end);
+			std::string_view name(p, p_end - p);
+			node_added(idx, name);
 			break;
 		}
 		default:
 			L_ERR("Unknown raft command ignored: {}", cmd);
+			break;
 	}
 }
 
@@ -1501,7 +1505,7 @@ XapiandManager::add_node(size_t idx, std::string_view name)
 {
 	L_CALL("XapiandManager::add_node({}, {})", idx, name);
 
-	_discovery->raft_add_command("N" + serialise_length(idx) + serialise_string(name));
+	_discovery->raft_add_command("N" + serialise_length(idx) + std::string(name));
 }
 
 
