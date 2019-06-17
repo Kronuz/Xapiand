@@ -1827,9 +1827,9 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] const MsgPack* settings)
+XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& normalized_path, [[maybe_unused]] bool writable, [[maybe_unused]] bool primary, [[maybe_unused]] const MsgPack* settings)
 {
-	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {})", repr(normalized_path), writable, settings ? settings->to_string() : "null");
+	L_CALL("XapiandManager::resolve_index_nodes_impl({}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null");
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
@@ -2007,7 +2007,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 	}
 	auto& endpoint_path = unsharded.second ? unsharded_endpoint_path : endpoint.path;
 
-	auto nodes = resolve_index_nodes_impl(endpoint_path, writable, settings);
+	auto nodes = resolve_index_nodes_impl(endpoint_path, writable, primary, settings);
 
 	int n_shards = nodes.size();
 	size_t shard_num = 0;
