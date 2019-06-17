@@ -166,10 +166,12 @@ private:
 	ev::async signal_sig_async;
 	ev::async setup_node_async;
 	ev::async set_cluster_database_ready_async;
-	ev::async shutdown_sig_async;
 
 #ifdef XAPIAND_CLUSTERING
 	ev::async new_leader_async;
+	ev::async raft_apply_command_async;
+
+	ConcurrentQueue<std::string> raft_apply_command_args;
 #endif
 
 	void signal_sig_async_cb(ev::async&, int);
@@ -190,6 +192,14 @@ private:
 	void renew_leader_impl();
 	void reset_state_impl();
 	void join_cluster_impl();
+
+
+	void raft_apply_command_async_cb(ev::async& watcher, int revents);
+	void raft_apply_command_impl(const std::string& command);
+	void _raft_apply_command(const std::string& command);
+
+	void add_node(size_t idx, std::string_view name);
+	void node_added(size_t idx, std::string_view name);
 #endif
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, const MsgPack* settings);
@@ -258,6 +268,13 @@ public:
 #ifdef XAPIAND_CLUSTERING
 		assert(_manager);
 		_manager->renew_leader_impl();
+#endif
+	}
+
+	static void raft_apply_command(const std::string& command) {
+#ifdef XAPIAND_CLUSTERING
+		assert(_manager);
+		_manager->raft_apply_command_impl(command);
 #endif
 	}
 

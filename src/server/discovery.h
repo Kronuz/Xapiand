@@ -164,7 +164,7 @@ private:
 	void _raft_leader_election_timeout_reset(double min = RAFT_LEADER_ELECTION_MIN, double max = RAFT_LEADER_ELECTION_MAX);
 	void _raft_set_leader_node(const std::shared_ptr<const Node>& node);
 
-	void _raft_apply(const std::string& command);
+	void _raft_apply_command(const std::string& command);
 	void _raft_commit_log();
 
 	void _raft_request_vote(bool immediate);

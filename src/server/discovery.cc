@@ -763,7 +763,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 						assert(raft_last_applied - 1 >= 0);
 						assert(raft_last_applied - 1 < raft_log.size());
 						const auto& command = raft_log[raft_last_applied - 1].command;
-						_raft_apply(command);
+						_raft_apply_command(command);
 					}
 				}
 			}
@@ -1178,34 +1178,13 @@ Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 
 
 void
-Discovery::_raft_apply(const std::string& command)
+Discovery::_raft_apply_command(const std::string& command)
 {
-	L_CALL("Discovery::_raft_apply({})", repr(command));
+	L_CALL("Discovery::_raft_apply_command({})", repr(command));
 
-	const char *p = command.data();
-	const char *p_end = p + command.size();
+	L_RAFT("Apply command: {}", repr(command));
 
-	size_t idx = unserialise_length(&p, p_end);
-	auto node_name = unserialise_string(&p, p_end);
-
-	Node indexed_node;
-
-	auto node = Node::get_node(node_name);
-	if (node) {
-		indexed_node = *node;
-		indexed_node.idx = idx;
-	} else {
-		indexed_node.name(std::string(node_name));
-		indexed_node.idx = idx;
-	}
-
-	auto put = Node::touch_node(indexed_node, false);
-	if (put.first == nullptr) {
-		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", indexed_node.col().ansi(), indexed_node.to_string(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
-	} else {
-		node = put.first;
-		L_DEBUG("Added node {}{}" + INFO_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
-	}
+	XapiandManager::raft_apply_command(command);
 }
 
 
@@ -1244,7 +1223,7 @@ Discovery::_raft_commit_log()
 					assert(raft_last_applied - 1 >= 0);
 					assert(raft_last_applied - 1 < raft_log.size());
 					const auto& command = raft_log[raft_last_applied - 1].command;
-					_raft_apply(command);
+					_raft_apply_command(command);
 				}
 			} else {
 				L_RAFT("not committed {{matches:{}, active_nodes:{}, raft_commit_index:{}}}",
