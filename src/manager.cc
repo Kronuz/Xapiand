@@ -755,7 +755,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			// Replicate cluster database from the leader
 			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
 			// Request updates from indices database shards
-			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"});
+			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"}, true);
 			assert(!endpoints.empty());
 			for (auto& endpoint : endpoints) {
 				Endpoint remote_endpoint{endpoint.path, leader_node};
@@ -1545,7 +1545,16 @@ struct NodeSettings {
 	NodeSettings(size_t num_shards, size_t num_replicas_plus_master, const std::vector<std::vector<std::string>>& shards) :
 		num_shards(num_shards),
 		num_replicas_plus_master(num_replicas_plus_master),
-		shards(shards) { }
+		shards(shards) {
+#ifndef NDEBUG
+		size_t replicas_size = 0;
+		for (auto& replicas : shards) {
+			auto replicas_size_ = replicas.size();
+			assert(replicas_size_ != 0 && (!replicas_size || replicas_size == replicas_size_));
+			replicas_size = replicas_size_;
+		}
+#endif
+	}
 };
 
 
@@ -1580,6 +1589,7 @@ settle_replicas(std::vector<std::vector<std::string>>& shards, size_t indexed_no
 				replicas.push_back(node->name());
 			}
 		} else {
+			assert(num_replicas_plus_master);
 			replicas.resize(num_replicas_plus_master);
 		}
 	}
@@ -1695,26 +1705,24 @@ load_replicas(const Endpoints& index_endpoints, const std::string& normalized_pa
 
 	std::vector<std::string> replicas;
 
-	try {
-		DatabaseHandler db_handler(index_endpoints);
-		auto document = db_handler.get_document(normalized_path);
-		auto obj = document.get_obj();
-		auto it = obj.find("shards");
-		if (it != obj.end()) {
-			auto& replicas_val = it.value();
-			if (replicas_val.is_array()) {
-				for (auto& node_name_val : replicas_val) {
-					if (!node_name_val.is_string()) {
-						replicas.clear();
-						break;
-					}
-					replicas.push_back(node_name_val.str());
+	DatabaseHandler db_handler(index_endpoints);
+	auto document = db_handler.get_document(normalized_path);
+	auto obj = document.get_obj();
+	auto it = obj.find("shards");
+	if (it != obj.end()) {
+		auto& replicas_val = it.value();
+		if (replicas_val.is_array()) {
+			for (auto& node_name_val : replicas_val) {
+				if (!node_name_val.is_string()) {
+					replicas.clear();
+					break;
 				}
+				replicas.push_back(node_name_val.str());
 			}
 		}
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
+	}
 
+	assert(!replicas.empty());
 	return replicas;
 }
 
@@ -1727,26 +1735,44 @@ load_settings(const std::string& normalized_path)
 	auto nodes = Node::nodes();
 	assert(!nodes.empty());
 
-	NodeSettings settings;
-
 	try {
+		NodeSettings settings;
+
 		Endpoint endpoint(".xapiand/indices");
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 		assert(!endpoints.empty());
 		DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 		auto document = db_handler.get_document(normalized_path);
 		auto obj = document.get_obj();
-		auto it = obj.find("number_of_shards");
+
+		auto it = obj.find("number_of_replicas");
+		if (it != obj.end()) {
+			auto& n_replicas_val = it.value();
+			if (n_replicas_val.is_number()) {
+				settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
+			}
+		}
+
+		it = obj.find("number_of_shards");
 		if (it != obj.end()) {
 			auto& n_shards_val = it.value();
 			if (n_shards_val.is_number()) {
 				settings.num_shards = n_shards_val.u64();
+				size_t replicas_size = 0;
 				for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
 					auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
-					settings.shards.push_back(load_replicas(endpoints, shard_normalized_path));
+					auto replicas = load_replicas(endpoints, shard_normalized_path);
+					auto replicas_size_ = replicas.size();
+					if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
+						THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
+					}
+					replicas_size = replicas_size_;
+					settings.shards.push_back(std::move(replicas));
 				}
 			}
-		} else {
+		}
+
+		if (!settings.num_shards) {
 			std::vector<std::string> replicas;
 			it = obj.find("shards");
 			if (it != obj.end()) {
@@ -1761,25 +1787,19 @@ load_settings(const std::string& normalized_path)
 					}
 				}
 			}
+			auto replicas_size_ = replicas.size();
+			if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master) {
+				THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
+			}
 			settings.shards.push_back(std::move(replicas));
 		}
-		if (!settings.shards.empty()) {
-			settings.num_replicas_plus_master = settings.shards.front().size();
-		}
-		it = obj.find("number_of_replicas");
-		if (it != obj.end()) {
-			auto& n_replicas_val = it.value();
-			if (n_replicas_val.is_number()) {
-				settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
-			}
-		}
+
+		return settings;
 	} catch (const Xapian::DocNotFoundError&) {
 	} catch (const Xapian::DatabaseNotFoundError&) {
-	} catch (...) {
-		L_EXC("Cannot load database index settings: {}", normalized_path);
 	}
 
-	return settings;
+	return {};
 }
 
 
