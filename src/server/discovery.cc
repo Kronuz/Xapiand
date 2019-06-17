@@ -44,6 +44,9 @@
 #include "utype.hh"                         // for toUType
 
 
+#define L_RAFT_HB L_NOTHING
+
+
 // #undef L_DEBUG
 // #define L_DEBUG L_GREY
 // #undef L_CALL
@@ -646,7 +649,11 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
+		if (type == Message::RAFT_HEARTBEAT) {
+			L_RAFT_HB(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
+		} else {
+			L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
+		}
 		return;
 	}
 
@@ -656,7 +663,11 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
+		if (type == Message::RAFT_HEARTBEAT) {
+			L_RAFT_HB(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
+		} else {
+			L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
+		}
 		return;
 	}
 
@@ -683,7 +694,11 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
+	if (type == Message::RAFT_HEARTBEAT) {
+		L_RAFT_HB(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
+	} else {
+		L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
+	}
 
 	size_t next_index;
 	size_t match_index;
@@ -709,7 +724,11 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		// prevLogIndex whose term matches prevLogTerm
 		auto last_index = raft_log.size();
 		auto entry_index = prev_log_index + 1;
-		// L_RAFT("   {{entry_index:{}, prev_log_index:{}, last_index:{}, prev_log_term:{}}}", entry_index, prev_log_index, last_index, prev_log_term);
+		// if (type == Message::RAFT_HEARTBEAT) {
+		// 	L_RAFT_HB("   {{entry_index:{}, prev_log_index:{}, last_index:{}, prev_log_term:{}}}", entry_index, prev_log_index, last_index, prev_log_term);
+		// } else {
+		// 	L_RAFT("   {{entry_index:{}, prev_log_index:{}, last_index:{}, prev_log_term:{}}}", entry_index, prev_log_index, last_index, prev_log_term);
+		// }
 		if (entry_index <= 1 || (prev_log_index <= last_index && raft_log[prev_log_index - 1].term == prev_log_term)) {
 			if (type == Message::RAFT_APPEND_ENTRIES) {
 				size_t last_log_index = unserialise_length(&p, p_end);
@@ -748,7 +767,11 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			if (leader_commit > raft_commit_index) {
 				raft_commit_index = std::min(leader_commit, entry_index);
 				if (raft_commit_index > raft_last_applied) {
-					L_RAFT("committed {{raft_commit_index:{}}}", raft_commit_index);
+					if (type == Message::RAFT_HEARTBEAT) {
+						L_RAFT_HB("committed {{raft_commit_index:{}}}", raft_commit_index);
+					} else {
+						L_RAFT("committed {{raft_commit_index:{}}}", raft_commit_index);
+					}
 
 					// If commitIndex > lastApplied:
 					while (raft_commit_index > raft_last_applied) {
@@ -783,13 +806,18 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 	}
 
 	Message response_type;
-	if (type != Message::RAFT_HEARTBEAT) {
-		response_type = Message::RAFT_APPEND_ENTRIES_RESPONSE;
-	} else {
+	if (type == Message::RAFT_HEARTBEAT) {
 		response_type = Message::RAFT_HEARTBEAT_RESPONSE;
+	} else {
+		response_type = Message::RAFT_APPEND_ENTRIES_RESPONSE;
 	}
-	L_RAFT("   << {} {{node:{}, term:{}, success:{}}}",
-		enum_name(response_type), local_node->to_string(), term, success);
+	if (type == Message::RAFT_HEARTBEAT) {
+		L_RAFT_HB("   << {} {{node:{}, term:{}, success:{}}}",
+			enum_name(response_type), local_node->to_string(), term, success);
+	} else {
+		L_RAFT("   << {} {{node:{}, term:{}, success:{}}}",
+			enum_name(response_type), local_node->to_string(), term, success);
+	}
 	send_message(response_type,
 		local_node->serialise() +
 		serialise_length(term) +
@@ -801,8 +829,10 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		));
 
 #ifdef L_RAFT_LOG
-	for (size_t i = 0; i < raft_log.size(); ++i) {
-		L_RAFT_LOG("   {} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+	if (type != Message::RAFT_HEARTBEAT) {
+		for (size_t i = 0; i < raft_log.size(); ++i) {
+			L_RAFT_LOG("   {} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+		}
 	}
 #endif
 }
@@ -816,7 +846,11 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
+		if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
+			L_RAFT_HB(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
+		} else {
+			L_RAFT(">> {} (invalid state: {})", enum_name(type), enum_name(XapiandManager::state().load()));
+		}
 		return;
 	}
 
@@ -826,7 +860,11 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
-		L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
+		if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
+			L_RAFT_HB(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
+		} else {
+			L_RAFT(">> {} [from {}] (nonexistent node)", enum_name(type), remote_node.to_string());
+		}
 		return;
 	}
 
@@ -847,7 +885,11 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 		_raft_leader_election_timeout_reset();
 	}
 
-	L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
+	if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
+		L_RAFT_HB(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
+	} else {
+		L_RAFT(">> {} [from {}]{}", enum_name(type), node->to_string(), term == raft_current_term ? "" : " (wrong term)");
+	}
 
 	if (term == raft_current_term) {
 		bool success = unserialise_length(&p, p_end);
@@ -858,7 +900,11 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 			size_t match_index = unserialise_length(&p, p_end);
 			raft_next_indexes[node->lower_name()] = next_index;
 			raft_match_indexes[node->lower_name()] = match_index;
-			L_RAFT("   {{success:{}, next_index:{}, match_index:{}}}", success, next_index, match_index);
+			if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
+				L_RAFT_HB("   {{success:{}, next_index:{}, match_index:{}}}", success, next_index, match_index);
+			} else {
+				L_RAFT("   {{success:{}, next_index:{}, match_index:{}}}", success, next_index, match_index);
+			}
 		} else {
 			// If AppendEntries fails because of raft_log inconsistency:
 			// decrement nextIndex and retry
@@ -869,13 +915,19 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 			if (next_index > 1) {
 				--next_index;
 			}
-			L_RAFT("   {{success:{}, next_index:{}}}", success, next_index);
+			if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
+				L_RAFT_HB("   {{success:{}, next_index:{}}}", success, next_index);
+			} else {
+				L_RAFT("   {{success:{}, next_index:{}}}", success, next_index);
+			}
 		}
 		_raft_commit_log();
 
 #ifdef L_RAFT_LOG
-		for (size_t i = 0; i < raft_log.size(); ++i) {
-			L_RAFT_LOG("{} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+		if (type != Message::RAFT_HEARTBEAT_RESPONSE) {
+			for (size_t i = 0; i < raft_log.size(); ++i) {
+				L_RAFT_LOG("{} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+			}
 		}
 #endif
 	}
@@ -1084,7 +1136,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT("   << HEARTBEAT (invalid state: {})", enum_name(XapiandManager::state().load()));
+		L_RAFT_HB("   << HEARTBEAT (invalid state: {})", enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -1125,7 +1177,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 
 	auto local_node = Node::local_node();
 	auto last_log_term = last_log_index > 0 ? raft_log[last_log_index - 1].term : 0;
-	L_RAFT("   << HEARTBEAT {{last_log_term:{}, last_log_index:{}, raft_commit_index:{}}}", last_log_term, last_log_index, raft_commit_index);
+	L_RAFT_HB("   << HEARTBEAT {{last_log_term:{}, last_log_index:{}, raft_commit_index:{}}}", last_log_term, last_log_index, raft_commit_index);
 	send_message(Message::RAFT_HEARTBEAT,
 		local_node->serialise() +
 		serialise_length(raft_current_term) +
