@@ -1131,7 +1131,10 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
 	lock_shard lk_shard(endpoint, flags);
+
 	auto info = lk_shard->replace_document(did, std::move(document));
+
+	lk_shard.unlock();
 
 	std::string reply;
 	reply += serialise_length(info.did);
