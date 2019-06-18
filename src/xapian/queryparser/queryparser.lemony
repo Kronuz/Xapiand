@@ -248,7 +248,7 @@ class State {
 			Xapian::valueno slot = base->get_slot();
 			return new Term(range_query, str(slot));
 		    }
-		    [[fallthrough]];
+		    // FALLTHRU
 		case Xapian::Query::LEAF_TERM:
 		    return new Term(range_query, i.grouping);
 		default:
@@ -979,7 +979,8 @@ QueryParser::Internal::parse_query(const string &qs, unsigned flags,
 					      "building Xapian to use ICU");
     }
 #endif
-    bool cjk_enable = (flags & (FLAG_CJK_NGRAM|FLAG_CJK_WORDS));
+    bool cjk_enable =
+	(flags & (FLAG_CJK_NGRAM|FLAG_CJK_WORDS)) || CJK::is_cjk_enabled();
 
     // Set ranges if we may have to handle ranges in the query.
     bool ranges = !rangeprocs.empty() && (qs.find("..") != string::npos);

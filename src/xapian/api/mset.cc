@@ -23,10 +23,9 @@
 #include "xapian/api/msetinternal.h"
 #include "xapian/mset.h"
 
-#include "xapian/net/length.h"
 #include "xapian/net/serialise.h"
-#include "xapian/matcher/matcher.h"
 #include "xapian/matcher/msetcmp.h"
+#include "xapian/common/pack.h"
 #include "xapian/api/roundestimate.h"
 #include "xapian/common/serialise-double.h"
 #include "xapian/common/str.h"
@@ -69,17 +68,6 @@ MSet::set_item_weight(Xapian::doccount i, double weight)
 }
 
 void
-MSet::set_database(const Database& db) const
-{
-    if (internal->stats.get() != NULL) {
-	internal->stats->db = db;
-    }
-    if (internal->enquire.get() != NULL) {
-	internal->enquire->set_database(db);
-    }
-}
-
-void
 MSet::sort_by_relevance()
 {
     std::sort(internal->items.begin(), internal->items.end(),
@@ -90,13 +78,6 @@ int
 MSet::convert_to_percent(double weight) const
 {
     return internal->convert_to_percent(weight);
-}
-
-void
-MSet::unshard_docids(Xapian::doccount shard,
-		     Xapian::doccount n_shards)
-{
-    return internal->unshard_docids(shard, n_shards);
 }
 
 Xapian::doccount
@@ -214,71 +195,9 @@ MSet::snippet(const std::string& text,
 }
 
 std::string
-MSet::serialise() const
-{
-    return internal->serialise();
-}
-
-MSet
-MSet::unserialise(const std::string &s)
-{
-    MSet mset;
-    mset.internal->unserialise(s.data(), s.data() + s.size());
-    return mset;
-}
-
-std::string
-MSet::serialise_stats() const
-{
-    return internal->serialise_stats();
-}
-
-MSet
-MSet::unserialise_stats(const std::string &s)
-{
-    MSet mset;
-    mset.internal->unserialise_stats(s);
-    return mset;
-}
-
-std::string
 MSet::get_description() const
 {
     return internal->get_description();
-}
-
-MSet::Internal::Internal()
-{
-}
-
-MSet::Internal::Internal(Xapian::doccount first_,
-	    Xapian::doccount matches_upper_bound_,
-	    Xapian::doccount matches_lower_bound_,
-	    Xapian::doccount matches_estimated_,
-	    Xapian::doccount uncollapsed_upper_bound_,
-	    Xapian::doccount uncollapsed_lower_bound_,
-	    Xapian::doccount uncollapsed_estimated_,
-	    double max_possible_,
-	    double max_attained_,
-	    std::vector<Result>&& items_,
-	    double percent_scale_factor_)
-    : items(std::move(items_)),
-      matches_lower_bound(matches_lower_bound_),
-      matches_estimated(matches_estimated_),
-      matches_upper_bound(matches_upper_bound_),
-      uncollapsed_lower_bound(uncollapsed_lower_bound_),
-      uncollapsed_estimated(uncollapsed_estimated_),
-      uncollapsed_upper_bound(uncollapsed_upper_bound_),
-      first(first_),
-      max_possible(max_possible_),
-      max_attained(max_attained_),
-      percent_scale_factor(percent_scale_factor_)
-{
-}
-
-void
-MSet::Internal::set_enquire(const Xapian::Enquire::Internal* enquire_) {
-    enquire = enquire_;
 }
 
 Document
@@ -398,37 +317,36 @@ MSet::Internal::serialise() const
 {
     string result;
 
-    result += encode_length(first);
+    result += serialise_double(max_possible);
+    result += serialise_double(max_attained);
+
+    result += serialise_double(percent_scale_factor);
+
+    pack_uint(result, first);
     // Send back the raw matches_* values.  MSet::get_matches_estimated()
     // rounds the estimate lazily, but when we merge MSet objects we really
     // want to merge based on the raw estimates.
     //
     // It is also cleaner that a round-trip through serialisation gives you an
     // object which is as close to the original as possible.
-    result += encode_length(matches_lower_bound);
-    result += encode_length(matches_estimated);
-    result += encode_length(matches_upper_bound);
-    result += encode_length(uncollapsed_lower_bound);
-    result += encode_length(uncollapsed_estimated);
-    result += encode_length(uncollapsed_upper_bound);
-    result += serialise_double(max_possible);
-    result += serialise_double(max_attained);
+    pack_uint(result, matches_lower_bound);
+    pack_uint(result, matches_estimated);
+    pack_uint(result, matches_upper_bound);
+    pack_uint(result, uncollapsed_lower_bound);
+    pack_uint(result, uncollapsed_estimated);
+    pack_uint(result, uncollapsed_upper_bound);
 
-    result += serialise_double(percent_scale_factor);
-
-    result += encode_length(items.size());
+    pack_uint(result, items.size());
     for (auto&& item : items) {
 	result += serialise_double(item.get_weight());
-	result += encode_length(item.get_docid());
-	result += encode_length(item.get_sort_key().size());
-	result += item.get_sort_key();
-	result += encode_length(item.get_collapse_key().size());
-	result += item.get_collapse_key();
-	result += encode_length(item.get_collapse_count());
+	pack_uint(result, item.get_docid());
+	pack_string(result, item.get_sort_key());
+	pack_string(result, item.get_collapse_key());
+	pack_uint(result, item.get_collapse_count());
     }
 
     if (stats)
-	result += ::serialise_stats(*stats);
+	result += serialise_stats(*stats);
 
     return result;
 }
@@ -438,54 +356,41 @@ MSet::Internal::unserialise(const char * p, const char * p_end)
 {
     items.clear();
 
-    decode_length(&p, p_end, first);
-    decode_length(&p, p_end, matches_lower_bound);
-    decode_length(&p, p_end, matches_estimated);
-    decode_length(&p, p_end, matches_upper_bound);
-    decode_length(&p, p_end, uncollapsed_lower_bound);
-    decode_length(&p, p_end, uncollapsed_estimated);
-    decode_length(&p, p_end, uncollapsed_upper_bound);
     max_possible = unserialise_double(&p, p_end);
     max_attained = unserialise_double(&p, p_end);
 
     percent_scale_factor = unserialise_double(&p, p_end);
 
     size_t msize;
-    decode_length(&p, p_end, msize);
+    if (!unpack_uint(&p, p_end, &first) ||
+	!unpack_uint(&p, p_end, &matches_lower_bound) ||
+	!unpack_uint(&p, p_end, &matches_estimated) ||
+	!unpack_uint(&p, p_end, &matches_upper_bound) ||
+	!unpack_uint(&p, p_end, &uncollapsed_lower_bound) ||
+	!unpack_uint(&p, p_end, &uncollapsed_estimated) ||
+	!unpack_uint(&p, p_end, &uncollapsed_upper_bound) ||
+	!unpack_uint(&p, p_end, &msize)) {
+	unpack_throw_serialisation_error(p);
+    }
     while (msize-- > 0) {
 	double wt = unserialise_double(&p, p_end);
 	Xapian::docid did;
-	decode_length(&p, p_end, did);
-	size_t len;
-	decode_length_and_check(&p, p_end, len);
-	string sort_key(p, len);
-	p += len;
-	decode_length_and_check(&p, p_end, len);
-	string key(p, len);
-	p += len;
+	string sort_key, key;
 	Xapian::doccount collapse_cnt;
-	decode_length(&p, p_end, collapse_cnt);
+	if (!unpack_uint(&p, p_end, &did) ||
+	    !unpack_string(&p, p_end, sort_key) ||
+	    !unpack_string(&p, p_end, key) ||
+	    !unpack_uint(&p, p_end, &collapse_cnt)) {
+	    unpack_throw_serialisation_error(p);
+	}
 	items.emplace_back(wt, did, std::move(key), collapse_cnt,
 			   std::move(sort_key));
     }
 
     if (p != p_end) {
 	stats.reset(new Xapian::Weight::Internal());
-	::unserialise_stats(string(p, p_end - p), *stats);
+	unserialise_stats(string(p, p_end - p), *stats);
     }
-}
-
-string
-MSet::Internal::serialise_stats() const
-{
-    return ::serialise_stats(*stats);
-}
-
-void
-MSet::Internal::unserialise_stats(const string& serialised)
-{
-    stats.reset(new Xapian::Weight::Internal());
-    ::unserialise_stats(serialised, *stats);
 }
 
 string

@@ -27,7 +27,6 @@
 #include "xapian/expand/expandweight.h"
 #include "xapian/matcher/matcher.h"
 #include "xapian/api/msetinternal.h"
-#include "xapian/net/serialise.h"
 #include "xapian/api/vectortermlist.h"
 #include "xapian/weight/weightinternal.h"
 #include "xapian/database.h"
@@ -196,44 +195,6 @@ Enquire::set_time_limit(double time_limit)
     internal->time_limit = time_limit;
 }
 
-void
-Enquire::set_database(const Database& db_) const
-{
-    internal->set_database(db_);
-}
-
-const MSet&
-Enquire::prepare_mset(const RSet *rset,
-		      const MatchDecider *mdecider) const
-{
-    return internal->prepare_mset(rset, mdecider);
-}
-
-const MSet&
-Enquire::get_prepared_mset() const
-{
-
-    return internal->get_prepared_mset();
-}
-
-void
-Enquire::clear_prepared_mset() const
-{
-    internal->clear_prepared_mset();
-}
-
-void
-Enquire::set_prepared_mset(const MSet& mset) const
-{
-    internal->set_prepared_mset(mset);
-}
-
-void
-Enquire::add_prepared_mset(const MSet& mset) const
-{
-    internal->add_prepared_mset(mset);
-}
-
 MSet
 Enquire::get_mset(doccount first,
 		  doccount maxitems,
@@ -242,16 +203,6 @@ Enquire::get_mset(doccount first,
 		  const MatchDecider* mdecider) const
 {
     return internal->get_mset(first, maxitems, checkatleast, rset, mdecider);
-}
-
-MSet
-Enquire::merge_mset(
-    const std::vector<Xapian::MSet>& msets,
-    Xapian::doccount docs,
-    Xapian::doccount first,
-    Xapian::doccount maxitems) const
-{
-    return internal->merge_mset(msets, docs, first, maxitems);
 }
 
 TermIterator
@@ -300,92 +251,6 @@ Enquire::get_description() const
 Enquire::Internal::Internal(const Database& db_)
     : db(db_) {}
 
-void
-Enquire::Internal::set_database(const Database& db_) const
-{
-    db = db_;
-    if (match) {
-	match->set_database(db);
-    }
-    if (prepared_mset && prepared_mset->internal->get_stats()) {
-	prepared_mset->internal->get_stats()->set_bounds_from_db(db);
-    }
-}
-
-const MSet&
-Enquire::Internal::prepare_mset(const RSet *rset,
-			      const MatchDecider *mdecider) const
-{
-    if (percent_threshold && (sort_by == VAL || sort_by == VAL_REL)) {
-	throw Xapian::UnimplementedError("Use of a percentage cutoff while "
-					 "sorting primary by value isn't "
-					 "currently supported");
-    }
-    // Lazily initialise weight to its default if necessary.
-    if (!weight.get())
-	weight.reset(new BM25Weight);
-
-    // Lazily initialise query_length if it wasn't explicitly specified.
-    if (query_length == 0) {
-	query_length = query.get_length();
-    }
-
-    prepared_mset.reset(new Xapian::MSet());
-    prepared_mset->internal->set_stats(new Xapian::Weight::Internal());
-    prepared_mset->internal->get_stats()->set_bounds_from_db(db);
-
-    match.reset(new ::Matcher(db));
-    match->prepare_mset(query, query_length,
-		      rset,
-		      *prepared_mset->internal->get_stats(),
-		      *weight,
-		      (mdecider != NULL),
-		      sort_functor.get(),
-		      collapse_key,
-		      collapse_max,
-		      percent_threshold,
-		      weight_threshold,
-		      order,
-		      sort_key,
-		      sort_by,
-		      sort_val_reverse,
-		      time_limit,
-		      matchspies);
-
-    return *prepared_mset;
-}
-
-const MSet&
-Enquire::Internal::get_prepared_mset() const
-{
-
-    return *prepared_mset;
-}
-
-void
-Enquire::Internal::clear_prepared_mset() const
-{
-    prepared_mset.reset();
-}
-
-void
-Enquire::Internal::set_prepared_mset(const MSet& mset) const
-{
-    clear_prepared_mset();
-    add_prepared_mset(mset);
-}
-
-void
-Enquire::Internal::add_prepared_mset(const MSet& mset) const
-{
-    if (!prepared_mset) {
-	prepared_mset.reset(new Xapian::MSet());
-	prepared_mset->internal->set_stats(new Xapian::Weight::Internal());
-	prepared_mset->internal->get_stats()->set_bounds_from_db(db);
-    }
-    *prepared_mset->internal->get_stats() += *mset.internal->get_stats();
-}
-
 MSet
 Enquire::Internal::get_mset(doccount first,
 			    doccount maxitems,
@@ -409,6 +274,11 @@ Enquire::Internal::get_mset(doccount first,
     if (!weight.get())
 	weight.reset(new BM25Weight);
 
+    // Lazily initialise query_length if it wasn't explicitly specified.
+    if (query_length == 0) {
+	query_length = query.get_length();
+    }
+
     Xapian::doccount first_orig = first;
     {
 	Xapian::doccount docs = db.get_doccount();
@@ -418,109 +288,55 @@ Enquire::Internal::get_mset(doccount first,
 	checkatleast = max(checkatleast, first + maxitems);
     }
 
-    try {
-	if (!prepared_mset || !match) {
-	    prepare_mset(rset, mdecider);
-	}
+    unique_ptr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
+    ::Matcher match(db,
+		    query,
+		    query_length,
+		    rset,
+		    *stats,
+		    *weight,
+		    (sort_functor.get() != NULL),
+		    (mdecider != NULL),
+		    collapse_key,
+		    collapse_max,
+		    percent_threshold,
+		    weight_threshold,
+		    order,
+		    sort_key,
+		    sort_by,
+		    sort_val_reverse,
+		    time_limit,
+		    matchspies);
 
-	MSet mset = match->get_mset(first,
-				    maxitems,
-				    checkatleast,
-				    *prepared_mset->internal->get_stats(),
-				    *weight,
-				    mdecider,
-				    sort_functor.get(),
-				    collapse_key,
-				    collapse_max,
-				    percent_threshold,
-				    weight_threshold,
-				    order,
-				    sort_key,
-				    sort_by,
-				    sort_val_reverse,
-				    time_limit,
-				    matchspies);
+    MSet mset = match.get_mset(first,
+			       maxitems,
+			       checkatleast,
+			       *stats,
+			       *weight,
+			       mdecider,
+			       sort_functor.get(),
+			       collapse_key,
+			       collapse_max,
+			       percent_threshold,
+			       weight_threshold,
+			       order,
+			       sort_key,
+			       sort_by,
+			       sort_val_reverse,
+			       time_limit,
+			       matchspies);
 
-	if (first_orig != first && mset.internal.get()) {
-	    mset.internal->set_first(first_orig);
-	}
-
-	mset.internal->set_enquire(this);
-
-	if (!mset.internal->get_stats()) {
-	    mset.internal->set_stats(prepared_mset->internal->release_stats());
-	}
-	prepared_mset.reset();
-
-	match.reset();
-
-	return mset;
-    } catch (...) {
-	prepared_mset.reset();
-	match.reset();
-	throw;
-    }
-}
-
-Xapian::MSet
-Enquire::Internal::merge_mset(
-    const std::vector<Xapian::MSet>& msets,
-    Xapian::doccount docs,
-    Xapian::doccount first,
-    Xapian::doccount maxitems
-) const
-{
-    if (percent_threshold && (sort_by == VAL || sort_by == VAL_REL)) {
-	throw Xapian::UnimplementedError("Use of a percentage cutoff while "
-					 "sorting primary by value isn't "
-					 "currently supported");
+    if (first_orig != first && mset.internal.get()) {
+	mset.internal->set_first(first_orig);
     }
 
-    Xapian::doccount first_orig = first;
-    first = min(first, docs);
-    maxitems = min(maxitems, docs - first);
+    mset.internal->set_enquire(this);
 
-    try {
-	match.reset(new ::Matcher(db));
-
-	MSet mset = match->merge_mset(msets,
-				      first,
-				      maxitems,
-				      collapse_max,
-				      percent_threshold,
-				      order,
-				      sort_by,
-				      sort_val_reverse);
-
-	if (first_orig != first && mset.internal.get()) {
-	    mset.internal->set_first(first_orig);
-	}
-
-	mset.internal->set_enquire(this);
-
-	if (!mset.internal->get_stats()) {
-	    std::unique_ptr<Xapian::Weight::Internal> stats;
-	    if (prepared_mset) {
-		stats.reset(prepared_mset->internal->release_stats());
-	    }
-	    if (!stats) {
-		stats.reset(new Xapian::Weight::Internal());
-		stats->set_bounds_from_db(db);
-		for (auto& m : msets) {
-		    *stats += *m.internal->get_stats();
-		}
-	    }
-	    mset.internal->set_stats(stats.release());
-	}
-
-	prepared_mset.reset();
-	match.reset();
-
-	return mset;
-    } catch (...) {
-	match.reset();
-	throw;
+    if (!mset.internal->get_stats()) {
+	mset.internal->set_stats(stats.release());
     }
+
+    return mset;
 }
 
 TermIterator

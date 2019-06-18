@@ -49,15 +49,6 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// Don't allow copying.
     RemoteDatabase(const RemoteDatabase &);
 
-    // Directory to store databases in.
-    const std::string db_dir;
-
-    // The database is writable.
-    const bool writable;
-
-    // Bitwise-or of Xapian::DB_* flags.
-    const int flags;
-
     /// The object which does the I/O.
     mutable OwnedRemoteConnection link;
 
@@ -79,14 +70,13 @@ class RemoteDatabase : public Xapian::Database::Internal {
     /// Has positional information?
     mutable bool has_positional_info;
 
-    /// The revision of the remote database.
-    mutable Xapian::rev revision;
-
     /// The UUID of the remote database.
     mutable std::string uuid;
 
     /// The context to return with any error messages
     std::string context;
+
+    mutable bool cached_stats_valid;
 
     /** The most recently used value statistics. */
     mutable ValueStats mru_valstats;
@@ -112,12 +102,11 @@ class RemoteDatabase : public Xapian::Database::Internal {
      *			length of time (in seconds).  A timeout of 0 means that
      *			operations will never timeout.
      *  @param context_ The context to return with any error messages.
-     *  @param writable	Is this a WritableDatabase?
-     *  @param flags	Xapian::DB_RETRY_LOCK or Bitwise-or of Xapian::DB_* constants.
-     *  @param dir      Database directory index to open.
+     *	@param writable	Is this a WritableDatabase?
+     *	@param flags	Xapian::DB_RETRY_LOCK or 0.
      */
     RemoteDatabase(int fd, double timeout_, const std::string& context_,
-		   bool writable, int flags, const std::string& dir);
+		   bool writable, int flags);
 
     /// Receive a message from the server.
     reply_type get_message(std::string& message,
@@ -158,8 +147,6 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     typedef Xapian::Internal::opt_intrusive_ptr<Xapian::MatchSpy> opt_ptr_spy;
 
-    typedef Xapian::Internal::opt_intrusive_ptr<Xapian::KeyMaker> opt_ptr_sorter;
-
     /** Set the query
      *
      * @param query			The query.
@@ -192,8 +179,7 @@ class RemoteDatabase : public Xapian::Database::Internal {
 		   int percent_threshold, double weight_threshold,
 		   const Xapian::Weight& wtscheme,
 		   const Xapian::RSet &omrset,
-		   const std::vector<opt_ptr_spy>& matchspies,
-		   const Xapian::KeyMaker* sorter) const;
+		   const std::vector<opt_ptr_spy>& matchspies) const;
 
     /** Get the underlying fd this remote connection reads from.
      *
@@ -277,17 +263,14 @@ class RemoteDatabase : public Xapian::Database::Internal {
 
     void cancel();
 
-    Xapian::DocumentInfo add_document(const Xapian::Document & doc);
+    Xapian::docid add_document(const Xapian::Document & doc);
 
     void delete_document(Xapian::docid did);
     void delete_document(const std::string & unique_term);
 
-    Xapian::DocumentInfo replace_document(Xapian::docid did,
-					  const Xapian::Document & doc);
-    Xapian::DocumentInfo replace_document(const std::string & unique_term,
-					  const Xapian::Document & document);
-
-    Xapian::rev get_revision() const;
+    void replace_document(Xapian::docid did, const Xapian::Document & doc);
+    Xapian::docid replace_document(const std::string & unique_term,
+				   const Xapian::Document & document);
 
     std::string get_uuid() const;
 

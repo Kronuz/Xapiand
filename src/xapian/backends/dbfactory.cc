@@ -194,11 +194,7 @@ Database::Database(const string& path, int flags)
 
     struct stat statbuf;
     if (stat(path.c_str(), &statbuf) == -1) {
-	if (errno == ENOENT) {
-	    throw DatabaseNotFoundError("Couldn't stat '" + path + "'", errno);
-	} else {
-	    throw DatabaseOpeningError("Couldn't stat '" + path + "'", errno);
-	}
+	throw DatabaseOpeningError("Couldn't stat '" + path + "'", errno);
     }
 
     if (S_ISREG(statbuf.st_mode)) {
@@ -272,13 +268,19 @@ Database::Database(const string& path, int flags)
 	throw FeatureUnavailableError("Flint backend no longer supported");
     }
 
-    throw DatabaseNotFoundError("Couldn't detect type of database");
+    throw DatabaseOpeningError("Couldn't detect type of database");
 }
 
-Database::Database(int fd, int flags)
+/** Helper factory function.
+ *
+ *  This allows us to initialise Database::internal via the constructor's
+ *  initialiser list, which we want to be able to do as Database::internal
+ *  is an intrusive_ptr_nonnull, so we can't set it to NULL in the initialiser
+ *  list and then fill it in later in the constructor body.
+ */
+static Database::Internal*
+database_factory(int fd, int flags)
 {
-    LOGCALL_CTOR(API, "Database", fd|flags);
-
     if (rare(fd < 0))
 	throw InvalidArgumentError("fd < 0");
 
@@ -287,7 +289,7 @@ Database::Database(int fd, int flags)
     switch (type) {
 	case 0:
 	case DB_BACKEND_GLASS:
-	    internal = new GlassDatabase(fd);
+	    return new GlassDatabase(fd);
     }
 #else
     (void)flags;
@@ -295,6 +297,12 @@ Database::Database(int fd, int flags)
 
     (void)::close(fd);
     throw DatabaseOpeningError("Couldn't detect type of database");
+}
+
+Database::Database(int fd, int flags)
+    : internal(database_factory(fd, flags))
+{
+    LOGCALL_CTOR(API, "Database", fd|flags);
 }
 
 #if defined XAPIAN_HAS_GLASS_BACKEND

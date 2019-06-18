@@ -1,7 +1,7 @@
 /** @file remoteprotocol.h
  *  @brief Remote protocol version and message numbers
  */
-/* Copyright (C) 2006,2007,2008,2009,2010,2011,2013,2014,2015,2017,2018 Olly Betts
+/* Copyright (C) 2006,2007,2008,2009,2010,2011,2013,2014,2015,2017,2018,2019 Olly Betts
  * Copyright (C) 2007,2010 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or modify
@@ -52,8 +52,10 @@
 // 39.1: pre-1.5.0 MSG_POSITIONLISTCOUNT added.
 // 40: pre-1.5.0 REPLY_REMOVESPELLING added.
 // 41: pre-1.5.0 Changed REPLY_ALLTERMS, REPLY_METADATAKEYLIST, REPLY_TERMLIST.
-// 42: 1.5.0 Use little-endian IEEE for doubles
-#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 42
+// 42: pre-1.5.0 Use little-endian IEEE for doubles
+// 43: pre-1.5.0 REPLY_DONE sent for 5 more messages; MSG_QUERY adjusted
+// 44: 1.5.0 pack_uint() now used; many other changes
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 44
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
 
 /** Message types (client -> server).
@@ -94,7 +96,6 @@ enum message_type {
     MSG_FREQS,			// Get termfreq and collfreq
     MSG_UNIQUETERMS,		// Get number of unique terms in doc
     MSG_POSITIONLISTCOUNT,	// Get PositionList length
-    MSG_READACCESS,             // Select currenty active read access
     MSG_MAX
 };
 
@@ -114,8 +115,8 @@ enum reply_type {
     REPLY_STATS,		// Stats
     REPLY_TERMLIST,		// Get Termlist
     REPLY_POSITIONLIST,		// Get PositionList
-    REPLY_POSTLISTSTART,	// Start of a postlist
-    REPLY_POSTLISTITEM,		// Item in body of a postlist
+    REPLY_POSTLISTHEADER,	// Header for get postlist
+    REPLY_POSTLIST,		// Get Postlist
     REPLY_VALUE,		// Document Value
     REPLY_ADDDOCUMENT,		// Add Document
     REPLY_RESULTS,		// Results (MSet)
@@ -125,7 +126,7 @@ enum reply_type {
     REPLY_UNIQUETERMS,		// Get number of unique terms in doc
     REPLY_POSITIONLISTCOUNT,	// Get PositionList length
     REPLY_REMOVESPELLING,	// Remove a spelling
-    REPLY_TERMLIST0,		// Header for get Termlist
+    REPLY_TERMLISTHEADER,	// Header for get termlist
     REPLY_MAX
 };
 

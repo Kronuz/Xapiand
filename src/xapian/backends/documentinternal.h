@@ -1,7 +1,7 @@
 /** @file documentinternal.h
  * @brief Abstract base class for a document
  */
-/* Copyright 2017,2018 Olly Betts
+/* Copyright 2017,2018,2019 Olly Betts
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -122,7 +122,7 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *
      *  If this document didn't come from a database, this will be NULL.
      */
-    mutable Xapian::Internal::intrusive_ptr<const Xapian::Database::Internal> database;
+    Xapian::Internal::intrusive_ptr<const Xapian::Database::Internal> database;
 
     /** The document ID this document came from in @a database.
      *
@@ -141,9 +141,9 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
     /// Constructor used by RemoteDocument subclass.
     Internal(const Xapian::Database::Internal* database_,
 	     Xapian::docid did_,
-	     const std::string& data_,
+	     std::string&& data_,
 	     std::map<Xapian::valueno, std::string>&& values_)
-	: data(new std::string(data_)),
+	: data(new std::string(std::move(data_))),
 	  values(new std::map<Xapian::valueno, std::string>(std::move(values_))),
 	  database(database_),
 	  did(did_) {}
@@ -178,8 +178,6 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
      *  using a pointer to the base class, so we need a virtual destructor.
      */
     virtual ~Internal();
-
-    void set_database(const Database& db) const;
 
     /** Return true if the document data might have been modified.
      *
@@ -309,8 +307,8 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
 	if (!i->second.remove_position(term_pos)) {
 	    return remove_posting_result::NO_POS;
 	}
-	if (wdf_dec)
-	    i->second.decrease_wdf(wdf_dec);
+	if (i->second.decrease_wdf(wdf_dec))
+	    --termlist_size;
 	positions_modified_ = true;
 	return remove_posting_result::OK;
     }
@@ -335,14 +333,13 @@ class Document::Internal : public Xapian::Internal::intrusive_base {
 					       term_pos_last);
 	if (n_removed) {
 	    positions_modified_ = true;
-	    if (wdf_dec) {
-		Xapian::termcount wdf_delta;
-		if (mul_overflows(n_removed, wdf_dec, wdf_delta)) {
-		    // Decreasing by the maximum value will zero the wdf.
-		    wdf_delta = numeric_limits<Xapian::termcount>::max();
-		}
-		i->second.decrease_wdf(wdf_delta);
+	    Xapian::termcount wdf_delta;
+	    if (mul_overflows(n_removed, wdf_dec, wdf_delta)) {
+		// Decreasing by the maximum value will zero the wdf.
+		wdf_delta = numeric_limits<Xapian::termcount>::max();
 	    }
+	    if (i->second.decrease_wdf(wdf_delta))
+		--termlist_size;
 	}
 	return remove_posting_result::OK;
     }

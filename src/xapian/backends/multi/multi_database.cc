@@ -577,7 +577,7 @@ MultiDatabase::end_transaction_(bool do_commit)
     }
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 MultiDatabase::add_document(const Xapian::Document& doc)
 {
     // With a single shard, add_document() uses docid (get_lastdocid() + 1)
@@ -591,9 +591,8 @@ MultiDatabase::add_document(const Xapian::Document& doc)
 
     auto n_shards = shards.size();
     auto shard = shards[shard_number(did, n_shards)];
-    auto info = shard->replace_document(shard_docid(did, n_shards), doc);
-    info.did = did;
-    return info;
+    shard->replace_document(shard_docid(did, n_shards), doc);
+    return did;
 }
 
 void
@@ -612,17 +611,15 @@ MultiDatabase::delete_document(const string& term)
     }
 }
 
-Xapian::DocumentInfo
+void
 MultiDatabase::replace_document(Xapian::docid did, const Xapian::Document& doc)
 {
     auto n_shards = shards.size();
     auto shard = shards[shard_number(did, n_shards)];
-    auto info = shard->replace_document(shard_docid(did, n_shards), doc);
-    info.did = did;
-    return info;
+    shard->replace_document(shard_docid(did, n_shards), doc);
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 MultiDatabase::replace_document(const string& term, const Xapian::Document& doc)
 {
     auto n_shards = shards.size();
@@ -639,17 +636,12 @@ MultiDatabase::replace_document(const string& term, const Xapian::Document& doc)
 					"documents");
 	}
 	auto shard = shards[shard_number(did, n_shards)];
-	auto info = shard->add_document(doc);
-	info.did = did;
-	info.term = term;
-	return info;
+	return shard->add_document(doc);
     }
 
     Xapian::docid result = pl->get_docid();
     auto replacing_shard = shards[shard_number(result, n_shards)];
-    auto info = replacing_shard->replace_document(shard_docid(result, n_shards), doc);
-    info.did = result;
-    info.term = term;
+    replacing_shard->replace_document(shard_docid(result, n_shards), doc);
 
     // Delete any other occurrences of the unique term.
     while (pl->next(), !pl->at_end()) {
@@ -658,7 +650,7 @@ MultiDatabase::replace_document(const string& term, const Xapian::Document& doc)
 	shard->delete_document(shard_docid(did, n_shards));
     }
 
-    return info;
+    return result;
 }
 
 void

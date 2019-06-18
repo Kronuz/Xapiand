@@ -64,12 +64,6 @@ Document::~Document()
 {
 }
 
-void
-Document::set_database(const Database& db) const
-{
-    internal->set_database(db);
-}
-
 Xapian::docid
 Document::get_docid() const
 {
