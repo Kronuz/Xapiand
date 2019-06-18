@@ -491,12 +491,12 @@ public:
 						} else {
 							it->second.value_ptr = agg->get_value_ptr(field);
 							if (!it->second.value_ptr) {
-								THROW(AggregationError, "Field not found! (1)");
+								THROW(AggregationError, "Field {} not found", repr(field));
 							}
 						}
 					}
 					if (!it->second.value_ptr) {
-						THROW(AggregationError, "Field not found! (2)");
+						THROW(AggregationError, "Field not found");
 					}
 				}
 			}
@@ -537,12 +537,12 @@ public:
 						} else {
 							it->second.value_ptr = agg->get_value_ptr(field);
 							if (!it->second.value_ptr) {
-								THROW(AggregationError, "Field not found! (1)");
+								THROW(AggregationError, "Field {} not found", repr(field));
 							}
 						}
 					}
 					if (!it->second.value_ptr) {
-						THROW(AggregationError, "Field not found! (2)");
+						THROW(AggregationError, "Field not found");
 					}
 				}
 			}
@@ -588,12 +588,12 @@ public:
 				} else {
 					it->second.value_ptr = agg->get_value_ptr(field);
 					if (!it->second.value_ptr) {
-						THROW(AggregationError, "Field not found! (1)");
+						THROW(AggregationError, "Field {} not found", repr(field));
 					}
 				}
 			}
 			if (!it->second.value_ptr) {
-				THROW(AggregationError, "Field not found! (2)");
+				THROW(AggregationError, "Field not found");
 			}
 		}
 	}
