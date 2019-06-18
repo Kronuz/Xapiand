@@ -38,7 +38,6 @@
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
-#include "length.h"                           // for serialise_length
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics
 #include "repr.hh"                            // for repr
@@ -47,6 +46,7 @@
 #include "multivalue/range.h"                 // for MultipleValueRange, MultipleValueGE, MultipleValueLE
 #include "multivalue/keymaker.h"              // for Multi_MultiValueKeyMaker
 #include "server/remote_protocol_client.h"    // for RemoteProtocolClient
+#include "xapian/common/pack.h"               // for pack_* unpack_*
 #include "xapian/common/serialise-double.h"   // for unserialise_double
 #include "xapian/net/serialise-error.h"       // for serialise_error
 
@@ -89,7 +89,7 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
  * |  _ <  __/ | | | | | (_) | ||  __/  __/| | | (_) | || (_) | (_| (_) | |
  * |_| \_\___|_| |_| |_|\___/ \__\___|_|   |_|  \___/ \__\___/ \___\___/|_|
  *
- * Based on xapian/xapian-core/net/remoteserver.cc @ 62d608e
+ * Based on xapian/xapian-core/net/remoteserver.cc @ db790e9e12bb9b3ebeaf916ac0acdea9a7ab0dd1
  */
 
 
@@ -334,10 +334,10 @@ RemoteProtocolClient::msg_allterms(const std::string &message)
 			prev.resize(255);
 		const std::string& term = *t;
 		size_t reuse = common_prefix_length(prev, term);
-		reply += serialise_length(t.get_termfreq());
 		reply.append(1, char(reuse));
-		reply += serialise_length(term.size() - reuse);
+		pack_uint(reply, term.size() - reuse);
 		reply.append(term, reuse, std::string::npos);
+		pack_uint(reply, t.get_termfreq());
 		prev = term;
 	}
 
@@ -354,7 +354,11 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_TERMLIST");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
@@ -362,30 +366,32 @@ RemoteProtocolClient::msg_termlist(const std::string &message)
 	Xapian::TermIterator t = db->termlist_begin(did);
 	Xapian::termcount num_terms = t.get_approx_size();
 
-	auto reply_termlist0 = serialise_length(db->get_doclength(did)) + serialise_length(num_terms);
+	std::string reply;
+	pack_uint(reply, db->get_doclength(did));
+	pack_uint_last(reply, num_terms);
+	send_message(RemoteReplyType::REPLY_TERMLISTHEADER, reply);
 
-    std::string reply_termlist;
-    std::string prev;
+	reply.resize(0);
+	std::string prev;
 
-    while (t != db->termlist_end(did)) {
+	while (t != db->termlist_end(did)) {
 		if unlikely(prev.size() > 255) {
 			prev.resize(255);
 		}
 		const std::string& term = *t;
 		size_t reuse = common_prefix_length(prev, term);
-		reply_termlist += serialise_length(t.get_wdf());
-		reply_termlist += serialise_length(t.get_termfreq());
-		reply_termlist.append(1, char(reuse));
-		reply_termlist += serialise_length(term.size() - reuse);
-		reply_termlist.append(term, reuse, std::string::npos);
+		reply.append(1, char(reuse));
+		pack_uint(reply, term.size() - reuse);
+		reply.append(term, reuse, std::string::npos);
+		pack_uint(reply, t.get_wdf());
+		pack_uint(reply, t.get_termfreq());
 		prev = term;
 		++t;
-    }
+	}
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_TERMLIST0, reply_termlist0);
-	send_message(RemoteReplyType::REPLY_TERMLIST, reply_termlist);
+	send_message(RemoteReplyType::REPLY_TERMLIST, reply);
 }
 
 
@@ -396,24 +402,29 @@ RemoteProtocolClient::msg_positionlist(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_POSITIONLIST");
+	}
 	std::string term(p, p_end - p);
 
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
+	std::string reply;
 	Xapian::termpos lastpos = static_cast<Xapian::termpos>(-1);
 	const Xapian::PositionIterator end = db->positionlist_end(did, term);
 	for (Xapian::PositionIterator i = db->positionlist_begin(did, term);
 		 i != end; ++i) {
 		Xapian::termpos pos = *i;
-		send_message(RemoteReplyType::REPLY_POSITIONLIST, serialise_length(pos - lastpos - 1));
+		pack_uint(reply, pos - lastpos - 1);
 		lastpos = pos;
 	}
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_DONE, std::string());
+	send_message(RemoteReplyType::REPLY_POSITIONLIST, reply);
 }
 
 
@@ -422,12 +433,16 @@ RemoteProtocolClient::msg_positionlistcount(const std::string &message)
 {
 	L_CALL("RemoteProtocolClient::msg_positionlistcount(<message>)");
 
-	lock_shard lk_shard(endpoint, flags);
-	auto db = lk_shard->db();
-
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_POSITIONLISTCOUNT");
+	}
+
+	lock_shard lk_shard(endpoint, flags);
+	auto db = lk_shard->db();
 
 	// This is kind of clumsy, but what the public API requires.
 	Xapian::termcount result = 0;
@@ -440,7 +455,11 @@ RemoteProtocolClient::msg_positionlistcount(const std::string &message)
 	   }
 	}
 
-	send_message(RemoteReplyType::REPLY_POSITIONLISTCOUNT, serialise_length(result));
+	lk_shard.unlock();
+
+	std::string reply;
+	pack_uint_last(reply, result);
+	send_message(RemoteReplyType::REPLY_POSITIONLISTCOUNT, reply);
 }
 
 
@@ -449,31 +468,32 @@ RemoteProtocolClient::msg_postlist(const std::string &message)
 {
 	L_CALL("RemoteProtocolClient::msg_postlist(<message>)");
 
-	const std::string & term = message;
+	const std::string& term = message;
 
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
 	Xapian::doccount termfreq = db->get_termfreq(term);
-	Xapian::termcount collfreq = db->get_collection_freq(term);
-	send_message(RemoteReplyType::REPLY_POSTLISTSTART, serialise_length(termfreq) + serialise_length(collfreq));
+	std::string reply;
+	pack_uint_last(reply, termfreq);
+	send_message(RemoteReplyType::REPLY_POSTLISTHEADER, reply);
 
+	reply.resize(0);
 	Xapian::docid lastdocid = 0;
 	const Xapian::PostingIterator end = db->postlist_end(term);
 	for (Xapian::PostingIterator i = db->postlist_begin(term);
 		 i != end; ++i) {
 
 		Xapian::docid newdocid = *i;
-		std::string reply(serialise_length(newdocid - lastdocid - 1));
-		reply += serialise_length(i.get_wdf());
+		pack_uint(reply, newdocid - lastdocid - 1);
+		pack_uint(reply, i.get_wdf());
 
-		send_message(RemoteReplyType::REPLY_POSTLISTITEM, reply);
 		lastdocid = newdocid;
 	}
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_DONE, std::string());
+	send_message(RemoteReplyType::REPLY_POSTLIST, reply);
 }
 
 
@@ -485,8 +505,12 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 	flags = DB_OPEN;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
+
 	if (p != p_end) {
-		auto xapian_flags = static_cast<unsigned>(unserialise_length(&p, p_end));
+		unsigned xapian_flags;
+		if (!unpack_uint(&p, p_end, &xapian_flags)) {
+			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
+		}
 		switch (xapian_flags & DB_ACTION_MASK_) {
 			case Xapian::DB_CREATE_OR_OPEN:
 				// Create database if it doesn't already exist.
@@ -510,10 +534,11 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 	}
 
 	if (p != p_end) {
-		size_t len;
-		len = unserialise_length_and_check(&p, p_end);
-		endpoint = Endpoint(std::string_view(p, len));
-		p += len;
+		std::string path;
+		if (!unpack_string(&p, p_end, path)) {
+			throw Xapian::NetworkError("Bad path in MSG_WRITEACCESS");
+		}
+		endpoint = Endpoint(path);
 		if (p != p_end) {
 			THROW(NetworkError, "only one database allowed on remote databases");
 		}
@@ -531,8 +556,12 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 	flags = DB_WRITABLE;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
+
 	if (p != p_end) {
-		auto xapian_flags = static_cast<unsigned>(unserialise_length(&p, p_end));
+		unsigned xapian_flags;
+		if (!unpack_uint(&p, p_end, &xapian_flags)) {
+			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
+		}
 		switch (xapian_flags & DB_ACTION_MASK_) {
 			case Xapian::DB_CREATE_OR_OPEN:
 				// Create database if it doesn't already exist.
@@ -556,10 +585,11 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 	}
 
 	if (p != p_end) {
-		size_t len;
-		len = unserialise_length_and_check(&p, p_end);
-		endpoint = Endpoint(std::string_view(p, len));
-		p += len;
+		std::string path;
+		if (!unpack_string(&p, p_end, path)) {
+			throw Xapian::NetworkError("Bad path in MSG_WRITEACCESS");
+		}
+		endpoint = Endpoint(path);
 		if (p != p_end) {
 			THROW(NetworkError, "only one database allowed on remote databases");
 		}
@@ -605,16 +635,15 @@ RemoteProtocolClient::msg_update(const std::string &)
 		auto db = lk_shard->db();
 
 		Xapian::doccount num_docs = db->get_doccount();
-		message += serialise_length(num_docs);
-		message += serialise_length(db->get_lastdocid() - num_docs);
+		pack_uint(message, num_docs);
+		pack_uint(message, db->get_lastdocid() - num_docs);
 		Xapian::termcount doclen_lb = db->get_doclength_lower_bound();
-		message += serialise_length(doclen_lb);
-		message += serialise_length(db->get_doclength_upper_bound() - doclen_lb);
-		message += (db->has_positions() ? '1' : '0');
-		message += serialise_length(db->get_total_length());
-		message += serialise_length(db->get_revision());
-		std::string uuid = db->get_uuid();
-		message += uuid;
+		pack_uint(message, doclen_lb);
+		pack_uint(message, db->get_doclength_upper_bound() - doclen_lb);
+		pack_bool(message, db->has_positions());
+		pack_uint(message, db->get_total_length());
+		pack_uint(message, db->get_revision());
+		message += db->get_uuid();
 	}
 
 	send_message(RemoteReplyType::REPLY_UPDATE, message);
@@ -638,24 +667,36 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	_msg_query_enquire = std::make_unique<Xapian::Enquire>(*db);
 
+	std::string serialisation;
+
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Query.
-	size_t len = unserialise_length_and_check(&p, p_end);
-	Xapian::Query query(Xapian::Query::unserialise(std::string(p, len), registry));
-	p += len;
+	if (!unpack_string(&p, p_end, serialisation)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
+
+	Xapian::Query query(Xapian::Query::unserialise(serialisation, registry));
 
 	// Unserialise assorted Enquire settings.
-	Xapian::termcount qlen = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+	Xapian::termcount qlen;
+	if (!unpack_uint(&p, p_end, &qlen)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
 
 	_msg_query_enquire->set_query(query, qlen);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Collapse key
-	Xapian::valueno collapse_max = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
+	Xapian::valueno collapse_max;
+	if (!unpack_uint(&p, p_end, &collapse_max)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
 
 	Xapian::valueno collapse_key = Xapian::BAD_VALUENO;
 	if (collapse_max) {
-		collapse_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
+		if (!unpack_uint(&p, p_end, &collapse_key)) {
+			throw Xapian::NetworkError("Bad MSG_QUERY");
+		}
 	}
 
 	_msg_query_enquire->set_collapse_key(collapse_key, collapse_max);
@@ -663,11 +704,11 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	////////////////////////////////////////////////////////////////////////////
 	// docid order
 
-	if (p_end - p < 4 || *p < '0' || *p > '2') {
+	if (p_end - p < 4 || static_cast<unsigned char>(*p) > 2) {
 		THROW(NetworkError, "bad message (docid_order)");
 	}
 	Xapian::Enquire::docid_order order;
-	order = static_cast<Xapian::Enquire::docid_order>(*p++ - '0');
+	order = static_cast<Xapian::Enquire::docid_order>(*p++);
 
 	_msg_query_enquire->set_docid_order(order);
 
@@ -675,18 +716,24 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	// Sort by
 	using sort_setting = enum { REL, VAL, VAL_REL, REL_VAL, DOCID };
 
-	Xapian::valueno sort_key = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
-
-	if (*p < '0' || *p > '4') {
-		THROW(NetworkError, "bad message (sort_by)");
+	if (static_cast<unsigned char>(*p) > 4) {
+		throw Xapian::NetworkError("bad message (sort_by)");
 	}
+
 	sort_setting sort_by;
-	sort_by = static_cast<sort_setting>(*p++ - '0');
+	sort_by = static_cast<sort_setting>(*p++);
 
-	if (*p < '0' || *p > '1') {
-		THROW(NetworkError, "bad message (sort_value_forward)");
+	Xapian::valueno sort_key = Xapian::BAD_VALUENO;
+	if (sort_by != REL) {
+		if (!unpack_uint(&p, p_end, &sort_key)) {
+			throw Xapian::NetworkError("Bad MSG_QUERY");
+		}
 	}
-	bool sort_value_forward(*p++ != '0');
+
+	bool sort_value_forward;
+	if (!unpack_bool(&p, p_end, &sort_value_forward)) {
+		throw Xapian::NetworkError("bad message (sort_value_forward)");
+	}
 
 	switch (sort_by) {
 		case REL:
@@ -730,9 +777,10 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Weight object.
-	len = unserialise_length_and_check(&p, p_end);
-	std::string wtname(p, len);
-	p += len;
+	std::string wtname;
+	if (!unpack_string(&p, p_end, wtname)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
 
 	const Xapian::Weight * wttype = registry.get_weighting_scheme(wtname);
 	if (wttype == nullptr) {
@@ -742,38 +790,44 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		THROW(InvalidArgumentError, "Weighting scheme " + wtname + " not registered");
 	}
 
-	len = unserialise_length_and_check(&p, p_end);
-	std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(std::string(p, len)));
+	if (!unpack_string(&p, p_end, serialisation)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
+
+	std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(serialisation));
 	_msg_query_enquire->set_weighting_scheme(*wt);
-	p += len;
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the RSet object.
-	len = unserialise_length_and_check(&p, p_end);
-	Xapian::RSet rset = Xapian::RSet::unserialise(std::string(p, len));
-	p += len;
+	if (!unpack_string(&p, p_end, serialisation)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
+
+	Xapian::RSet rset = Xapian::RSet::unserialise(serialisation);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise any MatchSpy or KeyMaker objects.
 	while (p != p_end) {
-		len = unserialise_length_and_check(&p, p_end);
-		std::string_view classtype(p, len);
-		if (len < 8) {
+		std::string classtype;
+		if (!unpack_string(&p, p_end, classtype)) {
+			throw Xapian::NetworkError("Bad MSG_QUERY");
+		}
+		if (classtype.size() < 8) {
 			THROW(InvalidArgumentError, "Class type {} is invalid", classtype);
 		}
-		std::string_view type(p + len - 8, 8);
-		p += len;
+		std::string_view type(classtype);
+		type.remove_prefix(classtype.size() - 8);
 
-		len = unserialise_length_and_check(&p, p_end);
-		std::string_view serialised(p, len);
-		p += len;
+		if (!unpack_string(&p, p_end, serialisation)) {
+			throw Xapian::NetworkError("Bad MSG_QUERY");
+		}
 
 		if (type == "KeyMaker") {
-			const Xapian::KeyMaker * sorterclass = registry.get_key_maker(std::string(classtype));
+			const Xapian::KeyMaker * sorterclass = registry.get_key_maker(classtype);
 			if (sorterclass == nullptr) {
 				THROW(InvalidArgumentError, "Key maker {} not registered", classtype);
 			}
-			Xapian::KeyMaker * sorter = sorterclass->unserialise(std::string(serialised), registry);
+			Xapian::KeyMaker * sorter = sorterclass->unserialise(serialisation, registry);
 			switch (sort_by) {
 				case REL:
 					break;
@@ -790,11 +844,11 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 					break;
 			}
 		} else if (type == "MatchSpy") {
-			const Xapian::MatchSpy * spyclass = registry.get_match_spy(std::string(classtype));
+			const Xapian::MatchSpy * spyclass = registry.get_match_spy(classtype);
 			if (spyclass == nullptr) {
 				THROW(InvalidArgumentError, "Match spy {} not registered", classtype);
 			}
-			Xapian::MatchSpy * spy = spyclass->unserialise(std::string(serialised), registry);
+			Xapian::MatchSpy * spy = spyclass->unserialise(serialisation, registry);
 			_msg_query_matchspies.push_back(spy);
 			_msg_query_enquire->add_matchspy(spy->release());
 		} else {
@@ -833,10 +887,14 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
-	Xapian::termcount first = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-	Xapian::termcount maxitems = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
-
-	Xapian::termcount check_at_least = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+	Xapian::termcount first;
+	Xapian::termcount maxitems;
+	Xapian::termcount check_at_least;
+	if (!unpack_uint(&p, p_end, &first) ||
+		!unpack_uint(&p, p_end, &maxitems) ||
+		!unpack_uint(&p, p_end, &check_at_least)) {
+		throw Xapian::NetworkError("Bad MSG_GETMSET");
+	}
 
 	_msg_query_enquire->set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
 
@@ -844,13 +902,11 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 	{
 		Xapian::MSet mset = _msg_query_enquire->get_mset(first, maxitems, check_at_least);
 		for (auto& i : _msg_query_matchspies) {
-			std::string spy_results = i->serialise_results();
-			msg += serialise_length(spy_results.size());
-			msg += spy_results;
+			pack_string(msg, i->serialise_results());
 		}
 		msg += mset.serialise();
-		// Make sure mset is destroyed before the database
-		// is checked in by the reset()
+		// Make sure mset is destroyed before the database is
+		// checked in by the enquire reset() below, hence the scope.
 	}
 
 	_msg_query_matchspies.clear();
@@ -868,7 +924,11 @@ RemoteProtocolClient::msg_document(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_DOCUMENT");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
 
@@ -878,10 +938,13 @@ RemoteProtocolClient::msg_document(const std::string &message)
 
 	Xapian::ValueIterator i;
 	for (i = doc.values_begin(); i != doc.values_end(); ++i) {
-		std::string item(serialise_length(i.get_valueno()));
+		std::string item;
+		pack_uint(item, i.get_valueno());
 		item += *i;
 		send_message(RemoteReplyType::REPLY_VALUE, item);
 	}
+
+	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -932,7 +995,9 @@ RemoteProtocolClient::msg_collfreq(const std::string &term)
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_COLLFREQ, serialise_length(collection_freq));
+	std::string reply;
+	pack_uint_last(reply, collection_freq);
+	send_message(RemoteReplyType::REPLY_COLLFREQ, reply);
 }
 
 
@@ -948,7 +1013,9 @@ RemoteProtocolClient::msg_termfreq(const std::string &term)
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_TERMFREQ, serialise_length(termfreq));
+	std::string reply;
+	pack_uint_last(reply, termfreq);
+	send_message(RemoteReplyType::REPLY_TERMFREQ, reply);
 }
 
 
@@ -965,9 +1032,10 @@ RemoteProtocolClient::msg_freqs(const std::string &term)
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_FREQS,
-		serialise_length(termfreq) +
-		serialise_length(collection_freq));
+	std::string reply;
+	pack_uint(reply, termfreq);
+	pack_uint_last(reply, collection_freq);
+	send_message(RemoteReplyType::REPLY_FREQS, reply);
 }
 
 
@@ -976,24 +1044,28 @@ RemoteProtocolClient::msg_valuestats(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_valuestats(<message>)");
 
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	Xapian::valueno slot;
+	if (!unpack_uint_last(&p, p_end, &slot)) {
+		throw Xapian::NetworkError("Bad MSG_VALUESTATS");
+	}
+
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
-	const char *p = message.data();
-	const char *p_end = p + message.size();
-	while (p != p_end) {
-		Xapian::valueno slot = static_cast<Xapian::valueno>(unserialise_length(&p, p_end));
-		std::string message_out;
-		message_out += serialise_length(db->get_value_freq(slot));
-		std::string bound = db->get_value_lower_bound(slot);
-		message_out += serialise_length(bound.size());
-		message_out += bound;
-		bound = db->get_value_upper_bound(slot);
-		message_out += serialise_length(bound.size());
-		message_out += bound;
+	auto value_freq = db->get_value_freq(slot);
+	auto value_lower_bound = db->get_value_lower_bound(slot);
+	auto value_upper_bound = db->get_value_upper_bound(slot);
 
-		send_message(RemoteReplyType::REPLY_VALUESTATS, message_out);
-	}
+	lk_shard.unlock();
+
+	std::string reply;
+	pack_uint(reply, value_freq);
+	pack_string(reply, value_lower_bound);
+	reply += value_upper_bound;
+	send_message(RemoteReplyType::REPLY_VALUESTATS, reply);
 }
 
 
@@ -1004,7 +1076,11 @@ RemoteProtocolClient::msg_doclength(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_DOCLENGTH");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
@@ -1013,7 +1089,9 @@ RemoteProtocolClient::msg_doclength(const std::string &message)
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_DOCLENGTH, serialise_length(doclength));
+	std::string reply;
+	pack_uint_last(reply, doclength);
+	send_message(RemoteReplyType::REPLY_DOCLENGTH, reply);
 }
 
 
@@ -1024,7 +1102,11 @@ RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_UNIQUETERMS");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
@@ -1033,7 +1115,9 @@ RemoteProtocolClient::msg_uniqueterms(const std::string &message)
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_UNIQUETERMS, serialise_length(unique_terms));
+	std::string reply;
+	pack_uint_last(reply, unique_terms);
+	send_message(RemoteReplyType::REPLY_UNIQUETERMS, reply);
 }
 
 
@@ -1058,10 +1142,13 @@ RemoteProtocolClient::msg_cancel(const std::string &)
 	L_CALL("RemoteProtocolClient::msg_cancel(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
+
 	// We can't call cancel since that's an internal method, but this
 	// has the same effect with minimal additional overhead.
 	lk_shard->begin_transaction(false);
 	lk_shard->cancel_transaction();
+
+	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1081,8 +1168,8 @@ RemoteProtocolClient::msg_adddocument(const std::string & message)
 	lk_shard.unlock();
 
 	std::string reply;
-	reply += serialise_length(info.did);
-	reply += serialise_length(info.version);
+	pack_uint(reply, info.did);
+	pack_uint(reply, info.version);
 	reply += info.term;
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, reply);
 }
@@ -1095,7 +1182,11 @@ RemoteProtocolClient::msg_deletedocument(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	auto did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint_last(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_DELETEDOCUMENT");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
 
@@ -1113,7 +1204,10 @@ RemoteProtocolClient::msg_deletedocumentterm(const std::string & message)
 	L_CALL("RemoteProtocolClient::msg_deletedocumentterm(<message>)");
 
 	lock_shard lk_shard(endpoint, flags);
+
 	lk_shard->delete_document_term(message);
+
+	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1126,7 +1220,11 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::docid did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+
+	Xapian::docid did;
+	if (!unpack_uint(&p, p_end, &did)) {
+		throw Xapian::NetworkError("Bad MSG_REPLACEDOCUMENT");
+	}
 
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
@@ -1137,8 +1235,8 @@ RemoteProtocolClient::msg_replacedocument(const std::string & message)
 	lk_shard.unlock();
 
 	std::string reply;
-	reply += serialise_length(info.did);
-	reply += serialise_length(info.version);
+	pack_uint(reply, info.did);
+	pack_uint(reply, info.version);
 	reply += info.term;
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, reply);
 }
@@ -1151,9 +1249,11 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	size_t len = unserialise_length_and_check(&p, p_end);
-	std::string unique_term(p, len);
-	p += len;
+
+	std::string unique_term;
+	if (!unpack_string(&p, p_end, unique_term)) {
+		throw Xapian::NetworkError("Bad MSG_REPLACEDOCUMENTTERM");
+	}
 
 	auto document = Xapian::Document::unserialise(std::string(p, p_end));
 
@@ -1164,8 +1264,8 @@ RemoteProtocolClient::msg_replacedocumentterm(const std::string & message)
 	lk_shard.unlock();
 
 	std::string reply;
-	reply += serialise_length(info.did);
-	reply += serialise_length(info.version);
+	pack_uint(reply, info.did);
+	pack_uint(reply, info.version);
 	reply += info.term;
 	send_message(RemoteReplyType::REPLY_ADDDOCUMENT, reply);
 }
@@ -1205,7 +1305,7 @@ RemoteProtocolClient::msg_metadatakeylist(const std::string & message)
 		const std::string& term = *t;
 		size_t reuse = common_prefix_length(prev, term);
 		reply.append(1, char(reuse));
-		reply += serialise_length(term.size() - reuse);
+		pack_uint(reply, term.size() - reuse);
 		reply.append(term, reuse, std::string::npos);
 		prev = term;
 	}
@@ -1223,13 +1323,18 @@ RemoteProtocolClient::msg_setmetadata(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	size_t keylen = unserialise_length_and_check(&p, p_end);
-	std::string key(p, keylen);
-	p += keylen;
+
+	std::string key;
+	if (!unpack_string(&p, p_end, key)) {
+		throw Xapian::NetworkError("Bad MSG_SETMETADATA");
+	}
 	std::string val(p, p_end - p);
 
 	lock_shard lk_shard(endpoint, flags);
+
 	lk_shard->set_metadata(key, val);
+
+	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1242,10 +1347,17 @@ RemoteProtocolClient::msg_addspelling(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::termcount freqinc = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+
+	Xapian::termcount freqinc;
+	if (!unpack_uint(&p, p_end, &freqinc)) {
+		throw Xapian::NetworkError("Bad MSG_ADDSPELLING");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
+
 	lk_shard->add_spelling(std::string(p, p_end - p), freqinc);
+
+	lk_shard.unlock();
 
 	send_message(RemoteReplyType::REPLY_DONE, std::string());
 }
@@ -1258,16 +1370,21 @@ RemoteProtocolClient::msg_removespelling(const std::string & message)
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-	Xapian::termcount freqdec = static_cast<Xapian::termcount>(unserialise_length(&p, p_end));
+
+	Xapian::termcount freqdec;
+	if (!unpack_uint(&p, p_end, &freqdec)) {
+		throw Xapian::NetworkError("Bad MSG_REMOVESPELLING");
+	}
 
 	lock_shard lk_shard(endpoint, flags);
 
 	auto result = lk_shard->remove_spelling(std::string(p, p_end - p), freqdec);
-	auto serialised = serialise_length(result);
 
 	lk_shard.unlock();
 
-	send_message(RemoteReplyType::REPLY_REMOVESPELLING, serialised);
+	std::string reply;
+	pack_uint_last(reply, result);
+	send_message(RemoteReplyType::REPLY_REMOVESPELLING, reply);
 }
 
 
@@ -1408,10 +1525,11 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 			}
 		}
 
-		ssize_t len;
-		try {
-			len = unserialise_length_and_check(&p, p_end);
-		} catch (const Xapian::SerialisationError) {
+		size_t len;
+		if (!unpack_uint(&p, p_end, &len)) {
+			return received;
+		}
+		if (size_t(p_end - p) != len) {
 			return received;
 		}
 
@@ -1515,9 +1633,9 @@ RemoteProtocolClient::send_message(char type_as_char, const std::string &message
 #endif
 
 	std::string buf;
-	buf += type_as_char;
-	buf += serialise_length(message.size());
-	buf += message;
+	buf.push_back(type_as_char);
+	pack_uint(buf, message.size());
+	buf.append(message);
 	write(buf);
 }
 
@@ -1528,8 +1646,8 @@ RemoteProtocolClient::send_file(char type_as_char, int fd)
 	L_CALL("RemoteProtocolClient::send_file(<type_as_char>, <fd>)");
 
 	std::string buf;
-	buf += FILE_FOLLOWS;
-	buf += type_as_char;
+	buf.push_back(FILE_FOLLOWS);
+	buf.push_back(type_as_char);
 	write(buf);
 
 	BaseClient<RemoteProtocolClient>::send_file(fd);
