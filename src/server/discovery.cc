@@ -62,8 +62,8 @@
 
 
 static inline bool raft_has_consensus(size_t votes) {
-	auto active_nodes = Node::active_nodes();
-	return active_nodes == 1 || votes > active_nodes / 2;
+	auto nodes = Node::total_nodes();
+	return nodes == 1 || votes > nodes / 2;
 }
 
 
