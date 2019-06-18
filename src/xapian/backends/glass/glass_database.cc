@@ -54,10 +54,10 @@
 #include "xapian/common/filetests.h"
 #include "xapian/common/io_utils.h"
 #include "xapian/common/pack.h"
+#include "xapian/common/parseint.h"
 #include "xapian/net/remoteconnection.h"
 #include "xapian/api/replication.h"
 #include "xapian/common/replicationprotocol.h"
-#include "xapian/net/length.h"
 #include "xapian/common/posixy_wrapper.h"
 #include "xapian/common/str.h"
 #include "xapian/common/stringutils.h"
@@ -438,9 +438,7 @@ GlassDatabase::send_whole_database(RemoteConnection & conn, double end_time)
 #ifdef XAPIAN_HAS_REMOTE_BACKEND
     // Send the current revision number in the header.
     string buf;
-    string uuid = get_uuid();
-    buf += encode_length(uuid.size());
-    buf += uuid;
+    pack_string(buf, get_uuid());
     pack_uint(buf, get_revision());
     conn.send_message(REPL_REPLY_DB_HEADER, buf, end_time);
 

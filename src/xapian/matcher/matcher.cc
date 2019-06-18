@@ -256,6 +256,7 @@ Matcher::prepare_mset(const Xapian::Query& query_,
 	    locals.resize(i);
 	locals.emplace_back(new LocalSubMatch(subdb, query, query_length,
 					      wtscheme,
+					      i,
 					      db.has_positions()));
 	subdb->readahead_for_query(query);
     }
@@ -623,7 +624,7 @@ Matcher::get_mset(Xapian::doccount first,
 
 Xapian::MSet
 Matcher::merge_mset(
-    const std::vector<Xapian::MSet>& msets,
+    const std::vector<Xapian::MSet>& vmsets,
     Xapian::doccount first,
     Xapian::doccount maxitems,
     Xapian::doccount collapse_max,
@@ -635,15 +636,15 @@ Matcher::merge_mset(
 {
     Xapian::MSet merged_mset;
 
-    std::vector<std::pair<Xapian::MSet, Xapian::doccount>> msets_cnt;
-    for (auto& mset : msets) {
+    std::vector<std::pair<Xapian::MSet, Xapian::doccount>> msets;
+    for (auto& mset : vmsets) {
 	merged_mset.internal->merge_stats(mset.internal.get());
 	if (!mset.empty()) {
-	    msets_cnt.push_back({mset, 0});
+	    msets.push_back({mset, 0});
 	}
     }
 
-    if (msets_cnt.empty()) {
+    if (msets.empty()) {
 	return merged_mset;
     }
 
@@ -678,7 +679,7 @@ Matcher::merge_mset(
 			a.first.internal->items[a.second]);
 	};
 
-    Heap::make(msets_cnt.begin(), msets_cnt.end(), heap_cmp);
+    Heap::make(msets.begin(), msets.end(), heap_cmp);
 
     double min_weight = 0.0;
     if (percent_threshold) {
@@ -688,8 +689,8 @@ Matcher::merge_mset(
 
     CollapserLite collapser(collapse_max);
     merged_mset.internal->first = first;
-    while (merged_mset.size() != maxitems) {
-	auto& front = msets_cnt.front();
+    while (!msets.empty() && merged_mset.size() != maxitems) {
+	auto& front = msets.front();
 	auto& result = front.first.internal->items[front.second];
 	if (percent_threshold) {
 	    if (result.get_weight() < min_weight) {
@@ -705,15 +706,13 @@ Matcher::merge_mset(
 	} else {
 	    merged_mset.internal->items.push_back(std::move(result));
 	}
-	auto n = msets_cnt.front().second + 1;
-	if (n == msets_cnt.front().first.size()) {
-	    Heap::pop(msets_cnt.begin(), msets_cnt.end(), heap_cmp);
-	    msets_cnt.resize(msets_cnt.size() - 1);
-	    if (msets_cnt.empty())
-		break;
+	auto n = msets.front().second + 1;
+	if (n == msets.front().first.size()) {
+	    Heap::pop(msets.begin(), msets.end(), heap_cmp);
+	    msets.resize(msets.size() - 1);
 	} else {
-	    msets_cnt.front().second = n;
-	    Heap::replace(msets_cnt.begin(), msets_cnt.end(), heap_cmp);
+	    msets.front().second = n;
+	    Heap::replace(msets.begin(), msets.end(), heap_cmp);
 	}
     }
 

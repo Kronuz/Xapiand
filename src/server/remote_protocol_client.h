@@ -75,7 +75,9 @@
 // 40: pre-1.5.0 REPLY_REMOVESPELLING added.
 // 41: pre-1.5.0 Changed REPLY_ALLTERMS, REPLY_METADATAKEYLIST, REPLY_TERMLIST.
 // 42: 1.5.0 Use little-endian IEEE for doubles
-#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 42
+// 43: pre-1.5.0 REPLY_DONE sent for 5 more messages; MSG_QUERY adjusted
+// 44: 1.5.0 pack_uint() now used; many other changes
+#define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 44
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
 
 #define FILE_FOLLOWS '\xfd'
@@ -143,8 +145,8 @@ ENUM_CLASS(RemoteReplyType, int,
 	REPLY_STATS,                // Stats
 	REPLY_TERMLIST,             // Get Termlist
 	REPLY_POSITIONLIST,         // Get PositionList
-	REPLY_POSTLISTSTART,        // Start of a postlist
-	REPLY_POSTLISTITEM,         // Item in body of a postlist
+	REPLY_POSTLISTHEADER,	    // Header for get postlist
+	REPLY_POSTLIST,		        // Get Postlist
 	REPLY_VALUE,                // Document Value
 	REPLY_ADDDOCUMENT,          // Add Document
 	REPLY_RESULTS,              // Results (MSet)
@@ -154,7 +156,7 @@ ENUM_CLASS(RemoteReplyType, int,
 	REPLY_UNIQUETERMS,          // Get number of unique terms in doc
 	REPLY_POSITIONLISTCOUNT,    // Get PositionList length
 	REPLY_REMOVESPELLING,       // Remove a spelling
-	REPLY_TERMLIST0,            // Header for get Termlist
+	REPLY_TERMLISTHEADER,	    // Header for get termlist
 	REPLY_MAX
 )
 
