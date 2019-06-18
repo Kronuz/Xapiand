@@ -1254,8 +1254,10 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 					data.flush();
 					doc.set_data(data.serialise());
 				}
+				wdb->replace_document(info.did, doc);
+			} else {
+				info = wdb->replace_document(info.did, doc);
 			}
-			wdb->replace_document(info.did, doc);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
