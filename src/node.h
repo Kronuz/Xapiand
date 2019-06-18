@@ -75,7 +75,7 @@ public:
 		http_port(std::move(other.http_port)),
 		remote_port(std::move(other.remote_port)),
 		replication_port(std::move(other.replication_port)),
-		touched(other.touched.load(std::memory_order_relaxed)) { }
+		touched(other.touched.load(std::memory_order_acquire)) { }
 
 	// Copy Constructor
 	Node(const Node& other) :
@@ -87,7 +87,7 @@ public:
 		http_port(other.http_port),
 		remote_port(other.remote_port),
 		replication_port(other.replication_port),
-		touched(other.touched.load(std::memory_order_relaxed)) { }
+		touched(other.touched.load(std::memory_order_acquire)) { }
 
 	// Move assignment
 	Node& operator=(Node&& other) {
@@ -99,7 +99,7 @@ public:
 		http_port = std::move(other.http_port);
 		remote_port = std::move(other.remote_port);
 		replication_port = std::move(other.replication_port);
-		touched = other.touched.load(std::memory_order_relaxed);
+		touched = other.touched.load(std::memory_order_acquire);
 		return *this;
 	}
 
@@ -113,7 +113,7 @@ public:
 		http_port = other.http_port;
 		remote_port = other.remote_port;
 		replication_port = other.replication_port;
-		touched = other.touched.load(std::memory_order_relaxed);
+		touched = other.touched.load(std::memory_order_acquire);
 		return *this;
 	}
 
@@ -126,7 +126,7 @@ public:
 		http_port = 0;
 		remote_port = 0;
 		replication_port = 0;
-		touched.store(0, std::memory_order_relaxed);
+		touched.store(0, std::memory_order_release);
 	}
 
 	bool empty() const noexcept {
@@ -195,15 +195,15 @@ public:
 	}
 
 	bool is_local() const {
-		return is_subset(_local_node.load(std::memory_order_relaxed));
+		return is_subset(_local_node.load(std::memory_order_acquire));
 	}
 
 	bool is_leader() const {
-		return is_subset(_leader_node.load(std::memory_order_relaxed));
+		return is_subset(_leader_node.load(std::memory_order_acquire));
 	}
 
 	bool is_active() const {
-		return (touched.load(std::memory_order_relaxed) >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
+		return (touched.load(std::memory_order_acquire) >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
 	}
 
 	bool operator==(const Node& other) const {
@@ -312,7 +312,8 @@ private:
 
 	static std::atomic_size_t _total_nodes;
 	static std::atomic_size_t _active_nodes;
-	static std::atomic_size_t _indexed_nodes;
+	static std::atomic_size_t _total_indexed_nodes;
+	static std::atomic_size_t _active_indexed_nodes;
 
 	static std::mutex _nodes_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<const Node>> _nodes;
@@ -322,15 +323,19 @@ private:
 
 public:
 	static size_t total_nodes() {
-		return _total_nodes.load(std::memory_order_relaxed);
+		return _total_nodes.load(std::memory_order_acquire);
 	}
 
 	static size_t active_nodes() {
-		return _active_nodes.load(std::memory_order_relaxed);
+		return _active_nodes.load(std::memory_order_acquire);
 	}
 
-	static size_t indexed_nodes() {
-		return _indexed_nodes.load(std::memory_order_relaxed);
+	static size_t total_indexed_nodes() {
+		return _total_indexed_nodes.load(std::memory_order_acquire);
+	}
+
+	static size_t active_indexed_nodes() {
+		return _active_indexed_nodes.load(std::memory_order_acquire);
 	}
 
 	static std::shared_ptr<const Node> get_node(size_t idx);

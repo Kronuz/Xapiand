@@ -44,20 +44,6 @@
 #include "xapian.h"                         // for Xapian::rev
 
 
-// Values in seconds
-constexpr double CLUSTER_DISCOVERY_WAITING_FAST  = 0.200;
-constexpr double CLUSTER_DISCOVERY_WAITING_SLOW  = 0.600;
-
-constexpr double RAFT_HEARTBEAT_LEADER_MIN = 0.150;
-constexpr double RAFT_HEARTBEAT_LEADER_MAX = 0.300;
-
-constexpr double RAFT_LEADER_ELECTION_MIN = 2.5 * RAFT_HEARTBEAT_LEADER_MAX;
-constexpr double RAFT_LEADER_ELECTION_MAX = 5.0 * RAFT_HEARTBEAT_LEADER_MAX;
-
-constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
-constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
-
-
 struct DatabaseUpdate;
 class UUID;
 
@@ -121,6 +107,7 @@ private:
 	Role raft_role;
 	size_t raft_votes_granted;
 	size_t raft_votes_denied;
+	std::unordered_set<std::string> raft_voters;
 
 	uint64_t raft_current_term;
 	Node raft_voted_for;
@@ -162,8 +149,8 @@ private:
 	void raft_leader_election_timeout_cb(ev::timer& watcher, int revents);
 	void raft_leader_heartbeat_cb(ev::timer& watcher, int revents);
 
-	void _raft_leader_heartbeat_start(double min = RAFT_HEARTBEAT_LEADER_MIN, double max = RAFT_HEARTBEAT_LEADER_MAX);
-	void _raft_leader_election_timeout_reset(double min = RAFT_LEADER_ELECTION_MIN, double max = RAFT_LEADER_ELECTION_MAX);
+	void _raft_leader_heartbeat_reset(double timeout);
+	void _raft_leader_election_timeout_reset(double timeout);
 	void _raft_set_leader_node(const std::shared_ptr<const Node>& node);
 
 	void _raft_apply_command(const std::string& command);

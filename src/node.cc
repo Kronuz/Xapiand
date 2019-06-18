@@ -42,7 +42,7 @@
 	L_SLATE_GREY(args); \
 	for (const auto& _ : _nodes) { \
 		L_SLATE_GREY("    nodes[{}] -> {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}", \
-			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->remote_port, _.second->replication_port, _.second->touched.load(std::memory_order_relaxed), \
+			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->remote_port, _.second->replication_port, _.second->touched.load(std::memory_order_acquire), \
 			Node::is_active(_.second) ? " " + LIGHT_STEEL_BLUE + "(active)" + STEEL_BLUE : "", \
 			Node::is_local(_.second) ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "", \
 			Node::is_leader(_.second) ? " " + DARK_STEEL_BLUE + "(leader)" + STEEL_BLUE : ""); \
@@ -72,39 +72,35 @@ set_as_title(const std::shared_ptr<const Node>& node)
 std::string
 Node::serialise() const
 {
-	return _name.empty()
-		? ""
-		: serialise_length(_addr.sin_addr.s_addr) +
-			serialise_length(http_port) +
-			serialise_length(remote_port) +
-			serialise_length(replication_port) +
-			serialise_length(idx) +
-			serialise_string(_name);
+	return (
+		serialise_length(_addr.sin_addr.s_addr) +
+		serialise_length(http_port) +
+		serialise_length(remote_port) +
+		serialise_length(replication_port) +
+		serialise_length(idx) +
+		serialise_string(_name)
+	);
 }
 
 
 Node
-Node::unserialise(const char **p, const char *end)
+Node::unserialise(const char **pp, const char *p_end)
 {
-	const char *ptr = *p;
-
 	Node node;
 
-	node._addr.sin_family = AF_INET;
-	node._addr.sin_addr.s_addr = unserialise_length(&ptr, end);
-	node.http_port = unserialise_length(&ptr, end);
-	node.remote_port = unserialise_length(&ptr, end);
-	node.replication_port = unserialise_length(&ptr, end);
-	node.idx = unserialise_length(&ptr, end);
-	node._name = unserialise_string(&ptr, end);
-	if (node._name.empty()) {
-		throw Xapian::SerialisationError("Bad Node: No name");
-	}
+	const char *p = *pp;
 
+	node._addr.sin_family = AF_INET;
+	node._addr.sin_addr.s_addr = unserialise_length(&p, p_end);
+	node.http_port = unserialise_length(&p, p_end);
+	node.remote_port = unserialise_length(&p, p_end);
+	node.replication_port = unserialise_length(&p, p_end);
+	node.idx = unserialise_length(&p, p_end);
+	node._name = unserialise_string(&p, p_end);
 	node._lower_name = strings::lower(node._name);
 	node._host = inet_ntop(node._addr);
 
-	*p = ptr;
+	*pp = p;
 
 	return node;
 }
@@ -114,7 +110,7 @@ std::string
 Node::__repr__() const
 {
 	return strings::format(STEEL_BLUE + "<Node {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, touched:{}}}{}{}{}>",
-		idx, repr(name()), repr(host()), http_port, remote_port, replication_port, touched.load(std::memory_order_relaxed),
+		idx, repr(name()), repr(host()), http_port, remote_port, replication_port, touched.load(std::memory_order_acquire),
 		is_active() ? " " + DARK_STEEL_BLUE + "(active)" + STEEL_BLUE : "",
 		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
 		is_leader() ? " " + DARK_STEEL_BLUE + "(leader)" + STEEL_BLUE : "");
@@ -130,9 +126,13 @@ Node::dump_nodes(int level)
 	}
 
 	std::string ret;
+	ret += indent;
+	ret += strings::format(STEEL_BLUE + "<Nodes {{total_nodes:{}, active_nodes:{}, total_indexed_nodes:{}, active_indexed_nodes:{}}}>",
+		Node::total_nodes(), Node::active_nodes(), Node::total_indexed_nodes(), Node::active_indexed_nodes());
+	ret.push_back('\n');
 
 	for (auto& node : nodes()) {
-		ret += indent;
+		ret += indent + indent;
 		ret += node->__repr__();
 		ret.push_back('\n');
 	}
@@ -151,7 +151,8 @@ std::vector<std::shared_ptr<const Node>> Node::_nodes_indexed;
 
 std::atomic_size_t Node::_total_nodes;
 std::atomic_size_t Node::_active_nodes;
-std::atomic_size_t Node::_indexed_nodes;
+std::atomic_size_t Node::_total_indexed_nodes;
+std::atomic_size_t Node::_active_indexed_nodes;
 
 
 std::shared_ptr<const Node>
@@ -161,13 +162,9 @@ Node::local_node(std::shared_ptr<const Node> node)
 		L_CALL("Node::local_node({})", node->__repr__());
 
 		auto now = epoch::now<std::chrono::milliseconds>();
-		node->touched.store(now, std::memory_order_relaxed);
+		node->touched.store(now, std::memory_order_release);
 		set_as_title(node);
 		_local_node.store(node, std::memory_order_release);
-		auto leader_node_ = _leader_node.load(std::memory_order_acquire);
-		if (node->lower_name() == leader_node_->lower_name()) {
-			_leader_node.store(node, std::memory_order_release);
-		}
 
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
 
@@ -177,14 +174,7 @@ Node::local_node(std::shared_ptr<const Node> node)
 			node_ref = node;
 		}
 
-		auto idx_ = node->idx;
-		if (idx_) {
-			if (_nodes_indexed.size() < idx_) {
-				_nodes_indexed.resize(idx_);
-			}
-			_nodes_indexed[idx_ - 1] = node;
-		}
-		_indexed_nodes = _nodes_indexed.size();
+		_update_nodes(node);
 
 		L_NODE_NODES("local_node({})", node->__repr__());
 	} else {
@@ -201,15 +191,8 @@ Node::leader_node(std::shared_ptr<const Node> node)
 		L_CALL("Node::leader_node({})", node->__repr__());
 
 		auto now = epoch::now<std::chrono::milliseconds>();
-		node->touched.store(now, std::memory_order_relaxed);
+		node->touched.store(now, std::memory_order_release);
 		_leader_node.store(node, std::memory_order_release);
-		auto local_node_ = _local_node.load(std::memory_order_acquire);
-		if (node->lower_name() == local_node_->lower_name()) {
-			if (node->idx != local_node_->idx) {
-				set_as_title(node);
-			}
-			_local_node.store(node, std::memory_order_release);
-		}
 
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
 
@@ -219,14 +202,7 @@ Node::leader_node(std::shared_ptr<const Node> node)
 			node_ref = node;
 		}
 
-		auto idx_ = node->idx;
-		if (idx_) {
-			if (_nodes_indexed.size() < idx_) {
-				_nodes_indexed.resize(idx_);
-			}
-			_nodes_indexed[idx_ - 1] = node;
-		}
-		_indexed_nodes = _nodes_indexed.size();
+		_update_nodes(node);
 
 		L_NODE_NODES("leader_node({})", node->__repr__());
 	} else {
@@ -256,14 +232,18 @@ Node::_update_nodes(const std::shared_ptr<const Node>& node)
 		}
 	}
 
-	size_t cnt = 0;
+	size_t active_nodes_cnt = 0;
+	size_t active_indexed_nodes_cnt = 0;
 	_nodes_indexed.clear();
 	for (const auto& node_pair : _nodes) {
 		const auto& node_ref = node_pair.second;
-		if (is_active(node_ref)) {
-			++cnt;
-		}
 		auto idx_ = node_ref->idx;
+		if (is_active(node_ref)) {
+			++active_nodes_cnt;
+			if (idx_) {
+				++active_indexed_nodes_cnt;
+			}
+		}
 		if (idx_) {
 			if (_nodes_indexed.size() < idx_) {
 				_nodes_indexed.resize(idx_);
@@ -271,9 +251,10 @@ Node::_update_nodes(const std::shared_ptr<const Node>& node)
 			_nodes_indexed[idx_ - 1] = node_ref;
 		}
 	}
-	_active_nodes.store(cnt, std::memory_order_relaxed);
-	_total_nodes.store(_nodes.size(), std::memory_order_relaxed);
-	_indexed_nodes.store(_nodes_indexed.size(), std::memory_order_relaxed);
+	_active_nodes.store(active_nodes_cnt, std::memory_order_release);
+	_total_nodes.store(_nodes.size(), std::memory_order_release);
+	_total_indexed_nodes.store(_nodes_indexed.size(), std::memory_order_release);
+	_active_indexed_nodes.store(active_indexed_nodes_cnt, std::memory_order_release);
 }
 
 
@@ -366,12 +347,17 @@ Node::touch_node(const Node& node, bool activate)
 				}
 #endif
 				node_ref = std::shared_ptr<const Node>(node_ref_copy.release());
+				if (activate || is_active(node_ref)) {
+					node_ref->touched.store(now, std::memory_order_release);
+				}
 				_update_nodes(node_ref);
 				modified = true;
-			}
-			if (activate || is_active(node_ref)) {
-				if (node_ref->touched.exchange(now, std::memory_order_relaxed) == 0) {
-					modified = true;
+			} else {
+				if (activate || is_active(node_ref)) {
+					if (node_ref->touched.exchange(now, std::memory_order_release) == 0) {
+						modified = true;
+					}
+					_update_nodes(node_ref);
 				}
 			}
 			L_NODE_NODES("touch_node({}) -> {} (1)", node_ref->__repr__(), modified);
@@ -396,7 +382,7 @@ Node::touch_node(const Node& node, bool activate)
 	}
 	auto new_node = std::shared_ptr<const Node>(new_node_copy.release());
 	if (activate || is_active(new_node)) {
-		new_node->touched.store(now, std::memory_order_relaxed);
+		new_node->touched.store(now, std::memory_order_release);
 	}
 	_nodes[new_node->lower_name()] = new_node;
 	_update_nodes(new_node);
@@ -416,7 +402,7 @@ Node::drop_node(std::string_view _node_name)
 	auto it = _nodes.find(strings::lower(_node_name));
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
-		node_ref->touched.store(0, std::memory_order_relaxed);
+		node_ref->touched.store(0, std::memory_order_release);
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
 		node_ref_copy->_addr = sockaddr_in{};
 		node_ref_copy->_host.clear();

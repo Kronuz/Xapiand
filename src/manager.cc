@@ -1984,7 +1984,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		}
 	}
 
-	auto indexed_nodes = Node::indexed_nodes();
+	auto indexed_nodes = Node::total_indexed_nodes();
 	assert(indexed_nodes);
 
 	if (settings && settings->is_map()) {
@@ -2099,21 +2099,21 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 					node_endpoint = Endpoint(path, node);
 					if (writable) {
 						if (Node::is_active(node)) {
-							L_SHARDS("Active writable node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Active writable node used (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
 							break;
 						}
 						reload = retry;
 						break;
 					} else {
 						if (Node::is_active(node)) {
-							L_SHARDS("Active node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Active node used (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
 							break;
 						}
 						if (primary) {
-							L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
 							break;
 						}
-						L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::indexed_nodes, node ? node->__repr__() : "null");
+						L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
 					}
 				}
 				endpoints.add(node_endpoint);
