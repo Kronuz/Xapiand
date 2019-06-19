@@ -1571,7 +1571,6 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 	}
 
 	send_message(Message::CLUSTER_ENTER, local_node->serialise());
-
 }
 
 
