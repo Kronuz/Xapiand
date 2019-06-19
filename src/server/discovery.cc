@@ -80,28 +80,8 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 
 
-static inline bool raft_has_consensus(size_t total, size_t votes, uint64_t term = 1) {
-	return (total || term >= 1) && (total <= 1 || votes > total / 2);
-}
-
-
-static inline size_t _total_nodes() {
-	size_t total_nodes = Node::total_indexed_nodes();
-	auto local_node = Node::get_local_node();
-	if (!local_node->idx) {
-		++total_nodes;
-	}
-	return total_nodes;
-}
-
-
-static inline size_t _alive_nodes() {
-	size_t alive_nodes = Node::alive_indexed_nodes();
-	auto local_node = Node::get_local_node();
-	if (!local_node->idx) {
-		++alive_nodes;
-	}
-	return alive_nodes;
+static inline bool raft_has_consensus(size_t total, size_t votes) {
+	return !total || votes > total / 2;
 }
 
 
@@ -505,7 +485,7 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), repr(remote_node.to_string()));
 	}
 
-	L_DEBUG("Nodes still active after {} left: {}", repr(remote_node.to_string()), _alive_nodes());
+	L_DEBUG("Nodes still active after {} left: {}", repr(remote_node.to_string()), Node::alive_indexed_nodes());
 }
 
 
@@ -514,9 +494,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 {
 	L_CALL("Discovery::raft_request_vote({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::READY) {
 		L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE (invalid state: {}) {{current_term:{}}}",
 			enum_name(XapiandManager::state().load()), raft_current_term);
 		return;
@@ -595,7 +573,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 	}
 
 	L_DIM_GREY("\n{}", Node::dump_nodes());
-	auto total_nodes = _total_nodes();
+	auto total_nodes = Node::total_indexed_nodes();
 	L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE_RESPONSE {{ node:{}, term:{}, total_nodes:{}, voted_for:{} }}",
 		repr(local_node->to_string()), term, total_nodes, repr(raft_voted_for.to_string()));
 
@@ -616,9 +594,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		return;
 	}
 
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::READY) {
 		L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE_RESPONSE (invalid state: {}) {{current_term:{}}}",
 			enum_name(XapiandManager::state().load()), raft_current_term);
 		return;
@@ -670,7 +646,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 				++raft_votes_denied;
 			}
 		}
-		if (raft_has_consensus(total_nodes, raft_votes_granted + raft_votes_denied, raft_current_term)) {
+		if (raft_has_consensus(total_nodes, raft_votes_granted + raft_votes_denied)) {
 			L_RAFT("Consensus reached: {} votes granted and {} denied, out of {}", raft_votes_granted, raft_votes_denied, total_nodes);
 			if (raft_votes_granted > raft_votes_denied) {
 				raft_role = Role::RAFT_LEADER;
@@ -918,9 +894,7 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 {
 	L_CALL("Discovery::raft_append_entries_response({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::READY) {
 		if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
 			L_RAFT_PROTO_HB(">>> RAFT_HEARTBEAT_RESPONSE (invalid state: {}) {{current_term:{}}}",
 				enum_name(XapiandManager::state().load()), raft_current_term);
@@ -1022,9 +996,7 @@ Discovery::raft_add_command([[maybe_unused]] Message type, const std::string& me
 {
 	L_CALL("Discovery::raft_add_command({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::READY) {
 		L_RAFT_PROTO(">>> RAFT_ADD_COMMAND (invalid state: {}) {{current_term:{}}}",
 			enum_name(XapiandManager::state().load()), raft_current_term);
 		return;
@@ -1219,8 +1191,30 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 	L_EV_BEGIN("Discovery::raft_leader_election_timeout_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_election_timeout_cb:END");
 
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
+	if (XapiandManager::state() == XapiandManager::State::JOINING) {
+		if (raft_current_term == 0) {
+			++raft_current_term;
+
+			auto local_node = Node::get_local_node();
+
+			raft_role = Role::RAFT_LEADER;
+			raft_voted_for.clear();
+			raft_next_indexes.clear();
+			raft_match_indexes.clear();
+
+			_raft_leader_heartbeat_reset(RAFT_HEARTBEAT_LEADER_TIMEOUT);
+			_raft_set_leader_node(local_node);
+
+			// First time we elect a leader's, we setup node
+			if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
+				// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
+				XapiandManager::setup_node();
+			}
+			return;
+		}
+	}
+
+	if (XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
 		L_RAFT_PROTO("<<< LEADER_ELECTION (invalid state: {})", enum_name(XapiandManager::state().load()));
 		return;
@@ -1246,9 +1240,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	L_EV_BEGIN("Discovery::raft_leader_heartbeat_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_heartbeat_cb:END");
 
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::READY) {
 		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (invalid state: {})",
 			enum_name(XapiandManager::state().load()));
 		return;
@@ -1258,9 +1250,9 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 		return;
 	}
 
-	if (!raft_has_consensus(_total_nodes(), _alive_nodes())) {
+	if (!raft_has_consensus(Node::total_indexed_nodes(), Node::alive_indexed_nodes())) {
 		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
-			_total_nodes(), _alive_nodes());
+			Node::total_indexed_nodes(), Node::alive_indexed_nodes());
 		_raft_request_vote(false);
 		return;
 	}
@@ -1379,7 +1371,7 @@ Discovery::_raft_commit_log()
 					++matches;
 				}
 			}
-			if (raft_has_consensus(Node::total_indexed_nodes(), matches, raft_current_term)) {
+			if (raft_has_consensus(Node::total_indexed_nodes(), matches)) {
 				raft_commit_index = index;
 				if (raft_commit_index > raft_last_applied) {
 					L_RAFT("Commit {{raft_commit_index:{}, raft_last_applied:{}, last_index:{}}}",
@@ -1424,7 +1416,7 @@ Discovery::_raft_request_vote(bool immediate)
 
 		auto local_node = Node::get_local_node();
 		L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE {{ node:{}, raft_current_term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, alive_nodes:{}, leader:{} }}",
-			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, _alive_nodes(), Node::get_leader_node()->empty() ? "<none>" : Node::get_leader_node()->to_string());
+			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::alive_indexed_nodes(), Node::get_leader_node()->empty() ? "<none>" : Node::get_leader_node()->to_string());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
 			serialise_length(raft_current_term) +
@@ -1436,7 +1428,11 @@ Discovery::_raft_request_vote(bool immediate)
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
 
-		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
+		if (raft_current_term == 0) {
+			_raft_leader_election_timeout_reset(RAFT_LEADER_ELECTION_MAX);
+		} else {
+			_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
+		}
 	}
 }
 
