@@ -572,7 +572,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		}
 	}
 
-	L_DIM_GREY("\n{}", Node::dump_nodes());
+	// L_DIM_GREY("\n{}", Node::dump_nodes());
 	auto total_nodes = Node::total_indexed_nodes();
 	L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE_RESPONSE {{ node:{}, term:{}, total_nodes:{}, voted_for:{} }}",
 		repr(local_node->to_string()), term, total_nodes, repr(raft_voted_for.to_string()));
@@ -1132,19 +1132,16 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 		case XapiandManager::State::RESET: {
 			auto local_node = Node::get_local_node();
 			auto node_copy = std::make_unique<Node>(*local_node);
-			std::string drop = node_copy->name();
-
+			auto drop_name = node_copy->name();
 			if (XapiandManager::node_name().empty()) {
 				node_copy->name(name_generator());
 			} else {
 				node_copy->name(XapiandManager::node_name());
 			}
-			Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
-
-			if (!drop.empty()) {
-				Node::drop_node(drop);
+			if (!drop_name.empty() && drop_name != node_copy->name()) {
+				Node::drop_node(drop_name);
 			}
-
+			Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
 			local_node = Node::get_local_node();
 			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 				// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
