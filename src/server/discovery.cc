@@ -1303,7 +1303,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 void
 Discovery::_raft_leader_heartbeat_reset(double timeout)
 {
-	L_CALL("Discovery::_raft_leader_heartbeat_reset()");
+	L_CALL("Discovery::_raft_leader_heartbeat_reset({})", timeout);
 
 	raft_leader_election_timeout.stop();
 	L_EV("Stop raft's leader election timeout event");
@@ -1317,7 +1317,7 @@ Discovery::_raft_leader_heartbeat_reset(double timeout)
 void
 Discovery::_raft_leader_election_timeout_reset(double timeout)
 {
-	L_CALL("Discovery::_raft_leader_election_timeout_reset({}, {})", min, max);
+	L_CALL("Discovery::_raft_leader_election_timeout_reset({})", timeout);
 
 	raft_leader_election_timeout.repeat = timeout;
 	raft_leader_election_timeout.again();
