@@ -95,13 +95,13 @@ static inline size_t _total_nodes() {
 }
 
 
-static inline size_t _active_nodes() {
-	size_t active_nodes = Node::active_indexed_nodes();
+static inline size_t _alive_nodes() {
+	size_t alive_nodes = Node::alive_indexed_nodes();
 	auto local_node = Node::local_node();
 	if (!local_node->idx) {
-		++active_nodes;
+		++alive_nodes;
 	}
-	return active_nodes;
+	return alive_nodes;
 }
 
 
@@ -377,7 +377,7 @@ Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& messa
 	auto local_node = Node::local_node();
 
 	if (!Node::is_superset(local_node, remote_node)) {
-		auto put = Node::touch_node(remote_node, false);
+		auto put = Node::touch_node(remote_node, false, false);
 		if (put.first == nullptr) {
 			send_message(Message::CLUSTER_SNEER, remote_node.serialise());
 		} else {
@@ -505,7 +505,7 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), repr(remote_node.to_string()));
 	}
 
-	L_DEBUG("Nodes still active after {} left: {}", repr(remote_node.to_string()), _active_nodes());
+	L_DEBUG("Nodes still active after {} left: {}", repr(remote_node.to_string()), _alive_nodes());
 }
 
 
@@ -1257,7 +1257,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 		return;
 	}
 
-	if (!raft_has_consensus(_total_nodes(), _active_nodes())) {
+	if (!raft_has_consensus(_total_nodes(), _alive_nodes())) {
 		_raft_request_vote(false);
 		return;
 	}
@@ -1418,8 +1418,8 @@ Discovery::_raft_request_vote(bool immediate)
 		auto last_log_term = last_log_index > 0 ? raft_log[last_log_index - 1].term : 0;
 
 		auto local_node = Node::local_node();
-		L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE {{ node:{}, raft_current_term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, active_nodes:{}, leader:{} }}",
-			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, _active_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->to_string());
+		L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE {{ node:{}, raft_current_term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, alive_nodes:{}, leader:{} }}",
+			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, _alive_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->to_string());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
 			serialise_length(raft_current_term) +
