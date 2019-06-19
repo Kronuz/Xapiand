@@ -475,6 +475,17 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 
 	Node::drop_node(remote_node.name());
 
+	if (raft_role == Role::RAFT_LEADER) {
+		// If we're leader, check consensus or vote.
+		auto total_indexed_nodes = Node::total_indexed_nodes();
+		auto alive_indexed_nodes = Node::alive_indexed_nodes();
+		if (!raft_has_consensus(total_indexed_nodes, alive_indexed_nodes)) {
+			L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+				total_indexed_nodes, alive_indexed_nodes);
+			_raft_request_vote(false);
+		}
+	}
+
 	auto leader_node = Node::get_leader_node();
 	if (*leader_node == remote_node) {
 		L_INFO("Leader node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), repr(remote_node.to_string()));
@@ -1247,9 +1258,12 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 		return;
 	}
 
-	if (!raft_has_consensus(Node::total_indexed_nodes(), Node::alive_indexed_nodes())) {
-		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
-			Node::total_indexed_nodes(), Node::alive_indexed_nodes());
+	auto total_indexed_nodes = Node::total_indexed_nodes();
+	auto alive_indexed_nodes = Node::alive_indexed_nodes();
+	if (!raft_has_consensus(total_indexed_nodes, alive_indexed_nodes)) {
+		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus)");
+		L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+			total_indexed_nodes, alive_indexed_nodes);
 		_raft_request_vote(false);
 		return;
 	}
@@ -1535,7 +1549,20 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 	L_EV_END("Discovery::cluster_enter_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
 	auto local_node = Node::get_local_node();
+
+	if (raft_role == Role::RAFT_LEADER) {
+		// If we're leader, check consensus or vote.
+		auto total_indexed_nodes = Node::total_indexed_nodes();
+		auto alive_indexed_nodes = Node::alive_indexed_nodes();
+		if (!raft_has_consensus(total_indexed_nodes, alive_indexed_nodes)) {
+			L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+				total_indexed_nodes, alive_indexed_nodes);
+			_raft_request_vote(false);
+		}
+	}
+
 	send_message(Message::CLUSTER_ENTER, local_node->serialise());
+
 }
 
 
