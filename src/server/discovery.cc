@@ -1308,7 +1308,7 @@ Discovery::_raft_leader_heartbeat_reset(double timeout)
 
 	raft_leader_heartbeat.repeat = timeout;
 	raft_leader_heartbeat.again();
-	L_RED("Restart raft's leader heartbeat event ({})", raft_leader_heartbeat.repeat);
+	L_EV("Restart raft's leader heartbeat event ({})", raft_leader_heartbeat.repeat);
 }
 
 
@@ -1319,7 +1319,7 @@ Discovery::_raft_leader_election_timeout_reset(double timeout)
 
 	raft_leader_election_timeout.repeat = timeout;
 	raft_leader_election_timeout.again();
-	L_GREEN("Restart raft's leader election timeout event ({})", raft_leader_election_timeout.repeat);
+	L_EV("Restart raft's leader election timeout event ({})", raft_leader_election_timeout.repeat);
 
 	raft_leader_heartbeat.stop();
 	L_EV("Stop raft's leader heartbeat event");
