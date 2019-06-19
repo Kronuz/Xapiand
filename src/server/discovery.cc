@@ -1249,7 +1249,8 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	if (XapiandManager::state() != XapiandManager::State::JOINING &&
 		XapiandManager::state() != XapiandManager::State::SETUP &&
 		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (invalid state: {})", enum_name(XapiandManager::state().load()));
+		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (invalid state: {})",
+			enum_name(XapiandManager::state().load()));
 		return;
 	}
 
@@ -1258,6 +1259,8 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	}
 
 	if (!raft_has_consensus(_total_nodes(), _alive_nodes())) {
+		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+			_total_nodes(), _alive_nodes());
 		_raft_request_vote(false);
 		return;
 	}
