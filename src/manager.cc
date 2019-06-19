@@ -923,6 +923,9 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 {
 	L_CALL("XapiandManager::set_cluster_database_ready_async_cb(...)");
 
+	auto local_node = Node::get_local_node();
+	assert(local_node->idx);
+
 	exchange_state(_state.load(), State::READY);
 
 	_http->start();
@@ -935,7 +938,6 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	}
 #endif
 
-	auto local_node = Node::get_local_node();
 	L(-LOG_NOTICE, SEA_GREEN, "Node {}{}" + SEA_GREEN + " is Ready to Rock!", local_node->col().ansi(), local_node->to_string());
 
 	if (opts.solo) {
