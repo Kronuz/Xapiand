@@ -1145,11 +1145,19 @@ QueryDSL::make_dsl_query(std::string_view query)
 						}
 						auto d_it = dates.begin();
 						const auto& from = *d_it;
-						value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_FROM] = from.substr(1, from.size() - 2);
+						if (from.front() == '"' && from.back() == '"') {
+							value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_FROM] = from.substr(1, from.size() - 2);
+						} else {
+							value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_FROM] = from;
+						}
 						++d_it;
 						if (d_it != dates.end()) {
 							const auto& to = *d_it;
-							value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_TO] = to.substr(1, to.size() - 2);
+							if (to.front() == '"' && to.back() == '"') {
+								value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_TO] = to.substr(1, to.size() - 2);
+							} else {
+								value[RESERVED_QUERYDSL_IN][RESERVED_QUERYDSL_RANGE][RESERVED_QUERYDSL_TO] = to;
+							}
 						}
 					} else {
 						value = fp.get_value();
