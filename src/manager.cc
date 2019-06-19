@@ -1522,6 +1522,8 @@ XapiandManager::add_node(size_t idx, std::string_view name)
 {
 	L_CALL("XapiandManager::add_node({}, {})", idx, name);
 
+	node_added(idx, name);
+
 	_discovery->raft_add_command("N" + serialise_length(idx) + std::string(name));
 }
 
@@ -1542,7 +1544,7 @@ XapiandManager::node_added(size_t idx, std::string_view name)
 		indexed_node.idx = idx;
 	}
 
-	auto put = Node::touch_node(indexed_node, false);
+	auto put = Node::touch_node(indexed_node, false, false);
 	if (put.first == nullptr) {
 		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", indexed_node.col().ansi(), indexed_node.to_string(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
 	} else {
