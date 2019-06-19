@@ -171,15 +171,17 @@ Node::set_local_node(std::shared_ptr<const Node> node)
 		set_as_title(node);
 		_local_node.store(node, std::memory_order_release);
 
-		std::lock_guard<std::mutex> lk(_nodes_mtx);
+		if (!node->empty()) {
+			std::lock_guard<std::mutex> lk(_nodes_mtx);
 
-		auto it = _nodes.find(node->lower_name());
-		if (it != _nodes.end()) {
-			auto& node_ref = it->second;
-			node_ref = node;
+			auto it = _nodes.find(node->lower_name());
+			if (it != _nodes.end()) {
+				auto& node_ref = it->second;
+				node_ref = node;
+			}
+
+			_update_nodes(node);
 		}
-
-		_update_nodes(node);
 
 		L_NODE_NODES("local_node({})", node->__repr__());
 	} else {
@@ -210,15 +212,17 @@ Node::set_leader_node(std::shared_ptr<const Node> node)
 		node->touched.store(now, std::memory_order_release);
 		_leader_node.store(node, std::memory_order_release);
 
-		std::lock_guard<std::mutex> lk(_nodes_mtx);
+		if (!node->empty()) {
+			std::lock_guard<std::mutex> lk(_nodes_mtx);
 
-		auto it = _nodes.find(node->lower_name());
-		if (it != _nodes.end()) {
-			auto& node_ref = it->second;
-			node_ref = node;
+			auto it = _nodes.find(node->lower_name());
+			if (it != _nodes.end()) {
+				auto& node_ref = it->second;
+				node_ref = node;
+			}
+
+			_update_nodes(node);
 		}
-
-		_update_nodes(node);
 
 		L_NODE_NODES("set_leader_node({})", node->__repr__());
 	} else {
