@@ -730,8 +730,29 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 
 	auto local_node = Node::get_local_node();
 
-	// If RPC request or response contains term T > currentTerm:
 	uint64_t term = unserialise_length(&p, p_end);
+
+	if (raft_role == Role::RAFT_LEADER) {
+		if (!Node::is_superset(local_node, node)) {
+			L_RAFT_PROTO(">>> {} [from {}]{} {{term:{}}}",
+				enum_name(type), repr(node->to_string()), term == raft_current_term ? "" : " (wrong term)", term);
+			// If another leader is around or there is no way to reach consnsus,
+			// immediately run for election.
+			_raft_request_vote(true);
+		}
+		return;
+	}
+
+	if (term < raft_current_term) {
+		L_RAFT_PROTO(">>> {} [from {}] (received older term) {{term:{}}}",
+			enum_name(type), repr(node->to_string()), term);
+		// If term from heartbeat is older,
+		// immediately run for election.
+		_raft_request_vote(true);
+		return;
+	}
+
+	// If RPC request or response contains term T > currentTerm:
 	if (term > raft_current_term) {
 		// set currentTerm = T,
 		raft_current_term = term;
@@ -741,17 +762,6 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
 		// _raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));  // resetted below!
-	}
-
-	if (raft_role == Role::RAFT_LEADER) {
-		if (!Node::is_superset(local_node, node)) {
-			L_RAFT_PROTO(">>> {} [from {}]{} {{term:{}}}",
-				enum_name(type), repr(node->to_string()), term == raft_current_term ? "" : " (wrong term)", term);
-			// If another leader is around or there is no way to reach consnsus,
-			// immediately run for election
-			_raft_request_vote(true);
-		}
-		return;
 	}
 
 	if (type == Message::RAFT_HEARTBEAT) {
