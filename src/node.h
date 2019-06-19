@@ -280,6 +280,7 @@ public:
 		return a.is_subset(b);
 	}
 
+
 	static bool is_local(const std::shared_ptr<const Node>& node) {
 		return node && node->is_local();
 	}
@@ -287,6 +288,15 @@ public:
 	static bool is_local(const Node& node) {
 		return node.is_local();
 	}
+
+	static bool is_local(std::string_view node_name) {
+		return Node::is_local(Node::get_node(node_name));
+	}
+
+	static bool is_local(size_t idx) {
+		return Node::is_local(Node::get_node(idx));
+	}
+
 
 	static bool is_leader(const std::shared_ptr<const Node>& node) {
 		return node && node->is_leader();
@@ -296,6 +306,15 @@ public:
 		return node.is_leader();
 	}
 
+	static bool is_leader(std::string_view node_name) {
+		return Node::is_leader(Node::get_node(node_name));
+	}
+
+	static bool is_leader(size_t idx) {
+		return Node::is_leader(Node::get_node(idx));
+	}
+
+
 	static bool is_alive(const std::shared_ptr<const Node>& node) {
 		return node && node->is_alive();
 	}
@@ -304,12 +323,29 @@ public:
 		return node.is_alive();
 	}
 
+	static bool is_alive(std::string_view node_name) {
+		return Node::is_alive(Node::get_node(node_name));
+	}
+
+	static bool is_alive(size_t idx) {
+		return Node::is_alive(Node::get_node(idx));
+	}
+
+
 	static bool is_active(const std::shared_ptr<const Node>& node) {
 		return node && node->is_active();
 	}
 
 	static bool is_active(const Node& node) {
 		return node.is_active();
+	}
+
+	static bool is_active(std::string_view node_name) {
+		return Node::is_active(Node::get_node(node_name));
+	}
+
+	static bool is_active(size_t idx) {
+		return Node::is_active(Node::get_node(idx));
 	}
 
 	static std::shared_ptr<const Node> get_local_node();
