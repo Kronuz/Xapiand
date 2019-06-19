@@ -35,20 +35,11 @@
 #include "xapian.h"             // for SerialisationError
 
 
-#define L_NODE_NODES(args...)
+#define L_NODE_NODES L_NOTHING
 
-#ifndef L_NODE_NODES
-#define L_NODE_NODES(args...) \
-	L_SLATE_GREY(args); \
-	for (const auto& _ : _nodes) { \
-		L_SLATE_GREY("    nodes[{}] -> {{index:{}, name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, activated:{}, touched:{}}}{}{}{}{}", \
-			_.first, _.second->idx, repr(_.second->name()), repr(_.second->host()), _.second->http_port, _.second->remote_port, _.second->replication_port, _.second->activated.load(std::memory_order_acquire) ? "true" : "false", _.second->touched.load(std::memory_order_acquire), \
-			Node::is_alive(_.second) ? " " + DARK_STEEL_BLUE + "(alive)" + STEEL_BLUE : "", \
-			Node::is_active(_.second) ? " " + DARK_STEEL_BLUE + "(active)" + STEEL_BLUE : "", \
-			Node::is_local(_.second) ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "", \
-			Node::is_leader(_.second) ? " " + DARK_STEEL_BLUE + "(leader)" + STEEL_BLUE : ""); \
-	}
-#endif
+
+// #undef L_NODE_NODES
+// #define L_NODE_NODES L_SLATE_GREY
 
 
 static inline void
@@ -173,17 +164,11 @@ Node::set_local_node(std::shared_ptr<const Node> node)
 
 		if (!node->empty()) {
 			std::lock_guard<std::mutex> lk(_nodes_mtx);
-
-			auto it = _nodes.find(node->lower_name());
-			if (it != _nodes.end()) {
-				auto& node_ref = it->second;
-				node_ref = node;
-			}
-
+			_nodes[node->lower_name()] = node;
 			_update_nodes(node);
 		}
 
-		L_NODE_NODES("local_node({})", node->__repr__());
+		L_NODE_NODES("set_local_node({})", node->__repr__());
 	} else {
 		_local_node.store(node, std::memory_order_release);
 
@@ -197,7 +182,11 @@ Node::get_local_node()
 {
 	L_CALL("Node::get_local_node()");
 
-	return _local_node.load(std::memory_order_acquire);
+	auto node = _local_node.load(std::memory_order_acquire);
+
+	L_NODE_NODES("get_local_node() => {}", node->__repr__());
+
+	return node;
 }
 
 
@@ -214,13 +203,7 @@ Node::set_leader_node(std::shared_ptr<const Node> node)
 
 		if (!node->empty()) {
 			std::lock_guard<std::mutex> lk(_nodes_mtx);
-
-			auto it = _nodes.find(node->lower_name());
-			if (it != _nodes.end()) {
-				auto& node_ref = it->second;
-				node_ref = node;
-			}
-
+			_nodes[node->lower_name()] = node;
 			_update_nodes(node);
 		}
 
@@ -238,7 +221,11 @@ Node::get_leader_node()
 {
 	L_CALL("Node::get_leader_node()");
 
-	return _leader_node.load(std::memory_order_acquire);
+	auto node = _leader_node.load(std::memory_order_acquire);
+
+	L_NODE_NODES("get_leader_node() => {}", node->__repr__());
+
+	return node;
 }
 
 
@@ -352,7 +339,7 @@ Node::touch_node(const Node& node, bool activate, bool touch)
 		if (Node::is_superset(node_ref, node)) {
 			auto modified = false;
 			if (
-				(!node_ref->idx && node.idx)
+				   (!node_ref->idx && node.idx)
 				|| (!node_ref->_addr.sin_addr.s_addr && node._addr.sin_addr.s_addr)
 				|| (!node_ref->http_port && node.http_port)
 #ifdef XAPIAND_CLUSTERING
