@@ -1260,8 +1260,10 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	if (last_log_index > 0) {
 		auto entry_index = last_log_index + 1;
 		for (const auto& next_index_pair : raft_next_indexes) {
-			if (entry_index > next_index_pair.second) {
-				entry_index = next_index_pair.second;
+			if (Node::is_alive(next_index_pair.first)) {
+				if (entry_index > next_index_pair.second) {
+					entry_index = next_index_pair.second;
+				}
 			}
 		}
 		if (entry_index > 0 && entry_index <= last_log_index) {
