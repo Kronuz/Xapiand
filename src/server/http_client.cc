@@ -1336,12 +1336,12 @@ HttpClient::node_obj()
 	L_CALL("HttpClient::node_obj()");
 
 	endpoints.clear();
-	auto leader_node = Node::leader_node();
+	auto leader_node = Node::get_leader_node();
 	endpoints.add(Endpoint{".xapiand/nodes", leader_node});
 
 	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	auto document = db_handler.get_document(local_node->lower_name());
 
 	auto obj = document.get_obj();

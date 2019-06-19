@@ -209,7 +209,7 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 
 	if (protocol == "file") {
 		if (node_name.empty()) {
-			node_name = Node::local_node()->lower_name();
+			node_name = Node::get_local_node()->lower_name();
 		}
 		if (_path.empty()) {
 			_path = uri;
@@ -219,7 +219,7 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	} else {
 		if (node_name.empty()) {
 			if (_port.empty() && uri.empty()) {
-				node_name = Node::local_node()->lower_name();
+				node_name = Node::get_local_node()->lower_name();
 			} else if (_port.empty()) {
 				auto uri_node = Node::get_node(uri);
 				if (uri_node) {
@@ -424,7 +424,7 @@ Endpoint::is_active() const
 bool
 Endpoint::is_local() const
 {
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	return !local_node || node_name == local_node->lower_name();
 }
 

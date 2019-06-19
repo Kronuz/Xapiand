@@ -503,7 +503,7 @@ XapiandManager::init()
 	);
 
 	// Set the id in local node.
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	auto node_copy = std::make_unique<Node>(*local_node);
 
 	// Setup node from node database directory
@@ -529,8 +529,8 @@ XapiandManager::init()
 		L(-LOG_NOTICE, NOTICE_COL, "Node IP address is {} on interface {}", inet_ntop(address.first), address.second);
 	}
 
-	local_node = std::shared_ptr<const Node>(node_copy.release());
-	local_node = Node::local_node(local_node);
+	Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
+	local_node = Node::get_local_node();
 
 	// If restoring documents, fill all the nodes from the cluster database:
 #ifdef XAPIAND_CLUSTERING
@@ -557,7 +557,7 @@ XapiandManager::init()
 	} else
 #endif
 	{
-		Node::leader_node(local_node);
+		Node::set_leader_node(local_node);
 		Node node;
 		node.idx = 1;
 		node.name(local_node->name());
@@ -646,8 +646,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	callstacks_snapshot();
 
 	nanosleep(100000000);  // sleep for 100 miliseconds
-	auto local_node = Node::local_node();
-	auto leader_node = Node::leader_node();
+	auto local_node = Node::get_local_node();
+	auto leader_node = Node::get_leader_node();
 	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
 
 	_new_cluster = 0;
@@ -727,8 +727,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				if (t == 0) { throw; }
 			}
 			nanosleep(100000000);  // sleep for 100 milliseconds
-			local_node = Node::local_node();
-			leader_node = Node::leader_node();
+			local_node = Node::get_local_node();
+			leader_node = Node::get_leader_node();
 			cluster_endpoint = Endpoint{".xapiand/nodes", leader_node};
 		}
 	}
@@ -738,7 +738,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (strings::lower(_node_name) != local_node->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node);
 		local_node_copy->name(_node_name);
-		local_node = Node::local_node(std::shared_ptr<const Node>(local_node_copy.release()));
+		Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
+		local_node = Node::get_local_node();
 	}
 
 	Metrics::metrics({{NODE_LABEL, _node_name}, {CLUSTER_LABEL, opts.cluster_name}});
@@ -794,7 +795,7 @@ XapiandManager::make_servers()
 	int replication_tries = opts.replication_port ? 1 : 10;
 	int replication_port = opts.replication_port ? opts.replication_port : XAPIAND_REPLICATION_SERVERPORT;
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 #ifdef XAPIAND_CLUSTERING
 	auto nodes = Node::nodes();
 	for (auto it = nodes.begin(); it != nodes.end();) {
@@ -881,7 +882,7 @@ XapiandManager::make_servers()
 		node_copy->replication_port = ntohs(_replication->addr.sin_port);
 	}
 #endif
-	Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
+	Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 	std::string msg("Servers listening on ");
 	msg += _http->getDescription();
@@ -934,7 +935,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	}
 #endif
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	L(-LOG_NOTICE, SEA_GREEN, "Node {}{}" + SEA_GREEN + " is Ready to Rock!", local_node->col().ansi(), local_node->to_string());
 
 	if (opts.solo) {
@@ -1401,7 +1402,7 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 {
 	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
-	auto leader_node = Node::leader_node();
+	auto leader_node = Node::get_leader_node();
 	L_INFO("New leader of cluster {} is {}{}", opts.cluster_name, leader_node->col().ansi(), leader_node->to_string());
 
 	if (_state == State::READY) {
@@ -1916,8 +1917,8 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 
 		// Primary databases in .xapiand are always in the master
 		std::vector<std::shared_ptr<const Node>> node_replicas;
-		node_replicas.push_back(Node::leader_node());
-		node_replicas.push_back(Node::local_node());
+		node_replicas.push_back(Node::get_leader_node());
+		node_replicas.push_back(Node::get_local_node());
 
 		if (normalized_path == ".xapiand/indices") {
 			// .xapiand/indices have the default number of shards

@@ -178,7 +178,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
-		auto local_node = Node::local_node();
+		auto local_node = Node::get_local_node();
 		auto nodes = XapiandManager::resolve_index_nodes(normalized_path);
 		for (const auto& shard_nodes : nodes) {
 			for (const auto& node : shard_nodes) {

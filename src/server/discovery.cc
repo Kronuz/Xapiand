@@ -87,7 +87,7 @@ static inline bool raft_has_consensus(size_t total, size_t votes, uint64_t term 
 
 static inline size_t _total_nodes() {
 	size_t total_nodes = Node::total_indexed_nodes();
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	if (!local_node->idx) {
 		++total_nodes;
 	}
@@ -97,7 +97,7 @@ static inline size_t _total_nodes() {
 
 static inline size_t _alive_nodes() {
 	size_t alive_nodes = Node::alive_indexed_nodes();
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	if (!local_node->idx) {
 		++alive_nodes;
 	}
@@ -215,7 +215,7 @@ Discovery::stop_impl()
 
 	Worker::stop_impl();
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	send_message(Message::CLUSTER_BYE, local_node->serialise());
 	L_INFO("Waving goodbye to cluster {}!", opts.cluster_name);
 
@@ -374,7 +374,7 @@ Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& messa
 	L_DISCOVERY(">>> CLUSTER_HELLO [from {}]", repr(remote_node.to_string()));
 
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 
 	if (!Node::is_superset(local_node, remote_node)) {
 		auto put = Node::touch_node(remote_node, false, false);
@@ -436,14 +436,14 @@ Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& messa
 	Node remote_node = Node::unserialise(&p, p_end);
 	L_DISCOVERY(">>> CLUSTER_SNEER [from {}]", repr(remote_node.to_string()));
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	if (remote_node == *local_node) {
 		if (XapiandManager::node_name().empty()) {
 			L_DISCOVERY("Node name {} already taken. Retrying other name...", local_node->name());
 			XapiandManager::reset_state();
 		} else {
 			XapiandManager::state().store(XapiandManager::State::BAD);
-			Node::local_node(std::make_shared<const Node>());
+			Node::set_local_node(std::make_shared<const Node>());
 			L_CRIT("Cannot join the party. Node name {} already taken!", local_node->name());
 			sig_exit(-EX_SOFTWARE);
 		}
@@ -495,11 +495,11 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 
 	Node::drop_node(remote_node.name());
 
-	auto leader_node = Node::leader_node();
+	auto leader_node = Node::get_leader_node();
 	if (*leader_node == remote_node) {
 		L_INFO("Leader node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), repr(remote_node.to_string()));
 
-		Node::leader_node(std::make_shared<const Node>());
+		Node::set_leader_node(std::make_shared<const Node>());
 		XapiandManager::renew_leader();
 	} else {
 		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), repr(remote_node.to_string()));
@@ -549,7 +549,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 	L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE [from {}]{} {{term:{}}}",
 		repr(node->to_string()), term == raft_current_term ? "" : " (wrong term)", term);
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 
 	if (term == raft_current_term) {
 		if (raft_voted_for.empty()) {
@@ -635,7 +635,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		return;
 	}
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 
 	// If RPC request or response contains term T > currentTerm:
 	uint64_t term = unserialise_length(&p, p_end);
@@ -741,7 +741,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		return;
 	}
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 
 	// If RPC request or response contains term T > currentTerm:
 	uint64_t term = unserialise_length(&p, p_end);
@@ -1064,7 +1064,7 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 
 	auto remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	if (Node::is_superset(local_node, remote_node)) {
 		// It's just me, do nothing!
 		return;
@@ -1104,7 +1104,7 @@ Discovery::schema_updated([[maybe_unused]] Message type, const std::string& mess
 
 	auto remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	if (Node::is_superset(local_node, remote_node)) {
 		// It's just me, do nothing!
 		return;
@@ -1132,7 +1132,7 @@ Discovery::primary_updated([[maybe_unused]] Message type, const std::string& mes
 
 	auto remote_node = Node::unserialise(&p, p_end);
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	if (Node::is_superset(local_node, remote_node)) {
 		// It's just me, do nothing!
 		return;
@@ -1158,7 +1158,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 
 	switch (state) {
 		case XapiandManager::State::RESET: {
-			auto local_node = Node::local_node();
+			auto local_node = Node::get_local_node();
 			auto node_copy = std::make_unique<Node>(*local_node);
 			std::string drop = node_copy->name();
 
@@ -1167,13 +1167,13 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 			} else {
 				node_copy->name(XapiandManager::node_name());
 			}
-			Node::local_node(std::shared_ptr<const Node>(node_copy.release()));
+			Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 			if (!drop.empty()) {
 				Node::drop_node(drop);
 			}
 
-			local_node = Node::local_node();
+			local_node = Node::get_local_node();
 			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 				// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::state().load()));
 				L_INFO("Advertising as {}{}" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
@@ -1273,7 +1273,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 			}
 		}
 		if (entry_index > 0 && entry_index <= last_log_index) {
-			auto local_node = Node::local_node();
+			auto local_node = Node::get_local_node();
 			auto prev_log_index = entry_index - 1;
 			auto prev_log_term = entry_index > 1 ? raft_log[prev_log_index - 1].term : 0;
 			auto entry_term = raft_log[entry_index - 1].term;
@@ -1293,7 +1293,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 		}
 	}
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	auto last_log_term = last_log_index > 0 ? raft_log[last_log_index - 1].term : 0;
 	L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT {{ node:{}, raft_current_term:{}, last_log_index:{}, last_log_term:{}, raft_commit_index:{} }}",
 		repr(local_node->to_string()), raft_current_term, last_log_index, last_log_term, raft_commit_index);
@@ -1339,9 +1339,9 @@ Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 {
 	L_CALL("Discovery::_raft_set_leader_node({})", repr(node->name()));
 
-	auto leader_node = Node::leader_node();
+	auto leader_node = Node::get_leader_node();
 	if (!Node::is_superset(leader_node, node)) {
-		Node::leader_node(node);
+		Node::set_leader_node(node);
 		XapiandManager::new_leader();
 	}
 }
@@ -1417,9 +1417,9 @@ Discovery::_raft_request_vote(bool immediate)
 		auto last_log_index = raft_log.size();
 		auto last_log_term = last_log_index > 0 ? raft_log[last_log_index - 1].term : 0;
 
-		auto local_node = Node::local_node();
+		auto local_node = Node::get_local_node();
 		L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE {{ node:{}, raft_current_term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, alive_nodes:{}, leader:{} }}",
-			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, _alive_nodes(), Node::leader_node()->empty() ? "<none>" : Node::leader_node()->to_string());
+			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, _alive_nodes(), Node::get_leader_node()->empty() ? "<none>" : Node::get_leader_node()->to_string());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
 			serialise_length(raft_current_term) +
@@ -1478,7 +1478,7 @@ Discovery::_raft_add_command(const std::string& command)
 		L_RAFT_LOG("{}", log.empty() ? "raft_log -> (empty)" : log);
 #endif
 	} else {
-		auto local_node = Node::local_node();
+		auto local_node = Node::get_local_node();
 		send_message(Message::RAFT_ADD_COMMAND,
 			local_node->serialise() +
 			serialise_string(command));
@@ -1517,7 +1517,7 @@ Discovery::_message_send(Message type, const std::string& message)
 {
 	assert(type == Message::DB_UPDATED || type == Message::SCHEMA_UPDATED || type == Message::PRIMARY_UPDATED);
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	send_message(type,
 		local_node->serialise() +   // The node where the index is at
 		message);
@@ -1534,7 +1534,7 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 	L_EV_BEGIN("Discovery::cluster_enter_async_cb:BEGIN {{state:{}}}", enum_name(XapiandManager::state()));
 	L_EV_END("Discovery::cluster_enter_async_cb:END {{state:{}}}", enum_name(XapiandManager::state()));
 
-	auto local_node = Node::local_node();
+	auto local_node = Node::get_local_node();
 	send_message(Message::CLUSTER_ENTER, local_node->serialise());
 }
 

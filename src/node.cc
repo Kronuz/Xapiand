@@ -159,12 +159,12 @@ std::atomic_size_t Node::_alive_indexed_nodes;
 std::atomic_size_t Node::_active_indexed_nodes;
 
 
-std::shared_ptr<const Node>
-Node::local_node(std::shared_ptr<const Node> node)
+void
+Node::set_local_node(std::shared_ptr<const Node> node)
 {
-	if (node) {
-		L_CALL("Node::local_node({})", node->__repr__());
+	L_CALL("Node::set_local_node({})", node ? node->__repr__() : "null");
 
+	if (node) {
 		auto now = epoch::now<std::chrono::milliseconds>();
 		node->activated.store(true, std::memory_order_release);
 		node->touched.store(now, std::memory_order_release);
@@ -183,18 +183,28 @@ Node::local_node(std::shared_ptr<const Node> node)
 
 		L_NODE_NODES("local_node({})", node->__repr__());
 	} else {
-		L_CALL("Node::local_node()");
+		_local_node.store(node, std::memory_order_release);
+
+		L_NODE_NODES("set_local_node(null)");
 	}
-	return _local_node.load(std::memory_order_acquire);
 }
 
 
 std::shared_ptr<const Node>
-Node::leader_node(std::shared_ptr<const Node> node)
+Node::get_local_node()
 {
-	if (node) {
-		L_CALL("Node::leader_node({})", node->__repr__());
+	L_CALL("Node::get_local_node()");
 
+	return _local_node.load(std::memory_order_acquire);
+}
+
+
+void
+Node::set_leader_node(std::shared_ptr<const Node> node)
+{
+	L_CALL("Node::set_leader_node({})", node ? node->__repr__() : "null");
+
+	if (node) {
 		auto now = epoch::now<std::chrono::milliseconds>();
 		node->activated.store(true, std::memory_order_release);
 		node->touched.store(now, std::memory_order_release);
@@ -210,10 +220,20 @@ Node::leader_node(std::shared_ptr<const Node> node)
 
 		_update_nodes(node);
 
-		L_NODE_NODES("leader_node({})", node->__repr__());
+		L_NODE_NODES("set_leader_node({})", node->__repr__());
 	} else {
-		L_CALL("Node::leader_node()");
+		_leader_node.store(node, std::memory_order_release);
+
+		L_NODE_NODES("set_leader_node(null)");
 	}
+}
+
+
+std::shared_ptr<const Node>
+Node::get_leader_node()
+{
+	L_CALL("Node::get_leader_node()");
+
 	return _leader_node.load(std::memory_order_acquire);
 }
 
