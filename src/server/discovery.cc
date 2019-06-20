@@ -24,6 +24,7 @@
 
 #ifdef XAPIAND_CLUSTERING
 
+#include <algorithm>                        // for std::find_if
 #include <cassert>                          // for assert
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
@@ -1494,6 +1495,13 @@ Discovery::_raft_add_command(const std::string& command)
 	L_CALL("Discovery::_raft_add_command({})", repr(command));
 
 	if (raft_role == Role::RAFT_LEADER) {
+		if (std::find_if(raft_log.begin(), raft_log.end(), [&](const RaftLogEntry& entry) {
+			return entry.command == command;
+		}) != raft_log.end()) {
+			L_RAFT("Skip adding duplicate command: {}", repr(command));
+			return;
+		}
+
 		raft_log.push_back({
 			raft_current_term,
 			command,
