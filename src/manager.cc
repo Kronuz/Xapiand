@@ -668,11 +668,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 #endif
 				}
 			}
-		} else {
-#ifdef XAPIAND_CLUSTERING
-			auto node = Node::get_node(local_node->lower_name());
-			found = !!node;
-#endif
 		}
 	} catch (const Xapian::DocNotFoundError&) {
 	} catch (const Xapian::DatabaseNotFoundError&) {}
