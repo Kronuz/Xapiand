@@ -946,13 +946,13 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 		}
 		switch (_new_cluster) {
 			case 0:
-				L_INFO("Opened cluster {} with nodes {}.", repr(opts.cluster_name), strings::join(nodes, ", ", " and "));
+				L_INFO("Opened cluster {} with {} {}.", repr(opts.cluster_name), nodes.size() == 1 ? "node" : "nodes", strings::join(nodes, ", ", " and "));
 				break;
 			case 1:
-				L_INFO("Created cluster {} with nodes {}.", repr(opts.cluster_name), strings::join(nodes, ", ", " and "));
+				L_INFO("Created cluster {} with {} {}.", repr(opts.cluster_name), nodes.size() == 1 ? "node" : "nodes", strings::join(nodes, ", ", " and "));
 				break;
 			case 2:
-				L_INFO("Joined cluster {} with nodes {}.", repr(opts.cluster_name), strings::join(nodes, ", ", " and "));
+				L_INFO("Joined cluster {} with {} {}.", repr(opts.cluster_name), nodes.size() == 1 ? "node" : "nodes", strings::join(nodes, ", ", " and "));
 				break;
 		}
 	}
