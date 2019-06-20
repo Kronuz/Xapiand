@@ -1580,22 +1580,27 @@ settle_replicas(std::vector<std::vector<std::string>>& shards, std::vector<std::
 		auto replicas_size = replicas.size();
 		assert(replicas_size);
 		if (replicas_size < num_replicas_plus_master) {
-			std::unordered_set<std::string_view> used;
+			std::unordered_set<std::string> used;
 			for (size_t i = 0; i < replicas.size(); ++i) {
-				auto node = Node::get_node(replicas[i]);
-				assert(node);
-				used.insert(node->lower_name());
+				used.insert(strings::lower(replicas[i]));
 			}
-			auto node = Node::get_node(replicas.front());
-			assert(node);
-			auto hash = fnv1ah64::hash(node->lower_name());
 			if (nodes.empty()) {
 				nodes = Node::nodes();
 			}
+			auto primary = strings::lower(replicas[0]);
+			size_t idx = 0;
+			for (const auto& node : nodes) {
+				++idx;
+				if (node->lower_name() == primary) {
+					break;
+				}
+			}
 			for (auto n = replicas_size; n < num_replicas_plus_master; ++n) {
-				do {
-					node = nodes[hash++ % nodes.size()];
-				} while (used.count(node->lower_name()));
+				auto node = nodes[idx % nodes.size()];
+				while (used.count(node->lower_name())) {
+					node = nodes[++idx % nodes.size()];
+					assert(idx < nodes.size() * 2);
+				}
 				replicas.push_back(node->name());
 			}
 		} else {
@@ -1613,12 +1618,16 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 
 	std::vector<std::vector<std::string>> shards;
 	if (Node::total_nodes()) {
+		if (routing_key < num_shards) {
+			routing_key += num_shards;
+		}
 		for (size_t s = 0; s < num_shards; ++s) {
 			std::vector<std::string> replicas;
 			if (nodes.empty()) {
 				nodes = Node::nodes();
 			}
-			auto node = nodes[(routing_key - s) % nodes.size()];
+			size_t idx = (routing_key - s) % nodes.size();
+			auto node = nodes[idx];
 			replicas.push_back(node->name());
 			shards.push_back(std::move(replicas));
 		}
@@ -1642,8 +1651,7 @@ update_primary(const std::string& normalized_path, std::vector<std::vector<std::
 		auto it = it_b;
 		for (; it != it_e; ++it) {
 			auto node = Node::get_node(*it);
-			assert(node);
-			if (node->is_active()) {
+			if (node && node->is_active()) {
 				break;
 			}
 		}
