@@ -357,11 +357,13 @@ Discovery::cluster_hello([[maybe_unused]] Message type, const std::string& messa
 	auto local_node = Node::get_local_node();
 
 	if (!Node::is_superset(local_node, remote_node)) {
-		auto put = Node::touch_node(remote_node, false, false);
+		auto put = Node::touch_node(remote_node, false);
 		if (put.first == nullptr) {
 			send_message(Message::CLUSTER_SNEER, remote_node.serialise());
+			L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", remote_node.col().ansi(), repr(remote_node.to_string()), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 		} else {
 			send_message(Message::CLUSTER_WAVE, local_node->serialise());
+			L_DEBUG("Touched node {}{}" + DEBUG_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", put.first->col().ansi(), put.first->to_string(), put.first->host(), put.first->http_port, put.first->remote_port, put.first->replication_port);
 		}
 	}
 }
@@ -382,10 +384,9 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 	if (put.first == nullptr) {
 		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", remote_node.col().ansi(), repr(remote_node.to_string()), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 	} else {
-		auto node = put.first;
-		L_DEBUG("Added node {}{}" + DEBUG_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Touched node {}{}" + DEBUG_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", put.first->col().ansi(), put.first->to_string(), put.first->host(), put.first->http_port, put.first->remote_port, put.first->replication_port);
 		if (put.second) {
-			L_INFO("Node {}{}" + INFO_COL + " is at the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+			L_INFO("Node {}{}" + INFO_COL + " is at the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", put.first->col().ansi(), put.first->to_string(), put.first->host(), put.first->http_port, put.first->remote_port, put.first->replication_port);
 			// L_DIM_GREY("\n{}", Node::dump_nodes());
 		}
 
@@ -446,10 +447,9 @@ Discovery::cluster_enter([[maybe_unused]] Message type, const std::string& messa
 	if (put.first == nullptr) {
 		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", remote_node.col().ansi(), repr(remote_node.to_string()), remote_node.host(), remote_node.http_port, remote_node.remote_port, remote_node.replication_port);
 	} else {
-		auto node = put.first;
-		L_DEBUG("Added node {}{}" + DEBUG_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+		L_DEBUG("Touched node {}{}" + DEBUG_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", put.first->col().ansi(), put.first->to_string(), put.first->host(), put.first->http_port, put.first->remote_port, put.first->replication_port);
 		if (put.second) {
-			L_INFO("Node {}{}" + INFO_COL + " joined the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
+			L_INFO("Node {}{}" + INFO_COL + " joined the party! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", put.first->col().ansi(), put.first->to_string(), put.first->host(), put.first->http_port, put.first->remote_port, put.first->replication_port);
 			// L_DIM_GREY("\n{}", Node::dump_nodes());
 		}
 	}
