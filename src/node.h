@@ -329,16 +329,16 @@ public:
 
 	static std::shared_ptr<const Node> get_leader_node();
 
-	static void set_local_node(std::shared_ptr<const Node> node);
+	static bool set_local_node(std::shared_ptr<const Node> node);
 
-	static void set_leader_node(std::shared_ptr<const Node> node);
+	static bool set_leader_node(std::shared_ptr<const Node> node);
 
-	static void set_local_node(const Node& node) {
-		set_local_node(std::make_shared<const Node>(node));
+	static bool set_local_node(const Node& node) {
+		return set_local_node(std::make_shared<const Node>(node));
 	}
 
-	static void set_leader_node(const Node& node) {
-		set_leader_node(std::make_shared<const Node>(node));
+	static bool set_leader_node(const Node& node) {
+		return set_leader_node(std::make_shared<const Node>(node));
 	}
 
 private:

@@ -142,30 +142,28 @@ std::atomic_size_t Node::_alive_nodes;
 std::atomic_size_t Node::_active_nodes;
 
 
-void
+bool
 Node::set_local_node(std::shared_ptr<const Node> node)
 {
 	L_CALL("Node::set_local_node({})", node ? node->__repr__() : "null");
 
-	if (node) {
-		auto now = epoch::now<std::chrono::milliseconds>();
-		node->activated.store(true, std::memory_order_release);
-		node->touched.store(now, std::memory_order_release);
-		set_as_title(node);
-		_local_node.store(node, std::memory_order_release);
+	assert(node);
 
-		if (!node->empty()) {
-			std::lock_guard<std::mutex> lk(_nodes_mtx);
-			_nodes[node->lower_name()] = node;
-			_update_nodes(node);
-		}
+	auto now = epoch::now<std::chrono::milliseconds>();
+	node->activated.store(true, std::memory_order_release);
+	node->touched.store(now, std::memory_order_release);
+	set_as_title(node);
+	auto old_node = _local_node.exchange(node, std::memory_order_acq_rel);
 
-		L_NODE_NODES("set_local_node({})", node->__repr__());
-	} else {
-		_local_node.store(node, std::memory_order_release);
-
-		L_NODE_NODES("set_local_node(null)");
+	if (!node->empty()) {
+		std::lock_guard<std::mutex> lk(_nodes_mtx);
+		_nodes[node->lower_name()] = node;
+		_update_nodes(node);
 	}
+
+	L_NODE_NODES("set_local_node({})", node->__repr__());
+
+	return !Node::is_simmilar(old_node, node);
 }
 
 
@@ -182,29 +180,27 @@ Node::get_local_node()
 }
 
 
-void
+bool
 Node::set_leader_node(std::shared_ptr<const Node> node)
 {
 	L_CALL("Node::set_leader_node({})", node ? node->__repr__() : "null");
 
-	if (node) {
-		auto now = epoch::now<std::chrono::milliseconds>();
-		node->activated.store(true, std::memory_order_release);
-		node->touched.store(now, std::memory_order_release);
-		_leader_node.store(node, std::memory_order_release);
+	assert(node);
 
-		if (!node->empty()) {
-			std::lock_guard<std::mutex> lk(_nodes_mtx);
-			_nodes[node->lower_name()] = node;
-			_update_nodes(node);
-		}
+	auto now = epoch::now<std::chrono::milliseconds>();
+	node->activated.store(true, std::memory_order_release);
+	node->touched.store(now, std::memory_order_release);
+	auto old_node = _leader_node.exchange(node, std::memory_order_acq_rel);
 
-		L_NODE_NODES("set_leader_node({})", node->__repr__());
-	} else {
-		_leader_node.store(node, std::memory_order_release);
-
-		L_NODE_NODES("set_leader_node(null)");
+	if (!node->empty()) {
+		std::lock_guard<std::mutex> lk(_nodes_mtx);
+		_nodes[node->lower_name()] = node;
+		_update_nodes(node);
 	}
+
+	L_NODE_NODES("set_leader_node({})", node->__repr__());
+
+	return !Node::is_simmilar(old_node, node);
 }
 
 
