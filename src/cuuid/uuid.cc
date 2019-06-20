@@ -578,7 +578,8 @@ UUID::compact_crush()
 			condenser.compact.salt = node & SALT_MASK;
 		} else {
 			auto local_node = Node::get_local_node();
-			auto salt = fnv_1a((local_node ? local_node->idx : 0) || node);
+			std::hash<std::string_view> hash_fn;
+			auto salt = fnv_1a((local_node ? hash_fn(local_node->lower_name()) : 0) || node);
 			salt = xor_fold(salt, SALT_BITS);
 			condenser.compact.salt = salt & SALT_MASK;
 		}

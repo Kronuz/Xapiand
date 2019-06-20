@@ -546,7 +546,6 @@ XapiandManager::init()
 						auto document = db_handler.get_document(did);
 						auto obj = document.get_obj();
 						Node node;
-						node.idx = did;
 						node.name(obj["name"].str_view());
 						Node::touch_node(node, false);
 					}
@@ -558,10 +557,7 @@ XapiandManager::init()
 #endif
 	{
 		Node::set_leader_node(local_node);
-		Node node;
-		node.idx = 1;
-		node.name(local_node->name());
-		Node::touch_node(node, true);
+		Node::touch_node(*local_node, true);
 	}
 }
 
@@ -667,7 +663,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 					}
 #ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
-						add_node(did, obj["name"].str_view());
+						add_node(obj["name"].str_view());
 					}
 #endif
 				}
@@ -675,7 +671,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		} else {
 #ifdef XAPIAND_CLUSTERING
 			auto node = Node::get_node(local_node->lower_name());
-			found = node && !!node->idx;
+			found = !!node;
 #endif
 		}
 	} catch (const Xapian::DocNotFoundError&) {
@@ -719,7 +715,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					add_node(info.did, local_node->name());
+					add_node(local_node->name());
 				}
 #endif
 				break;
@@ -924,7 +920,7 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	L_CALL("XapiandManager::set_cluster_database_ready_async_cb(...)");
 
 	auto local_node = Node::get_local_node();
-	assert(local_node->idx);
+	assert(local_node->is_active());
 
 	exchange_state(_state.load(), State::READY);
 
@@ -1431,37 +1427,32 @@ XapiandManager::load_nodes()
 	Endpoint cluster_endpoint{".xapiand/nodes"};
 	DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_mset();
-	const auto m_e = mset.end();
 
-	std::vector<std::pair<size_t, std::string>> db_nodes;
-	for (auto m = mset.begin(); m != m_e; ++m) {
-		auto did = *m;
-		auto document = db_handler.get_document(did);
-		auto id = document.get_value(DB_SLOT_ID);
-		db_nodes.push_back(std::make_pair(static_cast<size_t>(did), id));
+	std::vector<std::string> db_nodes;
+	for (auto it = mset.begin(), it_e = mset.end(); it != it_e; ++it) {
+		auto document = db_handler.get_document(*it);
+		db_nodes.push_back(document.get_value(DB_SLOT_ID));
 	}
 
 	for (const auto& node : Node::nodes()) {
-		if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](std::pair<size_t, std::string> db_node) {
-			return db_node.first == node->idx && db_node.second == node->lower_name();
+		if (std::find_if(db_nodes.begin(), db_nodes.end(), [&](const std::string& node_lower_name) {
+			return node_lower_name == node->lower_name();
 		}) == db_nodes.end()) {
-			if (node->idx) {
-				// Node is not in our local database, add it now!
-				L_WARNING("Adding missing node: {}{}", node->col().ansi(), node->to_string());
-				auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
-					{ ID_FIELD_NAME, {
-						{ RESERVED_STORE, false },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-					{ "name", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-						{ RESERVED_VALUE, node->name() },
-					} },
-				}, msgpack_type);
-				auto& doc = std::get<1>(prepared);
-				db_handler.replace_document(node->idx, std::move(doc), false);
-			}
+			// Node is not in our local database, add it now!
+			L_WARNING("Adding missing node: {}{}", node->col().ansi(), node->to_string());
+			auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
+				{ ID_FIELD_NAME, {
+					{ RESERVED_STORE, false },
+					{ RESERVED_TYPE,  KEYWORD_STR },
+				} },
+				{ "name", {
+					{ RESERVED_INDEX, "none" },
+					{ RESERVED_TYPE,  KEYWORD_STR },
+					{ RESERVED_VALUE, node->name() },
+				} },
+			}, msgpack_type);
+			auto& doc = std::get<1>(prepared);
+			db_handler.replace_document(node->lower_name(), std::move(doc), false);
 		}
 	}
 }
@@ -1502,51 +1493,38 @@ XapiandManager::_raft_apply_command(const std::string& command)
 		return;
 	}
 
-	char cmd = *p++;
-	switch (cmd) {
-		case 'N': {
-			size_t idx = unserialise_length(&p, p_end);
-			std::string_view name(p, p_end - p);
-			node_added(idx, name);
-			break;
-		}
-		default:
-			L_ERR("Unknown raft command ignored: {}", cmd);
-			break;
-	}
+	node_added(std::string_view(p, p_end - p));
 }
 
 
 void
-XapiandManager::add_node(size_t idx, std::string_view name)
+XapiandManager::add_node(std::string_view name)
 {
-	L_CALL("XapiandManager::add_node({}, {})", idx, name);
+	L_CALL("XapiandManager::add_node({})", name);
 
-	node_added(idx, name);
+	node_added(name);
 
-	_discovery->raft_add_command("N" + serialise_length(idx) + std::string(name));
+	_discovery->raft_add_command(std::string(name));
 }
 
 
 void
-XapiandManager::node_added(size_t idx, std::string_view name)
+XapiandManager::node_added(std::string_view name)
 {
-	L_CALL("XapiandManager::node_added({}, {})", idx, name);
+	L_CALL("XapiandManager::node_added({})", name);
 
-	Node indexed_node;
+	Node node_copy;
 
 	auto node = Node::get_node(name);
 	if (node) {
-		indexed_node = *node;
-		indexed_node.idx = idx;
+		node_copy = *node;
 	} else {
-		indexed_node.name(std::string(name));
-		indexed_node.idx = idx;
+		node_copy.name(std::string(name));
 	}
 
-	auto put = Node::touch_node(indexed_node, false, false);
+	auto put = Node::touch_node(node_copy, false, false);
 	if (put.first == nullptr) {
-		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", indexed_node.col().ansi(), indexed_node.to_string(), indexed_node.host(), indexed_node.http_port, indexed_node.remote_port, indexed_node.replication_port);
+		L_ERR("Denied node {}{}" + ERR_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node_copy.col().ansi(), node_copy.to_string(), node_copy.host(), node_copy.http_port, node_copy.remote_port, node_copy.replication_port);
 	} else {
 		node = put.first;
 		L_DEBUG("Added node {}{}" + INFO_COL + "! (ip:{}, http_port:{}, remote_port:{}, replication_port:{})", node->col().ansi(), node->to_string(), node->host(), node->http_port, node->remote_port, node->replication_port);
@@ -1595,33 +1573,34 @@ struct NodeSettings {
 
 
 void
-settle_replicas(std::vector<std::vector<std::string>>& shards, size_t indexed_nodes, size_t num_replicas_plus_master)
+settle_replicas(std::vector<std::vector<std::string>>& shards, std::vector<std::shared_ptr<const Node>>& nodes, size_t num_replicas_plus_master)
 {
-	L_CALL("settle_replicas(<shards>, {}, {})", indexed_nodes, num_replicas_plus_master);
+	L_CALL("settle_replicas(<shards>, {})", num_replicas_plus_master);
 
-	if (num_replicas_plus_master > indexed_nodes) {
-		num_replicas_plus_master = indexed_nodes;
+	size_t total_nodes = Node::total_nodes();
+	if (num_replicas_plus_master > total_nodes) {
+		num_replicas_plus_master = total_nodes;
 	}
 	for (auto& replicas : shards) {
 		auto replicas_size = replicas.size();
 		assert(replicas_size);
 		if (replicas_size < num_replicas_plus_master) {
-			std::unordered_set<size_t> used;
+			std::unordered_set<std::string_view> used;
 			for (size_t i = 0; i < replicas.size(); ++i) {
 				auto node = Node::get_node(replicas[i]);
 				assert(node);
-				size_t idx = node->idx;
-				used.insert(idx);
+				used.insert(node->lower_name());
 			}
 			auto node = Node::get_node(replicas.front());
 			assert(node);
-			size_t idx = node->idx;
+			auto hash = fnv1ah64::hash(node->lower_name());
+			if (nodes.empty()) {
+				nodes = Node::nodes();
+			}
 			for (auto n = replicas_size; n < num_replicas_plus_master; ++n) {
 				do {
-					idx = (idx % indexed_nodes) + 1;
-				} while (used.count(idx));
-				node = Node::get_node(idx);
-				assert(node);
+					node = nodes[hash++ % nodes.size()];
+				} while (used.count(node->lower_name()));
 				replicas.push_back(node->name());
 			}
 		} else {
@@ -1633,17 +1612,18 @@ settle_replicas(std::vector<std::vector<std::string>>& shards, size_t indexed_no
 
 
 std::vector<std::vector<std::string>>
-calculate_shards(size_t routing_key, size_t indexed_nodes, size_t num_shards)
+calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& nodes, size_t num_shards)
 {
-	L_CALL("calculate_shards({}, {}, {})", routing_key, indexed_nodes, num_shards);
+	L_CALL("calculate_shards({}, {})", routing_key, num_shards);
 
 	std::vector<std::vector<std::string>> shards;
-	if (indexed_nodes) {
+	if (Node::total_nodes()) {
 		for (size_t s = 0; s < num_shards; ++s) {
 			std::vector<std::string> replicas;
-			size_t idx = ((routing_key - s) % indexed_nodes) + 1;
-			auto node = Node::get_node(idx);
-			assert(node);
+			if (nodes.empty()) {
+				nodes = Node::nodes();
+			}
+			auto node = nodes[(routing_key - s) % nodes.size()];
 			replicas.push_back(node->name());
 			shards.push_back(std::move(replicas));
 		}
@@ -1874,10 +1854,9 @@ shards_to_obj(const std::vector<std::vector<std::string>>& shards)
 	MsgPack nodes = MsgPack::ARRAY();
 	for (auto& replicas : shards) {
 		MsgPack node_replicas = MsgPack::ARRAY();
-		for (auto idx : replicas) {
-			auto node = Node::get_node(idx);
+		for (auto name : replicas) {
+			auto node = Node::get_node(name);
 			node_replicas.append(MsgPack({
-				{ "idx", idx },
 				{ "node", node ? MsgPack(node->name()) : MsgPack::NIL() },
 			}));
 		}
@@ -1895,8 +1874,8 @@ shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 	for (auto& replicas : shards) {
 		std::vector<std::shared_ptr<const Node>> node_replicas;
-		for (auto idx : replicas) {
-			auto node = Node::get_node(idx);
+		for (auto name : replicas) {
+			auto node = Node::get_node(name);
 			node_replicas.push_back(std::move(node));
 		}
 		nodes.push_back(std::move(node_replicas));
@@ -1989,8 +1968,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		}
 	}
 
-	auto indexed_nodes = Node::total_indexed_nodes();
-	assert(indexed_nodes);
+	assert(Node::total_nodes());
 
 	if (settings && settings->is_map()) {
 		auto num_shards = node_settings.num_shards;
@@ -2034,13 +2012,13 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 	if (nodes.empty() || reload) {
 		L_SHARDS("    Configuring {} replicas for {} shards", node_settings.num_replicas_plus_master - 1, node_settings.num_shards);
 
+		std::vector<std::shared_ptr<const Node>> node_nodes;
 		if (node_settings.shards.empty()) {
-			size_t routing_key = jump_consistent_hash(normalized_path, indexed_nodes);
-			node_settings.shards = calculate_shards(routing_key, indexed_nodes, node_settings.num_shards);
+			size_t routing_key = jump_consistent_hash(normalized_path, Node::total_nodes());
+			node_settings.shards = calculate_shards(routing_key, node_nodes, node_settings.num_shards);
 			assert(!node_settings.shards.empty());
 		}
-
-		settle_replicas(node_settings.shards, indexed_nodes, node_settings.num_replicas_plus_master);
+		settle_replicas(node_settings.shards, node_nodes, node_settings.num_replicas_plus_master);
 
 		if (writable) {
 			update_primary(normalized_path, node_settings.shards);
@@ -2104,21 +2082,21 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 					node_endpoint = Endpoint(path, node);
 					if (writable) {
 						if (Node::is_active(node)) {
-							L_SHARDS("Active writable node used (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Active writable node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 							break;
 						}
 						reload = retry;
 						break;
 					} else {
 						if (Node::is_active(node)) {
-							L_SHARDS("Active node used (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Active node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 							break;
 						}
 						if (primary) {
-							L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
+							L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 							break;
 						}
-						L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::total_indexed_nodes, node ? node->__repr__() : "null");
+						L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 					}
 				}
 				endpoints.add(node_endpoint);

@@ -55,8 +55,6 @@ class Node {
 	struct sockaddr_in _addr;
 
 public:
-	size_t idx;
-
 	int http_port;
 	int remote_port;
 	int replication_port;
@@ -64,7 +62,7 @@ public:
 	mutable std::atomic_llong activated;
 	mutable std::atomic_llong touched;
 
-	Node() : _addr{}, idx(0), http_port(0), remote_port(0), replication_port(0), activated(false), touched(0) { }
+	Node() : _addr{}, http_port(0), remote_port(0), replication_port(0), activated(false), touched(0) { }
 
 	// Move constructor
 	Node(Node&& other) :
@@ -72,7 +70,6 @@ public:
 		_name(std::move(other._name)),
 		_lower_name(std::move(other._lower_name)),
 		_addr(std::move(other._addr)),
-		idx(std::move(other.idx)),
 		http_port(std::move(other.http_port)),
 		remote_port(std::move(other.remote_port)),
 		replication_port(std::move(other.replication_port)),
@@ -85,7 +82,6 @@ public:
 		_name(other._name),
 		_lower_name(other._lower_name),
 		_addr(other._addr),
-		idx(other.idx),
 		http_port(other.http_port),
 		remote_port(other.remote_port),
 		replication_port(other.replication_port),
@@ -98,7 +94,6 @@ public:
 		_name = std::move(other._name);
 		_lower_name = std::move(other._lower_name);
 		_addr = std::move(other._addr);
-		idx = std::move(other.idx);
 		http_port = std::move(other.http_port);
 		remote_port = std::move(other.remote_port);
 		replication_port = std::move(other.replication_port);
@@ -113,7 +108,6 @@ public:
 		_name = other._name;
 		_lower_name = other._lower_name;
 		_addr = other._addr;
-		idx = other.idx;
 		http_port = other.http_port;
 		remote_port = other.remote_port;
 		replication_port = other.replication_port;
@@ -127,7 +121,6 @@ public:
 		_name.clear();
 		_lower_name.clear();
 		_addr = sockaddr_in{};
-		idx = 0;
 		http_port = 0;
 		remote_port = 0;
 		replication_port = 0;
@@ -293,10 +286,6 @@ public:
 		return Node::is_local(Node::get_node(node_name));
 	}
 
-	static bool is_local(size_t idx) {
-		return Node::is_local(Node::get_node(idx));
-	}
-
 
 	static bool is_leader(const std::shared_ptr<const Node>& node) {
 		return node && node->is_leader();
@@ -308,10 +297,6 @@ public:
 
 	static bool is_leader(std::string_view node_name) {
 		return Node::is_leader(Node::get_node(node_name));
-	}
-
-	static bool is_leader(size_t idx) {
-		return Node::is_leader(Node::get_node(idx));
 	}
 
 
@@ -327,10 +312,6 @@ public:
 		return Node::is_alive(Node::get_node(node_name));
 	}
 
-	static bool is_alive(size_t idx) {
-		return Node::is_alive(Node::get_node(idx));
-	}
-
 
 	static bool is_active(const std::shared_ptr<const Node>& node) {
 		return node && node->is_active();
@@ -342,10 +323,6 @@ public:
 
 	static bool is_active(std::string_view node_name) {
 		return Node::is_active(Node::get_node(node_name));
-	}
-
-	static bool is_active(size_t idx) {
-		return Node::is_active(Node::get_node(idx));
 	}
 
 	static std::shared_ptr<const Node> get_local_node();
@@ -371,13 +348,9 @@ private:
 	static std::atomic_size_t _total_nodes;
 	static std::atomic_size_t _alive_nodes;
 	static std::atomic_size_t _active_nodes;
-	static std::atomic_size_t _total_indexed_nodes;
-	static std::atomic_size_t _alive_indexed_nodes;
-	static std::atomic_size_t _active_indexed_nodes;
 
 	static std::mutex _nodes_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<const Node>> _nodes;
-	static std::vector<std::shared_ptr<const Node>> _nodes_indexed;
 
 	static void _update_nodes(const std::shared_ptr<const Node>& node);
 
@@ -394,19 +367,6 @@ public:
 		return _active_nodes.load(std::memory_order_acquire);
 	}
 
-	static size_t total_indexed_nodes() {
-		return _total_indexed_nodes.load(std::memory_order_acquire);
-	}
-
-	static size_t alive_indexed_nodes() {
-		return _alive_indexed_nodes.load(std::memory_order_acquire);
-	}
-
-	static size_t active_indexed_nodes() {
-		return _active_indexed_nodes.load(std::memory_order_acquire);
-	}
-
-	static std::shared_ptr<const Node> get_node(size_t idx);
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);
 	static std::pair<std::shared_ptr<const Node>, bool> touch_node(const Node& node, bool activate = true, bool touch = true);
 	static void drop_node(std::string_view node_name);

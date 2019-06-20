@@ -1349,21 +1349,18 @@ HttpClient::node_obj()
 #ifdef XAPIAND_CLUSTERING
 	auto nodes = MsgPack::ARRAY();
 	for (auto& node : Node::nodes()) {
-		if (node->idx) {
-			auto node_obj = MsgPack::MAP();
-			node_obj["idx"] = node->idx;
-			node_obj["name"] = node->name();
-			if (Node::is_active(node)) {
-				node_obj["host"] = node->host();
-				node_obj["http_port"] = node->http_port;
-				node_obj["remote_port"] = node->remote_port;
-				node_obj["replication_port"] = node->replication_port;
-				node_obj["active"] = true;
-			} else {
-				node_obj["active"] = false;
-			}
-			nodes.push_back(node_obj);
+		auto node_obj = MsgPack::MAP();
+		node_obj["name"] = node->name();
+		if (Node::is_active(node)) {
+			node_obj["host"] = node->host();
+			node_obj["http_port"] = node->http_port;
+			node_obj["remote_port"] = node->remote_port;
+			node_obj["replication_port"] = node->replication_port;
+			node_obj["active"] = true;
+		} else {
+			node_obj["active"] = false;
 		}
+		nodes.push_back(node_obj);
 	}
 #endif
 
@@ -2873,9 +2870,7 @@ HttpClient::expand_paths(Request& request)
 			}
 			Endpoints index_endpoints;
 			for (auto& node : Node::nodes()) {
-				if (node->idx) {
-					index_endpoints.add(Endpoint(strings::format(".xapiand/nodes/{}", node->lower_name())));
-				}
+				index_endpoints.add(Endpoint(strings::format(".xapiand/nodes/{}", node->lower_name())));
 			}
 			DatabaseHandler db_handler;
 			db_handler.reset(index_endpoints);

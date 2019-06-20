@@ -476,11 +476,11 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 
 	if (raft_role == Role::RAFT_LEADER) {
 		// If we're leader, check consensus or vote.
-		auto total_indexed_nodes = Node::total_indexed_nodes();
-		auto alive_indexed_nodes = Node::alive_indexed_nodes();
-		if (!raft_has_consensus(total_indexed_nodes, alive_indexed_nodes)) {
+		auto total_nodes = Node::total_nodes();
+		auto alive_nodes = Node::alive_nodes();
+		if (!raft_has_consensus(total_nodes, alive_nodes)) {
 			L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
-				total_indexed_nodes, alive_indexed_nodes);
+				total_nodes, alive_nodes);
 			_raft_request_vote(false);
 		}
 	}
@@ -495,7 +495,7 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), repr(remote_node.to_string()));
 	}
 
-	L_DEBUG("Nodes still active after {} left: {}", repr(remote_node.to_string()), Node::alive_indexed_nodes());
+	L_DEBUG("Nodes still active after {} left: {}", repr(remote_node.to_string()), Node::alive_nodes());
 }
 
 
@@ -585,7 +585,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 	}
 
 	// L_DIM_GREY("\n{}", Node::dump_nodes());
-	auto total_nodes = Node::total_indexed_nodes();
+	auto total_nodes = Node::total_nodes();
 	L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE_RESPONSE {{ node:{}, term:{}, total_nodes:{}, voted_for:{} }}",
 		repr(local_node->to_string()), term, total_nodes, repr(raft_voted_for.to_string()));
 
@@ -645,7 +645,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 
 	if (term == raft_current_term) {
 		size_t total_nodes = unserialise_length(&p, p_end);
-		total_nodes = std::max(total_nodes, Node::total_indexed_nodes());
+		total_nodes = std::max(total_nodes, Node::total_nodes());
 
 		if (raft_voters.insert(node->name()).second) {
 			auto voted_for_node = Node::touch_node(Node::unserialise(&p, p_end), false).first;
@@ -1276,12 +1276,12 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 		return;
 	}
 
-	auto total_indexed_nodes = Node::total_indexed_nodes();
-	auto alive_indexed_nodes = Node::alive_indexed_nodes();
-	if (!raft_has_consensus(total_indexed_nodes, alive_indexed_nodes)) {
+	auto total_nodes = Node::total_nodes();
+	auto alive_nodes = Node::alive_nodes();
+	if (!raft_has_consensus(total_nodes, alive_nodes)) {
 		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus)");
 		L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
-			total_indexed_nodes, alive_indexed_nodes);
+			total_nodes, alive_nodes);
 		_raft_request_vote(false);
 		return;
 	}
@@ -1402,7 +1402,7 @@ Discovery::_raft_commit_log()
 					++matches;
 				}
 			}
-			if (raft_has_consensus(Node::total_indexed_nodes(), matches)) {
+			if (raft_has_consensus(Node::total_nodes(), matches)) {
 				raft_commit_index = index;
 				if (raft_commit_index > raft_last_applied) {
 					L_RAFT("Commit {{raft_commit_index:{}, raft_last_applied:{}, last_index:{}}}",
@@ -1447,7 +1447,7 @@ Discovery::_raft_request_vote(bool immediate)
 
 		auto local_node = Node::get_local_node();
 		L_RAFT_PROTO("<<< RAFT_REQUEST_VOTE {{ node:{}, raft_current_term:{}, last_log_term:{}, last_log_index:{}, state:{}, timeout:{}, alive_nodes:{}, leader:{} }}",
-			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::alive_indexed_nodes(), Node::get_leader_node()->empty() ? "<none>" : Node::get_leader_node()->to_string());
+			repr(local_node->to_string()), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::alive_nodes(), Node::get_leader_node()->empty() ? "<none>" : Node::get_leader_node()->to_string());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
 			serialise_length(raft_current_term) +
@@ -1570,11 +1570,11 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 
 	if (raft_role == Role::RAFT_LEADER) {
 		// If we're leader, check consensus or vote.
-		auto total_indexed_nodes = Node::total_indexed_nodes();
-		auto alive_indexed_nodes = Node::alive_indexed_nodes();
-		if (!raft_has_consensus(total_indexed_nodes, alive_indexed_nodes)) {
+		auto total_nodes = Node::total_nodes();
+		auto alive_nodes = Node::alive_nodes();
+		if (!raft_has_consensus(total_nodes, alive_nodes)) {
 			L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
-				total_indexed_nodes, alive_indexed_nodes);
+				total_nodes, alive_nodes);
 			_raft_request_vote(false);
 		}
 	}

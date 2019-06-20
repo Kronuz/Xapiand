@@ -199,8 +199,8 @@ private:
 	void raft_apply_command_impl(const std::string& command);
 	void _raft_apply_command(const std::string& command);
 
-	void add_node(size_t idx, std::string_view name);
-	void node_added(size_t idx, std::string_view name);
+	void add_node(std::string_view name);
+	void node_added(std::string_view name);
 #endif
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, bool reload, bool clear);
