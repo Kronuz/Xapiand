@@ -1364,9 +1364,7 @@ Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 {
 	L_CALL("Discovery::_raft_set_leader_node({})", repr(node->name()));
 
-	auto leader_node = Node::get_leader_node();
-	if (!Node::is_superset(leader_node, node)) {
-		Node::set_leader_node(node);
+	if (Node::set_leader_node(node)) {
 		XapiandManager::new_leader();
 	}
 }
