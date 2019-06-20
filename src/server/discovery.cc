@@ -1416,6 +1416,9 @@ Discovery::_raft_commit_log()
 					}
 				}
 			}
+		} else {
+			raft_log.resize(raft_commit_index);
+			last_index = raft_log.size();
 		}
 	}
 
