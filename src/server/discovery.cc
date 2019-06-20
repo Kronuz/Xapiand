@@ -1506,6 +1506,10 @@ Discovery::_raft_add_command(const std::string& command)
 	L_CALL("Discovery::_raft_add_command({})", repr(command));
 
 	if (raft_role == Role::RAFT_LEADER) {
+		if (raft_commit_index < raft_log.size() && raft_log[raft_commit_index].term != raft_current_term) {
+			raft_log.resize(raft_commit_index);
+		}
+
 		if (std::find_if(raft_log.begin(), raft_log.end(), [&](const RaftLogEntry& entry) {
 			return entry.command == command;
 		}) != raft_log.end()) {
