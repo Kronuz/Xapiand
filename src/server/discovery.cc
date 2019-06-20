@@ -815,11 +815,11 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 				uint64_t entry_term = unserialise_length(&p, p_end);
 				auto entry_command = unserialise_string(&p, p_end);
 				if (type == Message::RAFT_HEARTBEAT) {
-					L_RAFT_PROTO_HB("   {{ last_log_index:{}, entry_term:{}, entry_command:{} }}",
-						last_log_index, entry_term, repr(entry_command));
+					L_RAFT_PROTO_HB("   {{ leader_commit:{}, last_log_index:{}, entry_term:{}, entry_command:{} }}",
+						leader_commit, last_log_index, entry_term, repr(entry_command));
 				} else {
-					L_RAFT_PROTO("   {{ last_log_index:{}, entry_term:{}, entry_command:{} }}",
-						last_log_index, entry_term, repr(entry_command));
+					L_RAFT_PROTO("   {{ leader_commit:{}, last_log_index:{}, entry_term:{}, entry_command:{} }}",
+						leader_commit, last_log_index, entry_term, repr(entry_command));
 				}
 
 				if (entry_index <= last_index) {
