@@ -921,6 +921,7 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::floating }};
 			return _;
 		}
+		case _.fhhl("geospatial"):
 		case _.fhhl("geo"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::geo }};
 			return _;
