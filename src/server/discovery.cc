@@ -504,6 +504,14 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 {
 	L_CALL("Discovery::raft_request_vote({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE (invalid state: {}) {{current_term:{}}}",
+			enum_name(XapiandManager::state().load()), raft_current_term);
+		return;
+	}
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -526,12 +534,6 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
-	}
-
-	if (XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE (invalid state: {}) {{term:{}, current_term:{}}}",
-			enum_name(XapiandManager::state().load()), term, raft_current_term);
-		return;
 	}
 
 	L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE [from {}]{} {{term:{}}}",
@@ -600,6 +602,14 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 {
 	L_CALL("Discovery::raft_request_vote_response({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE_RESPONSE (invalid state: {}) {{current_term:{}}}",
+			enum_name(XapiandManager::state().load()), raft_current_term);
+		return;
+	}
+
 	if (raft_role != Role::RAFT_CANDIDATE) {
 		return;
 	}
@@ -628,12 +638,6 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
-	}
-
-	if (XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE_RESPONSE (invalid state: {}) {{term:{}, current_term:{}}}",
-			enum_name(XapiandManager::state().load()), term, raft_current_term);
-		return;
 	}
 
 	L_RAFT_PROTO(">>> RAFT_REQUEST_VOTE_RESPONSE [from {}]{} {{term:{}}}",
@@ -698,6 +702,19 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 {
 	L_CALL("Discovery::raft_append_entries({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		if (type == Message::RAFT_HEARTBEAT) {
+			L_RAFT_PROTO_HB(">>> RAFT_HEARTBEAT (invalid state: {}) {{current_term:{}}}",
+				enum_name(XapiandManager::state().load()), raft_current_term);
+		} else {
+			L_RAFT_PROTO(">>> RAFT_APPEND_ENTRIES (invalid state: {}) {{current_term:{}}}",
+				enum_name(XapiandManager::state().load()), raft_current_term);
+		}
+		return;
+	}
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -735,19 +752,6 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		// If term from heartbeat is older,
 		// immediately run for election.
 		_raft_request_vote(true);
-		return;
-	}
-
-	if (XapiandManager::state() != XapiandManager::State::JOINING &&
-		XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
-		if (type == Message::RAFT_HEARTBEAT) {
-			L_RAFT_PROTO_HB(">>> RAFT_HEARTBEAT (invalid state: {}) {{current_term:{}}}",
-				enum_name(XapiandManager::state().load()), raft_current_term);
-		} else {
-			L_RAFT_PROTO(">>> RAFT_APPEND_ENTRIES (invalid state: {}) {{current_term:{}}}",
-				enum_name(XapiandManager::state().load()), raft_current_term);
-		}
 		return;
 	}
 
@@ -914,6 +918,19 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 {
 	L_CALL("Discovery::raft_append_entries_response({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
+			L_RAFT_PROTO_HB(">>> RAFT_HEARTBEAT_RESPONSE (invalid state: {}) {{current_term:{}}}",
+				enum_name(XapiandManager::state().load()), raft_current_term);
+		} else {
+			L_RAFT_PROTO(">>> RAFT_APPEND_ENTRIES_RESPONSE (invalid state: {}) {{current_term:{}}}",
+				enum_name(XapiandManager::state().load()), raft_current_term);
+		}
+		return;
+	}
+
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
@@ -945,17 +962,6 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
-	}
-
-	if (XapiandManager::state() != XapiandManager::State::READY) {
-		if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
-			L_RAFT_PROTO_HB(">>> RAFT_HEARTBEAT_RESPONSE (invalid state: {}) {{term:{}, current_term:{}}}",
-				enum_name(XapiandManager::state().load()), term, raft_current_term);
-		} else {
-			L_RAFT_PROTO(">>> RAFT_APPEND_ENTRIES_RESPONSE (invalid state: {}) {{term:{}, current_term:{}}}",
-				enum_name(XapiandManager::state().load()), term, raft_current_term);
-		}
-		return;
 	}
 
 	if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
@@ -1016,7 +1022,9 @@ Discovery::raft_add_command([[maybe_unused]] Message type, const std::string& me
 {
 	L_CALL("Discovery::raft_add_command({}, <message>) {{state:{}}}", enum_name(type), enum_name(XapiandManager::state().load()));
 
-	if (XapiandManager::state() != XapiandManager::State::READY) {
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
 		L_RAFT_PROTO(">>> RAFT_ADD_COMMAND (invalid state: {}) {{current_term:{}}}",
 			enum_name(XapiandManager::state().load()), raft_current_term);
 		return;
@@ -1208,6 +1216,13 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 	L_EV_BEGIN("Discovery::raft_leader_election_timeout_cb:BEGIN");
 	L_EV_END("Discovery::raft_leader_election_timeout_cb:END");
 
+	if (XapiandManager::state() != XapiandManager::State::JOINING &&
+		XapiandManager::state() != XapiandManager::State::SETUP &&
+		XapiandManager::state() != XapiandManager::State::READY) {
+		L_RAFT_PROTO("<<< LEADER_ELECTION (invalid state: {})", enum_name(XapiandManager::state().load()));
+		return;
+	}
+
 	if (XapiandManager::state() == XapiandManager::State::JOINING) {
 		if (raft_current_term == 0) {
 			++raft_current_term;
@@ -1229,12 +1244,6 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 			}
 			return;
 		}
-	}
-
-	if (XapiandManager::state() != XapiandManager::State::SETUP &&
-		XapiandManager::state() != XapiandManager::State::READY) {
-		L_RAFT_PROTO("<<< LEADER_ELECTION (invalid state: {})", enum_name(XapiandManager::state().load()));
-		return;
 	}
 
 	if (raft_role == Role::RAFT_LEADER) {
