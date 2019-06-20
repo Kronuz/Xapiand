@@ -607,7 +607,7 @@ XapiandManager::start_discovery()
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		auto msg = strings::format("Discovering cluster {} by listening on ", opts.cluster_name);
+		auto msg = strings::format("Discovering cluster {} by listening on ", repr(opts.cluster_name));
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
 		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
@@ -1366,7 +1366,7 @@ XapiandManager::join_cluster_impl()
 {
 	L_CALL("XapiandManager::join_cluster_impl()");
 
-	L_INFO("Joining cluster {}...", opts.cluster_name);
+	L_INFO("Joining cluster {}...", repr(opts.cluster_name));
 	_discovery->raft_request_vote();
 }
 
@@ -1395,7 +1395,7 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	auto leader_node = Node::get_leader_node();
-	L_INFO("New leader of cluster {} is {}{}", opts.cluster_name, leader_node->col().ansi(), leader_node->to_string());
+	L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
 
 	if (_state == State::READY) {
 		if (leader_node->is_local()) {
