@@ -850,7 +850,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 #ifdef L_RAFT_LOG
 				std::string log;
 				for (size_t i = 0; i < raft_log.size(); ++i) {
-					log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+					log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? i + 1 <= raft_last_applied ? MEDIUM_SEA_GREEN + "*" : SEA_GREEN + "+" : DIM_GREY + " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 				}
 				L_RAFT_LOG("Command received for raft_log: {}{}", repr(entry_command), log.empty() ? "\n    (empty)" : log);
 #endif
@@ -879,7 +879,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 #ifdef L_RAFT_LOG
 				std::string log;
 				for (size_t i = 0; i < raft_log.size(); ++i) {
-					log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+					log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? i + 1 <= raft_last_applied ? MEDIUM_SEA_GREEN + "*" : SEA_GREEN + "+" : DIM_GREY + " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 				}
 				L_RAFT_LOG("Commands after commit:{}", log.empty() ? "\n    (empty)" : log);
 #endif
@@ -1425,7 +1425,7 @@ Discovery::_raft_commit_log()
 #ifdef L_RAFT_LOG
 		std::string log;
 		for (size_t i = 0; i < raft_log.size(); ++i) {
-			log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+			log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? i + 1 <= raft_last_applied ? MEDIUM_SEA_GREEN + "*" : SEA_GREEN + "+" : DIM_GREY + " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 		}
 		L_RAFT_LOG("Commands after commit:{}", log.empty() ? "\n    (empty)" : log);
 #endif
@@ -1520,7 +1520,7 @@ Discovery::_raft_add_command(const std::string& command)
 #ifdef L_RAFT_LOG
 		std::string log;
 		for (size_t i = 0; i < raft_log.size(); ++i) {
-			log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+			log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? i + 1 <= raft_last_applied ? MEDIUM_SEA_GREEN + "*" : SEA_GREEN + "+" : DIM_GREY + " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 		}
 		L_RAFT_LOG("Command added to raft_log: {}{}", repr(command), log.empty() ? "\n    (empty)" : log);
 #endif
