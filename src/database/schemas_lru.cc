@@ -90,12 +90,7 @@ get_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::s
 			// Return default .xapiand/indices (chicken and egg problem)
 			return std::make_pair(0, MsgPack({
 				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-				{ SCHEMA_FIELD_NAME, {
-					{ ID_FIELD_NAME, {
-						{ RESERVED_STORE, false },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-				} },
+				{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
 			}));
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
