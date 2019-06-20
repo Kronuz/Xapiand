@@ -846,6 +846,15 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 					});
 					last_index = raft_log.size();
 				}
+#ifdef L_RAFT_LOG
+				if (type != Message::RAFT_HEARTBEAT) {
+					std::string log;
+					for (size_t i = 0; i < raft_log.size(); ++i) {
+						log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+					}
+					L_RAFT_LOG("Command received for raft_log: {}{}", repr(entry_command), log.empty() ? "\n    (empty)" : log);
+				}
+#endif
 			}
 
 			// If leaderCommit > commitIndex,
@@ -900,16 +909,6 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			  serialise_length(match_index)
 			: ""
 		));
-
-#ifdef L_RAFT_LOG
-	if (type != Message::RAFT_HEARTBEAT) {
-		std::string log;
-		for (size_t i = 0; i < raft_log.size(); ++i) {
-			log += strings::format("\n    {} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
-		}
-		L_RAFT_LOG("{}", log.empty() ? "raft_log -> (empty)" : log);
-	}
-#endif
 }
 
 
@@ -997,22 +996,20 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 				--next_index;
 			}
 			if (type == Message::RAFT_HEARTBEAT_RESPONSE) {
-				L_RAFT_PROTO_HB("   {{success:{}, next_index:{}}}", success, next_index);
+				L_RAFT_PROTO_HB("   {{ success:{}, next_index:{} }}", success, next_index);
 			} else {
-				L_RAFT_PROTO("   {{success:{}, next_index:{}}}", success, next_index);
+				L_RAFT_PROTO("   {{ success:{}, next_index:{} }}", success, next_index);
 			}
 		}
-		_raft_commit_log();
-
+		if (_raft_commit_log()) {
 #ifdef L_RAFT_LOG
-		if (type != Message::RAFT_HEARTBEAT_RESPONSE) {
 			std::string log;
 			for (size_t i = 0; i < raft_log.size(); ++i) {
-				log += strings::format("\n    {} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+				log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 			}
-			L_RAFT_LOG("{}", log.empty() ? "raft_log -> (empty)" : log);
-		}
+			L_RAFT_LOG("Commands after commit:{}", log.empty() ? "\n    (empty)" : log);
 #endif
+		}
 	}
 }
 
@@ -1384,7 +1381,7 @@ Discovery::_raft_apply_command(const std::string& command)
 }
 
 
-void
+bool
 Discovery::_raft_commit_log()
 {
 	L_CALL("Discovery::_raft_commit_log()");
@@ -1393,6 +1390,7 @@ Discovery::_raft_commit_log()
 	// a majority of matchIndex[i] ≥ N,
 	// and raft_log[N].term == currentTerm:
 	// set commitIndex = N
+	auto old_raft_last_applied = raft_last_applied;
 	auto last_index = raft_log.size();
 	for (size_t index = raft_commit_index + 1; index <= last_index; ++index) {
 		if (raft_log[index - 1].term == raft_current_term) {
@@ -1420,6 +1418,7 @@ Discovery::_raft_commit_log()
 			}
 		}
 	}
+	return old_raft_last_applied != raft_last_applied;
 }
 
 
@@ -1505,9 +1504,9 @@ Discovery::_raft_add_command(const std::string& command)
 #ifdef L_RAFT_LOG
 		std::string log;
 		for (size_t i = 0; i < raft_log.size(); ++i) {
-			log += strings::format("\n    {} raft_log[{}] -> {{term:{}, command:{}}}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
+			log += strings::format("\n    {} raft_log[{}] -> {{ term:{}, command:{} }}", i + 1 <= raft_commit_index ? "*" : i + 1 <= raft_last_applied ? "+" : " ", i + 1, raft_log[i].term, repr(raft_log[i].command));
 		}
-		L_RAFT_LOG("{}", log.empty() ? "raft_log -> (empty)" : log);
+		L_RAFT_LOG("Command added to raft_log: {}{}", repr(command), log.empty() ? "\n    (empty)" : log);
 #endif
 	} else {
 		auto local_node = Node::get_local_node();
