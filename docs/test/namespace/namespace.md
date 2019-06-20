@@ -157,7 +157,7 @@ PUT /test/namespace/index_namespace/doc
 }
 ```
 ---
-description: Index Namespace with Key _index
+description: Index Namespace With Key _index
 ---
 
 ```json
@@ -177,7 +177,7 @@ pm.test("Value is valid", function() {
 });
 ```
 ---
-description: Get Namespace with Key _index
+description: Get Namespace With Key _index
 ---
 
 ```json
@@ -202,7 +202,7 @@ pm.test("Value is valid", function() {
 });
 ```
 ---
-description: Info Namespace with Key _index
+description: Info Namespace With Key _index
 ---
 {% endcomment %}
 
@@ -364,7 +364,7 @@ PUT /test/namespace/namespace_different/doc
 }
 ```
 ---
-description: Index Namespace different nested types
+description: Index Namespace Different Nested Types
 ---
 ```js
 pm.test("Response is expected error", function() {
@@ -394,7 +394,7 @@ PUT /test/namespace/namespace_text/doc
 }
 ```
 ---
-description: Index Namespace text type
+description: Index Namespace Text Type
 ---
 
 ```json
@@ -416,7 +416,7 @@ pm.test("Value is valid", function() {
 ```
 
 ---
-description: Get Namespace text type
+description: Get Namespace Text Type
 ---
 
 ```json
@@ -462,7 +462,7 @@ PUT /test/namespace/namespace_datetime/doc
 }
 ```
 ---
-description: Index Namespace datetime type
+description: Index Namespace Datetime Type
 ---
 
 ```json
@@ -485,7 +485,7 @@ pm.test("Value is valid", function() {
 ```
 
 ---
-description: Get Namespace datetime type
+description: Get Namespace Datetime Type
 ---
 
 ```json
@@ -534,7 +534,7 @@ pm.test("Value is valid", function() {
   });
 ```
 ---
-description: Info Namespace datetime type
+description: Info Namespace Datetime Type
 ---
 {% endcomment %}
 
@@ -558,7 +558,7 @@ PUT /test/namespace/types/integer/doc
 ```
 
 ---
-description: Index Namespace Numeric type
+description: Index Namespace Numeric Type
 ---
 
 ```json
@@ -581,7 +581,7 @@ pm.test("Value is valid", function() {
 ```
 
 ---
-description: Get Namespace Numeric type
+description: Get Namespace Numeric Type
 ---
 
 ```json
@@ -714,7 +714,7 @@ pm.test("Value is valid", function() {
 ```
 
 ---
-description: Search Namespace Numeric type
+description: Search Namespace Numeric Type
 ---
 
 
@@ -752,5 +752,77 @@ pm.test("Value is valid", function() {
 
 ---
 description: Search Namespace Numeric type by Range
+---
+{% endcomment %}
+
+
+### Namespace Geospatial type
+
+{% comment %}
+```json
+PUT /test/namespace/types/geospatial/doc
+
+{
+  "_strict": true,
+  "tags": {
+    "_namespace": true,
+    "_type": "geospatial",
+    "field": {
+      "_point": {
+        "_longitude": -80.31727,
+        "_latitude": 25.67927
+      }
+    }
+  }
+}
+```
+
+---
+description: Index Namespace Geospatial Type
+---
+
+```json
+GET /test/namespace/types/geospatial/._schema.schema.tags
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData._type).to.equal('geo');
+  pm.expect(jsonData._accuracy_prefix).to.eql(['<3>.','<5>.','<8>.','<a>.','<c>.','<f>.']);
+  pm.expect(jsonData._accuracy).to.eql([3, 5, 8, 10, 12, 15]);
+  pm.expect(jsonData._namespace).to.equal(true);
+});
+```
+
+---
+description: Get Namespace Geospatial Type
+---
+
+```json
+INFO /test/namespace/types/geospatial/doc
+```
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Value is valid", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.terms.tags.field).that.have.all.keys(['<3>', '<5>', '<8>', '<a>', '<c>', '<f>', 'G\u0000', 'term_freq', 'wdf']);
+  pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3171062315']);
+});
+```
+---
+description: Info Namespace Geospatial Type
 ---
 {% endcomment %}
