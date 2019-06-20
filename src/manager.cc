@@ -652,20 +652,24 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		if (Node::is_superset(local_node, leader_node)) {
 			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
 			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
-				auto mset = db_handler.get_mset();
-				const auto m_e = mset.end();
-				for (auto m = mset.begin(); m != m_e; ++m) {
-					auto did = *m;
-					auto document = db_handler.get_document(did);
-					auto obj = document.get_obj();
-					if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
-						found = true;
-					}
 #ifdef XAPIAND_CLUSTERING
-					if (!opts.solo) {
+				if (!opts.solo) {
+					auto mset = db_handler.get_mset();
+					const auto m_e = mset.end();
+					for (auto m = mset.begin(); m != m_e; ++m) {
+						auto did = *m;
+						auto document = db_handler.get_document(did);
+						if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
+							found = true;
+						}
+						auto obj = document.get_obj();
 						add_node(obj["name"].str_view());
 					}
+				} else
 #endif
+				{
+					db_handler.get_document(local_node->lower_name());
+					found = true;
 				}
 			}
 		}
@@ -675,11 +679,24 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	if (!found) {
 		for (int t = 10; t >= 0; --t) {
 			try {
+				DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
+				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, {
+					{ ID_FIELD_NAME, {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "name", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  KEYWORD_STR },
+						{ RESERVED_VALUE, local_node->name() },
+					} },
+				}, false, msgpack_type).first;
+				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
+					add_node(local_node->name());
+
 					if (Node::is_superset(local_node, leader_node)) {
 						L_INFO("Cluster database doesn't exist. Generating database...");
-						load_nodes();
 					} else {
 						if (!leader_node->is_active()) {
 							throw Xapian::NetworkError("Endpoint node is inactive");
@@ -693,24 +710,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 							throw Xapian::NetworkError("Endpoint node without a valid host");
 						}
 					}
-				}
-#endif
-				DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
-				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, {
-					{ ID_FIELD_NAME, {
-						{ RESERVED_STORE, false },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-					} },
-					{ "name", {
-						{ RESERVED_INDEX, "none" },
-						{ RESERVED_TYPE,  KEYWORD_STR },
-						{ RESERVED_VALUE, local_node->name() },
-					} },
-				}, false, msgpack_type).first;
-				_new_cluster = 1;
-#ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					add_node(local_node->name());
 				}
 #endif
 				break;
@@ -1419,7 +1418,8 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	Endpoint cluster_endpoint{".xapiand/nodes"};
+	auto leader_node = Node::get_leader_node();
+	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
 	DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_mset();
 
@@ -1448,6 +1448,7 @@ XapiandManager::load_nodes()
 			}, msgpack_type);
 			auto& doc = std::get<1>(prepared);
 			db_handler.replace_document(node->lower_name(), std::move(doc), false);
+			add_node(node->name());
 		}
 	}
 }
