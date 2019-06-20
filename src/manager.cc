@@ -1702,8 +1702,8 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 			{ RESERVED_VALUE, num_replicas_plus_master - 1 },
 		} },
 		{ "shards", {
-			{ RESERVED_INDEX, "none" },
-			{ RESERVED_TYPE,  "array/string" },
+			{ RESERVED_INDEX, "field_terms" },
+			{ RESERVED_TYPE,  "array/keyword" },
 			{ RESERVED_VALUE, shards },
 		} },
 		{ RESERVED_IGNORE, "schema" },
@@ -1742,8 +1742,8 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 					{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
 				} },
 				// { "shards", {
-				// 	{ RESERVED_INDEX, "none" },
-				// 	{ RESERVED_TYPE,  "array/string" },
+				// 	{ RESERVED_INDEX, "field_terms" },
+				// 	{ RESERVED_TYPE,  "array/keyword" },
 				// } },
 				{ RESERVED_IGNORE, "schema" },
 			}, false, msgpack_type);
