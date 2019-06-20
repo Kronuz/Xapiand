@@ -680,7 +680,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		for (int t = 10; t >= 0; --t) {
 			try {
 				DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
-				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, {
+				MsgPack obj({
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
 					} },
@@ -689,7 +689,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 						{ RESERVED_TYPE,  KEYWORD_STR },
 						{ RESERVED_VALUE, local_node->name() },
 					} },
-				}, false, msgpack_type).first;
+				});
+				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, obj, false, msgpack_type).first;
 				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
@@ -1433,7 +1434,7 @@ XapiandManager::load_nodes()
 		}) == db_nodes.end()) {
 			// Node is not in our local database, add it now!
 			L_WARNING("Adding missing node: {}{}", node->col().ansi(), node->to_string());
-			auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
+			MsgPack obj({
 				{ ID_FIELD_NAME, {
 					{ RESERVED_TYPE,  KEYWORD_STR },
 				} },
@@ -1442,7 +1443,8 @@ XapiandManager::load_nodes()
 					{ RESERVED_TYPE,  KEYWORD_STR },
 					{ RESERVED_VALUE, node->name() },
 				} },
-			}, msgpack_type);
+			});
+			auto prepared = db_handler.prepare(node->lower_name(), 0, false, obj, msgpack_type);
 			auto& doc = std::get<1>(prepared);
 			db_handler.replace_document(node->lower_name(), std::move(doc), false);
 			node_added(node->name());
@@ -1688,7 +1690,7 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 	assert(!endpoints.empty());
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
+	MsgPack obj({
 		{ ID_FIELD_NAME, {
 			{ RESERVED_TYPE,  KEYWORD_STR },
 		} },
@@ -1706,8 +1708,8 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 			{ RESERVED_TYPE,  "array/keyword" },
 			{ RESERVED_VALUE, shards },
 		} },
-		{ RESERVED_IGNORE, "schema" },
-	}, false, msgpack_type);
+	});
+	db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
 }
 
 
@@ -1727,7 +1729,7 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 			assert(!endpoints.empty());
 			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-			db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
+			MsgPack obj({
 				{ ID_FIELD_NAME, {
 					{ RESERVED_TYPE,  KEYWORD_STR },
 				} },
@@ -1745,8 +1747,8 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 				// 	{ RESERVED_INDEX, "field_terms" },
 				// 	{ RESERVED_TYPE,  "array/keyword" },
 				// } },
-				{ RESERVED_IGNORE, "schema" },
-			}, false, msgpack_type);
+			});
+			db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
 		}
 		size_t shard_num = 0;
 		for (auto& shard_replicas : node_settings.shards) {
