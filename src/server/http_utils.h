@@ -77,23 +77,12 @@ catch_http_errors(Func&& func)
 			error_string = msg.c_str();
 		}
 		constexpr static auto _ = phf::make_phf({
-			hhl("Endpoint node is invalid"),
-			hhl("Endpoint node is inactive"),
-			hhl("Endpoint node without a valid port"),
-			hhl("Endpoint node not available"),
 			hhl("Can't assign requested address"),
 			hhl("Connection refused"),
 			hhl("Connection reset by peer"),
 			hhl("Connection closed unexpectedly"),
 		});
 		switch (_.fhhl(error_string)) {
-			case _.fhhl("Endpoint node is invalid"):
-			case _.fhhl("Endpoint node is inactive"):
-			case _.fhhl("Endpoint node without a valid port"):
-			case _.fhhl("Endpoint node not available"):
-				http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
-				http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;
-				break;
 			case _.fhhl("Can't assign requested address"):
 				http_errors.error_code = HTTP_STATUS_BAD_GATEWAY;
 				http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + error_string;

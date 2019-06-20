@@ -1783,6 +1783,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 
 	size_t n_shards = endpoints.size();
 
+	std::exception_ptr eptr;
+
 	size_t shard_num = 0;
 	for (auto& endpoint : endpoints) {
 		lock_shard lk_shard(endpoint, flags);
@@ -1798,6 +1800,8 @@ DatabaseHandler::get_docid_term(const std::string& term)
 					return did;
 				}
 				break;
+			} catch (const Xapian::DatabaseNotAvailableError&) {
+				eptr = std::current_exception(); break;
 			} catch (const Xapian::DatabaseModifiedError&) {
 				if (t == 0) { lk_shard->do_close(); throw; }
 			} catch (const Xapian::DatabaseOpeningError&) {
@@ -1813,10 +1817,18 @@ DatabaseHandler::get_docid_term(const std::string& term)
 				lk_shard->do_close();
 				throw;
 			}
-			lk_shard->reopen();
+			try {
+				lk_shard->reopen();
+			} catch (const Xapian::DatabaseNotAvailableError&) {
+				eptr = std::current_exception(); break;
+			}
 		}
 
 		++shard_num;
+	}
+
+	if (eptr) {
+		std::rethrow_exception(eptr);
 	}
 
 	throw Xapian::DocNotFoundError("Document not found");
