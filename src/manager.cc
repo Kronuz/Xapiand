@@ -663,7 +663,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 							found = true;
 						}
 						auto obj = document.get_obj();
-						add_node(obj["name"].str_view());
+						node_added(obj["name"].str_view());
 					}
 				} else
 #endif
@@ -693,7 +693,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					add_node(local_node->name());
+					node_added(local_node->name());
 
 					if (Node::is_superset(local_node, leader_node)) {
 						L_INFO("Cluster database doesn't exist. Generating database...");
@@ -1397,14 +1397,12 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 	auto leader_node = Node::get_leader_node();
 	L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
 
-	if (_state == State::READY) {
-		if (leader_node->is_local()) {
-			try {
-				// If we get promoted to leader, we immediately try to load the nodes.
-				load_nodes();
-			} catch (...) {
-				L_EXC("ERROR: Cannot load local nodes!");
-			}
+	if (_state == State::READY && leader_node->is_local()) {
+		try {
+			// If we get promoted to leader, we immediately try to load the nodes.
+			load_nodes();
+		} catch (...) {
+			L_EXC("ERROR: Cannot load local nodes!");
 		}
 	}
 }
@@ -1447,6 +1445,9 @@ XapiandManager::load_nodes()
 			}, msgpack_type);
 			auto& doc = std::get<1>(prepared);
 			db_handler.replace_document(node->lower_name(), std::move(doc), false);
+			node_added(node->name());
+		}
+		if (_state == State::READY && leader_node->is_local()) {
 			add_node(node->name());
 		}
 	}
