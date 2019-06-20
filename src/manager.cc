@@ -1437,7 +1437,6 @@ XapiandManager::load_nodes()
 			L_WARNING("Adding missing node: {}{}", node->col().ansi(), node->to_string());
 			auto prepared = db_handler.prepare(node->lower_name(), 0, false, {
 				{ ID_FIELD_NAME, {
-					{ RESERVED_STORE, false },
 					{ RESERVED_TYPE,  KEYWORD_STR },
 				} },
 				{ "name", {
@@ -1682,7 +1681,6 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
 		{ ID_FIELD_NAME, {
-			{ RESERVED_STORE, false },
 			{ RESERVED_TYPE,  KEYWORD_STR },
 		} },
 		// { "number_of_shards", {
@@ -1722,7 +1720,6 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			db_handler.update(normalized_path, UNKNOWN_REVISION, false, {
 				{ ID_FIELD_NAME, {
-					{ RESERVED_STORE, false },
 					{ RESERVED_TYPE,  KEYWORD_STR },
 				} },
 				{ "number_of_shards", {
