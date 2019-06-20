@@ -266,7 +266,7 @@ std::string check_OS() {
 #elif __unix || __unix__
 	return "Unix";
 #elif __APPLE__ || __MACH__
-	return "Mac OSX";
+	return "macOS";
 #elif __linux__
 	return "Linux";
 #elif __FreeBSD__
