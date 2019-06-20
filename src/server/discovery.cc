@@ -480,7 +480,7 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 		auto total_nodes = Node::total_nodes();
 		auto alive_nodes = Node::alive_nodes();
 		if (!raft_has_consensus(total_nodes, alive_nodes)) {
-			L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+			L_RAFT("Vote again! (no consensus, CLUSTER_BYE) {{ total_nodes:{}, alive_nodes:{} }}",
 				total_nodes, alive_nodes);
 			_raft_request_vote(false);
 		}
@@ -1279,7 +1279,7 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 	auto alive_nodes = Node::alive_nodes();
 	if (!raft_has_consensus(total_nodes, alive_nodes)) {
 		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus)");
-		L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+		L_RAFT("Vote again! (no consensus, RAFT_HEARTBEAT) {{ total_nodes:{}, alive_nodes:{} }}",
 			total_nodes, alive_nodes);
 		_raft_request_vote(false);
 		return;
@@ -1590,7 +1590,7 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 		auto total_nodes = Node::total_nodes();
 		auto alive_nodes = Node::alive_nodes();
 		if (!raft_has_consensus(total_nodes, alive_nodes)) {
-			L_RAFT("Vote again! (no consensus) {{ total_nodes:{}, alive_nodes:{} }}",
+			L_RAFT("Vote again! (no consensus, CLUSTER_ENTER) {{ total_nodes:{}, alive_nodes:{} }}",
 				total_nodes, alive_nodes);
 			_raft_request_vote(false);
 		}
