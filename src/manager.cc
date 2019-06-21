@@ -690,11 +690,11 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 						{ RESERVED_VALUE, local_node->name() },
 					} },
 				});
-				[[maybe_unused]] auto info = db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, obj, false, msgpack_type).first;
+				db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, obj, false, msgpack_type);
 				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					node_added(local_node->name());
+					add_node(local_node->name());
 
 					if (Node::is_superset(local_node, leader_node)) {
 						L_INFO("Cluster database doesn't exist. Generating database...");
