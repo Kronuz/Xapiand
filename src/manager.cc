@@ -655,28 +655,27 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 		cluster_endpoint = Endpoint{".xapiand/nodes", leader_node};
 
 		try {
-			if (Node::is_superset(local_node, leader_node)) {
-				DatabaseHandler db_handler(Endpoints{cluster_endpoint});
-				if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
+			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
+			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 #ifdef XAPIAND_CLUSTERING
-					if (!opts.solo) {
-						auto mset = db_handler.get_mset();
-						const auto m_e = mset.end();
-						for (auto m = mset.begin(); m != m_e; ++m) {
-							auto did = *m;
-							auto document = db_handler.get_document(did);
-							if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
-								found = true;
-							}
-							auto obj = document.get_obj();
-							node_added(obj["name"].str_view());
+				if (!opts.solo) {
+					auto mset = db_handler.get_mset();
+					const auto m_e = mset.end();
+					for (auto m = mset.begin(); m != m_e; ++m) {
+						auto did = *m;
+						auto document = db_handler.get_document(did);
+						if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
+							found = true;
 						}
-					} else
-#endif
-					{
-						db_handler.get_document(local_node->lower_name());
-						found = true;
+						auto obj = document.get_obj();
+						node_added(obj["name"].str_view());
+						L_GREEN("{} -> {}", repr(document.get_value(DB_SLOT_ID)), obj.to_string());
 					}
+				} else
+#endif
+				{
+					db_handler.get_document(local_node->lower_name());
+					found = true;
 				}
 			}
 		} catch (const Xapian::DocNotFoundError&) {
