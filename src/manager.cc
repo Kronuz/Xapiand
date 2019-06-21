@@ -1700,6 +1700,7 @@ update_primary(const std::string& normalized_path, NodeSettings& node_settings)
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		if (updated) {
+			node_settings.stalled = std::chrono::steady_clock::time_point::max();
 			primary_updater()->debounce(normalized_path, node_settings.shards.size(), normalized_path);
 		}
 	}
@@ -1784,7 +1785,6 @@ index_settings(const std::string& normalized_path, NodeSettings& node_settings)
 				node_settings.version = info.version;
 				node_settings.modified = false;
 			}
-			node_settings.stalled = std::chrono::steady_clock::time_point::max();
 		}
 		size_t shard_num = 0;
 		for (auto& shard : node_settings.shards) {
