@@ -81,11 +81,6 @@ constexpr double CLUSTER_DISCOVERY_WAITING_FAST   = RAFT_LEADER_HEARTBEAT_TIMEOU
 constexpr double CLUSTER_DISCOVERY_WAITING_SLOW   = RAFT_LEADER_HEARTBEAT_TIMEOUT * 2.0;
 
 
-static inline bool raft_has_consensus(size_t total, size_t votes) {
-	return !total || votes > total / 2;
-}
-
-
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv)
 	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT | UDP_IP_MULTICAST_LOOP | UDP_IP_MULTICAST_TTL | UDP_IP_ADD_MEMBERSHIP),
 	  Worker(parent_, ev_loop_, ev_flags_),
@@ -476,11 +471,11 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 	Node::drop_node(remote_node.name());
 
 	if (raft_role == Role::RAFT_LEADER) {
-		// If we're leader, check consensus or vote.
+		// If we're leader, check quorum or vote.
 		auto total_nodes = Node::total_nodes();
 		auto alive_nodes = Node::alive_nodes();
-		if (!raft_has_consensus(total_nodes, alive_nodes)) {
-			L_RAFT("Vote again! (no consensus, CLUSTER_BYE) {{ total_nodes:{}, alive_nodes:{} }}",
+		if (!Node::quorum(total_nodes, alive_nodes)) {
+			L_RAFT("Vote again! (no quorum, CLUSTER_BYE) {{ total_nodes:{}, alive_nodes:{} }}",
 				total_nodes, alive_nodes);
 			_raft_request_vote(false);
 		}
@@ -661,7 +656,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 				++raft_votes_denied;
 			}
 		}
-		if (raft_has_consensus(total_nodes, raft_votes_granted + raft_votes_denied)) {
+		if (Node::quorum(total_nodes, raft_votes_granted + raft_votes_denied)) {
 			L_RAFT("Consensus reached: {} votes granted and {} denied, out of {}", raft_votes_granted, raft_votes_denied, total_nodes);
 			if (raft_votes_granted > raft_votes_denied) {
 				raft_role = Role::RAFT_LEADER;
@@ -1277,9 +1272,9 @@ Discovery::raft_leader_heartbeat_cb(ev::timer&, [[maybe_unused]] int revents)
 
 	auto total_nodes = Node::total_nodes();
 	auto alive_nodes = Node::alive_nodes();
-	if (!raft_has_consensus(total_nodes, alive_nodes)) {
-		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no consensus)");
-		L_RAFT("Vote again! (no consensus, RAFT_HEARTBEAT) {{ total_nodes:{}, alive_nodes:{} }}",
+	if (!Node::quorum(total_nodes, alive_nodes)) {
+		L_RAFT_PROTO_HB("<<< RAFT_HEARTBEAT (no quorum)");
+		L_RAFT("Vote again! (no quorum, RAFT_HEARTBEAT) {{ total_nodes:{}, alive_nodes:{} }}",
 			total_nodes, alive_nodes);
 		_raft_request_vote(false);
 		return;
@@ -1400,7 +1395,7 @@ Discovery::_raft_commit_log()
 					++matches;
 				}
 			}
-			if (raft_has_consensus(Node::total_nodes(), matches)) {
+			if (Node::quorum(Node::total_nodes(), matches)) {
 				raft_commit_index = index;
 				if (raft_commit_index > raft_last_applied) {
 					L_RAFT("Commit {{ raft_commit_index:{}, raft_last_applied:{}, last_index:{} }}",
@@ -1591,11 +1586,11 @@ Discovery::cluster_enter_async_cb(ev::async&, [[maybe_unused]] int revents)
 	auto local_node = Node::get_local_node();
 
 	if (raft_role == Role::RAFT_LEADER) {
-		// If we're leader, check consensus or vote.
+		// If we're leader, check quorum or vote.
 		auto total_nodes = Node::total_nodes();
 		auto alive_nodes = Node::alive_nodes();
-		if (!raft_has_consensus(total_nodes, alive_nodes)) {
-			L_RAFT("Vote again! (no consensus, CLUSTER_ENTER) {{ total_nodes:{}, alive_nodes:{} }}",
+		if (!Node::quorum(total_nodes, alive_nodes)) {
+			L_RAFT("Vote again! (no quorum, CLUSTER_ENTER) {{ total_nodes:{}, alive_nodes:{} }}",
 				total_nodes, alive_nodes);
 			_raft_request_vote(false);
 		}
