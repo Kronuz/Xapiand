@@ -671,7 +671,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 						}
 						auto obj = document.get_obj();
 						node_added(obj["name"].str_view());
-						L_GREEN("{} -> {}", repr(document.get_value(DB_SLOT_ID)), obj.to_string());
 					}
 				} else
 #endif
