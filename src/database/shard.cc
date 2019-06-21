@@ -714,6 +714,10 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	L_DATABASE_WRAP_BEGIN("Shard::commit:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
+
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -835,6 +839,10 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 	L_DATABASE_WRAP_BEGIN("Shard::delete_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
+
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	Xapian::rev version = UNKNOWN_REVISION;  // TODO: Implement version check (version should have required version)
@@ -916,6 +924,10 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 
 	L_DATABASE_WRAP_BEGIN("Shard::delete_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1092,6 +1104,10 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 	L_DATABASE_WRAP_BEGIN("Shard::add_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::add_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
+
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -1197,6 +1213,10 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 
 	L_DATABASE_WRAP_BEGIN("Shard::replace_document:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1318,6 +1338,10 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 
 	L_DATABASE_WRAP_BEGIN("Shard::replace_document_term:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1522,6 +1546,10 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 	L_DATABASE_WRAP_BEGIN("Shard::add_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
+
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
@@ -1569,6 +1597,10 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 
 	L_DATABASE_WRAP_BEGIN("Shard::remove_spelling:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
@@ -1820,6 +1852,10 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 
 	L_DATABASE_WRAP_BEGIN("Shard::set_metadata:BEGIN {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
 	L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}}", repr(to_string()), readable_flags(flags));
+
+	if (!Node::quorum()) {
+		throw Xapian::DatabaseNotAvailableError("No quorum");
+	}
 
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
