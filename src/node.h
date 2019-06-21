@@ -45,7 +45,8 @@
 #include "stringified.hh"       // for stringified
 
 
-constexpr long long NODE_LIFESPAN = 3000;  // in milliseconds
+constexpr double HEARTBEAT_TIMEOUT                = 0.300;  // in seconds
+constexpr long long NODE_LIFESPAN                 = HEARTBEAT_TIMEOUT * 2.5 * 1000.0;  // in milliseconds
 
 
 class Node {

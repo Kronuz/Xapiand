@@ -68,17 +68,17 @@
 // #define L_EV_END L_DELAYED_N_UNLOG
 
 
-// Values in seconds
-constexpr double CLUSTER_DISCOVERY_WAITING_FAST   = 0.200;
-constexpr double CLUSTER_DISCOVERY_WAITING_SLOW   = 0.600;
-
-constexpr double RAFT_HEARTBEAT_LEADER_TIMEOUT     = 0.300;
-
-constexpr double RAFT_LEADER_ELECTION_MIN = 2.5 * RAFT_HEARTBEAT_LEADER_TIMEOUT;
-constexpr double RAFT_LEADER_ELECTION_MAX = 5.0 * RAFT_HEARTBEAT_LEADER_TIMEOUT;
-
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION = 1;
 constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
+
+// Values in seconds
+constexpr double RAFT_LEADER_HEARTBEAT_TIMEOUT    = HEARTBEAT_TIMEOUT;
+
+constexpr double RAFT_LEADER_ELECTION_MIN         = 2.5 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
+constexpr double RAFT_LEADER_ELECTION_MAX         = 5.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
+
+constexpr double CLUSTER_DISCOVERY_WAITING_FAST   = RAFT_LEADER_HEARTBEAT_TIMEOUT / 3.0 * 2.0;
+constexpr double CLUSTER_DISCOVERY_WAITING_SLOW   = RAFT_LEADER_HEARTBEAT_TIMEOUT * 2.0;
 
 
 static inline bool raft_has_consensus(size_t total, size_t votes) {
@@ -669,7 +669,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 				raft_next_indexes.clear();
 				raft_match_indexes.clear();
 
-				_raft_leader_heartbeat_reset(RAFT_HEARTBEAT_LEADER_TIMEOUT);
+				_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 				_raft_set_leader_node(local_node);
 
 				auto entry_index = raft_log.size();
@@ -1233,7 +1233,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
 
-			_raft_leader_heartbeat_reset(RAFT_HEARTBEAT_LEADER_TIMEOUT);
+			_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 			_raft_set_leader_node(local_node);
 
 			// First time we elect a leader's, we setup node
