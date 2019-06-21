@@ -1544,21 +1544,32 @@ XapiandManager::sweep_primary_impl(size_t shards, const std::string& normalized_
 #endif
 
 
+struct NodeSettingsShard {
+	Xapian::rev version;
+
+	std::vector<std::string> nodes;
+
+	NodeSettingsShard() : version(UNKNOWN_REVISION) { }
+};
+
+
 struct NodeSettings {
+	Xapian::rev version;
+
 	size_t num_shards;
 	size_t num_replicas_plus_master;
-	std::vector<std::vector<std::string>> shards;
+	std::vector<NodeSettingsShard> shards;
 
-	NodeSettings() : num_shards(0), num_replicas_plus_master(0) { }
+	NodeSettings() : version(UNKNOWN_REVISION), num_shards(0), num_replicas_plus_master(0) { }
 
-	NodeSettings(size_t num_shards, size_t num_replicas_plus_master, const std::vector<std::vector<std::string>>& shards) :
+	NodeSettings(size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
 		num_shards(num_shards),
 		num_replicas_plus_master(num_replicas_plus_master),
 		shards(shards) {
 #ifndef NDEBUG
 		size_t replicas_size = 0;
-		for (auto& replicas : shards) {
-			auto replicas_size_ = replicas.size();
+		for (auto& shard : shards) {
+			auto replicas_size_ = shard.nodes.size();
 			assert(replicas_size_ != 0 && (!replicas_size || replicas_size == replicas_size_));
 			replicas_size = replicas_size_;
 		}
@@ -1568,7 +1579,7 @@ struct NodeSettings {
 
 
 void
-settle_replicas(std::vector<std::vector<std::string>>& shards, std::vector<std::shared_ptr<const Node>>& nodes, size_t num_replicas_plus_master)
+settle_replicas(std::vector<NodeSettingsShard>& shards, std::vector<std::shared_ptr<const Node>>& nodes, size_t num_replicas_plus_master)
 {
 	L_CALL("settle_replicas(<shards>, {})", num_replicas_plus_master);
 
@@ -1576,18 +1587,18 @@ settle_replicas(std::vector<std::vector<std::string>>& shards, std::vector<std::
 	if (num_replicas_plus_master > total_nodes) {
 		num_replicas_plus_master = total_nodes;
 	}
-	for (auto& replicas : shards) {
-		auto replicas_size = replicas.size();
+	for (auto& shard : shards) {
+		auto replicas_size = shard.nodes.size();
 		assert(replicas_size);
 		if (replicas_size < num_replicas_plus_master) {
 			std::unordered_set<std::string> used;
-			for (size_t i = 0; i < replicas.size(); ++i) {
-				used.insert(strings::lower(replicas[i]));
+			for (size_t i = 0; i < shard.nodes.size(); ++i) {
+				used.insert(strings::lower(shard.nodes[i]));
 			}
 			if (nodes.empty()) {
 				nodes = Node::nodes();
 			}
-			auto primary = strings::lower(replicas[0]);
+			auto primary = strings::lower(shard.nodes[0]);
 			size_t idx = 0;
 			for (const auto& node : nodes) {
 				++idx;
@@ -1601,35 +1612,35 @@ settle_replicas(std::vector<std::vector<std::string>>& shards, std::vector<std::
 					node = nodes[++idx % nodes.size()];
 					assert(idx < nodes.size() * 2);
 				}
-				replicas.push_back(node->name());
+				shard.nodes.push_back(node->name());
 			}
 		} else {
 			assert(num_replicas_plus_master);
-			replicas.resize(num_replicas_plus_master);
+			shard.nodes.resize(num_replicas_plus_master);
 		}
 	}
 }
 
 
-std::vector<std::vector<std::string>>
+std::vector<NodeSettingsShard>
 calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& nodes, size_t num_shards)
 {
 	L_CALL("calculate_shards({}, {})", routing_key, num_shards);
 
-	std::vector<std::vector<std::string>> shards;
+	std::vector<NodeSettingsShard> shards;
 	if (Node::total_nodes()) {
 		if (routing_key < num_shards) {
 			routing_key += num_shards;
 		}
 		for (size_t s = 0; s < num_shards; ++s) {
-			std::vector<std::string> replicas;
+			NodeSettingsShard shard;
 			if (nodes.empty()) {
 				nodes = Node::nodes();
 			}
 			size_t idx = (routing_key - s) % nodes.size();
 			auto node = nodes[idx];
-			replicas.push_back(node->name());
-			shards.push_back(std::move(replicas));
+			shard.nodes.push_back(node->name());
+			shards.push_back(std::move(shard));
 		}
 	}
 	return shards;
@@ -1637,17 +1648,17 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 
 
 void
-update_primary(const std::string& normalized_path, std::vector<std::vector<std::string>>& shards)
+update_primary(const std::string& normalized_path, std::vector<NodeSettingsShard>& shards)
 {
 	L_CALL("update_primary({}, <shards>)", repr(normalized_path));
 
 	bool updated = false;
 
 	size_t shard_num = 0;
-	for (auto& replicas : shards) {
+	for (auto& shard : shards) {
 		++shard_num;
-		auto it_b = replicas.begin();
-		auto it_e = replicas.end();
+		auto it_b = shard.nodes.begin();
+		auto it_e = shard.nodes.end();
 		auto it = it_b;
 		for (; it != it_e; ++it) {
 			auto node = Node::get_node(*it);
@@ -1679,9 +1690,9 @@ update_primary(const std::string& normalized_path, std::vector<std::vector<std::
 
 
 void
-index_replicas(const std::string& normalized_path, size_t num_replicas_plus_master, const std::vector<std::string>& shards)
+index_replicas(const std::string& normalized_path, size_t num_replicas_plus_master, const NodeSettingsShard& shard)
 {
-	L_CALL("index_replicas(<shards>)");
+	L_CALL("index_replicas(<shard>)");
 
 	Endpoint endpoint(".xapiand/indices");
 	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
@@ -1704,7 +1715,7 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 		{ "shards", {
 			{ RESERVED_INDEX, "field_terms" },
 			{ RESERVED_TYPE,  "array/keyword" },
-			{ RESERVED_VALUE, shards },
+			{ RESERVED_VALUE, shard.nodes },
 		} },
 	});
 	db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
@@ -1719,10 +1730,9 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 	assert(node_settings.shards.size() == node_settings.num_shards);
 
 	if (node_settings.num_shards == 1) {
-		index_replicas(normalized_path, node_settings.num_replicas_plus_master, node_settings.shards.front());
+		index_replicas(normalized_path, node_settings.num_replicas_plus_master, node_settings.shards[0]);
 	} else if (node_settings.num_shards != 0) {
-		auto& replicas = node_settings.shards.front();
-		if (!replicas.empty()) {
+		if (!node_settings.shards[0].nodes.empty()) {
 			Endpoint endpoint(".xapiand/indices");
 			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 			assert(!endpoints.empty());
@@ -1750,24 +1760,33 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 			db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
 		}
 		size_t shard_num = 0;
-		for (auto& shard_replicas : node_settings.shards) {
-			if (!shard_replicas.empty()) {
+		for (auto& shard : node_settings.shards) {
+			if (!shard.nodes.empty()) {
 				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-				index_replicas(shard_normalized_path, node_settings.num_replicas_plus_master, shard_replicas);
+				index_replicas(shard_normalized_path, node_settings.num_replicas_plus_master, shard);
 			}
 		}
 	}
 }
 
 
-std::vector<std::string>
+NodeSettingsShard
 load_replicas(const Endpoint& endpoint, const MsgPack& obj)
 {
 	L_CALL("load_replicas(<obj>)");
 
-	std::vector<std::string> replicas;
+	NodeSettingsShard shard;
 
-	auto it = obj.find("shards");
+	auto it = obj.find(VERSION_FIELD_NAME);
+	if (it != obj.end()) {
+		auto& version_val = it.value();
+		if (!version_val.is_number()) {
+			THROW(Error, "Inconsistency in '{}' configured for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+		}
+		shard.version = version_val.u64();
+	}
+
+	it = obj.find("shards");
 	if (it != obj.end()) {
 		auto& replicas_val = it.value();
 		if (!replicas_val.is_array()) {
@@ -1777,11 +1796,11 @@ load_replicas(const Endpoint& endpoint, const MsgPack& obj)
 			if (!node_name_val.is_string()) {
 				THROW(Error, "Inconsistency in 'shards' configured for {}: Invalid node name", repr(endpoint.to_string()));
 			}
-			replicas.push_back(node_name_val.str());
+			shard.nodes.push_back(node_name_val.str());
 		}
 	}
 
-	return replicas;
+	return shard;
 }
 
 
@@ -1803,7 +1822,16 @@ load_settings(const std::string& normalized_path)
 		auto document = db_handler.get_document(normalized_path);
 		auto obj = document.get_obj();
 
-		auto it = obj.find("number_of_replicas");
+		auto it = obj.find(VERSION_FIELD_NAME);
+		if (it != obj.end()) {
+			auto& version_val = it.value();
+			if (!version_val.is_number()) {
+				THROW(Error, "Inconsistency in '{}' configured for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+			}
+			settings.version = version_val.u64();
+		}
+
+		it = obj.find("number_of_replicas");
 		if (it != obj.end()) {
 			auto& n_replicas_val = it.value();
 			if (!n_replicas_val.is_number()) {
@@ -1823,23 +1851,23 @@ load_settings(const std::string& normalized_path)
 			for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
 				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, shard_num);
 				auto replica_document = db_handler.get_document(shard_normalized_path);
-				auto replicas = load_replicas(endpoint, replica_document.get_obj());
-				auto replicas_size_ = replicas.size();
+				auto shard = load_replicas(endpoint, replica_document.get_obj());
+				auto replicas_size_ = shard.nodes.size();
 				if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
 					THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 				}
 				replicas_size = replicas_size_;
-				settings.shards.push_back(std::move(replicas));
+				settings.shards.push_back(std::move(shard));
 			}
 		}
 
 		if (!settings.num_shards) {
-			auto replicas = load_replicas(endpoint, obj);
-			auto replicas_size_ = replicas.size();
+			auto shard = load_replicas(endpoint, obj);
+			auto replicas_size_ = shard.nodes.size();
 			if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master) {
 				THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 			}
-			settings.shards.push_back(std::move(replicas));
+			settings.shards.push_back(std::move(shard));
 		}
 
 		return settings;
@@ -1852,12 +1880,12 @@ load_settings(const std::string& normalized_path)
 
 
 MsgPack
-shards_to_obj(const std::vector<std::vector<std::string>>& shards)
+shards_to_obj(const std::vector<NodeSettingsShard>& shards)
 {
 	MsgPack nodes = MsgPack::ARRAY();
-	for (auto& replicas : shards) {
+	for (auto& shard : shards) {
 		MsgPack node_replicas = MsgPack::ARRAY();
-		for (auto name : replicas) {
+		for (auto name : shard.nodes) {
 			auto node = Node::get_node(name);
 			node_replicas.append(MsgPack({
 				{ "node", node ? MsgPack(node->name()) : MsgPack::NIL() },
@@ -1870,14 +1898,14 @@ shards_to_obj(const std::vector<std::vector<std::string>>& shards)
 
 
 std::vector<std::vector<std::shared_ptr<const Node>>>
-shards_to_nodes(const std::vector<std::vector<std::string>>& shards)
+shards_to_nodes(const std::vector<NodeSettingsShard>& shards)
 {
 	L_CALL("shards_to_nodes({})", shards_to_obj(shards).to_string());
 
 	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
-	for (auto& replicas : shards) {
+	for (auto& shard : shards) {
 		std::vector<std::shared_ptr<const Node>> node_replicas;
-		for (auto name : replicas) {
+		for (auto name : shard.nodes) {
 			auto node = Node::get_node(name);
 			node_replicas.push_back(std::move(node));
 		}
@@ -1943,14 +1971,14 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			nodes = shards_to_nodes(node_settings.shards);
 			lk.lock();
 			size_t shard_num = 0;
-			for (auto& replicas : node_settings.shards) {
-				if (replicas.empty()) {
+			for (auto& shard : node_settings.shards) {
+				if (shard.nodes.empty()) {
 					nodes.clear();  // There were missing replicas, abort!
 					break;
 				}
 				auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-				std::vector<std::vector<std::string>> shard_shards;
-				shard_shards.push_back(replicas);
+				std::vector<NodeSettingsShard> shard_shards;
+				shard_shards.push_back(shard);
 				resolve_index_lru[shard_normalized_path] = NodeSettings(
 					1,
 					node_settings.num_replicas_plus_master,
@@ -2032,11 +2060,11 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 
 		lk.lock();
 		size_t shard_num = 0;
-		for (auto& replicas : node_settings.shards) {
-			assert(!replicas.empty());
+		for (auto& shard : node_settings.shards) {
+			assert(!shard.nodes.empty());
 			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-			std::vector<std::vector<std::string>> shard_shards;
-			shard_shards.push_back(replicas);
+			std::vector<NodeSettingsShard> shard_shards;
+			shard_shards.push_back(shard);
 			resolve_index_lru[shard_normalized_path] = NodeSettings(
 				1,
 				node_settings.num_replicas_plus_master,
