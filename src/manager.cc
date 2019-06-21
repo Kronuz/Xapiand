@@ -128,6 +128,8 @@
 	log = __log_timed.release(); \
 }
 
+constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
+
 static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(\\.\\.(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)?)?", std::regex::icase | std::regex::optimize);
 
 std::shared_ptr<XapiandManager> XapiandManager::_manager;
@@ -1726,7 +1728,8 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 				{ RESERVED_VALUE, shard.nodes },
 			} },
 		});
-		db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
+		auto info = db_handler.update(normalized_path, shard.version, false, obj, false, msgpack_type).first;
+		shard.version = info.version;
 		shard.modified = false;
 	}
 }
@@ -1768,7 +1771,8 @@ index_settings(const std::string& normalized_path, NodeSettings& node_settings)
 						{ RESERVED_TYPE,  "array/keyword" },
 					} },
 				});
-				db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
+				auto info = db_handler.update(normalized_path, node_settings.version, false, obj, false, msgpack_type).first;
+				node_settings.version = info.version;
 				node_settings.modified = false;
 			}
 		}
@@ -2118,10 +2122,12 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 	auto& endpoint_path = unsharded.second ? unsharded_endpoint_path : endpoint.path;
 
 	bool rebuild = false;
+	int t = CONFLICT_RETRIES;
 	while (true) {
+		try {
 			Endpoints endpoints;
 
-		auto nodes = resolve_index_nodes_impl(endpoint_path, writable, primary, settings, false, rebuild, false);
+			auto nodes = resolve_index_nodes_impl(endpoint_path, writable, primary, settings, t != CONFLICT_RETRIES, rebuild, false);
 			bool retry = !rebuild;
 			rebuild = false;
 
@@ -2162,6 +2168,9 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 			if (!rebuild) {
 				return endpoints;
 			}
+		} catch (const Xapian::DocVersionConflictError&) {
+			if (--t == 0) { throw; }
+		}
 	}
 }
 
