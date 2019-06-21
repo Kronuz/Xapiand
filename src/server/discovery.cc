@@ -818,12 +818,12 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 				}
 
 				if (entry_index <= last_index) {
-					if (entry_index > 1 && raft_log[prev_log_index - 1].term != entry_term) {
+					if (entry_index >= 1 && raft_log[entry_index - 1].term != entry_term) {
 						// If an existing entry conflicts with a new one (same
 						// index but different terms),
 						// delete the existing entry and all that follow it
 						// and append new entries
-						raft_log.resize(entry_index);
+						raft_log.resize(entry_index - 1);
 						raft_log.push_back({
 							entry_term,
 							std::string(entry_command),
