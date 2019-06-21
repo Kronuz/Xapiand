@@ -1447,11 +1447,8 @@ XapiandManager::load_nodes()
 			auto prepared = db_handler.prepare(node->lower_name(), 0, false, obj, msgpack_type);
 			auto& doc = std::get<1>(prepared);
 			db_handler.replace_document(node->lower_name(), std::move(doc), false);
-			node_added(node->name());
 		}
-		if (_state == State::READY && leader_node->is_local()) {
-			add_node(node->name());
-		}
+		add_node(node->name());
 	}
 }
 
