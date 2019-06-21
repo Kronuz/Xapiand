@@ -121,6 +121,7 @@ extern struct opts_t {
 	unsigned long long trigger_replication_debounce_busy_timeout = 1000;
 	unsigned long long trigger_replication_debounce_min_force_timeout = 1000;
 	unsigned long long trigger_replication_debounce_max_force_timeout = 1000;
+	unsigned long long database_stall_time = 600000;
 } opts;
 
 const char* ev_backend(unsigned int backend);

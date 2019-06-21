@@ -129,6 +129,8 @@
 #define TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT  4900
 #define TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT  5100
 
+#define DATABASE_STALL_TIME                           600000  // 10 min
+
 
 #define EV_SELECT_NAME  "select"
 #define EV_POLL_NAME    "poll"
@@ -623,6 +625,8 @@ parseOptions(int argc, char** argv)
 	o.trigger_replication_debounce_busy_timeout = TRIGGER_REPLICATION_DEBOUNCE_BUSY_TIMEOUT;
 	o.trigger_replication_debounce_min_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT;
 	o.trigger_replication_debounce_max_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT;
+
+	o.database_stall_time = DATABASE_STALL_TIME;
 
 	return o;
 }

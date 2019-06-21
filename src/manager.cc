@@ -1560,15 +1560,18 @@ struct NodeSettings {
 	Xapian::rev version;
 	bool modified;
 
+	std::chrono::time_point<std::chrono::steady_clock> stalled;
+
 	size_t num_shards;
 	size_t num_replicas_plus_master;
 	std::vector<NodeSettingsShard> shards;
 
-	NodeSettings() : version(UNKNOWN_REVISION), modified(false), num_shards(0), num_replicas_plus_master(0) { }
+	NodeSettings() : version(UNKNOWN_REVISION), modified(false), stalled(std::chrono::steady_clock::time_point::max()), num_shards(0), num_replicas_plus_master(0) { }
 
 	NodeSettings(Xapian::rev version, bool modified, size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
 		version(version),
 		modified(modified),
+		stalled(std::chrono::steady_clock::time_point::max()),
 		num_shards(num_shards),
 		num_replicas_plus_master(num_replicas_plus_master),
 		shards(shards) {
@@ -1656,14 +1659,16 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 
 
 void
-update_primary(const std::string& normalized_path, std::vector<NodeSettingsShard>& shards)
+update_primary(const std::string& normalized_path, NodeSettings& node_settings)
 {
-	L_CALL("update_primary({}, <shards>)", repr(normalized_path));
+	L_CALL("update_primary({}, <node_settings>)", repr(normalized_path));
 
 	bool updated = false;
 
+	auto now = std::chrono::steady_clock::now();
+
 	size_t shard_num = 0;
-	for (auto& shard : shards) {
+	for (auto& shard : node_settings.shards) {
 		++shard_num;
 		auto it_b = shard.nodes.begin();
 		auto it_e = shard.nodes.end();
@@ -1675,23 +1680,27 @@ update_primary(const std::string& normalized_path, std::vector<NodeSettingsShard
 			}
 		}
 		if (it != it_b && it != it_e) {
-			auto from_node = Node::get_node(*it_b);
-			auto to_node = Node::get_node(*it);
-			auto path = shards.size() > 1 ? strings::format("{}/.__{}", normalized_path, shard_num) : normalized_path;
-			L_INFO("Primary shard {} moved from node {}{}" + INFO_COL + " to {}{}",
-				repr(path),
-				from_node->col().ansi(), from_node->name(),
-				to_node->col().ansi(), to_node->name());
-			std::swap(*it, *it_b);
-			updated = true;
-			shard.modified = true;
+			if (node_settings.stalled == std::chrono::steady_clock::time_point::max()) {
+				node_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
+			} else if (node_settings.stalled > now) {
+				auto from_node = Node::get_node(*it_b);
+				auto to_node = Node::get_node(*it);
+				auto path = node_settings.shards.size() > 1 ? strings::format("{}/.__{}", normalized_path, shard_num) : normalized_path;
+				L_INFO("Primary shard {} moved from node {}{}" + INFO_COL + " to {}{}",
+					repr(path),
+					from_node->col().ansi(), from_node->name(),
+					to_node->col().ansi(), to_node->name());
+				std::swap(*it, *it_b);
+				updated = true;
+				shard.modified = true;
+			}
 		}
 	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		if (updated) {
-			primary_updater()->debounce(normalized_path, shards.size(), normalized_path);
+			primary_updater()->debounce(normalized_path, node_settings.shards.size(), normalized_path);
 		}
 	}
 #endif
@@ -1775,6 +1784,7 @@ index_settings(const std::string& normalized_path, NodeSettings& node_settings)
 				node_settings.version = info.version;
 				node_settings.modified = false;
 			}
+			node_settings.stalled = std::chrono::steady_clock::time_point::max();
 		}
 		size_t shard_num = 0;
 		for (auto& shard : node_settings.shards) {
@@ -2082,7 +2092,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		settle_replicas(node_settings.shards, node_nodes, node_settings.num_replicas_plus_master);
 
 		if (writable) {
-			update_primary(normalized_path, node_settings.shards);
+			update_primary(normalized_path, node_settings);
 			index_settings(normalized_path, node_settings);
 		}
 
