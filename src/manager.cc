@@ -1691,6 +1691,7 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 	assert(!endpoints.empty());
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	MsgPack obj({
+		{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 		{ ID_FIELD_NAME, {
 			{ RESERVED_TYPE,  KEYWORD_STR },
 		} },
@@ -1730,6 +1731,7 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 			assert(!endpoints.empty());
 			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 			MsgPack obj({
+				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 				{ ID_FIELD_NAME, {
 					{ RESERVED_TYPE,  KEYWORD_STR },
 				} },
