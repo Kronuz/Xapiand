@@ -1568,10 +1568,10 @@ struct NodeSettings {
 
 	NodeSettings() : version(UNKNOWN_REVISION), modified(false), stalled(std::chrono::steady_clock::time_point::max()), num_shards(0), num_replicas_plus_master(0) { }
 
-	NodeSettings(Xapian::rev version, bool modified, size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
+	NodeSettings(Xapian::rev version, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
 		version(version),
 		modified(modified),
-		stalled(std::chrono::steady_clock::time_point::max()),
+		stalled(stalled),
 		num_shards(num_shards),
 		num_replicas_plus_master(num_replicas_plus_master),
 		shards(shards) {
@@ -1682,7 +1682,7 @@ update_primary(const std::string& normalized_path, NodeSettings& node_settings)
 		if (it != it_b && it != it_e) {
 			if (node_settings.stalled == std::chrono::steady_clock::time_point::max()) {
 				node_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
-			} else if (node_settings.stalled > now) {
+			} else if (now > node_settings.stalled) {
 				auto from_node = Node::get_node(*it_b);
 				auto to_node = Node::get_node(*it);
 				auto path = node_settings.shards.size() > 1 ? strings::format("{}/.__{}", normalized_path, shard_num) : normalized_path;
@@ -2009,6 +2009,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				resolve_index_lru[shard_normalized_path] = NodeSettings(
 					shard.version,
 					shard.modified,
+					node_settings.stalled,
 					1,
 					node_settings.num_replicas_plus_master,
 					shard_shards);
@@ -2017,6 +2018,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				resolve_index_lru[normalized_path] = NodeSettings(
 					node_settings.version,
 					node_settings.modified,
+					node_settings.stalled,
 					node_settings.num_shards,
 					node_settings.num_replicas_plus_master,
 					node_settings.shards);
@@ -2108,6 +2110,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			resolve_index_lru[shard_normalized_path] = NodeSettings(
 				shard.version,
 				shard.modified,
+				node_settings.stalled,
 				1,
 				node_settings.num_replicas_plus_master,
 				shard_shards);
@@ -2116,6 +2119,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			resolve_index_lru[normalized_path] = NodeSettings(
 				node_settings.version,
 				node_settings.modified,
+				node_settings.stalled,
 				node_settings.num_shards,
 				node_settings.num_replicas_plus_master,
 				node_settings.shards);
