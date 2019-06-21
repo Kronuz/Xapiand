@@ -1695,10 +1695,10 @@ index_replicas(const std::string& normalized_path, size_t num_replicas_plus_mast
 		{ ID_FIELD_NAME, {
 			{ RESERVED_TYPE,  KEYWORD_STR },
 		} },
-		// { "number_of_shards", {
-		// 	{ RESERVED_INDEX, "none" },
-		// 	{ RESERVED_TYPE,  "positive" },
-		// } },
+		{ "number_of_shards", {
+			{ RESERVED_INDEX, "none" },
+			{ RESERVED_TYPE,  "positive" },
+		} },
 		{ "number_of_replicas", {
 			{ RESERVED_INDEX, "none" },
 			{ RESERVED_TYPE,  "positive" },
@@ -1745,10 +1745,10 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 					{ RESERVED_TYPE,  "positive" },
 					{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
 				} },
-				// { "shards", {
-				// 	{ RESERVED_INDEX, "field_terms" },
-				// 	{ RESERVED_TYPE,  "array/keyword" },
-				// } },
+				{ "shards", {
+					{ RESERVED_INDEX, "field_terms" },
+					{ RESERVED_TYPE,  "array/keyword" },
+				} },
 			});
 			db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
 		}
