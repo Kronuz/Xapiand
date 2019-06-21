@@ -369,13 +369,13 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms['style']['pants']).to.have.all.keys(['Skhakis']);
   pm.expect(jsonData.terms['style']['shirt']).to.have.all.keys(['Sshirt', 'St']);
 
-  var t1 = '\u004e\ufffd\u0061\ufffd';
-  var t2 = '\u004e\ufffd\u0075\u0030';
-  var t3 = '\u004e\ufffd\u0076\u002a';
-  var t4 = '\u004e\ufffd';
-  var t5 = '\u004e\ufffd\u0077\u000b';
-  var t6 = '\u004e\ufffd';
-  var t7 = '\u004e\ufffdw\u0012\ufffd';
+  var t1 = 'N\ufffda\ufffd';
+  var t2 = 'N\ufffdu0';
+  var t3 = 'N\ufffdv*';
+  var t4 = 'N\ufffd';
+  var t5 = 'N\ufffdw\u000b';
+  var t6 = 'N\ufffd';
+  var t7 = 'N\ufffdw\u0012\ufffd';
 
   pm.expect(jsonData.terms.accountNumber).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
   pm.expect(jsonData.terms.accountNumber['<186a0>']).to.have.any.keys([t1]);
@@ -385,13 +385,13 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms.accountNumber['<64>']).to.have.any.keys([t5]);
   pm.expect(jsonData.terms.accountNumber['<f4240>']).to.have.any.keys([t6]);
 
-  t1 = '\u004e\ufffd';
-  t2 = '\u004e\ufffd';
-  t3 = '\u004e\ufffd';
-  t4 = '\u004e\ufffd';
-  t5 = '\u004e\ufffd';
-  t6 = '\u004e\ufffd';
-  t7 = '\u004e\ufffd\u0020';
+  t1 = 'N\ufffd';
+  t2 = 'N\ufffd';
+  t3 = 'N\ufffd';
+  t4 = 'N\ufffd';
+  t5 = 'N\ufffd';
+  t6 = 'N\ufffd';
+  t7 = 'N\ufffd\u0020';
 
   pm.expect(jsonData.terms.age).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
   pm.expect(jsonData.terms.age['<186a0>']).to.have.any.keys([t1]);
@@ -401,14 +401,14 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms.age['<64>']).to.have.any.keys([t5]);
   pm.expect(jsonData.terms.age['<f4240>']).to.have.any.keys([t6]);
 
-  t1 = '\u004e\ufffd';
-  t2 = '\u004e\ufffd';
-  t3 = '\u004e\ufffd';
-  t4 = '\u004e\ufffd';
-  t5 = '\u004e\ufffd\u0024';
-  t6 = '\u004e\ufffd';
-  t7 = '\u004e\ufffd';
-  var t8 = '\ufffd\ufffd\u0047\ufffd\u0014\u007c';
+  t1 = 'N\ufffd';
+  t2 = 'N\ufffd';
+  t3 = 'N\ufffd';
+  t4 = 'N\ufffd';
+  t5 = 'N\ufffd$';
+  t6 = 'N\ufffd';
+  t7 = 'N\ufffd';
+  var t8 = '\ufffd\ufffdG\ufffd\u0014|';
 
   pm.expect(jsonData.terms.balance).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
   pm.expect(jsonData.terms.balance['<186a0>']).to.have.any.keys([t1]);
@@ -419,12 +419,12 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms.balance['<f4240>']).to.have.any.keys([t6]);
   pm.expect(jsonData.terms.balance[t7]).to.have.any.keys([t8]);
 
-  t1 = '\u0047\ufffd\ufffd\ufffd';
-  t2 = '\u0047\ufffd\ufffd\ufffd';
-  t3 = '\u0047\ufffd\u0008\ufffd\u0040';
-  t4 = '\u0047\ufffd\u0008\ufffd\u0047';
-  t5 = '\u0047\ufffd\u0008\ufffd\u0047\u0028';
-  t6 = '\u0047\u0188\ufffd\u0047\u0028\u0060';
+  t1 = 'G\ufffd\ufffd\ufffd';
+  t2 = 'G\ufffd\ufffd\ufffd';
+  t3 = 'G\ufffd\u0008\ufffd@';
+  t4 = 'G\ufffd\u0008\ufffdG';
+  t5 = 'G\ufffd\u0008\ufffdG(';
+  t6 = 'G\u0188\ufffdG(`';
 
   pm.expect(jsonData.terms.checkin).to.have.all.keys(['<3>', '<5>', '<8>', '<a>', '<c>', '<f>', 'G\u0000']);
   pm.expect(jsonData.terms.checkin['<3>']).to.have.any.keys([t1]);
