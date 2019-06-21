@@ -154,9 +154,10 @@ Node::set_local_node(std::shared_ptr<const Node> node)
 	set_as_title(node);
 	auto old_node = _local_node.exchange(node, std::memory_order_acq_rel);
 
-	if (!node->empty()) {
+	auto name = node->lower_name();
+	if (!name.empty()) {
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
-		_nodes[node->lower_name()] = node;
+		_nodes[name] = node;
 		_update_nodes(node);
 	}
 
@@ -191,9 +192,10 @@ Node::set_leader_node(std::shared_ptr<const Node> node)
 	node->touched.store(now, std::memory_order_release);
 	auto old_node = _leader_node.exchange(node, std::memory_order_acq_rel);
 
-	if (!node->empty()) {
+	auto name = node->lower_name();
+	if (!name.empty()) {
 		std::lock_guard<std::mutex> lk(_nodes_mtx);
-		_nodes[node->lower_name()] = node;
+		_nodes[name] = node;
 		_update_nodes(node);
 	}
 
@@ -343,8 +345,12 @@ Node::touch_node(const Node& node, bool activate, bool touch)
 	if (touch || is_active(new_node)) {
 		new_node->touched.store(now, std::memory_order_release);
 	}
-	_nodes[new_node->lower_name()] = new_node;
-	_update_nodes(new_node);
+
+	auto name = new_node->lower_name();
+	if (!name.empty()) {
+		_nodes[name] = new_node;
+		_update_nodes(new_node);
+	}
 
 	L_NODE_NODES("touch_node({}) -> true", new_node->__repr__());
 	return std::make_pair(new_node, true);
