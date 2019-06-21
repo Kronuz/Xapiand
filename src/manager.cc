@@ -1566,9 +1566,9 @@ struct NodeSettings {
 
 	NodeSettings() : version(UNKNOWN_REVISION), modified(false), num_shards(0), num_replicas_plus_master(0) { }
 
-	NodeSettings(size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
-		version(UNKNOWN_REVISION),
-		modified(false),
+	NodeSettings(Xapian::rev version, bool modified, size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
+		version(version),
+		modified(modified),
 		num_shards(num_shards),
 		num_replicas_plus_master(num_replicas_plus_master),
 		shards(shards) {
@@ -1997,12 +1997,16 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 				std::vector<NodeSettingsShard> shard_shards;
 				shard_shards.push_back(shard);
 				resolve_index_lru[shard_normalized_path] = NodeSettings(
+					shard.version,
+					shard.modified,
 					1,
 					node_settings.num_replicas_plus_master,
 					shard_shards);
 			}
 			if (!nodes.empty()) {
 				resolve_index_lru[normalized_path] = NodeSettings(
+					node_settings.version,
+					node_settings.modified,
 					node_settings.num_shards,
 					node_settings.num_replicas_plus_master,
 					node_settings.shards);
@@ -2092,12 +2096,16 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			std::vector<NodeSettingsShard> shard_shards;
 			shard_shards.push_back(shard);
 			resolve_index_lru[shard_normalized_path] = NodeSettings(
+				shard.version,
+				shard.modified,
 				1,
 				node_settings.num_replicas_plus_master,
 				shard_shards);
 		}
 		if (!nodes.empty()) {
 			resolve_index_lru[normalized_path] = NodeSettings(
+				node_settings.version,
+				node_settings.modified,
 				node_settings.num_shards,
 				node_settings.num_replicas_plus_master,
 				node_settings.shards);
