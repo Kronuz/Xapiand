@@ -1697,40 +1697,43 @@ update_primary(const std::string& normalized_path, std::vector<NodeSettingsShard
 
 
 void
-index_replicas(const std::string& normalized_path, size_t num_replicas_plus_master, const NodeSettingsShard& shard)
+index_replicas(const std::string& normalized_path, size_t num_replicas_plus_master, NodeSettingsShard& shard)
 {
 	L_CALL("index_replicas(<shard>)");
 
-	Endpoint endpoint(".xapiand/indices");
-	auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
-	assert(!endpoints.empty());
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	MsgPack obj({
-		{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-		{ ID_FIELD_NAME, {
-			{ RESERVED_TYPE,  KEYWORD_STR },
-		} },
-		{ "number_of_shards", {
-			{ RESERVED_INDEX, "none" },
-			{ RESERVED_TYPE,  "positive" },
-		} },
-		{ "number_of_replicas", {
-			{ RESERVED_INDEX, "none" },
-			{ RESERVED_TYPE,  "positive" },
-			{ RESERVED_VALUE, num_replicas_plus_master - 1 },
-		} },
-		{ "shards", {
-			{ RESERVED_INDEX, "field_terms" },
-			{ RESERVED_TYPE,  "array/keyword" },
-			{ RESERVED_VALUE, shard.nodes },
-		} },
-	});
-	db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
+	if (shard.modified) {
+		Endpoint endpoint(".xapiand/indices");
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		assert(!endpoints.empty());
+		DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		MsgPack obj({
+			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
+			{ ID_FIELD_NAME, {
+				{ RESERVED_TYPE,  KEYWORD_STR },
+			} },
+			{ "number_of_shards", {
+				{ RESERVED_INDEX, "none" },
+				{ RESERVED_TYPE,  "positive" },
+			} },
+			{ "number_of_replicas", {
+				{ RESERVED_INDEX, "none" },
+				{ RESERVED_TYPE,  "positive" },
+				{ RESERVED_VALUE, num_replicas_plus_master - 1 },
+			} },
+			{ "shards", {
+				{ RESERVED_INDEX, "field_terms" },
+				{ RESERVED_TYPE,  "array/keyword" },
+				{ RESERVED_VALUE, shard.nodes },
+			} },
+		});
+		db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
+		shard.modified = false;
+	}
 }
 
 
 void
-index_settings(const std::string& normalized_path, const NodeSettings& node_settings)
+index_settings(const std::string& normalized_path, NodeSettings& node_settings)
 {
 	L_CALL("index_settings(<node_settings>)");
 
@@ -1740,31 +1743,34 @@ index_settings(const std::string& normalized_path, const NodeSettings& node_sett
 		index_replicas(normalized_path, node_settings.num_replicas_plus_master, node_settings.shards[0]);
 	} else if (node_settings.num_shards != 0) {
 		if (!node_settings.shards[0].nodes.empty()) {
-			Endpoint endpoint(".xapiand/indices");
-			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
-			assert(!endpoints.empty());
-			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-			MsgPack obj({
-				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-				{ ID_FIELD_NAME, {
-					{ RESERVED_TYPE,  KEYWORD_STR },
-				} },
-				{ "number_of_shards", {
-					{ RESERVED_INDEX, "none" },
-					{ RESERVED_TYPE,  "positive" },
-					{ RESERVED_VALUE, node_settings.num_shards },
-				} },
-				{ "number_of_replicas", {
-					{ RESERVED_INDEX, "none" },
-					{ RESERVED_TYPE,  "positive" },
-					{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
-				} },
-				{ "shards", {
-					{ RESERVED_INDEX, "field_terms" },
-					{ RESERVED_TYPE,  "array/keyword" },
-				} },
-			});
-			db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
+			if (node_settings.modified) {
+				Endpoint endpoint(".xapiand/indices");
+				auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+				assert(!endpoints.empty());
+				DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				MsgPack obj({
+					{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
+					{ ID_FIELD_NAME, {
+						{ RESERVED_TYPE,  KEYWORD_STR },
+					} },
+					{ "number_of_shards", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  "positive" },
+						{ RESERVED_VALUE, node_settings.num_shards },
+					} },
+					{ "number_of_replicas", {
+						{ RESERVED_INDEX, "none" },
+						{ RESERVED_TYPE,  "positive" },
+						{ RESERVED_VALUE, node_settings.num_replicas_plus_master - 1 },
+					} },
+					{ "shards", {
+						{ RESERVED_INDEX, "field_terms" },
+						{ RESERVED_TYPE,  "array/keyword" },
+					} },
+				});
+				db_handler.update(normalized_path, UNKNOWN_REVISION, false, obj, false, msgpack_type);
+				node_settings.modified = false;
+			}
 		}
 		size_t shard_num = 0;
 		for (auto& shard : node_settings.shards) {
@@ -2113,49 +2119,49 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 
 	bool rebuild = false;
 	while (true) {
-		Endpoints endpoints;
+			Endpoints endpoints;
 
 		auto nodes = resolve_index_nodes_impl(endpoint_path, writable, primary, settings, false, rebuild, false);
-		bool retry = !rebuild;
-		rebuild = false;
+			bool retry = !rebuild;
+			rebuild = false;
 
-		int n_shards = nodes.size();
-		size_t shard_num = 0;
-		for (const auto& shard_nodes : nodes) {
-			auto path = n_shards == 1 ? endpoint_path : strings::format("{}/.__{}", endpoint_path, ++shard_num);
-			if (!unsharded.second || path == endpoint.path) {
-				Endpoint node_endpoint;
-				for (const auto& node : shard_nodes) {
-					node_endpoint = Endpoint(path, node);
-					if (writable) {
-						if (Node::is_active(node)) {
-							L_SHARDS("Active writable node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
+			int n_shards = nodes.size();
+			size_t shard_num = 0;
+			for (const auto& shard_nodes : nodes) {
+				auto path = n_shards == 1 ? endpoint_path : strings::format("{}/.__{}", endpoint_path, ++shard_num);
+				if (!unsharded.second || path == endpoint.path) {
+					Endpoint node_endpoint;
+					for (const auto& node : shard_nodes) {
+						node_endpoint = Endpoint(path, node);
+						if (writable) {
+							if (Node::is_active(node)) {
+								L_SHARDS("Active writable node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
+								break;
+							}
+							rebuild = retry;
 							break;
+						} else {
+							if (Node::is_active(node)) {
+								L_SHARDS("Active node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
+								break;
+							}
+							if (primary) {
+								L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
+								break;
+							}
+							L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 						}
-						rebuild = retry;
+					}
+					endpoints.add(node_endpoint);
+					if (rebuild || unsharded.second) {
 						break;
-					} else {
-						if (Node::is_active(node)) {
-							L_SHARDS("Active node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
-							break;
-						}
-						if (primary) {
-							L_SHARDS("Inactive primary node used (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
-							break;
-						}
-						L_SHARDS("Inactive node ignored (of {} nodes) {}", Node::total_nodes(), node ? node->__repr__() : "null");
 					}
 				}
-				endpoints.add(node_endpoint);
-				if (rebuild || unsharded.second) {
-					break;
-				}
 			}
-		}
 
-		if (!rebuild) {
-			return endpoints;
-		}
+			if (!rebuild) {
+				return endpoints;
+			}
 	}
 }
 
