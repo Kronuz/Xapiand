@@ -58,11 +58,11 @@ pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   var field_name = '';
   pm.expect(jsonData.terms).to.have.property('QKdoc');
-  field_name = String.fromCharCode(1) + String.fromCharCode(80) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(11) + String.fromCharCode(107) + String.fromCharCode(118) + String.fromCharCode(72) + String.fromCharCode(39) + String.fromCharCode(65533) + String.fromCharCode(5) + String.fromCharCode(65533) + String.fromCharCode(127) + String.fromCharCode(94) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(83) + String.fromCharCode(115) + String.fromCharCode(101) + String.fromCharCode(99) + String.fromCharCode(111) + String.fromCharCode(110) + String.fromCharCode(100);
+  field_name = '\u0001\u0050\ufffd\ufffd\u000b\u006b\u0076\u0048\u0027\ufffd\u0005\ufffd\u007f\u005e\ufffd\ufffd\ufffd\u0053\u0073\u0065\u0063\u006f\u006e\u0064';
   pm.expect(jsonData.terms.uuids).to.have.property(field_name);
-  field_name =  String.fromCharCode(1) + String.fromCharCode(65533) + String.fromCharCode(61) + String.fromCharCode(95) + String.fromCharCode(65533) + String.fromCharCode(41) + String.fromCharCode(65533) + String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(95) + String.fromCharCode(65533) + String.fromCharCode(65) + String.fromCharCode(93) + String.fromCharCode(127) + String.fromCharCode(22) + String.fromCharCode(109) + String.fromCharCode(83) + String.fromCharCode(116) + String.fromCharCode(104) + String.fromCharCode(105) + String.fromCharCode(114) + String.fromCharCode(100);
+  field_name =  '\u0001\ufffd\u003d\u005f\ufffd\u0029\ufffd\u004e\ufffd\ufffd\u005f\ufffd\u0041\u005d\u007f\u0016\u006d\u0053\u0074\u0068\u0069\u0072\u0064';
   pm.expect(jsonData.terms.uuids).to.have.property(field_name);
-  field_name = String.fromCharCode(1) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(82) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(67) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(113) + String.fromCharCode(127) + String.fromCharCode(1845) + String.fromCharCode(55) + String.fromCharCode(93) + String.fromCharCode(108) + String.fromCharCode(83) + String.fromCharCode(102) + String.fromCharCode(105) + String.fromCharCode(114) + String.fromCharCode(115) + String.fromCharCode(116);
+  field_name = '\u0001\ufffd\ufffd\u0052\ufffd\ufffd\ufffd\u0043\ufffd\ufffd\u0071\u007f\u0735\u0037\u005d\u006c\u0053\u0066\u0069\u0072\u0073\u0074';
   pm.expect(jsonData.terms.uuids).to.have.property(field_name);
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '3856745852']);
 });
@@ -200,13 +200,12 @@ pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   var field_name = '';
   pm.expect(jsonData.terms).to.have.property('QKdoc');
-  field_name = String.fromCharCode(1) + String.fromCharCode(80) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(11) + String.fromCharCode(107) + String.fromCharCode(118) + String.fromCharCode(72) + String.fromCharCode(39) + String.fromCharCode(65533) + String.fromCharCode(5) + String.fromCharCode(65533) + String.fromCharCode(127) + String.fromCharCode(94) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(83) + String.fromCharCode(115) + String.fromCharCode(101) + String.fromCharCode(99) + String.fromCharCode(111) + String.fromCharCode(110) + String.fromCharCode(100);
+  field_name = '\u0001\u0050\ufffd\ufffd\u000b\u006b\u0076\u0048\u0027\ufffd\u0005\ufffd\u007f\u005e\ufffd\ufffd\ufffd\u0053\u0073\u0065\u0063\u006f\u006e\u0064';
   pm.expect(jsonData.terms.uuids).to.have.property(field_name);
-  field_name = String.fromCharCode(1) + String.fromCharCode(65533) + String.fromCharCode(61) + String.fromCharCode(95) + String.fromCharCode(65533) + String.fromCharCode(41) + String.fromCharCode(65533) + String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(95) + String.fromCharCode(65533) + String.fromCharCode(65) + String.fromCharCode(93) + String.fromCharCode(  127) + String.fromCharCode(22) + String.fromCharCode(109) + String.fromCharCode(83) + String.fromCharCode(116) + String.fromCharCode(104) + String.fromCharCode(105) + String.fromCharCode(114) + String.fromCharCode(100);
+  field_name = '\u0001\ufffd\u003d\u005f\ufffd\u0029\ufffd\u004e\ufffd\ufffd\u005f\ufffd\u0041\u005d\u007f\u0016\u006d\u0053\u0074\u0068\u0069\u0072\u0064';
   pm.expect(jsonData.terms.uuids).to.have.property(field_name);
-  field_name = String.fromCharCode(1) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(82) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(67) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(113) + String.fromCharCode(127) + String.fromCharCode(1845) + String.fromCharCode(55) + String.fromCharCode(93) + String.fromCharCode(108) + String.fromCharCode(83) + String.fromCharCode(102) + String.fromCharCode(105) + String.fromCharCode(114) + String.fromCharCode(115) + String.fromCharCode(116);
+  field_name = '\u0001\ufffd\ufffd\u0052\ufffd\ufffd\ufffd\u0043\ufffd\ufffd\u0071\u007f\u0735\u0037\u005d\u006c\u0053\u0066\u0069\u0072\u0073\u0074';
   pm.expect(jsonData.terms.uuids).to.have.property(field_name);
-
   pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Sfirst');
   pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Ssecond');
   pm.expect(jsonData.terms.uuids['<uuid_field>']).to.have.property('Sthird');

@@ -55,8 +55,8 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.terms.types.arms).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', 'N'+ String.fromCharCode(65533) +'@']);
-  pm.expect(jsonData.terms.types.legs).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', 'N'+ String.fromCharCode(65533) +'@']);
+  pm.expect(jsonData.terms.types.arms).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', 'N\ufffd@']);
+  pm.expect(jsonData.terms.types.legs).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', 'N\ufffd@']);
   pm.expect(jsonData.terms.types.type).to.have.all.keys(['Shuman']);
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1663382011','3248593248', '3741895486']);
 });
@@ -369,13 +369,13 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms['style']['pants']).to.have.all.keys(['Skhakis']);
   pm.expect(jsonData.terms['style']['shirt']).to.have.all.keys(['Sshirt', 'St']);
 
-  var t1 = String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(97) + String.fromCharCode(65533);
-  var t2 = String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(117) + String.fromCharCode(48);
-  var t3 = String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(118) + String.fromCharCode(42);
-  var t4 = String.fromCharCode(78) + String.fromCharCode(65533);
-  var t5 = String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(119) + String.fromCharCode(11);
-  var t6 = String.fromCharCode(78) + String.fromCharCode(65533);
-  var t7 = String.fromCharCode(78)+ String.fromCharCode(65533) + 'w' + '\u0012' + String.fromCharCode(65533);
+  var t1 = '\u004e\ufffd\u0061\ufffd';
+  var t2 = '\u004e\ufffd\u0075\u0030';
+  var t3 = '\u004e\ufffd\u0076\u002a';
+  var t4 = '\u004e\ufffd';
+  var t5 = '\u004e\ufffd\u0077\u000b';
+  var t6 = '\u004e\ufffd';
+  var t7 = '\u004e\ufffdw\u0012\ufffd';
 
   pm.expect(jsonData.terms.accountNumber).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
   pm.expect(jsonData.terms.accountNumber['<186a0>']).to.have.any.keys([t1]);
@@ -385,13 +385,13 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms.accountNumber['<64>']).to.have.any.keys([t5]);
   pm.expect(jsonData.terms.accountNumber['<f4240>']).to.have.any.keys([t6]);
 
-  t1 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t2 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t3 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t4 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t5 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t6 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t7 = String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(32);
+  t1 = '\u004e\ufffd';
+  t2 = '\u004e\ufffd';
+  t3 = '\u004e\ufffd';
+  t4 = '\u004e\ufffd';
+  t5 = '\u004e\ufffd';
+  t6 = '\u004e\ufffd';
+  t7 = '\u004e\ufffd\u0020';
 
   pm.expect(jsonData.terms.age).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
   pm.expect(jsonData.terms.age['<186a0>']).to.have.any.keys([t1]);
@@ -401,14 +401,14 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms.age['<64>']).to.have.any.keys([t5]);
   pm.expect(jsonData.terms.age['<f4240>']).to.have.any.keys([t6]);
 
-  t1 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t2 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t3 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t4 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t5 = String.fromCharCode(78) + String.fromCharCode(65533) + String.fromCharCode(36);
-  t6 = String.fromCharCode(78) + String.fromCharCode(65533);
-  t7 = String.fromCharCode(78) + String.fromCharCode(65533);
-  var t8 = String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(71) + String.fromCharCode(65533) + String.fromCharCode(20) + String.fromCharCode(124);
+  t1 = '\u004e\ufffd';
+  t2 = '\u004e\ufffd';
+  t3 = '\u004e\ufffd';
+  t4 = '\u004e\ufffd';
+  t5 = '\u004e\ufffd\u0024';
+  t6 = '\u004e\ufffd';
+  t7 = '\u004e\ufffd';
+  var t8 = '\ufffd\ufffd\u0047\ufffd\u0014\u007c';
 
   pm.expect(jsonData.terms.balance).to.have.all.keys(['<186a0>', '<2710>', '<3e8>', '<5f5e100>', '<64>', '<f4240>', t7]);
   pm.expect(jsonData.terms.balance['<186a0>']).to.have.any.keys([t1]);
@@ -419,12 +419,12 @@ pm.test("Values are valid", function() {
   pm.expect(jsonData.terms.balance['<f4240>']).to.have.any.keys([t6]);
   pm.expect(jsonData.terms.balance[t7]).to.have.any.keys([t8]);
 
-  t1 = String.fromCharCode(71) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(65533);
-  t2 = String.fromCharCode(71) + String.fromCharCode(65533) + String.fromCharCode(65533) + String.fromCharCode(65533);
-  t3 = String.fromCharCode(71) + String.fromCharCode(65533) + String.fromCharCode(8) + String.fromCharCode(65533) + String.fromCharCode(64);
-  t4 = String.fromCharCode(71) + String.fromCharCode(65533) + String.fromCharCode(8) + String.fromCharCode(65533) + String.fromCharCode(71);
-  t5 = String.fromCharCode(71) + String.fromCharCode(65533) + String.fromCharCode(8) + String.fromCharCode(65533) + String.fromCharCode(71) + String.fromCharCode(40);
-  t6 = String.fromCharCode(71) + String.fromCharCode(392) + String.fromCharCode(65533) + String.fromCharCode(71) + String.fromCharCode(40) + String.fromCharCode(96);
+  t1 = '\u0047\ufffd\ufffd\ufffd';
+  t2 = '\u0047\ufffd\ufffd\ufffd';
+  t3 = '\u0047\ufffd\u0008\ufffd\u0040';
+  t4 = '\u0047\ufffd\u0008\ufffd\u0047';
+  t5 = '\u0047\ufffd\u0008\ufffd\u0047\u0028';
+  t6 = '\u0047\u0188\ufffd\u0047\u0028\u0060';
 
   pm.expect(jsonData.terms.checkin).to.have.all.keys(['<3>', '<5>', '<8>', '<a>', '<c>', '<f>', 'G\u0000']);
   pm.expect(jsonData.terms.checkin['<3>']).to.have.any.keys([t1]);
