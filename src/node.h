@@ -22,8 +22,6 @@
 
 #pragma once
 
-#include "config.h"             // for XAPIAND_CLUSTERING
-
 #include <arpa/inet.h>          // for inet_addr
 #include <atomic>               // for std::atomic_llong, std::atomic_size_t
 #include <cstddef>              // for size_t
@@ -366,6 +364,18 @@ public:
 
 	static size_t active_nodes() {
 		return _active_nodes.load(std::memory_order_acquire);
+	}
+
+	static bool quorum([[maybe_unused]] size_t total, [[maybe_unused]] size_t votes) {
+		return !total || votes > total / 2;
+	}
+
+	static bool quorum([[maybe_unused]] size_t votes) {
+		return Node::quorum(Node::total_nodes(), votes);
+	}
+
+	static bool quorum() {
+		return Node::quorum(Node::total_nodes(), Node::alive_nodes());
 	}
 
 	static std::shared_ptr<const Node> get_node(std::string_view node_name);

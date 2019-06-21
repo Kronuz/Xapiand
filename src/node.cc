@@ -29,7 +29,6 @@
 #include "length.h"             // for serialise_length, unserialise_length, ser...
 #include "log.h"                // for L_CALL
 #include "logger.h"             // for Logging::tab_title, Logging::badge
-#include "opts.h"               // for opts
 #include "serialise.h"          // for Serialise
 #include "strings.hh"           // for strings::format, strings::lower
 #include "xapian.h"             // for SerialisationError
