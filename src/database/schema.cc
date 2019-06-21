@@ -3227,6 +3227,12 @@ Schema::index_new_object(const MsgPack*& parent_properties, const MsgPack& objec
 				specification.value.reset();
 				specification.value_rec.reset();
 				index_object(properties, value_object, data, doc, name);
+			} else {
+				if (specification.flags.store) {
+					if (data->is_undefined()) {
+						parent_data->erase(name);
+					}
+				}
 			}
 			if (specification.flags.inside_namespace && !spc_start.flags.concrete) {
 				// Bubble the namespaced type up
