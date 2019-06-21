@@ -641,45 +641,50 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	// Once all threads have started, get a callstacks snapshot:
 	callstacks_snapshot();
 
-	nanosleep(100000000);  // sleep for 100 miliseconds
-	auto local_node = Node::get_local_node();
-	auto leader_node = Node::get_leader_node();
-	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
+	std::shared_ptr<const Node> local_node;
+	std::shared_ptr<const Node> leader_node;
+	Endpoint cluster_endpoint;
 
 	_new_cluster = 0;
 	bool found = false;
-	try {
-		if (Node::is_superset(local_node, leader_node)) {
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
-			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
+
+	for (int t = 10; !found && t >= 0; --t) {
+		nanosleep(100000000);  // sleep for 100 miliseconds
+		local_node = Node::get_local_node();
+		leader_node = Node::get_leader_node();
+		cluster_endpoint = Endpoint{".xapiand/nodes", leader_node};
+
+		try {
+			if (Node::is_superset(local_node, leader_node)) {
+				DatabaseHandler db_handler(Endpoints{cluster_endpoint});
+				if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 #ifdef XAPIAND_CLUSTERING
-				if (!opts.solo) {
-					auto mset = db_handler.get_mset();
-					const auto m_e = mset.end();
-					for (auto m = mset.begin(); m != m_e; ++m) {
-						auto did = *m;
-						auto document = db_handler.get_document(did);
-						if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
-							found = true;
+					if (!opts.solo) {
+						auto mset = db_handler.get_mset();
+						const auto m_e = mset.end();
+						for (auto m = mset.begin(); m != m_e; ++m) {
+							auto did = *m;
+							auto document = db_handler.get_document(did);
+							if (document.get_value(DB_SLOT_ID) == local_node->lower_name()) {
+								found = true;
+							}
+							auto obj = document.get_obj();
+							node_added(obj["name"].str_view());
 						}
-						auto obj = document.get_obj();
-						node_added(obj["name"].str_view());
-					}
-				} else
+					} else
 #endif
-				{
-					db_handler.get_document(local_node->lower_name());
-					found = true;
+					{
+						db_handler.get_document(local_node->lower_name());
+						found = true;
+					}
 				}
 			}
-		}
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {}
+		} catch (const Xapian::DocNotFoundError&) {
+		} catch (const Xapian::DatabaseNotFoundError&) { }
 
-	if (!found) {
-		for (int t = 10; t >= 0; --t) {
+		if (!found) {
 			try {
-				DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
+				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 				MsgPack obj({
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -717,10 +722,6 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			} catch (...) {
 				if (t == 0) { throw; }
 			}
-			nanosleep(100000000);  // sleep for 100 milliseconds
-			local_node = Node::get_local_node();
-			leader_node = Node::get_leader_node();
-			cluster_endpoint = Endpoint{".xapiand/nodes", leader_node};
 		}
 	}
 
@@ -1419,7 +1420,7 @@ XapiandManager::load_nodes()
 
 	auto leader_node = Node::get_leader_node();
 	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
-	DatabaseHandler db_handler(Endpoints(cluster_endpoint), DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	auto mset = db_handler.get_mset();
 
 	std::vector<std::string> db_nodes;
