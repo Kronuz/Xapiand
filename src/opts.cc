@@ -129,7 +129,7 @@
 #define TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT  4900
 #define TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT  5100
 
-#define DATABASE_STALL_TIME                           600000  // 10 min
+#define DATABASE_STALL_TIME                               90
 
 
 #define EV_SELECT_NAME  "select"
@@ -299,6 +299,8 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::size_t> num_remote_servers("", "remote-servers", "Number of remote protocol servers.", false, 0, "servers", cmd);
 		ValueArg<std::size_t> num_replication_clients("", "replication-clients", "Number of replication protocol client threads.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_replication_servers("", "replication-servers", "Number of replication protocol servers.", false, 0, "servers", cmd);
+
+		ValueArg<double> database_stall_time("", "database-stall-time", "Seconds before allowing a shard to be promoted to primary.", false, DATABASE_STALL_TIME, "seconds", cmd);
 #endif
 		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, 0, "threads", cmd);
 		ValueArg<std::size_t> num_http_servers("", "http-servers", "Number of http servers.", false, 0, "servers", cmd);
@@ -516,6 +518,8 @@ parseOptions(int argc, char** argv)
 		o.num_remote_servers = fallback(num_remote_servers.getValue(), std::max(MIN_REMOTE_SERVERS, std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors)))));
 		o.num_replication_clients = fallback(num_replication_clients.getValue(), std::max(MIN_REPLICATION_CLIENTS, std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors)))));
 		o.num_replication_servers = fallback(num_replication_servers.getValue(), std::max(MIN_REPLICATION_SERVERS, std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors)))));
+
+		o.database_stall_time = database_stall_time.getValue() * 1000.0;
 #endif
 		if (o.detach) {
 			if (o.logfile.empty()) {
@@ -625,8 +629,6 @@ parseOptions(int argc, char** argv)
 	o.trigger_replication_debounce_busy_timeout = TRIGGER_REPLICATION_DEBOUNCE_BUSY_TIMEOUT;
 	o.trigger_replication_debounce_min_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT;
 	o.trigger_replication_debounce_max_force_timeout = TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT;
-
-	o.database_stall_time = DATABASE_STALL_TIME;
 
 	return o;
 }
