@@ -1546,23 +1546,27 @@ XapiandManager::sweep_primary_impl(size_t shards, const std::string& normalized_
 
 struct NodeSettingsShard {
 	Xapian::rev version;
+	bool modified;
 
 	std::vector<std::string> nodes;
 
-	NodeSettingsShard() : version(UNKNOWN_REVISION) { }
+	NodeSettingsShard() : version(UNKNOWN_REVISION), modified(false) { }
 };
 
 
 struct NodeSettings {
 	Xapian::rev version;
+	bool modified;
 
 	size_t num_shards;
 	size_t num_replicas_plus_master;
 	std::vector<NodeSettingsShard> shards;
 
-	NodeSettings() : version(UNKNOWN_REVISION), num_shards(0), num_replicas_plus_master(0) { }
+	NodeSettings() : version(UNKNOWN_REVISION), modified(false), num_shards(0), num_replicas_plus_master(0) { }
 
 	NodeSettings(size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
+		version(UNKNOWN_REVISION),
+		modified(false),
 		num_shards(num_shards),
 		num_replicas_plus_master(num_replicas_plus_master),
 		shards(shards) {
@@ -1588,11 +1592,11 @@ settle_replicas(std::vector<NodeSettingsShard>& shards, std::vector<std::shared_
 		num_replicas_plus_master = total_nodes;
 	}
 	for (auto& shard : shards) {
-		auto replicas_size = shard.nodes.size();
-		assert(replicas_size);
-		if (replicas_size < num_replicas_plus_master) {
+		auto shard_nodes_size = shard.nodes.size();
+		assert(shard_nodes_size);
+		if (shard_nodes_size < num_replicas_plus_master) {
 			std::unordered_set<std::string> used;
-			for (size_t i = 0; i < shard.nodes.size(); ++i) {
+			for (size_t i = 0; i < shard_nodes_size; ++i) {
 				used.insert(strings::lower(shard.nodes[i]));
 			}
 			if (nodes.empty()) {
@@ -1606,7 +1610,7 @@ settle_replicas(std::vector<NodeSettingsShard>& shards, std::vector<std::shared_
 					break;
 				}
 			}
-			for (auto n = replicas_size; n < num_replicas_plus_master; ++n) {
+			for (auto n = shard_nodes_size; n < num_replicas_plus_master; ++n) {
 				auto node = nodes[idx % nodes.size()];
 				while (used.count(node->lower_name())) {
 					node = nodes[++idx % nodes.size()];
@@ -1614,9 +1618,11 @@ settle_replicas(std::vector<NodeSettingsShard>& shards, std::vector<std::shared_
 				}
 				shard.nodes.push_back(node->name());
 			}
-		} else {
+			shard.modified = true;
+		} else if (shard_nodes_size > num_replicas_plus_master) {
 			assert(num_replicas_plus_master);
 			shard.nodes.resize(num_replicas_plus_master);
+			shard.modified = true;
 		}
 	}
 }
@@ -1676,6 +1682,7 @@ update_primary(const std::string& normalized_path, std::vector<NodeSettingsShard
 				to_node->col().ansi(), to_node->name());
 			std::swap(*it, *it_b);
 			updated = true;
+			shard.modified = true;
 		}
 	}
 
@@ -1995,6 +2002,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 		} else {
 			node_settings.num_shards = opts.num_shards;
 			node_settings.num_replicas_plus_master = opts.num_replicas + 1;
+			node_settings.modified = true;
 			L_SHARDS("Node settings for {} initialized", normalized_path);
 		}
 	}
@@ -2036,8 +2044,15 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			}
 		}
 
-		node_settings.num_replicas_plus_master = num_replicas_plus_master;
-		node_settings.num_shards = num_shards;
+		if (node_settings.num_replicas_plus_master != num_replicas_plus_master) {
+			node_settings.num_replicas_plus_master = num_replicas_plus_master;
+			node_settings.modified = true;
+		}
+
+		if (node_settings.num_shards != num_shards) {
+			node_settings.num_shards = num_shards;
+			node_settings.modified = true;
+		}
 	}
 
 	if (nodes.empty() || rebuild) {
@@ -2048,6 +2063,7 @@ XapiandManager::resolve_index_nodes_impl([[maybe_unused]] const std::string& nor
 			size_t routing_key = jump_consistent_hash(normalized_path, Node::total_nodes());
 			node_settings.shards = calculate_shards(routing_key, node_nodes, node_settings.num_shards);
 			assert(!node_settings.shards.empty());
+			node_settings.modified = true;
 		}
 		settle_replicas(node_settings.shards, node_nodes, node_settings.num_replicas_plus_master);
 
