@@ -679,6 +679,9 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 					found = true;
 				}
 			}
+		} catch (const Xapian::DatabaseNotAvailableError&) {
+			if (t == 0) { throw; }
+			continue;
 		} catch (const Xapian::DocNotFoundError&) {
 		} catch (const Xapian::DatabaseNotFoundError&) { }
 
