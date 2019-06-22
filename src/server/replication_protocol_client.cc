@@ -565,7 +565,7 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 
 	if (switching) {
 		// Close internal databases
-		shard->do_close(false, false, shard->transaction);
+		shard->do_close(false, false, Shard::Transaction::none);
 
 		if (switch_shard) {
 			switch_shard->close();
