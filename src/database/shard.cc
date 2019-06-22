@@ -556,7 +556,7 @@ Shard::reopen()
 	}
 
 	assert(database);
-	L_DATABASE("Reopen: {}", __repr__());
+	L_DATABASE("Reopening shard: {}", __repr__());
 	return true;
 }
 
@@ -723,7 +723,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Commit: t: {}", t);
+		L_DATABASE("Committing shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
 		try {
 			auto local = is_local();
 #ifdef XAPIAND_DATA_STORAGE
@@ -857,7 +857,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Deleting document: {}  t: {}", shard_did, t);
+		L_DATABASE("Deleting document {} in shard {} {{ try:{} }}", shard_did, repr(endpoint.to_string()), DB_RETRIES - t);
 
 		try {
 			auto local = is_local();
@@ -946,7 +946,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Deleting document: '{}'  t: {}", term, t);
+		L_DATABASE("Deleting document {} in shard {{ try:{} }}", repr(term), repr(endpoint.to_string()), DB_RETRIES - t);
 		shard_did = 0;
 
 		try {
@@ -1135,7 +1135,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Adding new document.  t: {}", t);
+		L_DATABASE("Adding new document to shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
 		info.version = 0;
 		info.did = 0;
 
@@ -1248,7 +1248,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 	}
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Replacing: {}  t: {}", info.did, t);
+		L_DATABASE("Replacing document {} in shard {} {{ try:{} }}", info.did, repr(endpoint.to_string()), DB_RETRIES - t);
 		info.version = 0;
 
 		try {
@@ -1376,7 +1376,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 	auto n_shards_ser = doc.get_value(DB_SLOT_SHARDS);
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
-		// L_DATABASE("Replacing: '{}'  t: {}", term, t);
+		L_DATABASE("Replacing document {} in shard {} {{ try:{} }}", repr(term), repr(endpoint.to_string()), DB_RETRIES - t);
 		info.version = 0;
 		info.did = 0;
 		info.term = term;
