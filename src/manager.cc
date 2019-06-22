@@ -1568,7 +1568,7 @@ struct NodeSettings {
 	size_t num_replicas_plus_master;
 	std::vector<NodeSettingsShard> shards;
 
-	NodeSettings() : version(UNKNOWN_REVISION), modified(false), stalled(std::chrono::steady_clock::time_point::max()), num_shards(0), num_replicas_plus_master(0) { }
+	NodeSettings() : version(UNKNOWN_REVISION), modified(false), stalled(std::chrono::steady_clock::time_point::min()), num_shards(0), num_replicas_plus_master(0) { }
 
 	NodeSettings(Xapian::rev version, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<NodeSettingsShard>& shards) :
 		version(version),
@@ -1665,10 +1665,13 @@ update_primary(const std::string& normalized_path, NodeSettings& node_settings)
 {
 	L_CALL("update_primary({}, <node_settings>)", repr(normalized_path));
 
-	bool updated = false;
-
 	auto now = std::chrono::steady_clock::now();
 
+	if (node_settings.stalled > now) {
+		return;
+	}
+
+	bool updated = false;
 	size_t shard_num = 0;
 	for (auto& shard : node_settings.shards) {
 		++shard_num;
@@ -1682,9 +1685,10 @@ update_primary(const std::string& normalized_path, NodeSettings& node_settings)
 			}
 		}
 		if (it != it_b && it != it_e) {
-			if (node_settings.stalled == std::chrono::steady_clock::time_point::max()) {
+			if (node_settings.stalled == std::chrono::steady_clock::time_point::min()) {
 				node_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
-			} else if (now > node_settings.stalled) {
+				break;
+			} else if (node_settings.stalled <= now) {
 				auto from_node = Node::get_node(*it_b);
 				auto to_node = Node::get_node(*it);
 				auto path = node_settings.shards.size() > 1 ? strings::format("{}/.__{}", normalized_path, shard_num) : normalized_path;
@@ -1702,7 +1706,7 @@ update_primary(const std::string& normalized_path, NodeSettings& node_settings)
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		if (updated) {
-			node_settings.stalled = std::chrono::steady_clock::time_point::max();
+			node_settings.stalled = std::chrono::steady_clock::time_point::min();
 			primary_updater()->debounce(normalized_path, node_settings.shards.size(), normalized_path);
 		}
 	}
