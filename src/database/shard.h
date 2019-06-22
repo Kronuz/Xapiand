@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"               // for XAPIAND_REMOTE_SERVERPORT
+#include "config.h"               // for XAPIAND_DATA_STORAGE
 
 #include <atomic>                 // for std::atomic_bool
 #include <chrono>                 // for std::chrono
@@ -65,11 +65,12 @@ private:
 	std::chrono::steady_clock::time_point reopen_time;
 	Xapian::rev reopen_revision;
 
-	std::atomic_bool busy;
-	std::atomic_bool _local;
-	std::atomic_bool _closed;
-	std::atomic_bool _modified;
-	std::atomic_bool _incomplete;
+	std::atomic<bool> _busy;
+	std::atomic<bool> _local;
+	std::atomic<bool> _closed;
+	std::atomic<bool> _modified;
+	std::atomic<bool> _incomplete;
+	std::atomic<Transaction> _transaction;
 
 	std::unique_ptr<Xapian::Database> database;
 
@@ -89,7 +90,6 @@ private:
 	bool reopen_readable();
 
 public:
-	Transaction transaction;
 
 	ShardEndpoint& endpoint;
 	int flags;
@@ -123,7 +123,15 @@ public:
 	}
 
 	bool is_busy() const {
-		return busy.load(std::memory_order_relaxed);
+		return _busy.load(std::memory_order_relaxed);
+	}
+
+	Transaction transactional() const {
+		return _transaction.load(std::memory_order_relaxed);
+	}
+
+	bool is_transactional() const {
+		return transactional() != Transaction::none;
 	}
 
 	Shard(ShardEndpoint& endpoint_, int flags);

@@ -159,7 +159,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 		if (!writable) {
 			writable = std::make_shared<Shard>(*this, flags);
 		}
-		if (!is_locked() && !writable->busy.exchange(true)) {
+		if (!is_locked() && !writable->_busy.exchange(true)) {
 			writable->flags = flags;  // update shard flags
 			return writable;
 		}
@@ -207,7 +207,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 				if (!readable) {
 					readable = std::make_shared<Shard>(*this, flags);
 				}
-				if (!is_locked() && !readable->busy.exchange(true)) {
+				if (!is_locked() && !readable->_busy.exchange(true)) {
 					readable->flags = flags;  // update shard flags
 					--readables_available;
 					return readable;
@@ -218,7 +218,7 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 			auto new_database = std::make_shared<Shard>(*this, flags);
 			auto& readable = *readables.insert(readables.end(), new_database);
 			++readables_available;
-			if (!is_locked() && !readable->busy.exchange(true)) {
+			if (!is_locked() && !readable->_busy.exchange(true)) {
 				readable->flags = flags;  // update shard flags
 				--readables_available;
 				return readable;
@@ -301,7 +301,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 			if (reopen) {
 				// Create a new shard and discard old one
 				auto new_database = std::make_shared<Shard>(*this, flags);
-				new_database->busy.store(true);
+				new_database->_busy.store(true);
 				lk.lock();
 				shard_ref = new_database;
 			}
@@ -344,7 +344,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 			Shard::autocommit(shard);
 		}
 		L_SHARD_LOG_TIMED_CLEAR();
-		shard->busy.store(false);
+		shard->_busy.store(false);
 		writable_cond.notify_one();
 	} else {
 		if (is_finished() || database_pool.notify_lockable(*this) || shard->is_closed()) {
@@ -358,7 +358,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 			++readables_available;
 		}
 		L_SHARD_LOG_TIMED_CLEAR();
-		shard->busy.store(false);
+		shard->_busy.store(false);
 		readables_cond.notify_one();
 	}
 
@@ -387,10 +387,10 @@ ShardEndpoint::clear()
 	std::unique_lock<std::mutex> lk(mtx);
 
 	if (writable) {
-		if (!writable->busy.exchange(true)) {
+		if (!writable->_busy.exchange(true)) {
 			lk.unlock();
 			// First try closing internal shard:
-			writable->do_close(true, writable->is_closed(), writable->transaction, false);
+			writable->do_close(true, writable->is_closed(), writable->transactional(), false);
 			lk.lock();
 			auto shared_writable = writable;
 			std::weak_ptr<Shard> weak_writable = shared_writable;
@@ -407,7 +407,7 @@ ShardEndpoint::clear()
 				// It wasn't the last one,
 				// add it back:
 				writable = shared_writable;
-				writable->busy.store(false);
+				writable->_busy.store(false);
 			}
 		}
 	}
@@ -418,10 +418,10 @@ ShardEndpoint::clear()
 			if (!readable) {
 				--readables_available;
 				it = readables.erase(it);
-			} else if (!readable->busy.exchange(true)) {
+			} else if (!readable->_busy.exchange(true)) {
 				lk.unlock();
 				// First try closing internal shard:
-				readable->do_close(true, readable->is_closed(), readable->transaction, false);
+				readable->do_close(true, readable->is_closed(), readable->transactional(), false);
 				lk.lock();
 				auto shared_readable = readable;
 				std::weak_ptr<Shard> weak_readable = shared_readable;
@@ -438,7 +438,7 @@ ShardEndpoint::clear()
 					// It wasn't the last one,
 					// add it back:
 					readable = shared_readable;
-					readable->busy.store(false);
+					readable->_busy.store(false);
 					++it;
 				} else {
 					// It was the last one,

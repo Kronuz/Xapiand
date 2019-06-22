@@ -216,12 +216,12 @@ DataStorage::open(std::string_view relative_path)
 Shard::Shard(ShardEndpoint& endpoint_, int flags_)
 	: reopen_time(std::chrono::steady_clock::now()),
 	  reopen_revision(0),
-	  busy(false),
+	  _busy(false),
 	  _local(false),
 	  _closed(false),
 	  _modified(false),
 	  _incomplete(false),
-	  transaction(Transaction::none),
+	  _transaction(Transaction::none),
 	  endpoint(endpoint_),
 	  flags(flags_)
 {
@@ -320,9 +320,9 @@ Shard::reopen_writable()
 		endpoint.local_revision = reopen_revision;
 	}
 
-	if (transaction != Transaction::none) {
+	if (is_transactional()) {
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(new_database.get());
-		wdb->begin_transaction(transaction == Transaction::flushed);
+		wdb->begin_transaction(transactional() == Transaction::flushed);
 	}
 
 #ifdef XAPIAND_DATA_STORAGE
@@ -612,12 +612,12 @@ Shard::reset() noexcept
 void
 Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw_exceptions)
 {
-	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, repr(to_string()), database ? "<database>" : "null", is_modified(), is_closed(), transaction == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions);
+	L_CALL("Shard::do_close({}, {}, {}, {}) {{endpoint:{}, database:{}, modified:{}, closed:{}}}", commit_, closed_, transaction_ == Shard::Transaction::none ? "<none>" : "<transaction>", throw_exceptions, repr(to_string()), database ? "<database>" : "null", is_modified(), is_closed());
 
 	if (
 		commit_ &&
 		database &&
-		transaction == Shard::Transaction::none &&
+		!is_transactional() &&
 		!is_closed() &&
 		is_modified() &&
 		is_writable() &&
@@ -652,7 +652,7 @@ Shard::do_close(bool commit_, bool closed_, Transaction transaction_, bool throw
 
 	_local.store(local_, std::memory_order_relaxed);
 	_closed.store(closed_, std::memory_order_relaxed);
-	transaction = transaction_;
+	_transaction.store(transaction_, std::memory_order_relaxed);
 }
 
 
@@ -661,7 +661,7 @@ Shard::do_close(bool commit_)
 {
 	L_CALL("Shard::do_close()");
 
-	do_close(commit_, is_closed(), transaction, false);
+	do_close(commit_, is_closed(), transactional(), false);
 }
 
 
@@ -685,7 +685,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 
 	if (
 		shard->database &&
-		shard->transaction == Shard::Transaction::none &&
+		!shard->is_transactional() &&
 		!shard->is_closed() &&
 		shard->is_modified() &&
 		shard->is_writable() &&
@@ -730,6 +730,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
 			assert(!local || wdb->get_revision() == endpoint.local_revision.load());
+			auto transaction = transactional();
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
 				wdb->begin_transaction(true);
@@ -785,12 +786,12 @@ Shard::begin_transaction(bool flushed)
 
 	assert(is_writable());
 
-	if (transaction == Transaction::none) {
+	if (!is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->begin_transaction(flushed);
-		transaction = flushed ? Transaction::flushed : Transaction::unflushed;
+		_transaction.store(flushed ? Transaction::flushed : Transaction::unflushed, std::memory_order_relaxed);
 	}
 }
 
@@ -802,12 +803,12 @@ Shard::commit_transaction()
 
 	assert(is_writable());
 
-	if (transaction != Transaction::none) {
+	if (is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->commit_transaction();
-		transaction = Transaction::none;
+		_transaction.store(Transaction::none, std::memory_order_relaxed);
 	}
 }
 
@@ -819,12 +820,12 @@ Shard::cancel_transaction()
 
 	assert(is_writable());
 
-	if (transaction != Transaction::none) {
+	if (is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
 		auto *wdb = static_cast<Xapian::WritableDatabase *>(db());
 		wdb->cancel_transaction();
-		transaction = Transaction::none;
+		_transaction.store(Transaction::none);
 	}
 }
 
@@ -1931,5 +1932,5 @@ Shard::__repr__() const
 		is_modified() ? " " + LIGHT_STEEL_BLUE + "(modified)" + STEEL_BLUE : "",
 		is_incomplete() ? " " + DARK_STEEL_BLUE + "(incomplete)" + STEEL_BLUE : "",
 		is_busy() ? " " + DARK_ORANGE + "(busy)" + STEEL_BLUE : "",
-		transaction != Shard::Transaction::none ? " " + DARK_STEEL_BLUE + "(transactional)" + STEEL_BLUE : "");
+		is_transactional() ? " " + DARK_STEEL_BLUE + "(transactional)" + STEEL_BLUE : "");
 }
