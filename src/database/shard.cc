@@ -681,7 +681,7 @@ Shard::close()
 void
 Shard::autocommit(const std::shared_ptr<Shard>& shard)
 {
-	L_CALL("Shard::autocommit(<shard>)");
+	L_CALL("Shard::autocommit({})", shard ? shard->__repr__() : "null");
 
 	if (
 		shard->database &&
@@ -1921,7 +1921,7 @@ Shard::to_string() const
 std::string
 Shard::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<Shard {} ({}){}{}{}{}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<Shard {} ({}){}{}{}{}{}{}{}{}>",
 		repr(to_string()),
 		readable_flags(flags),
 		is_writable() ? " " + DARK_STEEL_BLUE + "(writable)" + STEEL_BLUE : "",
@@ -1930,5 +1930,6 @@ Shard::__repr__() const
 		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "",
 		is_modified() ? " " + LIGHT_STEEL_BLUE + "(modified)" + STEEL_BLUE : "",
 		is_incomplete() ? " " + DARK_STEEL_BLUE + "(incomplete)" + STEEL_BLUE : "",
-		is_busy() ? " " + DARK_ORANGE + "(busy)" + STEEL_BLUE : "");
+		is_busy() ? " " + DARK_ORANGE + "(busy)" + STEEL_BLUE : "",
+		transaction != Shard::Transaction::none ? " " + DARK_STEEL_BLUE + "(transactional)" + STEEL_BLUE : "");
 }

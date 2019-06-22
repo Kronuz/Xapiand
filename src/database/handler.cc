@@ -1096,7 +1096,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		}
 	}
 
-	// L_DEBUG("query: {}", query.get_description());
+	L_DEBUG("query: {}", query.get_description());
 
 	// Configure sorter.
 	if (!query_field.sort.empty()) {
