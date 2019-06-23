@@ -164,22 +164,15 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	bool replicated = false;
 
-	const auto& normalized_path = args.src_endpoint.path;
-
-	if (strings::startswith(normalized_path, ".xapiand/")) {
+	if (strings::startswith(args.dst_endpoint.path, ".xapiand/")) {
 		// Index databases are always replicated
-		replicated = true;
-	}
-
-	if (!replicated && exists(normalized_path + "/iamglass")) {
-		// If database is already there, its also always updated
 		replicated = true;
 	}
 
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::get_local_node();
-		auto nodes = XapiandManager::resolve_index_nodes(normalized_path);
+		auto nodes = XapiandManager::resolve_index_nodes(args.dst_endpoint.path);
 		for (const auto& shard_nodes : nodes) {
 			for (const auto& node : shard_nodes) {
 				if (Node::is_superset(local_node, node)) {
@@ -192,6 +185,11 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	if (!replicated) {
 		assert(!args.cluster_database);
+
+		if (exists(args.dst_endpoint.path + "/iamglass")) {
+			// If database was already there
+			L_WARNING("Stalled shard: {}", args.dst_endpoint.path);
+		}
 		return;
 	}
 
