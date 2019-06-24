@@ -277,7 +277,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	}
 
 	auto node = args.src_endpoint.node();
-	if (!node) {
+	if (!node || node->empty()) {
 		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database (Endpoint node is invalid: {})", args.src_endpoint.node_name);
 			sig_exit(-EX_SOFTWARE);
