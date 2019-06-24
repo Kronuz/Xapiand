@@ -384,84 +384,66 @@ Shard::reopen_readable()
 		: Xapian::DB_OPEN;
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote shard {}", repr(endpoint.to_string()));
-		std::exception_ptr eptr;
-		try {
-			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			auto node = endpoint.node();
-			if (!node || node->empty()) {
-				L_DEBUG("Endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
-				throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
-			}
-			if (!node->is_active()) {
-				L_DEBUG("Endpoint {} ({}) is inactive.", repr(endpoint.to_string()), readable_flags(flags));
-				throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
-			}
-			auto port = node->remote_port;
-			if (port == 0) {
-				L_DEBUG("Endpoint {} ({}) node without a valid port.", repr(endpoint.to_string()), readable_flags(flags));
-				throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
-			}
-			auto& host = node->host();
-			if (host.empty()) {
-				L_DEBUG("Endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
-				throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
-			}
-			*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
-			// Check for a local database fallback:
-			auto nodes = XapiandManager::resolve_index_nodes(endpoint.path);
-			assert(nodes.size() == 1);
-			if (nodes.size() == 1) {
-				auto fallback = false;
-				auto local_node = Node::get_local_node();
-				const auto& shards = nodes[0];
-				for (const auto& shard_node : shards) {
-					if (Node::is_superset(local_node, shard_node)) {
-						fallback = true;
-						break;
-					}
+		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		auto node = endpoint.node();
+		if (!node || node->empty()) {
+			L_DEBUG("Endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
+			throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
+		}
+		if (!node->is_active()) {
+			L_DEBUG("Endpoint {} ({}) is inactive.", repr(endpoint.to_string()), readable_flags(flags));
+			throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
+		}
+		auto port = node->remote_port;
+		if (port == 0) {
+			L_DEBUG("Endpoint {} ({}) node without a valid port.", repr(endpoint.to_string()), readable_flags(flags));
+			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
+		}
+		auto& host = node->host();
+		if (host.empty()) {
+			L_DEBUG("Endpoint {} ({}) node without a valid host.", repr(endpoint.to_string()), readable_flags(flags));
+			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+		}
+		*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
+		// Check for a local database fallback:
+		auto nodes = XapiandManager::resolve_index_nodes(endpoint.path);
+		assert(nodes.size() == 1);
+		if (nodes.size() == 1) {
+			auto fallback = false;
+			auto local_node = Node::get_local_node();
+			const auto& shards = nodes[0];
+			for (const auto& shard_node : shards) {
+				if (Node::is_superset(local_node, shard_node)) {
+					fallback = true;
+					break;
 				}
-				if (fallback) {
-					try {
+			}
+			if (fallback) {
+				try {
+					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+					Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+					if (tmp.get_uuid() == new_database->get_uuid()) {
+						L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
+						// Handle remote endpoint and figure out if the endpoint is a local database
 						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-						Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-						if (tmp.get_uuid() == new_database->get_uuid()) {
-							L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
-							// Handle remote endpoint and figure out if the endpoint is a local database
-							RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-							*new_database = tmp;
-							local = true;
-						} else {
-							_incomplete.store(true, std::memory_order_relaxed);
-						}
-					} catch (const Xapian::DatabaseNotFoundError&) {
-					} catch (const Xapian::DatabaseOpeningError&) {
+						*new_database = tmp;
+						local = true;
+					} else {
 						_incomplete.store(true, std::memory_order_relaxed);
 					}
+				} catch (const Xapian::DatabaseNotFoundError&) {
+					_incomplete.store(true, std::memory_order_relaxed);
+				} catch (const Xapian::DatabaseOpeningError&) {
+					_incomplete.store(true, std::memory_order_relaxed);
+				}
+				if (XapiandManager::state() == XapiandManager::State::READY) {
+					// Try triggering replication from primary shard:
+					try {
+						trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, shards[0]}, Endpoint{endpoint.path});
+					} catch (...) { }
 				}
 			}
-		} catch (const Xapian::DatabaseNotAvailableError&) {
-			eptr = std::current_exception();
-		} catch (const Xapian::NetworkTimeoutError&) {
-			eptr = std::current_exception();
-		} catch (const Xapian::NetworkError&) {
-			eptr = std::current_exception();
 		}
-		if (eptr) {
-			try {
-				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				local = true;
-				_incomplete.store(true, std::memory_order_relaxed);
-			} catch (...) {
-				std::rethrow_exception(eptr);
-			}
-		}
-		try {
-			if (XapiandManager::state() == XapiandManager::State::READY) {
-				// If remote is master (it should be if we are here), try triggering replication
-				trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint(endpoint), Endpoint(endpoint.path));
-			}
-		} catch (...) { }
 	}
 	else
 #endif  // XAPIAND_CLUSTERING
