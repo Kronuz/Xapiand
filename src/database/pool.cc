@@ -30,6 +30,7 @@
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
+#include "node.h"                 // for Node
 
 
 // #undef L_DEBUG
@@ -698,6 +699,22 @@ ReferencedShardEndpoint
 DatabasePool::spawn(const Endpoint& endpoint)
 {
 	L_CALL("DatabasePool::spawn({})", repr(endpoint.to_string()));
+
+	auto node = endpoint.node();
+	if (!node) {
+		throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
+	}
+	if (!node->is_active()) {
+		throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
+	}
+	auto port = node->remote_port;
+	if (port == 0) {
+		throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
+	}
+	auto& host = node->host();
+	if (host.empty()) {
+		throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+	}
 
 	std::lock_guard<std::mutex> lk(mtx);
 	return _spawn(endpoint);
