@@ -33,6 +33,7 @@
 #include <vector>                             // for std::vector
 
 #include "base_x.hh"                          // for Base62
+#include "database/utils.h"                   // for UNKNOWN_REVISION
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "enum.h"                             // for ENUM_CLASS
@@ -43,6 +44,7 @@
 #include "thread.hh"                          // for ThreadPolicyType::*
 #include "threadpool.hh"                      // for ThreadPool
 #include "worker.h"                           // for Worker
+#include "xapian.h"                           // for Xapian::*
 
 
 class Http;
@@ -93,6 +95,47 @@ ENUM_CLASS(XapiandManagerState, int,
 	WAITING,
 	RESET
 )
+
+
+struct IndexSettingsShard {
+	Xapian::rev version;
+	bool modified;
+
+	std::vector<std::string> nodes;
+
+	IndexSettingsShard() : version(UNKNOWN_REVISION), modified(false) { }
+};
+
+
+struct IndexSettings {
+	Xapian::rev version;
+	bool modified;
+
+	std::chrono::time_point<std::chrono::steady_clock> stalled;
+
+	size_t num_shards;
+	size_t num_replicas_plus_master;
+	std::vector<IndexSettingsShard> shards;
+
+	IndexSettings() : version(UNKNOWN_REVISION), modified(false), stalled(std::chrono::steady_clock::time_point::min()), num_shards(0), num_replicas_plus_master(0) { }
+
+	IndexSettings(Xapian::rev version, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+		version(version),
+		modified(modified),
+		stalled(stalled),
+		num_shards(num_shards),
+		num_replicas_plus_master(num_replicas_plus_master),
+		shards(shards) {
+#ifndef NDEBUG
+		size_t replicas_size = 0;
+		for (auto& shard : shards) {
+			auto replicas_size_ = shard.nodes.size();
+			assert(replicas_size_ != 0 && (!replicas_size || replicas_size == replicas_size_));
+			replicas_size = replicas_size_;
+		}
+#endif
+	}
+};
 
 
 class XapiandManager : public Worker  {
@@ -203,6 +246,7 @@ private:
 	void node_added(std::string_view name);
 #endif
 
+	const IndexSettings resolve_index_settings_impl(const std::string& normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, bool reload, bool rebuild, bool clear);
 	std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes_impl(const std::string& normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, bool reload, bool rebuild, bool clear);
 	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings);
 
@@ -242,6 +286,13 @@ public:
 		assert(_manager);
 		_manager.reset();
 	}
+
+	static const IndexSettings resolve_index_settings(const std::string& normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
+		assert(_manager);
+		return _manager->resolve_index_settings_impl(normalized_path, writable, primary, settings, false, false, false);
+	}
+
+	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_nodes(const IndexSettings& index_settings);
 
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_index_nodes(const std::string& normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
 		assert(_manager);
