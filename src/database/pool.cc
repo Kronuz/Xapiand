@@ -132,7 +132,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 	refs(0),
 	finished(false),
 	locked(false),
-	local_revision(0),
+	revisions(0),
 	renew_time(std::chrono::steady_clock::now()),
 	readables_available(0)
 {
@@ -285,7 +285,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 				if (shard_ref->is_local()) {
 					auto referenced_database_endpoint = database_pool.get(*this);
 					if (referenced_database_endpoint) {
-						auto revision = referenced_database_endpoint->local_revision.load();
+						auto revision = referenced_database_endpoint->revision();
 						referenced_database_endpoint.reset();
 						if (revision && revision != shard_ref->db()->get_revision()) {
 							L_DATABASE("Local writable shard has changed revision");
@@ -480,6 +480,66 @@ ShardEndpoint::is_used() const
 		writable ||
 		!readables.empty()
 	);
+}
+
+
+Xapian::rev
+ShardEndpoint::revision(const std::string& lower_name)
+{
+	L_CALL("ShardEndpoint::revision({})", repr(lower_name));
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	auto it = revisions.find(lower_name);
+	if (it != revisions.end()) {
+		return it->second;
+	}
+	return 0;
+}
+
+
+Xapian::rev
+ShardEndpoint::revision()
+{
+	L_CALL("ShardEndpoint::revision()");
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	auto local_node = Node::get_local_node();
+	auto it = local_node ? revisions.find(local_node->lower_name()) : revisions.end();
+	if (it != revisions.end()) {
+		return it->second;
+	}
+	return 0;
+}
+
+
+void
+ShardEndpoint::revision(const std::string& lower_name, Xapian::rev revision)
+{
+	L_CALL("ShardEndpoint::revision({})", revision);
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	auto it = revisions.find(lower_name);
+	if (it != revisions.end()) {
+		it->second = revision;
+	}
+}
+
+
+void
+ShardEndpoint::revision(Xapian::rev revision)
+{
+	L_CALL("ShardEndpoint::revision({})", revision);
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	auto local_node = Node::get_local_node();
+	auto it = local_node ? revisions.find(local_node->lower_name()) : revisions.end();
+	if (it != revisions.end()) {
+		it->second = revision;
+	}
 }
 
 

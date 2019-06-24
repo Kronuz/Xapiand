@@ -315,7 +315,7 @@ Shard::reopen_writable()
 	_local.store(local, std::memory_order_relaxed);
 	if (local) {
 		reopen_revision = new_database->get_revision();
-		endpoint.local_revision = reopen_revision;
+		endpoint.revision(reopen_revision);
 	}
 
 	if (is_transactional()) {
@@ -721,7 +721,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
-			assert(!local || wdb->get_revision() == endpoint.local_revision.load());
+			assert(!local || wdb->get_revision() == endpoint.revision());
 			auto transaction = transactional();
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
@@ -735,7 +735,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			}
 			_modified.store(false, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = endpoint.local_revision.load();
+				auto prior_revision = endpoint.revision();
 				auto current_revision = wdb->get_revision();
 				if (prior_revision == current_revision) {
 					L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(endpoint.to_string()));
@@ -743,7 +743,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				}
 				assert(current_revision == prior_revision + 1);
 				L_DATABASE("Commit on shard {}: {} -> {}", repr(endpoint.to_string()), prior_revision, current_revision);
-				endpoint.local_revision = current_revision;
+				endpoint.revision(current_revision);
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {

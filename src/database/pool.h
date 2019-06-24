@@ -33,6 +33,7 @@
 #include <set>                  // for std::set
 #include <string>               // for std::string
 #include <utility>              // for std::pair
+#include <unordered_map>        // for std::unordered_map
 #include <vector>               // for std::vector
 
 #include "threadpool.hh"        // for TaskQueue
@@ -76,7 +77,8 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool finished;
 
 	std::atomic_bool locked;
-	std::atomic<Xapian::rev> local_revision;
+	std::mutex revisions_mtx;
+	std::unordered_map<std::string, Xapian::rev> revisions;
 	std::chrono::time_point<std::chrono::steady_clock> renew_time;
 
 	std::shared_ptr<Shard> writable;
@@ -117,6 +119,11 @@ public:
 	}
 
 	bool is_used() const;
+
+	Xapian::rev revision(const std::string& lower_name);
+	Xapian::rev revision();
+	void revision(const std::string& lower_name, Xapian::rev revision);
+	void revision(Xapian::rev revision);
 
 	std::string __repr__() const;
 	std::string dump_databases(int level) const;
