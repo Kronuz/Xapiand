@@ -129,7 +129,7 @@
 #define TRIGGER_REPLICATION_DEBOUNCE_MIN_FORCE_TIMEOUT  4900
 #define TRIGGER_REPLICATION_DEBOUNCE_MAX_FORCE_TIMEOUT  5100
 
-#define DATABASE_STALL_TIME                               90
+#define DATABASE_STALL_TIME                              300
 
 
 #define EV_SELECT_NAME  "select"
