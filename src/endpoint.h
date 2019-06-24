@@ -61,7 +61,7 @@ class Endpoint {
 public:
 	static std::string cwd;
 
-	std::string path, node_name, user, password, query;
+	std::string path, node_name, query;
 
 	Endpoint() = default;
 	Endpoint(const Endpoint& other);

@@ -194,7 +194,7 @@ std::string Endpoint::cwd("/");
 Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node)
 {
 	if (node) {
-		node_name = node->lower_name();
+		node_name = node->name();
 	}
 
 	auto protocol = slice_before(uri, "://");
@@ -203,13 +203,11 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	}
 	auto _query = slice_after(uri, "?");
 	auto _path = slice_after(uri, "/");
-	auto _user = slice_before(uri, "@");
-	auto _password = slice_after(_user, ":");
 	auto _port = slice_after(uri, ":");
 
 	if (protocol == "file") {
 		if (node_name.empty()) {
-			node_name = Node::get_local_node()->lower_name();
+			node_name = Node::get_local_node()->name();
 		}
 		if (_path.empty()) {
 			_path = uri;
@@ -219,25 +217,23 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	} else {
 		if (node_name.empty()) {
 			if (_port.empty() && uri.empty()) {
-				node_name = Node::get_local_node()->lower_name();
+				node_name = Node::get_local_node()->name();
 			} else if (_port.empty()) {
 				auto uri_node = Node::get_node(uri);
 				if (uri_node) {
-					node_name = uri_node->lower_name();
+					node_name = uri_node->name();
 				}
 			} else {
 				auto remote_port = strict_stoi(nullptr, _port);
 				for (auto& uri_node : Node::nodes()) {
 					if (uri_node->host() == uri && uri_node->remote_port == remote_port) {
-						node_name = uri_node->lower_name();
+						node_name = uri_node->name();
 						break;
 					}
 				}
 			}
 		}
 		query = _query;
-		password = _password;
-		user = _user;
 	}
 
 	if (!strings::startswith(_path, '/')) {
@@ -260,8 +256,6 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 Endpoint::Endpoint(const Endpoint& other) :
 	path(other.path),
 	node_name(other.node_name),
-	user(other.user),
-	password(other.password),
 	query(other.query)
 {
 }
@@ -270,8 +264,6 @@ Endpoint::Endpoint(const Endpoint& other) :
 Endpoint::Endpoint(Endpoint&& other) :
 	path(std::move(other.path)),
 	node_name(std::move(other.node_name)),
-	user(std::move(other.user)),
-	password(std::move(other.password)),
 	query(std::move(other.query))
 {
 }
@@ -279,9 +271,7 @@ Endpoint::Endpoint(Endpoint&& other) :
 
 Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node) :
 	path(other.path),
-	node_name(node->lower_name()),
-	user(other.user),
-	password(other.password),
+	node_name(node->name()),
 	query(other.query)
 {
 }
@@ -289,9 +279,7 @@ Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& nod
 
 Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
 	path(std::move(other.path)),
-	node_name(node->lower_name()),
-	user(std::move(other.user)),
-	password(std::move(other.password)),
+	node_name(node->name()),
 	query(std::move(other.query))
 {
 }
@@ -302,8 +290,6 @@ Endpoint::operator=(const Endpoint& other)
 {
 	path = other.path;
 	node_name = other.node_name;
-	user = other.user;
-	password = other.password;
 	query = other.query;
 	return *this;
 }
@@ -314,8 +300,6 @@ Endpoint::operator=(Endpoint&& other)
 {
 	path = std::move(other.path);
 	node_name = std::move(other.node_name);
-	user = std::move(other.user);
-	password = std::move(other.password);
 	query = std::move(other.query);
 	return *this;
 }
@@ -355,31 +339,16 @@ std::string
 Endpoint::to_string() const
 {
 	std::string ret;
-	if (path.empty()) {
-		return ret;
-	}
-	ret += "xapian://";
-	if (!user.empty() || !password.empty()) {
-		ret += user;
-		if (!password.empty()) {
-			ret += ":" + password;
+	if (!path.empty()) {
+		ret.reserve(node_name.size() + path.size() + query.size() + 11);
+		ret.append("xapian://");
+		ret.append(node_name);
+		ret.push_back('/');
+		ret.append(path);
+		if (!query.empty()) {
+			ret.push_back('?');
+			ret.append(query);
 		}
-		ret += "@";
-	}
-	auto node = Node::get_node(node_name);
-	if (node) {
-		ret += node->host();
-		if (node->remote_port > 0) {
-			ret += ":";
-			ret += strings::format("{}", node->remote_port);
-		}
-		if (!node->host().empty() || node->remote_port > 0) {
-			ret += "/";
-		}
-	}
-	ret += path;
-	if (!query.empty()) {
-		ret += "?" + query;
 	}
 	return ret;
 }
@@ -392,8 +361,6 @@ const noexcept
 	return (
 		path.empty() &&
 		node_name.empty() &&
-		user.empty() &&
-		password.empty() &&
 		query.empty()
 	);
 }
@@ -425,7 +392,7 @@ bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::get_local_node();
-	return !local_node || node_name == local_node->lower_name();
+	return !local_node || strings::lower(node_name) == local_node->lower_name();
 }
 
 
