@@ -167,6 +167,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 {
 	L_CALL("ReplicationProtocolClient::init_replication_protocol({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 
+	// Get fast write lock for replication or retry later
 	try {
 		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_REPLICA, false);
 		lk_shard_ptr->lock(0, [=] {
@@ -576,7 +577,7 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		XapiandManager::database_pool()->lock(shard);
 
 		// Now we are sure no readers are using the database before moving the files
-		delete_files(shard->endpoint.path, {"*glass", "wal.*"});
+		delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
 		move_files(switch_shard_path, shard->endpoint.path);
 
 		// release exclusive lock
