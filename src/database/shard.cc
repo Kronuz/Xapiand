@@ -264,10 +264,13 @@ Shard::reopen_writable()
 
 	assert(!endpoint.empty());
 	bool local = false;
+#ifdef XAPIAND_CLUSTERING
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
-#ifdef XAPIAND_CLUSTERING
+
+	// auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
+
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote writable shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
@@ -382,6 +385,9 @@ Shard::reopen_readable()
 	int _flags = ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN)
 		? Xapian::DB_CREATE_OR_OPEN
 		: Xapian::DB_OPEN;
+
+	auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
+
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
@@ -406,7 +412,7 @@ Shard::reopen_readable()
 		}
 		*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
 		// Check for a local database fallback:
-		auto nodes = XapiandManager::resolve_index_nodes(endpoint.path);
+		auto nodes = XapiandManager::resolve_nodes(index_settings);
 		assert(nodes.size() == 1);
 		if (nodes.size() == 1) {
 			auto fallback = false;
