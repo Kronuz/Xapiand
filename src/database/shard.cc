@@ -274,7 +274,7 @@ Shard::reopen_writable()
 		L_DATABASE("Opening remote writable shard {}", repr(endpoint.to_string()));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		auto node = endpoint.node();
-		if (!node) {
+		if (!node || node->empty()) {
 			L_DEBUG("Writable endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
 			throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
 		}
@@ -392,7 +392,7 @@ Shard::reopen_readable()
 #endif  // XAPIAN_LOCAL_DB_FALLBACK
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			auto node = endpoint.node();
-			if (!node) {
+			if (!node || node->empty()) {
 				L_DEBUG("Endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
 				throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
 			}

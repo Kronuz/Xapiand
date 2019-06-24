@@ -701,7 +701,7 @@ DatabasePool::spawn(const Endpoint& endpoint)
 	L_CALL("DatabasePool::spawn({})", repr(endpoint.to_string()));
 
 	auto node = endpoint.node();
-	if (!node) {
+	if (!node || node->empty()) {
 		throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
 	}
 	if (!node->is_active()) {
