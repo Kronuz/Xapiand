@@ -194,7 +194,7 @@ std::string Endpoint::cwd("/");
 Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node)
 {
 	if (node) {
-		node_name = node->name();
+		node_name = node->lower_name();
 	}
 
 	auto protocol = slice_before(uri, "://");
@@ -207,7 +207,7 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 
 	if (protocol == "file") {
 		if (node_name.empty()) {
-			node_name = Node::get_local_node()->name();
+			node_name = Node::get_local_node()->lower_name();
 		}
 		if (_path.empty()) {
 			_path = uri;
@@ -217,17 +217,17 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 	} else {
 		if (node_name.empty()) {
 			if (_port.empty() && uri.empty()) {
-				node_name = Node::get_local_node()->name();
+				node_name = Node::get_local_node()->lower_name();
 			} else if (_port.empty()) {
 				auto uri_node = Node::get_node(uri);
 				if (uri_node) {
-					node_name = uri_node->name();
+					node_name = uri_node->lower_name();
 				}
 			} else {
 				auto remote_port = strict_stoi(nullptr, _port);
 				for (auto& uri_node : Node::nodes()) {
 					if (uri_node->host() == uri && uri_node->remote_port == remote_port) {
-						node_name = uri_node->name();
+						node_name = uri_node->lower_name();
 						break;
 					}
 				}
@@ -271,7 +271,7 @@ Endpoint::Endpoint(Endpoint&& other) :
 
 Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node) :
 	path(other.path),
-	node_name(node->name()),
+	node_name(node->lower_name()),
 	query(other.query)
 {
 }
@@ -279,7 +279,7 @@ Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& nod
 
 Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
 	path(std::move(other.path)),
-	node_name(node->name()),
+	node_name(node->lower_name()),
 	query(std::move(other.query))
 {
 }
@@ -392,7 +392,7 @@ bool
 Endpoint::is_local() const
 {
 	auto local_node = Node::get_local_node();
-	return !local_node || strings::lower(node_name) == local_node->lower_name();
+	return !local_node || node_name == local_node->lower_name();
 }
 
 
