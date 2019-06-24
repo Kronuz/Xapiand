@@ -71,8 +71,6 @@
 // #define L_DATABASE_WRAP_END L_DELAYED_N_UNLOG
 
 
-#define XAPIAN_LOCAL_DB_FALLBACK 1
-
 #define DATA_STORAGE_PATH "docdata."
 
 #ifdef XAPIAND_DATABASE_WAL
@@ -293,7 +291,7 @@ Shard::reopen_writable()
 			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
 		}
 		*new_database = Xapian::Remote::open_writable(host, port, 10000, 10000, _flags | XAPIAN_DB_SYNC_MODE, endpoint.path);
-		// Writable remote databases do not have a local fallback
+		// Writable remote databases do not have a local database fallback.
 	}
 	else
 #endif  // XAPIAND_CLUSTERING
@@ -386,10 +384,8 @@ Shard::reopen_readable()
 		: Xapian::DB_OPEN;
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote shard {}", repr(endpoint.to_string()));
-#ifdef XAPIAN_LOCAL_DB_FALLBACK
 		std::exception_ptr eptr;
 		try {
-#endif  // XAPIAN_LOCAL_DB_FALLBACK
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			auto node = endpoint.node();
 			if (!node || node->empty()) {
@@ -411,7 +407,7 @@ Shard::reopen_readable()
 				throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
 			}
 			*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
-#ifdef XAPIAN_LOCAL_DB_FALLBACK
+			// Check for a local database fallback:
 			try {
 				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
@@ -451,7 +447,6 @@ Shard::reopen_readable()
 				trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint(endpoint), Endpoint(endpoint.path));
 			}
 		} catch (...) { }
-#endif  // XAPIAN_LOCAL_DB_FALLBACK
 	}
 	else
 #endif  // XAPIAND_CLUSTERING
