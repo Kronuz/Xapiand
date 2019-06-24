@@ -79,16 +79,16 @@ void delete_files(std::string_view path, const std::vector<std::string>& pattern
 					std::string file(path);
 					file.push_back('/');
 					file.append(n);
-					if (::remove(file.c_str()) != 0) {
-						L_ERR("File {} could not be deleted", n);
-						break;
+					if (::remove(file.c_str()) == 0) {
+						L_FS("File {} was deleted", n);
 					} else {
-						L_FS("File {} deleted", n);
+						L_ERR("File {} could not be deleted", n);
+						empty = false;
 					}
 				} else {
-					L_FS("File {} did not match", n);
+					L_FS("File {} is observed", n);
+					empty = false;
 				}
-				empty = false;
 				break;
 			case DT_LNK:  // This is a symbolic link.
 				L_FS("Symbolic link {} is observed", n);
