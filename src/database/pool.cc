@@ -132,7 +132,6 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 	refs(0),
 	finished(false),
 	locked(false),
-	local_revision(0),
 	renew_time(std::chrono::steady_clock::now()),
 	readables_available(0)
 {
@@ -285,7 +284,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 				if (shard_ref->is_local()) {
 					auto referenced_database_endpoint = database_pool.get(*this);
 					if (referenced_database_endpoint) {
-						auto revision = referenced_database_endpoint->local_revision.load();
+						auto revision = referenced_database_endpoint->get_revision();
 						referenced_database_endpoint.reset();
 						if (revision && revision != shard_ref->db()->get_revision()) {
 							L_DATABASE("Local writable shard has changed revision");
@@ -480,6 +479,72 @@ ShardEndpoint::is_used() const
 		writable ||
 		!readables.empty()
 	);
+}
+
+
+Xapian::rev
+ShardEndpoint::get_revision(const std::string& lower_name)
+{
+	L_CALL("ShardEndpoint::get_revision({})", repr(lower_name));
+
+	assert(!lower_name.empty());
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	auto it = revisions.find(lower_name);
+	if (it != revisions.end()) {
+		return it->second;
+	}
+	return 0;
+}
+
+
+Xapian::rev
+ShardEndpoint::get_revision()
+{
+	L_CALL("ShardEndpoint::get_revision()");
+
+	auto local_node = Node::get_local_node();
+	assert(local_node);
+	auto lower_name = local_node->lower_name();
+	assert(!lower_name.empty());
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	auto it = revisions.find(lower_name);
+	if (it != revisions.end()) {
+		return it->second;
+	}
+	return 0;
+}
+
+
+void
+ShardEndpoint::set_revision(const std::string& lower_name, Xapian::rev revision)
+{
+	L_CALL("ShardEndpoint::set_revision({})", revision);
+
+	assert(!lower_name.empty());
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	revisions[lower_name] = revision;
+}
+
+
+void
+ShardEndpoint::set_revision(Xapian::rev revision)
+{
+	L_CALL("ShardEndpoint::set_revision({})", revision);
+
+	auto local_node = Node::get_local_node();
+	assert(local_node);
+	auto lower_name = local_node->lower_name();
+	assert(!lower_name.empty());
+
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
+	revisions[lower_name] = revision;
 }
 
 
