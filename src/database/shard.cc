@@ -408,21 +408,36 @@ Shard::reopen_readable()
 			}
 			*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
 			// Check for a local database fallback:
-			try {
-				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				if (tmp.get_uuid() == new_database->get_uuid()) {
-					L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
-					// Handle remote endpoint and figure out if the endpoint is a local database
-					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-					*new_database = tmp;
-					local = true;
-				} else {
-					_incomplete.store(true, std::memory_order_relaxed);
+			auto nodes = XapiandManager::resolve_index_nodes(endpoint.path);
+			assert(nodes.size() == 1);
+			if (nodes.size() == 1) {
+				auto fallback = false;
+				auto local_node = Node::get_local_node();
+				const auto& shards = nodes[0];
+				for (const auto& shard_node : shards) {
+					if (Node::is_superset(local_node, shard_node)) {
+						fallback = true;
+						break;
+					}
 				}
-			} catch (const Xapian::DatabaseNotFoundError&) {
-			} catch (const Xapian::DatabaseOpeningError&) {
-				_incomplete.store(true, std::memory_order_relaxed);
+				if (fallback) {
+					try {
+						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+						Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+						if (tmp.get_uuid() == new_database->get_uuid()) {
+							L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
+							// Handle remote endpoint and figure out if the endpoint is a local database
+							RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+							*new_database = tmp;
+							local = true;
+						} else {
+							_incomplete.store(true, std::memory_order_relaxed);
+						}
+					} catch (const Xapian::DatabaseNotFoundError&) {
+					} catch (const Xapian::DatabaseOpeningError&) {
+						_incomplete.store(true, std::memory_order_relaxed);
+					}
+				}
 			}
 		} catch (const Xapian::DatabaseNotAvailableError&) {
 			eptr = std::current_exception();
