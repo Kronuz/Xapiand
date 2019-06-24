@@ -28,6 +28,9 @@
 #include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
 
+#include "database/lock.h"                  // for lock_shard
+#include "database/pool.h"                  // for DatabasePool
+#include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for query_field_t
 #include "error.hh"                         // for error:name, error::description
 #include "fs.hh"                            // for exists
@@ -43,8 +46,8 @@
  // #define L_DEBUG L_GREY
 // #undef L_CALL
 // #define L_CALL L_STACKED_DIM_GREY
-// #undef L_REPLICATION
-// #define L_REPLICATION L_ROSY_BROWN
+#undef L_REPLICATION
+#define L_REPLICATION L_ROSY_BROWN
 // #undef L_EV
 // #define L_EV L_MEDIUM_PURPLE
 
@@ -163,6 +166,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	}
 
 	bool replicated = false;
+	std::vector<std::vector<std::shared_ptr<const Node>>> nodes;
 
 	if (strings::startswith(args.dst_endpoint.path, ".xapiand/")) {
 		// Index databases are always replicated
@@ -172,24 +176,103 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::get_local_node();
-		auto nodes = XapiandManager::resolve_index_nodes(args.dst_endpoint.path);
-		for (const auto& shard_nodes : nodes) {
-			for (const auto& node : shard_nodes) {
-				if (Node::is_superset(local_node, node)) {
-					replicated = true;
-					break;
-				}
+		nodes = XapiandManager::resolve_index_nodes(args.dst_endpoint.path);
+		assert(nodes.size() == 1);
+		if (nodes.size() != 1) {
+			L_ERR("Ignored multi-shard endpoint");
+			assert(!args.cluster_database);
+			return;
+		}
+		const auto& shards = nodes[0];
+		for (const auto& node : shards) {
+			if (Node::is_superset(local_node, node)) {
+				replicated = true;
+				break;
 			}
 		}
 	}
 
 	if (!replicated) {
-		assert(!args.cluster_database);
-
 		if (exists(args.dst_endpoint.path + "/iamglass")) {
-			// If database was already there
-			L_WARNING("Stalled shard: {}", args.dst_endpoint.path);
+			// If we're not replicating it, but database is already there, try removing it.
+
+			// Get nodes for the endpoint.
+			if (nodes.empty()) {
+				nodes = XapiandManager::resolve_index_nodes(args.dst_endpoint.path);
+				assert(nodes.size() == 1);
+				if (nodes.size() != 1) {
+					L_ERR("Ignored multi-shard endpoint");
+					assert(!args.cluster_database);
+					return;
+				}
+			}
+
+			// Get fast write lock for replication or retry later
+			std::unique_ptr<lock_shard> lk_shard_ptr;
+			try {
+				lk_shard_ptr = std::make_unique<lock_shard>(args.dst_endpoint, DB_REPLICA, false);
+				lk_shard_ptr->lock(0, [=] {
+					// If it cannot checkout because database is busy, retry when ready...
+					::trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), args.dst_endpoint.path, args.src_endpoint, args.dst_endpoint);
+				});
+			} catch (const Xapian::DatabaseNotAvailableError&) {
+				L_REPLICATION("Stalled endpoint removal deferred (not available): {} -->  {}", repr(args.src_endpoint.to_string()), repr(args.dst_endpoint.to_string()));
+				return;
+			} catch (...) {
+				L_EXC("ERROR: Stalled endpoint removal ended with an unhandled exception");
+				return;
+			}
+
+			// Retrieve local database uuid and revision.
+			auto shard = lk_shard_ptr->locked();
+			auto db = shard->db();
+			auto uuid = db->get_uuid();
+			auto revision = db->get_revision();
+
+			size_t total = 0;
+			size_t ok = 0;
+
+			// Figure out remote uuid and revisions.
+			const auto& shards = nodes[0];
+			for (const auto& node : shards) {
+				++total;
+				try {
+					lock_shard lk_shard(Endpoint{args.dst_endpoint.path, node}, DB_WRITABLE, false);
+					auto remote_shard = lk_shard.lock(0);
+					auto remote_db = remote_shard->db();
+					auto remote_uuid = remote_db->get_uuid();
+					auto remote_revision = remote_db->get_revision();
+					if (remote_uuid == uuid && remote_revision >= revision) {
+						++ok;
+					}
+				} catch (...) { }
+			}
+
+			// If there are enough remote valid databases, remove the local one.
+			if (Node::quorum(total, ok)) {
+				L_REPLICATION("Remove stalled shard: {}", args.dst_endpoint.path);
+
+				// Close internal databases
+				shard->do_close();
+
+				// get exclusive lock
+				XapiandManager::database_pool()->lock(shard);
+
+				// Now we are sure no readers are using the database before removing the files
+				delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
+
+				// release exclusive lock
+				XapiandManager::database_pool()->unlock(shard);
+			} else {
+				L_WARNING("Stalled shard: {}", args.dst_endpoint.path);
+			}
+
+			return;
 		}
+	}
+
+	if (!replicated) {
+		assert(!args.cluster_database);
 		return;
 	}
 
