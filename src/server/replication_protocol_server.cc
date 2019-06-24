@@ -184,8 +184,8 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 			return;
 		}
 		const auto& shards = nodes[0];
-		for (const auto& node : shards) {
-			if (Node::is_superset(local_node, node)) {
+		for (const auto& shard_node : shards) {
+			if (Node::is_superset(local_node, shard_node)) {
 				replicated = true;
 				break;
 			}
@@ -234,10 +234,10 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 			// Figure out remote uuid and revisions.
 			const auto& shards = nodes[0];
-			for (const auto& node : shards) {
+			for (const auto& shard_node : shards) {
 				++total;
 				try {
-					lock_shard lk_shard(Endpoint{args.dst_endpoint.path, node}, DB_WRITABLE, false);
+					lock_shard lk_shard(Endpoint{args.dst_endpoint.path, shard_node}, DB_WRITABLE, false);
 					auto remote_shard = lk_shard.lock(0);
 					auto remote_db = remote_shard->db();
 					auto remote_uuid = remote_db->get_uuid();
