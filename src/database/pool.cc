@@ -997,6 +997,10 @@ DatabasePool::cleanup(bool immediate)
 					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return DropAction::leave;
 				}
+				if (endpoint_database_endpoint.second->is_pending()) {
+					L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
+					return DropAction::leave;
+				}
 				L_DATABASE("Evict endpoint from full LRU: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::evict;
 			}
@@ -1011,6 +1015,10 @@ DatabasePool::cleanup(bool immediate)
 			referenced_database_endpoint.reset();
 			if (endpoint_database_endpoint.second->is_used()) {
 				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
+				return DropAction::leave;
+			}
+			if (endpoint_database_endpoint.second->is_pending()) {
+				L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::leave;
 			}
 			L_DATABASE("Evict endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
