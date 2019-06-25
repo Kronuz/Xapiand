@@ -211,6 +211,17 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 
 
 void
+ReplicationProtocolClient::send_message(ReplicationMessageType type, const std::string& message)
+{
+	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", enum_name(type));
+
+	L_REPLICA_PROTO("<< send_message ({}): {}", enum_name(type), repr(message));
+
+	send_message(toUType(type), message);
+}
+
+
+void
 ReplicationProtocolClient::send_message(ReplicationReplyType type, const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::send_message({}, <message>)", enum_name(type));
@@ -451,7 +462,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		} while (to_revision < db_revision && --wal_iterations != 0);
 	}
 
-	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES, "");
+	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES);
 
 	auto ends = std::chrono::steady_clock::now();
 	_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
@@ -539,13 +550,11 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 	auto shard = lk_shard_ptr->locked();
 	auto db = shard->db();
 
-	auto local_node = Node::get_local_node();
-	message.append(serialise_string(local_node->lower_name()));
 	message.append(serialise_string(db->get_uuid()));
 	message.append(serialise_length(db->get_revision()));
 	message.append(serialise_string(shard->endpoint.path));
 
-	send_message(static_cast<ReplicationReplyType>(ReplicationMessageType::MSG_GET_CHANGESETS), message);
+	send_message(ReplicationMessageType::MSG_GET_CHANGESETS, message);
 }
 
 
@@ -739,7 +748,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_shard) {
-				switch_shard = XapiandManager::database_pool()->checkout(Endpoint(switch_shard_path), DB_REPLICA | DB_SYNCHRONOUS_WAL);
+				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_REPLICA | DB_SYNCHRONOUS_WAL);
 			}
 			switch_shard->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_shard.get());
@@ -1052,7 +1061,7 @@ ReplicationProtocolClient::operator()()
 			state = ReplicationState::REPLICATION_SERVER;
 			lk.unlock();
 			try {
-				send_message(static_cast<char>(ReplicationReplyType::REPLY_WELCOME), "");
+				send_message(ReplicationReplyType::REPLY_WELCOME);
 			} catch (...) {
 				lk.lock();
 				running = false;
