@@ -316,10 +316,12 @@ Shard::reopen_writable()
 	_local.store(local, std::memory_order_relaxed);
 	if (local) {
 		reopen_revision = new_database->get_revision();
-		auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
-		if (index_settings.shards.size() == 1) {
-			for (const auto& node_name : index_settings.shards[0].nodes) {
-				endpoint.set_revision(strings::lower(node_name), 0);
+		if ((flags & DB_REPLICA) != DB_REPLICA) {
+			auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
+			if (index_settings.shards.size() == 1) {
+				for (const auto& node_name : index_settings.shards[0].nodes) {
+					endpoint.set_revision(strings::lower(node_name), 0);
+				}
 			}
 		}
 		endpoint.set_revision(reopen_revision);
