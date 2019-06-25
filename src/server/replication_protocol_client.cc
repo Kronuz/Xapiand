@@ -301,9 +301,10 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	size_t _total_sent_bytes = total_sent_bytes;
 	auto begins = std::chrono::steady_clock::now();
 
-	const char *p = message.c_str();
+	const char *p = message.data();
 	const char *p_end = p + message.size();
 
+	auto remote_node_lower_name = std::string(unserialise_string(&p, p_end));
 	auto remote_uuid = unserialise_string(&p, p_end);
 	auto remote_revision = unserialise_length(&p, p_end);
 	auto endpoint_path = unserialise_string(&p, p_end);
@@ -328,12 +329,13 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
 	auto db_revision = db->get_revision();
-	lk_shard.unlock();
-
 	auto from_revision = remote_revision;
 	if (from_revision && uuid != remote_uuid) {
 		from_revision = 0;
 	}
+	lk_shard->endpoint.set_revision(remote_node_lower_name, from_revision);
+	lk_shard.unlock();
+
 
 	wal = std::make_unique<DatabaseWAL>(endpoint_path);
 	if (from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
@@ -537,6 +539,8 @@ ReplicationProtocolClient::reply_welcome(const std::string&)
 	auto shard = lk_shard_ptr->locked();
 	auto db = shard->db();
 
+	auto local_node = Node::get_local_node();
+	message.append(serialise_string(local_node->lower_name()));
 	message.append(serialise_string(db->get_uuid()));
 	message.append(serialise_length(db->get_revision()));
 	message.append(serialise_string(shard->endpoint.path));
@@ -595,12 +599,20 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		L(LOG_DEBUG, rgb(116, 100, 77), "REPLY_END_OF_CHANGES {} {{db:{}, rev:{}}}: No changes", repr(shard->endpoint.path), db->get_uuid(), db->get_revision(), switch_shard ? " (to switch database)" : "");
 	}
 
+	bool again = switching || changesets;
+
+	reset();
+
+	if (again) {
+		reply_welcome("");  // If we received any changes, ask again...
+		return;
+	}
+
 	if (cluster_database) {
 		cluster_database = false;
 		XapiandManager::set_cluster_database_ready();
 	}
 
-	reset();
 	lk_shard_ptr.reset();
 	destroy();
 	detach();
