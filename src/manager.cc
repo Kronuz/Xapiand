@@ -1986,11 +1986,14 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 
 		// Primary databases in .xapiand are always in the master
 		IndexSettingsShard shard;
-		auto local_node = Node::get_local_node();
-		shard.nodes.push_back(local_node ? local_node->name() : "");
 		auto leader_node = Node::get_leader_node();
-		if (!Node::is_superset(local_node, leader_node)) {
-			shard.nodes.push_back(leader_node ? leader_node->name() : "");
+		if (leader_node) {
+			shard.nodes.push_back(leader_node->name());
+		}
+		for (const auto& node : Node::nodes()) {
+			if (!Node::is_superset(node, leader_node)) {
+				shard.nodes.push_back(node->name());
+			}
 		}
 
 		if (normalized_path == ".xapiand/indices") {
