@@ -528,7 +528,14 @@ ShardEndpoint::set_revision(const std::string& lower_name, Xapian::rev revision)
 
 	std::lock_guard<std::mutex> lk (revisions_mtx);
 
-	revisions[lower_name] = revision;
+	auto it = revisions.find(lower_name);
+	if (it != revisions.end()) {
+		if (revision > it->second) {
+			it->second = revision;
+		}
+	} else {
+		revisions[lower_name] = revision;
+	}
 }
 
 
@@ -542,9 +549,14 @@ ShardEndpoint::set_revision(Xapian::rev revision)
 	auto lower_name = local_node->lower_name();
 	assert(!lower_name.empty());
 
-	std::lock_guard<std::mutex> lk (revisions_mtx);
-
-	revisions[lower_name] = revision;
+	auto it = revisions.find(lower_name);
+	if (it != revisions.end()) {
+		if (revision > it->second) {
+			it->second = revision;
+		}
+	} else {
+		revisions[lower_name] = revision;
+	}
 }
 
 
