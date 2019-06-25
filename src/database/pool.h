@@ -77,8 +77,9 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool finished;
 
 	std::atomic_bool locked;
-	std::mutex revisions_mtx;
+	mutable std::mutex revisions_mtx;
 	std::unordered_map<std::string, Xapian::rev> revisions;
+	std::atomic<Xapian::rev> expected_revision;
 	std::chrono::time_point<std::chrono::steady_clock> renew_time;
 
 	std::shared_ptr<Shard> writable;
@@ -110,6 +111,11 @@ public:
 
 	std::pair<size_t, size_t> count();
 
+	Xapian::rev get_revision(const std::string& lower_name) const;
+	Xapian::rev get_revision() const;
+	void set_revision(const std::string& lower_name, Xapian::rev revision);
+	void set_revision(Xapian::rev revision);
+
 	bool is_locked() const {
 		return locked.load(std::memory_order_relaxed);
 	}
@@ -120,10 +126,7 @@ public:
 
 	bool is_used() const;
 
-	Xapian::rev get_revision(const std::string& lower_name);
-	Xapian::rev get_revision();
-	void set_revision(const std::string& lower_name, Xapian::rev revision);
-	void set_revision(Xapian::rev revision);
+	bool is_pending() const;
 
 	std::string __repr__() const;
 	std::string dump_databases(int level) const;

@@ -31,6 +31,7 @@
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
 #include "node.h"                 // for Node
+#include "manager.h"              // for XapiandManager
 
 
 // #undef L_DEBUG
@@ -132,6 +133,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 	refs(0),
 	finished(false),
 	locked(false),
+	expected_revision(0),
 	renew_time(std::chrono::steady_clock::now()),
 	readables_available(0)
 {
@@ -225,7 +227,13 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 			}
 		}
 		auto wait_pred = [&]() {
-			return is_finished() || ((readables_available > 0 || readables.size() < database_pool.max_database_readers) && !is_locked() && !database_pool.is_locked(*this));
+			return is_finished() || (
+				(
+					readables_available > 0 ||
+					readables.size() < database_pool.max_database_readers
+				) &&
+				!is_locked() &&
+				!database_pool.is_locked(*this));
 		};
 		if (timeout) {
 			if (timeout > 0.0) {
@@ -466,24 +474,8 @@ ShardEndpoint::count()
 }
 
 
-bool
-ShardEndpoint::is_used() const
-{
-	L_CALL("ShardEndpoint::is_used()");
-
-	std::lock_guard<std::mutex> lk(mtx);
-
-	return (
-		refs != 0 ||
-		is_locked() ||
-		writable ||
-		!readables.empty()
-	);
-}
-
-
 Xapian::rev
-ShardEndpoint::get_revision(const std::string& lower_name)
+ShardEndpoint::get_revision(const std::string& lower_name) const
 {
 	L_CALL("ShardEndpoint::get_revision({})", repr(lower_name));
 
@@ -500,7 +492,7 @@ ShardEndpoint::get_revision(const std::string& lower_name)
 
 
 Xapian::rev
-ShardEndpoint::get_revision()
+ShardEndpoint::get_revision() const
 {
 	L_CALL("ShardEndpoint::get_revision()");
 
@@ -562,11 +554,64 @@ ShardEndpoint::set_revision(Xapian::rev revision)
 }
 
 
+bool
+ShardEndpoint::is_used() const
+{
+	L_CALL("ShardEndpoint::is_used()");
+
+	std::lock_guard<std::mutex> lk(mtx);
+
+	return (
+		refs != 0 ||
+		is_locked() ||
+		writable ||
+		!readables.empty()
+	);
+}
+
+
+bool
+ShardEndpoint::is_pending() const
+{
+	L_CALL("ShardEndpoint::is_pending()");
+
+	auto index_settings = XapiandManager::resolve_index_settings(path);
+	if (index_settings.shards.size() == 1) {
+		size_t total = 0;
+		size_t pending = 0;
+		auto expected_rev = expected_revision.load(std::memory_order_relaxed);
+		for (const auto& node_name : index_settings.shards[0].nodes) {
+			auto node = Node::get_node(node_name);
+			auto rev = get_revision(node->lower_name());
+			if (rev < expected_rev) {
+				++pending;
+			}
+			++total;
+		}
+		return Node::quorum(total, pending);
+	}
+	return false;
+}
+
+
 std::string
 ShardEndpoint::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}}} {}{}{}>",
+	std::vector<std::string> pending;
+	auto index_settings = XapiandManager::resolve_index_settings(path);
+	if (index_settings.shards.size() == 1) {
+		auto expected_rev = expected_revision.load(std::memory_order_relaxed);
+		for (const auto& node_name : index_settings.shards[0].nodes) {
+			auto node = Node::get_node(node_name);
+			auto rev = get_revision(node->lower_name());
+			if (rev < expected_rev) {
+				pending.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
+			}
+		}
+	}
+	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}, pending:[{}]}} {}{}{}>",
 		refs.load(),
+		strings::join(pending, ", "),
 		repr(to_string()),
 		is_locked() ? " " + RED + "(locked)" + STEEL_BLUE : "",
 		is_finished() ? " " + ORANGE + "(finished)" + STEEL_BLUE : "");
