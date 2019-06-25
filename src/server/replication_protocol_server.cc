@@ -176,7 +176,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::get_local_node();
-		nodes = XapiandManager::resolve_index_nodes(args.dst_endpoint.path);
+		nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
 		assert(nodes.size() == 1);
 		if (nodes.size() != 1) {
 			L_ERR("Ignored multi-shard endpoint");
@@ -198,7 +198,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 			// Get nodes for the endpoint.
 			if (nodes.empty()) {
-				nodes = XapiandManager::resolve_index_nodes(args.dst_endpoint.path);
+				nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
 				assert(nodes.size() == 1);
 				if (nodes.size() != 1) {
 					L_ERR("Ignored multi-shard endpoint");
