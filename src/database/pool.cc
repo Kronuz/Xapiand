@@ -549,6 +549,8 @@ ShardEndpoint::set_revision(Xapian::rev revision)
 	auto lower_name = local_node->lower_name();
 	assert(!lower_name.empty());
 
+	std::lock_guard<std::mutex> lk (revisions_mtx);
+
 	auto it = revisions.find(lower_name);
 	if (it != revisions.end()) {
 		if (revision > it->second) {
