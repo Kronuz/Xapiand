@@ -103,7 +103,7 @@ struct IndexSettingsShard {
 
 	std::vector<std::string> nodes;
 
-	IndexSettingsShard() : version(UNKNOWN_REVISION), modified(false) { }
+	IndexSettingsShard();
 };
 
 
@@ -119,26 +119,11 @@ struct IndexSettings {
 	size_t num_replicas_plus_master;
 	std::vector<IndexSettingsShard> shards;
 
-	IndexSettings() : version(UNKNOWN_REVISION), loaded(false), saved(false), modified(false), stalled(std::chrono::steady_clock::time_point::min()), num_shards(0), num_replicas_plus_master(0) { }
+	IndexSettings();
 
-	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
-		version(version),
-		loaded(loaded),
-		saved(saved),
-		modified(modified),
-		stalled(stalled),
-		num_shards(num_shards),
-		num_replicas_plus_master(num_replicas_plus_master),
-		shards(shards) {
-#ifndef NDEBUG
-		size_t replicas_size = 0;
-		for (auto& shard : shards) {
-			auto replicas_size_ = shard.nodes.size();
-			assert(replicas_size_ != 0 && (!replicas_size || replicas_size == replicas_size_));
-			replicas_size = replicas_size_;
-		}
-#endif
-	}
+	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
+
+	std::string __repr__() const;
 };
 
 

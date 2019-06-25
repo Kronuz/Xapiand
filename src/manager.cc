@@ -1548,6 +1548,59 @@ XapiandManager::sweep_primary_impl(size_t shards, const std::string& normalized_
 #endif
 
 
+IndexSettingsShard::IndexSettingsShard() :
+	version(UNKNOWN_REVISION),
+	modified(false)
+{
+}
+
+IndexSettings::IndexSettings() :
+	version(UNKNOWN_REVISION),
+	loaded(false),
+	saved(false),
+	modified(false),
+	stalled(std::chrono::steady_clock::time_point::min()),
+	num_shards(0),
+	num_replicas_plus_master(0)
+{
+}
+
+
+IndexSettings::IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+	version(version),
+	loaded(loaded),
+	saved(saved),
+	modified(modified),
+	stalled(stalled),
+	num_shards(num_shards),
+	num_replicas_plus_master(num_replicas_plus_master),
+	shards(shards)
+{
+#ifndef NDEBUG
+	size_t replicas_size = 0;
+	for (auto& shard : shards) {
+		auto replicas_size_ = shard.nodes.size();
+		assert(replicas_size_ != 0 && (!replicas_size || replicas_size == replicas_size_));
+		replicas_size = replicas_size_;
+	}
+#endif
+}
+
+
+std::string
+IndexSettings::__repr__() const {
+	std::vector<std::string> qq;
+	for (auto& ss : shards) {
+		std::vector<std::string> q;
+		for (auto& s : ss.nodes) {
+			q.push_back(repr(s));
+		}
+		qq.push_back(strings::format("[{}]", strings::join(q, ", ")));
+	}
+	return strings::format("[{}]", strings::join(qq, ", "));
+}
+
+
 void
 settle_replicas(IndexSettings& index_settings, std::vector<std::shared_ptr<const Node>>& nodes, size_t num_replicas_plus_master)
 {
