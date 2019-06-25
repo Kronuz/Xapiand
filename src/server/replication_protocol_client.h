@@ -60,6 +60,7 @@ ENUM_CLASS(ReplicationState, int,
 
 ENUM_CLASS(ReplicationMessageType, int,
 	MSG_GET_CHANGESETS,
+	MSG_SET_REVISION,
 	MSG_MAX
 )
 
@@ -74,6 +75,7 @@ ENUM_CLASS(ReplicationReplyType, int,
 	REPLY_DB_FILEDATA,          // Contents of a file in a DB copy
 	REPLY_DB_FOOTER,            // End of a whole DB copy
 	REPLY_CHANGESET,            // A changeset file is being sent
+	REPLY_DONE,                 // Finish
 	REPLY_MAX
 )
 
@@ -149,6 +151,7 @@ public:
 	void replication_client(ReplicationReplyType type, const std::string& message);
 
 	void msg_get_changesets(const std::string& message);
+	void msg_set_revision(const std::string& message);
 	void reply_welcome(const std::string& message);
 	void reply_exception(const std::string& message);
 	void reply_end_of_changes(const std::string& message);
@@ -158,6 +161,7 @@ public:
 	void reply_db_filedata(const std::string& message);
 	void reply_db_footer(const std::string& message);
 	void reply_changeset(const std::string& message);
+	void reply_done(const std::string& message);
 
 	char get_message(std::string &result, char max_type);
 	void send_message(char type_as_char, const std::string& message);

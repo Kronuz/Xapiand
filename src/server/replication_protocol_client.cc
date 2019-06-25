@@ -258,6 +258,9 @@ ReplicationProtocolClient::replication_server(ReplicationMessageType type, const
 			case ReplicationMessageType::MSG_GET_CHANGESETS:
 				msg_get_changesets(message);
 				return;
+			case ReplicationMessageType::MSG_SET_REVISION:
+				msg_set_revision(message);
+				return;
 			default: {
 				std::string errmsg("Unexpected message type ");
 				errmsg += std::to_string(toUType(type));
@@ -315,7 +318,6 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 	const char *p = message.data();
 	const char *p_end = p + message.size();
 
-	auto remote_node_lower_name = std::string(unserialise_string(&p, p_end));
 	auto remote_uuid = unserialise_string(&p, p_end);
 	auto remote_revision = unserialise_length(&p, p_end);
 	auto endpoint_path = unserialise_string(&p, p_end);
@@ -333,20 +335,17 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		return;
 	}
 
-	Xapian::Database* db;
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_WRITABLE, false);
 
-	lock_shard lk_shard(Endpoint(endpoint_path), DB_WRITABLE, false);
-
-	db = lk_shard.lock()->db();
+	auto db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
 	auto db_revision = db->get_revision();
+	lk_shard.unlock();
+
 	auto from_revision = remote_revision;
 	if (from_revision && uuid != remote_uuid) {
 		from_revision = 0;
 	}
-	lk_shard->endpoint.set_revision(remote_node_lower_name, from_revision);
-	lk_shard.unlock();
-
 
 	wal = std::make_unique<DatabaseWAL>(endpoint_path);
 	if (from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
@@ -475,6 +474,43 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 
 void
+ReplicationProtocolClient::msg_set_revision(const std::string& message)
+{
+	L_CALL("ReplicationProtocolClient::msg_set_revision(<message>)");
+
+	L_REPLICATION("SET_REVISION");
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node_lower_name = std::string(unserialise_string(&p, p_end));
+	auto remote_uuid = unserialise_string(&p, p_end);
+	auto remote_revision = unserialise_length(&p, p_end);
+	auto endpoint_path = unserialise_string(&p, p_end);
+
+	if (endpoint_path.empty()) {
+		send_message(ReplicationReplyType::REPLY_FAIL, "Database must have a valid path");
+		reset();
+		lk_shard_ptr.reset();
+		destroy();
+		detach();
+		return;
+	}
+
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_WRITABLE, false);
+
+	auto db = lk_shard.lock()->db();
+	auto uuid = db->get_uuid();
+	if (uuid == remote_uuid) {
+		lk_shard->endpoint.set_revision(remote_node_lower_name, remote_revision);
+	}
+	lk_shard.unlock();
+
+	send_message(ReplicationReplyType::REPLY_DONE);
+}
+
+
+void
 ReplicationProtocolClient::replication_client(ReplicationReplyType type, const std::string& message)
 {
 	L_CALL("ReplicationProtocolClient::replication_client({}, <message>)", enum_name(type));
@@ -512,6 +548,9 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 				return;
 			case ReplicationReplyType::REPLY_CHANGESET:
 				reply_changeset(message);
+				return;
+			case ReplicationReplyType::REPLY_DONE:
+				reply_done(message);
 				return;
 			default: {
 				std::string errmsg("Unexpected message type ");
@@ -608,23 +647,21 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		L(LOG_DEBUG, rgb(116, 100, 77), "REPLY_END_OF_CHANGES {} {{db:{}, rev:{}}}: No changes", repr(shard->endpoint.path), db->get_uuid(), db->get_revision(), switch_shard ? " (to switch database)" : "");
 	}
 
-	bool again = switching || changesets;
-
-	reset();
-
-	if (again) {
-		reply_welcome("");  // If we received any changes, ask again...
-		return;
-	}
-
 	if (cluster_database) {
 		cluster_database = false;
 		XapiandManager::set_cluster_database_ready();
 	}
 
-	lk_shard_ptr.reset();
-	destroy();
-	detach();
+	auto local_node = Node::get_local_node();
+	assert(local_node && !local_node->lower_name().empty());
+
+	std::string reply;
+	reply.append(serialise_string(local_node->lower_name()));
+	reply.append(serialise_string(db->get_uuid()));
+	reply.append(serialise_length(db->get_revision()));
+	reply.append(serialise_string(shard->endpoint.path));
+
+	send_message(ReplicationMessageType::MSG_SET_REVISION, reply);
 }
 
 
@@ -767,6 +804,18 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 
 	++changesets;
 	L_REPLICATION("CHANGESET ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint.path));
+}
+
+
+void
+ReplicationProtocolClient::reply_done(const std::string&)
+{
+	L_CALL("ReplicationProtocolClient::reply_done(<message>)");
+
+	reset();
+	lk_shard_ptr.reset();
+	destroy();
+	detach();
 }
 
 
