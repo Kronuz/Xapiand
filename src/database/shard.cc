@@ -317,15 +317,12 @@ Shard::reopen_writable()
 	if (local) {
 		reopen_revision = new_database->get_revision();
 		auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
-		assert(index_settings.shards.size() == 1);
 		if (index_settings.shards.size() == 1) {
 			for (const auto& node_name : index_settings.shards[0].nodes) {
-				endpoint.set_revision(strings::lower(node_name), reopen_revision);
+				endpoint.set_revision(strings::lower(node_name), 0);
 			}
-			assert(endpoint.get_revision() == reopen_revision);  // local node should be primary or a replica set above
-		} else {
-			endpoint.set_revision(reopen_revision);
 		}
+		endpoint.set_revision(reopen_revision);
 	}
 
 	if (is_transactional()) {
@@ -418,41 +415,40 @@ Shard::reopen_readable()
 		*new_database = Xapian::Remote::open(host, port, 10000, 10000, _flags, endpoint.path);
 		// Check for a local database fallback:
 		auto index_settings = XapiandManager::resolve_index_settings(endpoint.path);
-		assert(index_settings.shards.size() == 1);
 		if (index_settings.shards.size() == 1) {
-#ifndef NDEBUG
-			auto fallback = false;
 			auto local_node = Node::get_local_node();
-			for (const auto& node_name : index_settings.shards[0].nodes) {
+			auto fallback = false;
+			auto& nodes = index_settings.shards[0].nodes;
+			for (const auto& node_name : nodes) {
 				if (strings::lower(node_name) == local_node->lower_name()) {
 					fallback = true;
 					break;
 				}
 			}
-			assert(fallback);
-#endif
-			try {
-				RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-				Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
-				if (tmp.get_uuid() == new_database->get_uuid()) {
-					L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
-					// Handle remote endpoint and figure out if the endpoint is a local database
+			if (fallback) {
+				try {
 					RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-					*new_database = tmp;
-					local = true;
-				} else {
+					Xapian::Database tmp = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
+					if (tmp.get_uuid() == new_database->get_uuid()) {
+						L_DATABASE("Endpoint {} fallback to local shard!", repr(endpoint.to_string()));
+						// Handle remote endpoint and figure out if the endpoint is a local database
+						RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+						*new_database = tmp;
+						local = true;
+					} else {
+						_incomplete.store(true, std::memory_order_relaxed);
+					}
+				} catch (const Xapian::DatabaseNotFoundError&) {
+					_incomplete.store(true, std::memory_order_relaxed);
+				} catch (const Xapian::DatabaseOpeningError&) {
 					_incomplete.store(true, std::memory_order_relaxed);
 				}
-			} catch (const Xapian::DatabaseNotFoundError&) {
-				_incomplete.store(true, std::memory_order_relaxed);
-			} catch (const Xapian::DatabaseOpeningError&) {
-				_incomplete.store(true, std::memory_order_relaxed);
-			}
-			if (XapiandManager::state() == XapiandManager::State::READY) {
-				// Try triggering replication from primary shard:
-				try {
-					trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, Node::get_node(index_settings.shards[0].nodes[0])}, Endpoint{endpoint.path});
-				} catch (...) { }
+				if (XapiandManager::state() == XapiandManager::State::READY) {
+					// Try triggering replication from primary shard:
+					try {
+						trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, Node::get_node(nodes[0])}, Endpoint{endpoint.path});
+					} catch (...) { }
+				}
 			}
 		}
 	}
