@@ -1913,7 +1913,7 @@ XapiandManager::resolve_nodes(const IndexSettings& index_settings)
 }
 
 
-const IndexSettings
+IndexSettings
 XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, bool reload, bool rebuild, bool clear)
 {
 	L_CALL("XapiandManager::resolve_index_settings_impl({}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", rebuild, clear);
