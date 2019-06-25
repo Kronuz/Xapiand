@@ -1762,6 +1762,7 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 			}
 		}
 		index_settings.saved = true;
+		index_settings.loaded = true;
 	}
 }
 
@@ -1809,7 +1810,7 @@ load_settings(const std::string& unsharded_normalized_path)
 	assert(!nodes.empty());
 
 	try {
-		IndexSettings settings;
+		IndexSettings index_settings;
 
 		Endpoint endpoint(".xapiand/indices");
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
@@ -1824,7 +1825,7 @@ load_settings(const std::string& unsharded_normalized_path)
 			if (!version_val.is_number()) {
 				THROW(Error, "Inconsistency in '{}' configured for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 			}
-			settings.version = version_val.u64();
+			index_settings.version = version_val.u64();
 		}
 
 		it = obj.find("number_of_replicas");
@@ -1833,7 +1834,7 @@ load_settings(const std::string& unsharded_normalized_path)
 			if (!n_replicas_val.is_number()) {
 				THROW(Error, "Inconsistency in 'number_of_replicas' configured for {}: Invalid number", repr(endpoint.to_string()));
 			}
-			settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
+			index_settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
 		}
 
 		it = obj.find("number_of_shards");
@@ -1842,31 +1843,32 @@ load_settings(const std::string& unsharded_normalized_path)
 			if (!n_shards_val.is_number()) {
 				THROW(Error, "Inconsistency in 'number_of_shards' configured for {}: Invalid number", repr(endpoint.to_string()));
 			}
-			settings.num_shards = n_shards_val.u64();
+			index_settings.num_shards = n_shards_val.u64();
 			size_t replicas_size = 0;
-			for (size_t shard_num = 1; shard_num <= settings.num_shards; ++shard_num) {
+			for (size_t shard_num = 1; shard_num <= index_settings.num_shards; ++shard_num) {
 				auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, shard_num);
 				auto replica_document = db_handler.get_document(shard_normalized_path);
 				auto shard = load_replicas(endpoint, replica_document.get_obj());
 				auto replicas_size_ = shard.nodes.size();
-				if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
+				if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
 					THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 				}
 				replicas_size = replicas_size_;
-				settings.shards.push_back(std::move(shard));
+				index_settings.shards.push_back(std::move(shard));
 			}
 		}
 
-		if (!settings.num_shards) {
+		if (!index_settings.num_shards) {
 			auto shard = load_replicas(endpoint, obj);
 			auto replicas_size_ = shard.nodes.size();
-			if (replicas_size_ == 0 || replicas_size_ > settings.num_replicas_plus_master) {
+			if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master) {
 				THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 			}
-			settings.shards.push_back(std::move(shard));
+			index_settings.shards.push_back(std::move(shard));
 		}
 
-		return settings;
+		index_settings.loaded = true;
+		return index_settings;
 	} catch (const Xapian::DocNotFoundError&) {
 	} catch (const Xapian::DatabaseNotFoundError&) {
 	}
@@ -2041,7 +2043,10 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 
 		if (!index_settings.shards.empty()) {
 			if (num_shards != index_settings.num_shards) {
-				THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+				if (index_settings.loaded) {
+					THROW(ClientError, "It is not allowed to change 'number_of_shards' setting.");
+				}
+				rebuild = true;
 			}
 			if (num_replicas_plus_master != index_settings.num_replicas_plus_master) {
 				rebuild = true;
@@ -2093,6 +2098,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 			lk.lock();
 			resolve_index_lru[unsharded_normalized_path] = IndexSettings(
 				index_settings.version,
+				index_settings.loaded,
 				index_settings.saved,
 				index_settings.modified,
 				index_settings.stalled,
@@ -2107,6 +2113,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 				shard_shards.push_back(shard);
 				resolve_index_lru[shard_normalized_path] = IndexSettings(
 					shard.version,
+					index_settings.loaded,
 					index_settings.saved,
 					shard.modified,
 					index_settings.stalled,
@@ -2128,6 +2135,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 					shard_shards.push_back(shard);
 					shard_settings = IndexSettings(
 						shard.version,
+						index_settings.loaded,
 						index_settings.saved,
 						shard.modified,
 						index_settings.stalled,

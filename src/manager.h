@@ -109,6 +109,7 @@ struct IndexSettingsShard {
 
 struct IndexSettings {
 	Xapian::rev version;
+	bool loaded;
 	bool saved;
 	bool modified;
 
@@ -118,10 +119,11 @@ struct IndexSettings {
 	size_t num_replicas_plus_master;
 	std::vector<IndexSettingsShard> shards;
 
-	IndexSettings() : version(UNKNOWN_REVISION), saved(false), modified(false), stalled(std::chrono::steady_clock::time_point::min()), num_shards(0), num_replicas_plus_master(0) { }
+	IndexSettings() : version(UNKNOWN_REVISION), loaded(false), saved(false), modified(false), stalled(std::chrono::steady_clock::time_point::min()), num_shards(0), num_replicas_plus_master(0) { }
 
-	IndexSettings(Xapian::rev version, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
 		version(version),
+		loaded(loaded),
 		saved(saved),
 		modified(modified),
 		stalled(stalled),
