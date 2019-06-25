@@ -179,7 +179,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
 		assert(nodes.size() == 1);
 		if (nodes.size() != 1) {
-			L_ERR("Ignored multi-shard endpoint");
+			L_ERR("Replication ignored endpoint: {}", repr(args.dst_endpoint.to_string()));
 			assert(!args.cluster_database);
 			return;
 		}
@@ -201,7 +201,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 				nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
 				assert(nodes.size() == 1);
 				if (nodes.size() != 1) {
-					L_ERR("Ignored multi-shard endpoint");
+					L_ERR("Replication ignored endpoint: {}", repr(args.dst_endpoint.to_string()));
 					assert(!args.cluster_database);
 					return;
 				}
