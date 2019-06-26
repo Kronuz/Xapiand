@@ -897,8 +897,8 @@ DatabaseWALWriterThread::operator()()
 	_wal_writer->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_wal_writer->_finished.load(std::memory_order_acquire)) {
 		DatabaseWALWriterTask task;
-		_queue.wait_dequeue(task);
-		if likely(task) {
+		auto valid = _queue.wait_dequeue_timed(task, 100000);  // wait 100ms
+		if likely(valid && task) {
 			try {
 				task(*this);
 			} catch (...) {

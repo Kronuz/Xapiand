@@ -331,8 +331,8 @@ ThreadPoolThread<TaskType, thread_policy>::operator()()
 	_pool->_workers.fetch_add(1, std::memory_order_relaxed);
 	while (!_pool->_finished.load(std::memory_order_acquire)) {
 		TaskWrapper<TaskType> task;
-		_pool->_queue.wait_dequeue(task);
-		if likely(task) {
+		auto valid = _pool->_queue.wait_dequeue_timed(task, 100000);  // wait 100ms
+		if likely(valid && task) {
 			_pool->_running.fetch_add(1, std::memory_order_relaxed);
 			_pool->_enqueued.fetch_sub(1, std::memory_order_release);
 			try {
