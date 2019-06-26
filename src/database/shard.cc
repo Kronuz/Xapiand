@@ -723,7 +723,6 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
 			auto prior_revision = wdb->get_revision();
-			assert(!local || prior_revision == endpoint.get_revision());
 			auto transaction = transactional();
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
