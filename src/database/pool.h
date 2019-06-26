@@ -199,6 +199,8 @@ public:
 
 	bool clear();
 
+	bool is_pending() const;
+
 	std::pair<size_t, size_t> count();
 
 	std::string __repr__() const;

@@ -1362,7 +1362,7 @@ XapiandManager::ready_to_end_remote()
 bool
 XapiandManager::ready_to_end_replication()
 {
-	return !replication_clients;
+	return !replication_clients && !database_pool->is_pending();
 }
 
 
