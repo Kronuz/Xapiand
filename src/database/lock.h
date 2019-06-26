@@ -25,6 +25,7 @@
 #include <cassert>              // for assert
 
 #include "database/pool.h"      // for DatabasePool (database_pool)
+#include "database/shard.h"     // for Shard
 #include "endpoint.h"           // for Endpoints
 #include "manager.h"            // for XapiandManager
 #include "xapian.h"             // for Xapian::Database
@@ -63,7 +64,11 @@ public:
 	{
 		if (!_locked) {
 			assert(_locks == 0);
-			_locked = XapiandManager::database_pool()->checkout(endpoint, flags, std::forward<Args>(args)...);
+			auto manager = XapiandManager::manager();
+			if (!manager) {
+				throw Xapian::AssertionError("No manager");
+			}
+			_locked = manager->database_pool->checkout(endpoint, flags, std::forward<Args>(args)...);
 		}
 		++_locks;
 		return _locked;
@@ -73,7 +78,13 @@ public:
 	{
 		if (_locks > 0 && --_locks == 0) {
 			assert(_locked);
-			XapiandManager::database_pool()->checkin(_locked);
+			auto manager = XapiandManager::manager();
+			if (manager) {
+				manager->database_pool->checkin(_locked);
+			} else {
+				_locked->_busy.store(false);
+				_locked.reset();
+			}
 		}
 		return _locks;
 	}

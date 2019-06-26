@@ -83,7 +83,8 @@ ReplicationProtocolServer::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		if (now != 0 || !XapiandManager::replication_clients()) {
+		auto manager = XapiandManager::manager();
+		if (now != 0 || (manager && !manager->replication_clients)) {
 			stop(false);
 			destroy(false);
 
@@ -278,13 +279,13 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 				shard->do_close();
 
 				// get exclusive lock
-				XapiandManager::database_pool()->lock(shard);
+				XapiandManager::manager(true)->database_pool->lock(shard);
 
 				// Now we are sure no readers are using the database before removing the files
 				delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
 
 				// release exclusive lock
-				XapiandManager::database_pool()->unlock(shard);
+				XapiandManager::manager(true)->database_pool->unlock(shard);
 			} else {
 				L_WARNING("Stalled shard: {}", args.dst_endpoint.path);
 			}

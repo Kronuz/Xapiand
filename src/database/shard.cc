@@ -438,7 +438,7 @@ Shard::reopen_readable()
 				} catch (const Xapian::DatabaseOpeningError&) {
 					_incomplete.store(true, std::memory_order_relaxed);
 				}
-				if (XapiandManager::state() == XapiandManager::State::READY) {
+				if (XapiandManager::get_state() == XapiandManager::State::READY) {
 					// Try triggering replication from primary shard:
 					try {
 						trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, Node::get_node(nodes[0])}, Endpoint{endpoint.path});
@@ -768,7 +768,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_commit(*this, send_update); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_commit(*this, send_update); }
 #endif
 
 	return true;
@@ -907,7 +907,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_delete_document(*this, shard_did); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_delete_document(*this, shard_did); }
 #endif
 
 	if (commit_) {
@@ -1010,7 +1010,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_delete_document(*this, shard_did); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_delete_document(*this, shard_did); }
 #endif
 
 	if (commit_) {
@@ -1203,7 +1203,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document(*this, info.did, std::move(doc));
+		XapiandManager::manager(true)->wal_writer->write_replace_document(*this, info.did, std::move(doc));
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
@@ -1333,7 +1333,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document(*this, info.did, std::move(doc));
+		XapiandManager::manager(true)->wal_writer->write_replace_document(*this, info.did, std::move(doc));
 	}
 #endif  // XAPIAND_DATABASE_WAL
 
@@ -1545,7 +1545,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 			doc.set_data(pushed.second);  // restore data with blobs
 		}
 #endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::wal_writer()->write_replace_document(*this, info.did, std::move(doc));
+		XapiandManager::manager(true)->wal_writer->write_replace_document(*this, info.did, std::move(doc));
 	}
 #endif
 
@@ -1605,7 +1605,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_add_spelling(*this, word, freqinc); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_add_spelling(*this, word, freqinc); }
 #endif
 
 	if (commit_) {
@@ -1664,7 +1664,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_remove_spelling(*this, word, freqdec); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_remove_spelling(*this, word, freqdec); }
 #endif
 
 	if (commit_) {
@@ -1922,7 +1922,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	}
 
 #if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::wal_writer()->write_set_metadata(*this, key, value); }
+	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_set_metadata(*this, key, value); }
 #endif
 
 	if (commit_) {

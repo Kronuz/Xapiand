@@ -603,9 +603,11 @@ ShardEndpoint::__repr__() const
 		auto expected_rev = expected_revision.load(std::memory_order_relaxed);
 		for (const auto& node_name : index_settings.shards[0].nodes) {
 			auto node = Node::get_node(node_name);
-			auto rev = get_revision(node->lower_name());
-			if (rev < expected_rev) {
-				pending.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
+			if (node && !node->empty()) {
+				auto rev = get_revision(node->lower_name());
+				if (rev < expected_rev) {
+					pending.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
+				}
 			}
 		}
 	}

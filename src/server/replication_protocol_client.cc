@@ -90,13 +90,16 @@ ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worke
 	  cluster_database(cluster_database_),
 	  changesets(0)
 {
-	++XapiandManager::replication_clients();
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		++manager->replication_clients;
+	}
 
 	Metrics::metrics()
 		.xapiand_replication_connections
 		.Increment();
 
-	L_CONN("New Replication Protocol Client, {} client(s) of a total of {} connected.", XapiandManager::replication_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Replication Protocol Client, {} client(s) of a total of {} connected.", manager ? manager->replication_clients.load() : 0, manager ? manager->total_clients.load() : 0);
 }
 
 
@@ -106,9 +109,11 @@ ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 		reset();
 		lk_shard_ptr.reset();
 
-		if (XapiandManager::replication_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of replication clients");
-			sig_exit(-EX_SOFTWARE);
+		if (auto manager = XapiandManager::manager()) {
+			if (manager->replication_clients.fetch_sub(1) == 0) {
+				L_CRIT("Inconsistency in number of replication clients");
+				sig_exit(-EX_SOFTWARE);
+			}
 		}
 
 		if (file_descriptor != -1) {
@@ -145,7 +150,10 @@ ReplicationProtocolClient::reset()
 
 	if (switch_shard) {
 		switch_shard->close();
-		XapiandManager::database_pool()->checkin(switch_shard);
+		auto manager = XapiandManager::manager();
+		if (manager) {
+			manager->database_pool->checkin(switch_shard);
+		}
 	}
 
 	if (!switch_shard_path.empty()) {
@@ -620,20 +628,27 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		// Close internal databases
 		shard->do_close(false, false, Shard::Transaction::none);
 
+		auto manager = XapiandManager::manager();
 		if (switch_shard) {
 			switch_shard->close();
-			XapiandManager::database_pool()->checkin(switch_shard);
+			if (manager) {
+				manager->database_pool->checkin(switch_shard);
+			}
 		}
 
 		// get exclusive lock
-		XapiandManager::database_pool()->lock(shard);
+		if (manager) {
+			manager->database_pool->lock(shard);
+		}
 
 		// Now we are sure no readers are using the database before moving the files
 		delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
 		move_files(switch_shard_path, shard->endpoint.path);
 
 		// release exclusive lock
-		XapiandManager::database_pool()->unlock(shard);
+		if (manager) {
+			manager->database_pool->unlock(shard);
+		}
 	}
 
 	auto db = shard->db();
@@ -785,7 +800,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_shard) {
-				switch_shard = XapiandManager::database_pool()->checkout(Endpoint{switch_shard_path}, DB_REPLICA | DB_SYNCHRONOUS_WAL);
+				switch_shard = XapiandManager::manager(true)->database_pool->checkout(Endpoint{switch_shard_path}, DB_REPLICA | DB_SYNCHRONOUS_WAL);
 			}
 			switch_shard->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_shard.get());
@@ -845,7 +860,8 @@ ReplicationProtocolClient::shutdown_impl(long long asap, long long now)
 
 	if (asap) {
 		shutting_down = true;
-		if (now != 0 || !XapiandManager::replication_clients() || is_idle()) {
+		auto manager = XapiandManager::manager();
+		if (now != 0 || (manager && !manager->replication_clients) || is_idle()) {
 			stop(false);
 			destroy(false);
 			detach();
@@ -878,7 +894,10 @@ ReplicationProtocolClient::init_replication(int sock_) noexcept
 
 	// And start a runner.
 	running = true;
-	XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
+	}
 	return true;
 }
 
@@ -898,7 +917,10 @@ ReplicationProtocolClient::init_replication(const std::string& host, int port, c
 	if (init_replication_protocol(host, port, src_endpoint, dst_endpoint)) {
 		// And start a runner.
 		running = true;
-		XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
+		auto manager = XapiandManager::manager();
+		if (manager) {
+			manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
+		}
 		return true;
 	}
 	return false;
@@ -1006,7 +1028,10 @@ ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
 				running = true;
-				XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
+				auto manager = XapiandManager::manager();
+				if (manager) {
+					manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
+				}
 			} else {
 				// There should be a runner, just enqueue message.
 				messages.push_back(Buffer(type, p, len));
@@ -1051,7 +1076,10 @@ ReplicationProtocolClient::on_read_file_done()
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
 			running = true;
-			XapiandManager::replication_client_pool()->enqueue(share_this<ReplicationProtocolClient>());
+			auto manager = XapiandManager::manager();
+			if (manager) {
+				manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
+			}
 		} else {
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));

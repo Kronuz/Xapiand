@@ -152,28 +152,28 @@ void sig_exit(int sig) {
 
 XapiandManager::XapiandManager()
 	: Worker(std::weak_ptr<Worker>{}, loop_ref_nil, 0),
-	  _total_clients(0),
-	  _http_clients(0),
-	  _remote_clients(0),
-	  _replication_clients(0),
-	  _schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
-	  _database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
-	  _wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
-	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
-	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
+	  total_clients(0),
+	  http_clients(0),
+	  remote_clients(0),
+	  replication_clients(0),
+	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
+	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
+	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
+	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
+	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
-	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
-	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
-	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
+	  remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
+	  remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
+	  replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
+	  replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
-	  _doc_matcher_pool(std::make_unique<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
-	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
-	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
+	  doc_matcher_pool(std::make_unique<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
+	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
+	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
+	  state(State::RESET),
+	  node_name(opts.node_name),
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
-	  _state(State::RESET),
-	  _node_name(opts.node_name),
 	  _new_cluster(0),
 	  _process_start(std::chrono::steady_clock::now()),
 	  atom_sig(0)
@@ -183,28 +183,28 @@ XapiandManager::XapiandManager()
 
 XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::steady_clock> process_start_)
 	: Worker(std::weak_ptr<Worker>{}, ev_loop_, ev_flags_),
-	  _total_clients(0),
-	  _http_clients(0),
-	  _remote_clients(0),
-	  _replication_clients(0),
-	  _schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
-	  _database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
-	  _wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
-	  _http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
-	  _http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
+	  total_clients(0),
+	  http_clients(0),
+	  remote_clients(0),
+	  replication_clients(0),
+	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
+	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
+	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
+	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
+	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
-	  _remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
-	  _remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
-	  _replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
-	  _replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
+	  remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
+	  remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
+	  replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
+	  replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
-	  _doc_matcher_pool(std::make_unique<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
-	  _doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
-	  _doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
+	  doc_matcher_pool(std::make_unique<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>>("DM{:02}", opts.num_doc_matchers)),
+	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
+	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
+	  state(State::RESET),
+	  node_name(opts.node_name),
 	  _shutdown_asap(0),
 	  _shutdown_now(0),
-	  _state(State::RESET),
-	  _node_name(opts.node_name),
 	  _new_cluster(0),
 	  _process_start(process_start_),
 	  try_shutdown_timer(*ev_loop),
@@ -275,13 +275,13 @@ XapiandManager::load_node_name()
 
 
 void
-XapiandManager::save_node_name(std::string_view node_name)
+XapiandManager::save_node_name(std::string_view name)
 {
-	L_CALL("XapiandManager::save_node_name({})", node_name);
+	L_CALL("XapiandManager::save_node_name({})", name);
 
 	int fd = io::open(".xapiand/node", O_WRONLY | O_CREAT, 0644);
 	if (fd != -1) {
-		if (io::write(fd, node_name.data(), node_name.size()) != static_cast<ssize_t>(node_name.size())) {
+		if (io::write(fd, name.data(), name.size()) != static_cast<ssize_t>(name.size())) {
 			THROW(Error, "Cannot write in node file");
 		}
 		io::close(fd);
@@ -292,21 +292,21 @@ XapiandManager::save_node_name(std::string_view node_name)
 
 
 std::string
-XapiandManager::set_node_name(std::string_view node_name)
+XapiandManager::set_node_name(std::string_view name)
 {
-	L_CALL("XapiandManager::set_node_name({})", node_name);
+	L_CALL("XapiandManager::set_node_name({})", name);
 
-	_node_name = load_node_name();
+	node_name = load_node_name();
 
-	if (_node_name.empty()) {
-		if (!node_name.empty()) {
-			// Ignore empty _node_name
-			_node_name = node_name;
-			save_node_name(_node_name);
+	if (node_name.empty()) {
+		if (!name.empty()) {
+			// Ignore empty node_name
+			node_name = name;
+			save_node_name(node_name);
 		}
 	}
 
-	return _node_name;
+	return node_name;
 }
 
 
@@ -407,9 +407,9 @@ XapiandManager::signal_sig_impl()
 		case SIGINFO:
 #endif
 #ifdef XAPIAND_CLUSTERING
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), _schemas->dump_schemas(), Node::dump_nodes());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas(), Node::dump_nodes());
 #else
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", dump_callstacks(), dump_tree(), _database_pool->dump_databases(), _schemas->dump_schemas());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas());
 #endif
 			break;
 	}
@@ -495,7 +495,7 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 		stop(false);
 		destroy(false);
 
-		if (now != 0 || !XapiandManager::total_clients()) {
+		if (now != 0 || !total_clients) {
 			if (is_runner()) {
 				break_loop(false);
 			} else {
@@ -527,20 +527,20 @@ XapiandManager::init()
 	auto node_copy = std::make_unique<Node>(*local_node);
 
 	// Setup node from node database directory
-	std::string node_name(load_node_name());
-	if (!node_name.empty()) {
-		if (!_node_name.empty() && strings::lower(_node_name) != strings::lower(node_name)) {
-			_node_name = "~";
+	std::string name = load_node_name();
+	if (!name.empty()) {
+		if (!node_name.empty() && strings::lower(node_name) != strings::lower(name)) {
+			node_name = "~";
 		} else {
-			_node_name = node_name;
+			node_name = name;
 		}
 	}
 	if (opts.solo) {
-		if (_node_name.empty()) {
-			_node_name = name_generator();
+		if (node_name.empty()) {
+			node_name = name_generator();
 		}
 	}
-	node_copy->name(_node_name);
+	node_copy->name(node_name);
 
 	if (!snooping) {
 		// Set addr in local node
@@ -588,7 +588,7 @@ XapiandManager::run()
 	L_CALL("XapiandManager::run()");
 
 	try {
-		if (_node_name == "~") {
+		if (node_name == "~") {
 			L_CRIT("Node name {} doesn't match with the one in the cluster's database!", opts.node_name);
 			throw SystemExit(EX_CONFIG);
 		}
@@ -630,11 +630,11 @@ XapiandManager::start_discovery()
 		auto msg = strings::format("Discovering cluster {} by listening on ", repr(opts.cluster_name));
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
-		_discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
-		msg += _discovery->getDescription();
-		_discovery->run();
+		discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
+		msg += discovery->getDescription();
+		discovery->run();
 
-		_discovery->start();
+		discovery->start();
 
 		L_NOTICE(msg);
 	}
@@ -747,15 +747,15 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	}
 
 	// Set node as ready!
-	_node_name = set_node_name(local_node->name());
-	if (strings::lower(_node_name) != local_node->lower_name()) {
+	node_name = set_node_name(local_node->name());
+	if (strings::lower(node_name) != local_node->lower_name()) {
 		auto local_node_copy = std::make_unique<Node>(*local_node);
-		local_node_copy->name(_node_name);
+		local_node_copy->name(node_name);
 		Node::set_local_node(std::shared_ptr<const Node>(local_node_copy.release()));
 		local_node = Node::get_local_node();
 	}
 
-	Metrics::metrics({{NODE_LABEL, _node_name}, {CLUSTER_LABEL, opts.cluster_name}});
+	Metrics::metrics({{NODE_LABEL, node_name}, {CLUSTER_LABEL, opts.cluster_name}});
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -767,14 +767,14 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->to_string());
 			_new_cluster = 2;
 			// Replicate cluster database from the leader
-			_replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
+			replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
 			// Request updates from indices database shards
 			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"}, true);
 			assert(!endpoints.empty());
 			for (auto& endpoint : endpoints) {
 				Endpoint remote_endpoint{endpoint.path, leader_node};
 				Endpoint local_endpoint{endpoint.path};
-				_replication->trigger_replication({remote_endpoint, local_endpoint, false});
+				replication->trigger_replication({remote_endpoint, local_endpoint, false});
 			}
 		}
 	} else
@@ -849,68 +849,68 @@ XapiandManager::make_servers()
 
 	auto local_node_addr = inet_ntop(local_node->addr());
 
-	_http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
+	http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_remote = Worker::make_shared<RemoteProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? 0 : remote_tries);
-        _replication = Worker::make_shared<ReplicationProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
+		remote = Worker::make_shared<RemoteProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? 0 : remote_tries);
+        replication = Worker::make_shared<ReplicationProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
 	}
 #endif
 
 	for (ssize_t i = 0; i < opts.num_http_servers; ++i) {
-		auto _http_server = Worker::make_shared<HttpServer>(_http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
+		auto _http_server = Worker::make_shared<HttpServer>(http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
 		if (_http_server->addr.sin_family) {
-			_http->addr = _http_server->addr;
+			http->addr = _http_server->addr;
 		}
-		_http_server_pool->enqueue(std::move(_http_server));
+		http_server_pool->enqueue(std::move(_http_server));
 	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		for (ssize_t i = 0; i < opts.num_remote_servers; ++i) {
-			auto _remote_server = Worker::make_shared<RemoteProtocolServer>(_remote, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? remote_tries : 0);
+			auto _remote_server = Worker::make_shared<RemoteProtocolServer>(remote, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), remote_port, reuse_ports ? remote_tries : 0);
 			if (_remote_server->addr.sin_family) {
-				_remote->addr = _remote_server->addr;
+				remote->addr = _remote_server->addr;
 			}
-			_remote_server_pool->enqueue(std::move(_remote_server));
+			remote_server_pool->enqueue(std::move(_remote_server));
 		}
 
 		for (ssize_t i = 0; i < opts.num_replication_servers; ++i) {
-			auto _replication_server = Worker::make_shared<ReplicationProtocolServer>(_replication, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
+			auto _replication_server = Worker::make_shared<ReplicationProtocolServer>(replication, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
 			if (_replication_server->addr.sin_family) {
-				_replication->addr = _replication_server->addr;
+				replication->addr = _replication_server->addr;
 			}
-			_replication_server_pool->enqueue(std::move(_replication_server));
+			replication_server_pool->enqueue(std::move(_replication_server));
 		}
 	}
 #endif
 
 	// Setup local node ports.
 	auto node_copy = std::make_unique<Node>(*local_node);
-	node_copy->http_port = ntohs(_http->addr.sin_port);
+	node_copy->http_port = ntohs(http->addr.sin_port);
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		node_copy->remote_port = ntohs(_remote->addr.sin_port);
-		node_copy->replication_port = ntohs(_replication->addr.sin_port);
+		node_copy->remote_port = ntohs(remote->addr.sin_port);
+		node_copy->replication_port = ntohs(replication->addr.sin_port);
 	}
 #endif
 	Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 	std::string msg("Servers listening on ");
-	msg += _http->getDescription();
+	msg += http->getDescription();
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		msg += ", " + _remote->getDescription();
-		msg += " and " + _replication->getDescription();
+		msg += ", " + remote->getDescription();
+		msg += " and " + replication->getDescription();
 	}
 #endif
 	L(-LOG_NOTICE, NOTICE_COL, msg);
 
 	// Setup database cleanup thread.
-	_database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
-	_database_cleanup->run();
-	_database_cleanup->start();
+	database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
+	database_cleanup->run();
+	database_cleanup->start();
 
 	// Start committers, fsynchers, database updaters and replicator triggers.
 	committer();
@@ -939,15 +939,15 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 	auto local_node = Node::get_local_node();
 	assert(local_node->is_active());
 
-	exchange_state(_state.load(), State::READY);
+	exchange_state(state.load(), State::READY);
 
-	_http->start();
+	http->start();
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		_remote->start();
-		_replication->start();
-		_discovery->cluster_enter();
+		remote->start();
+		replication->start();
+		discovery->cluster_enter();
 	}
 #endif
 
@@ -987,22 +987,22 @@ XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
 
-	if (!_database_pool) {
+	if (!database_pool) {
 		return;  // already joined!
 	}
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
-	L_MANAGER(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
+	L_MANAGER(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), database_pool->dump_databases(), Node::dump_nodes());
 
 	////////////////////////////////////////////////////////////////////
-	if (_http_server_pool) {
+	if (http_server_pool) {
 		L_MANAGER("Finishing http servers pool!");
-		_http_server_pool->finish();
+		http_server_pool->finish();
 
-		L_MANAGER("Waiting for {} http server{}...", _http_server_pool->running_size(), (_http_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} http server{}...", http_server_pool->running_size(), (http_server_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP servers...", "HTTP servers finished!");
-		while (!_http_server_pool->join(500ms)) {
+		while (!http_server_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1011,13 +1011,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_http_client_pool) {
+	if (http_client_pool) {
 		L_MANAGER("Finishing http client threads pool!");
-		_http_client_pool->finish();
+		http_client_pool->finish();
 
-		L_MANAGER("Waiting for {} http client thread{}...", _http_client_pool->running_size(), (_http_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} http client thread{}...", http_client_pool->running_size(), (http_client_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP clients...", "HTTP clients finished!");
-		while (!_http_client_pool->join(500ms)) {
+		while (!http_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1026,13 +1026,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_doc_matcher_pool) {
+	if (doc_matcher_pool) {
 		L_MANAGER("Finishing parallel document matcher threads pool!");
-		_doc_matcher_pool->finish();
+		doc_matcher_pool->finish();
 
-		L_MANAGER("Waiting for {} parallel document matcher thread{}...", _doc_matcher_pool->running_size(), (_doc_matcher_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} parallel document matcher thread{}...", doc_matcher_pool->running_size(), (doc_matcher_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the parallel document matchers...", "Parallel document matchers finished!");
-		while (!_doc_matcher_pool->join(500ms)) {
+		while (!doc_matcher_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1041,13 +1041,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_doc_preparer_pool) {
+	if (doc_preparer_pool) {
 		L_MANAGER("Finishing bulk document preparer threads pool!");
-		_doc_preparer_pool->finish();
+		doc_preparer_pool->finish();
 
-		L_MANAGER("Waiting for {} bulk document preparer thread{}...", _doc_preparer_pool->running_size(), (_doc_preparer_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} bulk document preparer thread{}...", doc_preparer_pool->running_size(), (doc_preparer_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document preparers...", "Bulk document preparers finished!");
-		while (!_doc_preparer_pool->join(500ms)) {
+		while (!doc_preparer_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1056,13 +1056,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_doc_indexer_pool) {
+	if (doc_indexer_pool) {
 		L_MANAGER("Finishing bulk document indexer threads pool!");
-		_doc_indexer_pool->finish();
+		doc_indexer_pool->finish();
 
-		L_MANAGER("Waiting for {} bulk document indexer thread{}...", _doc_indexer_pool->running_size(), (_doc_indexer_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} bulk document indexer thread{}...", doc_indexer_pool->running_size(), (doc_indexer_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the bulk document indexers...", "Bulk document indexers finished!");
-		while (!_doc_indexer_pool->join(500ms)) {
+		while (!doc_indexer_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1089,13 +1089,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_remote_server_pool) {
+	if (remote_server_pool) {
 		L_MANAGER("Finishing remote protocol servers pool!");
-		_remote_server_pool->finish();
+		remote_server_pool->finish();
 
-		L_MANAGER("Waiting for {} remote protocol server{}...", _remote_server_pool->running_size(), (_remote_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} remote protocol server{}...", remote_server_pool->running_size(), (remote_server_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the remote protocol servers...", "Remote Protocol servers finished!");
-		while (!_remote_server_pool->join(500ms)) {
+		while (!remote_server_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1104,13 +1104,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_remote_client_pool) {
+	if (remote_client_pool) {
 		L_MANAGER("Finishing remote protocol threads pool!");
-		_remote_client_pool->finish();
+		remote_client_pool->finish();
 
-		L_MANAGER("Waiting for {} remote protocol thread{}...", _remote_client_pool->running_size(), (_remote_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} remote protocol thread{}...", remote_client_pool->running_size(), (remote_client_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the remote protocol threads...", "Remote Protocol threads finished!");
-		while (!_remote_client_pool->join(500ms)) {
+		while (!remote_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1183,13 +1183,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_replication_server_pool) {
+	if (replication_server_pool) {
 		L_MANAGER("Finishing replication protocol servers pool!");
-		_replication_server_pool->finish();
+		replication_server_pool->finish();
 
-		L_MANAGER("Waiting for {} replication server{}...", _replication_server_pool->running_size(), (_replication_server_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} replication server{}...", replication_server_pool->running_size(), (replication_server_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication protocol servers...", "Replication Protocol servers finished!");
-		while (!_replication_server_pool->join(500ms)) {
+		while (!replication_server_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1198,13 +1198,13 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (_replication_client_pool) {
+	if (replication_client_pool) {
 		L_MANAGER("Finishing replication protocol threads pool!");
-		_replication_client_pool->finish();
+		replication_client_pool->finish();
 
-		L_MANAGER("Waiting for {} replication protocol thread{}...", _replication_client_pool->running_size(), (_replication_client_pool->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} replication protocol thread{}...", replication_client_pool->running_size(), (replication_client_pool->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication protocol threads...", "Replication Protocol threads finished!");
-		while (!_replication_client_pool->join(500ms)) {
+		while (!replication_client_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1215,13 +1215,13 @@ XapiandManager::join()
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	if (_database_pool) {
+	if (database_pool) {
 		L_MANAGER("Finishing database pool!");
-		_database_pool->finish();
+		database_pool->finish();
 
 		L_MANAGER("Clearing and waiting for database pool!");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the database pool...", "Database pool finished!");
-		while (!_database_pool->join(500ms)) {
+		while (!database_pool->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1232,13 +1232,13 @@ XapiandManager::join()
 #if XAPIAND_DATABASE_WAL
 
 	////////////////////////////////////////////////////////////////////
-	if (_wal_writer) {
+	if (wal_writer) {
 		L_MANAGER("Finishing WAL writers!");
-		_wal_writer->finish();
+		wal_writer->finish();
 
-		L_MANAGER("Waiting for {} WAL writer{}...", _wal_writer->running_size(), (_wal_writer->running_size() == 1) ? "" : "s");
+		L_MANAGER("Waiting for {} WAL writer{}...", wal_writer->running_size(), (wal_writer->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the WAL writers...", "WAL writers finished!");
-		while (!_wal_writer->join(500ms)) {
+		while (!wal_writer->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1251,15 +1251,15 @@ XapiandManager::join()
 #if XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
-	if (_discovery) {
-		_discovery->stop();
+	if (discovery) {
+		discovery->stop();
 
 		L_MANAGER("Finishing Discovery loop!");
-		_discovery->finish();
+		discovery->finish();
 
 		L_MANAGER("Waiting for Discovery...");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the discovery protocol...", "Discovery protocol finished!");
-		while (!_discovery->join(500ms)) {
+		while (!discovery->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1270,13 +1270,13 @@ XapiandManager::join()
 #endif
 
 	////////////////////////////////////////////////////////////////////
-	if (_database_cleanup) {
+	if (database_cleanup) {
 		L_MANAGER("Finishing Database Cleanup loop!");
-		_database_cleanup->finish();
+		database_cleanup->finish();
 
 		L_MANAGER("Waiting for Database Cleanup...");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the database cleanup worker...", "Database cleanup worker finished!");
-		while (!_database_cleanup->join(500ms)) {
+		while (!database_cleanup->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);
@@ -1304,32 +1304,32 @@ XapiandManager::join()
 
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
 
-	_http.reset();
+	http.reset();
 #ifdef XAPIAND_CLUSTERING
-	_remote.reset();
-	_replication.reset();
-	_discovery.reset();
+	remote.reset();
+	replication.reset();
+	discovery.reset();
 #endif
 
-	_database_pool.reset();
+	database_pool.reset();
 
-	_wal_writer.reset();
+	wal_writer.reset();
 
-	_http_client_pool.reset();
-	_http_server_pool.reset();
+	http_client_pool.reset();
+	http_server_pool.reset();
 
-	_doc_matcher_pool.reset();
-	_doc_indexer_pool.reset();
-	_doc_preparer_pool.reset();
+	doc_matcher_pool.reset();
+	doc_indexer_pool.reset();
+	doc_preparer_pool.reset();
 
 #ifdef XAPIAND_CLUSTERING
-	_remote_client_pool.reset();
-	_remote_server_pool.reset();
-	_replication_client_pool.reset();
-	_replication_server_pool.reset();
+	remote_client_pool.reset();
+	remote_server_pool.reset();
+	replication_client_pool.reset();
+	replication_server_pool.reset();
 #endif
 
-	_database_cleanup.reset();
+	database_cleanup.reset();
 
 #ifdef XAPIAND_CLUSTERING
 	trigger_replication_obj.reset();
@@ -1338,7 +1338,7 @@ XapiandManager::join()
 	committer_obj.reset();
 	fsyncher_obj.reset();
 
-	_schemas.reset();
+	schemas.reset();
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
@@ -1352,9 +1352,9 @@ XapiandManager::reset_state_impl()
 {
 	L_CALL("XapiandManager::reset_state_impl()");
 
-	if (exchange_state(_state.load(), State::RESET, 3s, "Node resetting is taking too long...", "Node reset done!")) {
+	if (exchange_state(state.load(), State::RESET, 3s, "Node resetting is taking too long...", "Node reset done!")) {
 		Node::reset();
-		_discovery->start();
+		discovery->start();
 	}
 }
 
@@ -1365,7 +1365,7 @@ XapiandManager::join_cluster_impl()
 	L_CALL("XapiandManager::join_cluster_impl()");
 
 	L_INFO("Joining cluster {}...", repr(opts.cluster_name));
-	_discovery->raft_request_vote();
+	discovery->raft_request_vote();
 }
 
 
@@ -1374,7 +1374,7 @@ XapiandManager::renew_leader_impl()
 {
 	L_CALL("XapiandManager::renew_leader_impl()");
 
-	_discovery->raft_request_vote();
+	discovery->raft_request_vote();
 }
 
 
@@ -1395,7 +1395,7 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 	auto leader_node = Node::get_leader_node();
 	L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
 
-	if (_state == State::READY && leader_node->is_local()) {
+	if (state == State::READY && leader_node->is_local()) {
 		try {
 			// If we get promoted to leader, we immediately try to load the nodes.
 			load_nodes();
@@ -1496,7 +1496,7 @@ XapiandManager::add_node(std::string_view name)
 
 	node_added(name);
 
-	_discovery->raft_add_command(std::string(name));
+	discovery->raft_add_command(std::string(name));
 }
 
 
@@ -2284,24 +2284,24 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - _process_start).count());
 
 	// http client tasks:
-	metrics.xapiand_http_clients_running.Set(_http_client_pool->running_size());
-	metrics.xapiand_http_clients_queue_size.Set(_http_client_pool->size());
-	metrics.xapiand_http_clients_pool_size.Set(_http_client_pool->threadpool_size());
-	metrics.xapiand_http_clients_capacity.Set(_http_client_pool->threadpool_capacity());
+	metrics.xapiand_http_clients_running.Set(http_client_pool->running_size());
+	metrics.xapiand_http_clients_queue_size.Set(http_client_pool->size());
+	metrics.xapiand_http_clients_pool_size.Set(http_client_pool->threadpool_size());
+	metrics.xapiand_http_clients_capacity.Set(http_client_pool->threadpool_capacity());
 
 #ifdef XAPIAND_CLUSTERING
 	// remote protocol client tasks:
-	metrics.xapiand_remote_clients_running.Set(_remote_client_pool->running_size());
-	metrics.xapiand_remote_clients_queue_size.Set(_remote_client_pool->size());
-	metrics.xapiand_remote_clients_pool_size.Set(_remote_client_pool->threadpool_size());
-	metrics.xapiand_remote_clients_capacity.Set(_remote_client_pool->threadpool_capacity());
+	metrics.xapiand_remote_clients_running.Set(remote_client_pool->running_size());
+	metrics.xapiand_remote_clients_queue_size.Set(remote_client_pool->size());
+	metrics.xapiand_remote_clients_pool_size.Set(remote_client_pool->threadpool_size());
+	metrics.xapiand_remote_clients_capacity.Set(remote_client_pool->threadpool_capacity());
 #endif
 
 	// servers_threads:
-	metrics.xapiand_servers_running.Set(_http_server_pool->running_size());
-	metrics.xapiand_servers_queue_size.Set(_http_server_pool->size());
-	metrics.xapiand_servers_pool_size.Set(_http_server_pool->threadpool_size());
-	metrics.xapiand_servers_capacity.Set(_http_server_pool->threadpool_capacity());
+	metrics.xapiand_servers_running.Set(http_server_pool->running_size());
+	metrics.xapiand_servers_queue_size.Set(http_server_pool->size());
+	metrics.xapiand_servers_pool_size.Set(http_server_pool->threadpool_size());
+	metrics.xapiand_servers_capacity.Set(http_server_pool->threadpool_capacity());
 
 	// committers_threads:
 	metrics.xapiand_committers_running.Set(committer()->running_size());
@@ -2315,10 +2315,10 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_fsync_pool_size.Set(fsyncher()->threadpool_size());
 	metrics.xapiand_fsync_capacity.Set(fsyncher()->threadpool_capacity());
 
-	metrics.xapiand_http_current_connections.Set(_http_clients.load());
+	metrics.xapiand_http_current_connections.Set(http_clients.load());
 #ifdef XAPIAND_CLUSTERING
 	// current connections:
-	metrics.xapiand_remote_current_connections.Set(_remote_clients.load());
+	metrics.xapiand_remote_current_connections.Set(remote_clients.load());
 #endif
 
 	// file_descriptors:
@@ -2341,7 +2341,7 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_free_disk_bytes.Set(get_free_disk_size());
 
 	// databases:
-	auto count = _database_pool->count();
+	auto count = database_pool->count();
 	metrics.xapiand_endpoints.Set(count.first);
 	metrics.xapiand_databases.Set(count.second);
 
@@ -2352,9 +2352,8 @@ XapiandManager::server_metrics_impl()
 bool
 XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds timeout, std::string_view format_timeout, std::string_view format_done)
 {
-	assert(_manager);
-	if (from != to) {
-		if (_manager->_state.compare_exchange_strong(from, to)) {
+	if (_manager && from != to) {
+		if (_manager->state.compare_exchange_strong(from, to)) {
 			auto& log = _manager->log;
 			if (timeout == 0s) {
 				L_MANAGER_TIMED_CLEAR();
@@ -2372,7 +2371,7 @@ std::string
 XapiandManager::__repr__() const
 {
 	return strings::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
-		enum_name(_state.load()),
+		enum_name(state.load()),
 		use_count(),
 		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
 		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
@@ -2385,7 +2384,9 @@ XapiandManager::__repr__() const
 void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
-	XapiandManager::replication()->trigger_replication({src_endpoint, dst_endpoint, false});
+	if (auto manager = XapiandManager::manager()) {
+		manager->replication->trigger_replication({src_endpoint, dst_endpoint, false});
+	}
 }
 
 #endif

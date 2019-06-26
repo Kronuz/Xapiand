@@ -208,7 +208,10 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	: BaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_),
 	  new_request(std::make_shared<Request>(this))
 {
-	++XapiandManager::http_clients();
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		++manager->http_clients;
+	}
 
 	Metrics::metrics()
 		.xapiand_http_connections
@@ -217,16 +220,18 @@ HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_
 	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
 	new_request->begins = std::chrono::steady_clock::now();
 
-	L_CONN("New Http Client, {} client(s) of a total of {} connected.", XapiandManager::http_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Http Client, {} client(s) of a total of {} connected.", manager ? manager->http_clients.load() : 0, manager ? manager->total_clients.load() : 0);
 }
 
 
 HttpClient::~HttpClient() noexcept
 {
 	try {
-		if (XapiandManager::http_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of http clients");
-			sig_exit(-EX_SOFTWARE);
+		if (auto manager = XapiandManager::manager()) {
+			if (manager->http_clients.fetch_sub(1) == 0) {
+				L_CRIT("Inconsistency in number of http clients");
+				sig_exit(-EX_SOFTWARE);
+			}
 		}
 
 		if (is_shutting_down() && !is_idle()) {
@@ -385,7 +390,8 @@ HttpClient::shutdown_impl(long long asap, long long now)
 
 	if (asap) {
 		shutting_down = true;
-		if (now != 0 || !XapiandManager::http_clients() || is_idle()) {
+		auto manager = XapiandManager::manager();
+		if (now != 0 || (manager && !manager->http_clients) || is_idle()) {
 			stop(false);
 			destroy(false);
 			detach();
@@ -884,7 +890,7 @@ HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t
 					std::lock_guard<std::mutex> lk(runner_mutex);
 					if (!running) {  // Start a runner if not running
 						running = true;
-						XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+						XapiandManager::manager(true)->http_client_pool->enqueue(share_this<HttpClient>());
 					}
 				}
 			}
@@ -935,7 +941,7 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 					}
 					if (!running) {  // Start a runner if not running
 						running = true;
-						XapiandManager::http_client_pool()->enqueue(share_this<HttpClient>());
+						XapiandManager::manager(true)->http_client_pool->enqueue(share_this<HttpClient>());
 					}
 				}
 			} else {
@@ -1196,10 +1202,10 @@ HttpClient::prepare()
 				new_request->query_parser.rewind();
 				int flush_clients = new_request->query_parser.next("clients");
 				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::database_pool()->cleanup(true);
+					XapiandManager::manager(true)->database_pool->cleanup(true);
 				}
 				if (flush_clients != -1 || flush_databases == -1) {
-					XapiandManager::manager()->shutdown(0, 0);
+					XapiandManager::manager(true)->shutdown(0, 0);
 				}
 				write_http_response(*new_request, HTTP_STATUS_OK);
 			} else {

@@ -54,7 +54,8 @@ DatabaseCleanup::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		if (now != 0 || !XapiandManager::total_clients()) {
+		auto manager = XapiandManager::manager();
+		if (now != 0 || (manager && !manager->total_clients)) {
 			stop(false);
 			destroy(false);
 
@@ -98,9 +99,9 @@ DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("DatabaseCleanup::cleanup_cb(<timer>, {:#04x} ({}))", revents, readable_revents(revents));
 
-	XapiandManager::database_pool()->cleanup();
-
-	XapiandManager::schemas()->cleanup();
+	auto manager = XapiandManager::manager();
+	manager->database_pool->cleanup();
+	manager->schemas->cleanup();
 }
 
 

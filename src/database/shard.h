@@ -53,6 +53,7 @@ class Shard {
 	friend class ShardEndpoint;
 	friend class DatabasePool;
 	friend class DatabaseWAL;
+	friend class lock_shard;
 
 public:
 	enum class Transaction : uint8_t {

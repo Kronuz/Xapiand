@@ -100,7 +100,10 @@ BaseClient<ClientImpl>::BaseClient(const std::shared_ptr<Worker>& parent_, ev::l
 	  write_queue(WRITE_QUEUE_LIMIT, -1, WRITE_QUEUE_THRESHOLD),
 	  client(static_cast<ClientImpl&>(*this))
 {
-	++XapiandManager::total_clients();
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		++manager->total_clients;
+	}
 }
 
 
@@ -116,9 +119,11 @@ BaseClient<ClientImpl>::~BaseClient() noexcept
 			}
 		}
 
-		if (XapiandManager::total_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of clients");
-			sig_exit(-EX_SOFTWARE);
+		if (auto manager = XapiandManager::manager()) {
+			if (manager->total_clients.fetch_sub(1) == 0) {
+				L_CRIT("Inconsistency in number of clients");
+				sig_exit(-EX_SOFTWARE);
+			}
 		}
 
 		// If there are no more clients connected, try continue shutdown.

@@ -228,7 +228,12 @@ std::shared_ptr<Schema>
 DatabaseHandler::get_schema(const MsgPack* obj)
 {
 	L_CALL("DatabaseHandler::get_schema(<obj>)");
-	auto s = XapiandManager::schemas()->get(this, obj);
+
+	auto manager = XapiandManager::manager();
+	if (!manager) {
+		return nullptr;
+	}
+	auto s = manager->schemas->get(this, obj);
 	return std::make_shared<Schema>(std::move(std::get<0>(s)), std::move(std::get<1>(s)), std::move(std::get<2>(s)));
 }
 
@@ -920,10 +925,12 @@ DatabaseHandler::restore_documents(int fd)
 	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL, false, false, query_field);
 	try {
 		while (true) {
-			if (XapiandManager::manager()->is_detaching()) {
+			auto manager = XapiandManager::manager();
+			if (!manager || manager->is_detaching()) {
 				indexer->finish();
 				break;
 			}
+			manager.reset();
 
 			unpacker.reserve_buffer(1024);
 			auto bytes = io::read(fd, unpacker.buffer(), unpacker.buffer_capacity());
@@ -1434,6 +1441,8 @@ DatabaseHandler::get_mset(
 	registry.register_match_spy(AggregationMatchSpy{});
 	registry.register_key_maker(Multi_MultiValueKeyMaker{});
 
+	auto manager = XapiandManager::manager();
+
 	for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
 		// Configure nearest and fuzzy search:
 		std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
@@ -1477,7 +1486,7 @@ DatabaseHandler::get_mset(
 			merger
 		);
 		matchers.emplace_back(matcher);
-		XapiandManager::doc_matcher_pool()->enqueue(matcher);
+		manager->doc_matcher_pool->enqueue(matcher);
 	}
 
 	std::unique_lock<std::mutex> ready_lk(ready_mtx);
@@ -1498,7 +1507,7 @@ DatabaseHandler::get_mset(
 
 			pending.store(n_shards, std::memory_order_release);
 			for (auto& matcher : matchers) {
-				XapiandManager::doc_matcher_pool()->enqueue(matcher);
+				manager->doc_matcher_pool->enqueue(matcher);
 			}
 
 			ready.wait(ready_lk, [&]{
@@ -1532,7 +1541,7 @@ DatabaseHandler::get_mset(
 			if (fuzzy) {
 				matcher->fuzzy_edecider = get_edecider(*fuzzy);
 			}
-			XapiandManager::doc_matcher_pool()->enqueue(matcher);
+			manager->doc_matcher_pool->enqueue(matcher);
 		}
 	}
 
@@ -1550,7 +1559,8 @@ DatabaseHandler::update_schema()
 	auto mod_schema = schema->get_modified_schema();
 	if (mod_schema) {
 		auto old_schema = schema->get_const_schema();
-		return XapiandManager::schemas()->set(this, old_schema, mod_schema);
+		auto manager = XapiandManager::manager();
+		return manager && manager->schemas->set(this, old_schema, mod_schema);
 	}
 	return true;
 }
@@ -2383,19 +2393,22 @@ DocIndexer::_prepare(MsgPack&& obj)
 	bulk[bulk_cnt++] = DocPreparer::make_unique(shared_from_this(), std::move(obj), _idx++);
 	// Add documents in the bulk buffer as soon as is filled.
 	if (bulk_cnt == bulk.size() || last) {
-		if (!indexers) {
-			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
-			ready_queues.reserve(indexers);
-			for (int i = 0; i < indexers; ++i) {
-				ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		auto manager = XapiandManager::manager();
+		if (manager) {
+			if (!indexers) {
+				indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
+				ready_queues.reserve(indexers);
+				for (int i = 0; i < indexers; ++i) {
+					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
+					manager->doc_indexer_pool->enqueue(shared_from_this());
+				}
 			}
-		}
 
-		_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
-		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
-			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
+			_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
+			if unlikely(!manager->doc_preparer_pool->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+				_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
+				L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
+			}
 		}
 		bulk_cnt = 0;
 	}
@@ -2538,19 +2551,22 @@ DocIndexer::wait(double timeout)
 
 	// Add any missing documents in the bulk buffer.
 	if (bulk_cnt != 0) {
-		if (!indexers) {
-			indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
-			ready_queues.reserve(indexers);
-			for (int i = 0; i < indexers; ++i) {
-				ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
-				XapiandManager::doc_indexer_pool()->enqueue(shared_from_this());
+		auto manager = XapiandManager::manager();
+		if (manager) {
+			if (!indexers) {
+				indexers = std::min(static_cast<size_t>(opts.num_doc_indexers), endpoints.size());
+				ready_queues.reserve(indexers);
+				for (int i = 0; i < indexers; ++i) {
+					ready_queues.push_back(std::make_unique<BlockingConcurrentQueue<std::tuple<std::string, Xapian::Document, MsgPack, size_t>>>());
+					manager->doc_indexer_pool->enqueue(shared_from_this());
+				}
 			}
-		}
 
-		_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
-		if unlikely(!XapiandManager::doc_preparer_pool()->enqueue_bulk(bulk.begin(), bulk_cnt)) {
-			_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
-			L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
+			_total.fetch_add(bulk_cnt, std::memory_order_acq_rel);
+			if unlikely(!manager->doc_preparer_pool->enqueue_bulk(bulk.begin(), bulk_cnt)) {
+				_total.fetch_sub(bulk_cnt, std::memory_order_acq_rel);
+				L_ERR("Ignored {} documents: cannot enqueue tasks!", bulk_cnt);
+			}
 		}
 		bulk_cnt = 0;
 	}

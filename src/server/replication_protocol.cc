@@ -58,9 +58,12 @@ ReplicationProtocol::shutdown_impl(long long asap, long long now)
 		stop(false);
 		destroy(false);
 
-		if (now != 0 || !XapiandManager::replication_clients()) {
-			XapiandManager::replication_server_pool()->finish();
-			XapiandManager::replication_client_pool()->finish();
+		auto manager = XapiandManager::manager();
+		if (now != 0 || (manager && !manager->replication_clients)) {
+			if (manager) {
+				manager->replication_server_pool->finish();
+				manager->replication_client_pool->finish();
+			}
 			if (is_runner()) {
 				break_loop(false);
 			} else {

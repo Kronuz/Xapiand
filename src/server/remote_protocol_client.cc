@@ -106,7 +106,10 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 	  temp_file_template("xapiand.XXXXXX"),
 	  cluster_database(cluster_database_)
 {
-	++XapiandManager::remote_clients();
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		++manager->remote_clients;
+	}
 
 	Metrics::metrics()
 		.xapiand_remote_connections
@@ -119,16 +122,18 @@ RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent
 	registry.register_match_spy(AggregationMatchSpy{});
 	registry.register_key_maker(Multi_MultiValueKeyMaker{});
 
-	L_CONN("New Remote Protocol Client, {} client(s) of a total of {} connected.", XapiandManager::remote_clients().load(), XapiandManager::total_clients().load());
+	L_CONN("New Remote Protocol Client, {} client(s) of a total of {} connected.", manager ? manager->remote_clients.load() : 0, manager ? manager->total_clients.load() : 0);
 }
 
 
 RemoteProtocolClient::~RemoteProtocolClient() noexcept
 {
 	try {
-		if (XapiandManager::remote_clients().fetch_sub(1) == 0) {
-			L_CRIT("Inconsistency in number of binary clients");
-			sig_exit(-EX_SOFTWARE);
+		if (auto manager = XapiandManager::manager()) {
+			if (manager->remote_clients.fetch_sub(1) == 0) {
+				L_CRIT("Inconsistency in number of binary clients");
+				sig_exit(-EX_SOFTWARE);
+			}
 		}
 
 		if (file_descriptor != -1) {
@@ -1440,7 +1445,8 @@ RemoteProtocolClient::shutdown_impl(long long asap, long long now)
 
 	if (asap) {
 		shutting_down = true;
-		if (now != 0 || !XapiandManager::remote_clients() || is_idle()) {
+		auto manager = XapiandManager::manager();
+		if (now != 0 || (manager && !manager->remote_clients) || is_idle()) {
 			stop(false);
 			destroy(false);
 			detach();
@@ -1473,7 +1479,7 @@ RemoteProtocolClient::init_remote(int sock_) noexcept
 
 	// And start a runner.
 	running = true;
-	XapiandManager::remote_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+	XapiandManager::manager(true)->remote_client_pool->enqueue(share_this<RemoteProtocolClient>());
 	return true;
 }
 
@@ -1580,7 +1586,7 @@ RemoteProtocolClient::on_read(const char *buf, ssize_t received)
 				messages.push_back(Buffer(type, p, len));
 				// And start a runner.
 				running = true;
-				XapiandManager::remote_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+				XapiandManager::manager(true)->remote_client_pool->enqueue(share_this<RemoteProtocolClient>());
 			} else {
 				// There should be a runner, just enqueue message.
 				messages.push_back(Buffer(type, p, len));
@@ -1625,7 +1631,7 @@ RemoteProtocolClient::on_read_file_done()
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
 			// And start a runner.
 			running = true;
-			XapiandManager::remote_client_pool()->enqueue(share_this<RemoteProtocolClient>());
+			XapiandManager::manager(true)->remote_client_pool->enqueue(share_this<RemoteProtocolClient>());
 		} else {
 			// There should be a runner, just enqueue message.
 			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));

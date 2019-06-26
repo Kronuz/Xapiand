@@ -141,8 +141,8 @@ class XapiandManager : public Worker  {
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
 	std::string load_node_name();
-	void save_node_name(std::string_view node_name);
-	std::string set_node_name(std::string_view node_name);
+	void save_node_name(std::string_view name);
+	std::string set_node_name(std::string_view name);
 
 	void start_discovery();
 	void make_servers();
@@ -150,47 +150,48 @@ class XapiandManager : public Worker  {
 public:
 	using State = XapiandManagerState;
 
+	std::atomic_int total_clients;
+	std::atomic_int http_clients;
+	std::atomic_int remote_clients;
+	std::atomic_int replication_clients;
+
+	std::shared_ptr<Http> http;
+#ifdef XAPIAND_CLUSTERING
+	std::shared_ptr<RemoteProtocol> remote;
+	std::shared_ptr<ReplicationProtocol> replication;
+	std::shared_ptr<Discovery> discovery;
+#endif
+
+	std::shared_ptr<DatabaseCleanup> database_cleanup;
+
+	std::unique_ptr<SchemasLRU> schemas;
+	std::unique_ptr<DatabasePool> database_pool;
+	std::unique_ptr<DatabaseWALWriter> wal_writer;
+
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>> http_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> http_server_pool;
+#ifdef XAPIAND_CLUSTERING
+	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> remote_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> remote_server_pool;
+
+	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> replication_client_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> replication_server_pool;
+#endif
+	std::unique_ptr<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>> doc_matcher_pool;
+	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> doc_preparer_pool;
+	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> doc_indexer_pool;
+
+	std::atomic<State> state;
+	std::string node_name;
+
 private:
 	static std::shared_ptr<XapiandManager> _manager;
 
 	std::shared_ptr<Logging> log;
 
-	std::atomic_int _total_clients;
-	std::atomic_int _http_clients;
-	std::atomic_int _remote_clients;
-	std::atomic_int _replication_clients;
-
-	std::shared_ptr<Http> _http;
-#ifdef XAPIAND_CLUSTERING
-	std::shared_ptr<RemoteProtocol> _remote;
-	std::shared_ptr<ReplicationProtocol> _replication;
-	std::shared_ptr<Discovery> _discovery;
-#endif
-
-	std::shared_ptr<DatabaseCleanup> _database_cleanup;
-
-	std::unique_ptr<SchemasLRU> _schemas;
-	std::unique_ptr<DatabasePool> _database_pool;
-	std::unique_ptr<DatabaseWALWriter> _wal_writer;
-
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>> _http_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> _http_server_pool;
-#ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> _remote_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> _remote_server_pool;
-
-	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> _replication_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> _replication_server_pool;
-#endif
-	std::unique_ptr<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>> _doc_matcher_pool;
-	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> _doc_preparer_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> _doc_indexer_pool;
-
 	std::atomic_llong _shutdown_asap;
 	std::atomic_llong _shutdown_now;
 
-	std::atomic<State> _state;
-	std::string _node_name;
 	int _new_cluster;
 	std::chrono::time_point<std::chrono::steady_clock> _process_start;
 
@@ -261,209 +262,95 @@ public:
 
 	template<typename... Args>
 	static auto& make(Args&&... args) {
+		assert(!_manager);
 		_manager = Worker::make_shared<XapiandManager>(std::forward<Args>(args)...);
 		_manager->init();
 		return _manager;
 	}
 
-	static const auto& manager([[maybe_unused]] bool check = true) {
-		assert(!check || _manager);
+	static const auto& manager([[maybe_unused]] bool check = false) {
+		if (check && !_manager) {
+			throw Xapian::AssertionError("No manager");
+		}
 		return _manager;
 	}
 
 	static void reset() {
-		assert(_manager);
 		_manager.reset();
 	}
 
 	static IndexSettings resolve_index_settings(const std::string& normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
-		assert(_manager);
-		return _manager->resolve_index_settings_impl(normalized_path, writable, primary, settings, false, false, false);
+		return manager(true)->resolve_index_settings_impl(normalized_path, writable, primary, settings, false, false, false);
 	}
 
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_nodes(const IndexSettings& index_settings);
 
 	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
-		assert(_manager);
-		return _manager->resolve_index_endpoints_impl(endpoint, writable, primary, settings);
+		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, primary, settings);
 	}
 
 	static void setup_node() {
-		assert(_manager);
-		_manager->setup_node_impl();
+		manager(true)->setup_node_impl();
 	}
 
 	static void new_leader() {
-		assert(_manager);
 #ifdef XAPIAND_CLUSTERING
-		_manager->new_leader_impl();
+		manager(true)->new_leader_impl();
 #endif
 	}
 
 	static void renew_leader() {
 #ifdef XAPIAND_CLUSTERING
-		assert(_manager);
-		_manager->renew_leader_impl();
+		manager(true)->renew_leader_impl();
 #endif
 	}
 
 	static void raft_apply_command(const std::string& command) {
 #ifdef XAPIAND_CLUSTERING
-		assert(_manager);
-		_manager->raft_apply_command_impl(command);
+		manager(true)->raft_apply_command_impl(command);
 #endif
 	}
 
 	static void reset_state() {
 #ifdef XAPIAND_CLUSTERING
-		assert(_manager);
-		_manager->reset_state_impl();
+		manager(true)->reset_state_impl();
 #endif
 	}
 
 	static void join_cluster() {
 #ifdef XAPIAND_CLUSTERING
-		assert(_manager);
-		_manager->join_cluster_impl();
+		manager(true)->join_cluster_impl();
 #endif
 	}
 
 	static std::string server_metrics() {
-		assert(_manager);
-		return _manager->server_metrics_impl();
+		return manager(true)->server_metrics_impl();
 	}
 
 	static void try_shutdown(bool always = false) {
-		assert(_manager);
-		_manager->try_shutdown_impl(always);
+		if (_manager) {
+			_manager->try_shutdown_impl(always);
+		}
 	}
 
 	static void set_cluster_database_ready() {
-		assert(_manager);
-		_manager->set_cluster_database_ready_impl();
-	}
-
-	static auto& node_name() {
-		assert(_manager);
-		return _manager->_node_name;
-	}
-
-	static auto& state() {
-		assert(_manager);
-		return _manager->_state;
+		manager(true)->set_cluster_database_ready_impl();
 	}
 
 	static bool exchange_state(State from, State to, std::chrono::milliseconds timeout = 0s, std::string_view format_timeout = "", std::string_view format_done = "");
 
-	static auto& total_clients() {
-		assert(_manager);
-		return _manager->_total_clients;
-	}
-	static auto& http_clients() {
-		assert(_manager);
-		return _manager->_http_clients;
-	}
-	static auto& remote_clients() {
-		assert(_manager);
-		return _manager->_remote_clients;
-	}
-	static auto& replication_clients() {
-		assert(_manager);
-		return _manager->_replication_clients;
+	static State get_state() {
+		return _manager ? _manager->state.load() : State::BAD;
 	}
 
-	static auto& database_pool() {
-		assert(_manager);
-		assert(_manager->_database_pool);
-		return _manager->_database_pool;
-	}
-	static auto& http_client_pool() {
-		assert(_manager);
-		assert(_manager->_http_client_pool);
-		return _manager->_http_client_pool;
-	}
-	static auto& http_server_pool() {
-		assert(_manager);
-		assert(_manager->_http_server_pool);
-		return _manager->_http_server_pool;
-	}
-#ifdef XAPIAND_CLUSTERING
-	static auto& remote_client_pool() {
-		assert(_manager);
-		assert(_manager->_remote_client_pool);
-		return _manager->_remote_client_pool;
-	}
-	static auto& remote_server_pool() {
-		assert(_manager);
-		assert(_manager->_remote_server_pool);
-		return _manager->_remote_server_pool;
-	}
-	static auto& replication_client_pool() {
-		assert(_manager);
-		assert(_manager->_replication_client_pool);
-		return _manager->_replication_client_pool;
-	}
-	static auto& replication_server_pool() {
-		assert(_manager);
-		assert(_manager->_replication_server_pool);
-		return _manager->_replication_server_pool;
-	}
-	static auto& discovery() {
-		assert(_manager);
-		assert(_manager->_discovery);
-		return _manager->_discovery;
-	}
-	static auto& remote() {
-		assert(_manager);
-		assert(_manager->_remote);
-		return _manager->_remote;
-	}
-	static auto& replication() {
-		assert(_manager);
-		assert(_manager->_replication);
-		return _manager->_replication;
+	static void set_state(State state) {
+		if (_manager) {
+			_manager->state.store(state);
+		}
 	}
 
 	static void sweep_primary(size_t shards, const std::string& normalized_path) {
-		assert(_manager);
-		_manager->sweep_primary_impl(shards, normalized_path);
-	}
-#endif
-
-	static auto& doc_matcher_pool() {
-		assert(_manager);
-		assert(_manager->_doc_matcher_pool);
-		return _manager->_doc_matcher_pool;
-	}
-
-	static auto& doc_preparer_pool() {
-		assert(_manager);
-		assert(_manager->_doc_preparer_pool);
-		return _manager->_doc_preparer_pool;
-	}
-
-	static auto& doc_indexer_pool() {
-		assert(_manager);
-		assert(_manager->_doc_indexer_pool);
-		return _manager->_doc_indexer_pool;
-	}
-
-	static auto& http() {
-		assert(_manager);
-		assert(_manager->_http);
-		return _manager->_http;
-	}
-
-	static auto& wal_writer() {
-		assert(_manager);
-		assert(_manager->_wal_writer);
-		return _manager->_wal_writer;
-	}
-
-	static auto& schemas() {
-		assert(_manager);
-		assert(_manager->_schemas);
-		return _manager->_schemas;
+		manager(true)->sweep_primary_impl(shards, normalized_path);
 	}
 };
 
