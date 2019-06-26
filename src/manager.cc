@@ -1463,6 +1463,8 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 				L_EXC("ERROR: Cannot load local nodes!");
 			}
 		}
+	} else {
+		L_INFO("There is currently no leader for cluster {}!", repr(opts.cluster_name));
 	}
 }
 
