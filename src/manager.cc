@@ -495,7 +495,7 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 		stop(false);
 		destroy(false);
 
-		if (now != 0 || !total_clients) {
+		if (now != 0 || ready_to_end()) {
 			if (is_runner()) {
 				break_loop(false);
 			} else {
@@ -1342,6 +1342,48 @@ XapiandManager::join()
 
 	////////////////////////////////////////////////////////////////////
 	L_MANAGER("Server ended!");
+}
+
+
+bool
+XapiandManager::ready_to_end_http()
+{
+	return !http_clients;
+}
+
+
+bool
+XapiandManager::ready_to_end_remote()
+{
+	return !remote_clients;
+}
+
+
+bool
+XapiandManager::ready_to_end_replication()
+{
+	return !replication_clients;
+}
+
+
+bool
+XapiandManager::ready_to_end_database_cleanup()
+{
+	return !total_clients;
+}
+
+
+bool
+XapiandManager::ready_to_end_discovery()
+{
+	return !total_clients;
+}
+
+
+bool
+XapiandManager::ready_to_end()
+{
+	return !total_clients;
 }
 
 

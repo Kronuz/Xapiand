@@ -84,7 +84,7 @@ ReplicationProtocolServer::shutdown_impl(long long asap, long long now)
 
 	if (asap) {
 		auto manager = XapiandManager::manager();
-		if (now != 0 || (manager && !manager->replication_clients)) {
+		if (now != 0 || !manager || manager->ready_to_end_replication()) {
 			stop(false);
 			destroy(false);
 

@@ -76,7 +76,7 @@ HttpServer::shutdown_impl(long long asap, long long now)
 		destroy(false);
 
 		auto manager = XapiandManager::manager();
-		if (now != 0 || (manager && !manager->http_clients)) {
+		if (now != 0 || !manager || manager->ready_to_end_http()) {
 			if (is_runner()) {
 				break_loop(false);
 			} else {

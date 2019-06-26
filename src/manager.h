@@ -258,6 +258,13 @@ public:
 	void run();
 	void join();
 
+	bool ready_to_end_http();
+	bool ready_to_end_remote();
+	bool ready_to_end_replication();
+	bool ready_to_end_database_cleanup();
+	bool ready_to_end_discovery();
+	bool ready_to_end();
+
 	std::string __repr__() const override;
 
 	template<typename... Args>

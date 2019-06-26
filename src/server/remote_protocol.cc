@@ -59,7 +59,7 @@ RemoteProtocol::shutdown_impl(long long asap, long long now)
 		destroy(false);
 
 		auto manager = XapiandManager::manager();
-		if (now != 0 || (manager && !manager->remote_clients)) {
+		if (now != 0 || !manager || manager->ready_to_end_remote()) {
 			if (manager) {
 				manager->remote_server_pool->finish();
 				manager->remote_client_pool->finish();

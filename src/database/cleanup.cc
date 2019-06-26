@@ -55,7 +55,7 @@ DatabaseCleanup::shutdown_impl(long long asap, long long now)
 
 	if (asap) {
 		auto manager = XapiandManager::manager();
-		if (now != 0 || (manager && !manager->total_clients)) {
+		if (now != 0 || !manager || manager->ready_to_end_database_cleanup()) {
 			stop(false);
 			destroy(false);
 
