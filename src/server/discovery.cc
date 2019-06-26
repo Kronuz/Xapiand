@@ -495,8 +495,7 @@ Discovery::cluster_bye([[maybe_unused]] Message type, const std::string& message
 	if (*leader_node == remote_node) {
 		L_INFO("Leader node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.to_string());
 
-		Node::set_leader_node(std::make_shared<const Node>());
-		XapiandManager::renew_leader();
+		_raft_request_vote(false);
 	} else {
 		L_INFO("Node {}{}" + INFO_COL + " left the party!", remote_node.col().ansi(), remote_node.to_string());
 	}

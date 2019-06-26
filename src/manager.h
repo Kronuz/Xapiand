@@ -223,7 +223,6 @@ private:
 	void load_nodes();
 	void new_leader_async_cb(ev::async&, int);
 	void new_leader_impl();
-	void renew_leader_impl();
 	void reset_state_impl();
 	void join_cluster_impl();
 
@@ -303,12 +302,6 @@ public:
 	static void new_leader() {
 #ifdef XAPIAND_CLUSTERING
 		manager(true)->new_leader_impl();
-#endif
-	}
-
-	static void renew_leader() {
-#ifdef XAPIAND_CLUSTERING
-		manager(true)->renew_leader_impl();
 #endif
 	}
 

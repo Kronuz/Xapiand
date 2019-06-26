@@ -1438,15 +1438,6 @@ XapiandManager::join_cluster_impl()
 
 
 void
-XapiandManager::renew_leader_impl()
-{
-	L_CALL("XapiandManager::renew_leader_impl()");
-
-	discovery->raft_request_vote();
-}
-
-
-void
 XapiandManager::new_leader_impl()
 {
 	L_CALL("XapiandManager::new_leader_impl()");
