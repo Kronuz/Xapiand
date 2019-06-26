@@ -1089,9 +1089,8 @@ DatabasePool::is_pending() const
 {
 	L_CALL("DatabasePool::is_pending()");
 
-	std::lock_guard<std::mutex> lk(mtx);
-	for (auto& endpoint_database_endpoint : *this) {
-		if (endpoint_database_endpoint.second->is_pending()) {
+	for (auto& referenced_database_endpoint : endpoints()) {
+		if (referenced_database_endpoint->is_pending()) {
 			return true;
 		}
 	}
