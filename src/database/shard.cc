@@ -317,9 +317,6 @@ Shard::reopen_writable()
 	if (local) {
 		reopen_revision = new_database->get_revision();
 		endpoint.set_revision(reopen_revision);
-		if (!is_replica()) {
-			endpoint.pending_revision.store(reopen_revision, std::memory_order_relaxed);
-		}
 	}
 
 	if (is_transactional()) {
