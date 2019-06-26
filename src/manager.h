@@ -137,7 +137,6 @@ class XapiandManager : public Worker  {
 	std::pair<struct sockaddr_in, std::string> host_address();
 
 	void shutdown_impl(long long asap, long long now) override;
-	void stop_impl() override;
 
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
@@ -241,7 +240,7 @@ private:
 	std::string server_metrics_impl();
 
 	void try_shutdown_impl(bool always) {
-		if (always || (_shutdown_asap != 0 && _total_clients == 0)) {
+		if (always || _shutdown_asap) {
 			shutdown_sig(0, true);
 		}
 	}
@@ -381,16 +380,31 @@ public:
 		assert(_manager->_http_client_pool);
 		return _manager->_http_client_pool;
 	}
+	static auto& http_server_pool() {
+		assert(_manager);
+		assert(_manager->_http_server_pool);
+		return _manager->_http_server_pool;
+	}
 #ifdef XAPIAND_CLUSTERING
 	static auto& remote_client_pool() {
 		assert(_manager);
 		assert(_manager->_remote_client_pool);
 		return _manager->_remote_client_pool;
 	}
+	static auto& remote_server_pool() {
+		assert(_manager);
+		assert(_manager->_remote_server_pool);
+		return _manager->_remote_server_pool;
+	}
 	static auto& replication_client_pool() {
 		assert(_manager);
 		assert(_manager->_replication_client_pool);
 		return _manager->_replication_client_pool;
+	}
+	static auto& replication_server_pool() {
+		assert(_manager);
+		assert(_manager->_replication_server_pool);
+		return _manager->_replication_server_pool;
 	}
 	static auto& discovery() {
 		assert(_manager);

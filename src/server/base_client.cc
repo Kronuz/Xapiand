@@ -667,31 +667,6 @@ BaseClient<ClientImpl>::send_file(int fd, size_t offset)
 }
 
 
-template <typename ClientImpl>
-void
-BaseClient<ClientImpl>::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("BaseClient::shutdown_impl({}, {})", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		shutting_down = true;
-		if (now != 0 || is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	} else {
-		if (is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	}
-}
-
-
 // The following are only here so BaseClient
 // implementation for each clients is compiled:
 template class BaseClient<HttpClient>;

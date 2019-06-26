@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,28 +41,6 @@ BaseServer::~BaseServer() noexcept
 		TCP::close();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
-	}
-}
-
-
-void
-BaseServer::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("BaseServer::stop_impl(...)");
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		stop(false);
-		destroy(false);
-
-		if (now != 0) {
-			if (is_runner()) {
-				break_loop(false);
-			} else {
-				detach(false);
-			}
-		}
 	}
 }
 

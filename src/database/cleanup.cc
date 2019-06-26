@@ -49,15 +49,15 @@ DatabaseCleanup::~DatabaseCleanup() noexcept
 void
 DatabaseCleanup::shutdown_impl(long long asap, long long now)
 {
-	L_CALL("DatabaseCleanup::stop_impl(...)");
+	L_CALL("DatabaseCleanup::stop_impl({}, {})", asap, now);
 
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		stop(false);
-		destroy(false);
+		if (now != 0 || !XapiandManager::total_clients()) {
+			stop(false);
+			destroy(false);
 
-		if (now != 0) {
 			if (is_runner()) {
 				break_loop(false);
 			} else {

@@ -529,28 +529,6 @@ BaseTCP::~BaseTCP() noexcept
 
 
 void
-BaseTCP::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("BaseTCP::shutdown_impl({}, {})", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		stop(false);
-		destroy(false);
-
-		if (now != 0) {
-			if (is_runner()) {
-				break_loop(false);
-			} else {
-				detach(false);
-			}
-		}
-	}
-}
-
-
-void
 BaseTCP::destroy_impl()
 {
 	L_CALL("BaseTCP::destroy_impl()");

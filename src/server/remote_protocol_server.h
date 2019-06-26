@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,8 @@ class Endpoint;
 // RemoteProtocol Server
 class RemoteProtocolServer : public MetaBaseServer<RemoteProtocolServer> {
 	RemoteProtocol& remote;
+
+	void shutdown_impl(long long asap, long long now) override;
 
 	void start_impl() override;
 

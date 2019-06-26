@@ -71,7 +71,6 @@ public:
 // Base class for configuration data for TCP.
 class BaseTCP : public TCP, public Worker {
 protected:
-	void shutdown_impl(long long asap, long long now) override;
 	void destroy_impl() override;
 
 public:

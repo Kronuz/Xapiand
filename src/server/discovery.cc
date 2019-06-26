@@ -144,13 +144,15 @@ Discovery::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		stop(false);
-		destroy(false);
+		if (now != 0 || !XapiandManager::total_clients()) {
+			stop(false);
+			destroy(false);
 
-		if (is_runner()) {
-			break_loop(false);
-		} else {
-			detach(false);
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
 		}
 	}
 }

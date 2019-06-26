@@ -28,6 +28,7 @@
 
 #include "endpoint.h"                         // for Endpoint
 #include "io.hh"                              // for io::*
+#include "manager.h"                          // for XapiandManager
 #include "node.h"                             // for Node, local_node
 #include "remote_protocol_client.h"           // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
 #include "replication_protocol_server.h"      // For ReplicationProtocolServer
@@ -43,6 +44,30 @@ ReplicationProtocol::ReplicationProtocol(const std::shared_ptr<Worker>& parent_,
 	: BaseTCP(parent_, ev_loop_, ev_flags_, "Replication", TCP_TCP_NODELAY)
 {
 	bind(hostname, serv, tries);
+}
+
+
+void
+ReplicationProtocol::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("ReplicationProtocol::shutdown_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		stop(false);
+		destroy(false);
+
+		if (now != 0 || !XapiandManager::replication_clients()) {
+			XapiandManager::replication_server_pool()->finish();
+			XapiandManager::replication_client_pool()->finish();
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
+	}
 }
 
 

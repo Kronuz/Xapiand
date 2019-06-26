@@ -68,6 +68,28 @@ RemoteProtocolServer::~RemoteProtocolServer() noexcept
 
 
 void
+RemoteProtocolServer::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("RemoteProtocolServer::stop_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		stop(false);
+		destroy(false);
+
+		if (now != 0 || !XapiandManager::remote_clients()) {
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
+	}
+}
+
+
+void
 RemoteProtocolServer::start_impl()
 {
 	L_CALL("RemoteProtocolServer::start_impl()");

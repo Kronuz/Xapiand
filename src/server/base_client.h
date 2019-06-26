@@ -101,8 +101,6 @@ protected:
 	void start_impl() override;
 	void stop_impl() override;
 
-	void shutdown_impl(long long asap, long long now) override;
-
 	void io_cb_read(ev::io &watcher, int revents) noexcept;
 
 	void io_cb_write(ev::io &watcher, int revents) noexcept;

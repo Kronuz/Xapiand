@@ -273,7 +273,10 @@ class HttpClient : public BaseClient<HttpClient> {
 	int handled_errors(Request& request, Func&& func);
 
 	size_t pending_requests() const;
+
 	bool is_idle() const;
+
+	void shutdown_impl(long long asap, long long now) override;
 
 	void destroy_impl() override;
 

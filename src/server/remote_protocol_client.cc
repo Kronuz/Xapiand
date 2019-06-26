@@ -1431,6 +1431,30 @@ RemoteProtocolClient::is_idle() const
 }
 
 
+void
+RemoteProtocolClient::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("RemoteProtocolClient::shutdown_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		shutting_down = true;
+		if (now != 0 || !XapiandManager::remote_clients() || is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
+	} else {
+		if (is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
+	}
+}
+
+
 bool
 RemoteProtocolClient::init_remote(int sock_) noexcept
 {

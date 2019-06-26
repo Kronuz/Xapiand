@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,8 @@ constexpr uint16_t XAPIAND_HTTP_PROTOCOL_MINOR_VERSION = 1;
 // Configuration data for Http
 class Http : public BaseTCP {
 	friend HttpServer;
+
+	void shutdown_impl(long long asap, long long now) override;
 
 public:
 	Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries);

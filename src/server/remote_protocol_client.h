@@ -199,7 +199,10 @@ class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
 	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 
 	size_t pending_messages() const;
+
 	bool is_idle() const;
+
+	void shutdown_impl(long long asap, long long now) override;
 
 	ssize_t on_read(const char *buf, ssize_t received);
 	void on_read_file(const char *buf, ssize_t received);

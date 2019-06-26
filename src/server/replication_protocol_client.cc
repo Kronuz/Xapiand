@@ -836,6 +836,30 @@ ReplicationProtocolClient::is_idle() const
 }
 
 
+void
+ReplicationProtocolClient::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("ReplicationProtocolClient::shutdown_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		shutting_down = true;
+		if (now != 0 || !XapiandManager::replication_clients() || is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
+	} else {
+		if (is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
+	}
+}
+
+
 bool
 ReplicationProtocolClient::init_replication(int sock_) noexcept
 {

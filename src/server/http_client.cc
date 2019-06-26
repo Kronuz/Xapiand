@@ -377,6 +377,30 @@ HttpClient::is_idle() const
 
 
 void
+HttpClient::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("HttpClient::shutdown_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		shutting_down = true;
+		if (now != 0 || !XapiandManager::http_clients() || is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
+	} else {
+		if (is_idle()) {
+			stop(false);
+			destroy(false);
+			detach();
+		}
+	}
+}
+
+
+void
 HttpClient::destroy_impl()
 {
 	L_CALL("HttpClient::destroy_impl()");

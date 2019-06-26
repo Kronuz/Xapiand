@@ -462,10 +462,6 @@ XapiandManager::shutdown_sig(int sig, bool async)
 		_shutdown_asap = now;
 	}
 
-	if (_total_clients <= 0) {
-		_shutdown_now = now;
-	}
-
 	shutdown(_shutdown_asap, _shutdown_now, async);
 }
 
@@ -483,7 +479,7 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 		stop(false);
 		destroy(false);
 
-		if (now != 0) {
+		if (now != 0 || !XapiandManager::total_clients()) {
 			if (is_runner()) {
 				break_loop(false);
 			} else {
@@ -965,25 +961,6 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 
 
 void
-XapiandManager::stop_impl()
-{
-	L_CALL("XapiandManager::stop_impl()");
-
-	Worker::stop_impl();
-
-	// During stop, finish HTTP servers and clients, but not binary
-	// as those may still be needed by the other end to start the
-	// shutting down process.
-
-	L_MANAGER("Finishing http servers pool!");
-	_http_server_pool->finish();
-
-	L_MANAGER("Finishing http client threads pool!");
-	_http_client_pool->finish();
-}
-
-
-void
 XapiandManager::join()
 {
 	L_CALL("XapiandManager::join()");
@@ -995,12 +972,6 @@ XapiandManager::join()
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
 	L_MANAGER(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), _database_pool->dump_databases(), Node::dump_nodes());
-
-#ifdef XAPIAND_CLUSTERING
-	if (_discovery) {
-		_discovery->stop();
-	}
-#endif
 
 	////////////////////////////////////////////////////////////////////
 	if (_http_server_pool) {
@@ -1124,6 +1095,70 @@ XapiandManager::join()
 			}
 		}
 	}
+#endif
+
+	////////////////////////////////////////////////////////////////////
+	auto& committer_obj = committer(false);
+	if (committer_obj) {
+		L_MANAGER("Finishing autocommitter scheduler!");
+		committer_obj->finish();
+
+		L_MANAGER("Waiting for {} autocommitter{}...", committer_obj->running_size(), (committer_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
+		while (!committer_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+#ifdef XAPIAND_CLUSTERING
+
+	auto& db_updater_obj = db_updater(false);
+	if (db_updater_obj) {
+		L_MANAGER("Finishing database updater!");
+		db_updater_obj->finish();
+
+		L_MANAGER("Waiting for {} database updater{}...", db_updater_obj->running_size(), (db_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
+		while (!db_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	auto& schema_updater_obj = schema_updater(false);
+	if (schema_updater_obj) {
+		L_MANAGER("Finishing schema updater!");
+		schema_updater_obj->finish();
+
+		L_MANAGER("Waiting for {} schema updater{}...", schema_updater_obj->running_size(), (schema_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the schema updaters...", "Schema updaters finished!");
+		while (!schema_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	auto& primary_updater_obj = primary_updater(false);
+	if (primary_updater_obj) {
+		L_MANAGER("Finishing primary shard updater!");
+		primary_updater_obj->finish();
+
+		L_MANAGER("Waiting for {} primary shard updater{}...", primary_updater_obj->running_size(), (primary_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the primary shard updaters...", "Primary shard updaters finished!");
+		while (!primary_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
 
 	////////////////////////////////////////////////////////////////////
 	if (_replication_server_pool) {
@@ -1172,22 +1207,6 @@ XapiandManager::join()
 		}
 	}
 
-	////////////////////////////////////////////////////////////////////
-	auto& committer_obj = committer(false);
-	if (committer_obj) {
-		L_MANAGER("Finishing autocommitter scheduler!");
-		committer_obj->finish();
-
-		L_MANAGER("Waiting for {} autocommitter{}...", committer_obj->running_size(), (committer_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the autocommit schedulers...", "Autocommit schedulers finished!");
-		while (!committer_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 #if XAPIAND_DATABASE_WAL
 
 	////////////////////////////////////////////////////////////////////
@@ -1207,76 +1226,12 @@ XapiandManager::join()
 
 #endif
 
-	////////////////////////////////////////////////////////////////////
-#ifdef XAPIAND_CLUSTERING
-
-	auto& db_updater_obj = db_updater(false);
-	if (db_updater_obj) {
-		L_MANAGER("Finishing database updater!");
-		db_updater_obj->finish();
-
-		L_MANAGER("Waiting for {} database updater{}...", db_updater_obj->running_size(), (db_updater_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the database updaters...", "Database updaters finished!");
-		while (!db_updater_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-	auto& schema_updater_obj = schema_updater(false);
-	if (schema_updater_obj) {
-		L_MANAGER("Finishing schema updater!");
-		schema_updater_obj->finish();
-
-		L_MANAGER("Waiting for {} schema updater{}...", schema_updater_obj->running_size(), (schema_updater_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the schema updaters...", "Schema updaters finished!");
-		while (!schema_updater_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-	auto& primary_updater_obj = primary_updater(false);
-	if (primary_updater_obj) {
-		L_MANAGER("Finishing primary shard updater!");
-		primary_updater_obj->finish();
-
-		L_MANAGER("Waiting for {} primary shard updater{}...", primary_updater_obj->running_size(), (primary_updater_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the primary shard updaters...", "Primary shard updaters finished!");
-		while (!primary_updater_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-#endif
-
-	////////////////////////////////////////////////////////////////////
-	auto& fsyncher_obj = fsyncher(false);
-	if (fsyncher_obj) {
-		L_MANAGER("Finishing async fsync threads pool!");
-		fsyncher_obj->finish();
-
-		L_MANAGER("Waiting for {} async fsync{}...", fsyncher_obj->running_size(), (fsyncher_obj->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
-		while (!fsyncher_obj->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
 #if XAPIAND_CLUSTERING
 
 	////////////////////////////////////////////////////////////////////
 	if (_discovery) {
+		_discovery->stop();
+
 		L_MANAGER("Finishing Discovery loop!");
 		_discovery->finish();
 
@@ -1300,6 +1255,22 @@ XapiandManager::join()
 		L_MANAGER("Waiting for Database Cleanup...");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the database cleanup worker...", "Database cleanup worker finished!");
 		while (!_database_cleanup->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	////////////////////////////////////////////////////////////////////
+	auto& fsyncher_obj = fsyncher(false);
+	if (fsyncher_obj) {
+		L_MANAGER("Finishing async fsync threads pool!");
+		fsyncher_obj->finish();
+
+		L_MANAGER("Waiting for {} async fsync{}...", fsyncher_obj->running_size(), (fsyncher_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the async fsync threads...", "Async fsync threads finished!");
+		while (!fsyncher_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);

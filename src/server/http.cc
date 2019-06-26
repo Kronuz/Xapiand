@@ -26,6 +26,7 @@
 
 #include "tcp.h"                              // for BaseTCP, TCP_TCP_NODELAY, TCP_TCP_DEFER_ACCEPT
 #include "http_server.h"                      // For RemoteProtocolServer
+#include "manager.h"                          // for XapiandManager
 #include "log.h"                              // for L_OBJ
 #include "node.h"                             // for Node::local_node
 
@@ -40,6 +41,30 @@ Http::Http(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsig
 	: BaseTCP(parent_, ev_loop_, ev_flags_, "HTTP", TCP_TCP_NODELAY | TCP_TCP_DEFER_ACCEPT)
 {
 	bind(hostname, serv, tries);
+}
+
+
+void
+Http::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("Http::shutdown_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		stop(false);
+		destroy(false);
+
+		if (now != 0 || !XapiandManager::http_clients()) {
+			XapiandManager::http_server_pool()->finish();
+			XapiandManager::http_client_pool()->finish();
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
+	}
 }
 
 

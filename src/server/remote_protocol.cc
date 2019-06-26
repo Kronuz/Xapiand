@@ -29,6 +29,7 @@
 #include "remote_protocol_server.h"           // For RemoteProtocolServer
 #include "endpoint.h"                         // for Endpoint
 #include "io.hh"                              // for io::*
+#include "manager.h"                          // for XapiandManager
 #include "node.h"                             // for Node, local_node
 #include "remote_protocol_client.h"           // for XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MAINOR_VERSION
 
@@ -43,6 +44,30 @@ RemoteProtocol::RemoteProtocol(const std::shared_ptr<Worker>& parent_, ev::loop_
 	: BaseTCP(parent_, ev_loop_, ev_flags_, "Remote", TCP_TCP_NODELAY)
 {
 	bind(hostname, serv, tries);
+}
+
+
+void
+RemoteProtocol::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("RemoteProtocol::shutdown_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		stop(false);
+		destroy(false);
+
+		if (now != 0 || !XapiandManager::remote_clients()) {
+			XapiandManager::remote_server_pool()->finish();
+			XapiandManager::remote_client_pool()->finish();
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
+	}
 }
 
 

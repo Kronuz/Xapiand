@@ -33,6 +33,7 @@
 #include "http_client.h"                    // for HttpClient
 #include "io.hh"                            // for ignored_errno
 #include "log.h"                            // for L_EV, L_OBJ, L_CALL, L_ERR
+#include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
 #include "worker.h"                         // for Worker
 
@@ -59,6 +60,28 @@ HttpServer::~HttpServer() noexcept
 		Worker::deinit();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
+	}
+}
+
+
+void
+HttpServer::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("HttpServer::stop_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		stop(false);
+		destroy(false);
+
+		if (now != 0 || !XapiandManager::http_clients()) {
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
 	}
 }
 

@@ -76,6 +76,28 @@ ReplicationProtocolServer::~ReplicationProtocolServer() noexcept
 
 
 void
+ReplicationProtocolServer::shutdown_impl(long long asap, long long now)
+{
+	L_CALL("ReplicationProtocolServer::stop_impl({}, {})", asap, now);
+
+	Worker::shutdown_impl(asap, now);
+
+	if (asap) {
+		if (now != 0 || !XapiandManager::replication_clients()) {
+			stop(false);
+			destroy(false);
+
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
+	}
+}
+
+
+void
 ReplicationProtocolServer::start_impl()
 {
 	L_CALL("ReplicationProtocolServer::start_impl()");
