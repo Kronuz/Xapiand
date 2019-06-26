@@ -147,7 +147,6 @@ Node::set_local_node(std::shared_ptr<const Node> node)
 	L_CALL("Node::set_local_node({})", node ? node->__repr__() : "null");
 
 	assert(node);
-	assert(!node->empty());
 
 	auto now = epoch::now<std::chrono::milliseconds>();
 	node->activated.store(true, std::memory_order_release);
