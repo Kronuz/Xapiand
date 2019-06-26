@@ -1452,7 +1452,7 @@ Discovery::_raft_request_vote(bool immediate)
 {
 	L_CALL("Discovery::_raft_request_vote({})", immediate);
 
-	Node::set_leader_node(std::make_shared<const Node>());
+	_raft_set_leader_node(std::make_shared<const Node>());
 
 	if (immediate) {
 		++raft_current_term;
