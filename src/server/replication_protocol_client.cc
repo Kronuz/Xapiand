@@ -581,6 +581,7 @@ ReplicationProtocolClient::replication_client(ReplicationReplyType type, const s
 		L_EXC("ERROR: Replicating database: {}", (*lk_shard_ptr)->endpoint.path);
 	}
 
+	close();  // client closes on error, take no more messages!
 	reset();
 	lk_shard_ptr.reset();
 	destroy();
