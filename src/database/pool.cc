@@ -605,7 +605,7 @@ ShardEndpoint::is_pending() const
 std::string
 ShardEndpoint::__repr__() const
 {
-	std::vector<std::string> pending;
+	std::string pending;
 	auto pending_rev = pending_revision.load(std::memory_order_relaxed);
 	if (pending_rev) {
 		auto index_settings = XapiandManager::resolve_index_settings(path);
@@ -613,21 +613,25 @@ ShardEndpoint::__repr__() const
 			const auto& nodes = index_settings.shards[0].nodes;
 			auto node = Node::get_node(nodes[0]);
 			if (!node || node->is_local()) {
+				std::vector<std::string> pending_nodes;
 				for (const auto& node_name : nodes) {
 					node = Node::get_node(node_name);
 					if (node && !node->empty()) {
 						auto rev = get_revision(node->lower_name());
 						if (rev < pending_rev) {
-							pending.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
+							pending_nodes.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
 						}
 					}
+				}
+				if (!pending_nodes.empty()) {
+					pending = strings::format(", pending:[{}]", strings::join(pending_nodes, ", "));
 				}
 			}
 		}
 	}
-	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}, pending:[{}]}} {}{}{}>",
+	return strings::format(STEEL_BLUE + "<ShardEndpoint {{refs:{}{}}} {}{}{}>",
 		refs.load(),
-		strings::join(pending, ", "),
+		pending,
 		repr(to_string()),
 		is_locked() ? " " + RED + "(locked)" + STEEL_BLUE : "",
 		is_finished() ? " " + ORANGE + "(finished)" + STEEL_BLUE : "");
