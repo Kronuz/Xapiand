@@ -1154,7 +1154,7 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 void
 DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec)
 {
-	L_CALL("DatabaseWALWriter::write_remove_spelling()");
+	L_CALL("DatabaseWALWriter::write_remove_spelling({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1175,7 +1175,7 @@ DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& pa
 void
 DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, bool send_update)
 {
-	L_CALL("DatabaseWALWriter::write_commit()");
+	L_CALL("DatabaseWALWriter::write_commit({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1195,7 +1195,7 @@ DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const
 void
 DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, Xapian::Document&& doc)
 {
-	L_CALL("DatabaseWALWriter::write_replace_document()");
+	L_CALL("DatabaseWALWriter::write_replace_document({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
 	assert(did != 0);
 
@@ -1218,7 +1218,7 @@ DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& p
 void
 DatabaseWALWriter::write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did)
 {
-	L_CALL("DatabaseWALWriter::write_delete_document()");
+	L_CALL("DatabaseWALWriter::write_delete_document({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
 	assert(did != 0);
 
@@ -1240,7 +1240,7 @@ DatabaseWALWriter::write_delete_document(bool synchronous, const std::string& pa
 void
 DatabaseWALWriter::write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val)
 {
-	L_CALL("DatabaseWALWriter::write_set_metadata()");
+	L_CALL("DatabaseWALWriter::write_set_metadata({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
@@ -1261,7 +1261,7 @@ DatabaseWALWriter::write_set_metadata(bool synchronous, const std::string& path,
 void
 DatabaseWALWriter::write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc)
 {
-	L_CALL("DatabaseWALWriter::write_add_spelling()");
+	L_CALL("DatabaseWALWriter::write_add_spelling({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
 
 	DatabaseWALWriterTask task;
 	task.path = path;
