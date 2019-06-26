@@ -417,6 +417,16 @@ Logging::clean()
 }
 
 
+bool
+Logging::clear(bool internal)
+{
+	if (!internal) {
+		unlog_str.clear();
+	}
+	return ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>::clear(internal);
+}
+
+
 long double
 Logging::age()
 {
