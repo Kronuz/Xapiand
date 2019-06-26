@@ -372,7 +372,6 @@ XapiandManager::try_shutdown_timer_cb(ev::timer& /*unused*/, [[maybe_unused]] in
 	L_EV_BEGIN("XapiandManager::try_shutdown_timer_cb:BEGIN");
 	L_EV_END("XapiandManager::try_shutdown_timer_cb:END");
 
-	L_RED("Try shutdown!");
 	try_shutdown();
 }
 

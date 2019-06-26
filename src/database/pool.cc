@@ -594,7 +594,6 @@ ShardEndpoint::is_pending() const
 						++total;
 					}
 				}
-				L_ORANGE("{} -> total:{}, pending:{} => quorum:{}", path, total, pending, Node::quorum(total, pending));
 				return Node::quorum(total, pending);
 			}
 		}
