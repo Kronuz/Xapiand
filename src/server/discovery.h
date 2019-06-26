@@ -98,6 +98,7 @@ private:
 	ev::timer raft_leader_heartbeat;
 
 	ev::async raft_request_vote_async;
+	ev::async raft_relinquish_leadership_async;
 
 	ev::async raft_add_command_async;
 	ConcurrentQueue<std::string> raft_add_command_args;
@@ -159,8 +160,9 @@ private:
 	void _raft_commit_log();
 
 	void _raft_request_vote(bool immediate);
-
 	void raft_request_vote_async_cb(ev::async& watcher, int revents);
+
+	void raft_relinquish_leadership_async_cb(ev::async& watcher, int revents);
 
 	void _raft_add_command(const std::string& command);
 	void raft_add_command_async_cb(ev::async& watcher, int revents);
@@ -187,6 +189,7 @@ public:
 	void cluster_enter();
 	void raft_add_command(const std::string& command);
 	void raft_request_vote();
+	void raft_relinquish_leadership();
 	void db_updated_send(Xapian::rev revision, std::string_view path);
 	void schema_updated_send(Xapian::rev revision, std::string_view path);
 	void primary_updated_send(size_t shards, std::string_view path);

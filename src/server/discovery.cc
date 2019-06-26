@@ -90,6 +90,7 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_leader_election_timeout(*ev_loop),
 	  raft_leader_heartbeat(*ev_loop),
 	  raft_request_vote_async(*ev_loop),
+	  raft_relinquish_leadership_async(*ev_loop),
 	  raft_add_command_async(*ev_loop),
 	  message_send_async(*ev_loop),
 	  raft_role(Role::RAFT_FOLLOWER),
@@ -114,6 +115,10 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	raft_request_vote_async.set<Discovery, &Discovery::raft_request_vote_async_cb>(this);
 	raft_request_vote_async.start();
 	L_EV("Start raft's async raft_request_vote signal event");
+
+	raft_relinquish_leadership_async.set<Discovery, &Discovery::raft_relinquish_leadership_async_cb>(this);
+	raft_relinquish_leadership_async.start();
+	L_EV("Start raft's async raft_relinquish_leadership signal event");
 
 	raft_add_command_async.set<Discovery, &Discovery::raft_add_command_async_cb>(this);
 	raft_add_command_async.start();
@@ -145,6 +150,8 @@ Discovery::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
+		raft_relinquish_leadership();
+
 		auto manager = XapiandManager::manager();
 		if (now != 0 || !manager || manager->ready_to_end_discovery()) {
 			stop(false);
@@ -1512,6 +1519,30 @@ Discovery::raft_request_vote_async_cb(ev::async&, [[maybe_unused]] int revents)
 	L_EV_END("Discovery::raft_request_vote_async_cb:END {{ state:{} }}", enum_name(XapiandManager::get_state()));
 
 	_raft_request_vote(false);
+}
+
+
+void
+Discovery::raft_relinquish_leadership()
+{
+	L_CALL("Discovery::raft_relinquish_leadership()");
+
+	raft_relinquish_leadership_async.send();
+}
+
+
+void
+Discovery::raft_relinquish_leadership_async_cb(ev::async&, [[maybe_unused]] int revents)
+{
+	L_CALL("Discovery::raft_relinquish_leadership_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+
+	L_EV_BEGIN("Discovery::raft_relinquish_leadership_async_cb:BEGIN {{ state:{} }}", enum_name(XapiandManager::get_state()));
+	L_EV_END("Discovery::raft_relinquish_leadership_async_cb:END {{ state:{} }}", enum_name(XapiandManager::get_state()));
+
+	raft_eligible = false;
+	if (raft_role != Role::RAFT_FOLLOWER) {
+		_raft_request_vote(true);
+	}
 }
 
 
