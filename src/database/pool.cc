@@ -133,7 +133,7 @@ ShardEndpoint::ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoi
 	refs(0),
 	finished(false),
 	locked(false),
-	expected_revision(0),
+	pending_revision(0),
 	renew_time(std::chrono::steady_clock::now()),
 	readables_available(0)
 {
@@ -575,22 +575,29 @@ ShardEndpoint::is_pending() const
 {
 	L_CALL("ShardEndpoint::is_pending()");
 
-	auto index_settings = XapiandManager::resolve_index_settings(path);
-	if (index_settings.shards.size() == 1) {
-		size_t total = 0;
-		size_t pending = 0;
-		auto expected_rev = expected_revision.load(std::memory_order_relaxed);
-		for (const auto& node_name : index_settings.shards[0].nodes) {
-			auto node = Node::get_node(node_name);
-			if (node && !node->empty()) {
-				auto rev = get_revision(node->lower_name());
-				if (rev < expected_rev) {
-					++pending;
+	auto pending_rev = pending_revision.load(std::memory_order_relaxed);
+	if (pending_rev) {
+		auto index_settings = XapiandManager::resolve_index_settings(path);
+		if (index_settings.shards.size() == 1) {
+			const auto& nodes = index_settings.shards[0].nodes;
+			auto node = Node::get_node(nodes[0]);
+			if (!node || node->is_local()) {
+				size_t total = 0;
+				size_t pending = 0;
+				for (const auto& node_name : nodes) {
+					node = Node::get_node(node_name);
+					if (node && !node->empty()) {
+						auto rev = get_revision(node->lower_name());
+						if (rev < pending_rev) {
+							++pending;
+						}
+						++total;
+					}
 				}
-				++total;
+				L_ORANGE("{} -> total:{}, pending:{} => quorum:{}", path, total, pending, Node::quorum(total, pending));
+				return Node::quorum(total, pending);
 			}
 		}
-		return Node::quorum(total, pending);
 	}
 	return false;
 }
@@ -600,15 +607,21 @@ std::string
 ShardEndpoint::__repr__() const
 {
 	std::vector<std::string> pending;
-	auto index_settings = XapiandManager::resolve_index_settings(path);
-	if (index_settings.shards.size() == 1) {
-		auto expected_rev = expected_revision.load(std::memory_order_relaxed);
-		for (const auto& node_name : index_settings.shards[0].nodes) {
-			auto node = Node::get_node(node_name);
-			if (node && !node->empty()) {
-				auto rev = get_revision(node->lower_name());
-				if (rev < expected_rev) {
-					pending.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
+	auto pending_rev = pending_revision.load(std::memory_order_relaxed);
+	if (pending_rev) {
+		auto index_settings = XapiandManager::resolve_index_settings(path);
+		if (index_settings.shards.size() == 1) {
+			const auto& nodes = index_settings.shards[0].nodes;
+			auto node = Node::get_node(nodes[0]);
+			if (!node || node->is_local()) {
+				for (const auto& node_name : nodes) {
+					node = Node::get_node(node_name);
+					if (node && !node->empty()) {
+						auto rev = get_revision(node->lower_name());
+						if (rev < pending_rev) {
+							pending.push_back(strings::format("{}{}" + STEEL_BLUE, node->col().ansi(), node->name()));
+						}
+					}
 				}
 			}
 		}

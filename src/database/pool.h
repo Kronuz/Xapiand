@@ -79,7 +79,7 @@ class ShardEndpoint : public Endpoint
 	std::atomic_bool locked;
 	mutable std::mutex revisions_mtx;
 	std::unordered_map<std::string, Xapian::rev> revisions;
-	std::atomic<Xapian::rev> expected_revision;
+	std::atomic<Xapian::rev> pending_revision;
 	std::chrono::time_point<std::chrono::steady_clock> renew_time;
 
 	std::shared_ptr<Shard> writable;

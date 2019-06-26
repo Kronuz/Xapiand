@@ -317,7 +317,9 @@ Shard::reopen_writable()
 	if (local) {
 		reopen_revision = new_database->get_revision();
 		endpoint.set_revision(reopen_revision);
-		endpoint.expected_revision.store(reopen_revision, std::memory_order_relaxed);
+		if (!is_replica()) {
+			endpoint.pending_revision.store(reopen_revision, std::memory_order_relaxed);
+		}
 	}
 
 	if (is_transactional()) {
@@ -746,7 +748,9 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				assert(current_revision == prior_revision + 1);
 				L_DATABASE("Commit on shard {}: {} -> {}", repr(endpoint.to_string()), prior_revision, current_revision);
 				endpoint.set_revision(current_revision);
-				endpoint.expected_revision.store(current_revision, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(current_revision, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -885,7 +889,9 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 			wdb->delete_document(shard_did);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -988,7 +994,9 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1175,7 +1183,9 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1305,7 +1315,9 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1517,7 +1529,9 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1583,7 +1597,9 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 			wdb->add_spelling(word, freqinc);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1642,7 +1658,9 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 			result = wdb->remove_spelling(word, freqdec);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1900,7 +1918,9 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 			wdb->set_metadata(key, value);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
-				endpoint.expected_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				if (!is_replica()) {
+					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+				}
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
