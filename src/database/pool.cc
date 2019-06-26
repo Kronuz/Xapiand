@@ -31,7 +31,7 @@
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
 #include "node.h"                 // for Node
-#include "manager.h"              // for XapiandManager
+#include "manager.h"              // for IndexSettings, XapiandManager
 
 
 // #undef L_DEBUG
@@ -570,35 +570,53 @@ ShardEndpoint::is_used() const
 }
 
 
+IndexSettings
+ShardEndpoint::_get_pending_index_settings() const
+{
+	L_CALL("ShardEndpoint::_get_pending_index_settings()");
+
+	if (pending_revision.load(std::memory_order_relaxed)) {
+		return XapiandManager::resolve_index_settings(path);
+	}
+	return {};
+}
+
+
+bool
+ShardEndpoint::_is_pending(const IndexSettings& index_settings) const
+{
+	L_CALL("ShardEndpoint::_is_pending(<index_settings>)");
+
+	if (index_settings.shards.size() == 1) {
+		const auto& nodes = index_settings.shards[0].nodes;
+		auto node = Node::get_node(nodes[0]);
+		if (!node || node->is_local()) {
+			size_t total = 0;
+			size_t pending = 0;
+			auto pending_rev = pending_revision.load(std::memory_order_relaxed);
+			for (const auto& node_name : nodes) {
+				node = Node::get_node(node_name);
+				if (node && !node->empty()) {
+					auto rev = get_revision(node->lower_name());
+					if (rev < pending_rev) {
+						++pending;
+					}
+					++total;
+				}
+			}
+			return Node::quorum(total, pending);
+		}
+	}
+	return false;
+}
+
+
 bool
 ShardEndpoint::is_pending() const
 {
 	L_CALL("ShardEndpoint::is_pending()");
 
-	auto pending_rev = pending_revision.load(std::memory_order_relaxed);
-	if (pending_rev) {
-		auto index_settings = XapiandManager::resolve_index_settings(path);
-		if (index_settings.shards.size() == 1) {
-			const auto& nodes = index_settings.shards[0].nodes;
-			auto node = Node::get_node(nodes[0]);
-			if (!node || node->is_local()) {
-				size_t total = 0;
-				size_t pending = 0;
-				for (const auto& node_name : nodes) {
-					node = Node::get_node(node_name);
-					if (node && !node->empty()) {
-						auto rev = get_revision(node->lower_name());
-						if (rev < pending_rev) {
-							++pending;
-						}
-						++total;
-					}
-				}
-				return Node::quorum(total, pending);
-			}
-		}
-	}
-	return false;
+	return _is_pending(_get_pending_index_settings());
 }
 
 
@@ -1011,13 +1029,14 @@ DatabasePool::cleanup(bool immediate)
 				ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
 				lk.unlock();
 				referenced_database_endpoint->clear();
+				auto index_settings = referenced_database_endpoint->_get_pending_index_settings();
 				lk.lock();
 				referenced_database_endpoint.reset();
 				if (endpoint_database_endpoint.second->is_used()) {
 					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return DropAction::leave;
 				}
-				if (endpoint_database_endpoint.second->is_pending()) {
+				if (endpoint_database_endpoint.second->_is_pending(index_settings)) {
 					L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return DropAction::leave;
 				}
@@ -1031,13 +1050,14 @@ DatabasePool::cleanup(bool immediate)
 			ReferencedShardEndpoint referenced_database_endpoint(endpoint_database_endpoint.second.get());
 			lk.unlock();
 			referenced_database_endpoint->clear();
+			auto index_settings = referenced_database_endpoint->_get_pending_index_settings();
 			lk.lock();
 			referenced_database_endpoint.reset();
 			if (endpoint_database_endpoint.second->is_used()) {
 				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::leave;
 			}
-			if (endpoint_database_endpoint.second->is_pending()) {
+			if (endpoint_database_endpoint.second->_is_pending(index_settings)) {
 				L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::leave;
 			}

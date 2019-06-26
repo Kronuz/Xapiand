@@ -51,6 +51,7 @@ class Shard;
 class Database;
 class DatabasePool;
 class ReferencedShardEndpoint;
+struct IndexSettings;
 
 
 /*
@@ -95,6 +96,9 @@ class ShardEndpoint : public Endpoint
 
 	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk);
 	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk);
+
+	IndexSettings _get_pending_index_settings() const;
+	bool _is_pending(const IndexSettings& index_settings) const;
 
 public:
 	ShardEndpoint(DatabasePool& database_pool, const Endpoint& endpoint);
