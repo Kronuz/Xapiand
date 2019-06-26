@@ -119,6 +119,10 @@ public:
 		return (flags & DB_REPLICA) == DB_REPLICA;
 	}
 
+	bool is_synchronous_wal() const {
+		return (flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL;
+	}
+
 	bool is_wal_active() const {
 		return is_writable() && is_local() && (flags & DB_DISABLE_WAL) != DB_DISABLE_WAL;
 	}

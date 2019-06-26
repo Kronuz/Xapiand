@@ -341,12 +341,12 @@ public:
 
 	std::size_t running_size();
 
-	void write_commit(Shard& shard, bool send_update);
-	void write_replace_document(Shard& shard, Xapian::docid did, Xapian::Document&& doc);
-	void write_delete_document(Shard& shard, Xapian::docid did);
-	void write_set_metadata(Shard& shard, const std::string& key, const std::string& val);
-	void write_add_spelling(Shard& shard, const std::string& word, Xapian::termcount freqinc);
-	void write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec);
+	void write_commit(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, bool send_update);
+	void write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, Xapian::Document&& doc);
+	void write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did);
+	void write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val);
+	void write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc);
+	void write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec);
 };
 
 

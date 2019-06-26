@@ -1152,22 +1152,19 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 
 
 void
-DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, Xapian::termcount freqdec)
+DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec)
 {
 	L_CALL("DatabaseWALWriter::write_remove_spelling()");
 
-	assert(shard.is_wal_active());
-	assert(shard.endpoint.is_local());
-
 	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
+	task.path = path;
+	task.uuid = UUID(uuid);
+	task.revision = revision;
 	task.term_word_val = word;
 	task.freq = freqdec;
 	task.dispatcher = &DatabaseWALWriterTask::write_remove_spelling;
 
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
+	if (synchronous) {
 		execute(std::move(task));
 	} else {
 		enqueue(std::move(task));
@@ -1176,22 +1173,18 @@ DatabaseWALWriter::write_remove_spelling(Shard& shard, const std::string& word, 
 
 
 void
-DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
+DatabaseWALWriter::write_commit(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, bool send_update)
 {
 	L_CALL("DatabaseWALWriter::write_commit()");
 
-	assert(shard.is_wal_active());
-	assert(shard.endpoint.is_local());
-	assert(shard.db()->get_revision() != 0);
-
 	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision() - 1;
+	task.path = path;
+	task.uuid = UUID(uuid);
+	task.revision = revision;
 	task.send_update = send_update;
 	task.dispatcher = &DatabaseWALWriterTask::write_commit;
 
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
+	if (synchronous) {
 		execute(std::move(task));
 	} else {
 		enqueue(std::move(task));
@@ -1200,23 +1193,21 @@ DatabaseWALWriter::write_commit(Shard& shard, bool send_update)
 
 
 void
-DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapian::Document&& doc)
+DatabaseWALWriter::write_replace_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did, Xapian::Document&& doc)
 {
 	L_CALL("DatabaseWALWriter::write_replace_document()");
 
 	assert(did != 0);
-	assert(shard.is_wal_active());
-	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
+	task.path = path;
+	task.uuid = UUID(uuid);
+	task.revision = revision;
 	task.did = did;
 	task.doc = std::move(doc);
 	task.dispatcher = &DatabaseWALWriterTask::write_replace_document;
 
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
+	if (synchronous) {
 		execute(std::move(task));
 	} else {
 		enqueue(std::move(task));
@@ -1225,22 +1216,20 @@ DatabaseWALWriter::write_replace_document(Shard& shard, Xapian::docid did, Xapia
 
 
 void
-DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
+DatabaseWALWriter::write_delete_document(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, Xapian::docid did)
 {
 	L_CALL("DatabaseWALWriter::write_delete_document()");
 
 	assert(did != 0);
-	assert(shard.is_wal_active());
-	assert(shard.endpoint.is_local());
 
 	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
+	task.path = path;
+	task.uuid = UUID(uuid);
+	task.revision = revision;
 	task.did = did;
 	task.dispatcher = &DatabaseWALWriterTask::write_delete_document;
 
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
+	if (synchronous) {
 		execute(std::move(task));
 	} else {
 		enqueue(std::move(task));
@@ -1249,22 +1238,19 @@ DatabaseWALWriter::write_delete_document(Shard& shard, Xapian::docid did)
 
 
 void
-DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, const std::string& val)
+DatabaseWALWriter::write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val)
 {
 	L_CALL("DatabaseWALWriter::write_set_metadata()");
 
-	assert(shard.is_wal_active());
-	assert(shard.endpoint.is_local());
-
 	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
+	task.path = path;
+	task.uuid = UUID(uuid);
+	task.revision = revision;
 	task.key = key;
 	task.term_word_val = val;
 	task.dispatcher = &DatabaseWALWriterTask::write_set_metadata;
 
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
+	if (synchronous) {
 		execute(std::move(task));
 	} else {
 		enqueue(std::move(task));
@@ -1273,22 +1259,19 @@ DatabaseWALWriter::write_set_metadata(Shard& shard, const std::string& key, cons
 
 
 void
-DatabaseWALWriter::write_add_spelling(Shard& shard, const std::string& word, Xapian::termcount freqinc)
+DatabaseWALWriter::write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc)
 {
 	L_CALL("DatabaseWALWriter::write_add_spelling()");
 
-	assert(shard.is_wal_active());
-	assert(shard.endpoint.is_local());
-
 	DatabaseWALWriterTask task;
-	task.path = shard.endpoint.path;
-	task.uuid = UUID(shard.db()->get_uuid());
-	task.revision = shard.db()->get_revision();
+	task.path = path;
+	task.uuid = UUID(uuid);
+	task.revision = revision;
 	task.term_word_val = word;
 	task.freq = freqinc;
 	task.dispatcher = &DatabaseWALWriterTask::write_add_spelling;
 
-	if ((shard.flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) {
+	if (synchronous) {
 		execute(std::move(task));
 	} else {
 		enqueue(std::move(task));

@@ -722,7 +722,8 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
-			assert(!local || wdb->get_revision() == endpoint.get_revision());
+			auto prior_revision = wdb->get_revision();
+			assert(!local || prior_revision == endpoint.get_revision());
 			auto transaction = transactional();
 			if (transaction == Transaction::flushed) {
 				wdb->commit_transaction();
@@ -736,7 +737,6 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 			}
 			_modified.store(false, std::memory_order_relaxed);
 			if (local) {
-				auto prior_revision = endpoint.get_revision();
 				auto current_revision = wdb->get_revision();
 				if (prior_revision == current_revision) {
 					L_DATABASE("Commit on shard {} was discarded, because it turned out not to change the revision", repr(endpoint.to_string()));
@@ -748,6 +748,17 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 				if (!is_replica()) {
 					endpoint.pending_revision.store(current_revision, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+					XapiandManager::manager(true)->wal_writer->write_commit(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						send_update);
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -767,10 +778,6 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::commit:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_commit(*this, send_update); }
-#endif
 
 	return true;
 }
@@ -886,9 +893,21 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 			wdb->delete_document(shard_did);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+					XapiandManager::manager(true)->wal_writer->write_delete_document(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						shard_did);
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -908,10 +927,6 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::delete_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_delete_document(*this, shard_did); }
-#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -991,9 +1006,21 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+					XapiandManager::manager(true)->wal_writer->write_delete_document(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						shard_did);
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1013,10 +1040,6 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::delete_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_delete_document(*this, shard_did); }
-#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -1180,9 +1203,27 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+#ifdef XAPIAND_DATA_STORAGE
+					if (!pushed.second.empty()) {
+						doc.set_data(pushed.second);  // restore data with blobs
+					}
+#endif  // XAPIAND_DATA_STORAGE
+					XapiandManager::manager(true)->wal_writer->write_replace_document(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						info.did,
+						std::move(doc));
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1202,17 +1243,6 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::add_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) {
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // restore data with blobs
-		}
-#endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::manager(true)->wal_writer->write_replace_document(*this, info.did, std::move(doc));
-	}
-#endif  // XAPIAND_DATABASE_WAL
 
 	if (commit_) {
 		commit(wal_);
@@ -1312,9 +1342,27 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+#ifdef XAPIAND_DATA_STORAGE
+					if (!pushed.second.empty()) {
+						doc.set_data(pushed.second);  // restore data with blobs
+					}
+#endif  // XAPIAND_DATA_STORAGE
+					XapiandManager::manager(true)->wal_writer->write_replace_document(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						info.did,
+						std::move(doc));
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1334,17 +1382,6 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::replace_document:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) {
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // restore data with blobs
-		}
-#endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::manager(true)->wal_writer->write_replace_document(*this, info.did, std::move(doc));
-	}
-#endif  // XAPIAND_DATABASE_WAL
 
 	if (commit_) {
 		commit(wal_);
@@ -1526,9 +1563,27 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 			}
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+#ifdef XAPIAND_DATA_STORAGE
+					if (!pushed.second.empty()) {
+						doc.set_data(pushed.second);  // restore data with blobs
+					}
+#endif  // XAPIAND_DATA_STORAGE
+					XapiandManager::manager(true)->wal_writer->write_replace_document(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						info.did,
+						std::move(doc));
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1548,17 +1603,6 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::replace_document_term:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) {
-#ifdef XAPIAND_DATA_STORAGE
-		if (!pushed.second.empty()) {
-			doc.set_data(pushed.second);  // restore data with blobs
-		}
-#endif  // XAPIAND_DATA_STORAGE
-		XapiandManager::manager(true)->wal_writer->write_replace_document(*this, info.did, std::move(doc));
-	}
-#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -1594,9 +1638,22 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 			wdb->add_spelling(word, freqinc);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+					XapiandManager::manager(true)->wal_writer->write_add_spelling(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						word,
+						freqinc);
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1616,10 +1673,6 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::add_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_add_spelling(*this, word, freqinc); }
-#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -1655,9 +1708,22 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 			result = wdb->remove_spelling(word, freqdec);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+					XapiandManager::manager(true)->wal_writer->write_remove_spelling(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						word,
+						freqdec);
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1677,10 +1743,6 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::remove_spelling:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_remove_spelling(*this, word, freqdec); }
-#endif
 
 	if (commit_) {
 		commit(wal_);
@@ -1915,9 +1977,22 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 			wdb->set_metadata(key, value);
 			_modified.store(commit_ || local, std::memory_order_relaxed);
 			if (local) {
+				auto prior_revision = wdb->get_revision();
 				if (!is_replica()) {
-					endpoint.pending_revision.store(endpoint.get_revision() + 1, std::memory_order_relaxed);
+					endpoint.pending_revision.store(prior_revision + 1, std::memory_order_relaxed);
 				}
+#if XAPIAND_DATABASE_WAL
+				if (wal_ && is_wal_active()) {
+					auto uuid = wdb->get_uuid();
+					XapiandManager::manager(true)->wal_writer->write_set_metadata(
+						is_synchronous_wal(),
+						endpoint.path,
+						std::move(uuid),
+						prior_revision,
+						key,
+						value);
+				}
+#endif
 			}
 			break;
 		} catch (const Xapian::DatabaseOpeningError&) {
@@ -1937,10 +2012,6 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 		wdb = static_cast<Xapian::WritableDatabase *>(db());
 		L_DATABASE_WRAP_END("Shard::set_metadata:END {{endpoint:{}, flags:({})}} ({} retries)", repr(to_string()), readable_flags(flags), DB_RETRIES - t);
 	}
-
-#if XAPIAND_DATABASE_WAL
-	if (wal_ && is_wal_active()) { XapiandManager::manager(true)->wal_writer->write_set_metadata(*this, key, value); }
-#endif
 
 	if (commit_) {
 		commit(wal_);
