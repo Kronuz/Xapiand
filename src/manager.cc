@@ -1348,42 +1348,63 @@ XapiandManager::join()
 bool
 XapiandManager::ready_to_end_http()
 {
-	return !http_clients;
+	return (
+		!http_clients
+	);
 }
 
 
 bool
 XapiandManager::ready_to_end_remote()
 {
-	return !remote_clients;
+	return (
+		!remote_clients
+	);
 }
 
 
 bool
 XapiandManager::ready_to_end_replication()
 {
-	return !replication_clients && !database_pool->is_pending();
+	return (
+		!replication_clients &&
+		!database_pool->is_pending()
+	);
 }
 
 
 bool
 XapiandManager::ready_to_end_database_cleanup()
 {
-	return !total_clients;
+	return (
+		ready_to_end_http() &&
+		ready_to_end_remote() &&
+		ready_to_end_replication()
+	);
 }
 
 
 bool
 XapiandManager::ready_to_end_discovery()
 {
-	return !total_clients;
+	return (
+		ready_to_end_http() &&
+		ready_to_end_remote() &&
+		ready_to_end_replication()
+	);
 }
 
 
 bool
 XapiandManager::ready_to_end()
 {
-	return !total_clients;
+	return (
+		ready_to_end_http() &&
+		ready_to_end_remote() &&
+		ready_to_end_replication() &&
+		ready_to_end_database_cleanup() &&
+		ready_to_end_discovery()
+	);
 }
 
 
