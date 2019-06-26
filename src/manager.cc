@@ -405,61 +405,61 @@ XapiandManager::shutdown_sig(int sig, bool async)
 {
 	L_CALL("XapiandManager::shutdown_sig({}, {})", sig, async);
 
-	/* SIGINT is often delivered via Ctrl+C in an interactive session.
-	 * If we receive the signal the second time, we interpret this as
-	 * the user really wanting to quit ASAP without waiting to persist
-	 * on disk. */
-	auto now = epoch::now<std::chrono::milliseconds>();
+	if (sig) {
+		if (sig < 0) {
+			// System Exit with error code (-sig)
+			atom_sig = sig;
+			if (is_runner() && is_running_loop()) {
+				break_loop();
+			} else {
+				throw SystemExit(-sig);
+			}
+			return;
+		}
 
-	if (sig < 0) {
-		atom_sig = sig;
-		if (is_runner() && is_running_loop()) {
-			break_loop();
-		} else {
-			throw SystemExit(-sig);
-		}
-		return;
-	}
-	if (_shutdown_now != 0) {
-		if (now >= _shutdown_now + 800) {
-			if (now <= _shutdown_now + 3000) {
-				io::ignore_eintr().store(false);
-				atom_sig = sig = -EX_SOFTWARE;
-				if (is_runner() && is_running_loop()) {
-					L_WARNING("Trying breaking the loop.");
-					break_loop();
-				} else {
-					L_WARNING("You insisted... {} exiting now!", Package::NAME);
-					throw SystemExit(-sig);
+		auto now = epoch::now<std::chrono::milliseconds>();
+
+		if (_shutdown_now != 0) {
+			if (now >= _shutdown_now + 200) {
+				if (now <= _shutdown_now + 1000) {
+					io::ignore_eintr().store(false);
+					atom_sig = sig = -EX_SOFTWARE;
+					if (is_runner() && is_running_loop()) {
+						L_WARNING("Trying breaking the loop.");
+						break_loop();
+					} else {
+						L_WARNING("You insisted... {} exiting now!", Package::NAME);
+						throw SystemExit(-sig);
+					}
+					return;
 				}
-				return;
-			}
-			_shutdown_now = now;
-		}
-	} else if (_shutdown_asap != 0) {
-		if (now >= _shutdown_asap + 800) {
-			if (now <= _shutdown_asap + 3000) {
 				_shutdown_now = now;
-				io::ignore_eintr().store(false);
-				L_INFO("Trying immediate shutdown.");
 			}
+		} else if (_shutdown_asap != 0) {
+			if (now >= _shutdown_asap + 200) {
+				if (now <= _shutdown_asap + 1000) {
+					_shutdown_now = now;
+					io::ignore_eintr().store(false);
+					L_INFO("Trying immediate shutdown.");
+				}
+				_shutdown_asap = now;
+			}
+		} else {
+			switch (sig) {
+				case SIGINT:
+					L_INFO("Received SIGINT scheduling shutdown...");
+					break;
+				case SIGTERM:
+					L_INFO("Received SIGTERM scheduling shutdown...");
+					break;
+				default:
+					L_INFO("Received shutdown signal, scheduling shutdown...");
+			};
+		}
+
+		if (now >= _shutdown_asap + 200) {
 			_shutdown_asap = now;
 		}
-	} else {
-		switch (sig) {
-			case SIGINT:
-				L_INFO("Received SIGINT scheduling shutdown...");
-				break;
-			case SIGTERM:
-				L_INFO("Received SIGTERM scheduling shutdown...");
-				break;
-			default:
-				L_INFO("Received shutdown signal, scheduling shutdown...");
-		};
-	}
-
-	if (now >= _shutdown_asap + 800) {
-		_shutdown_asap = now;
 	}
 
 	shutdown(_shutdown_asap, _shutdown_now, async);
