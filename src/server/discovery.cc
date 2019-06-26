@@ -541,7 +541,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 
 	if (term == raft_current_term) {
 		if (raft_voted_for.empty()) {
-			if (Node::is_local(node)) {
+			if (Node::is_superset(local_node, node)) {
 				raft_voted_for = *node;
 				if (raft_voters.insert(local_node->name()).second) {
 					++raft_votes_granted;
