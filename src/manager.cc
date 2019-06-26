@@ -2049,14 +2049,15 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 			THROW(ClientError, "Cannot modify settings of cluster indices.");
 		}
 
-		// Primary databases in .xapiand are always in the master
+		// Primary databases in .xapiand are always in the master (or local, if master is unavailable)
 		IndexSettingsShard shard;
 		auto leader_node = Node::get_leader_node();
-		if (leader_node && !leader_node->empty()) {
-			shard.nodes.push_back(leader_node->name());
-		}
+		auto primary_node = (leader_node && !leader_node->empty() && leader_node->is_active())
+			? leader_node
+			: Node::get_local_node();
+		shard.nodes.push_back(primary_node->name());
 		for (const auto& node : Node::nodes()) {
-			if (!Node::is_superset(node, leader_node)) {
+			if (!Node::is_superset(node, primary_node)) {
 				shard.nodes.push_back(node->name());
 			}
 		}
