@@ -1456,14 +1456,16 @@ XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int 
 	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
 
 	auto leader_node = Node::get_leader_node();
-	L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
+	if (leader_node && !leader_node->empty()) {
+		L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
 
-	if (state == State::READY && leader_node->is_local()) {
-		try {
-			// If we get promoted to leader, we immediately try to load the nodes.
-			load_nodes();
-		} catch (...) {
-			L_EXC("ERROR: Cannot load local nodes!");
+		if (state == State::READY && leader_node->is_local()) {
+			try {
+				// If we get promoted to leader, we immediately try to load the nodes.
+				load_nodes();
+			} catch (...) {
+				L_EXC("ERROR: Cannot load local nodes!");
+			}
 		}
 	}
 }
@@ -2043,7 +2045,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 		// Primary databases in .xapiand are always in the master
 		IndexSettingsShard shard;
 		auto leader_node = Node::get_leader_node();
-		if (leader_node) {
+		if (leader_node && !leader_node->empty()) {
 			shard.nodes.push_back(leader_node->name());
 		}
 		for (const auto& node : Node::nodes()) {
