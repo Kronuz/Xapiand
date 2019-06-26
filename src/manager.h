@@ -194,6 +194,7 @@ private:
 	int _new_cluster;
 	std::chrono::time_point<std::chrono::steady_clock> _process_start;
 
+	ev::timer try_shutdown_timer;
 	ev::async signal_sig_async;
 	ev::async setup_node_async;
 	ev::async set_cluster_database_ready_async;
@@ -205,6 +206,7 @@ private:
 	ConcurrentQueue<std::string> raft_apply_command_args;
 #endif
 
+	void try_shutdown_timer_cb(ev::timer& watcher, int revents);
 	void signal_sig_async_cb(ev::async&, int);
 	void signal_sig_impl();
 

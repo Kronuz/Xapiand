@@ -207,6 +207,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _node_name(opts.node_name),
 	  _new_cluster(0),
 	  _process_start(process_start_),
+	  try_shutdown_timer(*ev_loop),
 	  signal_sig_async(*ev_loop),
 	  setup_node_async(*ev_loop),
 	  set_cluster_database_ready_async(*ev_loop),
@@ -216,6 +217,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 #endif
 	  atom_sig(0)
 {
+	try_shutdown_timer.set<XapiandManager, &XapiandManager::try_shutdown_timer_cb>(this);
+
 	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
 	signal_sig_async.start();
 
@@ -362,6 +365,19 @@ XapiandManager::signal_sig(int sig)
 
 
 void
+XapiandManager::try_shutdown_timer_cb(ev::timer& /*unused*/, [[maybe_unused]] int revents)
+{
+	L_CALL("XapiandManager::try_shutdown_timer_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+
+	L_EV_BEGIN("XapiandManager::try_shutdown_timer_cb:BEGIN");
+	L_EV_END("XapiandManager::try_shutdown_timer_cb:END");
+
+	L_RED("Try shutdown!");
+	try_shutdown();
+}
+
+
+void
 XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
 {
 	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
@@ -485,6 +501,12 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 			} else {
 				detach(false);
 			}
+		}
+
+		if (!try_shutdown_timer.repeat) {
+			try_shutdown_timer.repeat = 1.0;
+			try_shutdown_timer.again();
+			L_EV("Configured try shutdown timer ({})", try_shutdown_timer.repeat);
 		}
 	}
 }
