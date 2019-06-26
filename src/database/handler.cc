@@ -3136,6 +3136,10 @@ committer_commit(std::weak_ptr<Shard> weak_shard) {
 
 		if (error.empty()) {
 			L_DEBUG("Autocommit of {} succeeded after {}", repr(shard->to_string()), strings::from_delta(start, end));
+#ifdef XAPIAND_CLUSTERING
+		} else if (!Node::quorum()) {
+			L_DEBUG("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
+#endif
 		} else {
 			L_WARNING("Autocommit of {} falied after {}: {}", repr(shard->to_string()), strings::from_delta(start, end), error);
 		}
