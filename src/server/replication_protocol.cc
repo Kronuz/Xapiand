@@ -55,15 +55,15 @@ ReplicationProtocol::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		stop(false);
-		destroy(false);
-
 		auto manager = XapiandManager::manager();
 		if (now != 0 || !manager || manager->ready_to_end_replication()) {
 			if (manager) {
 				manager->replication_server_pool->finish();
 				manager->replication_client_pool->finish();
 			}
+
+			stop(false);
+			destroy(false);
 			if (is_runner()) {
 				break_loop(false);
 			} else {

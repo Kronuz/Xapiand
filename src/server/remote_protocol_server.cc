@@ -75,11 +75,11 @@ RemoteProtocolServer::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		stop(false);
-		destroy(false);
+		stop(false);  // immediately stop (accept no more connections)
 
 		auto manager = XapiandManager::manager();
 		if (now != 0 || !manager || manager->ready_to_end_remote()) {
+			destroy(false);
 			if (is_runner()) {
 				break_loop(false);
 			} else {

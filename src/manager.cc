@@ -490,17 +490,6 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 	Worker::shutdown_impl(asap, now);
 
 	if (asap) {
-		if (now != 0 || ready_to_end()) {
-			stop(false);
-			destroy(false);
-
-			if (is_runner()) {
-				break_loop(false);
-			} else {
-				detach(false);
-			}
-		}
-
 		if (!ready_to_end_http()) {
 			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down (HTTP is busy)...", "Continuing shutdown process!");
 		} else if (!ready_to_end_remote()) {
@@ -514,6 +503,16 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 		try_shutdown_timer.repeat = 5.0;
 		try_shutdown_timer.again();
 		L_EV("Configured try shutdown timer ({})", try_shutdown_timer.repeat);
+
+		if (now != 0 || ready_to_end()) {
+			stop(false);
+			destroy(false);
+			if (is_runner()) {
+				break_loop(false);
+			} else {
+				detach(false);
+			}
+		}
 	}
 }
 

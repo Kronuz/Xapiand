@@ -148,7 +148,6 @@ Discovery::shutdown_impl(long long asap, long long now)
 		if (now != 0 || !manager || manager->ready_to_end_discovery()) {
 			stop(false);
 			destroy(false);
-
 			if (is_runner()) {
 				break_loop(false);
 			} else {
