@@ -116,6 +116,8 @@ private:
 	size_t raft_commit_index;
 	size_t raft_last_applied;
 
+	bool raft_eligible;
+
 	std::unordered_map<std::string, size_t> raft_next_indexes;
 	std::unordered_map<std::string, size_t> raft_match_indexes;
 

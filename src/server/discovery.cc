@@ -97,7 +97,8 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_votes_denied(0),
 	  raft_current_term(0),
 	  raft_commit_index(0),
-	  raft_last_applied(0)
+	  raft_last_applied(0),
+	  raft_eligible(true)
 {
 	bind(hostname, serv, 1);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
@@ -522,6 +523,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 	}
 
 	// If RPC request or response contains term T > currentTerm:
+	auto eligible = unserialise_bool(&p, p_end);
 	uint64_t term = unserialise_length(&p, p_end);
 	if (term > raft_current_term) {
 		// set currentTerm = T,
@@ -541,8 +543,12 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 
 	if (term == raft_current_term) {
 		if (raft_voted_for.empty()) {
-			if (Node::is_superset(local_node, node)) {
-				raft_voted_for = *node;
+			if (!eligible || Node::is_superset(local_node, node)) {
+				if (!raft_eligible) {
+					L_RAFT("I refuse to vote {} for term {} (me)", node->to_string(), term);
+					return;
+				}
+				raft_voted_for = *local_node;
 				if (raft_voters.insert(local_node->name()).second) {
 					++raft_votes_granted;
 				}
@@ -1444,13 +1450,20 @@ Discovery::_raft_request_vote(bool immediate)
 
 	if (immediate) {
 		++raft_current_term;
-		raft_role = Role::RAFT_CANDIDATE;
-		raft_voted_for.clear();
-		raft_next_indexes.clear();
-		raft_match_indexes.clear();
-		raft_votes_granted = 0;
-		raft_votes_denied = 0;
-		raft_voters.clear();
+		if (raft_eligible) {
+			raft_role = Role::RAFT_CANDIDATE;
+			raft_voted_for.clear();
+			raft_next_indexes.clear();
+			raft_match_indexes.clear();
+			raft_votes_granted = 0;
+			raft_votes_denied = 0;
+			raft_voters.clear();
+		} else {
+			raft_role = Role::RAFT_FOLLOWER;
+			raft_voted_for.clear();
+			raft_next_indexes.clear();
+			raft_match_indexes.clear();
+		}
 
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 
@@ -1462,6 +1475,7 @@ Discovery::_raft_request_vote(bool immediate)
 			local_node->to_string(), raft_current_term, last_log_term, last_log_index, enum_name(raft_role), raft_leader_election_timeout.repeat, Node::alive_nodes(), Node::get_leader_node()->empty() ? "<none>" : Node::get_leader_node()->to_string());
 		send_message(Message::RAFT_REQUEST_VOTE,
 			local_node->serialise() +
+			serialise_bool(raft_eligible) +
 			serialise_length(raft_current_term) +
 			serialise_length(last_log_term) +
 			serialise_length(last_log_index));
