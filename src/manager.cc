@@ -1917,68 +1917,78 @@ load_settings(const std::string& unsharded_normalized_path)
 	auto nodes = Node::nodes();
 	assert(!nodes.empty());
 
-	try {
-		IndexSettings index_settings;
+	Endpoint endpoint(".xapiand/indices");
 
-		Endpoint endpoint(".xapiand/indices");
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
-		assert(!endpoints.empty());
-		DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-		auto document = db_handler.get_document(unsharded_normalized_path);
-		auto obj = document.get_obj();
+	for (int t = DB_RETRIES; t >= 0; --t) {
+		try {
+			IndexSettings index_settings;
 
-		auto it = obj.find(VERSION_FIELD_NAME);
-		if (it != obj.end()) {
-			auto& version_val = it.value();
-			if (!version_val.is_number()) {
-				THROW(Error, "Inconsistency in '{}' configured for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+			if(endpoints.empty()) {
+				continue;
 			}
-			index_settings.version = version_val.u64();
-		}
 
-		it = obj.find("number_of_replicas");
-		if (it != obj.end()) {
-			auto& n_replicas_val = it.value();
-			if (!n_replicas_val.is_number()) {
-				THROW(Error, "Inconsistency in 'number_of_replicas' configured for {}: Invalid number", repr(endpoint.to_string()));
-			}
-			index_settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
-		}
+			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+			auto document = db_handler.get_document(unsharded_normalized_path);
+			auto obj = document.get_obj();
 
-		it = obj.find("number_of_shards");
-		if (it != obj.end()) {
-			auto& n_shards_val = it.value();
-			if (!n_shards_val.is_number()) {
-				THROW(Error, "Inconsistency in 'number_of_shards' configured for {}: Invalid number", repr(endpoint.to_string()));
+			auto it = obj.find(VERSION_FIELD_NAME);
+			if (it != obj.end()) {
+				auto& version_val = it.value();
+				if (!version_val.is_number()) {
+					THROW(Error, "Inconsistency in '{}' configured for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+				}
+				index_settings.version = version_val.u64();
 			}
-			index_settings.num_shards = n_shards_val.u64();
-			size_t replicas_size = 0;
-			for (size_t shard_num = 1; shard_num <= index_settings.num_shards; ++shard_num) {
-				auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, shard_num);
-				auto replica_document = db_handler.get_document(shard_normalized_path);
-				auto shard = load_replicas(endpoint, replica_document.get_obj());
+
+			it = obj.find("number_of_replicas");
+			if (it != obj.end()) {
+				auto& n_replicas_val = it.value();
+				if (!n_replicas_val.is_number()) {
+					THROW(Error, "Inconsistency in 'number_of_replicas' configured for {}: Invalid number", repr(endpoint.to_string()));
+				}
+				index_settings.num_replicas_plus_master = n_replicas_val.u64() + 1;
+			}
+
+			it = obj.find("number_of_shards");
+			if (it != obj.end()) {
+				auto& n_shards_val = it.value();
+				if (!n_shards_val.is_number()) {
+					THROW(Error, "Inconsistency in 'number_of_shards' configured for {}: Invalid number", repr(endpoint.to_string()));
+				}
+				index_settings.num_shards = n_shards_val.u64();
+				size_t replicas_size = 0;
+				for (size_t shard_num = 1; shard_num <= index_settings.num_shards; ++shard_num) {
+					auto shard_normalized_path = strings::format("{}/.__{}", unsharded_normalized_path, shard_num);
+					auto replica_document = db_handler.get_document(shard_normalized_path);
+					auto shard = load_replicas(endpoint, replica_document.get_obj());
+					auto replicas_size_ = shard.nodes.size();
+					if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
+						THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
+					}
+					replicas_size = replicas_size_;
+					index_settings.shards.push_back(std::move(shard));
+				}
+			}
+
+			if (!index_settings.num_shards) {
+				auto shard = load_replicas(endpoint, obj);
 				auto replicas_size_ = shard.nodes.size();
-				if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master || (replicas_size && replicas_size != replicas_size_)) {
+				if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master) {
 					THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 				}
-				replicas_size = replicas_size_;
 				index_settings.shards.push_back(std::move(shard));
 			}
-		}
 
-		if (!index_settings.num_shards) {
-			auto shard = load_replicas(endpoint, obj);
-			auto replicas_size_ = shard.nodes.size();
-			if (replicas_size_ == 0 || replicas_size_ > index_settings.num_replicas_plus_master) {
-				THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
-			}
-			index_settings.shards.push_back(std::move(shard));
+			index_settings.loaded = true;
+			return index_settings;
+		} catch (const Xapian::DocNotFoundError&) {
+			break;
+		} catch (const Xapian::DatabaseNotFoundError&) {
+			break;
+		} catch (const Xapian::DatabaseNotAvailableError&) {
+			if (t == 0) { throw; }
 		}
-
-		index_settings.loaded = true;
-		return index_settings;
-	} catch (const Xapian::DocNotFoundError&) {
-	} catch (const Xapian::DatabaseNotFoundError&) {
 	}
 
 	return {};
