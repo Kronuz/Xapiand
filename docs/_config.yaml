@@ -59,6 +59,10 @@ collections:
 
 defaults:
   - scope:
+      path: ""
+    values:
+      layout: default
+  - scope:
       path: _docs
       type: docs
     values:

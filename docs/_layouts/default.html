@@ -1,13 +1,18 @@
-{% include top.html %}
+---
+layout: base
+---
 
-<body class="wrap">
-	{% include header.html %}
+	<section id="page" class="standalone">
+		<div class="taller grid">
 
-	{{ content }}
+			<div class="unit whole">
+				<article id="{{ page.title | slugify }}">
+					<h1>{{ page.title }}</h1>
+					{{ content }}
+				</article>
+			</div>
 
-	{% include footer.html %}
-	{% include anchor_links.html %}
-	{% include search/script.html %}
-	{% include scripts.html %}
-</body>
-</html>
+			<div class="clear"></div>
+
+		</div>
+	</section>
