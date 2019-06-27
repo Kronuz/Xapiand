@@ -113,6 +113,67 @@ void delete_files(std::string_view path, const std::vector<std::string>& pattern
 }
 
 
+void quarantine_files(std::string_view path, const std::vector<std::string>& patterns, std::string_view template_suffix) {
+	L_CALL("quarantine_files({}, <patterns>)", repr(path));
+
+	char quarantine_path[PATH_MAX + 1];
+
+	std::string path_string(path);
+	std::string template_suffix_string(template_suffix);
+
+	strncpy(quarantine_path, (path_string + "/" + template_suffix_string).c_str(), PATH_MAX);
+	build_path_index(quarantine_path);
+	if (io::mkdtemp(quarantine_path) == nullptr) {
+		L_ERR("Directory {} not created: {} ({}): {}", quarantine_path, error::name(errno), errno, error::description(errno));
+		return;
+	}
+
+	DIR *dirp = ::opendir(path_string.c_str());
+	if (dirp == nullptr) {
+		return;
+	}
+
+	struct dirent *ent;
+	while ((ent = ::readdir(dirp)) != nullptr) {
+		const char *n = ent->d_name;
+		switch (ent->d_type) {
+			case DT_DIR:  // This is a directory.
+				if (n[0] == '.' && (n[1] == '\0' || (n[1] == '.' && n[2] == '\0'))) {
+					L_FS("Directory {} is ignored", n);
+					continue;
+				}
+				L_FS("Directory {} is observed", n);
+				break;
+			case DT_REG:  //  This is a regular file.
+				if (std::any_of(patterns.cbegin(), patterns.cend(), [&](const std::string& pattern){
+					return ::fnmatch(pattern.c_str(), n, 0) == 0;
+				})) {
+					std::string file(path);
+					file.push_back('/');
+					file.append(n);
+					std::string new_file(quarantine_path);
+					new_file.push_back('/');
+					new_file.append(ent->d_name);
+					if (::rename(file.c_str(), new_file.c_str()) != 0) {
+						L_ERR("Couldn't rename {} to {}", file, new_file);
+					}
+				} else {
+					L_FS("File {} is observed", n);
+				}
+				break;
+			case DT_LNK:  // This is a symbolic link.
+				L_FS("Symbolic link {} is observed", n);
+				break;
+			default:
+				L_FS("Entry ({}) {} is observed", static_cast<int>(ent->d_type), n);
+				break;
+		}
+	}
+
+	::closedir(dirp);
+}
+
+
 void move_files(std::string_view src, std::string_view dst) {
 	L_CALL("move_files({}, {})", repr(src), repr(dst));
 
