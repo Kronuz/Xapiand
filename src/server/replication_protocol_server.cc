@@ -270,24 +270,25 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 				} catch (...) { }
 			}
 
-			// If there are enough remote valid databases, remove the local one.
+			L_REPLICATION("Remove stalled shard: {}", args.dst_endpoint.path);
+
+			// Close internal databases
+			shard->do_close();
+
+			// get exclusive lock
+			XapiandManager::manager(true)->database_pool->lock(shard);
+
+			// Now we are sure no readers are using the database before removing/moving the files
 			if (Node::quorum(total, ok)) {
-				L_REPLICATION("Remove stalled shard: {}", args.dst_endpoint.path);
-
-				// Close internal databases
-				shard->do_close();
-
-				// get exclusive lock
-				XapiandManager::manager(true)->database_pool->lock(shard);
-
-				// Now we are sure no readers are using the database before removing the files
+				// If there are enough remote valid databases, remove the local one.
 				delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
-
-				// release exclusive lock
-				XapiandManager::manager(true)->database_pool->unlock(shard);
 			} else {
+				// Quarantine WAL instead of deleting
 				L_WARNING("Stalled shard: {}", args.dst_endpoint.path);
 			}
+
+			// release exclusive lock
+			XapiandManager::manager(true)->database_pool->unlock(shard);
 
 			return;
 		}
