@@ -1679,18 +1679,20 @@ settle_replicas(IndexSettings& index_settings, std::vector<std::shared_ptr<const
 			auto primary = strings::lower(shard.nodes[0]);
 			size_t idx = 0;
 			for (const auto& node : nodes) {
-				++idx;
 				if (node->lower_name() == primary) {
 					break;
 				}
+				++idx;
 			}
+			auto nodes_size = nodes.size();
 			for (auto n = shard_nodes_size; n < num_replicas_plus_master; ++n) {
-				auto node = nodes[idx % nodes.size()];
-				while (used.count(node->lower_name())) {
-					node = nodes[++idx % nodes.size()];
-					assert(idx < nodes.size() * 2);
-				}
+				std::shared_ptr<const Node> node;
+				do {
+					node = nodes[++idx % nodes_size];
+					assert(idx < nodes_size * 2);
+				} while (used.count(node->lower_name()));
 				shard.nodes.push_back(node->name());
+				used.insert(node->lower_name());
 			}
 			shard.modified = true;
 			index_settings.saved = false;
