@@ -4,7 +4,8 @@ title: Object
 
 ### Object of Mixed Types
 
-{% comment %}
+{% capture req %}
+
 ```json
 PUT /test/mixed_objects/doc
 
@@ -16,13 +17,35 @@ PUT /test/mixed_objects/doc
   }
 }
 ```
+% endcapture %}
+{% include curl.html req=req %}
+
+
+{% comment %}
 ---
 description: Index Mixed Objects
 ---
 
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+
+{% capture req %}
+
 ```json
 GET /test/mixed_objects/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+---
+description: Get Mixed Objects
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -38,13 +61,21 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.types.arms._type).to.equal('integer');
 });
 ```
----
-description: Get Mixed Objects
----
+{% endcomment %}
+
+
+{% capture req %}
 
 ```json
 INFO /test/mixed_objects/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+---
+description: Info Mixed Objects
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -61,15 +92,13 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1663382011','3248593248', '3741895486']);
 });
 ```
----
-description: Info Mixed Objects
----
 {% endcomment %}
 
 
 ### Value With Nested Object
 
-{% comment %}
+{% capture req %}
+
 ```json
 PUT /test/value_object_nested/doc
 
@@ -87,13 +116,33 @@ PUT /test/value_object_nested/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 ---
 description: Index value with nested object
 ---
 
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
+
 ```json
 GET /test/value_object_nested/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+---
+description: Get value with nested object
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -112,13 +161,13 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.types.name.last._type).to.equal('text');
 });
 ```
-
 {% endcomment %}
 
 
 ### Simple Object
 
-{% comment %}
+{% capture req %}
+
 ```json
 PUT /test/object/doc
 
@@ -132,13 +181,33 @@ PUT /test/object/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 ---
 description: Index Object
 ---
 
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
+
 ```json
 GET /test/object/._schema.schema.name
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+---
+description: Get Object
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -152,13 +221,20 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('object');
 });
 ```
----
-description: Get Object
----
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 INFO /test/object/doc.terms.name
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+---
+description: Info Object
+---
 
 ```js
 pm.test("Response is success", function() {
@@ -174,9 +250,6 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.middle).to.have.all.keys(['Sr']);
 });
 ```
----
-description: Info Object
----
 {% endcomment %}
 
 
