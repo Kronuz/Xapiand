@@ -11,7 +11,7 @@ title: Tests
 * [**_Create Schema With UUID Field_**](uuid-field)
 * [**_Create Schema With UUID Field_**](create.schema.uuid)
 * [**_Arrays_**](arrays)
-* [**_Objects_**](objects)
+* [**_Objects_**](dataStructures/objects)
 
 
 ### Reserved Subfield
