@@ -31,6 +31,8 @@
 
 #include "color_tools.hh"                   // for color
 #include "cuuid/uuid.h"                     // for UUID
+#include "database/lock.h"                  // for lock_shard
+#include "database/shard.h"                 // for Shard
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
@@ -90,7 +92,6 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_leader_election_timeout(*ev_loop),
 	  raft_leader_heartbeat(*ev_loop),
 	  raft_request_vote_async(*ev_loop),
-	  raft_relinquish_leadership_async(*ev_loop),
 	  raft_add_command_async(*ev_loop),
 	  message_send_async(*ev_loop),
 	  raft_role(Role::RAFT_FOLLOWER),
@@ -99,7 +100,8 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_current_term(0),
 	  raft_commit_index(0),
 	  raft_last_applied(0),
-	  raft_eligible(true)
+	  raft_eligible(true),
+	  elected_primaries(0, 600s)
 {
 	bind(hostname, serv, 1);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
@@ -335,6 +337,12 @@ Discovery::discovery_server(Message type, const std::string& message)
 		case Message::PRIMARY_UPDATED:
 			primary_updated(type, message);
 			return;
+		case Message::ELECT_PRIMARY:
+			elect_primary(type, message);
+			return;
+		case Message::ELECT_PRIMARY_RESPONSE:
+			elect_primary_response(type, message);
+			return;
 		default: {
 			std::string errmsg("Unexpected message type ");
 			errmsg += std::to_string(toUType(type));
@@ -539,6 +547,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
+		elected_primaries.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 	}
 
@@ -647,6 +656,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
+		elected_primaries.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 	}
 
@@ -677,6 +687,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 				raft_voted_for.clear();
 				raft_next_indexes.clear();
 				raft_match_indexes.clear();
+				elected_primaries.clear();
 
 				_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 				_raft_set_leader_node(local_node);
@@ -774,6 +785,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
+		elected_primaries.clear();
 		// _raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));  // resetted below!
 	}
 
@@ -800,6 +812,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
+			elected_primaries.clear();
 		}
 
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
@@ -978,6 +991,7 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
+		elected_primaries.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 	}
 
@@ -1158,6 +1172,156 @@ Discovery::primary_updated([[maybe_unused]] Message type, const std::string& mes
 
 
 void
+Discovery::elect_primary([[maybe_unused]] Message type, const std::string& message)
+{
+	L_CALL("Discovery::elect_primary({}, <message>) {{ state:{} }}", enum_name(type), enum_name(XapiandManager::get_state()));
+
+	if (XapiandManager::get_state() != XapiandManager::State::READY) {
+		L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE (invalid state: {})",
+			enum_name(XapiandManager::get_state()));
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = Node::unserialise(&p, p_end);
+	auto node = Node::touch_node(remote_node, false).first;
+	if (!node) {
+		L_RAFT_PROTO(">>> ELECT_PRIMARY [from {}] (nonexistent node)",
+			remote_node.to_string());
+		return;
+	}
+
+	auto normalized_path = std::string(unserialise_string(&p, p_end));
+
+	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{} }}",
+		node->to_string(), repr(normalized_path));
+
+	auto local_node = Node::get_local_node();
+
+	std::string uuid;
+	Xapian::rev revision;
+	size_t total_nodes;
+
+	// FIXME: Maybe do the following asynchronously...
+	// it could be too slow for doing inside Discovery thread:
+	auto index_settings = XapiandManager::resolve_index_settings(normalized_path);
+	assert(index_settings.shards.size() == 1);
+	if (index_settings.shards.size() == 1) {
+		const auto& shard_nodes = index_settings.shards[0].nodes;
+		total_nodes = shard_nodes.size();
+		for (const auto& shard_node_name : shard_nodes) {
+			if (local_node->lower_name() == strings::lower(shard_node_name)) {
+				try {
+					lock_shard lk_shard(Endpoint{normalized_path}, DB_WRITABLE, false);
+					auto shard = lk_shard.lock(0);
+					auto db = shard->db();
+					uuid = db->get_uuid();
+					revision = db->get_revision();
+				} catch (...) { }
+				break;
+			}
+		}
+	}
+
+	if (!uuid.empty()) {
+		send_message(Message::ELECT_PRIMARY_RESPONSE,
+			local_node->serialise() +
+			serialise_string(normalized_path) +
+			serialise_string(uuid) +
+			serialise_length(revision) +
+			serialise_length(total_nodes));
+	}
+}
+
+
+void
+Discovery::elect_primary_response([[maybe_unused]] Message type, const std::string& message)
+{
+	L_CALL("Discovery::elect_primary_response({}, <message>) {{ state:{} }}", enum_name(type), enum_name(XapiandManager::get_state()));
+
+	if (XapiandManager::get_state() != XapiandManager::State::READY) {
+		L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE (invalid state: {})",
+			enum_name(XapiandManager::get_state()));
+		return;
+	}
+
+	if (raft_role != Role::RAFT_LEADER) {
+		return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = Node::unserialise(&p, p_end);
+	auto node = Node::touch_node(remote_node, false).first;
+	if (!node) {
+		L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}] (nonexistent node)",
+			remote_node.to_string());
+		return;
+	}
+
+	auto normalized_path = std::string(unserialise_string(&p, p_end));
+	auto uuid = unserialise_string(&p, p_end);
+	Xapian::rev revision = unserialise_length(&p, p_end);
+	size_t total_nodes = unserialise_length(&p, p_end);
+
+	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{}, uuid:{}, revision:{} }}",
+		node->to_string(), repr(normalized_path), repr(uuid), revision);
+
+	auto& voters = elected_primaries[normalized_path];
+	if (voters.emplace(node->lower_name(), std::make_pair(uuid, revision)).second) {
+		if (Node::quorum(total_nodes, voters.size())) {
+			// FIXME: Maybe do the following asynchronously...
+			// it could be too slow for doing inside Discovery thread:
+			auto nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
+			assert(nodes.size() == 1);
+			if (nodes.size() == 1) {
+				Xapian::rev max_revision = 0;
+				std::shared_ptr<const Node> elected_node;
+				const auto& shards = nodes[0];
+				total_nodes = shards.size();
+				size_t ok_nodes = 0;
+				for (const auto& shard_node : shards) {
+					if (shard_node->is_active()) {
+						auto it = voters.find(shard_node->lower_name());
+						if (it != voters.end()) {
+							++ok_nodes;
+							if (it->second.second > max_revision || !elected_node) {
+								max_revision = it->second.second;
+								elected_node = shard_node;
+							}
+						}
+					}
+				}
+				if (Node::quorum(total_nodes, ok_nodes)) {
+					elected_primaries.erase(normalized_path);
+					assert(elected_node);
+					L_RED("Elected primary node for {} is {}", normalized_path, (elected_node->to_string()));
+				}
+			}
+		}
+	}
+}
+
+
+void
+Discovery::elect_primary(std::string_view path)
+{
+	L_CALL("Discovery::elect_primary()");
+
+	std::string message;
+
+	message.append(serialise_string(path));
+
+	message_send_args.enqueue(std::make_pair(Message::ELECT_PRIMARY, message));
+
+	message_send_async.send();
+}
+
+
+void
 Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 {
 	auto state = XapiandManager::get_state();
@@ -1245,6 +1409,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
+			elected_primaries.clear();
 
 			_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 			_raft_set_leader_node(local_node);
@@ -1461,6 +1626,7 @@ Discovery::_raft_request_vote(bool immediate)
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
+			elected_primaries.clear();
 			raft_votes_granted = 0;
 			raft_votes_denied = 0;
 			raft_voters.clear();
@@ -1469,6 +1635,7 @@ Discovery::_raft_request_vote(bool immediate)
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
+			elected_primaries.clear();
 		}
 
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
@@ -1490,6 +1657,7 @@ Discovery::_raft_request_vote(bool immediate)
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
+		elected_primaries.clear();
 
 		if (raft_current_term == 0) {
 			_raft_leader_election_timeout_reset(RAFT_LEADER_ELECTION_MAX);
@@ -1614,8 +1782,6 @@ Discovery::raft_add_command(const std::string& command)
 void
 Discovery::_message_send(Message type, const std::string& message)
 {
-	assert(type == Message::DB_UPDATED || type == Message::SCHEMA_UPDATED || type == Message::PRIMARY_UPDATED);
-
 	auto local_node = Node::get_local_node();
 	send_message(type,
 		local_node->serialise() +   // The node where the index is at

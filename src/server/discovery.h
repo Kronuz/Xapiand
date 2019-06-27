@@ -42,6 +42,7 @@
 #include "udp.h"                            // for UDP
 #include "worker.h"                         // for Worker
 #include "xapian.h"                         // for Xapian::rev
+#include "lru.h"                            // for lru::aging_lru
 
 
 struct DatabaseUpdate;
@@ -76,7 +77,9 @@ ENUM_CLASS(DiscoveryMessage, int,
 	RAFT_ADD_COMMAND,             // Tell the leader to add a command to the log
 	DB_UPDATED,                   // Database has been updated, trigger replication
 	SCHEMA_UPDATED,               // Schema has been updated, invalidate schema from LRU
-	PRIMARY_UPDATED,              // Primary node has been updated, invalidate index from LRU
+	PRIMARY_UPDATED,              // Primary shard has been updated, invalidate index from LRU
+	ELECT_PRIMARY,                // Invoked by leader to gather votes to promote a primary shard
+	ELECT_PRIMARY_RESPONSE,       // Gather primary shard votes
 	MAX                           //
 )
 
@@ -122,6 +125,8 @@ private:
 	std::unordered_map<std::string, size_t> raft_next_indexes;
 	std::unordered_map<std::string, size_t> raft_match_indexes;
 
+	lru::aging_lru<std::string, std::unordered_map<std::string, std::pair<std::string, Xapian::rev>>> elected_primaries;
+
 	ConcurrentQueue<std::pair<Message, std::string>> message_send_args;
 
 	void cluster_enter_async_cb(ev::async& watcher, int revents);
@@ -146,6 +151,8 @@ private:
 	void db_updated(Message type, const std::string& message);
 	void schema_updated(Message type, const std::string& message);
 	void primary_updated(Message type, const std::string& message);
+	void elect_primary(Message type, const std::string& message);
+	void elect_primary_response(Message type, const std::string& message);
 
 	void cluster_discovery_cb(ev::timer& watcher, int revents);
 
@@ -193,6 +200,7 @@ public:
 	void db_updated_send(Xapian::rev revision, std::string_view path);
 	void schema_updated_send(Xapian::rev revision, std::string_view path);
 	void primary_updated_send(size_t shards, std::string_view path);
+	void elect_primary(std::string_view path);
 
 	std::string __repr__() const override;
 
