@@ -1978,6 +1978,7 @@ load_settings(const std::string& unsharded_normalized_path)
 					THROW(Error, "Inconsistency in number of replicas configured for {}", repr(endpoint.to_string()));
 				}
 				index_settings.shards.push_back(std::move(shard));
+				index_settings.num_shards = 1;
 			}
 
 			index_settings.loaded = true;
