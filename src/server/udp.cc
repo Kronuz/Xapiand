@@ -85,12 +85,14 @@ UDP::close() {
 		io::shutdown(sock, SHUT_RDWR);
 		// Create a new socket in a temporary file descriptor
 		int tmp = io::socket(AF_INET, SOCK_DGRAM, 0);
-		// Shutdown the temporary socket
-		io::shutdown(tmp, SHUT_RDWR);
-		// Close sock and duplicate the temporary socket into the sock file descriptor
-		io::dup2(tmp, sock);
-		// Close the temporary socket file descriptor
-		io::close(tmp);
+		if (tmp != -1) {
+			// Shutdown the temporary socket
+			io::shutdown(tmp, SHUT_RDWR);
+			// Close sock and duplicate the temporary socket into the sock file descriptor
+			io::dup2(tmp, sock);
+			// Close the temporary socket file descriptor
+			io::close(tmp);
+		}
 	}
 	return was_closed;
 }
