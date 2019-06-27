@@ -555,7 +555,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 					return;
 				}
 				raft_voted_for = *local_node;
-				if (raft_voters.insert(local_node->name()).second) {
+				if (raft_voters.insert(local_node->lower_name()).second) {
 					++raft_votes_granted;
 				}
 				L_RAFT("I vote {} for term {} (me)", raft_voted_for.to_string(), term);
@@ -569,7 +569,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 					// If the logs have last entries with different terms, then the
 					// raft_log with the later term is more up-to-date.
 					raft_voted_for = *node;
-					if (raft_voters.insert(local_node->name()).second) {
+					if (raft_voters.insert(local_node->lower_name()).second) {
 						++raft_votes_denied;
 					}
 					L_RAFT("I vote {} for term {} (raft_log term is newer)", raft_voted_for.to_string(), term);
@@ -578,7 +578,7 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 					// raft_log is longer is more up-to-date.
 					if (raft_log.size() <= remote_last_log_index) {
 						raft_voted_for = *node;
-						if (raft_voters.insert(local_node->name()).second) {
+						if (raft_voters.insert(local_node->lower_name()).second) {
 							++raft_votes_denied;
 						}
 						L_RAFT("I vote {} for term {} (raft_log index size concurs)", raft_voted_for.to_string(), term);
@@ -657,7 +657,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		size_t total_nodes = unserialise_length(&p, p_end);
 		total_nodes = std::max(total_nodes, Node::total_nodes());
 
-		if (raft_voters.insert(node->name()).second) {
+		if (raft_voters.insert(node->lower_name()).second) {
 			auto voted_for_node = Node::touch_node(Node::unserialise(&p, p_end), false).first;
 			if (voted_for_node) {
 				L_RAFT("Node {} just casted a secret vote for {}", node->to_string(), voted_for_node->to_string());
