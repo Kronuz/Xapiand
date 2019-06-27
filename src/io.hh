@@ -227,6 +227,7 @@ inline int dup(int fd) noexcept {
 
 inline int dup2(int fd, int fd2) noexcept {
 	CHECK_OPENED("during dup2()", fd);
+	CHECK_OPENED("during dup2()", fd2);
 
 	RANDOM_ERRORS_IO_ERRNO_RETURN(EIO);
 
