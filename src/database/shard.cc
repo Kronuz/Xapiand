@@ -342,7 +342,7 @@ Shard::reopen_writable()
 	if (is_wal_active()) {
 		// WAL wasn't already active for the requested endpoint
 		DatabaseWAL wal(this);
-		if (wal.execute(true)) {
+		if (wal.execute()) {
 			_modified.store(true, std::memory_order_relaxed);
 		}
 	}

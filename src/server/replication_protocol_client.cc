@@ -816,7 +816,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 			repr(shard->endpoint.path));
 	}
 
-	wal->execute_line(line, true, false, false);
+	wal->execute_line(line, true, false);
 
 	++changesets;
 	L_REPLICATION("CHANGESET ({} changesets{}): {}", changesets, switch_shard ? " to a new database" : "", repr(shard->endpoint.path));

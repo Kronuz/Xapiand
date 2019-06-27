@@ -164,9 +164,9 @@ DatabaseWAL::get_revision() const
 
 
 bool
-DatabaseWAL::execute(bool only_committed, bool unsafe)
+DatabaseWAL::execute()
 {
-	L_CALL("DatabaseWAL::execute({}, {})", only_committed, unsafe);
+	L_CALL("DatabaseWAL::execute()");
 
 	if (!_shard) {
 		THROW(Error, "Database is not defined");
@@ -184,28 +184,16 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 		for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 			try {
 				open(strings::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
-				if (header.head.revision != end_rev) {
-					if (!unsafe) {
-						L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
-						THROW(StorageCorruptVolume, "Mismatch in WAL revision");
-					}
-					L_WARNING("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
-					header.head.revision = end_rev;
-				}
 			} catch (const StorageIOError& exc) {
-				if (!unsafe) {
-					L_DEBUG("Cannot open WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
-					throw;
-				}
-				L_WARNING("Cannot open WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
-				continue;
+				L_DEBUG("Cannot open WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
+				throw;
 			} catch (const StorageCorruptVolume& exc) {
-				if (!unsafe) {
-					L_DEBUG("Corrupt WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
-					throw;
-				}
-				L_WARNING("Corrupt WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
-				continue;
+				L_DEBUG("Corrupt WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
+				throw;
+			}
+			if (header.head.revision != end_rev) {
+				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
+				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
 			}
 
 			Xapian::rev file_rev, begin_rev;
@@ -214,28 +202,20 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 			auto high_slot = highest_valid_slot();
 			if (high_slot == DatabaseWAL::max_slot) {
 				if (revision != file_rev) {
-					if (!unsafe) {
-						L_DEBUG("No WAL slots in the volume {} while trying to reach revision {}: {} volume {}", file_rev, revision, repr(base_path), file_rev);
-						THROW(StorageCorruptVolume, "No WAL slots in the volume");
-					}
-					L_WARNING("No WAL slots in the volume {} while trying to reach revision {}: {} volume {}", file_rev, revision, repr(base_path), file_rev);
-					continue;
+					L_DEBUG("No WAL slots in the volume {} while trying to reach revision {}: {} volume {}", file_rev, revision, repr(base_path), file_rev);
+					THROW(StorageCorruptVolume, "No WAL slots in the volume");
 				}
 				continue;
 			}
 			if (high_slot == 0) {
-				if (only_committed) {
-					continue;
-				}
+				continue;  // only_committed
 			}
 
 			if (file_rev == volumes.second) {
 				end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
-				if (only_committed) {
-					// last slot is uncommitted contain offset at the end of file
-					// In case not "committed" not execute the high slot avaible because are operations without commit
-					--high_slot;
-				}
+				// last slot is uncommitted contain offset at the end of file
+				// In case not "committed" not execute the high slot avaible because are operations without commit
+				--high_slot;  // only_committed
 			}
 
 			end_rev = file_rev + high_slot;
@@ -261,12 +241,8 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 					// First volume found is beyond the current revision,
 					// this could mean there are missing volumes between the
 					// current revision and the revisions in existing volumes.
-					if (!unsafe) {
-						L_DEBUG("Missing WAL volumes; the first one found is beyond current revision {}: {} volume {}", revision, repr(base_path), file_rev);
-						THROW(StorageCorruptVolume, "Missing WAL volumes");
-					}
-					L_WARNING("Missing WAL volumes; the first one found is beyond current revision {}: {} volume {}", revision, repr(base_path), file_rev);
-					continue;
+					L_DEBUG("Missing WAL volumes; the first one found is beyond current revision {}: {} volume {}", revision, repr(base_path), file_rev);
+					THROW(StorageCorruptVolume, "Missing WAL volumes");
 				}
 			} else {
 				// Always start at STORAGE_START_BLOCK_OFFSET for other volumes.
@@ -282,18 +258,15 @@ DatabaseWAL::execute(bool only_committed, bool unsafe)
 			try {
 				while (true) {
 					std::string line = read(end_off);
-					modified = execute_line(line, false, false, unsafe);
+					modified = execute_line(line, false, false);
 				}
 			} catch (const StorageEOF& exc) { }
 		}
 
 		if (volumes.first <= volumes.second) {
 			if (end_rev < revision) {
-				if (!unsafe) {
-					L_DEBUG("WAL did not reach the current revision {}, WAL ends at {}: {} volume {}", revision, end_rev, repr(base_path), volumes.second);
-					THROW(StorageCorruptVolume, "WAL did not reach the current revision");
-				}
-				L_WARNING("WAL did not reach the current revision {}, WAL ends at {}: {} volume {}", revision, end_rev, repr(base_path), volumes.second);
+				L_DEBUG("WAL did not reach the current revision {}, WAL ends at {}: {} volume {}", revision, end_rev, repr(base_path), volumes.second);
+				THROW(StorageCorruptVolume, "WAL did not reach the current revision");
 			}
 		}
 	} catch (const StorageException& exc) {
@@ -438,16 +411,16 @@ DatabaseWAL::to_string(Xapian::rev start_revision, Xapian::rev end_revision, boo
 	for (end_rev = volumes.first; end_rev <= volumes.second && !end; ++end_rev) {
 		try {
 			open(strings::format(WAL_STORAGE_PATH "{}", end_rev), STORAGE_OPEN);
-			if (header.head.revision != end_rev) {
-				L_WARNING("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
-				header.head.revision = end_rev;
-			}
 		} catch (const StorageIOError& exc) {
 			L_WARNING("Cannot open WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
 			continue;
 		} catch (const StorageCorruptVolume& exc) {
 			L_WARNING("Corrupt WAL {} volume {}: {}", repr(base_path), end_rev, exc.get_context());
 			continue;
+		}
+		if (header.head.revision != end_rev) {
+			L_WARNING("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
+			header.head.revision = end_rev;
 		}
 
 		Xapian::rev file_rev, begin_rev;
@@ -537,9 +510,9 @@ DatabaseWAL::highest_valid_slot()
 
 
 bool
-DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bool unsafe)
+DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 {
-	L_CALL("DatabaseWAL::execute_line(<line>, {}, {}, {})", wal_, send_update, unsafe);
+	L_CALL("DatabaseWAL::execute_line(<line>, {}, {})", wal_, send_update);
 
 	if (!_shard) {
 		THROW(Error, "Database is not defined");
@@ -556,11 +529,8 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 	L_REPLICATION("EXECUTE LINE: {} ({})", revision, enum_name(type));
 
 	if (revision != db_revision) {
-		if (!unsafe) {
-			L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
-			THROW(StorageCorruptVolume, "WAL revision mismatch!");
-		}
-		// L_WARNING("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
+		L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
+		THROW(StorageCorruptVolume, "WAL revision mismatch!");
 	}
 
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
@@ -589,20 +559,8 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update, bo
 			_shard->replace_document(did, Xapian::Document::unserialise(document), false, wal_, false);
 			break;
 		case Type::DELETE_DOCUMENT:
-			try {
-				did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
-				_shard->delete_document(did, false, wal_, false);
-			} catch (const Xapian::DocNotFoundError& exc) {
-				if (!unsafe) {
-					throw;
-				}
-				L_WARNING("Error during DELETE_DOCUMENT: {}", exc.get_msg());
-			} catch (const Xapian::DatabaseNotFoundError& exc) {
-				if (!unsafe) {
-					throw;
-				}
-				L_WARNING("Error during DELETE_DOCUMENT: {}", exc.get_msg());
-			}
+			did = static_cast<Xapian::docid>(unserialise_length(&p, p_end));
+			_shard->delete_document(did, false, wal_, false);
 			break;
 		case Type::SET_METADATA:
 			size = unserialise_length_and_check(&p, p_end);

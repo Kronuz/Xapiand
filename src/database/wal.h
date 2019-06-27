@@ -50,7 +50,7 @@ class Shard;
 struct WalHeader;
 
 
-#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))
+#define WAL_SLOTS ((STORAGE_BLOCK_SIZE - sizeof(WalHeader::StorageHeaderHead)) / sizeof(uint32_t))  // ((1024 * 4) - 32) / 4 = 1016
 
 
 struct WalHeader {
@@ -160,8 +160,8 @@ public:
 	Xapian::rev get_revision() const;
 
 	bool init_database();
-	bool execute(bool only_committed, bool unsafe = false);
-	bool execute_line(std::string_view line, bool wal_, bool send_update, bool unsafe);
+	bool execute();
+	bool execute_line(std::string_view line, bool wal_, bool send_update);
 	void write_line(const UUID& uuid, Xapian::rev revision, Type type, std::string_view data, bool send_update);
 
 	MsgPack to_string(Xapian::rev start_revision, Xapian::rev end_revision, bool unserialised);
