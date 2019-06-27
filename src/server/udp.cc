@@ -76,19 +76,21 @@ UDP::~UDP() noexcept
 
 
 bool
-UDP::close(bool close) {
+UDP::close() {
 	bool was_closed = closed.exchange(true);
 	if (!was_closed && sock != -1) {
-		if (close) {
-			// Dangerously close socket!
-			// (make sure no threads are using the file descriptor)
-			if (io::close(sock) == -1) {
-				L_WARNING("WARNING: close {{sock:{}}} - {} ({}): {}", sock, error::name(errno), errno, error::description(errno));
-			}
-			sock = -1;
-		} else {
-			io::shutdown(sock, SHUT_RDWR);
-		}
+		// Safe way to close sock without releasing its file descriptor
+		// (other threads could be using the same file descriptor)
+		// First shutdown sock
+		io::shutdown(sock, SHUT_RDWR);
+		// Create a new socket in a temporary file descriptor
+		int tmp = io::socket(AF_INET, SOCK_DGRAM, 0);
+		// Shutdown the temporary socket
+		io::shutdown(tmp, SHUT_RDWR);
+		// Close sock and duplicate the temporary socket into the sock file descriptor
+		io::dup2(tmp, sock);
+		// Close the temporary socket file descriptor
+		io::close(tmp);
 	}
 	return was_closed;
 }

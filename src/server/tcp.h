@@ -54,7 +54,7 @@ protected:
 
 	void bind(const char* hostname, unsigned int serv, int tries);
 
-	bool close(bool close = false);
+	bool close();
 
 public:
 	struct sockaddr_in addr;
