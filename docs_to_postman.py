@@ -127,7 +127,7 @@ def main():
         title = []
         for _, name in test['titles']:
             for item in items:
-                if item.get("name") == name:
+                if item.get("name") == name and 'item' in item:
                     break
             else:
                 item = {
