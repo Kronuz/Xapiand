@@ -1756,21 +1756,28 @@ update_primary(const std::string& unsharded_normalized_path, IndexSettings& inde
 			}
 		}
 		if (it != it_b && it != it_e) {
-			if (index_settings.stalled == std::chrono::steady_clock::time_point::min()) {
-				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
-				break;
-			} else if (index_settings.stalled <= now) {
+			if (0) {
+				auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
 				auto from_node = Node::get_node(*it_b);
 				auto to_node = Node::get_node(*it);
-				auto path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
 				L_INFO("Primary shard {} moved from node {}{}" + INFO_COL + " to {}{}",
-					repr(path),
+					repr(normalized_path),
 					from_node->col().ansi(), from_node->name(),
 					to_node->col().ansi(), to_node->name());
 				std::swap(*it, *it_b);
 				updated = true;
 				shard.modified = true;
 				index_settings.saved = false;
+			} else if (index_settings.stalled == std::chrono::steady_clock::time_point::min()) {
+				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
+				break;
+			} else if (index_settings.stalled <= now) {
+				auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
+				auto manager = XapiandManager::manager();
+				if (manager) {
+					manager->discovery->elect_primary(normalized_path);
+				}
+				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
 			}
 		}
 	}
