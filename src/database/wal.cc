@@ -264,10 +264,13 @@ DatabaseWAL::execute()
 			}
 		}
 	} catch (const StorageException& exc) {
-		L_ERR("WAL ERROR in {}: {}", repr(base_path), exc.get_message());
+		L_EXC("WAL ERROR in {}", repr(base_path));
 		Metrics::metrics()
 			.xapiand_wal_errors
 			.Increment();
+
+		close();
+		delete_files(base_path, {"wal.*"});
 	}
 
 	return modified;
@@ -657,79 +660,84 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 
 	_revision = revision;
 
-	try {
-		std::string line;
-		line.append(serialise_length(revision));
-		line.append(serialise_length(toUType(type)));
-		line.append(compress_lz4(data));
+	std::string line;
+	line.append(serialise_length(revision));
+	line.append(serialise_length(toUType(type)));
+	line.append(compress_lz4(data));
 
-		L_DATABASE_WAL("{} on {}: '{}'", enum_name(type), base_path, repr(line, quote));
+	L_DATABASE_WAL("{} on {}: '{}'", enum_name(type), base_path, repr(line, quote));
 
-		if (closed()) {
-			auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
-			auto volume = (volumes.first <= volumes.second) ? volumes.second : revision;
-			open(strings::format(WAL_STORAGE_PATH "{}", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
-			if (header.head.revision != volume) {
-				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), volume);
-				THROW(StorageCorruptWAL, "Mismatch in WAL revision");
+	for (int t = 1; t >= 0; --t) {
+		try {
+			if (closed()) {
+				auto volumes = get_volumes_range(WAL_STORAGE_PATH, revision, revision);
+				auto volume = (volumes.first <= volumes.second) ? volumes.second : revision;
+				open(strings::format(WAL_STORAGE_PATH "{}", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+				if (header.head.revision != volume) {
+					L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), volume);
+					THROW(StorageCorruptWAL, "Mismatch in WAL revision");
+				}
 			}
-		}
 
-		if (header.head.revision > revision) {
-			L_DEBUG("Invalid WAL revision {}: too old for {} volume {}", revision, repr(base_path), header.head.revision);
-			THROW(StorageCorruptWAL, "Invalid WAL revision", revision, header.head.revision);
-		}
-
-		uint32_t slot = revision - header.head.revision;
-
-		if (slot > WAL_SLOTS) {
-			L_DEBUG("Volume {} skips unexistent revision {}: {} volume {}", slot, revision - 1, repr(base_path), header.head.revision);
-			THROW(StorageCorruptWAL, "Volume skips unexistent revision");
-		} else if (slot == WAL_SLOTS) {
-			// We need a new volume, the old one is full
-			open(strings::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
-			if (header.head.revision != revision) {
-				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision);
-				THROW(StorageCorruptWAL, "Mismatch in WAL revision");
+			if (header.head.revision > revision) {
+				L_DEBUG("Invalid WAL revision {}: too old for {} volume {}", revision, repr(base_path), header.head.revision);
+				THROW(StorageCorruptWAL, "Invalid WAL revision", revision, header.head.revision);
 			}
-			slot = revision - header.head.revision;
-		}
 
-		assert(slot >= 0);
-		assert(slot < WAL_SLOTS);
-		if (slot > 0) {
-			if (header.slot[slot - 1] == 0) {
-				L_DEBUG("Slot {} skips unexistent revision {}: {} volume {}", slot, revision - 1, repr(base_path), header.head.revision);
-				THROW(StorageCorruptWAL, "Slot skips unexistent revision");
+			uint32_t slot = revision - header.head.revision;
+
+			if (slot > WAL_SLOTS) {
+				L_DEBUG("Volume {} skips unexistent revision {}: {} volume {}", slot, revision - 1, repr(base_path), header.head.revision);
+				THROW(StorageCorruptWAL, "Volume skips unexistent revision");
+			} else if (slot == WAL_SLOTS) {
+				// We need a new volume, the old one is full
+				open(strings::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
+				if (header.head.revision != revision) {
+					L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision);
+					THROW(StorageCorruptWAL, "Mismatch in WAL revision");
+				}
+				slot = revision - header.head.revision;
 			}
-		}
-		if (slot < WAL_SLOTS - 1) {
-			if (header.slot[slot + 1] != 0) {
-				L_DEBUG("Slot {} already occupied for revision {}: {} volume {}", slot, revision, repr(base_path), header.head.revision);
-				THROW(StorageCorruptWAL, "Slot already occupied for revision");
+
+			assert(slot >= 0);
+			assert(slot < WAL_SLOTS);
+			if (slot > 0) {
+				if (header.slot[slot - 1] == 0) {
+					L_DEBUG("Slot {} skips unexistent revision {}: {} volume {}", slot, revision - 1, repr(base_path), header.head.revision);
+					THROW(StorageCorruptWAL, "Slot skips unexistent revision");
+				}
 			}
-		}
+			if (slot < WAL_SLOTS - 1) {
+				if (header.slot[slot + 1] != 0) {
+					L_DEBUG("Slot {} already occupied for revision {}: {} volume {}", slot, revision, repr(base_path), header.head.revision);
+					THROW(StorageCorruptWAL, "Slot already occupied for revision");
+				}
+			}
 
-		write(line.data(), line.size());
+			write(line.data(), line.size());
 
-		header.slot[slot] = header.head.offset; // Beginning of the next revision
+			header.slot[slot] = header.head.offset; // Beginning of the next revision
 
-		commit();
+			commit();
 
 #ifdef XAPIAND_CLUSTERING
-		if (!opts.solo) {
-			// On COMMIT, let the updaters do their job
-			if (send_update) {
-				db_updater()->debounce(base_path, revision + 1, base_path);
+			if (!opts.solo) {
+				// On COMMIT, let the updaters do their job
+				if (send_update) {
+					db_updater()->debounce(base_path, revision + 1, base_path);
+				}
 			}
-		}
 #endif
+			break;
+		} catch (const StorageException&) {
+			L_EXC("WAL ERROR in {}", repr(base_path));
+			Metrics::metrics()
+				.xapiand_wal_errors
+				.Increment();
 
-	} catch (const StorageException& exc) {
-		L_ERR("WAL ERROR in {}: {}", repr(base_path), exc.get_message());
-		Metrics::metrics()
-			.xapiand_wal_errors
-			.Increment();
+			close();
+			delete_files(base_path, {"wal.*"});
+		}
 	}
 }
 
