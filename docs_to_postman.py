@@ -125,7 +125,13 @@ def main():
     for test in all_tests:
         items = collection["item"]
         title = []
-        for _, name in test['titles']:
+        description = test.get('description')
+        titles = test['titles']
+        if not description:
+            if titles:
+                description = titles[-1][1]
+                titles = titles[:-1]
+        for _, name in titles:
             for item in items:
                 if item.get("name") == name and 'item' in item:
                     break
@@ -217,12 +223,11 @@ def main():
                     "mode": "raw",
                     "raw": body,
                 }
-        name = test.get('description')
         item = {
             "request": request,
         }
-        if name:
-            item["name"] = name
+        if description:
+            item["name"] = description
         items.append(item)
         tests = test.get('tests')
         if tests:
