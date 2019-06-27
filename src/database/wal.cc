@@ -207,15 +207,9 @@ DatabaseWAL::execute()
 				}
 				continue;
 			}
-			if (high_slot == 0) {
-				continue;  // only_committed
-			}
 
 			if (file_rev == volumes.second) {
 				end = true;  // Avoid reenter to the loop with the high valid slot of the highest revision
-				// last slot is uncommitted contain offset at the end of file
-				// In case not "committed" not execute the high slot avaible because are operations without commit
-				--high_slot;  // only_committed
 			}
 
 			end_rev = file_rev + high_slot;
@@ -688,7 +682,10 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 
 		uint32_t slot = revision - header.head.revision;
 
-		if (slot >= WAL_SLOTS) {
+		if (slot > WAL_SLOTS) {
+			L_DEBUG("Volume {} skips unexistent revision {}: {} volume {}", slot, revision - 1, repr(base_path), header.head.revision);
+			THROW(StorageCorruptWAL, "Volume skips unexistent revision");
+		} else if (slot == WAL_SLOTS) {
 			// We need a new volume, the old one is full
 			open(strings::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != revision) {
@@ -700,7 +697,13 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 
 		assert(slot >= 0);
 		assert(slot < WAL_SLOTS);
-		if (slot + 1 < WAL_SLOTS) {
+		if (slot > 0) {
+			if (header.slot[slot - 1] == 0) {
+				L_DEBUG("Slot {} skips unexistent revision {}: {} volume {}", slot, revision - 1, repr(base_path), header.head.revision);
+				THROW(StorageCorruptWAL, "Slot skips unexistent revision");
+			}
+		}
+		if (slot < WAL_SLOTS - 1) {
 			if (header.slot[slot + 1] != 0) {
 				L_DEBUG("Slot {} already occupied for revision {}: {} volume {}", slot, revision, repr(base_path), header.head.revision);
 				THROW(StorageCorruptWAL, "Slot already occupied for revision");
@@ -710,18 +713,6 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		write(line.data(), line.size());
 
 		header.slot[slot] = header.head.offset; // Beginning of the next revision
-
-		if (type == Type::COMMIT) {
-			if (slot + 1 < WAL_SLOTS) {
-				header.slot[slot + 1] = header.slot[slot];
-			} else {
-				open(strings::format(WAL_STORAGE_PATH "{}", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
-				if (header.head.revision != revision + 1) {
-					L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision + 1);
-					THROW(StorageCorruptWAL, "Mismatch in WAL revision");
-				}
-			}
-		}
 
 		commit();
 
