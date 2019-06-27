@@ -1,5 +1,6 @@
 ---
 title: Tests
+permalink: /tests/
 ---
 
 * [**_Check Datatypes_**](check-data-types)
@@ -10,7 +11,7 @@ title: Tests
 * [**_Create Schema_**](create-schema)
 * [**_Create Schema With UUID Field_**](uuid-field)
 * [**_Create Schema With UUID Field_**](create.schema.uuid)
-* [**_Arrays_**](arrays)
+* [**_Arrays_**](dataStructures/arrays)
 * [**_Objects_**](dataStructures/objects)
 
 
