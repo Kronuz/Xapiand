@@ -238,7 +238,7 @@ def main():
                 scripts.append(test)
         # print(test)
 
-    json.dump(collection, sys.stdout)
+    json.dump(collection, sys.stdout, indent=2)
     return 0
 
 if __name__ == '__main__':
