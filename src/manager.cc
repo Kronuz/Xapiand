@@ -1594,10 +1594,10 @@ XapiandManager::sweep_primary_impl(size_t shards, const std::string& normalized_
 	if (shards > 1) {
 		for (size_t shard_num = 0; shard_num < shards; ++shard_num) {
 			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-			resolve_index_settings_impl(shard_normalized_path, false, false, nullptr, false, false, true);
+			resolve_index_settings_impl(shard_normalized_path, false, false, nullptr, nullptr, false, false, true);
 		}
 	}
-	resolve_index_settings_impl(normalized_path, false, false, nullptr, false, false, true);
+	resolve_index_settings_impl(normalized_path, false, false, nullptr, nullptr, false, false, true);
 }
 
 #endif
@@ -1732,7 +1732,7 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 
 
 void
-update_primary(const std::string& unsharded_normalized_path, IndexSettings& index_settings)
+update_primary(const std::string& unsharded_normalized_path, IndexSettings& index_settings, std::shared_ptr<const Node> primary_node)
 {
 	L_CALL("update_primary({}, <index_settings>)", repr(unsharded_normalized_path));
 
@@ -1751,12 +1751,14 @@ update_primary(const std::string& unsharded_normalized_path, IndexSettings& inde
 		auto it = it_b;
 		for (; it != it_e; ++it) {
 			auto node = Node::get_node(*it);
-			if (node && node->is_active()) {
-				break;
+			if (node && !node->empty()) {
+				if (node->is_active() || (primary_node && *node == *primary_node)) {
+					break;
+				}
 			}
 		}
 		if (it != it_b && it != it_e) {
-			if (0) {
+			if (primary_node) {
 				auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
 				auto from_node = Node::get_node(*it_b);
 				auto to_node = Node::get_node(*it);
@@ -2042,9 +2044,9 @@ XapiandManager::resolve_nodes(const IndexSettings& index_settings)
 
 
 IndexSettings
-XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, bool reload, bool rebuild, bool clear)
+XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear)
 {
-	L_CALL("XapiandManager::resolve_index_settings_impl({}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", rebuild, clear);
+	L_CALL("XapiandManager::resolve_index_settings_impl({}, {}, {}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", repr(primary_node->to_string()), reload, rebuild, clear);
 
 	if (settings && !settings->is_map()) {
 		settings = nullptr;
@@ -2062,7 +2064,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 		// Primary databases in .xapiand are always in the master (or local, if master is unavailable)
 		IndexSettingsShard shard;
 		auto leader_node = Node::get_leader_node();
-		auto primary_node = (leader_node && !leader_node->empty() && leader_node->is_active())
+		primary_node = (leader_node && !leader_node->empty() && leader_node->is_active())
 			? leader_node
 			: Node::get_local_node();
 		shard.nodes.push_back(primary_node->name());
@@ -2092,6 +2094,11 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 	static lru::lru<std::string, IndexSettings> resolve_index_lru(opts.resolver_cache_size);
 
 	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
+
+	if (primary_node) {
+		reload = true;
+		rebuild = true;
+	}
 
 	auto it_e = resolve_index_lru.end();
 	auto it = it_e;
@@ -2214,7 +2221,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 		settle_replicas(index_settings, node_nodes, index_settings.num_replicas_plus_master);
 
 		if (writable) {
-			update_primary(unsharded_normalized_path, index_settings);
+			update_primary(unsharded_normalized_path, index_settings, primary_node);
 		}
 
 		store_lru = true;
@@ -2308,7 +2315,7 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 		try {
 			Endpoints endpoints;
 
-			auto index_settings = resolve_index_settings_impl(unsharded_normalized_path, writable, primary, settings, t != CONFLICT_RETRIES, rebuild, false);
+			auto index_settings = resolve_index_settings_impl(unsharded_normalized_path, writable, primary, settings, nullptr, t != CONFLICT_RETRIES, rebuild, false);
 			auto nodes = resolve_nodes(index_settings);
 			bool retry = !rebuild;
 			rebuild = false;

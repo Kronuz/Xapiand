@@ -1298,7 +1298,8 @@ Discovery::elect_primary_response([[maybe_unused]] Message type, const std::stri
 				if (Node::quorum(total_nodes, ok_nodes)) {
 					elected_primaries.erase(normalized_path);
 					assert(elected_node);
-					L_RED("Elected primary node for {} is {}", normalized_path, (elected_node->to_string()));
+					L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
+					XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
 				}
 			}
 		}
