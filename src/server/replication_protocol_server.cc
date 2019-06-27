@@ -251,13 +251,11 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 			auto uuid = db->get_uuid();
 			auto revision = db->get_revision();
 
-			size_t total = 0;
-			size_t ok = 0;
-
 			// Figure out remote uuid and revisions.
 			const auto& shards = nodes[0];
+			size_t total_nodes = shards.size();
+			size_t ok_nodes = 0;
 			for (const auto& shard_node : shards) {
-				++total;
 				try {
 					lock_shard lk_shard(Endpoint{args.dst_endpoint.path, shard_node}, DB_WRITABLE, false);
 					auto remote_shard = lk_shard.lock(0);
@@ -265,7 +263,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 					auto remote_uuid = remote_db->get_uuid();
 					auto remote_revision = remote_db->get_revision();
 					if (remote_uuid == uuid && remote_revision >= revision) {
-						++ok;
+						++ok_nodes;
 					}
 				} catch (...) { }
 			}
@@ -279,7 +277,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 			XapiandManager::manager(true)->database_pool->lock(shard);
 
 			// Now we are sure no readers are using the database before removing/moving the files
-			if (Node::quorum(total, ok)) {
+			if (Node::quorum(total_nodes, ok_nodes)) {
 				// If there are enough remote valid databases, remove the local one.
 				delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
 			} else {
