@@ -350,4 +350,11 @@ public:
 };
 
 
+class StorageCorruptWAL : public StorageCorruptVolume {
+public:
+	template<typename... Args>
+	StorageCorruptWAL(Args&&... args) : StorageCorruptVolume(std::forward<Args>(args)...) { }
+};
+
+
 #endif /* XAPIAND_DATABASE_WAL */

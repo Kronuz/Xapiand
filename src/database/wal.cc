@@ -100,7 +100,7 @@ WalHeader::validate(void* param, void* /*unused*/)
 			if (uuid != wal->get_uuid()) {
 				// Xapian under FreeBSD stores UUIDs in native order (could be little endian)
 				if (uuid != wal->get_uuid_le()) {
-					THROW(StorageCorruptVolume, "WAL UUID mismatch");
+					THROW(StorageCorruptWAL, "WAL UUID mismatch");
 				}
 			}
 		}
@@ -193,7 +193,7 @@ DatabaseWAL::execute()
 			}
 			if (header.head.revision != end_rev) {
 				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), end_rev);
-				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
+				THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 			}
 
 			Xapian::rev file_rev, begin_rev;
@@ -203,7 +203,7 @@ DatabaseWAL::execute()
 			if (high_slot == DatabaseWAL::max_slot) {
 				if (revision != file_rev) {
 					L_DEBUG("No WAL slots in the volume {} while trying to reach revision {}: {} volume {}", file_rev, revision, repr(base_path), file_rev);
-					THROW(StorageCorruptVolume, "No WAL slots in the volume");
+					THROW(StorageCorruptWAL, "No WAL slots in the volume");
 				}
 				continue;
 			}
@@ -242,7 +242,7 @@ DatabaseWAL::execute()
 					// this could mean there are missing volumes between the
 					// current revision and the revisions in existing volumes.
 					L_DEBUG("Missing WAL volumes; the first one found is beyond current revision {}: {} volume {}", revision, repr(base_path), file_rev);
-					THROW(StorageCorruptVolume, "Missing WAL volumes");
+					THROW(StorageCorruptWAL, "Missing WAL volumes");
 				}
 			} else {
 				// Always start at STORAGE_START_BLOCK_OFFSET for other volumes.
@@ -266,7 +266,7 @@ DatabaseWAL::execute()
 		if (volumes.first <= volumes.second) {
 			if (end_rev < revision) {
 				L_DEBUG("WAL did not reach the current revision {}, WAL ends at {}: {} volume {}", revision, end_rev, repr(base_path), volumes.second);
-				THROW(StorageCorruptVolume, "WAL did not reach the current revision");
+				THROW(StorageCorruptWAL, "WAL did not reach the current revision");
 			}
 		}
 	} catch (const StorageException& exc) {
@@ -530,7 +530,7 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 
 	if (revision != db_revision) {
 		L_DEBUG("WAL revision mismatch for {}: Expected {}, got {} ({})", repr(base_path), db_revision, revision, enum_name(type));
-		THROW(StorageCorruptVolume, "WAL revision mismatch!");
+		THROW(StorageCorruptWAL, "WAL revision mismatch!");
 	}
 
 	auto data = decompress_lz4(std::string_view(p, p_end - p));
@@ -609,7 +609,7 @@ DatabaseWAL::init_database()
 		open(strings::format(WAL_STORAGE_PATH "{}", 0), STORAGE_OPEN);
 		if (header.head.revision != 0) {
 			L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), 0);
-			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
+			THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 		}
 	} catch (const StorageIOError&) {
 		return true;
@@ -677,13 +677,13 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 			open(strings::format(WAL_STORAGE_PATH "{}", volume), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != volume) {
 				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), volume);
-				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
+				THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 			}
 		}
 
 		if (header.head.revision > revision) {
 			L_DEBUG("Invalid WAL revision {}: too old for {} volume {}", revision, repr(base_path), header.head.revision);
-			THROW(Error, "Invalid WAL revision", revision, header.head.revision);
+			THROW(StorageCorruptWAL, "Invalid WAL revision", revision, header.head.revision);
 		}
 
 		uint32_t slot = revision - header.head.revision;
@@ -693,7 +693,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 			open(strings::format(WAL_STORAGE_PATH "{}", revision), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 			if (header.head.revision != revision) {
 				L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision);
-				THROW(StorageCorruptVolume, "Mismatch in WAL revision");
+				THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 			}
 			slot = revision - header.head.revision;
 		}
@@ -703,7 +703,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 		if (slot + 1 < WAL_SLOTS) {
 			if (header.slot[slot + 1] != 0) {
 				L_DEBUG("Slot {} already occupied for revision {}: {} volume {}", slot, revision, repr(base_path), header.head.revision);
-				THROW(Error, "Slot already occupied for revision");
+				THROW(StorageCorruptWAL, "Slot already occupied for revision");
 			}
 		}
 
@@ -718,7 +718,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 				open(strings::format(WAL_STORAGE_PATH "{}", revision + 1), STORAGE_OPEN | STORAGE_WRITABLE | STORAGE_CREATE | WAL_SYNC_MODE);
 				if (header.head.revision != revision + 1) {
 					L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), revision + 1);
-					THROW(StorageCorruptVolume, "Mismatch in WAL revision");
+					THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 				}
 			}
 		}
@@ -753,7 +753,7 @@ DatabaseWAL::locate_revision(Xapian::rev revision)
 		open(strings::format(WAL_STORAGE_PATH "{}", volumes.second), STORAGE_OPEN);
 		if (header.head.revision != volumes.second) {
 			L_DEBUG("Mismatch in WAL revision {}: {} volume {}", header.head.revision, repr(base_path), volumes.second);
-			THROW(StorageCorruptVolume, "Mismatch in WAL revision");
+			THROW(StorageCorruptWAL, "Mismatch in WAL revision");
 		}
 		if (header.head.revision <= revision) {
 			auto high_slot = highest_valid_slot();
