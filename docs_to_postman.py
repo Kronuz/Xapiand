@@ -6,6 +6,7 @@ import re
 import os
 import sys
 import json
+import copy
 import email
 import urlparse
 
@@ -27,7 +28,7 @@ def parse_filename(filename, index, all_tests):
     context.update(file_context)
     while fnp and fnp != BASE_DIR and fnp != '/':
         if fnp in index:
-            context['titles'].insert(0, (0, index.get(fnp)))
+            file_context['titles'].insert(0, (0, index.get(fnp)))
         fnp = os.path.dirname(fnp)
     # print(filename_path, base_titles)
 
@@ -37,7 +38,7 @@ def parse_filename(filename, index, all_tests):
         if groups[0] == 'json':
             # Flush:
             if context and 'request' in context:
-                all_tests.append(dict(context))
+                all_tests.append(copy.deepcopy(context))
             context.clear()
             context.update(file_context)
             context['request'] = groups[1].strip()
@@ -46,13 +47,13 @@ def parse_filename(filename, index, all_tests):
         elif groups[2]:
             # Flush:
             if context and 'request' in context:
-                all_tests.append(dict(context))
+                all_tests.append(copy.deepcopy(context))
             context.clear()
             context.update(file_context)
             # Add title:
             level = len(groups[2])
-            context['titles'] = [title for title in context.get('titles', []) if title[0] < level]
-            context['titles'].append((level, groups[3]))
+            file_context['titles'] = [title for title in file_context.get('titles', []) if title[0] < level]
+            file_context['titles'].append((level, groups[3]))
             # Clear description:
             file_context.pop('description', None)
             context.pop('description', None)
@@ -65,18 +66,18 @@ def parse_filename(filename, index, all_tests):
             elif name == 'title':
                 # Flush:
                 if context and 'request' in context:
-                    all_tests.append(dict(context))
+                    all_tests.append(copy.deepcopy(context))
                 context.clear()
                 context.update(file_context)
                 # Add title:
                 index[filename_path] = groups[5]
-                context['titles'].append((0, groups[5]))
+                file_context['titles'].append((1, groups[5]))
             else:
                 context[name] = groups[5]
     PARSER_RE.sub(process, data)
     # Flush:
     if context and 'request' in context:
-        all_tests.append(dict(context))
+        all_tests.append(copy.deepcopy(context))
 
 
 def parse_directory(directory, index, all_tests):
@@ -94,10 +95,11 @@ def main():
 
     if len(sys.argv) > 1:
         for arg in sys.argv:
-            if os.path.isdir(arg):
-                parse_directory(arg, index, all_tests)
-            else:
-                parse_filename(arg, index, all_tests)
+            if os.path.abspath(arg) != os.path.abspath(__file__):
+                if os.path.isdir(arg):
+                    parse_directory(arg, index, all_tests)
+                else:
+                    parse_filename(arg, index, all_tests)
     else:
         directory = os.path.join(BASE_DIR, 'docs')
         parse_directory(directory, index, all_tests)
