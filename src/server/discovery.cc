@@ -1336,7 +1336,7 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 						auto it = voters.find(shard_node->lower_name());
 						if (it != voters.end()) {
 							++ok_nodes;
-							if (it->second.second > max_revision || !elected_node) {
+							if (!elected_node || (it->second.first == uuid && it->second.second > max_revision)) {
 								max_revision = it->second.second;
 								elected_node = shard_node;
 							}
