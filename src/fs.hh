@@ -38,7 +38,7 @@ struct File_ptr {
 
 void delete_files(std::string_view path, const std::vector<std::string>& patterns = {"*"});
 
-void quarantine_files(std::string_view path, const std::vector<std::string>& patterns = {"*"}, std::string_view template_suffix = "quarantine.XXXXXX");
+void quarantine_files(std::string_view path, const std::vector<std::string>& patterns = {"*"}, std::string_view template_suffix = ".quarantine.XXXXXX");
 
 void move_files(std::string_view src, std::string_view dst);
 

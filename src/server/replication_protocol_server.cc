@@ -283,6 +283,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 			} else {
 				// Quarantine WAL instead of deleting
 				L_WARNING("Stalled shard: {}", args.dst_endpoint.path);
+				quarantine_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
 			}
 
 			// release exclusive lock

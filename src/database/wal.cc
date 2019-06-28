@@ -270,7 +270,7 @@ DatabaseWAL::execute()
 			.Increment();
 
 		close();
-		delete_files(base_path, {"wal.*"});  // Quarantine WAL instead of deleting
+		quarantine_files(base_path, {"wal.*"});  // Quarantine WAL instead of deleting
 	}
 
 	return modified;
@@ -736,7 +736,7 @@ DatabaseWAL::write_line(const UUID& uuid, Xapian::rev revision, Type type, std::
 				.Increment();
 
 			close();
-			delete_files(base_path, {"wal.*"});  // Quarantine WAL instead of deleting
+			quarantine_files(base_path, {"wal.*"});  // Quarantine WAL instead of deleting
 		}
 	}
 }
