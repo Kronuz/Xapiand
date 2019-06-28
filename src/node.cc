@@ -97,7 +97,7 @@ std::string
 Node::__repr__() const
 {
 	return strings::format(STEEL_BLUE + "<Node {{name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, activated:{}, touched:{}}}{}{}{}{}>",
-		repr(name()), repr(host()), http_port, remote_port, replication_port, activated.load(std::memory_order_acquire) ? "true" : "false", touched.load(std::memory_order_acquire),
+		repr(name()), repr(host()), http_port, remote_port, replication_port, activated.load(std::memory_order_acquire) ? "true" : "false", std::chrono::duration_cast<std::chrono::milliseconds>(touched.load(std::memory_order_acquire).time_since_epoch()).count(),
 		is_alive() ? " " + DARK_STEEL_BLUE + "(alive)" + STEEL_BLUE : "",
 		is_active() ? " " + DARK_STEEL_BLUE + "(active)" + STEEL_BLUE : "",
 		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
@@ -148,7 +148,7 @@ Node::set_local_node(std::shared_ptr<const Node> node)
 
 	assert(node);
 
-	auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+	auto now = std::chrono::steady_clock::now();
 
 	node->activated.store(true, std::memory_order_release);
 	node->touched.store(now, std::memory_order_release);
@@ -190,7 +190,7 @@ Node::set_leader_node(std::shared_ptr<const Node> node)
 
 	assert(node);
 
-	auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+	auto now = std::chrono::steady_clock::now();
 
 	node->activated.store(true, std::memory_order_release);
 	node->touched.store(now, std::memory_order_release);
@@ -285,7 +285,7 @@ Node::touch_node(const Node& node, bool activate, bool touch)
 {
 	L_CALL("Node::touch_node({}, {}, {})", node.__repr__(), activate, touch);
 
-	auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+	auto now = std::chrono::steady_clock::now();
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
@@ -374,7 +374,7 @@ Node::drop_node(std::string_view _node_name)
 	if (it != _nodes.end()) {
 		auto& node_ref = it->second;
 		node_ref->activated.store(false, std::memory_order_release);
-		node_ref->touched.store(0, std::memory_order_release);
+		node_ref->touched.store(std::chrono::steady_clock::time_point::min(), std::memory_order_release);
 		auto node_ref_copy = std::make_unique<Node>(*node_ref);
 		node_ref_copy->_addr = sockaddr_in{};
 		node_ref_copy->_host.clear();
