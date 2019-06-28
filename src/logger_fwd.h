@@ -88,11 +88,11 @@ static void collect(std::string_view format, Args&&... args) {
 }
 
 
-Log vlog(bool clears, const std::chrono::steady_clock::time_point& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+Log vlog(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 
 template <typename... Args>
-inline Log log(bool clears, const std::chrono::steady_clock::time_point& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
+inline Log log(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
 	return vlog(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
 }
 

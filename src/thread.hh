@@ -126,7 +126,7 @@ public:
 		}
 	}
 
-	bool join(const std::chrono::steady_clock::time_point& wakeup) {
+	bool join(std::chrono::steady_clock::time_point wakeup) {
 		if (!_joined && _running) {
 			std::future_status status;
 			do {

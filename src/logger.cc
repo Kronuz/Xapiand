@@ -148,7 +148,7 @@ vprintln(bool collect, bool with_endl, std::string_view format, fmt::format_args
 
 
 Log
-vlog(bool clears, const std::chrono::steady_clock::time_point& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+vlog(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, args);
 }
@@ -304,8 +304,8 @@ Logging::Logging(
 	bool stacked,
 	uint64_t once,
 	int priority,
-	const std::chrono::steady_clock::time_point& created_at,
-	const std::chrono::system_clock::time_point& timestamp
+	std::chrono::steady_clock::time_point created_at,
+	std::chrono::system_clock::time_point timestamp
 ) :
 	ScheduledTask<Scheduler<Logging, ThreadPolicyType::logging>, Logging, ThreadPolicyType::logging>(created_at),
 	thread_id(std::this_thread::get_id()),
@@ -745,7 +745,7 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, const std::chrono::steady_clock::time_point& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+Logging::do_log(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
@@ -763,7 +763,7 @@ Logging::do_log(bool clears, const std::chrono::steady_clock::time_point& wakeup
 
 Log
 Logging::add(
-	const std::chrono::steady_clock::time_point& wakeup,
+	std::chrono::steady_clock::time_point wakeup,
 	void** callstack,
 	const char* function,
 	const char* filename,
@@ -776,8 +776,8 @@ Logging::add(
 	bool stacked,
 	uint64_t once,
 	int priority,
-	const std::chrono::steady_clock::time_point& created_at,
-	const std::chrono::system_clock::time_point& timestamp
+	std::chrono::steady_clock::time_point created_at,
+	std::chrono::system_clock::time_point timestamp
 ) {
 	auto l_ptr = std::make_shared<Logging>(
 		callstack,

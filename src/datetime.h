@@ -129,14 +129,14 @@ namespace Datetime {
 	tm_t to_tm_t(std::time_t timestamp);
 	tm_t to_tm_t(double timestamp);
 	double timestamp(const tm_t& tm);
-	inline double timestamp(const std::chrono::system_clock::time_point& tp) {
+	inline double timestamp(std::chrono::system_clock::time_point tp) {
 		return std::chrono::duration_cast<std::chrono::microseconds>(tp.time_since_epoch()).count() / DATETIME_MICROSECONDS;
 	}
 	bool isValidDate(int year, int month, int day);
 	std::string iso8601(const std::tm& tm, bool trim=true, char sep='T');
 	std::string iso8601(const tm_t& tm, bool trim=true, char sep='T');
 	std::string iso8601(double timestamp, bool trim=true, char sep='T');
-	std::string iso8601(const std::chrono::system_clock::time_point& tp, bool trim=true, char sep='T');
+	std::string iso8601(std::chrono::system_clock::time_point tp, bool trim=true, char sep='T');
 	bool isDate(std::string_view date);
 	bool isDatetime(std::string_view datetime);
 

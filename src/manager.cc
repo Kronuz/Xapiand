@@ -1621,7 +1621,7 @@ IndexSettings::IndexSettings() :
 }
 
 
-IndexSettings::IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::steady_clock::time_point& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+IndexSettings::IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
 	version(version),
 	loaded(loaded),
 	saved(saved),
