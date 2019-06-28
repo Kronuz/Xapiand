@@ -1337,25 +1337,31 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 				const auto& shards = nodes[0];
 				total_nodes = shards.size();
 				size_t ok_nodes = 0;
-				for (const auto& shard_node : shards) {
-					if (shard_node->is_active()) {
-						auto it = voters.find(shard_node->lower_name());
-						if (it != voters.end()) {
-							++ok_nodes;
-							if (it->second.eligible) {
-								if (!elected_node || (it->second.uuid == uuid && it->second.revision > max_revision)) {
-									max_revision = it->second.revision;
-									elected_node = shard_node;
+				assert(total_nodes);
+				if (shards[0]->is_active()) {
+					// Shard's primary is active, abort election!
+					_ASYNC_elected_primaries.erase(normalized_path);
+				} else {
+					for (const auto& shard_node : shards) {
+						if (shard_node->is_active()) {
+							auto it = voters.find(shard_node->lower_name());
+							if (it != voters.end()) {
+								++ok_nodes;
+								if (it->second.eligible) {
+									if (!elected_node || (it->second.uuid == uuid && it->second.revision > max_revision)) {
+										max_revision = it->second.revision;
+										elected_node = shard_node;
+									}
 								}
 							}
 						}
 					}
-				}
-				if (Node::quorum(total_nodes, ok_nodes)) {
-					_ASYNC_elected_primaries.erase(normalized_path);
-					if (elected_node) {
-						L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
-						XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
+					if (Node::quorum(total_nodes, ok_nodes)) {
+						_ASYNC_elected_primaries.erase(normalized_path);
+						if (elected_node) {
+							L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
+							XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
+						}
 					}
 				}
 			}
