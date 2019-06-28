@@ -109,7 +109,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	bool stacked;
 	uint64_t once;
 	int priority;
-	std::atomic_ullong cleaned_at;
+	std::atomic<std::chrono::steady_clock::time_point> atom_cleaned_at;
 	std::chrono::system_clock::time_point timestamp;
 
 	void** unlog_callstack;
@@ -203,7 +203,7 @@ public:
 
 	bool clear(bool internal = false);
 
-	long double age();
+	std::chrono::nanoseconds age();
 
 	void operator()();
 };

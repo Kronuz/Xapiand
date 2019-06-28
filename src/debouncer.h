@@ -32,7 +32,6 @@
 #include "log.h"                             // for L_CALL, L_DEBUG_HOOK
 #include "random.hh"                         // for random_int
 #include "scheduler.h"                       // for ScheduledTask, ThreadedScheduler
-#include "time_point.hh"                     // for time_point_to_ullong
 
 
 template <typename Key, typename Func, typename Tuple, ThreadPolicyType thread_policy>
@@ -45,7 +44,7 @@ class Debouncer : public ThreadedScheduler<DebouncerTask<Key, Func, Tuple, threa
 
 	struct Status {
 		std::shared_ptr<DebouncerTask<Key, Func, Tuple, thread_policy>> task;
-		unsigned long long max_wakeup_time;
+		std::chrono::steady_clock::time_point max_wakeup_time;
 	};
 
 	std::mutex statuses_mtx;
@@ -173,13 +172,13 @@ Debouncer<Key, Func, Tuple, thread_policy>::throttle(const Key& key)
 
 			auto status = &(it->second);
 
-			status->max_wakeup_time = 0;  // flag status as throttler
+			status->max_wakeup_time = std::chrono::steady_clock::time_point::min();  // flag status as throttler
 
 			if (status->task) {
 				status->task->clear();
 			}
 			task = std::make_shared<DebouncerTask<Key, Func, Tuple, thread_policy>>(*this, key);
-			task->wakeup_time = time_point_to_ullong(now + throttle_time);
+			task->wakeup_time = now + throttle_time;
 			status->task = task;
 		}
 
@@ -209,7 +208,7 @@ Debouncer<Key, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::millis
 	std::shared_ptr<DebouncerTask<Key, Func, Tuple, thread_policy>> task;
 
 	{
-		unsigned long long next_wakeup_time;
+		std::chrono::steady_clock::time_point next_wakeup_time;
 
 		auto now = std::chrono::steady_clock::now();
 
@@ -221,19 +220,19 @@ Debouncer<Key, Func, Tuple, thread_policy>::delayed_debounce(std::chrono::millis
 			// status doesn't exists, initialize:
 			auto& status_ref = statuses[key] = {
 				nullptr,
-				time_point_to_ullong(now + random_time(debounce_min_force_timeout, debounce_max_force_timeout) + delay)
+				now + random_time(debounce_min_force_timeout, debounce_max_force_timeout) + delay,
 			};
 			status = &status_ref;
-			next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
+			next_wakeup_time = now + debounce_timeout + delay;
 		} else {
 			status = &(it->second);
-			if (status->max_wakeup_time) {
-				// status exists, so new timeout is of busy type:
-				next_wakeup_time = time_point_to_ullong(now + debounce_busy_timeout + delay);
-			} else {
+			if (status->max_wakeup_time == std::chrono::steady_clock::time_point::min()) {
 				// status exists but is a throttler (max_wakeup_time == 0), initialize:
-				status->max_wakeup_time = time_point_to_ullong(now + random_time(debounce_min_force_timeout, debounce_max_force_timeout) + delay);
-				next_wakeup_time = time_point_to_ullong(now + debounce_timeout + delay);
+				status->max_wakeup_time = now + random_time(debounce_min_force_timeout, debounce_max_force_timeout) + delay;
+				next_wakeup_time = now + debounce_timeout + delay;
+			} else {
+				// status exists, so new timeout is of busy type:
+				next_wakeup_time = now + debounce_busy_timeout + delay;
 			}
 		}
 

@@ -68,7 +68,7 @@ public:
 	void vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
 
 	bool clear();
-	long double age();
+	std::chrono::nanoseconds age();
 	LogType release();
 };
 

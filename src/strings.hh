@@ -329,8 +329,14 @@ std::string from_small_time(long double seconds, const char* prefix = "", bool c
 std::string from_time(long double seconds, const char* prefix = "", bool colored = false);
 std::string from_delta(long double nanoseconds, const char* prefix = "", bool colored = false);
 
+inline std::string
+from_delta(const std::chrono::nanoseconds& nanoseconds, const char* prefix = "", bool colored = false) {
+	return from_delta(nanoseconds.count(), prefix, colored);
+}
+
 template <typename T>
-std::string from_delta(const std::chrono::time_point<T>& start, const std::chrono::time_point<T>& end, const char* prefix = "", bool colored = false) {
+inline std::string
+from_delta(const std::chrono::time_point<T>& start, const std::chrono::time_point<T>& end, const char* prefix = "", bool colored = false) {
 	return from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count(), prefix, colored);
 }
 

@@ -46,8 +46,8 @@
 #include "atomic_shared_ptr.h"                    // for atomic_shared_ptr
 #include "error.hh"                               // for error::name
 #include "likely.h"                               // for likely/unlikely
+#include "nanosleep.h"                            // for nanosleep
 #include "strings.hh"                             // for strings::format
-#include "time_point.hh"                          // for wait
 
 
 constexpr const size_t max_frames = 128;

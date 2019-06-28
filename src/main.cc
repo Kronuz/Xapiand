@@ -65,6 +65,7 @@
 #include "log.h"                                  // for L_INFO, L_CRIT, L_NOTICE
 #include "logger.h"                               // for Logging
 #include "manager.h"                              // for XapiandManager
+#include "nanosleep.h"                            // for nanosleep
 #include "opts.h"                                 // for opts_t
 #include "package.h"                              // for Package::
 #include "strings.hh"                             // for strings::format, strings::center

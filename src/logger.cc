@@ -45,7 +45,6 @@
 #include "repr.hh"            // for repr
 #include "strings.hh"         // for strings::format
 #include "thread.hh"          // for get_thread_name, ThreadPolicyType::*
-#include "time_point.hh"      // for time_point_to_ullong
 #include "xapian.h"           // for Xapian::Error
 
 
@@ -201,10 +200,10 @@ Log::clear()
 }
 
 
-long double
+std::chrono::nanoseconds
 Log::age()
 {
-	return log ? log->age() : 0;
+	return log ? log->age() : 0ns;
 }
 
 
@@ -322,7 +321,7 @@ Logging::Logging(
 	stacked(stacked),
 	once(once),
 	priority(priority),
-	cleaned_at(0),
+	atom_cleaned_at(std::chrono::steady_clock::time_point{}),
 	timestamp(timestamp),
 	unlog_callstack(nullptr),
 	unlog_function(nullptr),
@@ -377,8 +376,8 @@ Logging::clean()
 
 	auto now = std::chrono::steady_clock::now();
 
-	unsigned long long c = 0;
-	if (cleaned_at.compare_exchange_strong(c, time_point_to_ullong(now))) {
+	std::chrono::steady_clock::time_point c;
+	if (atom_cleaned_at.compare_exchange_strong(c, now)) {
 		if (stacked) {
 			std::lock_guard<std::mutex> lk(stack_mtx);
 			if (stack_levels.at(thread_id)-- == 0) {
@@ -400,7 +399,7 @@ Logging::clean()
 				stacked,
 				once,
 				unlog_priority,
-				time_point_from_ullong(created_at),
+				atom_created_at.load(),
 				timestamp
 			);
 			unlog_callstack = nullptr;
@@ -427,19 +426,22 @@ Logging::clear(bool internal)
 }
 
 
-long double
+std::chrono::nanoseconds
 Logging::age()
 {
+	auto created_at = atom_created_at.load();
+
+	auto cleaned_at = atom_cleaned_at.load();
 	if (cleaned_at > created_at) {
-		return std::chrono::duration_cast<std::chrono::nanoseconds>(
-			time_point_from_ullong(cleaned_at) - time_point_from_ullong(created_at)
-		).count();
-	} else if (cleared_at > created_at) {
-		return std::chrono::duration_cast<std::chrono::nanoseconds>(
-			time_point_from_ullong(cleared_at) - time_point_from_ullong(created_at)
-		).count();
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(cleaned_at - created_at);
 	}
-	return 0;
+
+	auto cleared_at = atom_cleared_at.load();
+	if (cleared_at > created_at) {
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(cleared_at - created_at);
+	}
+
+	return 0ns;
 }
 
 
@@ -691,7 +693,7 @@ Logging::operator()()
 
 	if (async) {
 		auto log_age = age();
-		if (log_age > 1e8) {
+		if (log_age > 100ms) {
 			msg += " " + strings::from_delta(log_age, clears ? "+" : "~", true);
 		}
 	}

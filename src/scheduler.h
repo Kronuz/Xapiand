@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include <atomic>                 // for std::atomic_ullong
+#include <atomic>                 // for std::atomic
 #include <cassert>                // for assert
 #include <chrono>                 // for std::chrono
 #include <memory>
@@ -33,7 +33,6 @@
 #include "stash.h"                // for StashValues, StashSlots, StashContext
 #include "thread.hh"              // for Thread
 #include "threadpool.hh"          // for ThreadPool
-#include "time_point.hh"          // for time_point_to_ullong
 
 
 using namespace std::chrono_literals;
@@ -65,18 +64,18 @@ class ScheduledTask : public std::enable_shared_from_this<ScheduledTask<Schedule
 	friend ThreadedScheduler<ScheduledTaskImpl, thread_policy>;
 
 protected:
-	unsigned long long wakeup_time;
-	std::atomic_ullong created_at;
-	std::atomic_ullong cleared_at;
+	std::chrono::steady_clock::time_point wakeup_time;
+	std::atomic<std::chrono::steady_clock::time_point> atom_created_at;
+	std::atomic<std::chrono::steady_clock::time_point> atom_cleared_at;
 
 public:
 	ScheduledTask(std::chrono::steady_clock::time_point created_at = std::chrono::steady_clock::now()) :
-		wakeup_time(0),
-		created_at(time_point_to_ullong(created_at)),
-		cleared_at(0) {}
+		wakeup_time(std::chrono::steady_clock::time_point{}),
+		atom_created_at(created_at),
+		atom_cleared_at(std::chrono::steady_clock::time_point{}) {}
 
 	operator bool() const noexcept {
-		return !cleared_at;
+		return atom_cleared_at.load() == std::chrono::steady_clock::time_point{};
 	}
 
 	void operator()() {
@@ -84,8 +83,8 @@ public:
 	}
 
 	bool clear(bool /*internal*/ = false) {
-		unsigned long long c = 0;
-		return cleared_at.compare_exchange_strong(c, time_point_to_ullong(std::chrono::steady_clock::now()));
+		std::chrono::steady_clock::time_point c;
+		return atom_cleared_at.compare_exchange_strong(c, std::chrono::steady_clock::now());
 	}
 };
 
@@ -99,7 +98,7 @@ class SchedulerQueue {
 
 public:
 	static unsigned long long now() {
-		return time_point_to_ullong(std::chrono::steady_clock::now());
+		return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 	}
 
 private:
@@ -119,10 +118,10 @@ public:
 		ctx(now()),
 		cctx(now()) {}
 
-	TaskType peep(unsigned long long end_key) {
+	TaskType peep(std::chrono::steady_clock::time_point end_time) {
 		ctx.op = StashContext::Operation::peep;
 		ctx.begin_key = ctx.atom_first_valid_key.load();
-		ctx.end_key = end_key;
+		ctx.end_key = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time.time_since_epoch()).count();;
 		TaskType task;
 		queue.next(ctx, &task);
 		return task;
@@ -131,7 +130,7 @@ public:
 	TaskType walk() {
 		ctx.op = StashContext::Operation::walk;
 		ctx.begin_key = ctx.atom_first_valid_key.load();
-		ctx.end_key = time_point_to_ullong(std::chrono::steady_clock::now());
+		ctx.end_key = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 		TaskType task;
 		queue.next(ctx, &task);
 		return task;
@@ -148,14 +147,14 @@ public:
 	void clean() {
 		cctx.op = StashContext::Operation::clean;
 		cctx.begin_key = cctx.atom_first_valid_key.load();
-		cctx.end_key = time_point_to_ullong(std::chrono::steady_clock::now() - 1min);
+		cctx.end_key = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch() - 1min).count();
 		TaskType task;
 		queue.next(cctx, &task);
 	}
 
-	void add(const TaskType& task, unsigned long long key = 0) {
+	void add(const TaskType& task, std::chrono::steady_clock::time_point time_point) {
 		try {
-			queue.add(ctx, key, task);
+			queue.add(ctx, std::chrono::duration_cast<std::chrono::nanoseconds>(time_point.time_since_epoch()).count(), task);
 		} catch (const std::out_of_range&) {
 			L_SCHEDULER("BaseScheduler::" + BROWN + "Stash overflow!" + CLEAR_COLOR + "\n");
 		}
@@ -170,7 +169,7 @@ class BaseScheduler : public Thread<BaseScheduler<SchedulerImpl, ScheduledTaskIm
 	std::mutex mtx;
 
 	std::condition_variable wakeup_signal;
-	std::atomic_ullong atom_next_wakeup_time;
+	std::atomic<std::chrono::steady_clock::time_point> atom_next_wakeup_time;
 
 	SchedulerQueue<SchedulerImpl, ScheduledTaskImpl, thread_policy> scheduler_queue;
 
@@ -187,7 +186,7 @@ protected:
 
 public:
 	BaseScheduler(std::string name) :
-		atom_next_wakeup_time(0),
+		atom_next_wakeup_time(std::chrono::steady_clock::time_point{}),
 		_name(std::move(name)),
 		ending(-1) {
 		Thread<BaseScheduler<SchedulerImpl, ScheduledTaskImpl, thread_policy>, thread_policy>::run();
@@ -213,20 +212,20 @@ public:
 
 			// Propose a wakeup time some time in the future:
 			auto now = std::chrono::steady_clock::now();
-			auto wakeup_time = time_point_to_ullong(now + (ending < 0 ? 30s : 100ms));
+			auto wakeup_time = now + (ending < 0 ? 30s : 100ms);
 
 			// Then figure out if there's something that needs to be acted upon sooner
 			// than that wakeup time in the scheduler queue (an earlier wakeup time needed):
 			TaskType task;
-			L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(now), wakeup_time);
+			L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(wakeup_time.time_since_epoch()).count());
 			if ((task = scheduler_queue.peep(wakeup_time))) {
 				if (task) {
 					pending = true;  // flag there are still scheduled things pending.
 					if (wakeup_time > task->wakeup_time) {
 						wakeup_time = task->wakeup_time;
-						L_SCHEDULER("BaseScheduler::" + PURPLE + "PEEP_UPDATED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}  ({})", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+						L_SCHEDULER("BaseScheduler::" + PURPLE + "PEEP_UPDATED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}  ({})", std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(wakeup_time.time_since_epoch()).count(), *task ? "valid" : "cleared");
 					} else {
-						L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}  ({})", time_point_to_ullong(now), wakeup_time, *task ? "valid" : "cleared");
+						L_SCHEDULER("BaseScheduler::" + DIM_GREY + "PEEPED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}  ({})", std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(wakeup_time.time_since_epoch()).count(), *task ? "valid" : "cleared");
 					}
 				}
 			}
@@ -242,15 +241,14 @@ public:
 			// Sleep until wakeup time arrives or someone adding a task wakes us up;
 			// make sure we first lock mutex so there cannot be race condition between
 			// the time we load the next_wakeup_time and we actually start waiting:
-			L_DEBUG_HOOK("BaseScheduler::LOOP", "BaseScheduler::" + STEEL_BLUE + "LOOP" + CLEAR_COLOR + " - now:{}, next_wakeup_time:{}", time_point_to_ullong(now), atom_next_wakeup_time.load());
+			L_DEBUG_HOOK("BaseScheduler::LOOP", "BaseScheduler::" + STEEL_BLUE + "LOOP" + CLEAR_COLOR + " - now:{}, next_wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(atom_next_wakeup_time.load().time_since_epoch()).count());
 			lk.lock();
 			next_wakeup_time = atom_next_wakeup_time.load();
-			auto next_wakeup_time_point = time_point_from_ullong(next_wakeup_time);
-			if (next_wakeup_time_point > now) {
-				wakeup_signal.wait_until(lk, next_wakeup_time_point);
+			if (next_wakeup_time > now) {
+				wakeup_signal.wait_until(lk, next_wakeup_time);
 			}
 			lk.unlock();
-			L_SCHEDULER("BaseScheduler::" + DODGER_BLUE + "WAKEUP" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::steady_clock::now()), wakeup_time);
+			L_SCHEDULER("BaseScheduler::" + DODGER_BLUE + "WAKEUP" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(wakeup_time.time_since_epoch()).count());
 
 			// Start walking the queue and running still pending tasks.
 			scheduler_queue.clean_checkpoint();
@@ -265,15 +263,15 @@ public:
 
 	void add(const TaskType& task) {
 		if (ending < 0) {
-			unsigned long long wakeup_time = task->wakeup_time;
-			assert(wakeup_time != 0);
+			auto wakeup_time = task->wakeup_time;
+			assert(wakeup_time > std::chrono::steady_clock::time_point{});
 
 			scheduler_queue.add(task, wakeup_time);
 
 			auto next_wakeup_time = atom_next_wakeup_time.load();
 			while (next_wakeup_time > wakeup_time && !atom_next_wakeup_time.compare_exchange_weak(next_wakeup_time, wakeup_time)) { }
 
-			auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+			auto now = std::chrono::steady_clock::now();
 			if (next_wakeup_time >= wakeup_time || next_wakeup_time <= now) {
 				std::lock_guard<std::mutex> lk(mtx);
 				wakeup_signal.notify_one();
@@ -284,17 +282,13 @@ public:
 		}
 	}
 
-	void add(const TaskType& task, unsigned long long wakeup_time) {
-		auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+	void add(const TaskType& task, std::chrono::steady_clock::time_point wakeup_time) {
+		auto now = std::chrono::steady_clock::now();
 		if (wakeup_time < now) {
 			wakeup_time = now;
 		}
 		task->wakeup_time = wakeup_time;
 		add(task);
-	}
-
-	void add(const TaskType& task, std::chrono::steady_clock::time_point wakeup) {
-		add(task, time_point_to_ullong(wakeup));
 	}
 };
 
@@ -335,11 +329,11 @@ public:
 	void operator()(TaskType& task) {
 		if (*task) {
 			if (task->clear(true)) {
-				L_SCHEDULER("Scheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::steady_clock::now()), task->wakeup_time);
+				L_SCHEDULER("Scheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(task->wakeup_time.time_since_epoch()).count());
 				task->operator()();
 			}
 		}
-		L_SCHEDULER("Scheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::steady_clock::now()), task->wakeup_time);
+		L_SCHEDULER("Scheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(task->wakeup_time.time_since_epoch()).count());
 	}
 };
 
@@ -407,13 +401,13 @@ public:
 	void operator()(TaskType& task) {
 		if (*task) {
 			if (task->clear(true)) {
-				L_SCHEDULER("ThreadedScheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::steady_clock::now()), task->wakeup_time);
+				L_SCHEDULER("ThreadedScheduler::" + STEEL_BLUE + "RUNNING" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(task->wakeup_time.time_since_epoch()).count());
 				try {
 					thread_pool.enqueue(task);
 				} catch (const std::logic_error&) { }
 			}
 		}
-		L_SCHEDULER("ThreadedScheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", time_point_to_ullong(std::chrono::steady_clock::now()), task->wakeup_time);
+		L_SCHEDULER("ThreadedScheduler::" + BROWN + "ABORTED" + CLEAR_COLOR + " - now:{}, wakeup_time:{}", std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(task->wakeup_time.time_since_epoch()).count());
 	}
 };
 

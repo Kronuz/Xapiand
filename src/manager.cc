@@ -70,6 +70,7 @@
 #include "metrics.h"                             // for Metrics::metrics
 #include "msgpack.h"                             // for MsgPack, object::object
 #include "namegen.h"                             // for name_generator
+#include "nanosleep.h"                           // for nanosleep
 #include "net.hh"                                // for inet_ntop
 #include "package.h"                             // for Package
 #include "readable_revents.hh"                   // for readable_revents
