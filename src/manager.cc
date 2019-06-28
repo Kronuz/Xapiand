@@ -1774,10 +1774,13 @@ update_primary(const std::string& unsharded_normalized_path, IndexSettings& inde
 				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
 				break;
 			} else if (index_settings.stalled <= now) {
-				auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
-				auto manager = XapiandManager::manager();
-				if (manager) {
-					manager->discovery->elect_primary(normalized_path);
+				auto node = Node::get_node(*it_b);
+				if (node->last_seen() <= index_settings.stalled) {
+					auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
+					auto manager = XapiandManager::manager();
+					if (manager) {
+						manager->discovery->elect_primary(normalized_path);
+					}
 				}
 				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
 			}
