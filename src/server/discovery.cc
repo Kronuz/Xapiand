@@ -101,7 +101,7 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_commit_index(0),
 	  raft_last_applied(0),
 	  raft_eligible(true),
-	  elected_primaries(0, 600s)
+	  _ASYNC_elected_primaries(0, 600s)
 {
 	bind(hostname, serv, 1);
 	io.set<Discovery, &Discovery::io_accept_cb>(this);
@@ -335,13 +335,19 @@ Discovery::discovery_server(Message type, const std::string& message)
 			schema_updated(type, message);
 			return;
 		case Message::PRIMARY_UPDATED:
-			primary_updated(type, message);
+			// Dispatch the following asynchronously...
+			// it could be too slow for doing inside Discovery thread:
+			XapiandManager::dispatch_command(XapiandManager::Command::ASYNC_PRIMARY_UPDATED, message);
 			return;
 		case Message::ELECT_PRIMARY:
-			elect_primary(type, message);
+			// Dispatch the following asynchronously...
+			// it could be too slow for doing inside Discovery thread:
+			XapiandManager::dispatch_command(XapiandManager::Command::ASYNC_ELECT_PRIMARY, message);
 			return;
 		case Message::ELECT_PRIMARY_RESPONSE:
-			elect_primary_response(type, message);
+			// Dispatch the following asynchronously...
+			// it could be too slow for doing inside Discovery thread:
+			XapiandManager::dispatch_command(XapiandManager::Command::ASYNC_ELECT_PRIMARY_RESPONSE, message);
 			return;
 		default: {
 			std::string errmsg("Unexpected message type ");
@@ -440,7 +446,10 @@ Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& messa
 	if (remote_node == *local_node) {
 		if (XapiandManager::manager(true)->node_name.empty()) {
 			L_DISCOVERY("Node name {} already taken. Retrying other name...", local_node->name());
-			XapiandManager::reset_state();
+			if (XapiandManager::exchange_state(XapiandManager::get_state(), XapiandManager::State::RESET, 3s, "Node resetting is taking too long...", "Node reset done!")) {
+				Node::reset();
+				start();
+			}
 		} else {
 			XapiandManager::set_state(XapiandManager::State::BAD);
 			Node::set_local_node(std::make_shared<const Node>());
@@ -559,7 +568,6 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
-		elected_primaries.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 	}
 
@@ -671,7 +679,6 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
-		elected_primaries.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 	}
 
@@ -702,7 +709,6 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 				raft_voted_for.clear();
 				raft_next_indexes.clear();
 				raft_match_indexes.clear();
-				elected_primaries.clear();
 
 				_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 				_raft_set_leader_node(local_node);
@@ -803,7 +809,6 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
-		elected_primaries.clear();
 		// _raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));  // resetted below!
 	}
 
@@ -830,7 +835,6 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
-			elected_primaries.clear();
 		}
 
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
@@ -1012,7 +1016,6 @@ Discovery::raft_append_entries_response([[maybe_unused]] Message type, const std
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
-		elected_primaries.clear();
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 	}
 
@@ -1178,9 +1181,9 @@ Discovery::schema_updated([[maybe_unused]] Message type, const std::string& mess
 
 
 void
-Discovery::primary_updated([[maybe_unused]] Message type, const std::string& message)
+Discovery::_ASYNC_primary_updated(const std::string& message)
 {
-	L_CALL("Discovery::primary_updated({}, <message>) {{ state:{} }}", enum_name(type), enum_name(XapiandManager::get_state()));
+	L_CALL("Discovery::_ASYNC_primary_updated(<message>) {{ state:{} }}", enum_name(XapiandManager::get_state()));
 
 	switch (XapiandManager::get_state()) {
 		case XapiandManager::State::READY:
@@ -1203,17 +1206,23 @@ Discovery::primary_updated([[maybe_unused]] Message type, const std::string& mes
 	}
 
 	size_t shards = unserialise_length(&p, p_end);
+	auto normalized_path = std::string_view(p, p_end - p);
 
-	auto path = std::string(p, p_end - p);
+	if (shards > 1) {
+		for (size_t shard_num = 0; shard_num < shards; ++shard_num) {
+			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
+			XapiandManager::resolve_index_settings(shard_normalized_path, false, false, nullptr, nullptr, false, false, true);
+		}
+	}
 
-	XapiandManager::sweep_primary(shards, path);
+	XapiandManager::resolve_index_settings(normalized_path, false, false, nullptr, nullptr, false, false, true);
 }
 
 
 void
-Discovery::elect_primary([[maybe_unused]] Message type, const std::string& message)
+Discovery::_ASYNC_elect_primary(const std::string& message)
 {
-	L_CALL("Discovery::elect_primary({}, <message>) {{ state:{} }}", enum_name(type), enum_name(XapiandManager::get_state()));
+	L_CALL("Discovery::_ASYNC_elect_primary(<message>) {{ state:{} }}", enum_name(XapiandManager::get_state()));
 
 	switch (XapiandManager::get_state()) {
 		case XapiandManager::State::READY:
@@ -1226,7 +1235,6 @@ Discovery::elect_primary([[maybe_unused]] Message type, const std::string& messa
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
@@ -1235,24 +1243,21 @@ Discovery::elect_primary([[maybe_unused]] Message type, const std::string& messa
 		return;
 	}
 
-	auto normalized_path = std::string(unserialise_string(&p, p_end));
+	auto normalized_path = unserialise_string(&p, p_end);
 
-	L_RAFT_PROTO(">>> ELECT_PRIMARY [from {}]: {{ path:{} }}",
+	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{} }}",
 		node->to_string(), repr(normalized_path));
-
-	auto local_node = Node::get_local_node();
 
 	std::string uuid;
 	Xapian::rev revision;
 	size_t total_nodes;
 
-	// FIXME: Maybe do the following asynchronously...
-	// it could be too slow for doing inside Discovery thread:
 	auto index_settings = XapiandManager::resolve_index_settings(normalized_path);
 	assert(index_settings.shards.size() == 1);
 	if (index_settings.shards.size() == 1) {
 		const auto& shard_nodes = index_settings.shards[0].nodes;
 		total_nodes = shard_nodes.size();
+		auto local_node = Node::get_local_node();
 		for (const auto& shard_node_name : shard_nodes) {
 			if (local_node->lower_name() == strings::lower(shard_node_name)) {
 				try {
@@ -1268,20 +1273,21 @@ Discovery::elect_primary([[maybe_unused]] Message type, const std::string& messa
 	}
 
 	if (!uuid.empty()) {
-		send_message(Message::ELECT_PRIMARY_RESPONSE,
-			local_node->serialise() +
-			serialise_string(normalized_path) +
-			serialise_string(uuid) +
-			serialise_length(revision) +
-			serialise_length(total_nodes));
+		std::string response;
+		response.append(serialise_string(normalized_path));
+		response.append(serialise_string(uuid));
+		response.append(serialise_length(revision));
+		response.append(serialise_length(total_nodes));
+		message_send_args.enqueue(std::make_pair(Message::ELECT_PRIMARY_RESPONSE, response));
+		message_send_async.send();
 	}
 }
 
 
 void
-Discovery::elect_primary_response([[maybe_unused]] Message type, const std::string& message)
+Discovery::_ASYNC_elect_primary_response(const std::string& message)
 {
-	L_CALL("Discovery::elect_primary_response({}, <message>) {{ state:{} }}", enum_name(type), enum_name(XapiandManager::get_state()));
+	L_CALL("Discovery::_ASYNC_elect_primary_response(<message>) {{ state:{} }}", enum_name(XapiandManager::get_state()));
 
 	switch (XapiandManager::get_state()) {
 		case XapiandManager::State::READY:
@@ -1298,7 +1304,6 @@ Discovery::elect_primary_response([[maybe_unused]] Message type, const std::stri
 
 	const char *p = message.data();
 	const char *p_end = p + message.size();
-
 	auto remote_node = Node::unserialise(&p, p_end);
 	auto node = Node::touch_node(remote_node, false).first;
 	if (!node) {
@@ -1312,14 +1317,12 @@ Discovery::elect_primary_response([[maybe_unused]] Message type, const std::stri
 	Xapian::rev revision = unserialise_length(&p, p_end);
 	size_t total_nodes = unserialise_length(&p, p_end);
 
-	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{}, uuid:{}, revision:{} }}",
-		node->to_string(), repr(normalized_path), repr(uuid), revision);
+	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{}, uuid:{}, revision:{}, total_nodes:{} }}",
+		node->to_string(), repr(normalized_path), repr(uuid), revision, total_nodes);
 
-	auto& voters = elected_primaries[normalized_path];
+	auto& voters = _ASYNC_elected_primaries[normalized_path];
 	if (voters.emplace(node->lower_name(), std::make_pair(uuid, revision)).second) {
 		if (Node::quorum(total_nodes, voters.size())) {
-			// FIXME: Maybe do the following asynchronously...
-			// it could be too slow for doing inside Discovery thread:
 			auto nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
 			assert(nodes.size() == 1);
 			if (nodes.size() == 1) {
@@ -1341,7 +1344,7 @@ Discovery::elect_primary_response([[maybe_unused]] Message type, const std::stri
 					}
 				}
 				if (Node::quorum(total_nodes, ok_nodes)) {
-					elected_primaries.erase(normalized_path);
+					_ASYNC_elected_primaries.erase(normalized_path);
 					assert(elected_node);
 					L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
 					XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
@@ -1351,18 +1354,16 @@ Discovery::elect_primary_response([[maybe_unused]] Message type, const std::stri
 	}
 }
 
-
 void
-Discovery::elect_primary(std::string_view path)
+Discovery::_ASYNC_elect_primary_send(const std::string& normalized_path)
 {
 	L_CALL("Discovery::elect_primary()");
 
+	_ASYNC_elected_primaries.erase(normalized_path);
+
 	std::string message;
-
-	message.append(serialise_string(path));
-
+	message.append(serialise_string(normalized_path));
 	message_send_args.enqueue(std::make_pair(Message::ELECT_PRIMARY, message));
-
 	message_send_async.send();
 }
 
@@ -1417,7 +1418,8 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 
 			if (XapiandManager::exchange_state(XapiandManager::State::WAITING_MORE, XapiandManager::State::JOINING, 3s, "Joining cluster is taking too long...", "Joining cluster is finally done!")) {
 				// L_DEBUG("State changed: {} -> {}", enum_name(XapiandManager::State::WAITING_MORE), enum_name(XapiandManager::get_state()));
-				XapiandManager::join_cluster();
+				L_INFO("Joining cluster {}...", repr(opts.cluster_name));
+				_raft_request_vote(false);
 			}
 			break;
 		}
@@ -1447,7 +1449,6 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 				raft_voted_for.clear();
 				raft_next_indexes.clear();
 				raft_match_indexes.clear();
-				elected_primaries.clear();
 
 				_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 				_raft_set_leader_node(local_node);
@@ -1592,7 +1593,7 @@ Discovery::_raft_set_leader_node(const std::shared_ptr<const Node>& node)
 	L_CALL("Discovery::_raft_set_leader_node({})", repr(node->name()));
 
 	if (Node::set_leader_node(node)) {
-		XapiandManager::new_leader();
+		XapiandManager::dispatch_command(XapiandManager::Command::RAFT_SET_LEADER_NODE);
 	}
 }
 
@@ -1604,7 +1605,7 @@ Discovery::_raft_apply_command(const std::string& command)
 
 	L_RAFT("Apply command: {}", repr(command));
 
-	XapiandManager::raft_apply_command(command);
+	XapiandManager::dispatch_command(XapiandManager::Command::RAFT_APPLY_COMMAND, command);
 }
 
 
@@ -1675,7 +1676,6 @@ Discovery::_raft_request_vote(bool immediate)
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
-			elected_primaries.clear();
 			raft_votes_granted = 0;
 			raft_votes_denied = 0;
 			raft_voters.clear();
@@ -1684,7 +1684,6 @@ Discovery::_raft_request_vote(bool immediate)
 			raft_voted_for.clear();
 			raft_next_indexes.clear();
 			raft_match_indexes.clear();
-			elected_primaries.clear();
 		}
 
 		_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
@@ -1706,7 +1705,6 @@ Discovery::_raft_request_vote(bool immediate)
 		raft_voted_for.clear();
 		raft_next_indexes.clear();
 		raft_match_indexes.clear();
-		elected_primaries.clear();
 
 		if (raft_current_term == 0) {
 			_raft_leader_election_timeout_reset(RAFT_LEADER_ELECTION_MAX);

@@ -212,10 +212,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  signal_sig_async(*ev_loop),
 	  setup_node_async(*ev_loop),
 	  set_cluster_database_ready_async(*ev_loop),
-#ifdef XAPIAND_CLUSTERING
-	  new_leader_async(*ev_loop),
-	  raft_apply_command_async(*ev_loop),
-#endif
+	  dispatch_command_async(*ev_loop),
 	  atom_sig(0)
 {
 	try_shutdown_timer.set<XapiandManager, &XapiandManager::try_shutdown_timer_cb>(this);
@@ -229,13 +226,8 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	set_cluster_database_ready_async.set<XapiandManager, &XapiandManager::set_cluster_database_ready_async_cb>(this);
 	set_cluster_database_ready_async.start();
 
-#ifdef XAPIAND_CLUSTERING
-	new_leader_async.set<XapiandManager, &XapiandManager::new_leader_async_cb>(this);
-	new_leader_async.start();
-
-	raft_apply_command_async.set<XapiandManager, &XapiandManager::raft_apply_command_async_cb>(this);
-	raft_apply_command_async.start();
-#endif
+	dispatch_command_async.set<XapiandManager, &XapiandManager::dispatch_command_async_cb>(this);
+	dispatch_command_async.start();
 }
 
 
@@ -693,7 +685,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 							found = true;
 						}
 						auto obj = document.get_obj();
-						node_added(obj["name"].str_view());
+						node_added(obj["name"].str());
 					}
 				} else
 #endif
@@ -1413,61 +1405,64 @@ XapiandManager::ready_to_end()
 }
 
 
+
+void
+XapiandManager::dispatch_command_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
+{
+	L_CALL("XapiandManager::dispatch_command_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+
+	std::pair<Command, std::string> command;
+	while (dispatch_command_args.try_dequeue(command)) {
+		_dispatch_command(command.first, command.second);
+	}
+}
+
+
+void
+XapiandManager::dispatch_command_impl(Command command, const std::string& data)
+{
+	L_CALL("XapiandManager::dispatch_command_impl({}, {})", enum_name(command), repr(data));
+
+	dispatch_command_args.enqueue(std::make_pair(command, data));
+
+	dispatch_command_async.send();
+}
+
+
+void
+XapiandManager::_dispatch_command(Command command, const std::string& data)
+{
+	L_CALL("XapiandManager::_dispatch_command({}, {})", enum_name(command), repr(data));
+
+
+	switch (command) {
 #ifdef XAPIAND_CLUSTERING
-
-void
-XapiandManager::reset_state_impl()
-{
-	L_CALL("XapiandManager::reset_state_impl()");
-
-	if (exchange_state(state.load(), State::RESET, 3s, "Node resetting is taking too long...", "Node reset done!")) {
-		Node::reset();
-		discovery->start();
+		case Command::RAFT_APPLY_COMMAND:
+			node_added(data);
+			break;
+		case Command::RAFT_SET_LEADER_NODE:
+			new_leader();
+			break;
+		case Command::ELECT_PRIMARY:
+			discovery->_ASYNC_elect_primary_send(data);
+			break;
+		case Command::ASYNC_PRIMARY_UPDATED:
+			discovery->_ASYNC_primary_updated(data);
+			break;
+		case Command::ASYNC_ELECT_PRIMARY:
+			discovery->_ASYNC_elect_primary(data);
+			break;
+		case Command::ASYNC_ELECT_PRIMARY_RESPONSE:
+			discovery->_ASYNC_elect_primary_response(data);
+			break;
+#endif
+		default:
+			break;
 	}
 }
 
 
-void
-XapiandManager::join_cluster_impl()
-{
-	L_CALL("XapiandManager::join_cluster_impl()");
-
-	L_INFO("Joining cluster {}...", repr(opts.cluster_name));
-	discovery->raft_request_vote();
-}
-
-
-void
-XapiandManager::new_leader_impl()
-{
-	L_CALL("XapiandManager::new_leader_impl()");
-
-	new_leader_async.send();
-}
-
-
-void
-XapiandManager::new_leader_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
-{
-	L_CALL("XapiandManager::new_leader_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
-
-	auto leader_node = Node::get_leader_node();
-	if (leader_node && !leader_node->empty()) {
-		L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
-
-		if (state == State::READY && leader_node->is_local()) {
-			try {
-				// If we get promoted to leader, we immediately try to load the nodes.
-				load_nodes();
-			} catch (...) {
-				L_EXC("ERROR: Cannot load local nodes!");
-			}
-		}
-	} else {
-		L_INFO("There is currently no leader for cluster {}!", repr(opts.cluster_name));
-	}
-}
-
+#ifdef XAPIAND_CLUSTERING
 
 void
 XapiandManager::load_nodes()
@@ -1514,57 +1509,41 @@ XapiandManager::load_nodes()
 
 
 void
-XapiandManager::raft_apply_command_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
+XapiandManager::new_leader()
 {
-	L_CALL("XapiandManager::raft_apply_command_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+	L_CALL("XapiandManager::new_leader()");
 
-	std::string command;
-	while (raft_apply_command_args.try_dequeue(command)) {
-		_raft_apply_command(command);
+	auto leader_node = Node::get_leader_node();
+	if (leader_node && !leader_node->empty()) {
+		L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
+
+		if (state == State::READY && leader_node->is_local()) {
+			try {
+				// If we get promoted to leader, we immediately try to load the nodes.
+				load_nodes();
+			} catch (...) {
+				L_EXC("ERROR: Cannot load local nodes!");
+			}
+		}
+	} else {
+		L_INFO("There is currently no leader for cluster {}!", repr(opts.cluster_name));
 	}
 }
 
 
 void
-XapiandManager::raft_apply_command_impl(const std::string& command)
-{
-	L_CALL("XapiandManager::raft_apply_command_impl({})", repr(command));
-
-	raft_apply_command_args.enqueue(command);
-
-	raft_apply_command_async.send();
-}
-
-
-void
-XapiandManager::_raft_apply_command(const std::string& command)
-{
-	L_CALL("XapiandManager::_raft_apply_command({})", repr(command));
-
-	const char *p = command.data();
-	const char *p_end = p + command.size();
-	if (p == p_end) {
-		L_ERR("Empty raft command ignored");
-		return;
-	}
-
-	node_added(std::string_view(p, p_end - p));
-}
-
-
-void
-XapiandManager::add_node(std::string_view name)
+XapiandManager::add_node(const std::string& name)
 {
 	L_CALL("XapiandManager::add_node({})", name);
 
 	node_added(name);
 
-	discovery->raft_add_command(std::string(name));
+	discovery->raft_add_command(name);
 }
 
 
 void
-XapiandManager::node_added(std::string_view name)
+XapiandManager::node_added(const std::string& name)
 {
 	L_CALL("XapiandManager::node_added({})", name);
 
@@ -1574,7 +1553,7 @@ XapiandManager::node_added(std::string_view name)
 	if (node) {
 		node_copy = *node;
 	} else {
-		node_copy.name(std::string(name));
+		node_copy.name(name);
 	}
 
 	auto put = Node::touch_node(node_copy, false, false);
@@ -1586,20 +1565,6 @@ XapiandManager::node_added(std::string_view name)
 	}
 }
 
-
-void
-XapiandManager::sweep_primary_impl(size_t shards, const std::string& normalized_path)
-{
-	L_CALL("XapiandManager::sweep_primary_impl(<shards>, {})", repr(normalized_path));
-
-	if (shards > 1) {
-		for (size_t shard_num = 0; shard_num < shards; ++shard_num) {
-			auto shard_normalized_path = strings::format("{}/.__{}", normalized_path, ++shard_num);
-			resolve_index_settings_impl(shard_normalized_path, false, false, nullptr, nullptr, false, false, true);
-		}
-	}
-	resolve_index_settings_impl(normalized_path, false, false, nullptr, nullptr, false, false, true);
-}
 
 #endif
 
@@ -1778,10 +1743,7 @@ update_primary(const std::string& unsharded_normalized_path, IndexSettings& inde
 				auto node = Node::get_node(*it_b);
 				if (node->last_seen() <= index_settings.stalled) {
 					auto normalized_path = index_settings.shards.size() > 1 ? strings::format("{}/.__{}", unsharded_normalized_path, shard_num) : unsharded_normalized_path;
-					auto manager = XapiandManager::manager();
-					if (manager) {
-						manager->discovery->elect_primary(normalized_path);
-					}
+					XapiandManager::dispatch_command(XapiandManager::Command::ELECT_PRIMARY, normalized_path);
 				}
 				index_settings.stalled = now + std::chrono::milliseconds(opts.database_stall_time);
 			}
@@ -2048,7 +2010,7 @@ XapiandManager::resolve_nodes(const IndexSettings& index_settings)
 
 
 IndexSettings
-XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear)
+XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear)
 {
 	L_CALL("XapiandManager::resolve_index_settings_impl({}, {}, {}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", repr(primary_node->to_string()), reload, rebuild, clear);
 
@@ -2108,7 +2070,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 	auto it = it_e;
 
 	if (!settings && !reload && !rebuild && !clear) {
-		it = resolve_index_lru.find(normalized_path);
+		it = resolve_index_lru.find(std::string(normalized_path));
 		if (it != it_e) {
 			index_settings = it->second;
 			if (!writable || index_settings.saved) {
@@ -2120,11 +2082,7 @@ XapiandManager::resolve_index_settings_impl(const std::string& normalized_path, 
 	bool store_lru = false;
 
 	auto unsharded = unsharded_path(normalized_path);
-	std::string unsharded_normalized_path_holder;
-	if (unsharded.second) {
-		unsharded_normalized_path_holder = std::string(unsharded.first);
-	}
-	auto& unsharded_normalized_path = unsharded.second ? unsharded_normalized_path_holder : normalized_path;
+	std::string unsharded_normalized_path = std::string(unsharded.first);
 
 	if (!reload) {
 		it = resolve_index_lru.find(unsharded_normalized_path);

@@ -106,6 +106,14 @@ struct IndexSettingsShard {
 	IndexSettingsShard();
 };
 
+ENUM_CLASS(XapiandManagerCommand, int,
+	RAFT_APPLY_COMMAND,
+	RAFT_SET_LEADER_NODE,
+	ELECT_PRIMARY,
+	ASYNC_PRIMARY_UPDATED,
+	ASYNC_ELECT_PRIMARY,
+	ASYNC_ELECT_PRIMARY_RESPONSE
+)
 
 struct IndexSettings {
 	Xapian::rev version;
@@ -149,6 +157,7 @@ class XapiandManager : public Worker  {
 
 public:
 	using State = XapiandManagerState;
+	using Command = XapiandManagerCommand;
 
 	std::atomic_int total_clients;
 	std::atomic_int http_clients;
@@ -200,12 +209,8 @@ private:
 	ev::async setup_node_async;
 	ev::async set_cluster_database_ready_async;
 
-#ifdef XAPIAND_CLUSTERING
-	ev::async new_leader_async;
-	ev::async raft_apply_command_async;
-
-	ConcurrentQueue<std::string> raft_apply_command_args;
-#endif
+	ev::async dispatch_command_async;
+	ConcurrentQueue<std::pair<Command, std::string>> dispatch_command_args;
 
 	void try_shutdown_timer_cb(ev::timer& watcher, int revents);
 	void signal_sig_async_cb(ev::async&, int);
@@ -219,25 +224,20 @@ private:
 	void set_cluster_database_ready_async_cb(ev::async&, int);
 	void set_cluster_database_ready_impl();
 
+	void dispatch_command_async_cb(ev::async& watcher, int revents);
+	void dispatch_command_impl(Command command, const std::string& data);
+	void _dispatch_command(Command command, const std::string& data);
+
 #ifdef XAPIAND_CLUSTERING
 	void load_nodes();
-	void new_leader_async_cb(ev::async&, int);
-	void new_leader_impl();
-	void reset_state_impl();
-	void join_cluster_impl();
+	void new_leader();
 
-	void sweep_primary_impl(size_t shards, const std::string& normalized_path);
-
-	void raft_apply_command_async_cb(ev::async& watcher, int revents);
-	void raft_apply_command_impl(const std::string& command);
-	void _raft_apply_command(const std::string& command);
-
-	void add_node(std::string_view name);
-	void node_added(std::string_view name);
+	void add_node(const std::string& name);
+	void node_added(const std::string& name);
 #endif
 
-	IndexSettings resolve_index_settings_impl(const std::string& normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear);
-	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings);
+	IndexSettings resolve_index_settings_impl(std::string_view normalized_slashed_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
+	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr);
 
 	std::string server_metrics_impl();
 
@@ -285,8 +285,8 @@ public:
 		_manager.reset();
 	}
 
-	static IndexSettings resolve_index_settings(const std::string& normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr) {
-		return manager(true)->resolve_index_settings_impl(normalized_path, writable, primary, settings, primary_node, false, false, false);
+	static IndexSettings resolve_index_settings(std::string_view normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false) {
+		return manager(true)->resolve_index_settings_impl(normalized_path, writable, primary, settings, primary_node, reload, rebuild, clear);
 	}
 
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_nodes(const IndexSettings& index_settings);
@@ -299,28 +299,8 @@ public:
 		manager(true)->setup_node_impl();
 	}
 
-	static void new_leader() {
-#ifdef XAPIAND_CLUSTERING
-		manager(true)->new_leader_impl();
-#endif
-	}
-
-	static void raft_apply_command(const std::string& command) {
-#ifdef XAPIAND_CLUSTERING
-		manager(true)->raft_apply_command_impl(command);
-#endif
-	}
-
-	static void reset_state() {
-#ifdef XAPIAND_CLUSTERING
-		manager(true)->reset_state_impl();
-#endif
-	}
-
-	static void join_cluster() {
-#ifdef XAPIAND_CLUSTERING
-		manager(true)->join_cluster_impl();
-#endif
+	static void dispatch_command(Command command, const std::string& data = "") {
+		manager(true)->dispatch_command_impl(command, data);
 	}
 
 	static std::string server_metrics() {
@@ -347,10 +327,6 @@ public:
 		if (_manager) {
 			_manager->state.store(state);
 		}
-	}
-
-	static void sweep_primary(size_t shards, const std::string& normalized_path) {
-		manager(true)->sweep_primary_impl(shards, normalized_path);
 	}
 };
 

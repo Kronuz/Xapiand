@@ -36,13 +36,13 @@
 #include "concurrent_queue.h"               // for ConcurrentQueue
 #include "debouncer.h"                      // for make_debouncer
 #include "enum.h"                           // for ENUM_CLASS
+#include "lru.h"                            // for lru::aging_lru
 #include "node.h"                           // for Node
 #include "opts.h"                           // for opts::*
 #include "thread.hh"                        // for Thread, ThreadPolicyType::*
 #include "udp.h"                            // for UDP
 #include "worker.h"                         // for Worker
 #include "xapian.h"                         // for Xapian::rev
-#include "lru.h"                            // for lru::aging_lru
 
 
 struct DatabaseUpdate;
@@ -122,10 +122,10 @@ private:
 
 	bool raft_eligible;
 
+	lru::aging_lru<std::string, std::unordered_map<std::string, std::pair<std::string, Xapian::rev>>> _ASYNC_elected_primaries;
+
 	std::unordered_map<std::string, size_t> raft_next_indexes;
 	std::unordered_map<std::string, size_t> raft_match_indexes;
-
-	lru::aging_lru<std::string, std::unordered_map<std::string, std::pair<std::string, Xapian::rev>>> elected_primaries;
 
 	ConcurrentQueue<std::pair<Message, std::string>> message_send_args;
 
@@ -150,9 +150,6 @@ private:
 	void raft_add_command(Message type, const std::string& message);
 	void db_updated(Message type, const std::string& message);
 	void schema_updated(Message type, const std::string& message);
-	void primary_updated(Message type, const std::string& message);
-	void elect_primary(Message type, const std::string& message);
-	void elect_primary_response(Message type, const std::string& message);
 
 	void cluster_discovery_cb(ev::timer& watcher, int revents);
 
@@ -200,7 +197,12 @@ public:
 	void db_updated_send(Xapian::rev revision, std::string_view path);
 	void schema_updated_send(Xapian::rev revision, std::string_view path);
 	void primary_updated_send(size_t shards, std::string_view path);
-	void elect_primary(std::string_view path);
+
+	// Messages executed asynchronously from MAIN thread
+	void _ASYNC_primary_updated(const std::string& message);
+	void _ASYNC_elect_primary(const std::string& message);
+	void _ASYNC_elect_primary_response(const std::string& message);
+	void _ASYNC_elect_primary_send(const std::string& normalized_path);
 
 	std::string __repr__() const override;
 
