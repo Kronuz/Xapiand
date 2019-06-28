@@ -2,9 +2,13 @@
 title: Arrays
 ---
 
-### Single Array
+## Single Array
 
-{% comment %}
+
+#### Index single array
+
+{% capture req %}
+
 ```json
 PUT /test/array_single/doc
 
@@ -12,14 +16,29 @@ PUT /test/array_single/doc
   "types": [ "A" ]
 }
 ```
----
-description: Index single array
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get single array
+
+{% capture req %}
 
 ```json
 GET /test/array_single/._schema.schema.types
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -32,15 +51,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('array/text');
 });
 ```
----
-description: Get single array
----
+{% endcomment %}
 
+#### Info single array
+
+{% capture req %}
 
 ```json
 INFO /test/array_single/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -54,15 +77,16 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.include({'1680431078': 'A'});
 });
 ```
----
-description: Info single array
----
 {% endcomment %}
 
 
-### Simple Array
+## Simple Array
 
-{% comment %}
+
+#### Index Array
+
+{% capture req %}
+
 ```json
 PUT /test/array/doc
 
@@ -73,14 +97,29 @@ PUT /test/array/doc
   ]
 }
 ```
----
-description: Index Array
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get array
+
+{% capture req %}
 
 ```json
 GET /test/array/._schema.schema.types
 ```
 
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -93,14 +132,20 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('array/text');
 });
 ```
----
-description: Get array
----
+{% endcomment %}
 
+#### Info array
+
+{% capture req %}
 
 ```json
 INFO /test/array/doc
 ```
+
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
@@ -115,15 +160,16 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
 });
 ```
----
-description: Info array
----
 {% endcomment %}
 
 
-### Array of Array
+## Array of Array
 
-{% comment %}
+
+#### Index Array of Arrays
+
+{% capture req %}
+
 ```json
 PUT /test/array-of-array/doc
 
@@ -134,14 +180,24 @@ PUT /test/array-of-array/doc
   ]
 }
 ```
----
-description: Index Array of Arrays
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+####  Get Array of Arrays
 
 ```json
 GET /test/array-of-array/._schema.schema.types
 ```
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -154,13 +210,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('array/text');
 });
 ```
----
-description: Get Array of Arrays
----
+{% endcomment %}
+
+#### Info Array of Arrays
+
+{% capture req %}
 
 ```json
 INFO /test/array-of-array/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
@@ -175,15 +237,16 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
 });
 ```
----
-description: Info Array of Arrays
----
 {% endcomment %}
 
 
-### Array of Array of Arrays
+## Array of Array of Arrays
 
-{% comment %}
+
+####  Index Array of Arrays of Arrays
+
+{% capture req %}
+
 ```json
 PUT /test/array-of-arrays-of-arrays/doc
 
@@ -194,13 +257,28 @@ PUT /test/array-of-arrays-of-arrays/doc
   ]
 }
 ```
----
-description: Index Array of Arrays of Arrays
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Array of Arrays of Arrays
+
+{% capture req %}
 
 ```json
 GET /test/array-of-arrays-of-arrays/._schema.schema.types
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 
 ```js
 pm.test("Response is success", function() {
@@ -214,14 +292,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('array/text');
 });
 ```
----
-description: Get Array of Arrays of Arrays
----
+{% endcomment %}
+
+#### Info Array of Arrays of Arrays
+
+{% capture req %}
 
 ```json
 INFO /test/array-of-arrays-of-arrays/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -235,15 +318,16 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H'});
 });
 ```
----
-description: Info Array of Arrays of Arrays
----
 {% endcomment %}
 
 
-### Array Mixed With Text
+## Array Mixed With Text
 
-{% comment %}
+
+#### Index Arrays mixed with text
+
+{% capture req %}
+
 ```json
 PUT /test/arrays/doc
 
@@ -254,14 +338,28 @@ PUT /test/arrays/doc
   ]
 }
 ```
----
-description: Index Arrays mixed with text
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Arrays mixed with text
+
+{% capture req %}
 
 ```json
 GET /test/arrays/._schema.schema.types
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -274,14 +372,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('array/text');
 });
 ```
----
-description: Get Arrays mixed with text
----
+{% endcomment %}
+
+#### Info Arrays mixed with text
+
+{% capture req %}
 
 ```json
 INFO /test/arrays/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -295,15 +398,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.include({'1680431078': '\u0000\u0001A\u0001B\u0001C\u0001D\u0001E\u0001F\u0001G\u0001H\u0001I\u0001J\u0001K\u0001L\u0001M\u0001N'});
 });
 ```
----
-description: Info Arrays mixed with text
----
 {% endcomment %}
 
 
-### Array of Objects
+## Array of Objects
 
-{% comment %}
+#### Index Array of Objects
+
+{% capture req %}
+
 ```json
 PUT /test/array_of_objects/doc
 
@@ -344,14 +447,28 @@ PUT /test/array_of_objects/doc
   ]
 }
 ```
----
-description: Index Array of Objects
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Array of Objects
+
+{% capture req %}
 
 ```json
 GET /test/array_of_objects/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -366,14 +483,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.types.number._type).to.equal('integer');
 });
 ```
----
-description: Get Array of Objects
----
+{% endcomment %}
+
+#### Info Array of Objects
+
+{% capture req %}
 
 ```json
 INFO /test/array_of_objects/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -387,7 +509,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1666287912','3452157842']);
 });
 ```
----
-description: Info Array of Objects
----
 {% endcomment %}

@@ -3,11 +3,13 @@ title: Tests
 permalink: /tests/
 ---
 
-* [**_Check Datatypes_**](check-data-types)
-* [**_Global terms_**](global.terms)
-* [**_Null type_**](null-type)
-* [**_Replace Value by Null_**](replace-null)
-* [**_Ignore Comments_**](ignore-comments)
+* [**_Check Datatypes_**](dataTypes/check-data-types)
+* [**_Check DateType_**](dataTypes/date-type)
+* [**_Global terms_**](globalTerms/global-terms)
+* [**_Namespace_**](namespace/namespace)
+* [**_Null type_**](nullType/null-type)
+* [**_Replace Value by Null_**](nullType/replace-null)
+* [**_Ignore Comments_**](comments/ignore-comments)
 * [**_Create Schema_**](create-schema)
 * [**_Create Schema With UUID Field_**](uuid-field)
 * [**_Create Schema With UUID Field_**](create.schema.uuid)

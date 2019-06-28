@@ -2,10 +2,11 @@
 title: Null type
 ---
 
-### Check Null type
+## Check Null type
 
+#### Index Null
 
-{% comment %}
+{% capture req %}
 
 ```json
 PUT /test/schemas/implicit-_type/doc
@@ -20,21 +21,28 @@ PUT /test/schemas/implicit-_type/doc
     }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
----
-description: Index Null
----
+{% endcomment %}
 
+#### Get Null
+
+{% capture req %}
 
 ```json
 GET /test/schemas/implicit-_type/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -47,8 +55,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.campo).to.equal(null);
 });
 ```
----
-description: Get Null
----
-
 {% endcomment %}

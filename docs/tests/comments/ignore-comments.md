@@ -2,9 +2,13 @@
 title: Ignore Comments
 ---
 
-### Ignore Comments
+## Ignore Comments
 
-{% comment %}
+
+#### Ignore comment
+
+{% capture req %}
+
 ```json
 POST /test/comment-ignore/
 
@@ -20,6 +24,10 @@ POST /test/comment-ignore/
 }
 ```
 
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -34,8 +42,4 @@ pm.test("Value is valid", function() {
   }
 });
 ```
----
-description: Ignore comment
----
-
 {% endcomment %}

@@ -2,9 +2,12 @@
 title: Namespace
 ---
 
-### Namespace
+## Namespace
 
-{% comment %}
+#### Index Namespace
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/doc
 
@@ -19,14 +22,28 @@ PUT /test/namespace/doc
   }
 }
 ```
----
-description: Index Namespace
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace
+
+{% capture req %}
 
 ```json
 GET /test/namespace/._schema.schema.style
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -39,14 +56,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._namespace).to.equal(true);
 });
 ```
----
-description: Get Namespace
----
+{% endcomment %}
+
+#### Info Namespace
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -64,15 +86,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '271287252', '439783812', '1032232283', '2277530749', '2821621140']);
 });
 ```
----
-description: Info Namespace
----
 {% endcomment %}
 
 
-### Namespace No Partial Paths
+## Namespace No Partial Paths
 
-{% comment %}
+#### Index Namespace No Partial Paths
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/no_partial_paths/doc
 
@@ -88,14 +110,28 @@ PUT /test/namespace/no_partial_paths/doc
   }
 }
 ```
----
-description: Index Namespace No Partial Paths
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace No Partial Paths
+
+{% capture req %}
 
 ```json
 GET /test/namespace/no_partial_paths/._schema.schema.style
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -109,14 +145,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._partial_paths).to.equal(false);
 });
 ```
----
-description: Get Namespace No Partial Paths
----
+{% endcomment %}
+
+#### Info Namespace No Partial Paths
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/no_partial_paths/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -132,16 +173,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '333121230', '439783812', '2277530749']);
 });
 ```
-
----
-description: Info Namespace No Partial Paths
----
 {% endcomment %}
 
 
-### Namespace with Key _index
+## Namespace with Key _index
 
-{% comment %}
+#### Index Namespace With Key _index
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/index_namespace/doc
 
@@ -156,14 +196,28 @@ PUT /test/namespace/index_namespace/doc
   }
 }
 ```
----
-description: Index Namespace With Key _index
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace With Key _index
+
+{% capture req %}
 
 ```json
 GET /test/namespace/index_namespace/._schema.schema.style
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -176,14 +230,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._namespace).to.equal(true);
 });
 ```
----
-description: Get Namespace With Key _index
----
+{% endcomment %}
+
+#### Info Namespace With Key _index
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/index_namespace/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -201,15 +260,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '271287252', '439783812', '1032232283', '2277530749', '2821621140']);
 });
 ```
----
-description: Info Namespace With Key _index
----
 {% endcomment %}
 
 
-### Strict Namespace
+## Strict Namespace
 
-{% comment %}
+#### Index Strict Namespace
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/strict_namespace/doc
 
@@ -226,13 +285,26 @@ PUT /test/namespace/strict_namespace/doc
   }
 }
 ```
----
-description: Index Strict Namespace
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Strict Namespace
+
+{% capture req %}
 
 ```json
 GET /test/namespace/strict_namespace/._schema.schema.tags
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
 ```js
 pm.test("Response is success", function() {
@@ -247,14 +319,18 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('keyword');
 });
 ```
----
-description: Get Strict Namespace
----
+
+#### Info Strict Namespace
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/strict_namespace/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -269,15 +345,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
 });
 ```
----
-description: Info Strict Namespace
----
 {% endcomment %}
 
 
-### Strict Namespace Array
+## Strict Namespace Array
 
-{% comment %}
+#### Index Strict Namespace Array
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/strict_namespace_array/doc
 
@@ -294,14 +370,20 @@ PUT /test/namespace/strict_namespace_array/doc
   }
 }
 ```
----
-description: Index Strict Namespace Array
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+####  Get Strict Namespace Array
+
+{% capture req %}
 
 ```json
 GET /test/namespace/strict_namespace_array/._schema.schema.tags
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -315,14 +397,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('array/keyword');
 });
 ```
----
-description: Get Strict Namespace Array
----
+{% endcomment %}
+
+#### Info Strict Namespace Array
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/strict_namespace_array/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -337,15 +424,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3362632514', '3554249428']);
 });
 ```
----
-description: Info Strict Namespace Array
----
 {% endcomment %}
 
 
-### Namespace different nested types
+## Namespace different nested types
 
-{% comment %}
+#### Index Namespace Different Nested Types
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/namespace_different/doc
 
@@ -363,9 +450,10 @@ PUT /test/namespace/namespace_different/doc
   }
 }
 ```
----
-description: Index Namespace Different Nested Types
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
 ```js
 pm.test("Response is expected error", function() {
   pm.expect(pm.response.code).to.equal(400);
@@ -374,9 +462,12 @@ pm.test("Response is expected error", function() {
 {% endcomment %}
 
 
-### Namespace text type
+## Namespace text type
 
-{% comment %}
+#### Index Namespace Text Type
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/namespace_text/doc
 
@@ -393,14 +484,28 @@ PUT /test/namespace/namespace_text/doc
   }
 }
 ```
----
-description: Index Namespace Text Type
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace Text Type
+
+{% capture req %}
 
 ```json
 GET /test/namespace/namespace_text/._schema.schema.tags
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -414,15 +519,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._type).to.equal('text');
 });
 ```
+{% endcomment %}
 
----
-description: Get Namespace Text Type
----
+#### Info Strict Namespace Array
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/namespace_text/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -437,14 +546,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '1380202056', '1586983639']);
 });
 ```
----
-description: Info Strict Namespace Array
----
 {% endcomment %}
 
 
-### Namespace datetime type
-{% comment %}
+## Namespace datetime type
+
+#### Index Namespace Datetime Type
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/namespace_datetime/doc
 
@@ -461,14 +571,28 @@ PUT /test/namespace/namespace_datetime/doc
   }
 }
 ```
----
-description: Index Namespace Datetime Type
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace Datetime Type
+
+{% capture req %}
 
 ```json
 GET /test/namespace/namespace_datetime/._schema.schema.tags
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -483,15 +607,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._accuracy).to.eql(['hour', 'day', 'month', 'year', 'decade', 'century']);
 });
 ```
+{% endcomment %}
 
----
-description: Get Namespace Datetime Type
----
+#### Info Namespace Datetime Type
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/namespace_datetime/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -533,15 +661,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '760467980', '2973955702']);
   });
 ```
----
-description: Info Namespace Datetime Type
----
 {% endcomment %}
 
 
-### Namespace Numeric type
+## Namespace Numeric type
 
-{% comment %}
+#### Index Namespace Numeric Type
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/types/integer/doc
 
@@ -556,15 +684,28 @@ PUT /test/namespace/types/integer/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index Namespace Numeric Type
----
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace Numeric Type
+
+{% capture req %}
 
 ```json
 GET /test/namespace/types/integer/._schema.schema.style
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -579,15 +720,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._accuracy).to.eql([100, 1000, 10000, 100000, 1000000, 100000000]);
 });
 ```
+{% endcomment %}
 
----
-description: Get Namespace Numeric Type
----
+####  Info Namespace Numeric Type
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/types/integer/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -684,9 +829,11 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '328441664', '1844154444', '2306662042', '2533366391', '3009507063']);
 });
 ```
----
-description: Info Namespace Numeric Type
----
+{% endcomment %}
+
+#### Search Namespace Numeric Type
+
+{% capture req %}
 
 ```json
 SEARCH /test/namespace/types/integer/
@@ -697,7 +844,10 @@ SEARCH /test/namespace/types/integer/
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -712,11 +862,11 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.hits[0]).to.have.property('style');
 });
 ```
+{% endcomment %}
 
----
-description: Search Namespace Numeric Type
----
+#### Search Namespace Numeric type by Range
 
+{% capture req %}
 
 ```json
 SEARCH /test/namespace/types/integer/
@@ -734,7 +884,10 @@ SEARCH /test/namespace/types/integer/
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -749,16 +902,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.hits[0]).to.have.property('style');
 });
 ```
-
----
-description: Search Namespace Numeric type by Range
----
 {% endcomment %}
 
 
-### Namespace Geospatial type
+## Namespace Geospatial type
 
-{% comment %}
+#### Index Namespace Geospatial Type
+
+{% capture req %}
+
 ```json
 PUT /test/namespace/types/geospatial/doc
 
@@ -776,15 +928,28 @@ PUT /test/namespace/types/geospatial/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index Namespace Geospatial Type
----
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get Namespace Geospatial Type
+
+{% capture req %}
 
 ```json
 GET /test/namespace/types/geospatial/._schema.schema.tags
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -800,15 +965,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._namespace).to.equal(true);
 });
 ```
+{% endcomment %}
 
----
-description: Get Namespace Geospatial Type
----
+#### Info Namespace Geospatial Type
+
+{% capture req %}
 
 ```json
 INFO /test/namespace/types/geospatial/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -822,7 +991,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.be.an('object').that.have.all.keys(['0', '1', '3171062315']);
 });
 ```
----
-description: Info Namespace Geospatial Type
----
 {% endcomment %}

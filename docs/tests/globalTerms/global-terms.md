@@ -2,9 +2,11 @@
 title: Global Terms
 ---
 
-### Search For Global Term
+## Search For Global Term
 
-{% comment %}
+#### Index for Global
+
+{% capture req %}
 
 ```json
 PUT /test/doc
@@ -20,21 +22,29 @@ PUT /test/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
----
-description: Index for Global
----
+####  Search for Global
+
+{% capture req %}
 
 ```json
 SEARCH /test/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -47,9 +57,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.hits[0].ident).to.equal('~notmet');
 });
 ```
-
----
-description: Search for Global
----
-
 {% endcomment %}

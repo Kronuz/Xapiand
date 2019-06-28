@@ -2,9 +2,12 @@
 title: Set Value With Null
 ---
 
-### Replace Value by Null
+## Replace Value by Null
 
-{% comment %}
+#### Index value
+
+
+{% capture req %}
 
 ```json
 PUT /test/replace-null/doc1
@@ -19,10 +22,20 @@ PUT /test/replace-null/doc1
     }
 }
 ```
----
-description: Index value
----
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Replace value with null
+
+{% capture req %}
 
 ```json
 PUT /test/replace-null/doc2
@@ -34,15 +47,28 @@ PUT /test/replace-null/doc2
     "campo": null
 }
 ```
----
-description: Replace value with null
----
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get replaced value with null
+
+{% capture req %}
 
 ```json
 GET /test/replace-null/doc2
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -55,8 +81,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.campo).to.equal(null);
 });
 ```
----
-description: Get replaced value with null
----
-
 {% endcomment %}

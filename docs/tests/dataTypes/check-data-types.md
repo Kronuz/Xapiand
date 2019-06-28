@@ -4,11 +4,11 @@ title: Check Datatypes
 
 ## Check All Types
 
-{% comment %}
 
----
-description: Index Datatypes
----
+#### Index Datatypes
+
+
+{% capture req %}
 
 ```json
 PUT /test/types/~notmet
@@ -60,28 +60,35 @@ PUT /test/types/~notmet
     }
   }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
+{% endcomment %}
 
 
----
-description: Check Datatypes
----
+#### Check Datatypes
+
+{% capture req %}
 
 ```json
 GET /test/types/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
 });
 ```
-
 
 ```js
 pm.test("Schema floating type is valid", function() {
@@ -100,7 +107,6 @@ pm.test("Accuracy for floating is valid", function() {
 });
 ```
 
-
 ```js
 pm.test("Schema integer type is valid", function() {
     var jsonData = pm.response.json();
@@ -117,7 +123,6 @@ pm.test("Accuracy for integer is valid", function() {
   }
 });
 ```
-
 
 ```js
 pm.test("Schema positive type is valid", function() {
@@ -136,14 +141,12 @@ pm.test("Accuracy for positive is valid", function() {
 });
 ```
 
-
 ```js
 pm.test("Schema boolean type is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData._schema.schema['boolean']._type).to.equal('boolean');
 });
 ```
-
 
 ```js
 pm.test("Schema keyword type is valid", function() {
@@ -152,14 +155,12 @@ pm.test("Schema keyword type is valid", function() {
 });
 ```
 
-
 ```js
 pm.test("Schema text type is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData._schema.schema['text']._type).to.equal('text');
 });
 ```
-
 
 ```js
 pm.test("Schema date type is valid", function() {
@@ -178,7 +179,6 @@ pm.test("Accuracy for date is valid", function() {
 });
 ```
 
-
 ```js
 pm.test("Schema datetime type is valid", function() {
   var jsonData = pm.response.json();
@@ -195,7 +195,6 @@ pm.test("Accuracy for datetime is valid", function() {
   }
 });
 ```
-
 
 ```js
 pm.test("Schema time type is valid", function() {
@@ -214,7 +213,6 @@ pm.test("Accuracy for time is valid", function() {
 });
 ```
 
-
 ```js
 pm.test("Schema timedelta type is valid", function() {
   var jsonData = pm.response.json();
@@ -232,13 +230,10 @@ pm.test("Accuracy for timedelta is valid", function() {
 });
 ```
 
-
-
 ```js
 pm.test("Schema uuid type is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData._schema.schema['uuid']._type).to.equal('uuid');
 });
 ```
-
 {% endcomment %}
