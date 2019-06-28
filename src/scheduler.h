@@ -70,7 +70,7 @@ protected:
 	std::atomic_ullong cleared_at;
 
 public:
-	ScheduledTask(const std::chrono::time_point<std::chrono::steady_clock>& created_at = std::chrono::steady_clock::now()) :
+	ScheduledTask(const std::chrono::steady_clock::time_point& created_at = std::chrono::steady_clock::now()) :
 		wakeup_time(0),
 		created_at(time_point_to_ullong(created_at)),
 		cleared_at(0) {}
@@ -293,7 +293,7 @@ public:
 		add(task);
 	}
 
-	void add(const TaskType& task, const std::chrono::time_point<std::chrono::steady_clock>& wakeup) {
+	void add(const TaskType& task, const std::chrono::steady_clock::time_point& wakeup) {
 		add(task, time_point_to_ullong(wakeup));
 	}
 };

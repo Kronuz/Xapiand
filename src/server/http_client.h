@@ -233,11 +233,11 @@ public:
 
 	std::shared_ptr<Logging> log;
 
-	std::chrono::time_point<std::chrono::steady_clock> begins;
-	std::chrono::time_point<std::chrono::steady_clock> received;
-	std::chrono::time_point<std::chrono::steady_clock> processing;
-	std::chrono::time_point<std::chrono::steady_clock> ready;
-	std::chrono::time_point<std::chrono::steady_clock> ends;
+	std::chrono::steady_clock::time_point begins;
+	std::chrono::steady_clock::time_point received;
+	std::chrono::steady_clock::time_point processing;
+	std::chrono::steady_clock::time_point ready;
+	std::chrono::steady_clock::time_point ends;
 
 	atomic_shared_ptr<DocIndexer> indexer;
 

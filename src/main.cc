@@ -781,7 +781,7 @@ void setup() {
 }
 
 
-void server(std::chrono::time_point<std::chrono::steady_clock> process_start) {
+void server(std::chrono::steady_clock::time_point process_start) {
 	if (opts.detach) {
 		L_NOTICE("Xapiand is done with all work here. Daemon on process ID [{}] taking over!", getpid());
 	}

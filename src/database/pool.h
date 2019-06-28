@@ -81,7 +81,7 @@ class ShardEndpoint : public Endpoint
 	mutable std::mutex revisions_mtx;
 	std::unordered_map<std::string, Xapian::rev> revisions;
 	std::atomic<Xapian::rev> pending_revision;
-	std::chrono::time_point<std::chrono::steady_clock> renew_time;
+	std::chrono::steady_clock::time_point renew_time;
 
 	std::shared_ptr<Shard> writable;
 	std::list<std::shared_ptr<Shard>> readables;
@@ -94,8 +94,8 @@ class ShardEndpoint : public Endpoint
 
 	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
 
-	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk);
-	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::steady_clock::time_point& now, std::unique_lock<std::mutex>& lk);
+	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::steady_clock::time_point& now, std::unique_lock<std::mutex>& lk);
 
 	IndexSettings _get_pending_index_settings() const;
 	bool _is_pending(const IndexSettings& index_settings) const;
@@ -193,7 +193,7 @@ public:
 
 	void finish();
 
-	bool join(const std::chrono::time_point<std::chrono::steady_clock>& wakeup);
+	bool join(const std::chrono::steady_clock::time_point& wakeup);
 
 	bool join(std::chrono::milliseconds timeout = 60s) {
 		return join(std::chrono::steady_clock::now() + timeout);

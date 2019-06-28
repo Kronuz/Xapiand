@@ -113,7 +113,7 @@ struct IndexSettings {
 	bool saved;
 	bool modified;
 
-	std::chrono::time_point<std::chrono::steady_clock> stalled;
+	std::chrono::steady_clock::time_point stalled;
 
 	size_t num_shards;
 	size_t num_replicas_plus_master;
@@ -121,7 +121,7 @@ struct IndexSettings {
 
 	IndexSettings();
 
-	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
+	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::steady_clock::time_point& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
 
 	std::string __repr__() const;
 };
@@ -131,7 +131,7 @@ class XapiandManager : public Worker  {
 	friend Worker;
 
 	XapiandManager();
-	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::steady_clock> process_start_ = std::chrono::steady_clock::now());
+	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::steady_clock::time_point process_start_ = std::chrono::steady_clock::now());
 	~XapiandManager() noexcept;
 
 	std::pair<struct sockaddr_in, std::string> host_address();
@@ -193,7 +193,7 @@ private:
 	std::atomic_llong _shutdown_now;
 
 	int _new_cluster;
-	std::chrono::time_point<std::chrono::steady_clock> _process_start;
+	std::chrono::steady_clock::time_point _process_start;
 
 	ev::timer try_shutdown_timer;
 	ev::async signal_sig_async;

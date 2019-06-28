@@ -181,7 +181,7 @@ XapiandManager::XapiandManager()
 }
 
 
-XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::time_point<std::chrono::steady_clock> process_start_)
+XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::steady_clock::time_point process_start_)
 	: Worker(std::weak_ptr<Worker>{}, ev_loop_, ev_flags_),
 	  total_clients(0),
 	  http_clients(0),
@@ -1621,7 +1621,7 @@ IndexSettings::IndexSettings() :
 }
 
 
-IndexSettings::IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::time_point<std::chrono::steady_clock>& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
+IndexSettings::IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, const std::chrono::steady_clock::time_point& stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards) :
 	version(version),
 	loaded(loaded),
 	saved(saved),

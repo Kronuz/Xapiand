@@ -1461,7 +1461,7 @@ Datetime::iso8601(double timestamp, bool trim, char sep)
  * Transforms a time_point in seconds with decimal fraction to ISO 8601 format.
  */
 std::string
-Datetime::iso8601(const std::chrono::time_point<std::chrono::system_clock>& tp, bool trim, char sep)
+Datetime::iso8601(const std::chrono::system_clock::time_point& tp, bool trim, char sep)
 {
 	return iso8601(timestamp(tp), trim, sep);
 }

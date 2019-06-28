@@ -147,7 +147,7 @@ ShardEndpoint::~ShardEndpoint()
 
 
 std::shared_ptr<Shard>&
-ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk)
+ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::steady_clock::time_point& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("ShardEndpoint::_writable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
@@ -193,7 +193,7 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 
 
 std::shared_ptr<Shard>&
-ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::time_point<std::chrono::steady_clock>& now, std::unique_lock<std::mutex>& lk)
+ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, const std::chrono::steady_clock::time_point& now, std::unique_lock<std::mutex>& lk)
 {
 	L_CALL("ShardEndpoint::_readable_checkout(({}), {}, {})", readable_flags(flags), timeout, callback ? "<callback>" : "null");
 
@@ -978,7 +978,7 @@ DatabasePool::finish()
 
 
 bool
-DatabasePool::join(const std::chrono::time_point<std::chrono::steady_clock>& wakeup)
+DatabasePool::join(const std::chrono::steady_clock::time_point& wakeup)
 {
 	L_CALL("DatabasePool::join(<timeout>)");
 

@@ -39,7 +39,7 @@ namespace detail {
 
 struct aging
 {
-	std::chrono::time_point<std::chrono::steady_clock> now;
+	std::chrono::steady_clock::time_point now;
 };
 
 
@@ -140,7 +140,7 @@ struct base_node
 		_next(this),
 		_prev(this) { }
 
-	bool expired(std::chrono::time_point<std::chrono::steady_clock>) const noexcept {
+	bool expired(std::chrono::steady_clock::time_point) const noexcept {
 		return false;
 	}
 
@@ -191,7 +191,7 @@ struct base_node
 
 struct aging_base_node : public base_node
 {
-	std::chrono::time_point<std::chrono::steady_clock> _expiration;
+	std::chrono::steady_clock::time_point _expiration;
 
 	aging_base_node* _next_by_age;
 	aging_base_node* _prev_by_age;
@@ -201,7 +201,7 @@ struct aging_base_node : public base_node
 		_next_by_age(this),
 		_prev_by_age(this) { }
 
-	bool expired(std::chrono::time_point<std::chrono::steady_clock> now) const noexcept {
+	bool expired(std::chrono::steady_clock::time_point now) const noexcept {
 		return now > _expiration;
 	}
 
@@ -238,7 +238,7 @@ struct aging_base_node : public base_node
 	template <typename>
 	aging_base_node* next(void* ptr) const noexcept {
 		auto age = static_cast<detail::aging*>(ptr);
-		if (age->now == std::chrono::time_point<std::chrono::steady_clock>{}) {
+		if (age->now == std::chrono::steady_clock::time_point{}) {
 			age->now = std::chrono::steady_clock::now();
 		}
 		auto ret = static_cast<aging_base_node*>(_next);
@@ -249,7 +249,7 @@ struct aging_base_node : public base_node
 	template <typename>
 	aging_base_node* prev(void* ptr) const noexcept {
 		auto age = static_cast<detail::aging*>(ptr);
-		if (age->now == std::chrono::time_point<std::chrono::steady_clock>{}) {
+		if (age->now == std::chrono::steady_clock::time_point{}) {
 			age->now = std::chrono::steady_clock::now();
 		}
 		auto ret = static_cast<aging_base_node*>(_prev);

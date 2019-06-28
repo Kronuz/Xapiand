@@ -110,7 +110,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	uint64_t once;
 	int priority;
 	std::atomic_ullong cleaned_at;
-	std::chrono::time_point<std::chrono::system_clock> timestamp;
+	std::chrono::system_clock::time_point timestamp;
 
 	void** unlog_callstack;
 	const char* unlog_function;
@@ -125,7 +125,7 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 	Logging& operator=(const Logging&) = delete;
 
 	static Log add(
-		const std::chrono::time_point<std::chrono::steady_clock>& wakeup,
+		const std::chrono::steady_clock::time_point& wakeup,
 		void** callstack,
 		const char* function,
 		const char* filename,
@@ -138,8 +138,8 @@ class Logging : public ScheduledTask<Scheduler<Logging, ThreadPolicyType::loggin
 		bool stacked,
 		uint64_t once,
 		int priority,
-		const std::chrono::time_point<std::chrono::steady_clock>& created_at = std::chrono::steady_clock::now(),
-		const std::chrono::time_point<std::chrono::system_clock>& timestamp = std::chrono::system_clock::now()
+		const std::chrono::steady_clock::time_point& created_at = std::chrono::steady_clock::now(),
+		const std::chrono::system_clock::time_point& timestamp = std::chrono::system_clock::now()
 	);
 
 	static void log(int priority, std::string str, int indent=0, bool with_priority=true, bool with_endl=true);
@@ -164,8 +164,8 @@ public:
 		bool stacked,
 		uint64_t once,
 		int priority,
-		const std::chrono::time_point<std::chrono::steady_clock>& created_at = std::chrono::steady_clock::now(),
-		const std::chrono::time_point<std::chrono::system_clock>& timestamp = std::chrono::system_clock::now()
+		const std::chrono::steady_clock::time_point& created_at = std::chrono::steady_clock::now(),
+		const std::chrono::system_clock::time_point& timestamp = std::chrono::system_clock::now()
 	);
 	~Logging() noexcept;
 
@@ -191,7 +191,7 @@ public:
 	static void reset();
 
 	static void do_println(bool collect, bool with_endl, std::string_view format, fmt::format_args args);
-	static Log do_log(bool clears, const std::chrono::time_point<std::chrono::steady_clock>& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+	static Log do_log(bool clears, const std::chrono::steady_clock::time_point& wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
 
 	template <typename... Args>
 	void unlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, Args&&... args) {

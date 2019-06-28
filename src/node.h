@@ -59,7 +59,7 @@ public:
 	int replication_port;
 
 	mutable std::atomic<bool> activated;
-	mutable std::atomic<std::chrono::time_point<std::chrono::steady_clock>> touched;
+	mutable std::atomic<std::chrono::steady_clock::time_point> touched;
 
 	Node() : _addr{}, http_port(0), remote_port(0), replication_port(0), activated(false), touched(std::chrono::steady_clock::time_point::min()) { }
 
@@ -174,7 +174,7 @@ public:
 
 	color col() const;
 
-	std::chrono::time_point<std::chrono::steady_clock> last_seen() const {
+	std::chrono::steady_clock::time_point last_seen() const {
 		return touched.load(std::memory_order_acquire);
 	}
 
