@@ -41,6 +41,7 @@
 #include "net.hh"               // for inet_ntop
 #include "strings.hh"           // for strings::lower
 #include "stringified.hh"       // for stringified
+#include "time_point.hh"        // for time_point_to_ullong, time_point_from_ullong
 
 
 constexpr double HEARTBEAT_TIMEOUT                = 0.300;  // in seconds
@@ -58,8 +59,8 @@ public:
 	int remote_port;
 	int replication_port;
 
-	mutable std::atomic_llong activated;
-	mutable std::atomic_llong touched;
+	mutable std::atomic_bool activated;
+	mutable std::atomic_ullong touched;
 
 	Node() : _addr{}, http_port(0), remote_port(0), replication_port(0), activated(false), touched(0) { }
 
@@ -174,6 +175,10 @@ public:
 
 	color col() const;
 
+	std::chrono::time_point<std::chrono::steady_clock> last_seen() const {
+		return time_point_from_ullong<std::chrono::steady_clock>(touched.load(std::memory_order_acquire));
+	}
+
 	bool is_simmilar(const Node& other) const;
 
 	bool is_simmilar(const std::shared_ptr<const Node>& other) const {
@@ -201,7 +206,7 @@ public:
 	}
 
 	bool is_alive() const {
-		return (touched.load(std::memory_order_acquire) >= epoch::now<std::chrono::milliseconds>() - NODE_LIFESPAN || is_local());
+		return (touched.load(std::memory_order_acquire) >= time_point_to_ullong(std::chrono::steady_clock::now()) - NODE_LIFESPAN || is_local());
 	}
 
 	bool is_active() const {

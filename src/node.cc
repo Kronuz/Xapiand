@@ -148,7 +148,8 @@ Node::set_local_node(std::shared_ptr<const Node> node)
 
 	assert(node);
 
-	auto now = epoch::now<std::chrono::milliseconds>();
+	auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+
 	node->activated.store(true, std::memory_order_release);
 	node->touched.store(now, std::memory_order_release);
 	set_as_title(node);
@@ -189,7 +190,8 @@ Node::set_leader_node(std::shared_ptr<const Node> node)
 
 	assert(node);
 
-	auto now = epoch::now<std::chrono::milliseconds>();
+	auto now = time_point_to_ullong(std::chrono::steady_clock::now());
+
 	node->activated.store(true, std::memory_order_release);
 	node->touched.store(now, std::memory_order_release);
 	auto old_node = _leader_node.exchange(node, std::memory_order_acq_rel);
@@ -283,7 +285,7 @@ Node::touch_node(const Node& node, bool activate, bool touch)
 {
 	L_CALL("Node::touch_node({}, {}, {})", node.__repr__(), activate, touch);
 
-	auto now = epoch::now<std::chrono::milliseconds>();
+	auto now = time_point_to_ullong(std::chrono::steady_clock::now());
 
 	std::lock_guard<std::mutex> lk(_nodes_mtx);
 
