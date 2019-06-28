@@ -122,7 +122,13 @@ private:
 
 	bool raft_eligible;
 
-	lru::aging_lru<std::string, std::unordered_map<std::string, std::pair<std::string, Xapian::rev>>> _ASYNC_elected_primaries;
+	struct PrimaryShardVoter {
+		std::string uuid;
+		Xapian::rev revision;
+		bool eligible;
+	};
+
+	lru::aging_lru<std::string, std::unordered_map<std::string, PrimaryShardVoter>> _ASYNC_elected_primaries;
 
 	std::unordered_map<std::string, size_t> raft_next_indexes;
 	std::unordered_map<std::string, size_t> raft_match_indexes;

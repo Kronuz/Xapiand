@@ -1277,6 +1277,7 @@ Discovery::_ASYNC_elect_primary(const std::string& message)
 		response.append(serialise_string(normalized_path));
 		response.append(serialise_string(uuid));
 		response.append(serialise_length(revision));
+		response.append(serialise_bool(raft_eligible));
 		response.append(serialise_length(total_nodes));
 		message_send_args.enqueue(std::make_pair(Message::ELECT_PRIMARY_RESPONSE, response));
 		message_send_async.send();
@@ -1315,13 +1316,18 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 	auto normalized_path = std::string(unserialise_string(&p, p_end));
 	auto uuid = unserialise_string(&p, p_end);
 	Xapian::rev revision = unserialise_length(&p, p_end);
+	auto eligible = unserialise_bool(&p, p_end);
 	size_t total_nodes = unserialise_length(&p, p_end);
 
 	L_RAFT_PROTO(">>> ELECT_PRIMARY_RESPONSE [from {}]: {{ path:{}, uuid:{}, revision:{}, total_nodes:{} }}",
 		node->to_string(), repr(normalized_path), repr(uuid), revision, total_nodes);
 
 	auto& voters = _ASYNC_elected_primaries[normalized_path];
-	if (voters.emplace(node->lower_name(), std::make_pair(uuid, revision)).second) {
+	auto emplaced = voters.emplace(node->lower_name(), PrimaryShardVoter{});
+	if (emplaced.second) {
+		emplaced.first->second.uuid = uuid;
+		emplaced.first->second.revision = revision;
+		emplaced.first->second.eligible = eligible;
 		if (Node::quorum(total_nodes, voters.size())) {
 			auto nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
 			assert(nodes.size() == 1);
@@ -1336,18 +1342,21 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 						auto it = voters.find(shard_node->lower_name());
 						if (it != voters.end()) {
 							++ok_nodes;
-							if (!elected_node || (it->second.first == uuid && it->second.second > max_revision)) {
-								max_revision = it->second.second;
-								elected_node = shard_node;
+							if (it->second.eligible) {
+								if (!elected_node || (it->second.uuid == uuid && it->second.revision > max_revision)) {
+									max_revision = it->second.revision;
+									elected_node = shard_node;
+								}
 							}
 						}
 					}
 				}
 				if (Node::quorum(total_nodes, ok_nodes)) {
 					_ASYNC_elected_primaries.erase(normalized_path);
-					assert(elected_node);
-					L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
-					XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
+					if (elected_node) {
+						L_RAFT("Elected primary node for shard {} is {}", repr(normalized_path), elected_node->to_string());
+						XapiandManager::resolve_index_settings(normalized_path, true, true, nullptr, elected_node);
+					}
 				}
 			}
 		}
