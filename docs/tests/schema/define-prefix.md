@@ -2,9 +2,12 @@
 title: Define Prefix
 ---
 
-### Index document with _prefix
+## Index document with _prefix
 
-{% comment %}
+#### Index document with _prefix
+
+{% capture req %}
+
 ```json
 PUT /test/define-prefix/doc
 
@@ -17,15 +20,28 @@ PUT /test/define-prefix/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index document with _prefix
----
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+####  Get schema with _prefix
+
+{% capture req %}
 
 ```json
 GET /test/define-prefix/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -43,15 +59,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.foo._cjk_words).to.equal(false);
 });
 ```
+{% endcomment %}
 
----
-description: Get schema with _prefix
----
+#### Info document with _prefix
+
+{% capture req %}
 
 ```json
 INFO /test/define-prefix/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -66,7 +86,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.have.all.keys(['0', '1']);
 });
 ```
----
-description: Info document with _prefix
----
 {% endcomment %}

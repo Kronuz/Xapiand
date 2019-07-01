@@ -2,9 +2,12 @@
 title: Empty value
 ---
 
-### Field With Empty Value
+## Field With Empty Value
 
-{% comment %}
+#### Index Document With Empty Value
+
+{% capture req %}
+
 ```json
 PUT /test/empty-field/doc
 
@@ -15,14 +18,28 @@ PUT /test/empty-field/doc
   }
 }
 ```
----
-description: Index Document With Empty Value
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+####  Get Document With Empty Value
+
+{% capture req %}
 
 ```json
 GET /test/empty-field/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -35,8 +52,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData).to.all.keys(['_id', '_version', '#docid', '#shard']);
 });
 ```
----
-description: Get Document With Empty Value
----
-
 {% endcomment %}

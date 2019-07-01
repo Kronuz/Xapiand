@@ -2,9 +2,12 @@
 title: Range Search
 ---
 
-### Test range search with field_terms
+## Test range search with field_terms
 
-{% comment %}
+#### Index document with type
+
+{% capture req %}
+
 ```json
 PUT /test/field_terms/doc20
 
@@ -16,6 +19,18 @@ PUT /test/field_terms/doc20
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_terms/doc100
@@ -28,6 +43,18 @@ PUT /test/field_terms/doc100
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_terms/doc180
@@ -40,6 +67,18 @@ PUT /test/field_terms/doc180
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_terms/doc210
@@ -52,10 +91,20 @@ PUT /test/field_terms/doc210
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index document with type
----
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Range search for field_terms
+
+{% capture req %}
 
 ```json
 SEARCH /test/field_terms/
@@ -73,7 +122,10 @@ SEARCH /test/field_terms/
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -91,15 +143,15 @@ pm.test("Value is valid", function() {
 });
 ```
 ---
-description: Range search for field_terms
 params: sort=foo
 ---
 {% endcomment %}
 
 
-### Test range search with field_values
+## Test range search with field_values
 
-{% comment %}
+{% capture req %}
+
 ```json
 PUT /test/field_values/doc20
 
@@ -111,6 +163,20 @@ PUT /test/field_values/doc20
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Index document with type
+
+{% capture req %}
 
 ```json
 PUT /test/field_values/doc100
@@ -123,6 +189,18 @@ PUT /test/field_values/doc100
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_values/doc180
@@ -135,6 +213,18 @@ PUT /test/field_values/doc180
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_values/doc210
@@ -147,10 +237,20 @@ PUT /test/field_values/doc210
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index document with type
----
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Range search for field_values
+
+{% capture req %}
 
 ```json
 SEARCH /test/field_values/
@@ -168,7 +268,11 @@ SEARCH /test/field_values/
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -186,15 +290,17 @@ pm.test("Value is valid", function() {
 });
 ```
 ---
-description: Range search for field_values
 params: sort=foo
 ---
 {% endcomment %}
 
 
-### Test range search with field_all
+## Test range search with field_all
 
-{% comment %}
+#### Index document with type
+
+{% capture req %}
+
 ```json
 PUT /test/field_all/doc20
 
@@ -206,6 +312,18 @@ PUT /test/field_all/doc20
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_all/doc100
@@ -218,6 +336,18 @@ PUT /test/field_all/doc100
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_all/doc180
@@ -230,6 +360,18 @@ PUT /test/field_all/doc180
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+{% capture req %}
 
 ```json
 PUT /test/field_all/doc210
@@ -242,10 +384,12 @@ PUT /test/field_all/doc210
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index document with type
----
+####  Range search for field_all
+
+{% capture req %}
 
 ```json
 SEARCH /test/field_all/
@@ -263,7 +407,10 @@ SEARCH /test/field_all/
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -281,7 +428,6 @@ pm.test("Value is valid", function() {
 });
 ```
 ---
-description: Range search for field_all
 params: sort=foo
 ---
 {% endcomment %}

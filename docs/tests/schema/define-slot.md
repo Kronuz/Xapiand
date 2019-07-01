@@ -2,9 +2,12 @@
 title: Define Slot
 ---
 
-### Index document with _slot
+## Index document with _slot
 
-{% comment %}
+#### Index document with _slot
+
+{% capture req %}
+
 ```json
 PUT /test/define-slot/doc
 
@@ -17,15 +20,28 @@ PUT /test/define-slot/doc
   }
 }
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
----
-description: Index document with _slot
----
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get schema with _slot
+
+{% capture req %}
 
 ```json
 GET /test/define-slot/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -44,15 +60,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.foo._type).to.equal('string');
 });
 ```
+{% endcomment %}
 
----
-description: Get schema with _slot
----
+#### Info document with _slot
+
+{% capture req %}
 
 ```json
 INFO /test/define-slot/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -67,7 +87,4 @@ pm.test("Value is valid", function() {
    pm.expect(jsonData.values['100']).to.equal('foo and bar');
 });
 ```
----
-description: Info document with _slot
----
 {% endcomment %}

@@ -2,9 +2,12 @@
 title: Create Schema
 ---
 
-### Create Simple Schema
+## Create Simple Schema
 
-{% comment %}
+#### Create schema
+
+{% capture req %}
+
 ```json
 PUT /test/create-schema/
 
@@ -21,14 +24,28 @@ PUT /test/create-schema/
   }
 }
 ```
----
-description: Create schema
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Schema values are valid
+
+{% capture req %}
 
 ```json
 GET /test/create-schema/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -42,7 +59,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.age).to.include({'_type': 'positive' });
 });
 ```
----
-description: Schema values are valid
----
 {% endcomment %}

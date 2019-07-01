@@ -2,9 +2,12 @@
 description: UUID Field
 ---
 
-### UUID Index Default
+## UUID Index Default
 
-{% comment %}
+#### Index uuid field with default
+
+{% capture req %}
+
 ```json
 PUT /test/uuid/uuid/doc
 
@@ -16,14 +19,28 @@ PUT /test/uuid/uuid/doc
   }
 }
 ```
----
-description: Index uuid field with default
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
+#### Get schema uuid field with default
+
+{% capture req %}
 
 ```json
 GET /test/uuid/uuid/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -39,14 +56,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_slot']).to.equal(296138942);
 });
 ```
----
-description: Get schema uuid field with default
----
+{% endcomment %}
+
+#### Info uuid field with default
+
+{% capture req %}
 
 ```json
 INFO /test/uuid/uuid/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -67,15 +89,14 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '3856745852']);
 });
 ```
----
-description: Info uuid field with default
----
 {% endcomment %}
 
+## UUID Index uuid_field
 
-### UUID Index uuid_field
+#### Index uuid field with uuid_field
 
-{% comment %}
+{% capture req %}
+
 ```json
 PUT /test/uuid/uuid_field/doc
 
@@ -88,14 +109,20 @@ PUT /test/uuid/uuid_field/doc
   }
 }
 ```
----
-description: Index uuid field with uuid_field
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+#### Get schema uuid field with uuid_field
+
+{% capture req %}
 
 ```json
 GET /test/uuid/uuid_field/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -111,14 +138,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_slot']).to.equal(2761136387);
 });
 ```
----
-description: Get schema uuid field with uuid_field
----
+{% endcomment %}
+
+#### Info uuid field with uuid_field
+
+{% capture req %}
 
 ```json
 INFO /test/uuid/uuid_field/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -137,15 +169,15 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '2761136387']);
 });
 ```
----
-description: Info uuid field with uuid_field
----
 {% endcomment %}
 
 
-### UUID Index Field Both
+## UUID Index Field Both
 
-{% comment %}
+#### Index uuid field with both
+
+{% capture req %}
+
 ```json
 PUT /test/uuid/both/doc
 
@@ -158,14 +190,20 @@ PUT /test/uuid/both/doc
   }
 }
 ```
----
-description: Index uuid field with both
----
+{% endcapture %}
+{% include curl.html req=req %}
+
+#### Get schema uuid field with both
+
+{% capture req %}
 
 ```json
 GET /test/uuid/both/
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -181,14 +219,19 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_slot']).to.equal(2761136387);
 });
 ```
----
-description: Get schema uuid field with both
----
+{% endcomment %}
+
+#### Info uuid field with both
+
+{% capture req %}
 
 ```json
 INFO /test/uuid/both/doc
 ```
+{% endcapture %}
+{% include curl.html req=req %}
 
+{% comment %}
 ```js
 pm.test("Response is success", function() {
   pm.response.to.be.success;
@@ -212,7 +255,4 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData.values).to.have.all.keys(['0', '1', '296138942', '1407656467', '2761136387', '3856745852']);
 });
 ```
----
-description: Info uuid field with both
----
 {% endcomment %}
