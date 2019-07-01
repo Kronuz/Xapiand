@@ -856,7 +856,7 @@ DatabasePool::spawn(const Endpoint& endpoint)
 		throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
 	}
 	auto port = node->remote_port;
-	if (port == 0) {
+	if (port == 0 && !opts.solo) {
 		throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
 	}
 	auto& host = node->host();
