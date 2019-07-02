@@ -2012,7 +2012,7 @@ XapiandManager::resolve_nodes(const IndexSettings& index_settings)
 IndexSettings
 XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bool writable, [[maybe_unused]] bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear)
 {
-	L_CALL("XapiandManager::resolve_index_settings_impl({}, {}, {}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", repr(primary_node->to_string()), reload, rebuild, clear);
+	L_CALL("XapiandManager::resolve_index_settings_impl({}, {}, {}, {}, {}, {}, {}, {})", repr(normalized_path), writable, primary, settings ? settings->to_string() : "null", primary_node ? repr(primary_node->to_string()) : "null", reload, rebuild, clear);
 
 	if (settings && !settings->is_map()) {
 		settings = nullptr;
