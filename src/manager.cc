@@ -798,15 +798,17 @@ XapiandManager::make_servers()
 	bool reuse_ports = false;
 #endif
 
+	auto local_node = Node::get_local_node();
+
 	int http_tries = opts.http_port ? 1 : 10;
 	int http_port = opts.http_port ? opts.http_port : XAPIAND_HTTP_SERVERPORT;
+
+#ifdef XAPIAND_CLUSTERING
 	int remote_tries = opts.remote_port ? 1 : 10;
 	int remote_port = opts.remote_port ? opts.remote_port : XAPIAND_REMOTE_SERVERPORT;
 	int replication_tries = opts.replication_port ? 1 : 10;
 	int replication_port = opts.replication_port ? opts.replication_port : XAPIAND_REPLICATION_SERVERPORT;
 
-	auto local_node = Node::get_local_node();
-#ifdef XAPIAND_CLUSTERING
 	auto nodes = Node::nodes();
 	for (auto it = nodes.begin(); it != nodes.end();) {
 		const auto& node = *it;
@@ -1430,7 +1432,7 @@ XapiandManager::dispatch_command_impl(Command command, const std::string& data)
 
 
 void
-XapiandManager::_dispatch_command(Command command, const std::string& data)
+XapiandManager::_dispatch_command(Command command, [[maybe_unused]] const std::string& data)
 {
 	L_CALL("XapiandManager::_dispatch_command({}, {})", enum_name(command), repr(data));
 
