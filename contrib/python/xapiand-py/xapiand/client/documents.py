@@ -41,7 +41,7 @@ class DocumentsClient(NamespacedClient):
             params=params, body=body)
 
     @query_params('selector', 'timeout')
-    def update(self, index, id, body=None, params=None):
+    def update(self, index, id, body=None, patch=False, params=None):
         """
         Update a document based on a partial data provided.
 
@@ -54,7 +54,8 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('UPDATE', index, id,
+        method = 'PATCH' if patch else 'UPDATE'
+        return self.transport.perform_request(method, index, id,
             params=params, body=body)
 
     @query_params('timeout')
