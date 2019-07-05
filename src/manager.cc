@@ -1692,6 +1692,7 @@ calculate_shards(size_t routing_key, std::vector<std::shared_ptr<const Node>>& n
 			size_t idx = (routing_key - s) % nodes.size();
 			auto node = nodes[idx];
 			shard.nodes.push_back(node->name());
+			shard.modified = true;
 			shards.push_back(std::move(shard));
 		}
 	}
