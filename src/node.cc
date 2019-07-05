@@ -61,13 +61,15 @@ set_as_title(const std::shared_ptr<const Node>& node)
 std::string
 Node::serialise() const
 {
-	return (
-		serialise_length(_addr.sin_addr.s_addr) +
-		serialise_length(http_port) +
-		serialise_length(remote_port) +
-		serialise_length(replication_port) +
-		serialise_string(_name)
-	);
+	std::string serialised;
+	serialised.append(serialise_string(_name));
+	serialised.append(serialise_length(_addr.sin_addr.s_addr));
+	serialised.append(serialise_length(http_port));
+#ifdef XAPIAND_CLUSTERING
+	serialised.append(serialise_length(remote_port));
+	serialised.append(serialise_length(replication_port));
+#endif
+	return serialised;
 }
 
 
@@ -81,9 +83,13 @@ Node::unserialise(const char **pp, const char *p_end)
 	node._addr.sin_family = AF_INET;
 	node._addr.sin_addr.s_addr = unserialise_length(&p, p_end);
 	node.http_port = unserialise_length(&p, p_end);
-	node.remote_port = unserialise_length(&p, p_end);
-	node.replication_port = unserialise_length(&p, p_end);
 	node._name = unserialise_string(&p, p_end);
+#ifdef XAPIAND_CLUSTERING
+	if (p != p_end) {
+		node.remote_port = unserialise_length(&p, p_end);
+		node.replication_port = unserialise_length(&p, p_end);
+	}
+#endif
 	node._lower_name = strings::lower(node._name);
 	node._host = inet_ntop(node._addr);
 
@@ -96,8 +102,26 @@ Node::unserialise(const char **pp, const char *p_end)
 std::string
 Node::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<Node {{name:{}, host:{}, http_port:{}, remote_port:{}, replication_port:{}, activated:{}, touched:{}}}{}{}{}{}>",
-		repr(name()), repr(host()), http_port, remote_port, replication_port, activated.load(std::memory_order_acquire) ? "true" : "false", std::chrono::duration_cast<std::chrono::milliseconds>(touched.load(std::memory_order_acquire).time_since_epoch()).count(),
+	return strings::format(STEEL_BLUE + "<Node {{"
+			"name:{}, "
+			"host:{}, "
+			"http_port:{}, "
+#ifdef XAPIAND_CLUSTERING
+			"remote_port:{}, "
+			"replication_port:{}, "
+#endif
+			"activated:{}, "
+			"touched:{}"
+		"}}{}{}{}{}>",
+		repr(name()),
+		repr(host()),
+		http_port,
+#ifdef XAPIAND_CLUSTERING
+		remote_port,
+		replication_port,
+#endif
+		activated.load(std::memory_order_acquire) ? "true" : "false",
+		std::chrono::duration_cast<std::chrono::milliseconds>(touched.load(std::memory_order_acquire).time_since_epoch()).count(),
 		is_alive() ? " " + DARK_STEEL_BLUE + "(alive)" + STEEL_BLUE : "",
 		is_active() ? " " + DARK_STEEL_BLUE + "(active)" + STEEL_BLUE : "",
 		is_local() ? " " + DARK_STEEL_BLUE + "(local)" + STEEL_BLUE : "",
