@@ -848,20 +848,22 @@ DatabasePool::spawn(const Endpoint& endpoint)
 {
 	L_CALL("DatabasePool::spawn({})", repr(endpoint.to_string()));
 
-	auto node = endpoint.node();
-	if (!node || node->empty()) {
-		throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
-	}
-	if (!node->is_active()) {
-		throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
-	}
-	auto port = node->remote_port;
-	if (port == 0 && !opts.solo) {
-		throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
-	}
-	auto& host = node->host();
-	if (host.empty()) {
-		throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+	if (!endpoint.is_local()) {
+		auto node = endpoint.node();
+		if (!node || node->empty()) {
+			throw Xapian::DatabaseNotAvailableError("Endpoint node is invalid");
+		}
+		if (!node->is_active()) {
+			throw Xapian::DatabaseNotAvailableError("Endpoint node is inactive");
+		}
+		auto port = node->remote_port;
+		if (port == 0) {
+			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid port");
+		}
+		auto& host = node->host();
+		if (host.empty()) {
+			throw Xapian::DatabaseNotAvailableError("Endpoint node without a valid host");
+		}
 	}
 
 	std::lock_guard<std::mutex> lk(mtx);
