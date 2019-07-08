@@ -108,6 +108,13 @@ class ConnectionTimeout(ConnectionError):
 class NotFoundError(TransportError):
     """ Exception representing a 404 status code. """
 
+try:
+    from django.core.exceptions import ObjectDoesNotExist
+    class NotFoundError(NotFoundError, ObjectDoesNotExist):
+        """ Exception representing a 404 status code. """
+except ImportError:
+    pass
+
 
 class ConflictError(TransportError):
     """ Exception representing a 409 status code. """

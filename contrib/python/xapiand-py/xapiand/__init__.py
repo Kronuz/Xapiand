@@ -30,7 +30,6 @@ except ImportError:
         def emit(self, record):
             pass
 
-import sys
 
 logger = logging.getLogger('xapiand')
 logger.addHandler(logging.NullHandler())
@@ -40,4 +39,4 @@ from .transport import Transport
 from .connection_pool import ConnectionPool, ConnectionSelector, RoundRobinSelector
 from .serializer import JSONSerializer
 from .connection import Connection, RequestsHttpConnection, Urllib3HttpConnection
-from .exceptions import *
+from .exceptions import NotFoundError, ConflictError, RequestError, AuthenticationException, AuthorizationException, TransportError

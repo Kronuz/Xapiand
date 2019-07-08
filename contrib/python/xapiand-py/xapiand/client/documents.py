@@ -17,6 +17,7 @@
 # limitations under the License.
 
 from ..utils import NamespacedClient, query_params, SKIP_IN_PATH
+from ..exceptions import NotFoundError
 
 
 class DocumentsClient(NamespacedClient):

@@ -20,6 +20,7 @@ from __future__ import unicode_literals
 import logging
 
 from ..transport import Transport
+from ..exceptions import NotFoundError
 from ..compat import string_types, urlparse, unquote
 from .indices import IndicesClient
 from .documents import DocumentsClient
@@ -177,6 +178,8 @@ class Xapiand(object):
         self.streaming_restore = self.indices.streaming_restore
         self.restore = self.indices.restore
         self.parallel_restore = self.indices.parallel_restore
+
+        self.DoesNotExist = NotFoundError
 
     def __repr__(self):
         try:
