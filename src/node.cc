@@ -22,6 +22,8 @@
 
 #include "node.h"
 
+#include "config.h"             // for XAPIAND_*
+
 #include <cstdlib>              // for atoi
 #include <algorithm>            // for std::lower_bound
 
@@ -80,10 +82,10 @@ Node::unserialise(const char **pp, const char *p_end)
 
 	const char *p = *pp;
 
+	node._name = unserialise_string(&p, p_end);
 	node._addr.sin_family = AF_INET;
 	node._addr.sin_addr.s_addr = unserialise_length(&p, p_end);
 	node.http_port = unserialise_length(&p, p_end);
-	node._name = unserialise_string(&p, p_end);
 #ifdef XAPIAND_CLUSTERING
 	if (p != p_end) {
 		node.remote_port = unserialise_length(&p, p_end);
