@@ -41,7 +41,7 @@ class DocumentsClient(NamespacedClient):
             params=params, body=body)
 
     @query_params('selector', 'timeout')
-    def update(self, index, id, body=None, patch=False, params=None):
+    def update(self, index, id, body=None, params=None):
         """
         Update a document based on a partial data provided.
 
@@ -54,8 +54,25 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        method = 'PATCH' if patch else 'UPDATE'
-        return self.transport.perform_request(method, index, id,
+        return self.transport.perform_request('UPDATE', index, id,
+            params=params, body=body)
+
+    @query_params('selector', 'timeout')
+    def patch(self, index, id, body=None, params=None):
+        """
+        Patch a document based on a sequence of operations to apply to a
+        JSON document (see RFC 6902.)
+
+        :arg index: The name of the index
+        :arg id: Document ID
+        :arg body: The request definition using a partial `doc`
+        :arg selector: A comma-separated list of fields to return in the response
+        :arg timeout: Explicit operation timeout
+        """
+        for param in (index, id):
+            if param in SKIP_IN_PATH:
+                raise ValueError("Empty value passed for a required argument.")
+        return self.transport.perform_request('PATCH', index, id,
             params=params, body=body)
 
     @query_params('timeout')

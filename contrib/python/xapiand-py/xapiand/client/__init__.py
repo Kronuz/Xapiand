@@ -164,6 +164,7 @@ class Xapiand(object):
         # Shortcuts
         self.index = self.documents.index
         self.update = self.documents.update
+        self.patch = self.documents.patch
         self.store = self.documents.store
         self.exists = self.documents.exists
         self.get = self.documents.get
