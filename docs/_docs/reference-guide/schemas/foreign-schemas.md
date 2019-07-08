@@ -37,13 +37,13 @@ PUT /headlines/
 
 In the example above, an index `.schemas` is created (if missing) containing
 documents which can be used as shared Schemas. To exemplify differences about
-IDs, note how the ID of the documents for such Schema objects is of type UUID
+IDs, note how the ID of the documents for such Schema objects is of type `"uuid"`
 whilst the type of the ID for the documents in the `headlines` index itself is
 of type `"string"`.
 
 The Schema used for the index `hedlines`, can be shared with other indexes that
-share the same properties; for example, to create a new index `banners` which
-will have the exact same properties as `headlines` use:
+use the same properties; for example, to create a new index `banners`, which
+will have the exact same properties as `headlines`, use:
 
 {% capture req %}
 
