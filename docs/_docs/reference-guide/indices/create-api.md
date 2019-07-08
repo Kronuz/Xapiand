@@ -97,6 +97,9 @@ PUT /twitter/tweet/
 {% endcapture %}
 {% include curl.html req=req %}
 
+More information about Schemas can be found [here]({{ '/docs/reference-guide/schemas' | relative_url }}).
+
+
 {: .note .info }
 **_Only for New Indices_**<br>
 Some configurations about schemas can be set only the first time a field is

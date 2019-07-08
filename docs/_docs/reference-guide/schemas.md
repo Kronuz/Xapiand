@@ -93,7 +93,7 @@ it'd be beneficial to have a single shared schema. This can be accomplished by
 setting the foreign schema of all such indexes to point to a document containing
 the schema.
 
-You can read more about foreign schemas [here](foreign-schemas).
+You can read more about Foreign Schemas [here](foreign-schemas).
 
 
 {: .note .info }
