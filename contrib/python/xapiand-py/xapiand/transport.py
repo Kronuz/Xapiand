@@ -23,7 +23,6 @@ from .connection import Urllib3HttpConnection
 from .connection_pool import ConnectionPool, DummyConnectionPool
 from .serializer import Deserializer, DEFAULT_SERIALIZERS, DEFAULT_SERIALIZER
 from .exceptions import ConnectionError, TransportError, SerializationError, ConnectionTimeout
-from .utils import make_path
 
 
 def get_node_info(node_info, host):
@@ -269,7 +268,7 @@ class Transport(object):
         if self.sniff_on_connection_fail:
             self.sniff_hosts()
 
-    def perform_request(self, method, *path, **kwargs):
+    def perform_request(self, method, url, **kwargs):
         """
         Perform the actual request. Retrieve a connection from the connection
         pool, pass all the information to it's perform_request method and
@@ -282,7 +281,7 @@ class Transport(object):
         marked as dead, mark it as live, resetting it's failure count.
 
         :arg method: HTTP method to use
-        :arg path: path parts (without host) to target
+        :arg url: url (without host) to target
         :arg headers: dictionary of headers, will be handed over to the
             underlying :class:`~xapiand.Connection` class
         :arg params: dictionary of query parameters, will be handed over to the
@@ -317,10 +316,8 @@ class Transport(object):
             if isinstance(ignore, int):
                 ignore = (ignore, )
 
-        url = make_path(path)
-
         for attempt in range(1, self.max_retries + 1):
-            connection = self.get_connection(method=method, path=path, headers=headers, params=params)
+            connection = self.get_connection(method=method, path=url, headers=headers, params=params)
 
             try:
                 status, headers_response, data = connection.perform_request(

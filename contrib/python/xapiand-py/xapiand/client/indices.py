@@ -18,7 +18,7 @@
 
 from ..exceptions import TransportError
 from ..helpers import bulk, streaming_bulk, parallel_bulk
-from ..utils import NamespacedClient, query_params, SKIP_IN_PATH
+from ..utils import NamespacedClient, query_params, make_url, SKIP_IN_PATH
 
 
 class IndicesClient(NamespacedClient):
@@ -42,7 +42,7 @@ class IndicesClient(NamespacedClient):
         :arg body: The configuration for the index (`_settings` and `_schema`)
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('UPDATE', *index.split('/') + [''],
+        return self.transport.perform_request('UPDATE', make_url(index),
             params=params, body=body)
 
     @query_params('timeout')
@@ -55,7 +55,7 @@ class IndicesClient(NamespacedClient):
             string to perform the operation on all indices
         :arg timeout: Explicit operation timeout
         """
-        return self.transport.perform_request('COMMIT', *index.split('/') + [''],
+        return self.transport.perform_request('COMMIT', make_url(index),
             params=params)
 
     @query_params('timeout')
@@ -68,7 +68,7 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('OPEN', *index.split('/') + [''],
+        return self.transport.perform_request('OPEN', make_url(index),
             params=params)
 
     @query_params('timeout')
@@ -82,7 +82,7 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('CLOSE', *index.split('/') + [''],
+        return self.transport.perform_request('CLOSE', make_url(index),
             params=params)
 
     @query_params('timeout')
@@ -95,7 +95,7 @@ class IndicesClient(NamespacedClient):
         """
         if index in SKIP_IN_PATH:
             raise ValueError("Empty value passed for a required argument 'index'.")
-        return self.transport.perform_request('DELETE', *index.split('/') + [''],
+        return self.transport.perform_request('DELETE', make_url(index),
             params=params)
 
     @query_params('q', 'refresh', 'timeout')
@@ -111,7 +111,7 @@ class IndicesClient(NamespacedClient):
         """
         if not index:
             index = '*'
-        return self.transport.perform_request('COUNT', *index.split('/') + [''],
+        return self.transport.perform_request('COUNT', make_url(index),
             params=params, body=body)
 
     @query_params('q', 'offset', 'limit', 'sort', 'selector', 'refresh', 'timeout')
@@ -130,7 +130,7 @@ class IndicesClient(NamespacedClient):
         """
         if not index:
             index = '*'
-        return self.transport.perform_request('SEARCH', *index.split('/') + [''],
+        return self.transport.perform_request('SEARCH', make_url(index),
             params=params, body=body)
 
     def _restore(self, body, index, params=None):
@@ -139,7 +139,7 @@ class IndicesClient(NamespacedClient):
                 raise ValueError("Empty value passed for a required argument.")
 
         content_type, body = self.transport.serializer.nddumps(body)
-        return self.transport.perform_request('RESTORE', *index.split('/') + [''],
+        return self.transport.perform_request('RESTORE', make_url(index),
             params=params, body=body,
             headers={'content-type': content_type})
 

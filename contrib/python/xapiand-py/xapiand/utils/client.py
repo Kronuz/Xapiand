@@ -60,18 +60,18 @@ def _escape(value):
     return str(value)
 
 
-def make_path(parts):
+def make_url(url, id=""):
     """
-    Create a URL string from parts, omit all `None` values and empty strings.
-    Convert lists nad tuples to comma separated values.
+    Create a normalized URL string.
     """
-    #TODO: maybe only allow some parts to be lists/tuples ?
-    path = '/' + '/'.join(
-        # preserve ',' and '*' in url for nicer URLs in logs
-        quote_plus(_escape(p), b',*') for p in parts if p not in SKIP_IN_PATH)
-    if parts[-1] in SKIP_IN_PATH:
-        path += '/'
-    return path
+    if isinstance(url, tuple):
+        url = list(url)
+    elif not isinstance(url, list):
+        url = url.split('/')
+    # preserve ',', '*' and '~' in url for nicer URLs in logs
+    url = [quote_plus(_escape(u), b',*~') for u in url if u not in SKIP_IN_PATH]
+    url.append(id)
+    return '/' + '/'.join(url)
 
 
 # parameters that apply to all methods

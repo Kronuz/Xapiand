@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from ..utils import NamespacedClient, query_params, SKIP_IN_PATH
+from ..utils import NamespacedClient, query_params, make_url, SKIP_IN_PATH
 from ..exceptions import NotFoundError
 
 
@@ -38,7 +38,7 @@ class DocumentsClient(NamespacedClient):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
         method = 'POST' if id in SKIP_IN_PATH else 'PUT'
-        return self.transport.perform_request(method, index, id,
+        return self.transport.perform_request(method, make_url(index, id=id),
             params=params, body=body)
 
     @query_params('selector', 'timeout')
@@ -55,7 +55,7 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('UPDATE', index, id,
+        return self.transport.perform_request('UPDATE', make_url(index, id=id),
             params=params, body=body)
 
     @query_params('selector', 'timeout')
@@ -73,7 +73,7 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('PATCH', index, id,
+        return self.transport.perform_request('PATCH', make_url(index, id=id),
             params=params, body=body)
 
     @query_params('timeout')
@@ -89,7 +89,7 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('STORE', index, id,
+        return self.transport.perform_request('STORE', make_url(index, id=id),
             params=params, body=body,
             headers={'content-type': content_type})
 
@@ -107,7 +107,7 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('HEAD', index, id,
+        return self.transport.perform_request('HEAD', make_url(index, id=id),
             params=params)
 
     @query_params('selector', 'refresh', 'timeout')
@@ -126,7 +126,7 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('GET', index, id,
+        return self.transport.perform_request('GET', make_url(index, id=id),
             params=params)
 
     @query_params('timeout')
@@ -141,7 +141,7 @@ class DocumentsClient(NamespacedClient):
         for param in (index, id):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('DELETE', index, id,
+        return self.transport.perform_request('DELETE', make_url(index, id=id),
             params=params)
 
     @query_params()
@@ -156,5 +156,5 @@ class DocumentsClient(NamespacedClient):
         for param in (index,):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('INFO', index, id,
+        return self.transport.perform_request('INFO', make_url(index, id=id),
             params=params)
