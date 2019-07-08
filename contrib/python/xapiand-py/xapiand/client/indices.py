@@ -98,7 +98,7 @@ class IndicesClient(NamespacedClient):
         return self.transport.perform_request('DELETE', make_url(index),
             params=params)
 
-    @query_params('q', 'refresh', 'timeout')
+    @query_params('q', 'query', 'refresh', 'timeout')
     def count(self, index=None, body=None, params=None):
         """
         Execute a query and get the number of matches for that query.
@@ -114,7 +114,7 @@ class IndicesClient(NamespacedClient):
         return self.transport.perform_request('COUNT', make_url(index),
             params=params, body=body)
 
-    @query_params('q', 'offset', 'limit', 'sort', 'selector', 'refresh', 'timeout')
+    @query_params('q', 'query', 'offset', 'limit', 'sort', 'selector', 'refresh', 'timeout')
     def search(self, index=None, body=None, params=None):
         """
         Execute a search query and get back search hits that match the query.

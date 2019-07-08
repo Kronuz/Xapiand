@@ -110,7 +110,7 @@ class DocumentsClient(NamespacedClient):
         return self.transport.perform_request('HEAD', make_url(index, id=id),
             params=params)
 
-    @query_params('selector', 'refresh', 'timeout')
+    @query_params('selector', 'refresh', 'timeout', 'volatile')
     def get(self, index, id, params=None):
         """
         Get a document from the index based on its id.
