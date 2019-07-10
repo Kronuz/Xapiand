@@ -145,7 +145,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 
 
 static inline Xapian::rev
-save_shared(std::string_view id, MsgPack schema, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
+save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("save_shared({}, <schema>, {}, {})", repr(id), repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
 
@@ -171,7 +171,7 @@ save_shared(std::string_view id, MsgPack schema, const Endpoint& endpoint, std::
 		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		auto info = _db_handler.update(id.substr(0, needle), UNKNOWN_REVISION, false, schema, false, msgpack_type).first;
+		auto info = _db_handler.update(id.substr(0, needle), version, false, schema, false, msgpack_type).first;
 		context->erase(path);
 		return info.version;
 	} catch (...) {
@@ -478,14 +478,15 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				}
 			}
 			// If we still need to save the schema document, we save it:
-			if (writable && schema_ptr->get_flags() == 0) {
+			Xapian::rev schema_version = schema_ptr->get_flags();
+			if (writable && schema_version == 0) {
 				try {
-					auto version = save_shared(foreign_id, *schema_ptr, Endpoint(foreign_path), context);
-					schema_ptr->set_flags(version);
+					schema_version = save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
+					schema_ptr->set_flags(schema_version);
 #ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
-						if (version) {
-							schema_updater()->debounce(foreign_uri, version, foreign_uri);
+						if (schema_version) {
+							schema_updater()->debounce(foreign_uri, schema_version, foreign_uri);
 						}
 					}
 #endif
