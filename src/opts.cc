@@ -265,8 +265,8 @@ parseOptions(int argc, char** argv)
 		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, 0, "port", cmd);
 		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
 		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
-		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 #endif
+		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
 
 #if XAPIAND_DATABASE_WAL
 		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, 0, "writers", cmd);
@@ -476,9 +476,9 @@ parseOptions(int argc, char** argv)
 		}
 		o.http_port = http_port.getValue();
 		o.bind_address = bind_address.getValue();
+		o.node_name = node_name.getValue();
 #ifdef XAPIAND_CLUSTERING
 		o.cluster_name = cluster_name.getValue();
-		o.node_name = node_name.getValue();
 		o.remote_port = remote_port.getValue();
 		o.replication_port = replication_port.getValue();
 		o.discovery_port = discovery_port.getValue();
