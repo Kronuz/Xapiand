@@ -73,6 +73,55 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_
 }
 
 
+bool
+compare_schema(const MsgPack& a, const MsgPack& b)
+{
+	// Compares two MsgPack objects to see if they're
+	// objects with "schema", if they are, compare thw two
+	// (only "schema" and "description").
+
+	auto it_a = a.find(SCHEMA_FIELD_NAME);
+	auto it_b = b.find(SCHEMA_FIELD_NAME);
+	if (it_a != a.end() && it_b != b.end()) {
+		if (it_a.value() != it_b.value()) {
+			return false;
+		}
+
+		it_a = a.find("description");
+		it_b = b.find("description");
+		if (it_a != a.end() && it_b != b.end()) {
+			auto a_value = it_a.value();
+			auto b_value = it_b.value();
+			if (a_value.is_map()) {
+				auto it = a_value.find(RESERVED_VALUE);
+				if (it != a_value.end()) {
+					a_value = it.value();
+				}
+			}
+			if (b_value.is_map()) {
+				auto it = b_value.find(RESERVED_VALUE);
+				if (it != b_value.end()) {
+					b_value = it.value();
+				}
+			}
+			if (a_value != b_value) {
+				return false;
+			}
+		} else if (it_a != a.end() || it_b != b.end()) {
+			return false;
+		}
+		return true;
+	}
+
+	if (it_a != a.end() || it_b != b.end()) {
+		return false;
+	}
+
+	return a == b;
+
+}
+
+
 static inline std::pair<Xapian::rev, MsgPack>
 load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
@@ -107,10 +156,18 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
+		std::string description;
 		Xapian::rev version;
 		auto document = _db_handler.get_document(id);
 		auto obj = document.get_obj();
-		auto it = obj.find(VERSION_FIELD_NAME);
+		auto it = obj.find("description");
+		if (it != obj.end()) {
+			auto& description_val = it.value();
+			if (description_val.is_string()) {
+				description = description_val.str();
+			}
+		}
+		it = obj.find(VERSION_FIELD_NAME);
 		if (it != obj.end()) {
 			auto& version_val = it.value();
 			if (!version_val.is_number()) {
@@ -124,16 +181,14 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			}
 			version = sortable_unserialise(version_ser);
 		}
-		if (selector.empty()) {
-			// If there's no selector use SCHEMA_FIELD_NAME ("schema"):
-			obj = obj[SCHEMA_FIELD_NAME];
-		} else {
-			obj = obj.select(selector);
-		}
+		auto schema_obj = selector.empty() ? obj[SCHEMA_FIELD_NAME] : obj.select(selector);
 		obj = MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-			{ SCHEMA_FIELD_NAME, obj },
+			{ SCHEMA_FIELD_NAME, schema_obj },
 		});
+		if (!description.empty()) {
+			obj["description"] = description;
+		}
 		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
 		return std::make_pair(version, obj);
@@ -145,10 +200,12 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 }
 
 
-static inline Xapian::rev
+static inline std::pair<Xapian::rev, MsgPack>
 save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("save_shared({}, <schema>, {}. {}, {})", repr(id), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
+	L_CALL("save_shared({}, {}, {}. {}, {})", repr(id), schema.to_string(), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
+
+	Schema::check<ClientError>(schema, "Foreign schema is invalid: ", false, false);
 
 	auto& path = endpoint.path;
 	if (!context) {
@@ -160,7 +217,7 @@ save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endp
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
 			// Ignore .xapiand/indices (chicken and egg problem)
-			return 0;
+			return std::make_pair(0, std::move(schema));
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
@@ -172,9 +229,26 @@ save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endp
 		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		auto info = _db_handler.update(id.substr(0, needle), version, false, schema, false, msgpack_type).first;
+		auto updated = _db_handler.update(id.substr(0, needle), version, false, schema, false, msgpack_type);
+		auto obj = std::move(updated.second);
+		std::string description;
+		auto it = obj.find("description");
+		if (it != obj.end()) {
+			auto& description_val = it.value();
+			if (description_val.is_string()) {
+				description = description_val.str();
+			}
+		}
+		auto& schema_obj = obj[SCHEMA_FIELD_NAME];
+		obj = MsgPack({
+			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
+			{ SCHEMA_FIELD_NAME, schema_obj },
+		});
+		if (!description.empty()) {
+			obj["description"] = description;
+		}
 		context->erase(path);
-		return info.version;
+		return std::make_pair(updated.first.version, obj);
 	} catch (...) {
 		context->erase(path);
 		// L_EXC("save_shared, endpoint:{}, version: {}", repr(endpoint.to_string()), version);
@@ -228,7 +302,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				{ RESERVED_TYPE, "foreign/object" },
 				{ RESERVED_ENDPOINT, foreign_uri },
 			}));
-			if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
+			if (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr)) {
 				schema_ptr = local_schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Local Schema [{}] already had the same foreign link in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 			} else {
@@ -242,7 +316,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				} else {
 					local_schema_ptr = schema;
 					assert(local_schema_ptr);
-					if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
+					if (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr)) {
 						schema_ptr = local_schema_ptr;
 						L_SCHEMA("{}" + GREEN + "Local Schema [{}] couldn't add new foreign link but it already was the same foreign link in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 					} else {
@@ -306,7 +380,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			// Read object couldn't be stored in cache,
 			// so we use the schema now currently in cache
 			assert(local_schema_ptr);
-			if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
+			if (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr)) {
 				schema_ptr = local_schema_ptr;
 				L_SCHEMA("{}" + GREEN + "Local Schema [{}] already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 			} else {
@@ -322,7 +396,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		try {
 			DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 			// Try writing (only if there's no metadata there alrady)
-			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr)) {
+			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr))) {
 				std::string schema_ser;
 				try {
 					schema_ser = _db_handler.get_metadata(reserved_schema);
@@ -351,7 +425,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					} else {
 						local_schema_ptr = schema;
 						assert(local_schema_ptr);
-						if (schema_ptr == local_schema_ptr || *schema_ptr == *local_schema_ptr) {
+						if (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr)) {
 							schema_ptr = local_schema_ptr;
 							L_SCHEMA("{}" + DARK_RED + "Local Schema [{}] metadata wasn't overwritten, it was reloaded but already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 						} else {
@@ -387,6 +461,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 	}
 
 	if (!new_schema || foreign_uri.empty()) {
+		bool save_schema = false;
 		// Now we check if the schema points to a foreign schema
 		validate_schema<Error>(*schema_ptr, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
 		if (!foreign_uri.empty()) {
@@ -396,10 +471,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				std::lock_guard<std::mutex> lk(schemas_mtx);
 				foreign_schema_ptr = schemas[foreign_uri];
 			}
-			if (foreign_schema_ptr && (!new_schema || *new_schema == *foreign_schema_ptr)) {
+			if (foreign_schema_ptr && (!new_schema || compare_schema(*new_schema, *foreign_schema_ptr))) {
 				// Same Foreign Schema was in the cache
 				schema_ptr = foreign_schema_ptr;
 				L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] found in cache (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+				save_schema = schema_ptr->get_flags() == 0;
 			} else if (new_schema) {
 				if (foreign_schema_ptr) {
 					new_schema->set_flags(foreign_schema_ptr->get_flags());
@@ -415,10 +491,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					schema = schema_ptr;
 					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
 					foreign_schema_ptr = schema;
+					save_schema = true;
 				} else {
 					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
-					if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
+					if (schema_ptr == foreign_schema_ptr || compare_schema(*schema_ptr, *foreign_schema_ptr)) {
 						foreign_schema_ptr->set_flags(schema_ptr->get_flags());
 						schema_ptr = foreign_schema_ptr;
 						L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] already had the same object in LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
@@ -478,7 +555,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				} else {
 					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
-					if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
+					if (schema_ptr == foreign_schema_ptr || compare_schema(*schema_ptr, *foreign_schema_ptr)) {
 						schema_ptr = foreign_schema_ptr;
 						L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] couldn't be added but already was the same object in LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
 					} else {
@@ -490,10 +567,36 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			}
 			// If we still need to save the schema document, we save it:
 			Xapian::rev schema_version = foreign_schema_ptr ? foreign_schema_ptr->get_flags() : UNKNOWN_REVISION;
-			if (writable && schema_ptr->get_flags() == 0) {
+			if (writable && save_schema) {
 				try {
-					schema_version = save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
+					auto shared = save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
+					schema_ptr = std::make_shared<const MsgPack>(shared.second);
+					assert(schema_ptr);
+					schema_ptr->lock();
+					schema_version = shared.first;
 					schema_ptr->set_flags(schema_version);
+
+					{
+						std::lock_guard<std::mutex> lk(schemas_mtx);
+						auto& schema = schemas[foreign_uri];
+						if (!schema || schema == foreign_schema_ptr) {
+							schema = schema_ptr;
+							L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was saved and added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+							foreign_schema_ptr = schema;
+						} else {
+							foreign_schema_ptr = schema;
+							assert(foreign_schema_ptr);
+							if (schema_ptr == foreign_schema_ptr || compare_schema(*schema_ptr, *foreign_schema_ptr)) {
+								schema_ptr = foreign_schema_ptr;
+								L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was saved and couldn't be added but already was the same object in LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
+							} else {
+								L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] was saved and couldn't be added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "==>" + DIM_GREY + " {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr");
+								schema_ptr = foreign_schema_ptr;
+								failure = true;
+							}
+						}
+					}
+
 #ifdef XAPIAND_CLUSTERING
 					if (!opts.solo) {
 						if (schema_version) {
@@ -552,7 +655,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					} else {
 						foreign_schema_ptr = schema;
 						assert(foreign_schema_ptr);
-						if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
+						if (schema_ptr == foreign_schema_ptr || compare_schema(*schema_ptr, *foreign_schema_ptr)) {
 							foreign_schema_ptr->set_flags(schema_ptr->get_flags());
 							schema_ptr = foreign_schema_ptr;
 							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
