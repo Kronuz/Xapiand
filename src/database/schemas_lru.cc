@@ -139,6 +139,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 		return std::make_pair(version, obj);
 	} catch (...) {
 		context->erase(path);
+		// L_EXC("load_shared, endpoint:{}", repr(endpoint.to_string()));
 		throw;
 	}
 }
@@ -147,7 +148,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 static inline Xapian::rev
 save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("save_shared({}, <schema>, {}, {})", repr(id), repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
+	L_CALL("save_shared({}, <schema>, {}. {}, {})", repr(id), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
 
 	auto& path = endpoint.path;
 	if (!context) {
@@ -176,6 +177,7 @@ save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endp
 		return info.version;
 	} catch (...) {
 		context->erase(path);
+		// L_EXC("save_shared, endpoint:{}, version: {}", repr(endpoint.to_string()), version);
 		throw;
 	}
 }
@@ -298,6 +300,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		if (!schema || schema == local_schema_ptr) {
 			schema = schema_ptr;
 			L_SCHEMA("{}" + GREEN + "Local Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(local_schema_path), local_schema_ptr ? repr(local_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+			local_schema_ptr = schema;
 		} else {
 			local_schema_ptr = schema;
 			// Read object couldn't be stored in cache,
@@ -396,20 +399,27 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			if (foreign_schema_ptr && (!new_schema || *new_schema == *foreign_schema_ptr)) {
 				// Same Foreign Schema was in the cache
 				schema_ptr = foreign_schema_ptr;
-				L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] found in cache: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
+				L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] found in cache (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
 			} else if (new_schema) {
-				L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try using new schema", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,");
+				if (foreign_schema_ptr) {
+					new_schema->set_flags(foreign_schema_ptr->get_flags());
+					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] found in cache, but it was different so try using new schema", prefix, repr(foreign_uri));
+				} else {
+					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try using new schema", prefix, repr(foreign_uri));
+				}
 				schema_ptr = new_schema;
 				assert(schema_ptr);
 				std::lock_guard<std::mutex> lk(schemas_mtx);
 				auto& schema = schemas[foreign_uri];
 				if (!schema || schema == foreign_schema_ptr) {
 					schema = schema_ptr;
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+					foreign_schema_ptr = schema;
 				} else {
 					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
 					if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
+						foreign_schema_ptr->set_flags(schema_ptr->get_flags());
 						schema_ptr = foreign_schema_ptr;
 						L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] already had the same object in LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
 					} else {
@@ -463,7 +473,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				auto& schema = schemas[foreign_uri];
 				if (!schema || schema == foreign_schema_ptr) {
 					schema = schema_ptr;
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+					foreign_schema_ptr = schema;
 				} else {
 					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
@@ -478,8 +489,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				}
 			}
 			// If we still need to save the schema document, we save it:
-			Xapian::rev schema_version = schema_ptr->get_flags();
-			if (writable && schema_version == 0) {
+			Xapian::rev schema_version = foreign_schema_ptr ? foreign_schema_ptr->get_flags() : UNKNOWN_REVISION;
+			if (writable && schema_ptr->get_flags() == 0) {
 				try {
 					schema_version = save_shared(foreign_id, *schema_ptr, schema_version, Endpoint(foreign_path), context);
 					schema_ptr->set_flags(schema_version);
@@ -497,7 +508,8 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						auto shared = load_shared(foreign_id, Endpoint(foreign_path), DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
-						schema_ptr->set_flags(shared.first);
+						schema_version = shared.first;
+						schema_ptr->set_flags(schema_version);
 						L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {} id={}, it was reloaded: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()));
 					} catch (const ClientError&) {
 						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} and couldn't be reloaded (client error)", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
@@ -535,11 +547,13 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					auto& schema = schemas[foreign_uri];
 					if (!schema || schema == foreign_schema_ptr) {
 						schema = schema_ptr;
-						L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+						L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+						foreign_schema_ptr = schema;
 					} else {
 						foreign_schema_ptr = schema;
 						assert(foreign_schema_ptr);
 						if (schema_ptr == foreign_schema_ptr || *schema_ptr == *foreign_schema_ptr) {
+							foreign_schema_ptr->set_flags(schema_ptr->get_flags());
 							schema_ptr = foreign_schema_ptr;
 							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema already had the same object in the LRU: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()));
 						} else {
@@ -777,9 +791,10 @@ SchemasLRU::dump_schemas(int level) const
 		std::lock_guard<std::mutex> versions_lk(versions_mtx);
 		for (auto schema_it = schemas.begin(); schema_it != schemas.end(); ++schema_it) {
 			auto& schema = *schema_it;
+			Xapian::rev schema_version = schema.second->get_flags();
 			std::string outdated;
 			auto version_it = versions.find(schema.first);
-			if (version_it != versions.end() && version_it->second > schema.second->get_flags()) {
+			if (version_it != versions.end() && version_it->second > schema_version) {
 				if (schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
 					outdated = " " + DARK_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
 				} else {
@@ -787,7 +802,7 @@ SchemasLRU::dump_schemas(int level) const
 				}
 			}
 			ret += indent + indent;
-			ret += strings::format("<Schema {}{}>", repr(schema.first),  outdated);
+			ret += strings::format("<Schema {}@{}{}>", repr(schema.first), schema_version, outdated);
 			ret.push_back('\n');
 		}
 	}
