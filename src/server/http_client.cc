@@ -4019,18 +4019,22 @@ Request::to_text(bool decode)
 			if (raw.size() > 1024 * 10) {
 				request_text += "<body " + strings::from_bytes(raw.size()) + ">";
 			} else {
-				auto& decoded = decoded_body();
-				if (
-					ct_type == json_type ||
-					ct_type == x_json_type ||
-					ct_type == yaml_type ||
-					ct_type == x_yaml_type ||
-					ct_type == msgpack_type ||
-					ct_type == x_msgpack_type
-				) {
-					request_text += decoded.to_string(DEFAULT_INDENTATION);
-				} else {
-					request_text += "<body " + strings::from_bytes(raw.size()) + ">";
+				try {
+					auto& decoded = decoded_body();
+					if (
+						ct_type == json_type ||
+						ct_type == x_json_type ||
+						ct_type == yaml_type ||
+						ct_type == x_yaml_type ||
+						ct_type == msgpack_type ||
+						ct_type == x_msgpack_type
+					) {
+						request_text += decoded.to_string(DEFAULT_INDENTATION);
+					} else {
+						request_text += "<body " + repr(raw, true, true, 500) + ">";
+					}
+				} catch (...) {
+					request_text += "<body " + repr(raw, true, true, 500) + ">";
 				}
 			}
 		}
