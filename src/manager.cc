@@ -1921,6 +1921,12 @@ load_settings(const std::string& unsharded_normalized_path)
 					THROW(Error, "Inconsistency in '{}' configured for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
 				}
 				index_settings.version = version_val.u64();
+			} else {
+				auto version_ser = document.get_value(DB_SLOT_VERSION);
+				if (version_ser.empty()) {
+					THROW(Error, "Inconsistency in '{}' configured for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+				}
+				index_settings.version = sortable_unserialise(version_ser);
 			}
 
 			it = obj.find("number_of_replicas");
