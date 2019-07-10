@@ -208,7 +208,7 @@ class Transport(object):
             for c in chain(self.connection_pool.connections, self.seed_connections):
                 try:
                     # use small timeout for the sniffing request, should be a fast api call
-                    _, headers, node_info = c.perform_request('GET', '',
+                    _, headers, node_info = c.perform_request('GET', '/',
                         timeout=self.sniff_timeout if not initial else None)
                     node_info = self.deserializer.loads(node_info, headers.get('content-type'))
                     break
@@ -229,9 +229,6 @@ class Transport(object):
         port = node_info.pop('http_port', None)
         if port is not None:
             node_info['port'] = port
-        idx = node_info.pop('id', None)
-        if idx is not None:
-            node_info['idx'] = idx
         return node_info
 
     def sniff_hosts(self, initial=False):
@@ -247,7 +244,7 @@ class Transport(object):
         node_info = self._get_sniff_data(initial)
 
         hosts = [self._get_node_info(n) for n in node_info]
-        hosts.sort(key=lambda x: x['idx'])
+        hosts.sort(key=lambda x: x['name'].lower())
 
         # we weren't able to get any nodes or node_info_callback blocked all -
         # raise error.
