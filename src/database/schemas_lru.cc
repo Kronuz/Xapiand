@@ -107,23 +107,36 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
+		Xapian::rev version;
 		auto document = _db_handler.get_document(id);
-		auto version_ser = document.get_value(DB_SLOT_VERSION);
-		Xapian::rev version = version_ser.empty() ? 0 : sortable_unserialise(version_ser);
-		auto o = document.get_obj();
+		auto obj = document.get_obj();
+		auto it = obj.find(VERSION_FIELD_NAME);
+		if (it != obj.end()) {
+			auto& version_val = it.value();
+			if (!version_val.is_number()) {
+				THROW(Error, "Inconsistency in '{}' for {}: Invalid version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+			}
+			version = version_val.u64();
+		} else {
+			auto version_ser = document.get_value(DB_SLOT_VERSION);
+			if (version_ser.empty()) {
+				THROW(Error, "Inconsistency in '{}' for {}: No version number", VERSION_FIELD_NAME, repr(endpoint.to_string()));
+			}
+			version = sortable_unserialise(version_ser);
+		}
 		if (selector.empty()) {
 			// If there's no selector use SCHEMA_FIELD_NAME ("schema"):
-			o = o[SCHEMA_FIELD_NAME];
+			obj = obj[SCHEMA_FIELD_NAME];
 		} else {
-			o = o.select(selector);
+			obj = obj.select(selector);
 		}
-		o = MsgPack({
+		obj = MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-			{ SCHEMA_FIELD_NAME, o },
+			{ SCHEMA_FIELD_NAME, obj },
 		});
-		Schema::check<Error>(o, "Foreign schema is invalid: ", false, false);
+		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false);
 		context->erase(path);
-		return std::make_pair(version, o);
+		return std::make_pair(version, obj);
 	} catch (...) {
 		context->erase(path);
 		throw;
