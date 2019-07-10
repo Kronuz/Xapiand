@@ -74,9 +74,9 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_
 
 
 static inline std::pair<Xapian::rev, MsgPack>
-get_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
+load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context)
 {
-	L_CALL("get_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), read_flags, context ? std::to_string(context->size()) : "nullptr");
+	L_CALL("load_shared({}, {}, {}, {})", repr(id), repr(endpoint.to_string()), read_flags, context ? std::to_string(context->size()) : "nullptr");
 
 	auto path = endpoint.path;
 	if (!context) {
@@ -409,7 +409,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				// Foreign Schema needs to be read
 				L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try loading from {} id={}", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,", repr(foreign_path), repr(foreign_id));
 				try {
-					auto shared = get_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
+					auto shared = load_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
 					schema_ptr->lock();
 					schema_ptr->set_flags(shared.first);
@@ -480,7 +480,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
 					try {
-						auto shared = get_shared(foreign_id, Endpoint(foreign_path), DB_WRITABLE | DB_CREATE_OR_OPEN, context);
+						auto shared = load_shared(foreign_id, Endpoint(foreign_path), DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_ptr->set_flags(shared.first);
