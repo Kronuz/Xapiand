@@ -47,7 +47,7 @@ UPDATE /bank/1
 {
   "hobbies": {
     "_namespace": true,
-    "_partial_paths": false
+    "_partial_paths": false,
     "Observation": {
       "Indoors": {
         "Learning": 10,
