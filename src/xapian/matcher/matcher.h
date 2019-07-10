@@ -154,9 +154,7 @@ class Matcher {
 		      double time_limit,
 		      const std::vector<opt_ptr_spy>& matchspies);
 
-    void set_database(const Xapian::Database& db_) {
-	db = db_;
-    }
+    void set_database(const Xapian::Database& db_);
 
     /** Run the match and produce an MSet object.
      *
