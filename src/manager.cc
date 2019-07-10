@@ -1804,7 +1804,7 @@ save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_pl
 void
 save_settings(const std::string& unsharded_normalized_path, IndexSettings& index_settings)
 {
-	L_STACKED_DIM_GREY("save_settings(<index_settings>)");
+	L_CALL("save_settings(<index_settings>)");
 
 	assert(index_settings.shards.size() == index_settings.num_shards);
 
