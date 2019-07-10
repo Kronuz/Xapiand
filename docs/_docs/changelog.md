@@ -16,6 +16,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.24.0] - 2019-07-10
+{: #v0-24-0 }
+
+### Changed
+- **BREAKING**: Clustering: Added primary shard promotions
+- Updated xapian-core to latest 1.5 (git@db790e9e12bb9b3ebeaf916ac0acdea9a7ab0dd1)
+- Python client updated
+- Quarantine (invalid) WAL and database files/directories when appropriate
+- Only nodes marked as primary for shards get the replica, others simply erase
+  (or quarantine) stalled databases.
+- Unused server sockets are now fully closed during shutdown
+
+### Fixed
+- **BREAKING**: Clustering: Increased overall cluster stability
+- Remote protocol: Race conditions for some used database objects after checkin
+- Refactored node shutdown process
+- Schemas LRU properly detect changes to schemas now checking only inside
+  "schema" and "description"
+- WAL had a bug which could lead to skipped slots (it now checks revision before
+  writing lines and recovers after errors)
+- Many solo mode (and CLUSTERING=off) fixes.
+
+
+---
 ## [0.23.0] - 2019-05-24
 {: #v0-23-0 }
 
@@ -752,7 +776,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/Kronuz/Xapiand/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/Kronuz/Xapiand/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/Kronuz/Xapiand/compare/v0.22.1...v0.22.2
 [0.22.1]: https://github.com/Kronuz/Xapiand/compare/v0.22.0...v0.22.1
