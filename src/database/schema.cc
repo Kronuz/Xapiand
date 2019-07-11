@@ -6649,6 +6649,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_ENDPOINT):
 			Schema::process_endpoint(prop_name, value);
 			return true;
+		case _.fhh(RESERVED_STRICT):
+			Schema::process_strict(prop_name, value);
+			return true;
 		case _.fhh(RESERVED_SCRIPT):
 			Schema::process_script(prop_name, value);
 			return true;
@@ -6764,9 +6767,6 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 			return true;
 		case _.fhh(RESERVED_DYNAMIC):
 			Schema::consistency_dynamic(prop_name, value);
-			return true;
-		case _.fhh(RESERVED_STRICT):
-			Schema::consistency_strict(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_DATE_DETECTION):
 			Schema::consistency_date_detection(prop_name, value);
@@ -8508,6 +8508,20 @@ Schema::process_endpoint(std::string_view prop_name, const MsgPack& prop_obj)
 
 
 inline void
+Schema::process_strict(std::string_view prop_name, const MsgPack& prop_obj)
+{
+	// RESERVED_STRICT is heritable and can change.
+	L_CALL("Schema::process_strict({})", repr(prop_obj.to_string()));
+
+	if (prop_obj.is_boolean()) {
+		specification.flags.strict = prop_obj.boolean();
+	} else {
+		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
+	}
+}
+
+
+inline void
 Schema::process_cast_object(std::string_view prop_name, const MsgPack& prop_obj)
 {
 	// This property isn't heritable and is not saved in schema.
@@ -8918,23 +8932,6 @@ Schema::consistency_dynamic(std::string_view prop_name, const MsgPack& prop_obj)
 		const auto _dynamic = prop_obj.boolean();
 		if (specification.flags.dynamic != _dynamic) {
 			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.dynamic), _dynamic);
-		}
-	} else {
-		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));
-	}
-}
-
-
-inline void
-Schema::consistency_strict(std::string_view prop_name, const MsgPack& prop_obj)
-{
-	// RESERVED_STRICT is heritable but can't change.
-	L_CALL("Schema::consistency_strict({})", repr(prop_obj.to_string()));
-
-	if (prop_obj.is_boolean()) {
-		const auto _strict = prop_obj.boolean();
-		if (specification.flags.strict != _strict) {
-			THROW(ClientError, "It is not allowed to change {} [{}  ->  {}]", repr(prop_name), bool(specification.flags.strict), _strict);
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be boolean", repr(prop_name));

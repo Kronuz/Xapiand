@@ -893,6 +893,7 @@ class Schema {
 	void process_error(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_value(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_endpoint(std::string_view prop_name, const MsgPack& prop_obj);
+	void process_strict(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_cast_object(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_script(std::string_view prop_name, const MsgPack& prop_obj);
 	// Next functions only check the consistency of user provided data.
@@ -910,7 +911,6 @@ class Schema {
 	void consistency_partials(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_error(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_dynamic(std::string_view prop_name, const MsgPack& prop_obj);
-	void consistency_strict(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_date_detection(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_datetime_detection(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_time_detection(std::string_view prop_name, const MsgPack& prop_obj);
