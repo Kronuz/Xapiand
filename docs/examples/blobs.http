@@ -1,6 +1,0 @@
-
-POST /test/blobs
-Content-Type: image/jpeg
-
-< /Users/kronuz/Pictures/Chromatic/2fbd62df.jpg
-###
