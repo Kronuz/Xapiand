@@ -3317,7 +3317,7 @@ Schema::index_object(const MsgPack*& parent_properties, const MsgPack& object, M
 		case MsgPack::Type::ARRAY: {
 			auto data = parent_data;
 			auto concrete_type = guess_concrete_type(object);
-			if (concrete_type == FieldType::empty || specification.sep_types[SPC_ARRAY_TYPE] == FieldType::array) {
+			if (concrete_type == FieldType::empty || specification.sep_types[SPC_ARRAY_TYPE] == FieldType::array || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
 				index_array(parent_properties, object, data, doc, name);
 			} else {
 				index_item_value(doc, data, object);
@@ -3423,7 +3423,7 @@ Schema::index_array(const MsgPack*& parent_properties, const MsgPack& array, Msg
 				auto data_array = parent_data;
 				auto data = specification.flags.store ? &data_array->get(pos) : data_array;
 				auto concrete_type = guess_concrete_type(object);
-				if (concrete_type == FieldType::empty || specification.sep_types[SPC_ARRAY_TYPE] == FieldType::array) {
+				if (concrete_type == FieldType::empty || specification.sep_types[SPC_ARRAY_TYPE] == FieldType::array || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::object) {
 					index_array(parent_properties, object, data, doc, name);
 				} else {
 					index_item_value(doc, data, object, pos);
@@ -4687,6 +4687,7 @@ Schema::set_type_to_object()
 
 	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+			// Object type is always autodetected (even in strict mode)
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::object;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 			mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
@@ -4704,6 +4705,9 @@ Schema::set_type_to_array()
 
 	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
+			if (specification.flags.strict) {
+				THROW(MissingTypeError, "Type of field {} is not array", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+			}
 			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::array;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 			mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
