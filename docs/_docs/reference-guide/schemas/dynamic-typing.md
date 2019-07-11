@@ -42,14 +42,14 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Field 'name' is text", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.name._type).to.equal("text");
+  pm.expect(jsonData._schema.name._type).to.equal("text");
 });
 ```
 
 ```js
 pm.test("Field 'age' is integer", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.age._type).to.equal("integer");
+  pm.expect(jsonData._schema.age._type).to.equal("integer");
 });
 ```
 {% endcomment %}
@@ -101,9 +101,7 @@ PUT /my_index/
 
 {
   "_schema": {
-    "schema": {
-      "datetime_detection": false
-    }
+    "datetime_detection": false
   }
 }
 ```
@@ -140,9 +138,7 @@ PUT /my_index/
 
 {
   "_schema": {
-    "schema": {
-      "numeric_detection": true
-    }
+    "numeric_detection": true
   }
 }
 ```

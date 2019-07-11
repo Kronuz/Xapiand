@@ -83,13 +83,11 @@ PUT /twitter/tweet/
 
 {
   "_schema": {
-    "schema": {
-      "name": {
-        "_type": "text"
-      },
-      "age": {
-        "_type": "positive"
-      }
+    "name": {
+      "_type": "text"
+    },
+    "age": {
+      "_type": "positive"
     }
   }
 }

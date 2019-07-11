@@ -50,10 +50,10 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.uuids).to.have.any.keys(['<uuid_field>']);
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_prefix']).to.equal('<uuid_field>.');
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_type']).to.equal('text');
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_slot']).to.equal(296138942);
+  pm.expect(jsonData._schema.uuids).to.have.any.keys(['<uuid_field>']);
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_prefix']).to.equal('<uuid_field>.');
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_type']).to.equal('text');
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_slot']).to.equal(296138942);
 });
 ```
 {% endcomment %}
@@ -132,10 +132,10 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.uuids).to.have.any.keys(['<uuid_field>']);
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_prefix']).to.equal('<uuid_field>.');
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_type']).to.equal('text');
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_slot']).to.equal(2761136387);
+  pm.expect(jsonData._schema.uuids).to.have.any.keys(['<uuid_field>']);
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_prefix']).to.equal('<uuid_field>.');
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_type']).to.equal('text');
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_slot']).to.equal(2761136387);
 });
 ```
 {% endcomment %}
@@ -213,10 +213,10 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.uuids).to.have.any.keys(['<uuid_field>']);
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_prefix']).to.equal('<uuid_field>.');
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_type']).to.equal('text');
-  pm.expect(jsonData._schema.schema.uuids['<uuid_field>']['_slot']).to.equal(2761136387);
+  pm.expect(jsonData._schema.uuids).to.have.any.keys(['<uuid_field>']);
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_prefix']).to.equal('<uuid_field>.');
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_type']).to.equal('text');
+  pm.expect(jsonData._schema.uuids['<uuid_field>']['_slot']).to.equal(2761136387);
 });
 ```
 {% endcomment %}

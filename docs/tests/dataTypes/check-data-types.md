@@ -93,7 +93,7 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Schema floating type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['floating']._type).to.equal('floating');
+  pm.expect(jsonData._schema['floating']._type).to.equal('floating');
 });
 ```
 
@@ -102,7 +102,7 @@ pm.test("Accuracy for floating is valid", function() {
   var jsonData = pm.response.json();
   var expected = [100, 1000, 10000, 100000, 1000000, 100000000];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['floating']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['floating']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -110,7 +110,7 @@ pm.test("Accuracy for floating is valid", function() {
 ```js
 pm.test("Schema integer type is valid", function() {
     var jsonData = pm.response.json();
-    pm.expect(jsonData._schema.schema['integer']._type).to.equal('integer');
+    pm.expect(jsonData._schema['integer']._type).to.equal('integer');
 });
 ```
 
@@ -119,7 +119,7 @@ pm.test("Accuracy for integer is valid", function() {
   var jsonData = pm.response.json();
   var expected = [100, 1000, 10000, 100000, 1000000, 100000000];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['integer']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['integer']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -127,7 +127,7 @@ pm.test("Accuracy for integer is valid", function() {
 ```js
 pm.test("Schema positive type is valid", function() {
     var jsonData = pm.response.json();
-    pm.expect(jsonData._schema.schema['positive']._type).to.equal('positive');
+    pm.expect(jsonData._schema['positive']._type).to.equal('positive');
 });
 ```
 
@@ -136,7 +136,7 @@ pm.test("Accuracy for positive is valid", function() {
   var jsonData = pm.response.json();
   var expected = [100, 1000, 10000, 100000, 1000000, 100000000];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['positive']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['positive']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -144,28 +144,28 @@ pm.test("Accuracy for positive is valid", function() {
 ```js
 pm.test("Schema boolean type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['boolean']._type).to.equal('boolean');
+  pm.expect(jsonData._schema['boolean']._type).to.equal('boolean');
 });
 ```
 
 ```js
 pm.test("Schema keyword type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['keyword']._type).to.equal('keyword');
+  pm.expect(jsonData._schema['keyword']._type).to.equal('keyword');
 });
 ```
 
 ```js
 pm.test("Schema text type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['text']._type).to.equal('text');
+  pm.expect(jsonData._schema['text']._type).to.equal('text');
 });
 ```
 
 ```js
 pm.test("Schema date type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['date']._type).to.equal('date');
+  pm.expect(jsonData._schema['date']._type).to.equal('date');
 });
 ```
 
@@ -174,7 +174,7 @@ pm.test("Accuracy for date is valid", function() {
   var jsonData = pm.response.json();
   var expected = ['hour', 'day', 'month', 'year', 'decade', 'century'];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['date']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['date']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -182,7 +182,7 @@ pm.test("Accuracy for date is valid", function() {
 ```js
 pm.test("Schema datetime type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['datetime']._type).to.equal('datetime');
+  pm.expect(jsonData._schema['datetime']._type).to.equal('datetime');
 });
 ```
 
@@ -191,7 +191,7 @@ pm.test("Accuracy for datetime is valid", function() {
   var jsonData = pm.response.json();
   var expected = ['hour', 'day', 'month', 'year', 'decade', 'century'];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['datetime']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['datetime']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -199,7 +199,7 @@ pm.test("Accuracy for datetime is valid", function() {
 ```js
 pm.test("Schema time type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['time']._type).to.equal('time');
+  pm.expect(jsonData._schema['time']._type).to.equal('time');
 });
 ```
 
@@ -208,7 +208,7 @@ pm.test("Accuracy for time is valid", function() {
   var jsonData = pm.response.json();
   var expected = ['minute', 'hour'];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['time']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['time']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -216,7 +216,7 @@ pm.test("Accuracy for time is valid", function() {
 ```js
 pm.test("Schema timedelta type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['timedelta']._type).to.equal('timedelta');
+  pm.expect(jsonData._schema['timedelta']._type).to.equal('timedelta');
 });
 ```
 
@@ -225,7 +225,7 @@ pm.test("Accuracy for timedelta is valid", function() {
   var jsonData = pm.response.json();
   var expected = ['minute', 'hour'];
   for (var i = 0; i < expected.length; ++i) {
-    pm.expect(jsonData._schema.schema['timedelta']._accuracy[i]).to.equal(expected[i]);
+    pm.expect(jsonData._schema['timedelta']._accuracy[i]).to.equal(expected[i]);
   }
 });
 ```
@@ -233,7 +233,7 @@ pm.test("Accuracy for timedelta is valid", function() {
 ```js
 pm.test("Schema uuid type is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema['uuid']._type).to.equal('uuid');
+  pm.expect(jsonData._schema['uuid']._type).to.equal('uuid');
 });
 ```
 {% endcomment %}

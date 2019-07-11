@@ -38,7 +38,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/._schema.schema.style
+GET /test/namespace/._schema.style
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -126,7 +126,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/no_partial_paths/._schema.schema.style
+GET /test/namespace/no_partial_paths/._schema.style
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -212,7 +212,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/index_namespace/._schema.schema.style
+GET /test/namespace/index_namespace/._schema.style
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -305,7 +305,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/strict_namespace/._schema.schema.tags
+GET /test/namespace/strict_namespace/._schema.tags
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -386,7 +386,7 @@ PUT /test/namespace/strict_namespace_array/doc
 {% capture req %}
 
 ```json
-GET /test/namespace/strict_namespace_array/._schema.schema.tags
+GET /test/namespace/strict_namespace_array/._schema.tags
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -516,7 +516,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/namespace_text/._schema.schema.tags
+GET /test/namespace/namespace_text/._schema.tags
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -607,7 +607,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/namespace_datetime/._schema.schema.tags
+GET /test/namespace/namespace_datetime/._schema.tags
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -720,7 +720,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/types/integer/._schema.schema.style
+GET /test/namespace/types/integer/._schema.style
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -968,7 +968,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/namespace/types/geospatial/._schema.schema.tags
+GET /test/namespace/types/geospatial/._schema.tags
 ```
 {% endcapture %}
 {% include curl.html req=req %}

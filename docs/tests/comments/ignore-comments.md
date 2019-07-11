@@ -18,7 +18,7 @@ POST /test/comment-ignore/
     "_type": "uuid",
   },
   "#comment": "This comment is ignored",
-  "schema": {
+  "_schema": {
     "_type": "object"
   }
 }

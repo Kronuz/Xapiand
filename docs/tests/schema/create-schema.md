@@ -13,13 +13,11 @@ PUT /test/create-schema/
 
 {
   "_schema": {
-    "schema": {
-      "name": {
-        "_type": "text"
-      },
-      "age": {
-        "_type": "positive"
-      }
+    "name": {
+      "_type": "text"
+    },
+    "age": {
+      "_type": "positive"
     }
   }
 }
@@ -55,8 +53,8 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.name).to.include({'_type': 'text' });
-  pm.expect(jsonData._schema.schema.age).to.include({'_type': 'positive' });
+  pm.expect(jsonData._schema.name).to.include({'_type': 'text' });
+  pm.expect(jsonData._schema.age).to.include({'_type': 'positive' });
 });
 ```
 {% endcomment %}

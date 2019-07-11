@@ -52,9 +52,9 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.types.type._type).to.equal('text');
-  pm.expect(jsonData._schema.schema.types.legs._type).to.equal('integer');
-  pm.expect(jsonData._schema.schema.types.arms._type).to.equal('integer');
+  pm.expect(jsonData._schema.types.type._type).to.equal('text');
+  pm.expect(jsonData._schema.types.legs._type).to.equal('integer');
+  pm.expect(jsonData._schema.types.arms._type).to.equal('integer');
 });
 ```
 {% endcomment %}
@@ -144,12 +144,12 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.types.type._type).to.equal('text');
-  pm.expect(jsonData._schema.schema.types.legs._type).to.equal('integer');
-  pm.expect(jsonData._schema.schema.types.arms._type).to.equal('integer');
-  pm.expect(jsonData._schema.schema.types.name._type).to.equal('object');
-  pm.expect(jsonData._schema.schema.types.name.first._type).to.equal('text');
-  pm.expect(jsonData._schema.schema.types.name.last._type).to.equal('text');
+  pm.expect(jsonData._schema.types.type._type).to.equal('text');
+  pm.expect(jsonData._schema.types.legs._type).to.equal('integer');
+  pm.expect(jsonData._schema.types.arms._type).to.equal('integer');
+  pm.expect(jsonData._schema.types.name._type).to.equal('object');
+  pm.expect(jsonData._schema.types.name.first._type).to.equal('text');
+  pm.expect(jsonData._schema.types.name.last._type).to.equal('text');
 });
 ```
 {% endcomment %}
@@ -191,7 +191,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/object/._schema.schema.name
+GET /test/object/._schema.name
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -275,7 +275,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/nested_object/._schema.schema.name
+GET /test/nested_object/._schema.name
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -390,7 +390,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/complex_object/._schema.schema
+GET /test/complex_object/._schema
 ```
 {% endcapture %}
 {% include curl.html req=req %}

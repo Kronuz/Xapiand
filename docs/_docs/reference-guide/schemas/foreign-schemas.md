@@ -19,15 +19,10 @@ PUT /headlines/
     "_type": "foreign/object",
     "_endpoint": ".schemas/319b4e5e-41af-4906-b3cd-cce91502dda3",
     "_id": {
-      "_type": "uuid"
+      "_type": "string"
     },
-    "schema": {
-      "_id": {
-        "_type": "string"
-      },
-      "title": {
-        "_type": "text"
-      }
+    "title": {
+      "_type": "text"
     }
   }
 }

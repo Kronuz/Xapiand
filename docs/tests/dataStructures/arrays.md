@@ -33,7 +33,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/array_single/._schema.schema.types
+GET /test/array_single/._schema.types
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -113,7 +113,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/array/._schema.schema.types
+GET /test/array/._schema.types
 ```
 
 {% endcapture %}
@@ -194,7 +194,7 @@ pm.test("Response is success", function() {
 ####  Get Array of Arrays
 
 ```json
-GET /test/array-of-array/._schema.schema.types
+GET /test/array-of-array/._schema.types
 ```
 
 {% comment %}
@@ -273,7 +273,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/array-of-arrays-of-arrays/._schema.schema.types
+GET /test/array-of-arrays-of-arrays/._schema.types
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -354,7 +354,7 @@ pm.test("Response is success", function() {
 {% capture req %}
 
 ```json
-GET /test/arrays/._schema.schema.types
+GET /test/arrays/._schema.types
 ```
 {% endcapture %}
 {% include curl.html req=req %}
@@ -478,9 +478,9 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.types._type).to.equal('array/object');
-  pm.expect(jsonData._schema.schema.types.property._type).to.equal('text');
-  pm.expect(jsonData._schema.schema.types.number._type).to.equal('integer');
+  pm.expect(jsonData._schema.types._type).to.equal('array/object');
+  pm.expect(jsonData._schema.types.property._type).to.equal('text');
+  pm.expect(jsonData._schema.types.number._type).to.equal('integer');
 });
 ```
 {% endcomment %}

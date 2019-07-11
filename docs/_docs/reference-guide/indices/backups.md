@@ -138,25 +138,21 @@ PUT /twitter/tweets/
   "_schema": {
     "_type": "foreign/object",
     "_endpoint": ".schemas/00000000-0000-1000-8000-010000000000",
+    "_meta": {
+      "description": "Twitter Schema"
+    },
     "_id": {
-      "_type": "uuid",
+      "_type": "integer",
     },
-    "description": "Twitter Schema",
-    "schema": {
-      "_type": "object",
-      "_id": {
-        "_type": "integer",
-      },
-      "user": {
-        "_type": "keyword"
-      },
-      "postDate": {
-        "_type": "datetime"
-      },
-      "message": {
-        "_type": "text"
-      }
+    "user": {
+      "_type": "keyword"
     },
+    "postDate": {
+      "_type": "datetime"
+    },
+    "message": {
+      "_type": "text"
+    }
   }
 }
 ```

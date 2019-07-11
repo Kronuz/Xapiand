@@ -51,12 +51,12 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData._schema.schema.foo._prefix).to.equal('bar.');
-  pm.expect(jsonData._schema.schema.foo._index).to.equal('field_terms');
-  pm.expect(jsonData._schema.schema.foo._type).to.equal('string');
-  pm.expect(jsonData._schema.schema.foo._ngram).to.equal(false);
-  pm.expect(jsonData._schema.schema.foo._cjk_ngram).to.equal(false);
-  pm.expect(jsonData._schema.schema.foo._cjk_words).to.equal(false);
+  pm.expect(jsonData._schema.foo._prefix).to.equal('bar.');
+  pm.expect(jsonData._schema.foo._index).to.equal('field_terms');
+  pm.expect(jsonData._schema.foo._type).to.equal('string');
+  pm.expect(jsonData._schema.foo._ngram).to.equal(false);
+  pm.expect(jsonData._schema.foo._cjk_ngram).to.equal(false);
+  pm.expect(jsonData._schema.foo._cjk_words).to.equal(false);
 });
 ```
 {% endcomment %}
