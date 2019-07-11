@@ -787,9 +787,13 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 			sep_types[SPC_FOREIGN_TYPE] = FieldType::empty;
 			type = required_spc_t::get_str_type(sep_types);
 		}
-		o[RESERVED_IGNORE] = SCHEMA_FIELD_NAME;
-		if (opts.strict && o.find(ID_FIELD_NAME) == o.end()) {
-			THROW(MissingTypeError, "Type of field '{}' for the foreign schema is missing", ID_FIELD_NAME);
+		if (o.find(RESERVED_IGNORE) == o.end()) {
+			o[RESERVED_IGNORE] = SCHEMA_FIELD_NAME;
+		}
+		if (o.find(ID_FIELD_NAME) == o.end()) {
+			o[ID_FIELD_NAME] = MsgPack({
+				{ RESERVED_TYPE,  KEYWORD_STR },
+			});
 		}
 		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
 			o[SCHEMA_FIELD_NAME] = MsgPack::MAP();
