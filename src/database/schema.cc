@@ -2752,6 +2752,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 		map_values.clear();
 		specification = default_spc;
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
+		specification.index = TypeIndex::NONE;
 
 		Fields fields;
 		Field* id_field = nullptr;
@@ -3579,6 +3580,7 @@ Schema::update(const MsgPack& object)
 		map_values.clear();
 		specification = default_spc;
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
+		specification.index = TypeIndex::NONE;
 
 		std::pair<const MsgPack*, const MsgPack*> checked;
 		checked = check<ClientError>(object, "Invalid schema: ", true);
@@ -4066,6 +4068,7 @@ Schema::write(const MsgPack& object)
 		map_values.clear();
 		specification = default_spc;
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
+		specification.index = TypeIndex::NONE;
 
 		std::pair<const MsgPack*, const MsgPack*> checked;
 		checked = check<ClientError>(object, "Invalid schema: ", true);
