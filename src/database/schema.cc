@@ -7676,12 +7676,15 @@ Schema::write_ignore(MsgPack& mut_properties, std::string_view prop_name, const 
 	L_CALL("Schema::write_ignore({})", repr(prop_obj.to_string()));
 
 	/*
-	 * RESERVED_IGNORE is heritable and can change, but once fixed in false
-	 * it does not process its children.
+	 * RESERVED_IGNORE is not heritable and can change, but once fixed it ignores
+	 * its specified children fields.
 	 */
 
 	process_ignore(prop_name, prop_obj);
-	if (!specification.ignored.empty()) {
+	auto ignored = specification.ignored.size();
+	if (ignored == 1) {
+		mut_properties[prop_name] = *specification.ignored.begin();
+	} else if (ignored > 1) {
 		mut_properties[prop_name] = MsgPack::ARRAY();
 		for (const auto& item : specification.ignored) {
 			mut_properties[prop_name].append(item);
