@@ -4060,7 +4060,7 @@ Schema::update_inner_object(const MsgPack*& properties, const MsgPack& object)
 bool
 Schema::write(const MsgPack& object)
 {
-	L_CALL("Schema::write({}, {})", object.to_string());
+	L_CALL("Schema::write({})", object.to_string());
 
 	L_INDEX(">>> Write schema from: " + DIM_GREY + "{}", object.to_string());
 
