@@ -217,7 +217,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		validate_schema<Error>(*new_schema, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
 	} else if (schema_obj) {
 		// Check if passed object specifies a foreign schema
-		validate_schema<Error>(*schema_obj, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
+		validate_schema<ClientError>(*schema_obj, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
 	}
 
 	// Whatever was passed by the user doesn't specify a foreign schema,
