@@ -480,11 +480,11 @@ protected:
 public:
 	MetricMin(const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(conf, schema),
-		  _min(std::numeric_limits<long double>::max()) { }
+		  _min(std::numeric_limits<double>::max()) { }
 
 	MetricMin(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
-		  _min(std::numeric_limits<long double>::max()) { }
+		  _min(std::numeric_limits<double>::max()) { }
 
 	MsgPack get_result() const override {
 		return {
@@ -566,11 +566,11 @@ protected:
 public:
 	MetricMax(const MsgPack& conf, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(conf, schema),
-		  _max(std::numeric_limits<long double>::min()) { }
+		  _max(std::numeric_limits<double>::min()) { }
 
 	MetricMax(const MsgPack& context, std::string_view name, const std::shared_ptr<Schema>& schema)
 		: HandledSubAggregation<ValuesHandler>(context, name, schema),
-		  _max(std::numeric_limits<long double>::min()) { }
+		  _max(std::numeric_limits<double>::min()) { }
 
 	MsgPack get_result() const override {
 		return {
