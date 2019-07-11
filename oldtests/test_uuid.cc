@@ -372,7 +372,7 @@ int test_several_uuids() {
 					} catch (const std::invalid_argument&) { }
 				}
 			}
-			L_ERR("Invalid encoded UUID format in: {}", repr(uuid));
+			L_ERR("Invalid encoded UUID format: {}", repr(uuid));
 		}
 
 		std::string str_uuids_serialised;

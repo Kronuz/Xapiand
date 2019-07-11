@@ -658,12 +658,12 @@ Serialise::uuid(std::string_view field_value)
 					} catch (const std::invalid_argument&) { }
 				}
 			#endif
-				THROW(SerialisationError, "Invalid encoded UUID format in: {}", uuid);
+				THROW(SerialisationError, "Invalid encoded UUID format: {}", repr(uuid));
 			}
 		}
 		return serialised;
 	}
-	THROW(SerialisationError, "Invalid UUID format in: {}", repr(field_value));
+	THROW(SerialisationError, "Invalid UUID format: {}", repr(field_value));
 }
 
 
