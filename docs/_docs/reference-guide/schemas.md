@@ -65,6 +65,12 @@ Indexing mode defines what parts of the documents are indexed and how.
 
 You can read more about this mode [here](indexing-mode).
 
+## [Metadata](meta-data)
+
+Schemas can have custom meta data associated with it.
+
+You can read more about meta data [here](meta-data).
+
 
 ## [Dynamic Field Names](dynamic-field-names)
 
