@@ -29,7 +29,7 @@
 #include "database/utils.h"                       // for unsharded_path
 #include "log.h"                                  // for L_CALL
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
-#include "opts.h"                                 // for opts.strict
+#include "opts.h"                                 // for opts.solo
 #include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_FOREIGN, ...
 #include "serialise.h"                            // for KEYWORD_STR
 #include "server/discovery.h"                     // for schema_updater

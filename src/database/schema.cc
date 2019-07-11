@@ -4667,7 +4667,7 @@ Schema::set_type_to_array()
 	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
 			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field {} is not array", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+				THROW(MissingTypeError, "Type of field {} is not an array", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 			}
 			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::array;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
