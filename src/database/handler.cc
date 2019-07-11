@@ -334,7 +334,7 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 std::tuple<std::string, Xapian::Document, MsgPack>
 DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& obj, Data& data, size_t seq)
 {
-	L_CALL("DatabaseHandler::prepare({}, {}, <data>, <seq>)", repr(document_id.to_string()), repr(obj.to_string()));
+	L_CALL("DatabaseHandler::prepare({}, {}, <data>, <seq>)", repr(document_id.to_string()), obj.to_string());
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
 
@@ -346,7 +346,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 
 	for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 		schema = get_schema(&obj);
-		L_INDEX("Schema: {}", repr(schema->to_string()));
+		L_INDEX("Prepare {}: {} using schema {}", repr(document_id.to_string()), obj.to_string(), schema->to_string());
 		prepared = schema->index(obj, document_id, *this, data, seq);
 		if (update_schema()) {
 			break;

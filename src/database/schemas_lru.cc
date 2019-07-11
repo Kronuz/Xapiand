@@ -488,10 +488,14 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				std::lock_guard<std::mutex> lk(schemas_mtx);
 				auto& schema = schemas[foreign_uri];
 				if (!schema || schema == foreign_schema_ptr) {
-					schema = schema_ptr;
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
-					foreign_schema_ptr = schema;
-					save_schema = true;
+					if (!context || context->find(foreign_path) == context->end()) {
+						schema = schema_ptr;
+						L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] new schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+						foreign_schema_ptr = schema;
+						save_schema = true;
+					} else {
+						L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] new schema wasn't added to LRU (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr");
+					}
 				} else {
 					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
@@ -549,9 +553,13 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				std::lock_guard<std::mutex> lk(schemas_mtx);
 				auto& schema = schemas[foreign_uri];
 				if (!schema || schema == foreign_schema_ptr) {
-					schema = schema_ptr;
-					L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
-					foreign_schema_ptr = schema;
+					if (!context || context->find(foreign_path) == context->end()) {
+						schema = schema_ptr;
+						L_SCHEMA("{}" + GREEN + "Foreign Schema [{}] was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+						foreign_schema_ptr = schema;
+					} else {
+						L_SCHEMA("{}" + DARK_GREEN + "Foreign Schema [{}] wasn't added to LRU (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr");
+					}
 				} else {
 					foreign_schema_ptr = schema;
 					assert(foreign_schema_ptr);
@@ -649,9 +657,13 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					std::lock_guard<std::mutex> lk(schemas_mtx);
 					auto& schema = schemas[foreign_uri];
 					if (!schema || schema == foreign_schema_ptr) {
-						schema = schema_ptr;
-						L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] for new initial schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
-						foreign_schema_ptr = schema;
+						if (!context || context->find(foreign_path) == context->end()) {
+							schema = schema_ptr;
+							L_SCHEMA("{}" + ORANGE + "Foreign Schema [{}] for new initial schema was added to LRU (version {}): " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr", repr(schema_ptr->to_string()));
+							foreign_schema_ptr = schema;
+						} else {
+							L_SCHEMA("{}" + DARK_ORANGE + "Foreign Schema [{}] for new initial schema wasn't added to LRU (version {}): " + DIM_GREY + "{}", prefix, repr(foreign_uri), schema_ptr->get_flags(), foreign_schema_ptr ? repr(foreign_schema_ptr->to_string()) : "nullptr");
+						}
 					} else {
 						foreign_schema_ptr = schema;
 						assert(foreign_schema_ptr);
