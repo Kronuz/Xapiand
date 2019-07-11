@@ -1541,16 +1541,8 @@ HttpClient::write_document_view(Request& request)
 
 	auto& decoded_body = request.decoded_body();
 
-	MsgPack* settings = nullptr;
-	if (decoded_body.is_map()) {
-		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
-		if (settings_it != decoded_body.end()) {
-			settings = &settings_it.value();
-		}
-	}
-
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (resolve_index_endpoints(request, query_field, settings) > 1) {
+	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -1637,16 +1629,8 @@ HttpClient::update_document_view(Request& request)
 
 	auto& decoded_body = request.decoded_body();
 
-	MsgPack* settings = nullptr;
-	if (decoded_body.is_map()) {
-		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
-		if (settings_it != decoded_body.end()) {
-			settings = &settings_it.value();
-		}
-	}
-
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
-	if (resolve_index_endpoints(request, query_field, settings) > 1) {
+	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2073,16 +2057,8 @@ HttpClient::write_database_view(Request& request)
 
 	auto& decoded_body = request.decoded_body();
 
-	MsgPack* settings = nullptr;
-	if (decoded_body.is_map()) {
-		auto settings_it = decoded_body.find(RESERVED_SETTINGS);
-		if (settings_it != decoded_body.end()) {
-			settings = &settings_it.value();
-		}
-	}
-
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE);
-	if (resolve_index_endpoints(request, query_field, settings) > 1) {
+	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
 
@@ -2264,15 +2240,8 @@ HttpClient::restore_database_view(Request& request)
 		MsgPack obj;
 		while (request.next_object(obj)) {
 			if (!indexer) {
-				MsgPack* settings = nullptr;
-				if (obj.is_map()) {
-					auto settings_it = obj.find(RESERVED_SETTINGS);
-					if (settings_it != obj.end()) {
-						settings = &settings_it.value();
-					}
-				}
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
-				if (resolve_index_endpoints(request, query_field, settings) > 1) {
+				if (resolve_index_endpoints(request, query_field, &obj) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
@@ -2290,15 +2259,8 @@ HttpClient::restore_database_view(Request& request)
 		}
 		for (auto& obj : docs) {
 			if (!indexer) {
-				MsgPack* settings = nullptr;
-				if (obj.is_map()) {
-					auto settings_it = obj.find(RESERVED_SETTINGS);
-					if (settings_it != obj.end()) {
-						settings = &settings_it.value();
-					}
-				}
 				auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_OFFSET);
-				if (resolve_index_endpoints(request, query_field, settings) > 1) {
+				if (resolve_index_endpoints(request, query_field, &obj) > 1) {
 					THROW(ClientError, "Method can only be used with single indexes");
 				}
 
