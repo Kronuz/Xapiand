@@ -30,7 +30,7 @@
 #include "log.h"                                  // for L_CALL
 #include "manager.h"                              // for XapiandManager::resolve_index_endpoints
 #include "opts.h"                                 // for opts.strict
-#include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_ENDPOINT, ...
+#include "reserved/schema.h"                      // for RESERVED_RECURSE, RESERVED_FOREIGN, ...
 #include "serialise.h"                            // for KEYWORD_STR
 #include "server/discovery.h"                     // for schema_updater
 #include "strings.hh"                             // for strings::format, strings::replace
@@ -58,13 +58,13 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_
 {
 	L_CALL("validate_schema({})", repr(object.to_string()));
 
-	auto checked = Schema::check<ErrorType>(object, prefix, true, true);
+	auto checked = Schema::check<ErrorType>(object, prefix, true);
 	if (checked.first) {
 		foreign_uri = checked.first->str();
 		std::string_view foreign_path_view, foreign_id_view;
 		split_path_id(foreign_uri, foreign_path_view, foreign_id_view);
 		if (foreign_path_view.empty() || foreign_id_view.empty()) {
-			THROW(ErrorType, "{}'{}' must contain index and docid [{}]", prefix, RESERVED_ENDPOINT, repr(foreign_uri));
+			THROW(ErrorType, "{}'{}' must contain index and docid [{}]", prefix, RESERVED_FOREIGN, repr(foreign_uri));
 		}
 		foreign_path = urldecode(foreign_path_view);
 		foreign_id = urldecode(foreign_id_view);
@@ -73,52 +73,10 @@ validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_
 }
 
 
-bool
+static inline bool
 compare_schema(const MsgPack& a, const MsgPack& b)
 {
-	// Compares two MsgPack objects to see if they're
-	// objects with "schema", if they are, compare thw two
-	// (only "schema" and "description").
-
-	auto it_a = a.find(SCHEMA_FIELD_NAME);
-	auto it_b = b.find(SCHEMA_FIELD_NAME);
-	if (it_a != a.end() && it_b != b.end()) {
-		if (it_a.value() != it_b.value()) {
-			return false;
-		}
-
-		it_a = a.find("description");
-		it_b = b.find("description");
-		if (it_a != a.end() && it_b != b.end()) {
-			auto a_value = it_a.value();
-			auto b_value = it_b.value();
-			if (a_value.is_map()) {
-				auto it = a_value.find(RESERVED_VALUE);
-				if (it != a_value.end()) {
-					a_value = it.value();
-				}
-			}
-			if (b_value.is_map()) {
-				auto it = b_value.find(RESERVED_VALUE);
-				if (it != b_value.end()) {
-					b_value = it.value();
-				}
-			}
-			if (a_value != b_value) {
-				return false;
-			}
-		} else if (it_a != a.end() || it_b != b.end()) {
-			return false;
-		}
-		return true;
-	}
-
-	if (it_a != a.end() || it_b != b.end()) {
-		return false;
-	}
-
 	return a == b;
-
 }
 
 
@@ -137,10 +95,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
 			// Return initial schema for .xapiand/indices (chicken and egg problem)
-			return std::make_pair(0, MsgPack({
-				{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-				{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
-			}));
+			return std::make_pair(0, MsgPack::MAP());
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
@@ -156,18 +111,10 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
 			id = id.substr(0, needle);
 		}
-		std::string description;
 		Xapian::rev version;
 		auto document = _db_handler.get_document(id);
 		auto obj = document.get_obj();
-		auto it = obj.find("description");
-		if (it != obj.end()) {
-			auto& description_val = it.value();
-			if (description_val.is_string()) {
-				description = description_val.str();
-			}
-		}
-		it = obj.find(VERSION_FIELD_NAME);
+		auto it = obj.find(VERSION_FIELD_NAME);
 		if (it != obj.end()) {
 			auto& version_val = it.value();
 			if (!version_val.is_number()) {
@@ -181,31 +128,24 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			}
 			version = sortable_unserialise(version_ser);
 		}
-		auto schema_obj = selector.empty() ? obj[SCHEMA_FIELD_NAME] : obj.select(selector);
-		obj = MsgPack({
-			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-			{ SCHEMA_FIELD_NAME, schema_obj },
-		});
-		if (!description.empty()) {
-			obj["description"] = description;
-		}
-		Schema::check<Error>(obj, "Foreign schema is invalid: ", false, false);
+		obj = selector.empty() ? obj[SCHEMA_FIELD_NAME] : obj.select(selector);
+		Schema::check<Error>(obj, "Foreign schema is invalid: ", false);
 		context->erase(path);
 		return std::make_pair(version, obj);
 	} catch (...) {
 		context->erase(path);
-		// L_EXC("load_shared, endpoint:{}", repr(endpoint.to_string()));
+		// L_EXC("load_shared, endpoint:{}, id:{}", repr(endpoint.to_string()), repr(id));
 		throw;
 	}
 }
 
 
 static inline std::pair<Xapian::rev, MsgPack>
-save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
+save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("save_shared({}, {}, {}. {}, {})", repr(id), schema.to_string(), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
 
-	Schema::check<ClientError>(schema, "Foreign schema is invalid: ", false, false);
+	Schema::check<ClientError>(schema, "Foreign schema is invalid: ", false);
 
 	auto& path = endpoint.path;
 	if (!context) {
@@ -217,7 +157,7 @@ save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endp
 	if (!context->insert(path).second) {
 		if (path == ".xapiand/indices") {
 			// Ignore .xapiand/indices (chicken and egg problem)
-			return std::make_pair(0, std::move(schema));
+			return std::make_pair(0, schema);
 		}
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
@@ -229,29 +169,17 @@ save_shared(std::string_view id, MsgPack schema, Xapian::rev version, const Endp
 		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = _db_handler.update(id.substr(0, needle), version, false, schema, false, msgpack_type);
-		auto obj = std::move(updated.second);
-		std::string description;
-		auto it = obj.find("description");
-		if (it != obj.end()) {
-			auto& description_val = it.value();
-			if (description_val.is_string()) {
-				description = description_val.str();
-			}
-		}
-		auto& schema_obj = obj[SCHEMA_FIELD_NAME];
-		obj = MsgPack({
+		auto updated = _db_handler.update(id.substr(0, needle), version, false, MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-			{ SCHEMA_FIELD_NAME, schema_obj },
-		});
-		if (!description.empty()) {
-			obj["description"] = description;
-		}
+			{ SCHEMA_FIELD_NAME, schema },
+		}), false, msgpack_type);
+		auto obj = std::move(updated.second);
+		obj = obj[SCHEMA_FIELD_NAME];
 		context->erase(path);
 		return std::make_pair(updated.first.version, obj);
 	} catch (...) {
 		context->erase(path);
-		// L_EXC("save_shared, endpoint:{}, version: {}", repr(endpoint.to_string()), version);
+		L_EXC("save_shared, endpoint:{}, id:{}, version: {}", repr(endpoint.to_string()), repr(id), version);
 		throw;
 	}
 }
@@ -300,7 +228,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		if (!foreign_uri.empty()) {
 			schema_ptr = std::make_shared<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
-				{ RESERVED_ENDPOINT, foreign_uri },
+				{ RESERVED_FOREIGN, foreign_uri },
 			}));
 			if (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr)) {
 				schema_ptr = local_schema_ptr;
@@ -343,7 +271,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			if (!foreign_uri.empty()) {
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_ENDPOINT, foreign_uri },
+					{ RESERVED_FOREIGN, foreign_uri },
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Schema [{}] couldn't be loaded from metadata, create a new foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
@@ -351,7 +279,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				// Implement foreign schemas in .xapiand/indices by default:
 				schema_ptr = std::make_shared<MsgPack>(MsgPack({
 					{ RESERVED_TYPE, "foreign/object" },
-					{ RESERVED_ENDPOINT, strings::format(".xapiand/indices/{}", strings::replace(endpoints_path, "/", "%2F")) },
+					{ RESERVED_FOREIGN, strings::format(".xapiand/indices/{}", strings::replace(endpoints_path, "/", "%2F")) },
 				}));
 				schema_ptr->lock();
 				L_SCHEMA("{}" + LIGHT_CORAL + "Local Schema [{}] couldn't be loaded from metadata, create a new default foreign link: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
@@ -522,6 +450,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be loaded (client error)", prefix, repr(foreign_uri));
 					throw;
 				} catch (const Error&) {
+					L_EXC("Error loading schema");
 					if (new_schema) {
 						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (error), create from new schema: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), new_schema->to_string());
 						schema_ptr = new_schema;
@@ -626,6 +555,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} and couldn't be reloaded (client error)", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 						throw;
 					} catch (const Error&) {
+						L_EXC("Error loading schema");
 						if (new_schema) {
 							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {} id={} and couldn't be reloaded (error), create from new schema: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), new_schema->to_string());
 							schema_ptr = new_schema;
@@ -791,24 +721,13 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
 		// Initialize schema (non-foreign, non-recursive, ensure there's "schema"):
-		o.erase(RESERVED_ENDPOINT);
+		o.erase(RESERVED_FOREIGN);
 		auto it = o.find(RESERVED_TYPE);
 		if (it != o.end()) {
 			auto &type = it.value();
 			auto sep_types = required_spc_t::get_types(type.str_view());
 			sep_types[SPC_FOREIGN_TYPE] = FieldType::empty;
 			type = required_spc_t::get_str_type(sep_types);
-		}
-		if (o.find(RESERVED_IGNORE) == o.end()) {
-			o[RESERVED_IGNORE] = SCHEMA_FIELD_NAME;
-		}
-		if (o.find(ID_FIELD_NAME) == o.end()) {
-			o[ID_FIELD_NAME] = MsgPack({
-				{ RESERVED_TYPE,  KEYWORD_STR },
-			});
-		}
-		if (o.find(SCHEMA_FIELD_NAME) == o.end()) {
-			o[SCHEMA_FIELD_NAME] = MsgPack::MAP();
 		}
 		Schema schema(schema_ptr, nullptr, "");
 		schema.update(o);

@@ -1947,7 +1947,7 @@ required_spc_t::flags_t::flags_t()
 	  has_index(false),
 	  has_namespace(false),
 	  has_partial_paths(false),
-	  static_endpoint(false) { }
+	  static_foreign(false) { }
 
 
 std::string
@@ -2106,7 +2106,7 @@ required_spc_t::to_obj() const
 	obj_flags["has_index"] = flags.has_index;
 	obj_flags["has_namespace"] = flags.has_namespace;
 	obj_flags["has_partial_paths"] = flags.has_partial_paths;
-	obj_flags["static_endpoint"] = flags.static_endpoint;
+	obj_flags["static_foreign"] = flags.static_foreign;
 	obj_flags["ngram"] = flags.ngram;
 	obj_flags["cjk_ngram"] = flags.cjk_ngram;
 	obj_flags["cjk_words"] = flags.cjk_words;
@@ -2470,24 +2470,24 @@ specification_t::to_string(int indent) const
 
 template <typename ErrorType>
 std::pair<const MsgPack*, const MsgPack*>
-Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root)
+Schema::check(const MsgPack& schema, const char* prefix, bool allow_foreign)
 {
-	L_CALL("Schema::check({}, <prefix>, allow_foreign:{}, allow_root:{})", object.to_string(), allow_foreign, allow_root);
+	L_CALL("Schema::check({}, <prefix>, allow_foreign:{})", schema.to_string(), allow_foreign);
 
-	if (object.empty()) {
-		THROW(ErrorType, "{}Schema object is empty", prefix);
+	if (schema.is_undefined()) {
+		return std::make_pair(nullptr, &schema);
 	}
 
 	// Check foreign:
 	if (allow_foreign) {
-		if (object.is_string()) {
-			return std::make_pair(&object, nullptr);
+		if (schema.is_string()) {
+			return std::make_pair(&schema, nullptr);
 		}
-		if (!object.is_map()) {
+		if (!schema.is_map()) {
 			THROW(ErrorType, "{}Schema must be a map", prefix);
 		}
-		auto it_end = object.end();
-		auto type_it = object.find(RESERVED_TYPE);
+		auto it_end = schema.end();
+		auto type_it = schema.find(RESERVED_TYPE);
 		if (type_it != it_end) {
 			auto& type = type_it.value();
 			if (!type.is_string()) {
@@ -2496,55 +2496,40 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 			auto type_name = type.str_view();
 			const auto& sep_types = required_spc_t::get_types(type_name);
 			if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-				auto endpoint_it = object.find(RESERVED_ENDPOINT);
-				if (endpoint_it == it_end) {
-					THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, RESERVED_ENDPOINT);
+				auto foreign_it = schema.find(RESERVED_FOREIGN);
+				if (foreign_it == it_end) {
+					THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, RESERVED_FOREIGN);
 				}
-				auto& endpoint = endpoint_it.value();
-				if (!endpoint.is_string()) {
-					THROW(ErrorType, "{}Schema field '{}' must be a string", prefix, RESERVED_ENDPOINT);
+				auto& foreign = foreign_it.value();
+				if (!foreign.is_string()) {
+					THROW(ErrorType, "{}Schema field '{}' must be a string", prefix, RESERVED_FOREIGN);
 				}
-				return std::make_pair(&endpoint, &object);
+				return std::make_pair(&foreign, &schema);
 			}
 		}
 	} else {
-		if (!object.is_map()) {
+		if (!schema.is_map()) {
 			THROW(ErrorType, "{}Schema must be a map", prefix);
 		}
 	}
 
-	auto it_end = object.end();
-
-	// Check schema object:
-	auto schema_it = object.find(SCHEMA_FIELD_NAME);
-	if (schema_it == it_end) {
-		if (!allow_root) {
-			THROW(ErrorType, "{}Schema field '{}' does not exist", prefix, SCHEMA_FIELD_NAME);
-		}
-		return std::make_pair(nullptr, nullptr);
-	}
-
-	auto& schema = schema_it.value();
-	if (!schema.is_map() && !schema.is_undefined()) {
-		THROW(ErrorType, "{}Schema field '{}' is not an object", prefix, SCHEMA_FIELD_NAME);
-	}
 	auto schema_it_end = schema.end();
 	auto type_it = schema.find(RESERVED_TYPE);
 	if (type_it != schema_it_end) {
 		auto& type = type_it.value();
 		if (!type.is_string()) {
-			THROW(ErrorType, "{}Schema field '{}.{}' must be a string", prefix, SCHEMA_FIELD_NAME, RESERVED_TYPE);
+			THROW(ErrorType, "{}Schema field '{}' must be a string", prefix, RESERVED_TYPE);
 		}
 		auto type_name = type.str_view();
 		const auto& sep_types = required_spc_t::get_types(type_name);
 		if (sep_types[SPC_CONCRETE_TYPE] != FieldType::object) {
-			THROW(ErrorType, "{}Schema field '{}' has an unsupported type: {}", prefix, SCHEMA_FIELD_NAME, type_name);
+			THROW(ErrorType, "{}Schema has an unsupported type: {}", prefix, type_name);
 		}
 	}
 
-	// Prevent schemas from having a '_schemas' field inside:
-	auto reserved_schema_it = object.find(RESERVED_SCHEMA);
-	if (reserved_schema_it != it_end) {
+	// Prevent schemas from having a '_schema' field inside:
+	auto reserved_schema_it = schema.find(RESERVED_SCHEMA);
+	if (reserved_schema_it != schema_it_end) {
 		THROW(ErrorType, "{}Schema field '{}' is not valid", prefix, RESERVED_SCHEMA);
 	}
 
@@ -2557,7 +2542,7 @@ Schema::Schema(std::shared_ptr<const MsgPack> s, std::unique_ptr<MsgPack> m, std
 	  mut_schema(std::move(m)),
 	  origin(std::move(o))
 {
-	auto checked = check<Error>(*schema, "Schema is corrupt: ", true, false);
+	auto checked = check<Error>(*schema, "Schema is corrupt: ", true);
 	if (checked.first != nullptr) {
 		schema = get_initial_schema();
 	}
@@ -2569,10 +2554,7 @@ Schema::get_initial_schema()
 {
 	L_CALL("Schema::get_initial_schema()");
 
-	static const MsgPack initial_schema_tpl({
-		{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
-		{ SCHEMA_FIELD_NAME, MsgPack::MAP() },
-	});
+	static const MsgPack initial_schema_tpl(MsgPack::MAP());
 	auto initial_schema = std::make_shared<const MsgPack>(initial_schema_tpl);
 	initial_schema->lock();
 	return initial_schema;
@@ -2652,7 +2634,7 @@ Schema::restart_specification()
 	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
 	specification.flags.has_index            = default_spc.flags.has_index;
 	specification.flags.has_namespace        = default_spc.flags.has_namespace;
-	specification.flags.static_endpoint      = default_spc.flags.static_endpoint;
+	specification.flags.static_foreign       = default_spc.flags.static_foreign;
 
 	specification.flags.concrete             = default_spc.flags.concrete;
 	specification.flags.complete             = default_spc.flags.complete;
@@ -2680,7 +2662,7 @@ Schema::restart_namespace_specification()
 
 	specification.flags.bool_term            = default_spc.flags.bool_term;
 	specification.flags.has_bool_term        = default_spc.flags.has_bool_term;
-	specification.flags.static_endpoint      = default_spc.flags.static_endpoint;
+	specification.flags.static_foreign       = default_spc.flags.static_foreign;
 
 	specification.flags.concrete             = default_spc.flags.concrete;
 	specification.flags.complete             = default_spc.flags.complete;
@@ -3567,8 +3549,8 @@ Schema::index_item_value(Xapian::Document& doc, MsgPack*& data, const MsgPack& i
 	}
 
 	if (specification.sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-		if (!specification.flags.static_endpoint) {
-			data->get(RESERVED_ENDPOINT) = specification.endpoint;
+		if (!specification.flags.static_foreign) {
+			data->get(RESERVED_FOREIGN) = specification.endpoint;
 		}
 	}
 }
@@ -3599,12 +3581,12 @@ Schema::update(const MsgPack& object)
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		std::pair<const MsgPack*, const MsgPack*> checked;
-		checked = check<ClientError>(object, "Invalid schema: ", true, true);
+		checked = check<ClientError>(object, "Invalid schema: ", true);
 
 		if (checked.first != nullptr) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
-				{ RESERVED_ENDPOINT, *checked.first },
+				{ RESERVED_FOREIGN, *checked.first },
 			}));
 
 			return checked.second != nullptr ? checked.second->size() != 2 : false;
@@ -3628,18 +3610,6 @@ Schema::update(const MsgPack& object)
 			}
 
 			update_fields(properties, fields);
-		}
-
-		// Inject remaining items from received object into the new schema
-		const auto it_e = object.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str_view();
-			if (str_key != SCHEMA_FIELD_NAME) {
-				if (!mut_schema) {
-					mut_schema = std::make_unique<MsgPack>(*schema);
-				}
-				mut_schema->get(str_key) = it.value();
-			}
 		}
 
 		// L_INDEX("Updated schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
@@ -4098,12 +4068,12 @@ Schema::write(const MsgPack& object)
 		specification.slot = DB_SLOT_ROOT;  // Set default RESERVED_SLOT for root
 
 		std::pair<const MsgPack*, const MsgPack*> checked;
-		checked = check<ClientError>(object, "Invalid schema: ", true, true);
+		checked = check<ClientError>(object, "Invalid schema: ", true);
 
 		if (checked.first != nullptr) {
 			mut_schema = std::make_unique<MsgPack>(MsgPack({
 				{ RESERVED_TYPE, "foreign/object" },
-				{ RESERVED_ENDPOINT, *checked.first },
+				{ RESERVED_FOREIGN, *checked.first },
 			}));
 
 			return checked.second != nullptr ? checked.second->size() != 2 : false;
@@ -4121,18 +4091,6 @@ Schema::write(const MsgPack& object)
 			dispatch_write_properties(*mut_properties, schema_obj, fields);
 
 			write_fields(mut_properties, fields);
-		}
-
-		// Inject remaining items from received object into the new schema
-		const auto it_e = object.end();
-		for (auto it = object.begin(); it != it_e; ++it) {
-			auto str_key = it->str_view();
-			if (str_key != SCHEMA_FIELD_NAME) {
-				if (!mut_schema) {
-					mut_schema = std::make_unique<MsgPack>(*schema);
-				}
-				mut_schema->get(str_key) = it.value();
-			}
 		}
 
 		// L_INDEX("Written schema: " + DIM_GREY + "{}", get_newest_properties().to_string());
@@ -6236,7 +6194,7 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 		hh(RESERVED_PARTIAL_PATHS),
 		hh(RESERVED_INDEX_UUID_FIELD),
 		hh(RESERVED_SCRIPT),
-		hh(RESERVED_ENDPOINT),
+		hh(RESERVED_FOREIGN),
 	});
 
 	switch (_.find(key)) {
@@ -6354,8 +6312,8 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 		case _.fhh(RESERVED_SCRIPT):
 			Schema::feed_script(value);
 			return true;
-		case _.fhh(RESERVED_ENDPOINT):
-			Schema::feed_endpoint(value);
+		case _.fhh(RESERVED_FOREIGN):
+			Schema::feed_foreign(value);
 			return true;
 		default:
 			return false;
@@ -6477,7 +6435,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_PARTIAL_PATHS),
 		hh(RESERVED_INDEX_UUID_FIELD),
 		hh(RESERVED_VALUE),
-		hh(RESERVED_ENDPOINT),
+		hh(RESERVED_FOREIGN),
 		hh(RESERVED_SCRIPT),
 		hh(RESERVED_FLOAT),
 		hh(RESERVED_POSITIVE),
@@ -6553,7 +6511,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_PARTIAL_PATHS),
 		hh(RESERVED_INDEX_UUID_FIELD),
 		hh(RESERVED_VALUE),
-		hh(RESERVED_ENDPOINT),
+		hh(RESERVED_FOREIGN),
 		hh(RESERVED_SCRIPT),
 		hh(RESERVED_FLOAT),
 		hh(RESERVED_POSITIVE),
@@ -6646,8 +6604,8 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_VALUE):
 			Schema::process_value(prop_name, value);
 			return true;
-		case _.fhh(RESERVED_ENDPOINT):
-			Schema::process_endpoint(prop_name, value);
+		case _.fhh(RESERVED_FOREIGN):
+			Schema::process_foreign(prop_name, value);
 			return true;
 		case _.fhh(RESERVED_STRICT):
 			Schema::process_strict(prop_name, value);
@@ -7572,15 +7530,15 @@ Schema::feed_script([[maybe_unused]] const MsgPack& prop_obj)
 
 
 void
-Schema::feed_endpoint(const MsgPack& prop_obj)
+Schema::feed_foreign(const MsgPack& prop_obj)
 {
-	L_CALL("Schema::feed_endpoint({})", repr(prop_obj.to_string()));
+	L_CALL("Schema::feed_foreign({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_string()) {
 		specification.endpoint.assign(prop_obj.str_view());
-		specification.flags.static_endpoint = true;
+		specification.flags.static_foreign = true;
 	} else {
-		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_ENDPOINT, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
+		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_FOREIGN, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
 }
 
@@ -7940,12 +7898,12 @@ Schema::write_settings(MsgPack& /*unused*/, std::string_view prop_name, const Ms
 
 
 void
-Schema::write_endpoint(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
+Schema::write_foreign(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
 {
-	L_CALL("Schema::write_endpoint({})", repr(prop_obj.to_string()));
+	L_CALL("Schema::write_foreign({})", repr(prop_obj.to_string()));
 
-	process_endpoint(prop_name, prop_obj);
-	specification.flags.static_endpoint = true;
+	process_foreign(prop_name, prop_obj);
+	specification.flags.static_foreign = true;
 	mut_properties[prop_name] = specification.endpoint;
 }
 
@@ -8477,22 +8435,22 @@ Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPa
 
 
 inline void
-Schema::process_endpoint(std::string_view prop_name, const MsgPack& prop_obj)
+Schema::process_foreign(std::string_view prop_name, const MsgPack& prop_obj)
 {
-	// RESERVED_ENDPOINT isn't heritable.
-	L_CALL("Schema::process_endpoint({})", repr(prop_obj.to_string()));
+	// RESERVED_FOREIGN isn't heritable.
+	L_CALL("Schema::process_foreign({})", repr(prop_obj.to_string()));
 
 	if (prop_obj.is_string()) {
-		const auto _endpoint = prop_obj.str_view();
-		if (_endpoint.empty()) {
+		const auto _foreign = prop_obj.str_view();
+		if (_foreign.empty()) {
 			THROW(ClientError, "Data inconsistency, {} must be a valid endpoint", repr(prop_name));
 		}
 		std::string_view _path, _id;
-		split_path_id(_endpoint, _path, _id);
+		split_path_id(_foreign, _path, _id);
 		if (_path.empty() || _id.empty()) {
 			THROW(ClientError, "Data inconsistency, {} must be a valid endpoint", repr(prop_name));
 		}
-		if (specification.endpoint != _endpoint) {
+		if (specification.endpoint != _foreign) {
 			if (
 				specification.sep_types[SPC_FOREIGN_TYPE] != FieldType::foreign && (
 					specification.sep_types[SPC_ARRAY_TYPE] != FieldType::empty ||
@@ -8501,8 +8459,8 @@ Schema::process_endpoint(std::string_view prop_name, const MsgPack& prop_obj)
 			) {
 				THROW(ClientError, "Data inconsistency, {} cannot be used in non-foreign fields", repr(prop_name));
 			}
-			specification.flags.static_endpoint = false;
-			specification.endpoint.assign(_endpoint);
+			specification.flags.static_foreign = false;
+			specification.endpoint.assign(_foreign);
 		}
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be string", repr(prop_name));
@@ -9229,7 +9187,7 @@ Schema::get_full(bool readable) const
 	}
 	if (!origin.empty()) {
 		full_schema[RESERVED_TYPE] = "foreign/object";
-		full_schema[RESERVED_ENDPOINT] = origin;
+		full_schema[RESERVED_FOREIGN] = origin;
 	}
 	return full_schema;
 }

@@ -349,7 +349,7 @@ struct required_spc_t {
 		bool has_namespace:1;        // Either RESERVED_NAMESPACE is in the schema or the user sent it
 		bool has_partial_paths:1;    // Either RESERVED_PARTIAL_PATHS is in the schema or the user sent it
 
-		bool static_endpoint:1;      // RESERVED_ENDPOINT is from the schema
+		bool static_foreign:1;      // RESERVED_FOREIGN is from the schema
 
 		flags_t();
 	};
@@ -588,7 +588,7 @@ class Schema {
 	 * Returns root properties of schema.
 	 */
 	const MsgPack& get_properties() const {
-		return schema->at(SCHEMA_FIELD_NAME);
+		return *schema;
 	}
 
 	/*
@@ -598,18 +598,14 @@ class Schema {
 		if (!mut_schema) {
 			mut_schema = std::make_unique<MsgPack>(*schema);
 		}
-		return mut_schema->at(SCHEMA_FIELD_NAME);
+		return *mut_schema;
 	}
 
 	/*
 	 * Returns newest root properties.
 	 */
 	const MsgPack& get_newest_properties() const {
-		if (mut_schema) {
-			return mut_schema->at(SCHEMA_FIELD_NAME);
-		} else {
-			return schema->at(SCHEMA_FIELD_NAME);
-		}
+		return mut_schema ? *mut_schema : *schema;
 	}
 
 	/*
@@ -825,7 +821,7 @@ class Schema {
 	void feed_partial_paths(const MsgPack& prop_obj);
 	void feed_index_uuid_field(const MsgPack& prop_obj);
 	void feed_script(const MsgPack& prop_obj);
-	void feed_endpoint(const MsgPack& prop_obj);
+	void feed_foreign(const MsgPack& prop_obj);
 
 
 	/*
@@ -857,7 +853,7 @@ class Schema {
 	void write_index_uuid_field(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);
 	void write_schema(MsgPack& properties, std::string_view prop_name, const MsgPack& prop_obj);
 	void write_settings(MsgPack& properties, std::string_view prop_name, const MsgPack& prop_obj);
-	void write_endpoint(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);
+	void write_foreign(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);
 
 
 	/*
@@ -891,7 +887,7 @@ class Schema {
 	void process_partials(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_error(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_value(std::string_view prop_name, const MsgPack& prop_obj);
-	void process_endpoint(std::string_view prop_name, const MsgPack& prop_obj);
+	void process_foreign(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_strict(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_cast_object(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_script(std::string_view prop_name, const MsgPack& prop_obj);
@@ -1004,7 +1000,7 @@ public:
 	}
 
 	template <typename ErrorType>
-	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign, bool allow_root);
+	static std::pair<const MsgPack*, const MsgPack*> check(const MsgPack& object, const char* prefix, bool allow_foreign);
 
 	/*
 	 * Transforms schema into json string.

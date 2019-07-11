@@ -55,7 +55,7 @@ constexpr const char RESERVED_PARTIAL_PATHS[]               = RESERVED__ "partia
 constexpr const char RESERVED_INDEX_UUID_FIELD[]            = RESERVED__ "index_uuid_field";
 constexpr const char RESERVED_SCHEMA[]                      = RESERVED__ "schema";
 constexpr const char RESERVED_SETTINGS[]                    = RESERVED__ "settings";
-constexpr const char RESERVED_ENDPOINT[]                    = RESERVED__ "endpoint";
+constexpr const char RESERVED_FOREIGN[]                     = RESERVED__ "foreign";
 
 // Reserved for bulk operations
 constexpr const char RESERVED_OP_TYPE[]                     = RESERVED__ "op_type";

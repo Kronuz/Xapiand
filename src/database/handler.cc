@@ -639,7 +639,7 @@ DatabaseHandler::update_schema(const MsgPack& obj)
 	if (was_foreign_obj) {
 		MsgPack o = obj;
 		o[RESERVED_TYPE] = "object";
-		o.erase(RESERVED_ENDPOINT);
+		o.erase(RESERVED_FOREIGN);
 		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 			schema = get_schema();
 			was_foreign_obj = schema->update(o);
@@ -676,7 +676,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 	if (was_foreign_obj) {
 		MsgPack o = obj;
 		o[RESERVED_TYPE] = "object";
-		o.erase(RESERVED_ENDPOINT);
+		o.erase(RESERVED_FOREIGN);
 		for (int t = SCHEMA_RETRIES; t >= 0; --t) {
 			schema = get_schema();
 			was_foreign_obj = schema->write(o);

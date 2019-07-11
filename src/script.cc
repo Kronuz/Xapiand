@@ -53,7 +53,7 @@ Script::Script(const MsgPack& _obj)
 					hh(RESERVED_BODY),
 					hh(RESERVED_NAME),
 					hh(RESERVED_PARAMS),
-					hh(RESERVED_ENDPOINT),
+					hh(RESERVED_FOREIGN),
 				});
 				switch (_.fhh(str_key)) {
 					case _.fhh(RESERVED_TYPE):
@@ -87,15 +87,15 @@ Script::Script(const MsgPack& _obj)
 						}
 						params = val;
 						break;
-					case _.fhh(RESERVED_ENDPOINT):
+					case _.fhh(RESERVED_FOREIGN):
 						if (!val.is_string()) {
-							THROW(ClientError, "'{}' must be string", RESERVED_ENDPOINT);
+							THROW(ClientError, "'{}' must be string", RESERVED_FOREIGN);
 						}
 						endpoint = val.str_view();
 						break;
 					default:
 						if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_ENDPOINT, RESERVED_PARAMS);
+							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_FOREIGN, RESERVED_PARAMS);
 						} else {
 							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_CHAI, RESERVED_PARAMS);
 						}
@@ -170,7 +170,7 @@ Script::get_types(bool strict) const
 			THROW(ClientError, "For type {}, '{}' should not be defined", enum_name(FieldType::foreign), RESERVED_NAME);
 		}
 		if (!value.empty() && !endpoint.empty()) {
-			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_ENDPOINT);
+			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_FOREIGN);
 		}
 	} else {
 		if (strict) {
@@ -181,7 +181,7 @@ Script::get_types(bool strict) const
 			THROW(ClientError, "Only type {} is allowed in '{}'", enum_name(FieldType::script), RESERVED_SCRIPT);
 		}
 		if (!endpoint.empty()) {
-			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_ENDPOINT, enum_name(FieldType::foreign));
+			THROW(ClientError, "'{}' must exist only for type {}", RESERVED_FOREIGN, enum_name(FieldType::foreign));
 		}
 		if (!value.empty() && !body.empty() && !name.empty()) {
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_NAME, RESERVED_BODY);
@@ -197,7 +197,7 @@ Script::get_endpoint() const
 {
 	auto script_endpoint = endpoint.empty() ? value : endpoint;
 	if (script_endpoint.empty()) {
-		THROW(ClientError, "Script must specify '{}'", RESERVED_ENDPOINT);
+		THROW(ClientError, "Script must specify '{}'", RESERVED_FOREIGN);
 	}
 	return script_endpoint;
 }
@@ -241,7 +241,7 @@ Script::process_script([[maybe_unused]] bool strict) const
 		chaipp::Processor::compile(*this);
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-			{ RESERVED_ENDPOINT,  get_endpoint() },
+			{ RESERVED_FOREIGN, get_endpoint() },
 		});
 		auto& script_params = get_params();
 		if (!script_params.empty()) {
