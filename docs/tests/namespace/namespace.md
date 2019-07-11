@@ -274,6 +274,10 @@ PUT /test/namespace/strict_namespace/doc
 
 {
   "_strict": true,
+  "_settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
   "tags": {
     "_namespace": true,
     "_type": "keyword",
@@ -359,6 +363,10 @@ PUT /test/namespace/strict_namespace_array/doc
 
 {
   "_strict": true,
+  "_settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
   "tags": {
     "_namespace": true,
     "_type": "array/keyword",
@@ -438,6 +446,10 @@ PUT /test/namespace/namespace_different/doc
 
 {
   "_strict": true,
+  "_settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
   "tags": {
     "_namespace": true,
     "_type": "array/keyword",
@@ -473,6 +485,10 @@ PUT /test/namespace/namespace_text/doc
 
 {
   "_strict": true,
+  "_settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
   "tags": {
     "_namespace": true,
     "_type": "text",
@@ -560,6 +576,10 @@ PUT /test/namespace/namespace_datetime/doc
 
 {
   "_strict": true,
+  "_settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
   "tags": {
     "_namespace": true,
     "_type": "datetime",
@@ -916,6 +936,10 @@ PUT /test/namespace/types/geospatial/doc
 
 {
   "_strict": true,
+  "_settings": {
+    "number_of_shards": 5,
+    "number_of_replicas": 1
+  },
   "tags": {
     "_namespace": true,
     "_type": "geospatial",
