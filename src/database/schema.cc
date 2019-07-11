@@ -6041,6 +6041,7 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 	L_CALL("Schema::_dispatch_write_properties({})", mut_properties.to_string());
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
@@ -6069,6 +6070,9 @@ Schema::_dispatch_write_properties(uint32_t key, MsgPack& mut_properties, std::s
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_META):
+			write_meta(mut_properties, prop_name, value);
+			return true;
 		case _.fhh(RESERVED_WEIGHT):
 			write_weight(mut_properties, prop_name, value);
 			return true;
@@ -7540,6 +7544,16 @@ Schema::feed_foreign(const MsgPack& prop_obj)
 	} else {
 		THROW(Error, "Schema is corrupt: '{}' in {} is not valid.", RESERVED_FOREIGN, specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
 	}
+}
+
+
+void
+Schema::write_meta(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj)
+{
+	// RESERVED_META property is heritable and can change between documents.
+	L_CALL("Schema::write_meta({})", repr(prop_obj.to_string()));
+
+	mut_properties[prop_name] = prop_obj;
 }
 
 

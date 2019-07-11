@@ -828,6 +828,7 @@ class Schema {
 	 * Functions for reserved words that are in document and need to be written in schema properties.
 	 */
 
+	void write_meta(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);
 	void write_weight(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);
 	void write_position(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);
 	void write_spelling(MsgPack& mut_properties, std::string_view prop_name, const MsgPack& prop_obj);

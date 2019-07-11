@@ -24,6 +24,7 @@
 
 #include "reserved/reserved.h"
 
+constexpr const char RESERVED_META[]                        = RESERVED__ "meta";
 constexpr const char RESERVED_WEIGHT[]                      = RESERVED__ "weight";
 constexpr const char RESERVED_POSITION[]                    = RESERVED__ "position";
 constexpr const char RESERVED_SPELLING[]                    = RESERVED__ "spelling";
