@@ -2130,8 +2130,15 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 	assert(Node::total_nodes());
 
 	if (settings) {
+		auto strict = opts.strict;
 		auto num_shards = index_settings.num_shards;
 		auto num_replicas_plus_master = index_settings.num_replicas_plus_master;
+
+		auto strict_it = settings->find(RESERVED_STRICT);
+		if (strict_it != settings->end()) {
+			auto& strict_val = strict_it.value();
+			strict = strict_val.as_boolean();
+		}
 
 		auto num_shards_it = settings->find("number_of_shards");
 		if (num_shards_it != settings->end()) {
@@ -2141,6 +2148,10 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 				if (num_shards == 0 || num_shards > 9999UL) {
 					THROW(ClientError, "Invalid 'number_of_shards' setting.");
 				}
+			}
+		} else {
+			if (strict && index_settings.shards.empty()) {
+				THROW(MissingTypeError, "Value of 'number_of_shards' is missing");
 			}
 		}
 
@@ -2152,6 +2163,10 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 				if (num_replicas_plus_master == 0 || num_replicas_plus_master > 9999UL) {
 					THROW(ClientError, "Invalid 'number_of_replicas' setting.");
 				}
+			}
+		} else {
+			if (strict && index_settings.shards.empty()) {
+				THROW(MissingTypeError, "Value of 'number_of_replicas' is missing");
 			}
 		}
 
@@ -2177,6 +2192,10 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 			index_settings.num_shards = num_shards;
 			index_settings.modified = true;
 			index_settings.saved = false;
+		}
+	} else {
+		if (opts.strict && index_settings.shards.empty()) {
+			THROW(MissingTypeError, "Index settings are missing");
 		}
 	}
 
