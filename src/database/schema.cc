@@ -9235,10 +9235,10 @@ Schema::get_full(bool readable) const
 }
 
 
-inline bool
-Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
+void
+Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
 {
-	L_CALL("Schema::_dispatch_readable({})", value.to_string());
+	L_CALL("Schema::dispatch_readable({}, {})", repr(item_schema.to_string()), at_root);
 
 	constexpr static auto _ = phf::make_phf({
 		hh(RESERVED_TYPE),
@@ -9249,56 +9249,60 @@ Schema::_dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties)
 		hh(RESERVED_SCRIPT),
 	});
 
-	switch (key) {
-		case _.fhh(RESERVED_PREFIX):
-			return Schema::readable_prefix(value, properties);
-		case _.fhh(RESERVED_SLOT):
-			return Schema::readable_slot(value, properties);
-		case _.fhh(RESERVED_STEM_LANGUAGE):
-			return Schema::readable_stem_language(value, properties);
-		case _.fhh(RESERVED_ACC_PREFIX):
-			return Schema::readable_acc_prefix(value, properties);
-		case _.fhh(RESERVED_SCRIPT):
-			return Schema::readable_script(value, properties);
-		default:
-			throw std::out_of_range("Invalid readable");
-	}
-}
-
-
-void
-Schema::dispatch_readable(MsgPack& item_schema, bool at_root)
-{
-	L_CALL("Schema::dispatch_readable({}, {})", repr(item_schema.to_string()), at_root);
-
 	// Change this item of schema in readable form.
 	for (auto it = item_schema.begin(); it != item_schema.end(); ) {
 		auto str_key = it->str_view();
 		auto& value = it.value();
-		auto key = hh(str_key);
-		try {
-			if (is_reserved(str_key)) {
-				if (!_dispatch_readable(key, value, item_schema)) {
-					it = item_schema.erase(it);
-					continue;
-				}
-				++it;
-				continue;
+		if (is_reserved(str_key)) {
+			auto key = hh(str_key);
+			switch (key) {
+				case _.fhh(RESERVED_PREFIX):
+					if (!Schema::readable_prefix(value, item_schema)) {
+						it = item_schema.erase(it);
+						continue;
+					}
+					break;
+				case _.fhh(RESERVED_SLOT):
+					if (!Schema::readable_slot(value, item_schema)) {
+						it = item_schema.erase(it);
+						continue;
+					}
+					break;
+				case _.fhh(RESERVED_STEM_LANGUAGE):
+					if (!Schema::readable_stem_language(value, item_schema)) {
+						it = item_schema.erase(it);
+						continue;
+					}
+					break;
+				case _.fhh(RESERVED_ACC_PREFIX):
+					if (!Schema::readable_acc_prefix(value, item_schema)) {
+						it = item_schema.erase(it);
+						continue;
+					}
+					break;
+				case _.fhh(RESERVED_SCRIPT):
+					if (!Schema::readable_script(value, item_schema)) {
+						it = item_schema.erase(it);
+						continue;
+					}
+					break;
+				default:
+					if (!at_root && has_dispatch_set_default_spc(key)) {
+						it = item_schema.erase(it);
+						continue;
+					}
+					if (value.is_map()) {
+						dispatch_readable(value, false);
+					}
+					break;
 			}
-		} catch (const std::out_of_range&) { }
-
-		if (is_valid(str_key)) {
+		} else if (is_valid(str_key)) {
 			if (value.is_map()) {
 				dispatch_readable(value, false);
 			}
-		} else if (has_dispatch_set_default_spc(key)) {
-			if (at_root) {
-				it = item_schema.erase(it);
-				continue;
-			}
-			if (value.is_map()) {
-				dispatch_readable(value, false);
-			}
+		} else {
+			it = item_schema.erase(it);
+			continue;
 		}
 		++it;
 	}

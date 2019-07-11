@@ -576,7 +576,6 @@ class Schema {
 	bool _dispatch_feed_properties(uint32_t key, const MsgPack& value);
 	bool _dispatch_process_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
 	bool _dispatch_process_concrete_properties(uint32_t key, std::string_view prop_name, const MsgPack& value);
-	static bool _dispatch_readable(uint32_t key, MsgPack& value, MsgPack& properties);
 
 	std::shared_ptr<const MsgPack> schema;
 	std::unique_ptr<MsgPack> mut_schema;
