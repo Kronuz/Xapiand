@@ -49,9 +49,6 @@
 using namespace std::chrono_literals;
 
 
-static const std::string reserved_schema(RESERVED_SCHEMA);
-
-
 template <typename ErrorType>
 static inline std::pair<const MsgPack*, const MsgPack*>
 validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_uri, std::string& foreign_path, std::string& foreign_id)
@@ -263,7 +260,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		std::string schema_ser;
 		try {
 			DatabaseHandler _db_handler(endpoints, read_flags, context);
-			schema_ser = _db_handler.get_metadata(reserved_schema);
+			schema_ser = _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
 		} catch (const Xapian::DocNotFoundError&) {
 		} catch (const Xapian::DatabaseNotFoundError&) {
 		}
@@ -327,16 +324,16 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr))) {
 				std::string schema_ser;
 				try {
-					schema_ser = _db_handler.get_metadata(reserved_schema);
+					schema_ser = _db_handler.get_metadata(std::string_view(RESERVED_SCHEMA));
 				} catch (const Xapian::DocNotFoundError&) {
 				} catch (const Xapian::DatabaseNotFoundError&) {
 				}
 				if (schema_ser.empty()) {
-					_db_handler.set_metadata(reserved_schema, schema_ptr->serialise());
+					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
-					_db_handler.set_metadata(reserved_schema, schema_ptr->serialise());
+					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 				} else {
@@ -364,7 +361,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					failure = true;
 				}
 			} else {
-				_db_handler.set_metadata(reserved_schema, schema_ptr->serialise());
+				_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 			}
@@ -646,7 +643,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 
 	const MsgPack* schema_obj = nullptr;
 	if (obj && obj->is_map()) {
-		const auto it = obj->find(reserved_schema);
+		const auto it = obj->find(RESERVED_SCHEMA);
 		if (it != obj->end()) {
 			schema_obj = &it.value();
 		}
