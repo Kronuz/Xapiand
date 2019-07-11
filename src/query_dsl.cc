@@ -1201,7 +1201,8 @@ QueryDSL::create_exp_op_dsl(std::vector<MsgPack>& stack_msgpack, const std::stri
 {
 	L_CALL("QueryDSL::create_exp_op_dsl({})", repr(operator_dsl));
 
-	MsgPack object = {{ operator_dsl, stack_msgpack.back() }}; // expression.
+	MsgPack object;
+	object[operator_dsl] = {{ stack_msgpack.back() }}; // expression.
 	stack_msgpack.pop_back();
 	stack_msgpack.push_back(std::move(object));
 }
