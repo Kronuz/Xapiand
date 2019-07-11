@@ -16,6 +16,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.25.0] - 2019-07-11
+{: #v0-25-0 }
+
+### Added
+- Added support for `_meta` inside schemas (to allow user to add custom meta
+data associated with it)
+
+### Changed
+- **BREAKING**: Schema declaration no longer needs nested `_schema` -> `schema`
+                node; it now only needs `_schama`
+- **BREAKING**: Strict mode requires newly created indexes to declare `_settings`
+                with at least `number_of_shards` and `number_of_replicas`.
+- **BREAKING**: Foreign schemas no longer use `_endpoint`, it was renamed to
+                `_foreign`.
+
+### Fixed
+- Aggregations (min/max) which have no elements could result in errors.
+- Fix parser query params to qdsl for not operator
+
+
+---
 ## [0.24.0] - 2019-07-10
 {: #v0-24-0 }
 
@@ -776,7 +797,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/Kronuz/Xapiand/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/Kronuz/Xapiand/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/Kronuz/Xapiand/compare/v0.22.2...v0.23.0
 [0.22.2]: https://github.com/Kronuz/Xapiand/compare/v0.22.1...v0.22.2
