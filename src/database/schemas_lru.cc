@@ -921,7 +921,7 @@ SchemasLRU::dump_schemas(int level) const
 				}
 			}
 			ret += indent + indent;
-			ret += strings::format("<Schema {}@{}{}>", repr(schema.first), schema_version, outdated);
+			ret += strings::format("<Schema {} {{version:{}}}{}>", repr(schema.first), schema_version, outdated);
 			ret.push_back('\n');
 		}
 	}
