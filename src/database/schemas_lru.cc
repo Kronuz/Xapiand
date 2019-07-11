@@ -179,7 +179,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		return std::make_pair(updated.first.version, obj);
 	} catch (...) {
 		context->erase(path);
-		L_EXC("save_shared, endpoint:{}, id:{}, version: {}", repr(endpoint.to_string()), repr(id), version);
+		// L_EXC("save_shared, endpoint:{}, id:{}, version: {}", repr(endpoint.to_string()), repr(id), version);
 		throw;
 	}
 }
