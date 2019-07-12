@@ -131,7 +131,6 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 		return std::make_pair(version, obj);
 	} catch (...) {
 		context->erase(path);
-		// L_EXC("load_shared, endpoint:{}, id:{}", repr(endpoint.to_string()), repr(id));
 		throw;
 	}
 }
@@ -176,7 +175,6 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		return std::make_pair(updated.first.version, obj);
 	} catch (...) {
 		context->erase(path);
-		// L_EXC("save_shared, endpoint:{}, id:{}, version: {}", repr(endpoint.to_string()), repr(id), version);
 		throw;
 	}
 }
@@ -366,6 +364,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written: " + DIM_GREY + "{}", prefix, repr(local_schema_path), repr(schema_ptr->to_string()));
 			}
 		} catch (...) {
+			L_EXC("Error saving local schema: endpoint:{}", repr(endpoints.to_string()));
 			if (local_schema_ptr && (schema_ptr != local_schema_ptr && *schema_ptr != *local_schema_ptr)) {
 				// On error, try reverting
 				assert(local_schema_ptr);
@@ -447,7 +446,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be loaded (client error)", prefix, repr(foreign_uri));
 					throw;
 				} catch (const Error&) {
-					L_EXC("Error loading schema");
+					L_EXC("Error loading foreign schema");
 					if (new_schema) {
 						L_SCHEMA("{}" + LIGHT_CORAL + "Foreign Schema [{}] couldn't be loaded (error), create from new schema: " + DIM_GREY + "{} " + LIGHT_GREY + "-->" + DIM_GREY + " {}", prefix, repr(foreign_uri), repr(schema_ptr->to_string()), new_schema->to_string());
 						schema_ptr = new_schema;
@@ -552,7 +551,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 						L_SCHEMA("{}" + RED + "Foreign Schema [{}] couldn't be saved to {} id={} and couldn't be reloaded (client error)", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
 						throw;
 					} catch (const Error&) {
-						L_EXC("Error loading schema");
+						L_EXC("Error loading foreign schema");
 						if (new_schema) {
 							L_SCHEMA("{}" + DARK_RED + "Foreign Schema [{}] couldn't be saved to {} id={} and couldn't be reloaded (error), create from new schema: " + DIM_GREY + "{}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id), repr(schema_ptr->to_string()), new_schema->to_string());
 							schema_ptr = new_schema;
@@ -605,6 +604,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					}
 					failure = true;
 				} catch (...) {
+					L_EXC("Error saving foreign schema: endpoint:{}, id:{}, version: {}", repr(foreign_path), repr(foreign_id), schema_version);
 					if (foreign_schema_ptr != schema_ptr) {
 						// On error, try reverting
 						assert(foreign_schema_ptr);
