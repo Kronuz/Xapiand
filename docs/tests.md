@@ -15,7 +15,6 @@ permalink: /tests/
 * [**_Define Slot_**](schema/define-slot)
 * [**_Empty Value_**](schema/empty-value)
 * [**_Range Search_**](schema/range-search)
-* [**_Array Objects_**](schema/array-objects)
 * [**_UUID Field_**](schema/uuid-field)
 * [**_Arrays_**](dataStructures/arrays)
 * [**_Objects_**](dataStructures/objects)
