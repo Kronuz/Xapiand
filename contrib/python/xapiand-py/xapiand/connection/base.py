@@ -132,17 +132,14 @@ class Connection(object):
         if response is not None:
             logger.debug('< %s', response)
 
-    def _raise_error(self, status_code, raw_data):
+    def _raise_error(self, status_code, data):
         """ Locate appropriate exception and raise it. """
-        error_message = raw_data
-        additional_info = None
-        try:
-            if raw_data:
-                additional_info = json.loads(raw_data)
-                error_message = additional_info.get('error', error_message)
-                if isinstance(error_message, dict) and 'type' in error_message:
-                    error_message = error_message['type']
-        except (ValueError, TypeError) as err:
-            logger.warning("Undecodable raw error response from server: %s", err)
-
-        raise HTTP_EXCEPTIONS.get(status_code, TransportError)(status_code, error_message, additional_info)
+        error_message = "Unknown error"
+        if isinstance(data, dict):
+            if 'message' in data:
+                error_message = data['message']
+            elif 'type' in data:
+                error_message = data['type']
+            elif 'code' in data:
+                error_message = data['code']
+        raise HTTP_EXCEPTIONS.get(status_code, TransportError)(status_code, error_message, data)
