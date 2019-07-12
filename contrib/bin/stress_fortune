@@ -131,7 +131,7 @@ def _task(args):
                                 sys.stderr.write(self.err['BadResponse'])
                             else:
                                 content = msgpack.loads(exc_val.response.content)
-                                message = content.get('#message', [content])[0]
+                                message = content.get('message', [content])[0]
                                 print('\n{}: {}'.format(exc_val, message), file=sys.stderr)
                         elif issubclass(exc_type, NotFoundError):
                             if self.dne:
