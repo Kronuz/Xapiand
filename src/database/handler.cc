@@ -1070,11 +1070,13 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		sorter = query_object.get_sorter(value);
 	}
 
-	if (qdsl && qdsl->find(RESERVED_QUERYDSL_QUERY) != qdsl->end()) {
-		query = query_object.get_query(qdsl->at(RESERVED_QUERYDSL_QUERY));
-	} else {
-		query = query_object.get_query(query_object.make_dsl_query(query_field));
-	}
+	auto qdsl_query = (qdsl && qdsl->find(RESERVED_QUERYDSL_QUERY) != qdsl->end())
+		? qdsl->at(RESERVED_QUERYDSL_QUERY)
+		: query_object.make_dsl_query(query_field);
+	L_DEBUG("qdsl: {}", qdsl_query.to_string());
+
+	query = query_object.get_query(qdsl_query);
+	L_DEBUG("query: {}", query.get_description());
 
 	if (qdsl && qdsl->find(RESERVED_QUERYDSL_OFFSET) != qdsl->end()) {
 		auto value = qdsl->at(RESERVED_QUERYDSL_OFFSET);
@@ -1102,8 +1104,6 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 			THROW(ClientError, "The {} must be a unsigned int", RESERVED_QUERYDSL_CHECK_AT_LEAST);
 		}
 	}
-
-	L_DEBUG("query: {}", query.get_description());
 
 	// Configure sorter.
 	if (!query_field.sort.empty()) {
