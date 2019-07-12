@@ -2166,7 +2166,7 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 				THROW(ClientError, "Data inconsistency, 'number_of_shards' must be integer");
 			}
 		} else if (writable) {
-			if (strict && index_settings.shards.empty()) {
+			if (strict && !index_settings.loaded) {
 				THROW(MissingTypeError, "Value of 'number_of_shards' is missing");
 			}
 		}
@@ -2183,7 +2183,7 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 				THROW(ClientError, "Data inconsistency, 'number_of_replicas' must be numeric");
 			}
 		} else if (writable) {
-			if (strict && index_settings.shards.empty()) {
+			if (strict && !index_settings.loaded) {
 				THROW(MissingTypeError, "Value of 'number_of_replicas' is missing");
 			}
 		}
@@ -2210,9 +2210,10 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 			index_settings.num_shards = num_shards;
 			index_settings.modified = true;
 			index_settings.saved = false;
+			index_settings.shards.clear();
 		}
 	} else if (writable) {
-		if (strict && index_settings.shards.empty()) {
+		if (strict && !index_settings.loaded) {
 			THROW(MissingTypeError, "Index settings are missing");
 		}
 	}
