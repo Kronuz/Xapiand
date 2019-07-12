@@ -2356,7 +2356,7 @@ DocPreparer::operator()()
 				std::string{},
 				Xapian::Document{},
 				MsgPack{
-					{ RESPONSE_CODE, static_cast<unsigned>(http_errors.error_code) },
+					{ RESPONSE_STATUS, static_cast<unsigned>(http_errors.error_code) },
 					{ RESPONSE_TYPE, http_status_str(http_errors.error_code) },
 					{ RESPONSE_MESSAGE, http_errors.error }
 				},
@@ -2500,7 +2500,7 @@ DocIndexer::operator()()
 							return 0;
 						});
 						if (http_errors.error_code != HTTP_STATUS_OK) {
-							obj[RESPONSE_CODE] = static_cast<unsigned>(http_errors.error_code);
+							obj[RESPONSE_STATUS] = static_cast<unsigned>(http_errors.error_code);
 							obj[RESPONSE_TYPE] = http_status_str(http_errors.error_code);
 							obj[RESPONSE_MESSAGE] = http_errors.error;
 						}

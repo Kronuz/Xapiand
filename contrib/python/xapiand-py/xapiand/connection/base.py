@@ -138,8 +138,10 @@ class Connection(object):
         if isinstance(data, dict):
             if 'message' in data:
                 error_message = data['message']
+            elif 'code' in data:
+                error_message = "Error Code: {}".format(data['code'])
             elif 'type' in data:
                 error_message = data['type']
-            elif 'code' in data:
-                error_message = data['code']
+            elif 'status' in data:
+                error_message = "Status Code: {}".format(data['status'])
         raise HTTP_EXCEPTIONS.get(status_code, TransportError)(status_code, error_message, data)

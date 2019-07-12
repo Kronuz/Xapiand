@@ -2666,7 +2666,7 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 	L_CALL("HttpClient::write_status_response()");
 
 	MsgPack response({
-		{ RESPONSE_CODE, static_cast<unsigned>(status) },
+		{ RESPONSE_STATUS, static_cast<unsigned>(status) },
 		{ RESPONSE_TYPE, http_status_str(status) },
 	});
 	if (!message.empty()) {
@@ -3412,7 +3412,7 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 		} else {
 			write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE, MsgPack({
-				{ RESPONSE_CODE, static_cast<unsigned>(HTTP_STATUS_NOT_ACCEPTABLE) },
+				{ RESPONSE_STATUS, static_cast<unsigned>(HTTP_STATUS_NOT_ACCEPTABLE) },
 				{ RESPONSE_TYPE, http_status_str(HTTP_STATUS_NOT_ACCEPTABLE) },
 				{ RESPONSE_MESSAGE, { MsgPack({ exc.what() }) } }
 			}), location);
