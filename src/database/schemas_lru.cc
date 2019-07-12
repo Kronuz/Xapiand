@@ -49,6 +49,9 @@
 using namespace std::chrono_literals;
 
 
+static const MsgPack non_strict({{ RESERVED_STRICT, false }});
+
+
 template <typename ErrorType>
 static inline std::pair<const MsgPack*, const MsgPack*>
 validate_schema(const MsgPack& object, const char* prefix, std::string& foreign_uri, std::string& foreign_path, std::string& foreign_id)
@@ -158,7 +161,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		THROW(ClientError, "Cyclic schema reference detected: {}", endpoint.to_string());
 	}
 	try {
-		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
+		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true, false, &non_strict);
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
