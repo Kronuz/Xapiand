@@ -345,13 +345,8 @@ HttpClient::handled_errors(Request& request, Func&& func)
 			// There was an error, but request already had written stuff...
 			// disconnect client!
 			detach();
-		} else if (request.comments) {
-			write_http_response(request, http_errors.error_code, MsgPack({
-				{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-				{ RESPONSE_xMESSAGE, strings::split(http_errors.error, '\n') }
-			}));
 		} else {
-			write_http_response(request, http_errors.error_code);
+			write_status_response(request, http_errors.error_code, http_errors.error);
 		}
 		request.atom_ending = true;
 	}
@@ -479,7 +474,6 @@ HttpClient::on_read(const char* buf, ssize_t received)
 	L_HTTP_WIRE("HttpClient::on_read: {} bytes", received);
 	ssize_t parsed = http_parser_execute(&new_request->parser, &parser_settings, buf, received);
 	if (parsed != received) {
-		enum http_status error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
 		if (err == HPE_INVALID_METHOD) {
 			if (new_request->response.status == static_cast<http_status>(0)) {
@@ -490,14 +484,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 			std::string message(http_errno_description(err));
 			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
 			if (new_request->response.status == static_cast<http_status>(0)) {
-				if (new_request->comments) {
-					write_http_response(*new_request, error_code, MsgPack({
-						{ RESPONSE_xSTATUS, (int)error_code },
-						{ RESPONSE_xMESSAGE, strings::split(message, '\n') }
-					}));
-				} else {
-					write_http_response(*new_request, error_code);
-				}
+				write_status_response(*new_request, HTTP_STATUS_BAD_REQUEST, message);
 				end_http_request(*new_request);
 			}
 		}
@@ -1013,15 +1000,7 @@ HttpClient::prepare()
 
 	new_request->type_encoding = resolve_encoding(*new_request);
 	if (new_request->type_encoding == Encoding::unknown) {
-		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		if (new_request->comments) {
-			write_http_response(*new_request, error_code, MsgPack({
-				{ RESPONSE_xSTATUS, (int)error_code },
-				{ RESPONSE_xMESSAGE, { MsgPack({ "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header" }) } }
-			}));
-		} else {
-			write_http_response(*new_request, error_code);
-		}
+		write_status_response(*new_request, HTTP_STATUS_NOT_ACCEPTABLE, "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header");
 		return 1;
 	}
 
@@ -2199,15 +2178,7 @@ HttpClient::dump_database_view(Request& request)
 	auto& ct_type = resolve_ct_type(request);
 	if (ct_type.empty()) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
-		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		if (request.comments) {
-			write_http_response(request, error_code, MsgPack({
-				{ RESPONSE_xSTATUS, (int)error_code },
-				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
-			}));
-		} else {
-			write_http_response(request, error_code);
-		}
+		write_status_response(request, HTTP_STATUS_NOT_ACCEPTABLE, "Response type not accepted by the Accept header");
 		return;
 	}
 
@@ -2414,15 +2385,7 @@ HttpClient::retrieve_document_view(Request& request)
 	auto accepted = data.get_accepted(request.accept_set, selector_mime_type);
 	if (accepted.first == nullptr) {
 		// No content type could be resolved, return NOT ACCEPTABLE.
-		enum http_status error_code = HTTP_STATUS_NOT_ACCEPTABLE;
-		if (request.comments) {
-			write_http_response(request, error_code, MsgPack({
-				{ RESPONSE_xSTATUS, (int)error_code },
-				{ RESPONSE_xMESSAGE, { MsgPack({ "Response type not accepted by the Accept header" }) } }
-			}));
-		} else {
-			write_http_response(request, error_code);
-		}
+		write_status_response(request, HTTP_STATUS_NOT_ACCEPTABLE, "Response type not accepted by the Accept header");
 		return;
 	}
 
@@ -2702,14 +2665,14 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 {
 	L_CALL("HttpClient::write_status_response()");
 
-	if (request.comments) {
-		write_http_response(request, status, MsgPack({
-			{ RESPONSE_xSTATUS, (int)status },
-			{ RESPONSE_xMESSAGE, message.empty() ? MsgPack({ http_status_str(status) }) : strings::split(message, '\n') }
-		}));
-	} else {
-		write_http_response(request, status);
+	MsgPack response({
+		{ RESPONSE_CODE, static_cast<unsigned>(status) },
+		{ RESPONSE_TYPE, http_status_str(status) },
+	});
+	if (!message.empty()) {
+		response[RESPONSE_MESSAGE] = message;
 	}
+	write_http_response(request, status, response);
 }
 
 
@@ -3448,14 +3411,11 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
 			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 		} else {
-			if (request.comments) {
-				write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE, MsgPack({
-					{ RESPONSE_xSTATUS, (int)HTTP_STATUS_NOT_ACCEPTABLE },
-					{ RESPONSE_xMESSAGE, { MsgPack({ exc.what() }) } }
-				}), location);
-			} else {
-				write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE);
-			}
+			write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE, MsgPack({
+				{ RESPONSE_CODE, static_cast<unsigned>(HTTP_STATUS_NOT_ACCEPTABLE) },
+				{ RESPONSE_TYPE, http_status_str(HTTP_STATUS_NOT_ACCEPTABLE) },
+				{ RESPONSE_MESSAGE, { MsgPack({ exc.what() }) } }
+			}), location);
 		}
 		return;
 	}

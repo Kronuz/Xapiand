@@ -2355,10 +2355,11 @@ DocPreparer::operator()()
 			std::make_tuple(
 				std::string{},
 				Xapian::Document{},
-				indexer->comments ? MsgPack{
-					{ RESPONSE_xSTATUS, static_cast<unsigned>(http_errors.error_code) },
-					{ RESPONSE_xMESSAGE, strings::split(http_errors.error, '\n') }
-				} : MsgPack::MAP(),
+				MsgPack{
+					{ RESPONSE_CODE, static_cast<unsigned>(http_errors.error_code) },
+					{ RESPONSE_TYPE, http_status_str(http_errors.error_code) },
+					{ RESPONSE_MESSAGE, http_errors.error }
+				},
 				idx
 			)
 		)) {
@@ -2499,10 +2500,9 @@ DocIndexer::operator()()
 							return 0;
 						});
 						if (http_errors.error_code != HTTP_STATUS_OK) {
-							if (comments) {
-								obj[RESPONSE_xSTATUS] = static_cast<unsigned>(http_errors.error_code);
-								obj[RESPONSE_xMESSAGE] = strings::split(http_errors.error, '\n');
-							}
+							obj[RESPONSE_CODE] = static_cast<unsigned>(http_errors.error_code);
+							obj[RESPONSE_TYPE] = http_status_str(http_errors.error_code);
+							obj[RESPONSE_MESSAGE] = http_errors.error;
 						}
 					} else if (!data_obj.is_undefined()) {
 						obj = std::move(data_obj);

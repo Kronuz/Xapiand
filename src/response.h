@@ -29,8 +29,9 @@ constexpr const char RESPONSE_xWEIGHT[]                     = "#weight";
 constexpr const char RESPONSE_xPERCENT[]                    = "#percent";
 constexpr const char RESPONSE_xENDPOINT[]                   = "#endpoint";
 
-constexpr const char RESPONSE_xMESSAGE[]                    = "#message";
-constexpr const char RESPONSE_xSTATUS[]                     = "#status";
+constexpr const char RESPONSE_CODE[]                        = "status";
+constexpr const char RESPONSE_TYPE[]                        = "type";
+constexpr const char RESPONSE_MESSAGE[]                     = "message";
 
 // Reserved words only used in the responses to the user.
 constexpr const char RESPONSE_TOTAL[]                       = "total";
@@ -70,7 +71,6 @@ constexpr const char RESPONSE_RAW_DATA[]                    = "raw_data";
 constexpr const char RESPONSE_TERMS[]                       = "terms";
 constexpr const char RESPONSE_VALUES[]                      = "values";
 
-constexpr const char RESPONSE_TYPE[]                        = "type";
 constexpr const char RESPONSE_CONTENT_TYPE[]                = "content_type";
 constexpr const char RESPONSE_VOLUME[]                      = "volume";
 constexpr const char RESPONSE_OFFSET[]                      = "offset";
