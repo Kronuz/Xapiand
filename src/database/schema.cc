@@ -4645,7 +4645,6 @@ Schema::set_type_to_object()
 
 	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
-			// Object type is always autodetected (even in strict mode)
 			specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::object;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 			mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
@@ -4663,9 +4662,6 @@ Schema::set_type_to_array()
 
 	if (!specification.flags.is_namespace) {
 		if (specification.sep_types[SPC_ARRAY_TYPE] == FieldType::empty) {
-			if (specification.flags.strict) {
-				THROW(MissingTypeError, "Type of field {} is not an array", specification.full_meta_name.empty() ? "<root>" : repr(specification.full_meta_name));
-			}
 			specification.sep_types[SPC_ARRAY_TYPE] = FieldType::array;
 			auto& mut_properties = get_mutable_properties(specification.full_meta_name);
 			mut_properties[RESERVED_TYPE] = _get_str_type(specification.sep_types);
