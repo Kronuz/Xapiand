@@ -43,19 +43,20 @@ class Stox {
 
 	template <typename T, typename... Args>
 	auto _stox(std::true_type, const std::string_view& str, std::size_t* idx, Args&&... args) noexcept {
-		char b[64]{};
-		std::strncpy(b, str.data(), std::min(str.size(), sizeof(b) - 1));
-		auto e = b + str.size();
-		auto ptr = const_cast<char*>(e);
-		auto r = func(b, &ptr, std::forward<Args>(args)...);
+		char buf[64]{};
+		size_t size = std::min(str.size(), sizeof(buf) - 1);
+		std::strncpy(buf, str.data(), size);
+		auto end = buf + size;
+		auto ptr = const_cast<char*>(end);
+		auto r = func(buf, &ptr, std::forward<Args>(args)...);
 		if (errno) return static_cast<decltype(r)>(0);
-		if (ptr == b) {
+		if (ptr == buf) {
 			errno = EINVAL;
 			return static_cast<decltype(r)>(0);
 		}
 		if (idx) {
-			*idx = static_cast<size_t>(ptr - b);
-		} else if (ptr != e) {
+			*idx = static_cast<size_t>(ptr - buf);
+		} else if (ptr != end || size != str.size()) {
 			errno = EINVAL;
 			return static_cast<decltype(r)>(0);
 		}
