@@ -514,6 +514,8 @@ struct specification_t : required_spc_t {
 	std::unique_ptr<const MsgPack> script;
 #endif
 
+	std::unique_ptr<const MsgPack> meta;
+
 	std::string endpoint;
 
 	// Used to save the last meta name.
@@ -861,6 +863,7 @@ class Schema {
 	 * Functions for reserved words that are in the document.
 	 */
 
+	void process_meta(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_data(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_weight(std::string_view prop_name, const MsgPack& prop_obj);
 	void process_position(std::string_view prop_name, const MsgPack& prop_obj);

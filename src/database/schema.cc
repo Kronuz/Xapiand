@@ -6160,6 +6160,7 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	L_CALL("Schema::_dispatch_feed_properties({})", value.to_string());
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
 		hh(RESERVED_SPELLING),
@@ -6202,6 +6203,8 @@ Schema::_dispatch_feed_properties(uint32_t key, const MsgPack& value)
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_META):
+			return true;
 		case _.fhh(RESERVED_WEIGHT):
 			Schema::feed_weight(value);
 			return true;
@@ -6427,6 +6430,7 @@ inline bool
 has_dispatch_process_concrete_properties(uint32_t key)
 {
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6503,6 +6507,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	L_CALL("Schema::_dispatch_process_concrete_properties({})", repr(prop_name));
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6572,6 +6577,9 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_META):
+			Schema::process_meta(prop_name, value);
+			return true;
 		case _.fhh(RESERVED_DATA):
 			Schema::process_data(prop_name, value);
 			return true;
@@ -7553,6 +7561,7 @@ Schema::write_meta(MsgPack& mut_properties, std::string_view prop_name, const Ms
 	// RESERVED_META property is heritable and can change between documents.
 	L_CALL("Schema::write_meta({})", repr(prop_obj.to_string()));
 
+	process_meta(prop_name, prop_obj);
 	mut_properties[prop_name] = prop_obj;
 }
 
@@ -8169,6 +8178,16 @@ Schema::process_error(std::string_view prop_name, const MsgPack& prop_obj)
 	} else {
 		THROW(ClientError, "Data inconsistency, {} must be a double", repr(prop_name));
 	}
+}
+
+
+void
+Schema::process_meta(std::string_view, const MsgPack& prop_obj)
+{
+	// RESERVED_POSITION is heritable and can change between documents.
+	L_CALL("Schema::process_meta({})", repr(prop_obj.to_string()));
+
+	specification.meta = std::make_unique<const MsgPack>(prop_obj);
 }
 
 
