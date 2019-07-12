@@ -25,6 +25,7 @@
 #include <algorithm>                // for std::any_of
 #include <errno.h>                  // for errno
 #include <fnmatch.h>                // for fnmatch
+#include <limits.h>                 // for PATH_MAX
 #include <stdio.h>                  // for rename
 #include <sys/stat.h>               // for stat, mkdir
 #include <unistd.h>                 // for rmdir
