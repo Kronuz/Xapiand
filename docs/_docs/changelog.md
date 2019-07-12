@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.26.0] - 2019-07-12
+{: #v0-26-0 }
+
+### Changed
+- **BREAKING**: Errors returned with `status` and `message` (no hash `#`)
+
+### Fixed
+- Fixed `_meta` producing errors when passed to `POST`, `PUT` or `UPDATE`
+
+
+---
 ## [0.25.0] - 2019-07-11
 {: #v0-25-0 }
 
@@ -797,7 +808,8 @@ data associated with it)
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.25.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.26.0...HEAD
+[0.26.0]: https://github.com/Kronuz/Xapiand/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/Kronuz/Xapiand/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/Kronuz/Xapiand/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/Kronuz/Xapiand/compare/v0.22.2...v0.23.0
