@@ -168,7 +168,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = _db_handler.update(id.substr(0, needle), version, false, MsgPack({
+		auto updated = _db_handler.update(id.substr(0, needle), version, false, true, MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, schema },
 		}), false, msgpack_type);

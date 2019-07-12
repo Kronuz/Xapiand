@@ -713,7 +713,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 						{ RESERVED_VALUE, local_node->name() },
 					} },
 				});
-				db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, obj, false, msgpack_type);
+				db_handler.update(local_node->lower_name(), UNKNOWN_REVISION, false, true, obj, false, msgpack_type);
 				_new_cluster = 1;
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
@@ -1794,7 +1794,7 @@ save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_pl
 				{ RESERVED_VALUE, shard.nodes },
 			} },
 		});
-		auto info = db_handler.update(unsharded_normalized_path, shard.version, false, obj, false, msgpack_type).first;
+		auto info = db_handler.update(unsharded_normalized_path, shard.version, false, true, obj, false, msgpack_type).first;
 		shard.version = info.version;
 		shard.modified = false;
 	}
@@ -1839,7 +1839,7 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 						{ RESERVED_TYPE,  "array/keyword" },
 					} },
 				});
-				auto info = db_handler.update(unsharded_normalized_path, index_settings.version, false, obj, false, msgpack_type).first;
+				auto info = db_handler.update(unsharded_normalized_path, index_settings.version, false, true, obj, false, msgpack_type).first;
 				index_settings.version = info.version;
 				index_settings.modified = false;
 			}

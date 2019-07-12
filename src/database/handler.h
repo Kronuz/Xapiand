@@ -112,8 +112,8 @@ public:
 	std::tuple<std::string, Xapian::Document, MsgPack> prepare(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, const ct_type_t& ct_type);
 
 	DocumentInfo index(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
-	DocumentInfo patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit);
-	DocumentInfo update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type);
+	DocumentInfo patch(const MsgPack& document_id, Xapian::rev document_ver, bool create, const MsgPack& patches, bool commit);
+	DocumentInfo update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type);
 
 	void update_schema(const MsgPack& obj);
 	void write_schema(const MsgPack& obj);

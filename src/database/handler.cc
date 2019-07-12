@@ -495,7 +495,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 
 
 DocumentInfo
-DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, const MsgPack& patches, bool commit)
+DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, bool create, const MsgPack& patches, bool commit)
 {
 	L_CALL("DatabaseHandler::patch({}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit);
 
@@ -523,7 +523,14 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 				did = current_document.get_docid();
 				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
 			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {}
+				if (!create) {
+					throw;
+				}
+			} catch (const Xapian::DatabaseNotFoundError&) {
+				if (!create) {
+					throw;
+				}
+			}
 			auto obj = data.get_obj();
 			obj.erase(VERSION_FIELD_NAME);  // discard any saved version
 
@@ -544,7 +551,7 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, con
 
 
 DocumentInfo
-DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, const MsgPack& body, bool commit, const ct_type_t& ct_type)
+DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bool stored, bool create, const MsgPack& body, bool commit, const ct_type_t& ct_type)
 {
 	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, enum_name(body.get_type()), commit, ct_type.first, ct_type.second);
 
@@ -568,7 +575,14 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 				did = current_document.get_docid();
 				data = Data(current_document.get_data(), current_document.get_value(DB_SLOT_VERSION));
 			} catch (const Xapian::DocNotFoundError&) {
-			} catch (const Xapian::DatabaseNotFoundError&) {}
+				if (!create) {
+					throw;
+				}
+			} catch (const Xapian::DatabaseNotFoundError&) {
+				if (!create) {
+					throw;
+				}
+			}
 			auto obj = data.get_obj();
 			obj.erase(VERSION_FIELD_NAME);  // discard any saved version
 
