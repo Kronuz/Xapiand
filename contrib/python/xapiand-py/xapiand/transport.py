@@ -219,6 +219,8 @@ class Transport(object):
         except Exception:
             # keep the previous value on error
             self.last_sniff = previous_sniff
+            if initial:
+                return []
             raise
 
         return node_info['nodes']
@@ -249,6 +251,8 @@ class Transport(object):
         # we weren't able to get any nodes or node_info_callback blocked all -
         # raise error.
         if not hosts:
+            if initial:
+                return
             raise TransportError("N/A", "Unable to sniff hosts - no viable hosts found.")
 
         self.set_connections(hosts)
