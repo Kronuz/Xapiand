@@ -645,15 +645,17 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	assert(db_handler);
 	assert(!db_handler->endpoints.empty());
 
+	bool writable = false;
 	const MsgPack* schema_obj = nullptr;
 	if (obj && obj->is_map()) {
 		const auto it = obj->find(RESERVED_SCHEMA);
 		if (it != obj->end()) {
+			writable = (db_handler->flags & DB_WRITABLE) == DB_WRITABLE;
 			schema_obj = &it.value();
 		}
 	}
 
-	auto up = _update("GET: ", false, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
+	auto up = _update("GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
 	auto schema_ptr = std::get<1>(up);
 	auto local_schema_path = std::get<2>(up);
 	auto foreign_uri = std::get<3>(up);
@@ -689,7 +691,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 		if (retry) {
 			L_SCHEMA("GET: " + DARK_CORAL + "Schema {} is outdated, try reloading {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
-			up = _update("RETRY GET: ", false, nullptr, schema_obj, db_handler->endpoints, DB_WRITABLE, db_handler->context);
+			up = _update("RETRY GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_WRITABLE, db_handler->context);
 			schema_ptr = std::get<1>(up);
 			local_schema_path = std::get<2>(up);
 			foreign_uri = std::get<3>(up);
