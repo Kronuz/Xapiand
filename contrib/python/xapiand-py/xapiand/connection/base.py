@@ -110,8 +110,8 @@ class Connection(object):
             "%s %s [status:%s request:%.3fs]", method, full_url,
             status_code, duration
         )
-        logger.debug('> %r', body)
-        logger.debug('< %r', response)
+        logger.debug('> %s', self._pretty_json(body, body_content_type))
+        logger.debug('< %s', self._pretty_json(response, response_content_type))
 
         self._log_trace(method, path, body, body_content_type, status_code, response, response_content_type, duration)
 
@@ -125,12 +125,12 @@ class Connection(object):
             status_code or "N/A", duration, exc_info=exception is not None
         )
 
-        logger.debug('> %r', body)
+        logger.debug('> %s', self._pretty_json(body, body_content_type))
 
         self._log_trace(method, path, body, body_content_type, status_code, response, response_content_type, duration)
 
         if response is not None:
-            logger.debug('< %s', response)
+            logger.debug('< %s', self._pretty_json(response, response_content_type))
 
     def _raise_error(self, status_code, data):
         """ Locate appropriate exception and raise it. """
