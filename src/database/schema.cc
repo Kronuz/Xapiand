@@ -9813,11 +9813,26 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 	const auto it_e = field_names.end();
 	const auto it_b = field_names.begin();
 	for (auto it = it_b; it != it_e; ++it) {
+		std::string default_prefix;
 		auto field_name = *it;
 		if (!is_valid(field_name)) {
 			// Check if the field_name is accuracy.
 			if (it == it_b) {
-				if (!has_dispatch_set_default_spc(hh(field_name))) {
+				auto key = hh(field_name);
+				if (has_dispatch_set_default_spc(key)) {
+					constexpr static auto _ = phf::make_phf({
+						hh(ID_FIELD_NAME),
+						hh(VERSION_FIELD_NAME),
+					});
+					switch (_.find(key)) {
+						case _.fhh(ID_FIELD_NAME):
+							default_prefix = DOCUMENT_ID_TERM_PREFIX;
+							break;
+						case _.fhh(VERSION_FIELD_NAME):
+							default_prefix = DOCUMENT_VERSION_TERM_PREFIX;
+							break;
+					}
+				} else {
 					if (++it == it_e) {
 						auto acc_data = _get_acc_data(field_name);
 						spc.prefix.append(acc_data.first);
@@ -9851,7 +9866,7 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 					THROW(Error, "Schema is corrupt: '{}' is not valid.", RESERVED_PREFIX);
 				}
 			} else {
-				spc.prefix.append(get_prefix(field_name));
+				spc.prefix.append(default_prefix.empty() ? get_prefix(field_name) : default_prefix);
 			}
 			// Get namespace:
 			auto namespace_it = spc.properties->find(RESERVED_NAMESPACE);
@@ -9874,10 +9889,10 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 					}
 					spc.prefix.append(prefix_uuid);
 				} catch (const SerialisationError&) {
-					spc.prefix.append(get_prefix(field_name));
+					spc.prefix.append(default_prefix.empty() ? get_prefix(field_name) : default_prefix);
 				}
 			} else {
-				spc.prefix.append(get_prefix(field_name));
+				spc.prefix.append(default_prefix.empty() ? get_prefix(field_name) : default_prefix);
 			}
 
 			// It is a search using partial prefix.
@@ -9894,10 +9909,10 @@ Schema::get_dynamic_subproperties(const MsgPack& properties, std::string_view fu
 							spc.prefix.append(Serialise::uuid(partial_field));
 							spc.has_uuid_prefix = true;
 						} catch (const SerialisationError&) {
-							spc.prefix.append(get_prefix(partial_field));
+							spc.prefix.append(default_prefix.empty() ? get_prefix(partial_field) : default_prefix);
 						}
 					} else {
-						spc.prefix.append(get_prefix(partial_field));
+						spc.prefix.append(default_prefix.empty() ? get_prefix(partial_field) : default_prefix);
 					}
 				} else if (++it == it_e) {
 					auto acc_data = _get_acc_data(partial_field);
