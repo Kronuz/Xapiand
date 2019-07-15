@@ -81,7 +81,7 @@ class RequestsHttpConnection(Connection):
     def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None):
         full_url = self.base_url + url
         if params:
-            full_url = '%s?%s' % (full_url, urlencode(params or {}))
+            full_url = '%s?%s' % (full_url, urlencode(params, doseq=True))
 
         body_content_type = headers.get('content-type')
         start = time.time()

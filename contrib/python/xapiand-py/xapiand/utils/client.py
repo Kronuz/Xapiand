@@ -91,9 +91,12 @@ def query_params(*accepted_params):
                 params = kwargs.pop('params').copy()
             for p in accepted_params + GLOBAL_PARAMS:
                 if p in kwargs:
-                    v = kwargs.pop(p)
-                    if v is not None:
-                        params[p] = _escape(v)
+                    value = kwargs.pop(p)
+                    if value is not None:
+                        if isinstance(value, (list, tuple)):
+                            params[p] = [_escape(v) for v in value]
+                        else:
+                            params[p] = _escape(value)
 
             # don't treat ignore and request_timeout as other params to avoid escaping
             for p in ('ignore', 'request_timeout'):

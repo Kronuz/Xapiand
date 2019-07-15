@@ -158,10 +158,10 @@ class Urllib3HttpConnection(Connection):
         self.pool = pool_class(host, port=port, timeout=self.timeout, maxsize=maxsize, **kw)
 
     def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None):
-        url = self.url_prefix + url
+        full_url = self.url_prefix + url
         if params:
-            url = '%s?%s' % (url, urlencode(params))
-        full_url = self.host + url
+            full_url = '%s?%s' % (full_url, urlencode(params, doseq=True))
+        full_url = self.host + full_url
 
         start = time.time()
         try:
@@ -172,8 +172,8 @@ class Urllib3HttpConnection(Connection):
             # in python2 we need to make sure the url and method are not
             # unicode. Otherwise the body will be decoded into unicode too and
             # that will fail (#133, #201).
-            if not isinstance(url, str):
-                url = url.encode('utf-8')
+            if not isinstance(full_url, str):
+                full_url = full_url.encode('utf-8')
             if not isinstance(method, str):
                 method = method.encode('utf-8')
 
@@ -194,7 +194,7 @@ class Urllib3HttpConnection(Connection):
                 compressed_body = body
 
             body_content_type = request_headers.get('content-type')
-            response = self.pool.urlopen(method, url, compressed_body, retries=Retry(False), headers=request_headers, **kw)
+            response = self.pool.urlopen(method, full_url, compressed_body, retries=Retry(False), headers=request_headers, **kw)
             duration = time.time() - start
             status = response.status
             headers = response.getheaders()
@@ -202,7 +202,7 @@ class Urllib3HttpConnection(Connection):
             data_content_type = headers.get('content-type')
             data = deserializer.loads(raw_data, data_content_type) if raw_data and deserializer else raw_data
         except Exception as e:
-            self.log_request_fail(method, full_url, url, body, body_content_type, time.time() - start, exception=e)
+            self.log_request_fail(method, full_url, full_url, body, body_content_type, time.time() - start, exception=e)
             if isinstance(e, UrllibSSLError):
                 raise SSLError("N/A", str(e), e)
             if isinstance(e, ReadTimeoutError):
@@ -211,10 +211,10 @@ class Urllib3HttpConnection(Connection):
 
         # raise errors based on http status codes, let the client handle those if needed
         if not (200 <= status < 300) and status not in ignore:
-            self.log_request_fail(method, full_url, url, body, body_content_type, duration, status, raw_data, data_content_type)
+            self.log_request_fail(method, full_url, full_url, body, body_content_type, duration, status, raw_data, data_content_type)
             self._raise_error(status, data)
 
-        self.log_request_success(method, full_url, url, body, body_content_type, status, raw_data, data_content_type, duration)
+        self.log_request_success(method, full_url, full_url, body, body_content_type, status, raw_data, data_content_type, duration)
 
         return status, headers, data
 
