@@ -352,11 +352,13 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	auto from_revision = remote_revision;
 	if (from_revision && uuid != remote_uuid) {
+		L_REPLICATION("GET_CHANGESETS: UUID mismatch for {} ({} vs. {})", repr(endpoint_path), uuid, remote_uuid);
 		from_revision = 0;
 	}
 
 	wal = std::make_unique<DatabaseWAL>(endpoint_path);
-	if (from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
+	if (from_revision && db_revision != from_revision && wal->locate_revision(from_revision).first == DatabaseWAL::max_rev) {
+		L_REPLICATION("GET_CHANGESETS: Cannot locate revision {} for {}", from_revision, repr(endpoint_path));
 		from_revision = 0;
 	}
 
