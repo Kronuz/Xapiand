@@ -98,7 +98,6 @@ public:
 	DatabaseHandler();
 	DatabaseHandler(const Endpoints& endpoints_, int flags_ = 0, std::shared_ptr<std::unordered_set<std::string>> context_ = nullptr);
 
-	std::shared_ptr<Database> get_database() const noexcept;
 	std::shared_ptr<Schema> get_schema(const MsgPack* obj = nullptr);
 
 	void reset(const Endpoints& endpoints_, int flags_ = 0, const std::shared_ptr<std::unordered_set<std::string>>& context_ = nullptr);
@@ -117,6 +116,8 @@ public:
 
 	void update_schema(const MsgPack& obj);
 	void write_schema(const MsgPack& obj);
+
+	bool has_positions();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
 	Xapian::MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
@@ -192,6 +193,8 @@ class DocMatcher {
 	Xapian::rev revision;
 	Xapian::Enquire enquire;
 
+	bool full_db_has_positions;
+
 	std::atomic_size_t& pending;
 	std::condition_variable& ready;
 	size_t shard_num;
@@ -224,6 +227,7 @@ public:
 	std::exception_ptr eptr;
 
 	DocMatcher(
+		bool full_db_has_positions,
 		std::atomic_size_t& pending,
 		std::condition_variable& ready,
 		size_t shard_num,

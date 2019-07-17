@@ -759,6 +759,14 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	}
 
 	////////////////////////////////////////////////////////////////////////////
+	// Has positions
+
+	bool full_db_has_positions;
+	if (!unpack_bool(&p, p_end, &full_db_has_positions)) {
+		throw Xapian::NetworkError("bad message (full_db_has_positions)");
+	}
+
+	////////////////////////////////////////////////////////////////////////////
 	// Time limit
 
 	double time_limit = unserialise_double(&p, p_end);
@@ -862,7 +870,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	}
 
 	////////////////////////////////////////////////////////////////////////////
-	auto prepared_mset = _msg_query_enquire->prepare_mset(&rset, nullptr);
+	auto prepared_mset = _msg_query_enquire->prepare_mset(full_db_has_positions, &rset, nullptr);
 	send_message(RemoteReplyType::REPLY_STATS, prepared_mset.serialise_stats());
 
 	// Clear internal database, as it's going to be checked in.

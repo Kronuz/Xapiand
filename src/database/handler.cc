@@ -1191,6 +1191,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 
 DocMatcher::DocMatcher(
+	bool full_db_has_positions,
 	std::atomic_size_t& pending,
 	std::condition_variable& ready,
 	size_t shard_num,
@@ -1220,6 +1221,7 @@ DocMatcher::DocMatcher(
 	doccount(0),
 	revision(0),
 	enquire(Xapian::Database()),
+	full_db_has_positions(full_db_has_positions),
 	pending(pending),
 	ready(ready),
 	shard_num(shard_num),
@@ -1279,7 +1281,7 @@ DocMatcher::prepare_mset()
 					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
 				}
 				enquire.set_query(final_query);
-				mset = enquire.prepare_mset(nullptr, nullptr);
+				mset = enquire.prepare_mset(full_db_has_positions, nullptr, nullptr);
 				revision = db->get_revision();
 				doccount += db->get_doccount();
 				mset.set_database(Xapian::Database{});  // Make Enquire release the database
@@ -1388,6 +1390,46 @@ DocMatcher::operator()()
 }
 
 
+bool
+DatabaseHandler::has_positions()
+{
+	L_CALL("DatabaseHandler::has_positions()");
+
+	assert(!endpoints.empty());
+	auto valid = endpoints.size();
+	std::exception_ptr eptr;
+	for (auto& endpoint : endpoints) {
+		lock_shard lk_shard(endpoint, flags);
+		try {
+			auto db = lk_shard->db();
+			if (db->has_positions()) {
+				return true;
+			}
+		} catch (const Xapian::DatabaseOpeningError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkTimeoutError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::NetworkError&) {
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseClosedError&) {
+			lk_shard->do_close();
+			eptr = std::current_exception();
+			--valid;
+		} catch (const Xapian::DatabaseError&) {
+			lk_shard->do_close();
+			throw;
+		}
+	}
+	if (eptr && !valid) {
+		std::rethrow_exception(eptr);
+	}
+	return false;
+}
+
+
 Xapian::MSet
 DatabaseHandler::get_mset(
 	const Xapian::Query& query,
@@ -1410,6 +1452,8 @@ DatabaseHandler::get_mset(
 	if (query.empty()) {
 		return Xapian::MSet{};
 	}
+
+	 bool full_db_has_positions = has_positions();
 
 	Xapian::doccount doccount = 0;
 	Xapian::Enquire merger(Xapian::Database{});
@@ -1474,6 +1518,7 @@ DatabaseHandler::get_mset(
 
 		// Create matcher object:
 		auto matcher = std::make_shared<DocMatcher>(
+			full_db_has_positions,
 			pending,
 			ready,
 			shard_num,
