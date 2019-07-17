@@ -7,6 +7,16 @@ import re
 
 
 def main():
+    GENERATED_H = (
+        'xapian/languages/sbl-dispatch.h',
+        'xapian/languages/allsnowballheaders.h',
+        'xapian/queryparser/queryparser_token.h',
+        'xapian/unicode/c_istab.h',
+        'xapian/errordispatch.h',
+        'xapian/error.h',
+        'xapian/version.h',
+    )
+
     os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
     prefix_len = len(os.path.dirname(os.path.abspath('xapian'))) + 1
     for dirpath, dirnames, filenames in os.walk('xapian'):
@@ -21,15 +31,7 @@ def main():
                             for q in (dirpath, 'xapian/common', 'xapian', ''):
                                 tmp = os.path.abspath(os.path.join(q, include))
                                 tmp = tmp[prefix_len:]
-                                if os.path.exists(tmp) or tmp in (
-                                    'xapian/languages/sbl-dispatch.h',
-                                    'xapian/languages/allsnowballheaders.h',
-                                    'xapian/queryparser/queryparser_token.h',
-                                    'xapian/unicode/c_istab.h',
-                                    'xapian/errordispatch.h',
-                                    'xapian/error.h',
-                                    'xapian/version.h',
-                                ):
+                                if os.path.exists(tmp) or tmp in GENERATED_H:
                                     # parents = ''
                                     # basepath = dirpath
                                     # while basepath:
@@ -60,7 +62,7 @@ def main():
 
     def fn(m):
         include = m.group(3)
-        if not os.path.exists(include):
+        if not os.path.exists(include) and include not in GENERATED_H:
             print('xapian.h')
             print("  Include not found:", m.group(2))
         return m.group(1) + '"' + include + '"'
