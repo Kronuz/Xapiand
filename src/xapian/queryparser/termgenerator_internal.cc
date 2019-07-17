@@ -288,6 +288,9 @@ TermGenerator::Internal::index_text(Utf8Iterator itor, termcount wdf_inc,
     }
 #endif
     unsigned cjk_flags = flags & (FLAG_CJK_NGRAM | FLAG_CJK_WORDS);
+    if (cjk_flags == 0 && CJK::is_cjk_enabled()) {
+	cjk_flags = FLAG_CJK_NGRAM;
+    }
 
     stop_strategy current_stop_mode;
     if (!stopper.get()) {
@@ -763,6 +766,9 @@ MSet::Internal::snippet(const string & text,
 #endif
     auto SNIPPET_CJK_MASK = MSet::SNIPPET_CJK_NGRAM | MSet::SNIPPET_CJK_WORDS;
     unsigned cjk_flags = flags & SNIPPET_CJK_MASK;
+    if (cjk_flags == 0 && CJK::is_cjk_enabled()) {
+	cjk_flags = MSet::SNIPPET_CJK_NGRAM;
+    }
 
     size_t term_start = 0;
     double min_tw = 0, max_tw = 0;
@@ -887,10 +893,11 @@ MSet::Internal::snippet(const string & text,
 		// FIXME: Sort fuzzies, cheapest to check first or something?
 		i = 0;
 		for (auto&& qed : fuzzies) {
-		    int result = qed->test(term);
-		    if (result) {
+		    // test() returns 0 for no match, or edit_distance + 1.
+		    int ed_result = qed->test(term);
+		    if (ed_result) {
 			// FIXME: Reduce relevance the more edits there are?
-			// We can't just divide by result here as this
+			// We can't just divide by ed_result here as this
 			// relevance is used by any term matching this
 			// subquery.
 			relevance = &fuzzies_relevance[i];

@@ -1,7 +1,7 @@
 /** @file database.h
  * @brief An indexed database of documents
  */
-/* Copyright 2003,2004,2005,2006,2007,2008,2009,2011,2012,2013,2014,2015,2016,2017,2018 Olly Betts
+/* Copyright 2003,2004,2005,2006,2007,2008,2009,2011,2012,2013,2014,2015,2016,2017,2018,2019 Olly Betts
  * Copyright 2007,2008,2009 Lemur Consulting Ltd
  *
  * This program is free software; you can redistribute it and/or
@@ -42,15 +42,6 @@
 #include "xapian/visibility.h"
 
 namespace Xapian {
-
-struct DocumentInfo {
-    Xapian::docid did;
-    Xapian::rev version;
-    std::string term;
-
-    DocumentInfo() : did(0), version(0) { }
-    DocumentInfo(Xapian::docid did) : did(did), version(0) { }
-};
 
 class Compactor;
 class Document;
@@ -99,12 +90,12 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
     /// Class representing the Database internals.
     class Internal;
     /// @private @internal Reference counted internals.
-    Xapian::Internal::internal_intrusive_ptr<Internal, Database> internal;
+    Xapian::Internal::intrusive_ptr_nonnull<Internal> internal;
 
     /** Add shards from another Database.
      *
-     *  Any shards in @a other are added to the list of shards in this object.
-     *  The shards are reference counted and also remain in @a other.
+     *  Any shards in @a other are appended to the list of shards in this
+     *  object.  The shards are reference counted and also remain in @a other.
      *
      *  @param other	Another Database to add shards from
      *
@@ -114,6 +105,9 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
     void add_database(const Database& other) {
 	add_database_(other, true);
     }
+
+    /** Return number of shards in this Database object. */
+    size_t size() const;
 
     /** Construct a Database containing no shards.
      *
@@ -1135,7 +1129,7 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
      *
      *  @return The document ID allocated to the document.
      */
-    Xapian::DocumentInfo add_document(const Xapian::Document& doc);
+    Xapian::docid add_document(const Xapian::Document& doc);
 
     /** Delete a document from the database.
      *
@@ -1190,8 +1184,7 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
      *  @param did      The document ID of the document to be replaced.
      *  @param document The new document.
      */
-    Xapian::DocumentInfo replace_document(Xapian::docid did,
-					  const Xapian::Document& document);
+    void replace_document(Xapian::docid did, const Xapian::Document& document);
 
     /** Replace any documents matching a term.
      *
@@ -1221,8 +1214,8 @@ class XAPIAN_VISIBILITY_DEFAULT WritableDatabase : public Database {
      *		     Previously automatic commits could happen during the
      *		     batch.
      */
-    Xapian::DocumentInfo replace_document(const std::string& unique_term,
-					  const Xapian::Document& document);
+    Xapian::docid replace_document(const std::string& unique_term,
+				   const Xapian::Document& document);
 
     /** Add a word to the spelling dictionary.
      *

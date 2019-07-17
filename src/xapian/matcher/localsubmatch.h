@@ -75,10 +75,6 @@ class LocalSubMatch {
 	  full_db_has_positions(full_db_has_positions_)
     {}
 
-    void set_database(const Xapian::Database& db_) {
-	db = db_.internal.get();
-    }
-
     /** Fetch and collate statistics.
      *
      *  Before we can calculate term weights we need to fetch statistics from

@@ -381,19 +381,19 @@ class Database::Internal : public Xapian::Internal::intrusive_base {
      */
     virtual void end_transaction(bool do_commit);
 
-    virtual DocumentInfo add_document(const Document& document);
+    virtual docid add_document(const Document& document);
 
     virtual void delete_document(docid did);
 
     /** Delete any documents indexed by a term from the database. */
     virtual void delete_document(const std::string& unique_term);
 
-    virtual DocumentInfo replace_document(docid did,
-					  const Document& document);
+    virtual void replace_document(docid did,
+				  const Document& document);
 
     /** Replace any documents matching a term. */
-    virtual DocumentInfo replace_document(const std::string& unique_term,
-					  const Document& document);
+    virtual docid replace_document(const std::string& unique_term,
+				   const Document& document);
 
     /** Request a document.
      *

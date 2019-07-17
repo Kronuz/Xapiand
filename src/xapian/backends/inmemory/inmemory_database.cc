@@ -761,11 +761,11 @@ InMemoryDatabase::delete_document(Xapian::docid did)
     termlists[did - 1].terms.clear();
 }
 
-Xapian::DocumentInfo
+void
 InMemoryDatabase::replace_document(Xapian::docid did,
 				   const Xapian::Document & document)
 {
-    LOGCALL(DB, Xapian::DocumentInfo, "InMemoryDatabase::replace_document", did | document);
+    LOGCALL_VOID(DB, "InMemoryDatabase::replace_document", did | document);
 
     if (closed) InMemoryDatabase::throw_database_closed();
 
@@ -817,25 +817,19 @@ InMemoryDatabase::replace_document(Xapian::docid did,
     doclists[did - 1] = document.get_data();
 
     finish_add_doc(did, document);
-
-    Xapian::DocumentInfo info;
-    info.did = did;
-
-    RETURN(info);
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 InMemoryDatabase::add_document(const Xapian::Document & document)
 {
-    LOGCALL(DB, Xapian::DocumentInfo, "InMemoryDatabase::add_document", document);
+    LOGCALL(DB, Xapian::docid, "InMemoryDatabase::add_document", document);
     if (closed) InMemoryDatabase::throw_database_closed();
 
-    Xapian::DocumentInfo info;
-    info.did = make_doc(document.get_data());
+    Xapian::docid did = make_doc(document.get_data());
 
-    finish_add_doc(info.did, document);
+    finish_add_doc(did, document);
 
-    RETURN(info);
+    RETURN(did);
 }
 
 void

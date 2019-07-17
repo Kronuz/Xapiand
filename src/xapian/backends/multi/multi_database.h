@@ -147,17 +147,16 @@ class MultiDatabase : public Xapian::Database::Internal {
 
     void end_transaction_(bool do_commit);
 
-    Xapian::DocumentInfo add_document(const Xapian::Document& doc);
+    Xapian::docid add_document(const Xapian::Document& doc);
 
     void delete_document(Xapian::docid did);
 
     void delete_document(const std::string& term);
 
-    Xapian::DocumentInfo replace_document(Xapian::docid did,
-					  const Xapian::Document& doc);
+    void replace_document(Xapian::docid did, const Xapian::Document& doc);
 
-    Xapian::DocumentInfo replace_document(const std::string& term,
-					  const Xapian::Document& doc);
+    Xapian::docid replace_document(const std::string& term,
+				   const Xapian::Document& doc);
 
     void request_document(Xapian::docid did) const;
 

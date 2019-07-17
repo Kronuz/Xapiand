@@ -48,10 +48,6 @@ class RemoteSubMatch {
     RemoteSubMatch(const RemoteDatabase *db_, size_t shard_)
 	: db(db_), shard(shard_) {}
 
-    void set_database(const Xapian::Database& db_) {
-		db = static_cast<const RemoteDatabase*>(db_.internal.get());
-    }
-
     int get_read_fd() const {
 	return db->get_read_fd();
     }

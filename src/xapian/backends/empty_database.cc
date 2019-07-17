@@ -294,7 +294,7 @@ EmptyDatabase::end_transaction_(bool)
     no_subdatabases();
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 EmptyDatabase::add_document(const Xapian::Document&)
 {
     no_subdatabases();
@@ -313,14 +313,13 @@ EmptyDatabase::delete_document(const string&)
     no_subdatabases();
 }
 
-Xapian::DocumentInfo
+void
 EmptyDatabase::replace_document(Xapian::docid, const Xapian::Document&)
 {
     no_subdatabases();
-    return 0;
 }
 
-Xapian::DocumentInfo
+Xapian::docid
 EmptyDatabase::replace_document(const string&, const Xapian::Document&)
 {
     no_subdatabases();

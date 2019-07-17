@@ -42,7 +42,6 @@
 #include <iostream> // FIXME
 #endif
 
-#include <cerrno>
 #include <cstdio> // For EOF
 #include <cstdlib> // std::abort()
 #include <type_traits>
@@ -140,7 +139,7 @@ class BufferedFile {
     bool is_open() const { return common && common->fd >= 0; }
 
     bool was_forced_closed() const {
-	return !common || common->fd == FORCED_CLOSE;
+	return common && common->fd == FORCED_CLOSE;
     }
 
     bool open(const std::string& path, bool read_only_) {
@@ -466,7 +465,7 @@ class SSTIndex {
 	    size_t o = 3 + (ch - first) * 4;
 	    // FIXME: Just make offsets 8 bytes?  Or allow different widths?
 	    off_t ptr = pointers[ch];
-	    if (ptr > 0xffffffff)
+	    if (sizeof(off_t) > 4 && ptr > off_t(0xffffffff))
 		throw Xapian::DatabaseError("Index offset needs >4 bytes");
 	    Assert(o + 4 <= data.size());
 	    unaligned_write4(reinterpret_cast<unsigned char*>(&data[o]), ptr);

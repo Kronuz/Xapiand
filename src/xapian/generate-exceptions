@@ -21,7 +21,9 @@ use strict;
 use exception_data qw(
     $copyright $generated_warning @baseclasses @classes %classcode
 );
+use File::Path qw(mkpath);
 
+mkpath("include/xapian");
 open HDR, ">xapian/error.h" or die $!;
 open DISPATCH, ">xapian/errordispatch.h" or die $!;
 
