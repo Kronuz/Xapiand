@@ -96,7 +96,7 @@ struct query_field_t {
 	bool unique_doc = false;
 	bool is_fuzzy = false;
 	bool is_nearest = false;
-	bool if_exists = false;
+	bool upsert = false;
 	std::string collapse;
 	Xapian::doccount collapse_max = 1;
 	std::vector<std::string> query;
