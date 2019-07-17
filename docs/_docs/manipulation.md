@@ -137,7 +137,7 @@ as we're not specifying an explicit ID.
 ## Updating Documents
 
 In addition to being able to index and replace documents, we can also update
-documents.
+existing documents.
 
 This example shows how to update our previous document (ID of `John`) by adding
 a _gender_ field to it and leaving the _name_ intact:

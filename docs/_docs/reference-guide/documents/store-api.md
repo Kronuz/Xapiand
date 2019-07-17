@@ -15,12 +15,13 @@ you know won't be changing often or at all.
 
 Assuming there is a [PNG]({{ '/assets/Lenna.png' | absolute_url }}){:download="Lenna.png"}
 file called `Lenna.png` in the working directory, lets add those to the storage
-using `STORE`:
+using `PUT` or `UPDATE` (if the document already exists) _and_ passing a content
+type:
 
 {% capture req %}
 
 ```json
-STORE /assets/Lenna
+PUT /assets/Lenna
 Content-Type: image/png
 
 @Lenna.png
@@ -75,15 +76,15 @@ feature to work ([iTerm2](https://www.iterm2.com){:target="_blank"}, for example
 
 ## Multi-Content Documents
 
-Use `STORE` with a different `Content-Type` to add new content to the same
-document. For example, the following adds a [PDF]({{ '/assets/Lenna.pdf' | absolute_url }}){:download="Lenna.pdf"}
+Use `PUT` or `UPDATE` with a different `Content-Type` to add new content to the
+same document. For example, the following adds a [PDF]({{ '/assets/Lenna.pdf' | absolute_url }}){:download="Lenna.pdf"}
 and a [JPEG]({{ '/assets/Lenna.jpg' | absolute_url }}){:download="Lenna.jpg"} from
 files called `Lenna.pdf` and `Lenna.jpg`, respectively:
 
 {% capture req %}
 
 ```json
-STORE /assets/Lenna
+UPDATE /assets/Lenna
 Content-Type: application/pdf
 
 @Lenna.pdf
@@ -108,7 +109,7 @@ This time we also include the `.jpg` selector as a [File Extension](#file-extens
 {% capture req %}
 
 ```json
-STORE /assets/Lenna.jpg
+UPDATE /assets/Lenna.jpg
 Content-Type: image/jpeg
 
 @Lenna.jpg
@@ -331,7 +332,7 @@ To remove stored content by storing an empty object:
 {% capture req %}
 
 ```json
-STORE /assets/Lenna
+UPDATE /assets/Lenna
 Content-Type: image/jpeg
 Content-Length: 0
 ```

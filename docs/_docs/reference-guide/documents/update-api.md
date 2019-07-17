@@ -9,12 +9,13 @@ new data with the data in the current document, optionally it can also run a
 script, and indexes back the result. It internally and automatically uses
 versioning to make sure this operation is atomic.
 
-If the document does not already exist, the body of the request will be added
-as a new document, the exact same way as the [Index API](../index-api) does it,
-just just the little extra overhead of trying to retrieve the current document
-first.
+If the document does not already exist, Xapiand will return 404 by default.
+This can be changed by passing `upsert` as a query param, in this event, the
+body of the request will be added as a new document, the exact same way as the
+[Index API](../index-api) does it, just just the little extra overhead of trying
+to retrieve the current document first.
 
-For example, let’s index a simple doc:
+For example, let's index a simple doc:
 
 {% capture req %}
 

@@ -31,7 +31,7 @@ We do our best to use standard HTTP methods with accurate and well-known status
 codes in the Xapiand API, but here are some additions and deviations.
 
 Additionally to the standard HTTP methods, we also use other custom methods
-such as `UPDATE` and `STORE`, for certain operations.
+such as `UPDATE`, for certain operations.
 
 
 ---
@@ -72,7 +72,7 @@ INFO /some/resource/name
 {% include curl.html req=req %}
 
 If your firewall rules don't support non-standard HTTP methods like `PATCH`,
-`UPDATE`, `STORE` or `DELETE`, for example, you have two options:
+`UPDATE` or `DELETE`, for example, you have two options:
 
 + Use HTTP Method Override
 + Use HTTP Method Mapping
