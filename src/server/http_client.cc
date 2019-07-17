@@ -1625,13 +1625,13 @@ HttpClient::update_document_view(Request& request)
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
-		indexed = db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
+		indexed = db_handler.patch(document_id, query_field.version, true, decoded_body, query_field.commit);
 	} else if (request.method == HTTP_STORE) {
 		operation = "store";
-		indexed = db_handler.update(document_id, query_field.version, true, false, decoded_body, query_field.commit, request.ct_type == json_type || request.ct_type == x_json_type || request.ct_type == yaml_type || request.ct_type == x_yaml_type || request.ct_type == msgpack_type || request.ct_type == x_msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = db_handler.update(document_id, query_field.version, true, true, decoded_body, query_field.commit, request.ct_type == json_type || request.ct_type == x_json_type || request.ct_type == yaml_type || request.ct_type == x_yaml_type || request.ct_type == msgpack_type || request.ct_type == x_msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
-		indexed = db_handler.update(document_id, query_field.version, false, false, decoded_body, query_field.commit, request.ct_type);
+		indexed = db_handler.update(document_id, query_field.version, false, true, decoded_body, query_field.commit, request.ct_type);
 	}
 
 	request.ready = std::chrono::steady_clock::now();
