@@ -1191,6 +1191,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 
 
 DocMatcher::DocMatcher(
+	const std::string& query_id,
 	bool full_db_has_positions,
 	std::atomic_size_t& pending,
 	std::condition_variable& ready,
@@ -1221,6 +1222,7 @@ DocMatcher::DocMatcher(
 	doccount(0),
 	revision(0),
 	enquire(Xapian::Database()),
+	query_id(query_id),
 	full_db_has_positions(full_db_has_positions),
 	pending(pending),
 	ready(ready),
@@ -1281,7 +1283,7 @@ DocMatcher::prepare_mset()
 					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
 				}
 				enquire.set_query(final_query);
-				mset = enquire.prepare_mset(full_db_has_positions, nullptr, nullptr);
+				mset = enquire.prepare_mset(query_id, full_db_has_positions, nullptr, nullptr);
 				revision = db->get_revision();
 				doccount += db->get_doccount();
 				mset.set_database(Xapian::Database{});  // Make Enquire release the database
@@ -1501,6 +1503,9 @@ DatabaseHandler::get_mset(
 
 	auto manager = XapiandManager::manager();
 
+	static std::atomic_size_t query_seq = 0;
+	auto local_node = Node::get_local_node();
+
 	for (size_t shard_num = 0; shard_num < n_shards; ++shard_num) {
 		// Configure nearest and fuzzy search:
 		std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
@@ -1516,8 +1521,11 @@ DatabaseHandler::get_mset(
 		// Add mset object to msets vector:
 		msets.push_back(Xapian::MSet());
 
+		std::string query_id = strings::format("{}:{}", local_node->lower_name(), ++query_seq);
+
 		// Create matcher object:
 		auto matcher = std::make_shared<DocMatcher>(
+			query_id,
 			full_db_has_positions,
 			pending,
 			ready,

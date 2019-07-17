@@ -38,6 +38,7 @@
 #include "error.hh"                           // for error:name, error::description
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
+#include "lru.h"                              // for lru::aging_lru
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics
 #include "repr.hh"                            // for repr
@@ -91,6 +92,10 @@ static inline std::string::size_type common_prefix_length(const std::string &a, 
  *
  * Based on xapian/xapian-core/net/remoteserver.cc @ db790e9e12bb9b3ebeaf916ac0acdea9a7ab0dd1
  */
+
+
+static std::mutex pending_queries_mtx;
+static lru::aging_lru<std::string, RemoteProtocolPendingQuery> pending_queries(0, 600s);
 
 
 RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
@@ -666,16 +671,24 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
 
-	_msg_query_matchspies.clear();
+	RemoteProtocolPendingQuery pending_query;
 
-	_msg_query_revision = db->get_revision();
+	pending_query.revision = db->get_revision();
 
-	_msg_query_enquire = std::make_unique<Xapian::Enquire>(*db);
+	pending_query.enquire = std::make_unique<Xapian::Enquire>(*db);
 
-	std::string serialisation;
+	////////////////////////////////////////////////////////////////////////////
+	// Unserialise Query ID
+
+	std::string query_id;
+	if (!unpack_string(&p, p_end, query_id)) {
+		throw Xapian::NetworkError("Bad MSG_QUERY");
+	}
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Query.
+
+	std::string serialisation;
 	if (!unpack_string(&p, p_end, serialisation)) {
 		throw Xapian::NetworkError("Bad MSG_QUERY");
 	}
@@ -688,7 +701,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		throw Xapian::NetworkError("Bad MSG_QUERY");
 	}
 
-	_msg_query_enquire->set_query(query, qlen);
+	pending_query.enquire->set_query(query, qlen);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Collapse key
@@ -704,7 +717,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		}
 	}
 
-	_msg_query_enquire->set_collapse_key(collapse_key, collapse_max);
+	pending_query.enquire->set_collapse_key(collapse_key, collapse_max);
 
 	////////////////////////////////////////////////////////////////////////////
 	// docid order
@@ -715,7 +728,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	Xapian::Enquire::docid_order order;
 	order = static_cast<Xapian::Enquire::docid_order>(*p++);
 
-	_msg_query_enquire->set_docid_order(order);
+	pending_query.enquire->set_docid_order(order);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Sort by
@@ -742,19 +755,19 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	switch (sort_by) {
 		case REL:
-			_msg_query_enquire->set_sort_by_relevance();
+			pending_query.enquire->set_sort_by_relevance();
 			break;
 		case VAL:
-			_msg_query_enquire->set_sort_by_value(sort_key, sort_value_forward);
+			pending_query.enquire->set_sort_by_value(sort_key, sort_value_forward);
 			break;
 		case VAL_REL:
-			_msg_query_enquire->set_sort_by_value_then_relevance(sort_key, sort_value_forward);
+			pending_query.enquire->set_sort_by_value_then_relevance(sort_key, sort_value_forward);
 			break;
 		case REL_VAL:
-			_msg_query_enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
+			pending_query.enquire->set_sort_by_relevance_then_value(sort_key, sort_value_forward);
 			break;
 		case DOCID:
-			_msg_query_enquire->set_weighting_scheme(Xapian::BoolWeight());
+			pending_query.enquire->set_weighting_scheme(Xapian::BoolWeight());
 			break;
 	}
 
@@ -771,7 +784,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 
 	double time_limit = unserialise_double(&p, p_end);
 
-	_msg_query_enquire->set_time_limit(time_limit);
+	pending_query.enquire->set_time_limit(time_limit);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Threshold
@@ -786,7 +799,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 		THROW(NetworkError, "bad message (weight_threshold)");
 	}
 
-	_msg_query_enquire->set_cutoff(percent_threshold, weight_threshold);
+	pending_query.enquire->set_cutoff(percent_threshold, weight_threshold);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the Weight object.
@@ -808,7 +821,7 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 	}
 
 	std::unique_ptr<Xapian::Weight> wt(wttype->unserialise(serialisation));
-	_msg_query_enquire->set_weighting_scheme(*wt);
+	pending_query.enquire->set_weighting_scheme(*wt);
 
 	////////////////////////////////////////////////////////////////////////////
 	// Unserialise the RSet object.
@@ -845,13 +858,13 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 				case REL:
 					break;
 				case VAL:
-					_msg_query_enquire->set_sort_by_key(sorter->release(), sort_value_forward);
+					pending_query.enquire->set_sort_by_key(sorter->release(), sort_value_forward);
 					break;
 				case VAL_REL:
-					_msg_query_enquire->set_sort_by_key_then_relevance(sorter->release(), sort_value_forward);
+					pending_query.enquire->set_sort_by_key_then_relevance(sorter->release(), sort_value_forward);
 					break;
 				case REL_VAL:
-					_msg_query_enquire->set_sort_by_relevance_then_key(sorter->release(), sort_value_forward);
+					pending_query.enquire->set_sort_by_relevance_then_key(sorter->release(), sort_value_forward);
 					break;
 				case DOCID:
 					break;
@@ -862,19 +875,24 @@ RemoteProtocolClient::msg_query(const std::string &message_in)
 				THROW(InvalidArgumentError, "Match spy {} not registered", classtype);
 			}
 			Xapian::MatchSpy * spy = spyclass->unserialise(serialisation, registry);
-			_msg_query_matchspies.push_back(spy);
-			_msg_query_enquire->add_matchspy(spy->release());
+			pending_query.matchspies.push_back(spy);
+			pending_query.enquire->add_matchspy(spy->release());
 		} else {
 			THROW(InvalidArgumentError, "Class type {} is invalid", classtype);
 		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////
-	auto prepared_mset = _msg_query_enquire->prepare_mset(full_db_has_positions, &rset, nullptr);
-	send_message(RemoteReplyType::REPLY_STATS, prepared_mset.serialise_stats());
-
+	auto prepared_mset = pending_query.enquire->prepare_mset(query_id, full_db_has_positions, &rset, nullptr);
 	// Clear internal database, as it's going to be checked in.
-	_msg_query_enquire->set_database(Xapian::Database{});
+	pending_query.enquire->set_database(Xapian::Database{});
+
+	{
+		std::lock_guard<std::mutex> lk(pending_queries_mtx);
+		pending_queries[query_id] = std::move(pending_query);
+	}
+
+	send_message(RemoteReplyType::REPLY_STATS, prepared_mset.serialise_stats());
 }
 
 
@@ -883,48 +901,54 @@ RemoteProtocolClient::msg_getmset(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_getmset(<message>)");
 
-	if (!_msg_query_enquire) {
-		THROW(NetworkError, "Unexpected MSG_GETMSET");
-	}
-
 	lock_shard lk_shard(endpoint, flags);
 	auto db = lk_shard->db();
-
-	if (_msg_query_revision != db->get_revision()) {
-		throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
-	}
-
-	// Set internal database from checked out database.
-	_msg_query_enquire->set_database(*db);
 
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
+	std::string query_id;
 	Xapian::termcount first;
 	Xapian::termcount maxitems;
 	Xapian::termcount check_at_least;
-	if (!unpack_uint(&p, p_end, &first) ||
+	if (!unpack_string(&p, p_end, query_id) ||
+		!unpack_uint(&p, p_end, &first) ||
 		!unpack_uint(&p, p_end, &maxitems) ||
 		!unpack_uint(&p, p_end, &check_at_least)) {
 		throw Xapian::NetworkError("Bad MSG_GETMSET");
 	}
 
-	_msg_query_enquire->set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
+	RemoteProtocolPendingQuery pending_query;
+	{
+		std::lock_guard<std::mutex> lk(pending_queries_mtx);
+		auto it = pending_queries.find(query_id);
+		if (it == pending_queries.end()) {
+			throw Xapian::DatabaseModifiedError("The query ID is not available - you should call Xapian::Database::reopen() and retry the operation");
+		}
+		pending_query = std::move(it->second);
+		pending_queries.erase(it);
+	}
+
+	if (pending_query.revision != db->get_revision()) {
+		throw Xapian::DatabaseModifiedError("The revision being read has been discarded - you should call Xapian::Database::reopen() and retry the operation");
+	}
+
+	// Set internal database from checked out database.
+	pending_query.enquire->set_database(*db);
+
+
+	pending_query.enquire->set_prepared_mset(Xapian::MSet::unserialise_stats(std::string(p, p_end)));
 
 	std::string msg;
 	{
-		Xapian::MSet mset = _msg_query_enquire->get_mset(first, maxitems, check_at_least);
-		for (auto& i : _msg_query_matchspies) {
+		Xapian::MSet mset = pending_query.enquire->get_mset(first, maxitems, check_at_least);
+		for (auto& i : pending_query.matchspies) {
 			pack_string(msg, i->serialise_results());
 		}
 		msg += mset.serialise();
 		// Make sure mset is destroyed before the database is
 		// checked in by the enquire reset() below, hence the scope.
 	}
-
-	_msg_query_matchspies.clear();
-	_msg_query_revision = 0;
-	_msg_query_enquire.reset();
 
 	send_message(RemoteReplyType::REPLY_RESULTS, msg);
 }

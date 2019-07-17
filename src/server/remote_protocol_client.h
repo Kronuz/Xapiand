@@ -161,6 +161,13 @@ ENUM_CLASS(RemoteReplyType, int,
 )
 
 
+struct RemoteProtocolPendingQuery {
+	Xapian::rev revision;
+	std::unique_ptr<Xapian::Enquire> enquire;
+	std::vector<Xapian::MatchSpy*> matchspies;
+};
+
+
 // A single instance of a non-blocking Xapiand binary protocol handler
 class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
 	friend BaseClient<RemoteProtocolClient>;
@@ -190,11 +197,6 @@ class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
 	bool cluster_database;
 
 	Xapian::Registry registry;
-
-	// For msg_query and msg_mset:
-	Xapian::rev _msg_query_revision;
-	std::unique_ptr<Xapian::Enquire> _msg_query_enquire;
-	std::vector<Xapian::MatchSpy*> _msg_query_matchspies;
 
 	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
 

@@ -193,6 +193,7 @@ class DocMatcher {
 	Xapian::rev revision;
 	Xapian::Enquire enquire;
 
+	std::string query_id;
 	bool full_db_has_positions;
 
 	std::atomic_size_t& pending;
@@ -227,6 +228,7 @@ public:
 	std::exception_ptr eptr;
 
 	DocMatcher(
+		const std::string& query_id,
 		bool full_db_has_positions,
 		std::atomic_size_t& pending,
 		std::condition_variable& ready,
