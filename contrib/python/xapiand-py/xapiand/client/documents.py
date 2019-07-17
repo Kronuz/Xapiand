@@ -22,7 +22,7 @@ from ..exceptions import NotFoundError
 
 class DocumentsClient(NamespacedClient):
     @query_params('commit', 'timeout')
-    def index(self, index, body, id=None, params=None):
+    def index(self, index, body, id=None, content_type=None, params=None):
         """
         Adds or updates a document in a specific index, making it searchable.
 
@@ -39,10 +39,11 @@ class DocumentsClient(NamespacedClient):
                 raise ValueError("Empty value passed for a required argument.")
         method = 'POST' if id in SKIP_IN_PATH else 'PUT'
         return self.transport.perform_request(method, make_url(index, id=id),
-            params=params, body=body)
+            params=params, body=body,
+            headers=content_type and {'content-type': content_type})
 
     @query_params('selector', 'timeout')
-    def update(self, index, id, body=None, params=None):
+    def update(self, index, id, body=None, content_type=None, params=None):
         """
         Update a document based on a partial data provided.
 
@@ -56,7 +57,8 @@ class DocumentsClient(NamespacedClient):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
         return self.transport.perform_request('UPDATE', make_url(index, id=id),
-            params=params, body=body)
+            params=params, body=body,
+            headers=content_type and {'content-type': content_type})
 
     @query_params('selector', 'timeout')
     def patch(self, index, id, body=None, params=None):
@@ -76,23 +78,6 @@ class DocumentsClient(NamespacedClient):
         return self.transport.perform_request('PATCH', make_url(index, id=id),
             params=params, body=body)
 
-    @query_params('timeout')
-    def store(self, index, id, content_type, body=None, params=None):
-        """
-        Store content in a document.
-
-        :arg index: The name of the index
-        :arg id: Document ID
-        :arg body: The body to store
-        :arg timeout: Explicit operation timeout
-        """
-        for param in (index, id):
-            if param in SKIP_IN_PATH:
-                raise ValueError("Empty value passed for a required argument.")
-        return self.transport.perform_request('STORE', make_url(index, id=id),
-            params=params, body=body,
-            headers={'content-type': content_type})
-
     @query_params('refresh', 'routing', 'timeout')
     def exists(self, index, id, params=None):
         """
@@ -111,7 +96,7 @@ class DocumentsClient(NamespacedClient):
             params=params)
 
     @query_params('selector', 'refresh', 'timeout', 'volatile')
-    def get(self, index, id, params=None):
+    def get(self, index, id, accept=None, params=None):
         """
         Get a document from the index based on its id.
 
@@ -127,7 +112,8 @@ class DocumentsClient(NamespacedClient):
             if param in SKIP_IN_PATH:
                 raise ValueError("Empty value passed for a required argument.")
         return self.transport.perform_request('GET', make_url(index, id=id),
-            params=params)
+            params=params,
+            headers=accept and {'accept': accept})
 
     @query_params('timeout')
     def delete(self, index, id, params=None):
