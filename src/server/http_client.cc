@@ -1104,6 +1104,7 @@ HttpClient::prepare()
 
 		case HTTP_PATCH:
 		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
+		case HTTP_STORE:  // TODO: Remove STORE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
 			if (!cmd.empty() && id.empty()) {
 				new_request->view = &HttpClient::update_metadata_view;
@@ -1111,14 +1112,6 @@ HttpClient::prepare()
 				new_request->view = &HttpClient::update_document_view;
 			} else {
 				new_request->view = &HttpClient::write_database_view;
-			}
-			break;
-
-		case HTTP_STORE:
-			if (!id.empty()) {
-				new_request->view = &HttpClient::update_document_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
 			break;
 
@@ -1532,7 +1525,8 @@ HttpClient::write_document_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
-	auto indexed = db_handler.index(document_id, query_field.version, false, decoded_body, query_field.commit, request.ct_type);
+	bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
+	auto indexed = db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -1626,12 +1620,10 @@ HttpClient::update_document_view(Request& request)
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
 		indexed = db_handler.patch(document_id, query_field.version, true, decoded_body, query_field.commit);
-	} else if (request.method == HTTP_STORE) {
-		operation = "store";
-		indexed = db_handler.update(document_id, query_field.version, true, true, decoded_body, query_field.commit, request.ct_type == json_type || request.ct_type == x_json_type || request.ct_type == yaml_type || request.ct_type == x_yaml_type || request.ct_type == msgpack_type || request.ct_type == x_msgpack_type || request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
-		indexed = db_handler.update(document_id, query_field.version, false, true, decoded_body, query_field.commit, request.ct_type);
+		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
+		indexed = db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	}
 
 	request.ready = std::chrono::steady_clock::now();
