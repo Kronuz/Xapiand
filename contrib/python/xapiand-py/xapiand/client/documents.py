@@ -42,7 +42,7 @@ class DocumentsClient(NamespacedClient):
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
-    @query_params('selector', 'timeout')
+    @query_params('selector', 'timeout', 'upsert')
     def update(self, index, id, body=None, content_type=None, params=None):
         """
         Update a document based on a partial data provided.
@@ -60,7 +60,7 @@ class DocumentsClient(NamespacedClient):
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
-    @query_params('selector', 'timeout')
+    @query_params('selector', 'timeout', 'upsert')
     def patch(self, index, id, body=None, params=None):
         """
         Patch a document based on a sequence of operations to apply to a
