@@ -101,6 +101,7 @@
 #define QUERY_FIELD_PERIOD     (1 << 6)
 #define QUERY_FIELD_VOLATILE   (1 << 7)
 #define QUERY_FIELD_OFFSET     (1 << 8)
+#define QUERY_FIELD_IF_EXISTS  (1 << 9)
 
 #define DEFAULT_INDENTATION 2
 
@@ -1619,11 +1620,11 @@ HttpClient::update_document_view(Request& request)
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
-		indexed = db_handler.patch(document_id, query_field.version, true, decoded_body, query_field.commit);
+		indexed = db_handler.patch(document_id, query_field.version, !query_field.if_exists, decoded_body, query_field.commit);
 	} else {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-		indexed = db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = db_handler.update(document_id, query_field.version, stored, !query_field.if_exists, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	}
 
 	request.ready = std::chrono::steady_clock::now();
@@ -2889,6 +2890,18 @@ HttpClient::query_field_maker(Request& request, int flags)
 			if (request.query_parser.len != 0u) {
 				try {
 					query_field.primary = Serialise::boolean(request.query_parser.get()) == "t";
+				} catch (const Exception&) { }
+			}
+		}
+	}
+
+	if ((flags & QUERY_FIELD_IF_EXISTS) != 0) {
+		request.query_parser.rewind();
+		if (request.query_parser.next("if_exists") != -1) {
+			query_field.if_exists = true;
+			if (request.query_parser.len != 0u) {
+				try {
+					query_field.if_exists = Serialise::boolean(request.query_parser.get()) == "t";
 				} catch (const Exception&) { }
 			}
 		}
