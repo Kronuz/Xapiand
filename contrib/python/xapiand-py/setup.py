@@ -1,21 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import os
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from os.path import join, dirname
+from setuptools import setup, find_packages
 
 from xapiand import __versionstr__
 
-
-def read(fname):
-    try:
-        with open(os.path.join(os.path.dirname(__file__), fname), "r") as fp:
-            return fp.read().strip()
-    except IOError:
-        return ''
+with open(join(dirname(__file__), "README.md"), "r") as f:
+    long_description = f.read().strip()
 
 install_requires = [
     'urllib3>=1.21.1',
@@ -30,7 +21,7 @@ setup(
     url="https://github.com/Kronuz/Xapiand",
     license="Apache License, Version 2.0",
     description="Python client for Xapiand",
-    long_description=read("README.md"),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers = [
         "Development Status :: 5 - Production/Stable",
@@ -51,7 +42,7 @@ setup(
         "Programming Language :: Python :: Implementation :: PyPy",
     ],
     install_requires=install_requires,
-    packages=['xapiand'],
+    packages=find_packages(where=".", exclude=("example",)),
     extras_require={
         'requests': ['requests>=2.4.0, <3.0.0']
     },

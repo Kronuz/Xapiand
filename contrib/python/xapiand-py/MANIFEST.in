@@ -1,9 +1,8 @@
 include AUTHORS
 include LICENSE
 include MANIFEST.in
-include README
+include README.md
 include setup.py
-recursive-include *
-
+recursive-include * *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
