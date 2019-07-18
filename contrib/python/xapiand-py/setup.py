@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import os
+
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
-
-VERSION = (1, 0, 0)
-__version__ = '.'.join(map(str, VERSION))
+from xapiand import __versionstr__
 
 
 def read(fname):
@@ -24,9 +24,9 @@ install_requires = [
 
 setup(
     name="xapiand",
-    version=__version__,
-    author="Germán Méndez Bravo (Kronuz), Honza Král, Nick Lang",
-    author_email="german.mb@gmail.com, honza.kral@gmail.com, nick@nicklang.com",
+    version=__versionstr__,
+    author="Germán Méndez Bravo (Kronuz)",
+    author_email="german.mb@gmail.com",
     url="https://github.com/Kronuz/Xapiand",
     license="Apache License, Version 2.0",
     description="Python client for Xapiand",
