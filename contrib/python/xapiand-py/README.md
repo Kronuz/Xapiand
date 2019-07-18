@@ -26,11 +26,11 @@ Simple use-case:
 
 # datetimes will be serialized
 >>> client.index(index="my-index", id=42, body={"any": "data", "timestamp": datetime.now()})
-{'timestamp': '2019-01-25T11:46:20.819478', '_id': 42, 'any': 'data', '#commit': False}
+{'#docid': 42, '#shard': 2 '_id': 42, '_version': 1, 'any': 'data', 'timestamp': '2019-07-18T09:04:54.182665'}
 
 # and deserialized
->>> client.get(index="my-index", id=42)['_source']
-{'timestamp': '2019-01-25T11:46:20.819478', '#docid': 1, '_id': 42, 'any': 'data'}
+>>> client.get(index="my-index", id=42)
+{'#docid': 42, '#shard': 2 '_id': 42, '_version': 1, 'any': 'data', 'timestamp': '2019-07-18T09:04:54.182665'}
 ```
 
 [Full documentation](https://kronuz.io/Xapiand/).
