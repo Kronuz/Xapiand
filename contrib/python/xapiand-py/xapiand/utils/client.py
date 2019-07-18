@@ -70,7 +70,7 @@ def make_url(url, id=""):
         url = url.split('/')
     # preserve ',', '*' and '~' in url for nicer URLs in logs
     url = [quote_plus(_escape(u), b',*~') for u in url if u not in SKIP_IN_PATH]
-    url.append(id)
+    url.append(quote_plus(_escape(id), b',*~'))
     return '/' + '/'.join(url)
 
 
