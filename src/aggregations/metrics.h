@@ -212,6 +212,10 @@ public:
 		}
 	}
 
+	void _aggregate_nothing(const Xapian::Document&) {
+		/* do nothing */
+	}
+
 	void operator()(const Xapian::Document& doc) override {
 		_handler(this, doc);
 	}

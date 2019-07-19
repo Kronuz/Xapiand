@@ -32,7 +32,7 @@
 
 template <typename Handler>
 static auto
-get_func_value_handle(FieldType type, std::string_view field_name)
+get_func_value_handle(FieldType type)
 {
 	switch (type) {
 		case FieldType::floating:
@@ -58,10 +58,8 @@ get_func_value_handle(FieldType type, std::string_view field_name)
 			return &HandledSubAggregation<Handler>::_aggregate_geo;
 		case FieldType::uuid:
 			return &HandledSubAggregation<Handler>::_aggregate_uuid;
-		case FieldType::empty:
-			THROW(AggregationError, "Field: {} has not been indexed", repr(field_name));
 		default:
-			THROW(AggregationError, "Type: '{}' is not supported", toUType(type));
+			return &HandledSubAggregation<Handler>::_aggregate_nothing;
 	}
 }
 
@@ -83,7 +81,7 @@ ValuesHandler::ValuesHandler(const MsgPack& conf, const std::shared_ptr<Schema>&
 
 	_type = field_spc.get_type();
 	_slot = field_spc.slot;
-	_func = get_func_value_handle<ValuesHandler>(_type, field_name);
+	_func = get_func_value_handle<ValuesHandler>(_type);
 }
 
 
@@ -116,7 +114,7 @@ TermsHandler::TermsHandler(const MsgPack& conf, const std::shared_ptr<Schema>& s
 
 	_type = field_spc.get_type();
 	_prefix = field_spc.prefix();
-	_func = get_func_value_handle<TermsHandler>(_type, field_name);
+	_func = get_func_value_handle<TermsHandler>(_type);
 }
 
 
