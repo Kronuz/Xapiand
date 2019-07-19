@@ -27,13 +27,10 @@
 constexpr int DB_OPEN              = 0x0000;  // Opens a database
 constexpr int DB_CREATE_OR_OPEN    = 0x0001;  // Automatically creates the database if it doesn't exist
 constexpr int DB_WRITABLE          = 0x0002;  // Opens as writable
-constexpr int DB_REPLICA_          = 0x0004;  // Being replicated
-constexpr int DB_RESTORE_          = 0x0008;  // Being restored
+constexpr int DB_RESTORE           = 0x0004;  // Being restored
+constexpr int DB_REPLICA           = 0x0008;  // Being replicated
 constexpr int DB_DISABLE_WAL       = 0x0010;  // Disable open wal file
 constexpr int DB_SYNCHRONOUS_WAL   = 0x0020;  // Use sync wal
-
-constexpr int DB_REPLICA           = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_REPLICA_;
-constexpr int DB_RESTORE           = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE_;
 
 constexpr int DB_RETRIES           = 10;      // Number of tries to do an operation on a Xapian::Database or Document
 

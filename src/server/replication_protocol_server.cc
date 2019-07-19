@@ -232,7 +232,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 			// Get fast write lock for replication or retry later
 			std::unique_ptr<lock_shard> lk_shard_ptr;
 			try {
-				lk_shard_ptr = std::make_unique<lock_shard>(args.dst_endpoint, DB_REPLICA, false);
+				lk_shard_ptr = std::make_unique<lock_shard>(args.dst_endpoint, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_REPLICA, false);
 				lk_shard_ptr->lock(0, [=] {
 					// If it cannot checkout because database is busy, retry when ready...
 					::trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), args.dst_endpoint.path, args.src_endpoint, args.dst_endpoint);

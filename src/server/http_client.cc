@@ -2213,7 +2213,7 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				indexer = DocIndexer::make_shared(endpoints, DB_RESTORE, request.echo, request.comments, query_field);
+				indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE, request.echo, request.comments, query_field);
 				request.indexer.store(indexer);
 			}
 			indexer->prepare(std::move(obj));
@@ -2232,7 +2232,7 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				indexer = DocIndexer::make_shared(endpoints, DB_RESTORE, request.echo, request.comments, query_field);
+				indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE, request.echo, request.comments, query_field);
 				request.indexer.store(indexer);
 			}
 			indexer->prepare(std::move(obj));
