@@ -27,9 +27,13 @@
 constexpr int DB_OPEN              = 0x0000;  // Opens a database
 constexpr int DB_CREATE_OR_OPEN    = 0x0001;  // Automatically creates the database if it doesn't exist
 constexpr int DB_WRITABLE          = 0x0002;  // Opens as writable
-constexpr int DB_REPLICA           = 0x0007;  // Being replicated (DB_WRITABLE + DB_CREATE_OR_OPEN + 0x0004)
+constexpr int DB_REPLICA_          = 0x0004;  // Being replicated
+constexpr int DB_RESTORE_          = 0x0008;  // Being restored
 constexpr int DB_DISABLE_WAL       = 0x0010;  // Disable open wal file
 constexpr int DB_SYNCHRONOUS_WAL   = 0x0020;  // Use sync wal
+
+constexpr int DB_REPLICA           = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_REPLICA_;
+constexpr int DB_RESTORE           = DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE_;
 
 constexpr int DB_RETRIES           = 10;      // Number of tries to do an operation on a Xapian::Database or Document
 
@@ -39,6 +43,7 @@ inline std::string readable_flags(int flags) {
 	if ((flags & DB_OPEN) == DB_OPEN) values.push_back("DB_OPEN");
 	if ((flags & DB_WRITABLE) == DB_WRITABLE) values.push_back("DB_WRITABLE");
 	if ((flags & DB_REPLICA) == DB_REPLICA) values.push_back("DB_REPLICA");
+	if ((flags & DB_RESTORE) == DB_RESTORE) values.push_back("DB_RESTORE");
 	if ((flags & DB_CREATE_OR_OPEN) == DB_CREATE_OR_OPEN) values.push_back("DB_CREATE_OR_OPEN");
 	if ((flags & DB_DISABLE_WAL) == DB_DISABLE_WAL) values.push_back("DB_DISABLE_WAL");
 	if ((flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL) values.push_back("DB_SYNCHRONOUS_WAL");

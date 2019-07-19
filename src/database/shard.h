@@ -119,6 +119,10 @@ public:
 		return (flags & DB_REPLICA) == DB_REPLICA;
 	}
 
+	bool is_restore() const {
+		return (flags & DB_RESTORE) == DB_RESTORE;
+	}
+
 	bool is_synchronous_wal() const {
 		return (flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL;
 	}

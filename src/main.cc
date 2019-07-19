@@ -818,7 +818,7 @@ void dump_documents() {
 			Endpoint endpoint(opts.dump_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
 			L_INFO("Dumping database: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_OPEN | DB_DISABLE_WAL);
+			db_handler.reset(endpoints, DB_OPEN);
 			auto sha256 = db_handler.dump_documents(fd);
 			L(-LOG_NOTICE, NOTICE_COL, "Dump sha256 = {}", sha256);
 			manager->join();
@@ -854,7 +854,7 @@ void restore_documents() {
 			Endpoint endpoint(opts.restore_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
 			L_INFO("Restoring into: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL);
+			db_handler.reset(endpoints, DB_RESTORE);
 			auto sha256 = db_handler.restore_documents(fd);
 			L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 = {}", sha256);
 			manager->join();
