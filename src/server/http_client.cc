@@ -101,7 +101,6 @@
 #define QUERY_FIELD_PERIOD     (1 << 6)
 #define QUERY_FIELD_VOLATILE   (1 << 7)
 #define QUERY_FIELD_OFFSET     (1 << 8)
-#define QUERY_FIELD_UPSERT     (1 << 9)
 
 #define DEFAULT_INDENTATION 2
 
@@ -137,15 +136,15 @@ static const std::string eol("\r\n");
 	OPTION(FLUSH,    "flush") \
 	OPTION(INFO,     "info") \
 	OPTION(LOCK,     "lock") \
-	OPTION(MERGE,    "merge") \
 	OPTION(MOVE,     "move") \
 	OPTION(OPEN,     "open") \
 	OPTION(QUIT,     "quit") \
 	OPTION(RESTORE,  "restore") \
 	OPTION(SEARCH,   "search") \
-	OPTION(STORE,    "store") \
 	OPTION(UNLOCK,   "unlock") \
-	OPTION(UPDATE,   "update")
+	OPTION(UPDATE,   "update") \
+	OPTION(UPSERT,   "upsert") \
+	OPTION(WAL,      "wal")
 
 
 constexpr static auto http_methods = phf::make_phf({
@@ -1104,9 +1103,8 @@ HttpClient::prepare()
 			break;
 
 		case HTTP_PATCH:
-		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
-		case HTTP_STORE:  // TODO: Remove STORE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
+		case HTTP_UPSERT:
 			if (!cmd.empty() && id.empty()) {
 				new_request->view = &HttpClient::update_metadata_view;
 			} else if (!id.empty()) {
@@ -1603,7 +1601,7 @@ HttpClient::update_document_view(Request& request)
 
 	auto& decoded_body = request.decoded_body();
 
-	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT | QUERY_FIELD_UPSERT);
+	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	if (resolve_index_endpoints(request, query_field, &decoded_body) > 1) {
 		THROW(ClientError, "Method can only be used with single indexes");
 	}
@@ -1620,11 +1618,15 @@ HttpClient::update_document_view(Request& request)
 	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
-		indexed = db_handler.patch(document_id, query_field.version, query_field.upsert, decoded_body, query_field.commit);
+		indexed = db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
+	} else if (HTTP_UPSERT) {
+		operation = "update";
+		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
+		indexed = db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	} else {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
-		indexed = db_handler.update(document_id, query_field.version, stored, query_field.upsert, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
+		indexed = db_handler.update(document_id, query_field.version, stored, false, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 	}
 
 	request.ready = std::chrono::steady_clock::now();
@@ -2895,18 +2897,6 @@ HttpClient::query_field_maker(Request& request, int flags)
 		}
 	}
 
-	if ((flags & QUERY_FIELD_UPSERT) != 0) {
-		request.query_parser.rewind();
-		if (request.query_parser.next("upsert") != -1) {
-			query_field.upsert = true;
-			if (request.query_parser.len != 0u) {
-				try {
-					query_field.upsert = Serialise::boolean(request.query_parser.get()) == "t";
-				} catch (const Exception&) { }
-			}
-		}
-	}
-
 	if (((flags & QUERY_FIELD_ID) != 0) || ((flags & QUERY_FIELD_SEARCH) != 0)) {
 		request.query_parser.rewind();
 		if (request.query_parser.next("check_at_least") != -1) {
@@ -3873,9 +3863,8 @@ Request::to_text(bool decode)
 		case HTTP_POST:
 		case HTTP_RESTORE:
 		case HTTP_PATCH:
-		case HTTP_MERGE:  // TODO: Remove MERGE (method was renamed to UPDATE)
 		case HTTP_UPDATE:
-		case HTTP_STORE:
+		case HTTP_UPSERT:
 		case HTTP_PUT:
 		{
 			// rgb(250, 153, 63)

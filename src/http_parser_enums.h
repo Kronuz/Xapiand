@@ -124,16 +124,15 @@ ENUM(http_status,
   XX(18, FLUSH,       FLUSH)        \
   XX(19, INFO,        INFO)         \
   XX(20, LOCK,        LOCK)         \
-  XX(21, MERGE,       MERGE)        \
-  XX(22, MOVE,        MOVE)         \
-  XX(23, OPEN,        OPEN)         \
-  XX(24, QUIT,        QUIT)         \
-  XX(25, RESTORE,     RESTORE)      \
-  XX(26, SEARCH,      SEARCH)       \
-  XX(27, STORE,       STORE)        \
-  XX(28, UNLOCK,      UNLOCK)       \
-  XX(29, UPDATE,      UPDATE)       \
-  XX(30, WAL,         WAL)          \
+  XX(21, MOVE,        MOVE)         \
+  XX(22, OPEN,        OPEN)         \
+  XX(23, QUIT,        QUIT)         \
+  XX(24, RESTORE,     RESTORE)      \
+  XX(25, SEARCH,      SEARCH)       \
+  XX(26, UNLOCK,      UNLOCK)       \
+  XX(27, UPDATE,      UPDATE)       \
+  XX(28, UPSERT,      UPSERT)       \
+  XX(29, WAL,         WAL)          \
 
 #define HTTP_SINGLE_METHOD(num, name, string) HTTP_##name = num,
 #define HTTP_TO_METHOD() HTTP_METHOD_MAP(HTTP_SINGLE_METHOD)

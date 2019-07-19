@@ -935,14 +935,14 @@ reexecute:
           case 'H': parser->method = HTTP_HEAD; break;
           case 'I': parser->method = HTTP_INFO; break;
           case 'L': parser->method = HTTP_LOCK; /* or LINK */ break;
-          case 'M': parser->method = HTTP_MOVE; /* or MERGE */ break;
+          case 'M': parser->method = HTTP_MOVE; break;
           case 'O': parser->method = HTTP_OPTIONS; /* or OPEN */ break;
           case 'P': parser->method = HTTP_PUT; /* or PURGE, POST, PATCH */ break;
           case 'Q': parser->method = HTTP_QUIT; break;
           case 'R': parser->method = HTTP_RESTORE; break;
-          case 'S': parser->method = HTTP_STORE; /* or SEARCH */ break;
+          case 'S': parser->method = HTTP_SEARCH; /* or SEARCH */ break;
           case 'T': parser->method = HTTP_TRACE; break;
-          case 'U': parser->method = HTTP_UNLOCK; /* or UNLINK, UPDATE */ break;
+          case 'U': parser->method = HTTP_UNLOCK; /* or UNLINK, UPDATE, UPSERT */ break;
           case 'W': parser->method = HTTP_WAL; break;
           default:
             SET_ERRNO(HPE_INVALID_METHOD);
@@ -982,13 +982,12 @@ reexecute:
             XX(COUNT,     2, 'P', COPY)
             XX(DUMP,      1, 'E', DELETE)
             XX(LOCK,      1, 'I', LINK)
-            XX(MOVE,      1, 'E', MERGE)
             XX(OPTIONS,   2, 'E', OPEN)
             XX(PUT,       1, 'O', POST)
             XX(PUT,       1, 'A', PATCH)
             XX(PUT,       2, 'R', PURGE)
-            XX(STORE,     1, 'E', SEARCH)
             XX(UNLOCK,    1, 'P', UPDATE)
+            XX(UPDATE,    2, 'S', UPSERT)
             XX(UNLOCK,    3, 'I', UNLINK)
 #undef XX
 
