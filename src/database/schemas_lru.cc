@@ -165,7 +165,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		if (endpoints.empty()) {
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
-		DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
+		DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
 		auto updated = _db_handler.update(id.substr(0, needle), version, false, true, MsgPack({
@@ -320,7 +320,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 	// If we still need to save the metadata, we save it:
 	if (writable && schema_ptr->get_flags() == 0) {
 		try {
-			DatabaseHandler _db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN, context);
+			DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 			// Try writing (only if there's no metadata there alrady)
 			if (!local_schema_ptr || (schema_ptr == local_schema_ptr || compare_schema(*schema_ptr, *local_schema_ptr))) {
 				std::string schema_ser;
@@ -545,7 +545,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				} catch (const Xapian::DocVersionConflictError&) {
 					// Foreign Schema needs to be read
 					try {
-						auto shared = load_shared(foreign_id, Endpoint(foreign_path), DB_WRITABLE | DB_CREATE_OR_OPEN, context);
+						auto shared = load_shared(foreign_id, Endpoint(foreign_path), DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 						schema_ptr = std::make_shared<const MsgPack>(shared.second);
 						schema_ptr->lock();
 						schema_version = shared.first;
@@ -691,7 +691,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 		}
 		if (retry) {
 			L_SCHEMA("GET: " + DARK_CORAL + "Schema {} is outdated, try reloading {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
-			up = _update("RETRY GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_WRITABLE, db_handler->context);
+			up = _update("RETRY GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN | DB_WRITABLE, db_handler->context);
 			schema_ptr = std::get<1>(up);
 			local_schema_path = std::get<2>(up);
 			foreign_uri = std::get<3>(up);

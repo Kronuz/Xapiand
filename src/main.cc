@@ -854,7 +854,7 @@ void restore_documents() {
 			Endpoint endpoint(opts.restore_documents);
 			auto endpoints = resolve_index_endpoints(endpoint);
 			L_INFO("Restoring into: {}", repr(endpoints.to_string()));
-			db_handler.reset(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE);
+			db_handler.reset(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE);
 			auto sha256 = db_handler.restore_documents(fd);
 			L(-LOG_NOTICE, NOTICE_COL, "Restore sha256 = {}", sha256);
 			manager->join();

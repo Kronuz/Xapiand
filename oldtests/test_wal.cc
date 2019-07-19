@@ -101,7 +101,7 @@ bool dir_compare(const std::string& dir1, const std::string& dir2) {
 
 
 int create_db_wal() {
-	static DB_Test db_wal(test_db, std::vector<std::string>(), DB_WRITABLE | DB_CREATE_OR_OPEN);
+	static DB_Test db_wal(test_db, std::vector<std::string>(), DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	int num_documents = 1020;
 	std::string document("{ \"message\" : \"Hello world\"}");
@@ -145,7 +145,7 @@ int restore_database() {
 			endpoints.add(create_endpoint(restored_db));
 			const auto queue_state(std::make_shared<queue::QueueState>(-1, 1, -1));
 			auto b_queue = DatabaseQueue::make_shared(endpoints, queue_state);
-			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, DB_WRITABLE);
+			std::shared_ptr<Database> res_database = std::make_shared<Database>(b_queue, DB_OPEN | DB_WRITABLE);
 			if (not dir_compare(test_db, restored_db)) {
 				delete_files(restored_db);
 				RETURN(1);

@@ -1486,7 +1486,7 @@ HttpClient::delete_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	db_handler.delete_document(document_id, query_field.commit);
 	request.ready = std::chrono::steady_clock::now();
@@ -1523,7 +1523,7 @@ HttpClient::write_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
 	auto indexed = db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 
@@ -1615,7 +1615,7 @@ HttpClient::update_document_view(Request& request)
 
 	std::string operation;
 	DocumentInfo indexed;
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
 		indexed = db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
@@ -2040,7 +2040,7 @@ HttpClient::write_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	if (decoded_body.is_map()) {
 		auto schema_it = decoded_body.find(RESERVED_SCHEMA);
@@ -2101,7 +2101,7 @@ HttpClient::commit_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	db_handler.commit();  // Ensure touch.
 
@@ -2213,7 +2213,7 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE, request.echo, request.comments, query_field);
+				indexer = DocIndexer::make_shared(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE, request.echo, request.comments, query_field);
 				request.indexer.store(indexer);
 			}
 			indexer->prepare(std::move(obj));
@@ -2232,7 +2232,7 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE, request.echo, request.comments, query_field);
+				indexer = DocIndexer::make_shared(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE, request.echo, request.comments, query_field);
 				request.indexer.store(indexer);
 			}
 			indexer->prepare(std::move(obj));

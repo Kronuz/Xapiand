@@ -1261,7 +1261,7 @@ Discovery::_ASYNC_elect_primary(const std::string& message)
 		for (const auto& shard_node_name : shard_nodes) {
 			if (local_node->lower_name() == strings::lower(shard_node_name)) {
 				try {
-					lock_shard lk_shard(Endpoint{normalized_path}, DB_WRITABLE, false);
+					lock_shard lk_shard(Endpoint{normalized_path}, DB_OPEN | DB_WRITABLE, false);
 					auto shard = lk_shard.lock(0);
 					auto db = shard->db();
 					uuid = db->get_uuid();

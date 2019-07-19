@@ -702,7 +702,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 		if (!found) {
 			try {
-				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
 				MsgPack obj({
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -1476,7 +1476,7 @@ XapiandManager::load_nodes()
 
 	auto leader_node = Node::get_leader_node();
 	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
-	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_WRITABLE | DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	auto mset = db_handler.get_mset();
 
 	std::vector<std::string> db_nodes;
@@ -1773,7 +1773,7 @@ save_shards(const std::string& unsharded_normalized_path, size_t num_replicas_pl
 		Endpoint endpoint(".xapiand/indices");
 		auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 		assert(!endpoints.empty());
-		DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+		DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 		MsgPack obj({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ ID_FIELD_NAME, {
@@ -1818,7 +1818,7 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 				Endpoint endpoint(".xapiand/indices");
 				auto endpoints = XapiandManager::resolve_index_endpoints(endpoint, true);
 				assert(!endpoints.empty());
-				DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+				DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 				MsgPack obj({
 					{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 					{ ID_FIELD_NAME, {
@@ -1910,7 +1910,7 @@ load_settings(const std::string& unsharded_normalized_path)
 				continue;
 			}
 
-			DatabaseHandler db_handler(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN);
+			DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 			auto document = db_handler.get_document(unsharded_normalized_path);
 			auto obj = document.get_obj();
 

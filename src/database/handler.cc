@@ -936,7 +936,7 @@ DatabaseHandler::restore_documents(int fd)
 	msgpack::unpacker unpacker;
 	query_field_t query_field;
 	query_field.commit = true;
-	auto indexer = DocIndexer::make_shared(endpoints, DB_WRITABLE | DB_CREATE_OR_OPEN | DB_DISABLE_WAL | DB_RESTORE, false, false, query_field);
+	auto indexer = DocIndexer::make_shared(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE, false, false, query_field);
 	try {
 		while (true) {
 			auto manager = XapiandManager::manager();
@@ -3191,7 +3191,7 @@ committer_commit(std::weak_ptr<Shard> weak_shard) {
 		std::string error;
 
 		try {
-			lock_shard lk_shard(Endpoint(shard->endpoint), DB_WRITABLE);
+			lock_shard lk_shard(Endpoint(shard->endpoint), DB_OPEN | DB_WRITABLE);
 			lk_shard->commit();
 		} catch (const Exception& exc) {
 			error = exc.get_message();
