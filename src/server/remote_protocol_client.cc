@@ -72,9 +72,6 @@
 // #define L_OBJ_END L_DELAYED_N_UNLOG
 
 
-constexpr int DB_ACTION_MASK_ = 0x03;  // Xapian::DB_ACTION_MASK_
-
-
 static inline std::string::size_type common_prefix_length(const std::string &a, const std::string &b) {
 	std::string::size_type minlen = std::min(a.size(), b.size());
 	std::string::size_type common;
@@ -512,41 +509,27 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 {
 	L_CALL("RemoteProtocolClient::msg_readaccess(<message>)");
 
-	flags = DB_OPEN;
+	flags = 0;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
 	if (p != p_end) {
-		unsigned xapian_flags;
-		if (!unpack_uint(&p, p_end, &xapian_flags)) {
+		unsigned flag_bits;
+		if (!unpack_uint(&p, p_end, &flag_bits)) {
 			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
 		}
-		switch (xapian_flags & DB_ACTION_MASK_) {
-			case Xapian::DB_CREATE_OR_OPEN:
-				// Create database if it doesn't already exist.
-				flags |= DB_CREATE_OR_OPEN;
-				break;
-			case Xapian::DB_CREATE_OR_OVERWRITE:
-				// Create database if it doesn't already exist, or overwrite if it does.
-				// TODO: Add DB_OVERWRITE
-				flags |= DB_CREATE_OR_OPEN;
-				break;
-			case Xapian::DB_CREATE:
-				// If the database already exists, an exception will be thrown.
-				// TODO: Add DB_CREATE
-				flags |= DB_CREATE_OR_OPEN;
-				break;
-			case Xapian::DB_OPEN:
-				// Open an existing database.
-				flags |= DB_OPEN;
-				break;
+		flags |= flag_bits &~ DB_XAPIAN_MASK;
+		flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+		L_RED("MSG_READACCESS flags = {}", readable_flags(flags));
+		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
+			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
 		}
 	}
 
 	if (p != p_end) {
 		std::string path;
 		if (!unpack_string(&p, p_end, path)) {
-			throw Xapian::NetworkError("Bad path in MSG_WRITEACCESS");
+			throw Xapian::NetworkError("Bad path in MSG_READACCESS");
 		}
 		endpoint = Endpoint(path);
 		if (p != p_end) {
@@ -568,29 +551,15 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 	const char *p_end = p + message.size();
 
 	if (p != p_end) {
-		unsigned xapian_flags;
-		if (!unpack_uint(&p, p_end, &xapian_flags)) {
-			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
+		unsigned flag_bits;
+		if (!unpack_uint(&p, p_end, &flag_bits)) {
+			throw Xapian::NetworkError("Bad flags in MSG_WRITEACCESS");
 		}
-		switch (xapian_flags & DB_ACTION_MASK_) {
-			case Xapian::DB_CREATE_OR_OPEN:
-				// Create database if it doesn't already exist.
-				flags |= DB_CREATE_OR_OPEN;
-				break;
-			case Xapian::DB_CREATE_OR_OVERWRITE:
-				// Create database if it doesn't already exist, or overwrite if it does.
-				// TODO: Add DB_OVERWRITE
-				flags |= DB_CREATE_OR_OPEN;
-				break;
-			case Xapian::DB_CREATE:
-				// If the database already exists, an exception will be thrown.
-				// TODO: Add DB_CREATE
-				flags |= DB_CREATE_OR_OPEN;
-				break;
-			case Xapian::DB_OPEN:
-				// Open an existing database.
-				flags |= DB_OPEN;
-				break;
+		flags |= flag_bits &~ DB_XAPIAN_MASK;
+		flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+		L_RED("MSG_WRITEACCESS flags = {}", readable_flags(flags));
+		if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+			throw Xapian::NetworkError("Bad flags in MSG_WRITEACCESS");
 		}
 	}
 
