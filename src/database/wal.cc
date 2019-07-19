@@ -546,7 +546,8 @@ DatabaseWAL::execute_line(std::string_view line, bool wal_, bool send_update)
 	switch (type) {
 		case Type::COMMIT:
 			if (!_shard->commit(wal_, send_update)) {
-				L_WARNING("WAL commit did nothing ({})", db_revision);
+				L_DEBUG("WAL commit did nothing for {} at revision {}: line={{revision:{}, type:{}}}", repr(base_path), db_revision, revision, enum_name(type));
+				L_WARNING("WAL commit did nothing");
 			}
 			modified = false;
 			break;
