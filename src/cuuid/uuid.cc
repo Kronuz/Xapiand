@@ -89,12 +89,13 @@ template <typename T>
 static inline void
 pack(char** p, T num)
 {
-	auto ptr = *p;
+	auto end = *p + sizeof(num);
+	auto ptr = end;
 	for (size_t i = 0; i < sizeof(num); ++i) {
-		*ptr++ = static_cast<char>(num & 0xff);
+		*--ptr = static_cast<char>(num & 0xff);
 		num >>= 8;
 	}
-	*p = ptr;
+	*p = end;
 }
 
 
@@ -105,7 +106,8 @@ unpack(char** const p)
 	T num = 0;
 	auto ptr = *p;
 	for (size_t i = 0; i < sizeof(num); ++i) {
-		num |= static_cast<T>(*ptr++) << (i * 8);
+		num <<= 8;
+		num |= static_cast<unsigned char>(*ptr++);
 	}
 	*p = ptr;
 	return num;
@@ -229,8 +231,8 @@ UUIDCondenser::serialise() const
 
 	char* end = buf;
 	*end++ = '\0';
-	pack(&end, htobe64(buf0));
-	pack(&end, htobe64(buf1));
+	pack(&end, buf0);
+	pack(&end, buf1);
 	end -= 4; // serialized must be at least 4 bytes long.
 
 	auto ptr = buf;
