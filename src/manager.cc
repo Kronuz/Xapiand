@@ -1367,7 +1367,7 @@ XapiandManager::ready_to_end_replication()
 {
 	return (
 		!replication_clients &&
-		!database_pool->is_pending()
+		!database_pool->is_pending(true)
 	);
 }
 

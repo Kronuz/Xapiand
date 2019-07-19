@@ -130,7 +130,7 @@ public:
 
 	bool is_used() const;
 
-	bool is_pending() const;
+	bool is_pending(bool notify = false) const;
 
 	std::string __repr__() const;
 	std::string dump_databases(int level) const;
@@ -203,7 +203,7 @@ public:
 
 	bool clear();
 
-	bool is_pending() const;
+	bool is_pending(bool notify = false) const;
 
 	std::pair<size_t, size_t> count();
 

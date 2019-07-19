@@ -32,6 +32,7 @@
 #include "logger.h"               // for Logging (database->log)
 #include "node.h"                 // for Node
 #include "manager.h"              // for IndexSettings, XapiandManager
+#include "server/discovery.h"     // for db_updater
 
 
 // #undef L_DEBUG
@@ -598,11 +599,16 @@ ShardEndpoint::_is_pending(const IndexSettings& index_settings) const
 
 
 bool
-ShardEndpoint::is_pending() const
+ShardEndpoint::is_pending(bool notify) const
 {
 	L_CALL("ShardEndpoint::is_pending()");
 
-	return _is_pending(_get_pending_index_settings());
+	auto pending = _is_pending(_get_pending_index_settings());
+	if (pending && notify) {
+		auto pending_rev = pending_revision.load(std::memory_order_relaxed);
+		db_updater()->debounce(path, pending_rev, path);
+	}
+	return pending;
 }
 
 
@@ -1093,16 +1099,20 @@ DatabasePool::clear()
 
 
 bool
-DatabasePool::is_pending() const
+DatabasePool::is_pending(bool notify) const
 {
 	L_CALL("DatabasePool::is_pending()");
 
+	bool pending = false;
 	for (auto& referenced_database_endpoint : endpoints()) {
-		if (referenced_database_endpoint->is_pending()) {
-			return true;
+		if (referenced_database_endpoint->is_pending(notify)) {
+			if (!notify) {
+				return true;
+			}
+			pending = true;
 		}
 	}
-	return false;
+	return pending;
 }
 
 
