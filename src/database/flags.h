@@ -35,7 +35,6 @@ const int DB_RESTORE                    = 0x2000;  // Flag database as being res
 const int DB_REPLICA                    = 0x3000;  // Flag database as being replicated
 const int DB_DISABLE_WAL                = 0x4000;  // Disable open WAL file
 const int DB_SYNCHRONOUS_WAL            = 0x5000;  // Using synchronous WAL
-const int DB_XAPIAN_MASK                = 0x0fff;
 
 const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a Xapian::Database or Document
 

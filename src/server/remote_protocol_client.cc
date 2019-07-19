@@ -518,8 +518,7 @@ RemoteProtocolClient::msg_readaccess(const std::string &message)
 		if (!unpack_uint(&p, p_end, &flag_bits)) {
 			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
 		}
-		flags |= flag_bits &~ DB_XAPIAN_MASK;
-		flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+		flags = static_cast<int>(flag_bits);
 		L_RED("MSG_READACCESS flags = {}", readable_flags(flags));
 		if ((flags & DB_WRITABLE) == DB_WRITABLE) {
 			throw Xapian::NetworkError("Bad flags in MSG_READACCESS");
@@ -546,7 +545,7 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 {
 	L_CALL("RemoteProtocolClient::msg_writeaccess(<message>)");
 
-	flags = DB_WRITABLE;
+	flags = 0;
 	const char *p = message.c_str();
 	const char *p_end = p + message.size();
 
@@ -555,8 +554,7 @@ RemoteProtocolClient::msg_writeaccess(const std::string & message)
 		if (!unpack_uint(&p, p_end, &flag_bits)) {
 			throw Xapian::NetworkError("Bad flags in MSG_WRITEACCESS");
 		}
-		flags |= flag_bits &~ DB_XAPIAN_MASK;
-		flags |= flag_bits &~ Xapian::DB_ACTION_MASK_;
+		flags = static_cast<int>(flag_bits);
 		L_RED("MSG_WRITEACCESS flags = {}", readable_flags(flags));
 		if ((flags & DB_WRITABLE) != DB_WRITABLE) {
 			throw Xapian::NetworkError("Bad flags in MSG_WRITEACCESS");
