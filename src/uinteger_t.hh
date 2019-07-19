@@ -2,7 +2,7 @@
 uinteger_t.hh
 An arbitrary precision unsigned integer type for C++
 
-Copyright (c) 2017 German Mendez Bravo (Kronuz) @ german dot mb at gmail.com
+Copyright (c) 2017,2019 German Mendez Bravo (Kronuz) @ german dot mb at gmail.com
 Copyright (c) 2013 - 2017 Jason Lee @ calccrypto at gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -1991,7 +1991,7 @@ public:
 	}
 
 	template <typename T, std::size_t N>
-	explicit uinteger_t(T (&s)[N], int base=10) :
+	explicit uinteger_t(T (&&s)[N], int base=10) :
 		uinteger_t(s, N - 1, base) { }
 
 	explicit uinteger_t(const unsigned char* bytes, std::size_t sz, int base) :

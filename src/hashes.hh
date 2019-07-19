@@ -113,7 +113,7 @@ public:
 	}
 
 	template <size_t N>
-	constexpr static std::uint64_t hash(const char(&s)[N], std::uint64_t seed = 0) {
+	constexpr static std::uint64_t hash(const char(&&s)[N], std::uint64_t seed = 0) {
 		return hash(s, N - 1, seed);
 	}
 
@@ -200,7 +200,7 @@ struct fnv1ah {
 	}
 
 	template <size_t N>
-	constexpr static T hash(const char(&s)[N], T seed = offset) {
+	constexpr static T hash(const char(&&s)[N], T seed = offset) {
 		return hash(s, N - 1, seed);
 	}
 
@@ -254,7 +254,7 @@ struct djb2h {
 	}
 
 	template <size_t N>
-	constexpr static T hash(const char(&s)[N], T seed = offset) {
+	constexpr static T hash(const char(&&s)[N], T seed = offset) {
 		return hash(s, N - 1, seed);
 	}
 

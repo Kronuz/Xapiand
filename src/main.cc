@@ -89,7 +89,7 @@ static const bool is_tty = isatty(STDERR_FILENO) != 0;
 
 
 template<typename T, std::size_t N>
-static ssize_t write(int fildes, T (&buf)[N]) {
+static ssize_t write(int fildes, T (&&buf)[N]) {
 	return write(fildes, buf, N - 1);
 }
 

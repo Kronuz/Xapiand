@@ -240,12 +240,12 @@ public:
 	}
 
 	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	void encode(Result& result, T (&s)[N]) const {
+	void encode(Result& result, T (&&s)[N]) const {
 		encode(result, s, N - 1);
 	}
 
 	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value>>
-	Result encode(T (&s)[N]) const {
+	Result encode(T (&&s)[N]) const {
 		Result result;
 		encode(result, s, N - 1);
 		return result;
@@ -354,12 +354,12 @@ public:
 	}
 
 	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
-	void decode(Result& result, T (&s)[N]) const {
+	void decode(Result& result, T (&&s)[N]) const {
 		decode(result, s, N - 1);
 	}
 
 	template <typename Result = std::string, typename T, std::size_t N, typename = std::enable_if_t<uinteger_t::is_result<Result>::value or std::is_integral<Result>::value>>
-	Result decode(T (&s)[N]) const {
+	Result decode(T (&&s)[N]) const {
 		Result result;
 		decode(result, s, N - 1);
 		return result;
@@ -400,7 +400,7 @@ public:
 	}
 
 	template <typename T, std::size_t N>
-	bool is_valid(T (&s)[N]) const {
+	bool is_valid(T (&&s)[N]) const {
 		return is_valid(s, N - 1);
 	}
 

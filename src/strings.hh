@@ -49,7 +49,7 @@ namespace std {
 	}
 
 	template <typename T, int N>
-	inline auto to_string(const T (&s)[N]) {
+	inline auto to_string(const T (&&s)[N]) {
 		return std::string(s, N - 1);
 	}
 

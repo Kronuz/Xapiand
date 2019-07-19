@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,6 @@ inline std::string repr(std::string_view s, bool friendly = true, char quote = '
 }
 
 template<typename T, std::size_t N>
-inline std::string repr(T (&s)[N], bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
+inline std::string repr(T (&&s)[N], bool friendly = true, char quote = '\'', std::size_t max_size = 0) {
 	return repr(s, N - 1, friendly, quote, max_size);
 }

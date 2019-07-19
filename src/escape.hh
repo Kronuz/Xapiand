@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018 Dubalu LLC
+ * Copyright (c) 2015-2019 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,6 @@ inline std::string escape(T&& s, char quote = '\'') {
 }
 
 template<typename T, std::size_t N>
-inline std::string escape(T (&s)[N], char quote = '\'') {
+inline std::string escape(T (&&s)[N], char quote = '\'') {
 	return escape(s, N - 1, quote);
 }
