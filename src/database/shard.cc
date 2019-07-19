@@ -677,12 +677,13 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 	L_CALL("Shard::autocommit({})", shard ? shard->__repr__() : "null");
 
 	if (
-		shard->database &&
-		!shard->is_transactional() &&
-		!shard->is_closed() &&
-		shard->is_modified() &&
-		shard->is_writable() &&
-		shard->is_local()
+		shard->database &&              // Autocommit only if there is a database
+		!shard->is_transactional() &&   // Autocommit only if there's no transaction active (like during replication)
+		!shard->is_closed() &&          // Autocommit only if database is not closed
+		shard->is_modified() &&         // Autocommit only modified databases
+		shard->is_writable() &&         // Autocommit only writable databases
+		shard->is_local() &&            // Autocommit only local databases
+		!shard->is_restore()            // Data RESTORE doesn't do autocommit
 	) {
 		// Auto commit only on modified writable databases
 		committer()->debounce(shard->endpoint, std::weak_ptr<Shard>(shard));
