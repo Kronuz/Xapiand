@@ -277,7 +277,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 
 	std::unique_lock<std::mutex> lk(mtx);
 
-	if ((flags & DB_WRITABLE) == DB_WRITABLE) {
+	if (has_db_writable(flags)) {
 		shard = _writable_checkout(flags, timeout, callback, now, lk);
 	} else {
 		auto& shard_ref = _readable_checkout(flags, timeout, callback, now, lk);

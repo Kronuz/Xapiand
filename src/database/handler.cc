@@ -385,7 +385,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, b
 {
 	L_CALL("DatabaseHandler::prepare({}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), ct_type.first, ct_type.second);
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!has_db_writable(flags)) {
 		THROW(Error, "Database is read-only");
 	}
 
@@ -447,7 +447,7 @@ DatabaseHandler::index(const MsgPack& document_id, Xapian::rev document_ver, boo
 {
 	L_CALL("DatabaseHandler::index({}, {}, {}, {}, {}/{})", repr(document_id.to_string()), stored, repr(body.to_string()), commit, ct_type.first, ct_type.second);
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!has_db_writable(flags)) {
 		THROW(Error, "Database is read-only");
 	}
 
@@ -499,8 +499,8 @@ DatabaseHandler::patch(const MsgPack& document_id, Xapian::rev document_ver, boo
 {
 	L_CALL("DatabaseHandler::patch({}, {}, {}, {})", repr(document_id.to_string()), document_ver, repr(patches.to_string()), commit);
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
-		THROW(Error, "database is read-only");
+	if (!has_db_writable(flags)) {
+		THROW(Error, "Database is read-only");
 	}
 
 	if (!patches.is_map() && !patches.is_array()) {
@@ -555,8 +555,8 @@ DatabaseHandler::update(const MsgPack& document_id, Xapian::rev document_ver, bo
 {
 	L_CALL("DatabaseHandler::update({}, {}, {}, <body:{}>, {}, {}/{})", repr(document_id.to_string()), document_ver, stored, enum_name(body.get_type()), commit, ct_type.first, ct_type.second);
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
-		THROW(Error, "database is read-only");
+	if (!has_db_writable(flags)) {
+		THROW(Error, "Database is read-only");
 	}
 
 	if (!document_id) {
@@ -977,7 +977,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 {
 	L_CALL("DatabaseHandler::prepare_document(<body>, <seq>)");
 
-	if ((flags & DB_WRITABLE) != DB_WRITABLE) {
+	if (!has_db_writable(flags)) {
 		THROW(Error, "Database is read-only");
 	}
 

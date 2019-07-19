@@ -650,7 +650,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 	if (obj && obj->is_map()) {
 		const auto it = obj->find(RESERVED_SCHEMA);
 		if (it != obj->end()) {
-			writable = (db_handler->flags & DB_WRITABLE) == DB_WRITABLE;
+			writable = has_db_writable(db_handler->flags);
 			schema_obj = &it.value();
 		}
 	}
@@ -753,7 +753,7 @@ SchemasLRU::set(DatabaseHandler* db_handler, std::shared_ptr<const MsgPack>& old
 	assert(db_handler);
 	assert(!db_handler->endpoints.empty());
 
-	bool writable = (db_handler->flags & DB_WRITABLE) == DB_WRITABLE;
+	bool writable = has_db_writable(db_handler->flags);
 	auto up = _update("SET: ", writable, new_schema, nullptr, db_handler->endpoints, db_handler->flags, db_handler->context);
 	auto failure = std::get<0>(up);
 	auto schema_ptr = std::get<1>(up);

@@ -112,23 +112,23 @@ public:
 	}
 
 	bool is_writable() const {
-		return (flags & DB_WRITABLE) == DB_WRITABLE;
+		return has_db_writable(flags);
 	}
 
 	bool is_replica() const {
-		return (flags & DB_REPLICA) == DB_REPLICA;
+		return has_db_replica(flags);
 	}
 
 	bool is_restore() const {
-		return (flags & DB_RESTORE) == DB_RESTORE;
+		return has_db_restore(flags);
 	}
 
 	bool is_synchronous_wal() const {
-		return (flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL;
+		return has_db_synchronous_wal(flags);
 	}
 
 	bool is_wal_active() const {
-		return is_writable() && is_local() && (flags & DB_DISABLE_WAL) != DB_DISABLE_WAL;
+		return is_writable() && is_local() && !has_db_disable_wal(flags);
 	}
 
 	bool is_busy() const {

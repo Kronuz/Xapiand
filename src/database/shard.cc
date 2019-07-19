@@ -298,7 +298,7 @@ Shard::reopen_writable()
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseNotFoundError&) {
-			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN) {
+			if (!has_db_create_or_open(flags)) {
 				throw;
 			}
 			build_path_index(endpoint.path);
@@ -446,7 +446,7 @@ Shard::reopen_readable()
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
 		} catch (const Xapian::DatabaseNotFoundError&) {
-			if ((flags & DB_CREATE_OR_OPEN) != DB_CREATE_OR_OPEN)  {
+			if (!has_db_create_or_open(flags))  {
 				throw;
 			}
 			build_path_index(endpoint.path);
