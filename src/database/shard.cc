@@ -429,11 +429,13 @@ Shard::reopen_readable()
 				} catch (const Xapian::DatabaseOpeningError&) {
 					_incomplete.store(true, std::memory_order_relaxed);
 				}
-				if (XapiandManager::get_state() == XapiandManager::State::READY) {
-					// Try triggering replication from primary shard:
-					try {
-						trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, Node::get_node(nodes[0])}, Endpoint{endpoint.path});
-					} catch (...) { }
+				if (has_db_trigger_replication(flags)) {
+					if (XapiandManager::get_state() == XapiandManager::State::READY) {
+						// Try triggering replication from primary shard:
+						try {
+							trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), endpoint.path, Endpoint{endpoint.path, Node::get_node(nodes[0])}, Endpoint{endpoint.path});
+						} catch (...) { }
+					}
 				}
 			}
 		}

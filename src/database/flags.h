@@ -35,6 +35,7 @@ const int DB_RESTORE                    = 0x00020000;  // Flag database as being
 const int DB_REPLICA                    = 0x00040000;  // Flag database as being replicated
 const int DB_DISABLE_WAL                = 0x00080000;  // Disable open WAL file
 const int DB_SYNCHRONOUS_WAL            = 0x00100000;  // Using synchronous WAL
+const int DB_TRIGGER_REPLICATION        = 0x00200000;  // Allow trigger replication
 
 const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a Xapian::Database or Document
 
@@ -77,6 +78,10 @@ inline bool has_db_disable_wal(int flags) {
 
 inline bool has_db_synchronous_wal(int flags) {
 	return (flags & DB_SYNCHRONOUS_WAL) == DB_SYNCHRONOUS_WAL;
+}
+
+inline bool has_db_trigger_replication(int flags) {
+	return (flags & DB_TRIGGER_REPLICATION) == DB_TRIGGER_REPLICATION;
 }
 
 inline std::string readable_flags(int flags) {
