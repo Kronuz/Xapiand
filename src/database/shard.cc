@@ -443,7 +443,7 @@ Shard::reopen_readable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		L_DATABASE("Opening local shard {} ()", repr(endpoint.to_string()), readable_flags(flags));
+		L_DATABASE("Opening local shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
