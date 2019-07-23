@@ -31,6 +31,7 @@
 #include <memory>               // for std::shared_ptr
 #include <mutex>                // for std::mutex, std::condition_variable, std::unique_lock
 #include <set>                  // for std::set
+#include <future>               // for std::packaged_task
 #include <string>               // for std::string
 #include <utility>              // for std::pair
 #include <unordered_map>        // for std::unordered_map
@@ -92,7 +93,7 @@ class ShardEndpoint : public Endpoint
 
 	std::condition_variable lockable_cond;
 
-	TaskQueue<void()> callbacks;  // callbacks waiting for database to be ready
+	TaskQueue<std::packaged_task<void()>> callbacks;  // callbacks waiting for database to be ready
 
 	std::shared_ptr<Shard>& _writable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, std::chrono::steady_clock::time_point now, std::unique_lock<std::mutex>& lk);
 	std::shared_ptr<Shard>& _readable_checkout(int flags, double timeout, std::packaged_task<void()>* callback, std::chrono::steady_clock::time_point now, std::unique_lock<std::mutex>& lk);

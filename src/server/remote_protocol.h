@@ -33,7 +33,6 @@
 #include "concurrent_queue.h"                 // for ConcurrentQueue
 #include "endpoint.h"                         // for Endpoint
 #include "tcp.h"                              // for BaseTCP
-#include "threadpool.hh"                      // for TaskQueue
 
 
 class RemoteProtocolServer;

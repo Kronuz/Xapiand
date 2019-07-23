@@ -33,7 +33,6 @@
 #include "concurrent_queue.h"                 // for ConcurrentQueue
 #include "endpoint.h"                         // for Endpoint
 #include "tcp.h"                              // for BaseTCP
-#include "threadpool.hh"                      // for TaskQueue
 
 
 constexpr uint16_t XAPIAND_REPLICATION_PROTOCOL_MAJOR_VERSION = 10;

@@ -338,7 +338,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 	assert(shard->is_busy());
 	assert(&shard->endpoint == this);
 
-	TaskQueue<void()> pending_callbacks;
+	TaskQueue<std::packaged_task<void()>> pending_callbacks;
 	{
 		std::lock_guard<std::mutex> lk(mtx);
 		std::swap(pending_callbacks, callbacks);

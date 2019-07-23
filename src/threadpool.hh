@@ -355,14 +355,13 @@ template <typename>
 class TaskQueue;
 
 template <typename R, typename... Args>
-class TaskQueue<R(Args...)> {
+class TaskQueue<std::packaged_task<R(Args...)>> {
 	using Queue = ConcurrentQueue<std::packaged_task<R(Args...)>>;
 	Queue _queue;
 
+
 public:
-	template <typename Func>
-	auto enqueue(Func&& func) {
-		auto packaged_task = std::packaged_task<R(Args...)>(std::forward<Func>(func));
+	auto enqueue(std::packaged_task<R(Args...)>&& packaged_task) {
 		auto future = packaged_task.get_future();
 		_queue.enqueue(std::move(packaged_task));
 		return future;
