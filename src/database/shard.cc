@@ -266,7 +266,7 @@ Shard::reopen_writable()
 	bool local = false;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
-		L_DATABASE("Opening remote writable shard {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening remote writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
@@ -293,7 +293,7 @@ Shard::reopen_writable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		L_DATABASE("Opening local writable shard {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | XAPIAN_DB_SYNC_MODE);
@@ -377,7 +377,7 @@ Shard::reopen_readable()
 	bool local = false;
 #ifdef XAPIAND_CLUSTERING
 	if (!endpoint.is_local()) {
-		L_DATABASE("Opening remote shard {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening remote shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
@@ -443,7 +443,7 @@ Shard::reopen_readable()
 	else
 #endif  // XAPIAND_CLUSTERING
 	{
-		L_DATABASE("Opening local shard {}", repr(endpoint.to_string()));
+		L_DATABASE("Opening local shard {} ()", repr(endpoint.to_string()), readable_flags(flags));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
 			*new_database = Xapian::Database(endpoint.path, Xapian::DB_OPEN);
