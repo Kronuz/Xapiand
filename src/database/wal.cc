@@ -37,7 +37,7 @@
 #include "database/utils.h"         // for read_uuid
 #include "exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description
-#include "fs.hh"                    // for exists
+#include "fs.hh"                    // for exists, delete_files
 #include "io.hh"                    // for io::*
 #include "log.h"                    // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
 #include "manager.h"                // for XapiandManager
@@ -893,6 +893,15 @@ DatabaseWALWriterThread::get(const std::string& path)
 }
 
 
+void
+DatabaseWALWriterThread::erase(const std::string& path)
+{
+	L_CALL("DatabaseWALWriterThread::erase()");
+
+	lru.erase(path);
+}
+
+
 DatabaseWALWriter::DatabaseWALWriter(const char* format, std::size_t num_threads) :
 	_threads(num_threads),
 	_format(format),
@@ -1110,6 +1119,23 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 
 
 void
+DatabaseWALWriterTask::delete_wal(DatabaseWALWriterThread& thread)
+{
+	L_CALL("DatabaseWALWriterTask::delete_wal()");
+
+	L_DATABASE_NOW(start);
+
+	L_DATABASE("delete_wal {{path:{}}}: {}", repr(path));
+
+	thread.erase(path);
+	delete_files(path, {"wal.*"});
+
+	L_DATABASE_NOW(end);
+	L_DATABASE("Database WAL delete of {} succeeded after {}", repr(path), strings::from_delta(start, end));
+}
+
+
+void
 DatabaseWALWriter::write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec)
 {
 	L_CALL("DatabaseWALWriter::write_remove_spelling({}, {}, {}, {}, ...)", synchronous, repr(path), repr(uuid), revision);
@@ -1235,5 +1261,22 @@ DatabaseWALWriter::write_add_spelling(bool synchronous, const std::string& path,
 		enqueue(std::move(task));
 	}
 }
+
+void
+DatabaseWALWriter::delete_wal(bool synchronous, const std::string& path)
+{
+	L_CALL("DatabaseWALWriter::delete_wal({}, {})", synchronous, repr(path));
+
+	DatabaseWALWriterTask task;
+	task.path = path;
+	task.dispatcher = &DatabaseWALWriterTask::delete_wal;
+
+	if (synchronous) {
+		execute(std::move(task));
+	} else {
+		enqueue(std::move(task));
+	}
+}
+
 
 #endif

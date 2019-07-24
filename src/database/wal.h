@@ -272,6 +272,7 @@ class DatabaseWALWriterTask {
 	void write_set_metadata(DatabaseWALWriterThread& thread);
 	void write_add_spelling(DatabaseWALWriterThread& thread);
 	void write_remove_spelling(DatabaseWALWriterThread& thread);
+	void delete_wal(DatabaseWALWriterThread& thread);
 
 public:
 	DatabaseWALWriterTask() : dispatcher(nullptr) {}
@@ -308,6 +309,7 @@ public:
 	void operator()();
 	void clear();
 	DatabaseWAL& get(const std::string& path);
+	void erase(const std::string& path);
 
 	const std::string& name() const noexcept;
 };
@@ -347,6 +349,7 @@ public:
 	void write_set_metadata(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& key, const std::string& val);
 	void write_add_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqinc);
 	void write_remove_spelling(bool synchronous, const std::string& path, const std::string& uuid, Xapian::rev revision, const std::string& word, Xapian::termcount freqdec);
+	void delete_wal(bool synchronous, const std::string& path);
 };
 
 

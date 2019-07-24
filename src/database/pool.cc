@@ -33,6 +33,7 @@
 #include "node.h"                 // for Node
 #include "manager.h"              // for IndexSettings, XapiandManager
 #include "server/discovery.h"     // for db_updater
+#include "wal.h"                  // for DatabaseWALWriter
 
 
 // #undef L_DEBUG
@@ -390,9 +391,12 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			Shard::autocommit(shard);
 		}
+#if XAPIAND_DATABASE_WAL
+		// Delete WAL during checking of a restore
 		if (shard->is_restore()) {
-			delete_files(path, {"wal.*"});  // Delete WAL during checking of a restore
+			XapiandManager::manager(true)->wal_writer->delete_wal(shard->is_synchronous_wal(), path);
 		}
+#endif
 		L_SHARD_LOG_TIMED_CLEAR();
 		shard->_busy.store(false);
 		writable_cond.notify_one();
