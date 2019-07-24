@@ -2378,7 +2378,6 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 	flags(flags),
 	echo(echo),
 	comments(comments),
-	commit(query_field.commit),
 	first(query_field.offset),
 	maxitems(query_field.limit),
 	_prepared(0),
@@ -2680,9 +2679,9 @@ DocIndexer::wait(double timeout)
 		}
 	}
 
-	if (commit) {
-		DatabaseHandler db_handler(endpoints, flags);
-		db_handler.commit();
+	DatabaseHandler db_handler(endpoints, flags);
+	db_handler.commit();
+
 #ifdef XAPIAND_CLUSTERING
 		if (!opts.solo) {
 			for (auto& endpoint : endpoints) {
@@ -2690,12 +2689,6 @@ DocIndexer::wait(double timeout)
 			}
 		}
 #endif
-	} else {
-		for (auto& endpoint : endpoints) {
-			lock_shard lk_shard(endpoint, flags & ~DB_RESTORE);
-			Shard::autocommit(lk_shard.locked());
-		}
-	}
 
 	return true;
 }

@@ -304,7 +304,6 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 
 	bool echo;
 	bool comments;
-	bool commit;
 	Xapian::doccount first;
 	Xapian::doccount maxitems;
 
