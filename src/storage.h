@@ -145,7 +145,7 @@ inline auto& fsyncher(bool create = true) {
 		auto end = std::chrono::steady_clock::now();
 
 		if (err == -1) {
-			if (errno == EBADF || errno == EINVAL) {
+			if (errno == EBADF || errno == EINVAL || errno == ENOTSUP) {
 				L_DEBUG("Async {} falied after {}: {} ({}): {}", full_fsync ? "Full Fsync" : "Fsync", strings::from_delta(start, end), error::name(errno), errno, error::description(errno));
 			} else {
 				L_WARNING("Async {} falied after {}: {} ({}): {}", full_fsync ? "Full Fsync" : "Fsync", strings::from_delta(start, end), error::name(errno), errno, error::description(errno));
