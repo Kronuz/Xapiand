@@ -59,6 +59,7 @@
 #include "script.h"                         // for Script
 #include "strings.hh"                       // for strings::from_bytes
 #include "serialise.h"                      // for cast, serialise, type
+#include "server/discovery.h"               // for db_updater
 #include "server/http_utils.h"              // for catch_http_errors
 
 #ifdef XAPIAND_CHAISCRIPT
@@ -2682,6 +2683,13 @@ DocIndexer::wait(double timeout)
 	if (commit) {
 		DatabaseHandler db_handler(endpoints, flags);
 		db_handler.commit();
+#ifdef XAPIAND_CLUSTERING
+		if (!opts.solo) {
+			for (auto& endpoint : endpoints) {
+				db_updater()->debounce(endpoint.path, 0, endpoint.path);
+			}
+		}
+#endif
 	}
 
 	return true;
