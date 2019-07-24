@@ -2690,6 +2690,11 @@ DocIndexer::wait(double timeout)
 			}
 		}
 #endif
+	} else {
+		for (auto& endpoint : endpoints) {
+			lock_shard lk_shard(endpoint, flags & ~DB_RESTORE);
+			Shard::autocommit(lk_shard.locked());
+		}
 	}
 
 	return true;
