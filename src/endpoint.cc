@@ -253,22 +253,6 @@ Endpoint::Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node
 }
 
 
-Endpoint::Endpoint(const Endpoint& other) :
-	path(other.path),
-	node_name(other.node_name),
-	query(other.query)
-{
-}
-
-
-Endpoint::Endpoint(Endpoint&& other) :
-	path(std::move(other.path)),
-	node_name(std::move(other.node_name)),
-	query(std::move(other.query))
-{
-}
-
-
 Endpoint::Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node) :
 	path(other.path),
 	node_name(node->lower_name()),
@@ -282,26 +266,6 @@ Endpoint::Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node) :
 	node_name(node->lower_name()),
 	query(std::move(other.query))
 {
-}
-
-
-Endpoint&
-Endpoint::operator=(const Endpoint& other)
-{
-	path = other.path;
-	node_name = other.node_name;
-	query = other.query;
-	return *this;
-}
-
-
-Endpoint&
-Endpoint::operator=(Endpoint&& other)
-{
-	path = std::move(other.path);
-	node_name = std::move(other.node_name);
-	query = std::move(other.query);
-	return *this;
 }
 
 

@@ -64,15 +64,15 @@ public:
 	std::string path, node_name, query;
 
 	Endpoint() = default;
-	Endpoint(const Endpoint& other);
-	Endpoint(Endpoint&& other);
+	Endpoint(const Endpoint& other) = default;
+	Endpoint(Endpoint&& other) = default;
 	Endpoint(const Endpoint& other, const std::shared_ptr<const Node>& node);
 	Endpoint(Endpoint&& other, const std::shared_ptr<const Node>& node);
 
 	Endpoint(std::string_view uri, const std::shared_ptr<const Node>& node = nullptr);
 
-	Endpoint& operator=(const Endpoint& other);
-	Endpoint& operator=(Endpoint&& other);
+	Endpoint& operator=(const Endpoint& other) = default;
+	Endpoint& operator=(Endpoint&& other) = default;
 
 	bool is_local() const;
 
