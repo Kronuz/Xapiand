@@ -143,7 +143,7 @@ public:
 		return transactional() != Transaction::none;
 	}
 
-	Shard(ShardEndpoint& endpoint_, int flags);
+	Shard(ShardEndpoint& endpoint_, int flags_, bool busy_);
 	~Shard() noexcept;
 
 #ifdef XAPIAND_DATA_STORAGE

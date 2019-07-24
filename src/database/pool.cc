@@ -159,12 +159,19 @@ ShardEndpoint::_writable_checkout(int flags, double timeout, std::packaged_task<
 			}
 			throw Xapian::DatabaseNotAvailableError("Shard is not available");
 		}
-		if (!writable) {
-			writable = std::make_shared<Shard>(*this, flags);
-		}
-		if (!is_locked() && !writable->_busy.exchange(true)) {
-			writable->flags = flags;  // update shard flags
-			return writable;
+		if (!is_locked()) {
+			if (!writable) {
+				writable = std::make_shared<Shard>(*this, flags, false);
+			}
+			if (!writable->_busy.exchange(true)) {
+				if (writable->flags != flags) {
+					writable.reset();
+					writable = std::make_shared<Shard>(*this, flags, true);
+				}
+				assert(writable->flags == flags);
+				assert(writable->is_busy());
+				return writable;
+			}
 		}
 		auto wait_pred = [&]() {
 			return is_finished() || (!writable->is_busy() && !is_locked() && !database_pool.is_locked(*this));
@@ -205,24 +212,54 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 			}
 			throw Xapian::DatabaseNotAvailableError("Shard is not available");
 		}
-		if (readables_available > 0) {
-			for (auto& readable : readables) {
-				if (!readable) {
-					readable = std::make_shared<Shard>(*this, flags);
+		if (!is_locked()) {
+			if (readables_available > 0) {
+				bool has_empty = false;
+				// Try finding an available readable database with the same flags
+				for (auto& readable : readables) {
+					if (!readable) {
+						has_empty = true;
+					} else if (readable->flags == flags) {
+						if (!readable->_busy.exchange(true)) {
+							--readables_available;
+							return readable;
+						}
+					}
 				}
-				if (!is_locked() && !readable->_busy.exchange(true)) {
-					readable->flags = flags;  // update shard flags
-					--readables_available;
-					return readable;
+				// Or try adding a new database in an empty position
+				if (has_empty) {
+					for (auto& readable : readables) {
+						if (!readable) {
+							readable = std::make_shared<Shard>(*this, flags, true);
+							assert(readable->flags == flags);
+							assert(readable->is_busy());
+							--readables_available;
+							return readable;
+						}
+					}
+				}
+				// Or try upgrading flags
+				for (auto& readable : readables) {
+					if (readable) {
+						if (!readable->_busy.exchange(true)) {
+							assert(readable->flags != flags);
+							readable.reset();
+							readable = std::make_shared<Shard>(*this, flags, true);
+							assert(readable->flags == flags);
+							assert(readable->is_busy());
+							--readables_available;
+							return readable;
+						}
+					}
 				}
 			}
-		}
-		if (readables.size() < database_pool.max_database_readers) {
-			auto new_database = std::make_shared<Shard>(*this, flags);
-			auto& readable = *readables.insert(readables.end(), new_database);
-			++readables_available;
-			if (!is_locked() && !readable->_busy.exchange(true)) {
-				readable->flags = flags;  // update shard flags
+			// Otherwise add a new database
+			if (readables.size() < database_pool.max_database_readers) {
+				auto new_database = std::make_shared<Shard>(*this, flags, true);
+				auto& readable = *readables.insert(readables.end(), new_database);
+				++readables_available;
+				assert(readable->flags == flags);
+				assert(readable->is_busy());
 				--readables_available;
 				return readable;
 			}
@@ -309,8 +346,7 @@ ShardEndpoint::checkout(int flags, double timeout, std::packaged_task<void()>* c
 			}
 			if (reopen) {
 				// Create a new shard and discard old one
-				auto new_database = std::make_shared<Shard>(*this, flags);
-				new_database->_busy.store(true);
+				auto new_database = std::make_shared<Shard>(*this, flags, true);
 				lk.lock();
 				shard_ref = new_database;
 			}

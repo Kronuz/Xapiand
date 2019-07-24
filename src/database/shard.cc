@@ -211,10 +211,10 @@ DataStorage::open(std::string_view relative_path)
  *  |____/|_| |_|\__,_|_|  \__,_|
  *
  */
-Shard::Shard(ShardEndpoint& endpoint_, int flags_)
+Shard::Shard(ShardEndpoint& endpoint_, int flags_, bool busy_)
 	: reopen_time(std::chrono::steady_clock::now()),
 	  reopen_revision(0),
-	  _busy(false),
+	  _busy(busy_),
 	  _local(false),
 	  _closed(false),
 	  _modified(false),
