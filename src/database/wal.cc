@@ -881,9 +881,9 @@ DatabaseWALWriterThread::clear()
 
 
 DatabaseWAL&
-DatabaseWALWriterThread::wal(const std::string& path)
+DatabaseWALWriterThread::get(const std::string& path)
 {
-	L_CALL("DatabaseWALWriterThread::wal()");
+	L_CALL("DatabaseWALWriterThread::get()");
 
 	auto it = lru.find(path);
 	if (it == lru.end()) {
@@ -1009,7 +1009,7 @@ DatabaseWALWriterTask::write_remove_spelling(DatabaseWALWriterThread& thread)
 	line.append(term_word_val);  // word
 	L_DATABASE("write_remove_spelling {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
-	auto& wal = thread.wal(path);
+	auto& wal = thread.get(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::REMOVE_SPELLING, line, false);
 
 	L_DATABASE_NOW(end);
@@ -1026,7 +1026,7 @@ DatabaseWALWriterTask::write_commit(DatabaseWALWriterThread& thread)
 
 	L_DATABASE("write_commit {{path:{}, rev:{}}}", repr(path), revision);
 
-	auto& wal = thread.wal(path);
+	auto& wal = thread.get(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::COMMIT, "", send_update);
 
 	L_DATABASE_NOW(end);
@@ -1045,7 +1045,7 @@ DatabaseWALWriterTask::write_replace_document(DatabaseWALWriterThread& thread)
 	line.append(doc.serialise());
 	L_DATABASE("write_replace_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
-	auto& wal = thread.wal(path);
+	auto& wal = thread.get(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::REPLACE_DOCUMENT, line, false);
 
 	L_DATABASE_NOW(end);
@@ -1063,7 +1063,7 @@ DatabaseWALWriterTask::write_delete_document(DatabaseWALWriterThread& thread)
 	auto line = serialise_length(did);
 	L_DATABASE("write_delete_document {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
-	auto& wal = thread.wal(path);
+	auto& wal = thread.get(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::DELETE_DOCUMENT, line, false);
 
 	L_DATABASE_NOW(end);
@@ -1082,7 +1082,7 @@ DatabaseWALWriterTask::write_set_metadata(DatabaseWALWriterThread& thread)
 	line.append(term_word_val);  // val
 	L_DATABASE("write_set_metadata {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
-	auto& wal = thread.wal(path);
+	auto& wal = thread.get(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::SET_METADATA, line, false);
 
 	L_DATABASE_NOW(end);
@@ -1101,7 +1101,7 @@ DatabaseWALWriterTask::write_add_spelling(DatabaseWALWriterThread& thread)
 	line.append(term_word_val);  // word
 	L_DATABASE("write_add_spelling {{path:{}, rev:{}}}: {}", repr(path), revision, repr(line));
 
-	auto& wal = thread.wal(path);
+	auto& wal = thread.get(path);
 	wal.write_line(uuid, revision, DatabaseWAL::Type::ADD_SPELLING, line, false);
 
 	L_DATABASE_NOW(end);

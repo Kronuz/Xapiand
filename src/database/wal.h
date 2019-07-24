@@ -307,7 +307,7 @@ public:
 
 	void operator()();
 	void clear();
-	DatabaseWAL& wal(const std::string& path);
+	DatabaseWAL& get(const std::string& path);
 
 	const std::string& name() const noexcept;
 };
