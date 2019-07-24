@@ -693,7 +693,9 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 
 	assert(is_writable());
 
-	if (!is_modified()) {
+	auto local = is_local();
+
+	if (local && !is_modified()) {
 		L_DATABASE("Commit on shard {} was discarded, because there are not changes", repr(endpoint.to_string()));
 		return false;
 	}
@@ -714,7 +716,6 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		L_DATABASE("Committing shard {} {{ try:{} }}", repr(endpoint.to_string()), DB_RETRIES - t);
 		try {
-			auto local = is_local();
 #ifdef XAPIAND_DATA_STORAGE
 			storage_commit();
 #endif  // XAPIAND_DATA_STORAGE
