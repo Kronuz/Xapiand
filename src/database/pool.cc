@@ -390,6 +390,9 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		} else {
 			Shard::autocommit(shard);
 		}
+		if (shard->is_restore()) {
+			delete_files(path, {"wal.*"});  // Delete WAL during checking of a restore
+		}
 		L_SHARD_LOG_TIMED_CLEAR();
 		shard->_busy.store(false);
 		writable_cond.notify_one();
