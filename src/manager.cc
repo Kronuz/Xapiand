@@ -1357,7 +1357,8 @@ bool
 XapiandManager::ready_to_end_remote()
 {
 	return (
-		!remote_clients
+		!remote_clients &&
+		!database_pool->is_pending(true)
 	);
 }
 
