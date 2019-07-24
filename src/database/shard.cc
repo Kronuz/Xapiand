@@ -41,6 +41,7 @@
 #include "random.hh"              // for random_int
 #include "repr.hh"                // for repr
 #include "reserved/fields.h"      // for ID_FIELD_NAME
+#include "server/discovery.h"     // for db_updater
 #include "storage.h"              // for STORAGE_BLOCK_SIZE, StorageCorruptVolume...
 #include "strings.hh"             // for strings::from_delta, strings::format
 
@@ -751,6 +752,11 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 						std::move(uuid),
 						prior_revision,
 						send_update);
+				}
+#endif
+#ifdef XAPIAND_CLUSTERING
+				if (!opts.solo) {
+					db_updater()->debounce(endpoint.path, current_revision, endpoint.path);
 				}
 #endif
 			}
