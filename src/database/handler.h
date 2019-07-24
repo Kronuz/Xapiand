@@ -327,6 +327,8 @@ class DocIndexer : public std::enable_shared_from_this<DocIndexer> {
 	void _prepare(MsgPack&& obj);
 
 public:
+	~DocIndexer();
+
 	template <typename... Args>
 	static auto make_shared(Args&&... args) {
 		/*

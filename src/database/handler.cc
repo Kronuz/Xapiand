@@ -2389,6 +2389,19 @@ DocIndexer::DocIndexer(const Endpoints& endpoints, int flags, bool echo, bool co
 }
 
 
+DocIndexer::~DocIndexer()
+{
+	try {
+		if (indexed()) {
+			DatabaseHandler db_handler(endpoints, flags);
+			db_handler.commit();
+		}
+	} catch (...) {
+		L_EXC("Unhandled exception in DocIndexer destructor");
+	}
+}
+
+
 void
 DocPreparer::operator()()
 {
@@ -2677,9 +2690,6 @@ DocIndexer::wait(double timeout)
 			return false;
 		}
 	}
-
-	DatabaseHandler db_handler(endpoints, flags);
-	db_handler.commit();
 
 	return true;
 }
