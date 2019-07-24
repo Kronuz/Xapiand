@@ -123,6 +123,10 @@ public:
 		return has_db_restore(flags);
 	}
 
+	bool is_autocommit_active() const {
+		return !has_db_disable_autocommit(flags);
+	}
+
 	bool is_synchronous_wal() const {
 		return has_db_synchronous_wal(flags);
 	}

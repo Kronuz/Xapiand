@@ -177,7 +177,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 
 	// Get fast write lock for replication or retry later
 	try {
-		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_REPLICA, false);
+		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT | DB_REPLICA, false);
 		lk_shard_ptr->lock(0, [=] {
 			// If it cannot checkout because database is busy, retry when ready...
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), dst_endpoint.path, src_endpoint, dst_endpoint);
@@ -343,7 +343,7 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		return;
 	}
 
-	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE, false);
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT, false);
 
 	auto db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
@@ -507,7 +507,7 @@ ReplicationProtocolClient::msg_set_revision(const std::string& message)
 		return;
 	}
 
-	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE, false);
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT, false);
 
 	auto db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
@@ -803,7 +803,7 @@ ReplicationProtocolClient::reply_changeset(const std::string& line)
 	if (!wal) {
 		if (switching) {
 			if (!switch_shard) {
-				switch_shard = XapiandManager::manager(true)->database_pool->checkout(Endpoint{switch_shard_path}, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_REPLICA | DB_SYNCHRONOUS_WAL);
+				switch_shard = XapiandManager::manager(true)->database_pool->checkout(Endpoint{switch_shard_path}, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT | DB_REPLICA | DB_SYNCHRONOUS_WAL);
 			}
 			switch_shard->begin_transaction(false);
 			wal = std::make_unique<DatabaseWAL>(switch_shard.get());

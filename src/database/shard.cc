@@ -678,7 +678,7 @@ Shard::autocommit(const std::shared_ptr<Shard>& shard)
 		shard->is_modified() &&         // Autocommit only modified databases
 		shard->is_writable() &&         // Autocommit only writable databases
 		shard->is_local() &&            // Autocommit only local databases
-		!shard->is_restore()            // Data RESTORE doesn't do autocommit
+		shard->is_autocommit_active()   // Data RESTORE doesn't do autocommit
 	) {
 		// Auto commit only on modified writable databases
 		committer()->debounce(shard->endpoint, std::weak_ptr<Shard>(shard));
