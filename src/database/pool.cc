@@ -238,17 +238,19 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 						}
 					}
 				}
-				// Or try upgrading flags
-				for (auto& readable : readables) {
-					if (readable) {
-						if (!readable->_busy.exchange(true)) {
-							assert(readable->flags != flags);
-							readable.reset();
-							readable = std::make_shared<Shard>(*this, flags, true);
-							assert(readable->flags == flags);
-							assert(readable->is_busy());
-							--readables_available;
-							return readable;
+				// Or try upgrading flags of an already taken database
+				if (readables.size() >= database_pool.max_database_readers) {
+					for (auto& readable : readables) {
+						if (readable) {
+							if (!readable->_busy.exchange(true)) {
+								assert(readable->flags != flags);
+								readable.reset();
+								readable = std::make_shared<Shard>(*this, flags, true);
+								assert(readable->flags == flags);
+								assert(readable->is_busy());
+								--readables_available;
+								return readable;
+							}
 						}
 					}
 				}
