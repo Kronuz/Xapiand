@@ -143,7 +143,6 @@ def _task(args):
     indexed = []
     while running and offset < args.end:
         now = time.time()
-        client = random.choice(args.clients)
         op = random.choice(args.ops)
         with Check(errors[op]) as check:
             if op == 'put':
@@ -155,11 +154,11 @@ def _task(args):
                 fortune_id = offset
                 db = random.choice(args.databases)
                 if args.file:
-                    line = "http://{}:{}/{}/{} PUT {}".format(client.transport.hosts[0]['host'], client.transport.hosts[0]['port'], db, fortune_id, json.dumps(body))
+                    line = "http://{}:{}/{}/{} PUT {}".format(args.client.transport.hosts[0]['host'], args.client.transport.hosts[0]['port'], db, fortune_id, json.dumps(body))
                     with lock:
                         print(line, file=args.file)
                 else:
-                    client.index(index=db, id=fortune_id, body=body)
+                    args.client.index(index=db, id=fortune_id, body=body)
                 indexed.append((db, fortune_id, fortune, now))
             elif op == 'get':
                 if not indexed:
@@ -186,11 +185,11 @@ def _task(args):
                 elif now < epoch + 200:
                     check.dne = "▇"
                 if args.file:
-                    line = "http://{}:{}/{}/{}".format(client.transport.hosts[0]['host'], client.transport.hosts[0]['port'], db, fortune_id)
+                    line = "http://{}:{}/{}/{}".format(args.client.transport.hosts[0]['host'], args.client.transport.hosts[0]['port'], db, fortune_id)
                     with lock:
                         print(line, file=args.file)
                 else:
-                    body = client.get(index=db, id=fortune_id)
+                    body = args.client.get(index=db, id=fortune_id)
                     try:
                         if body[FIELD] != fortune:
                             raise ValueError
@@ -205,14 +204,13 @@ def _task(args):
     #     time.sleep(1)
     #     new_indexed = []
     #     for db, fortune_id, fortune, epoch in indexed:
-    #         client = random.choice(args.clients)
     #         with Check(errors['get']) as check:
     #             check.ok = ""
     #             try:
-    #                 body = client.get(db, fortune_id)
+    #                 body = args.client.get(db, fortune_id)
     #                 if body[FIELD] != fortune:
     #                     raise ValueError
-    #             except client.DoesNotExist:
+    #             except args.client.DoesNotExist:
     #                 new_indexed.append((db, fortune_id, fortune, epoch))
     #     indexed = new_indexed
 
@@ -311,9 +309,17 @@ def main():
         # ops = ['get', 'get', 'get', 'put']  # 75% of the time it's a get
 
         from xapiand import Xapiand
-        clients = []
-        for host, port in hosts:
-            clients.append(Xapiand(hosts=[{"host": host, "port": port}]))
+        client = Xapiand(
+            hosts=[{"host": host, "port": port} for host, port in hosts],
+            # sniff before doing anything
+            sniff_on_start=True,
+            # refresh nodes after a node fails to respond
+            sniff_on_connection_fail=True,
+            # and also every 60 seconds
+            sniffer_timeout=60,
+            # should timeout trigger a retry on different
+            retry_on_timeout=True,
+        )
 
         # Initialize Fortunate:
         try:
@@ -338,7 +344,7 @@ def main():
                         start=start + i * tpw,
                         end=start + i * tpw + tpw,
                         ops=ops,
-                        clients=clients,
+                        client=client,
                         databases=databases,
                         generator=generator,
                     )))
@@ -358,7 +364,7 @@ def main():
                 start=start,
                 end=tasks,
                 ops=ops,
-                clients=clients,
+                client=client,
                 databases=databases,
                 generator=generator,
             ))
