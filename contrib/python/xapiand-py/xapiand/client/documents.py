@@ -21,7 +21,7 @@ from ..exceptions import NotFoundError
 
 
 class DocumentsClient(NamespacedClient):
-    @query_params('commit', 'timeout')
+    @query_params('selector', 'commit', 'timeout')
     def index(self, index, body, id=None, content_type=None, params=None):
         """
         Adds or updates a document in a specific index, making it searchable.
@@ -42,7 +42,7 @@ class DocumentsClient(NamespacedClient):
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
-    @query_params('selector', 'timeout', 'upsert')
+    @query_params('selector', 'commit', 'timeout')
     def update(self, index, id, body=None, content_type=None, params=None):
         """
         Update a document based on a partial data provided.
@@ -60,7 +60,25 @@ class DocumentsClient(NamespacedClient):
             params=params, body=body,
             headers=content_type and {'content-type': content_type})
 
-    @query_params('selector', 'timeout', 'upsert')
+    @query_params('selector', 'commit', 'timeout')
+    def upsert(self, index, id, body=None, content_type=None, params=None):
+        """
+        Update or create a document based on a partial data provided.
+
+        :arg index: The name of the index
+        :arg id: Document ID
+        :arg body: The request definition using a partial `doc`
+        :arg selector: A comma-separated list of fields to return in the response
+        :arg timeout: Explicit operation timeout
+        """
+        for param in (index, id):
+            if param in SKIP_IN_PATH:
+                raise ValueError("Empty value passed for a required argument.")
+        return self.transport.perform_request('UPSERT', make_url(index, id=id),
+            params=params, body=body,
+            headers=content_type and {'content-type': content_type})
+
+    @query_params('selector', 'commit', 'timeout', 'upsert')
     def patch(self, index, id, body=None, params=None):
         """
         Patch a document based on a sequence of operations to apply to a

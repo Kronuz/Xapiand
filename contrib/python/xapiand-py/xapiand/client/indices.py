@@ -114,7 +114,7 @@ class IndicesClient(NamespacedClient):
         return self.transport.perform_request('COUNT', make_url(index),
             params=params, body=body)
 
-    @query_params('q', 'query', 'offset', 'limit', 'sort', 'selector', 'refresh', 'timeout')
+    @query_params('q', 'query', 'offset', 'limit', 'check_at_least', 'sort', 'selector', 'refresh', 'timeout')
     def search(self, index=None, body=None, params=None):
         """
         Execute a search query and get back search hits that match the query.
