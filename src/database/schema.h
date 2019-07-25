@@ -181,7 +181,6 @@ inline constexpr void operator^=(TypeIndex& a, const TypeIndex& b) {
 
 
 constexpr uint8_t EMPTY_CHAR         = ' ';
-constexpr uint8_t STRING_CHAR        = 's';
 constexpr uint8_t TIMEDELTA_CHAR     = 'z';
 constexpr uint8_t ARRAY_CHAR         = 'A';
 constexpr uint8_t BOOLEAN_CHAR       = 'B';
@@ -215,7 +214,6 @@ ENUM_CLASS(FieldType, uint8_t,
 	keyword       = KEYWORD_CHAR,
 	positive      = POSITIVE_CHAR,
 	script        = SCRIPT_CHAR,
-	string        = STRING_CHAR,
 	text          = TEXT_CHAR,
 	time          = TIME_CHAR,
 	timedelta     = TIMEDELTA_CHAR,
@@ -385,9 +383,8 @@ struct required_spc_t {
 
 	std::unordered_set<std::string> ignored;
 
-	// For STRING and TEXT type.
-	std::string language;
 	// Variables for TEXT type.
+	std::string language;
 	StopStrategy stop_strategy;
 	StemStrategy stem_strategy;
 	std::string stem_language;
@@ -430,7 +427,6 @@ struct required_spc_t {
 				return 'K';
 
 			case FieldType::script:
-			case FieldType::string:
 			case FieldType::text:
 				return 'S';
 

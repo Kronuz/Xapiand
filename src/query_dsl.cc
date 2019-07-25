@@ -642,7 +642,7 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 	auto type_ser = Serialise::guess_serialise(obj);
 
 	auto& type = std::get<0>(type_ser);
-	if (type == FieldType::keyword || type == FieldType::string) {
+	if (type == FieldType::keyword) {
 		type = FieldType::text;
 	}
 
@@ -751,7 +751,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			return Xapian::Query(prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()), wqf);
 		}
 
-		case FieldType::string:
 		case FieldType::text: {
 			if (flags & Xapian::QueryParser::FLAG_WILDCARD) {
 				if (serialised_term.find_first_of("?*") == std::string::npos) {
@@ -1367,7 +1366,6 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 							break;
 						case FieldType::uuid:  // FIXME: Should UUID be here?
 						case FieldType::keyword:
-						case FieldType::string:
 						case FieldType::text: {
 							constexpr static auto _ = phf::make_phf({
 								hh("levenshtein"),

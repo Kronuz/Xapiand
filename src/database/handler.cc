@@ -1649,7 +1649,7 @@ DatabaseHandler::get_prefixed_term_id(const MsgPack& document_id)
 		// Search like namespace.
 		const auto type_ser = Serialise::guess_serialise(document_id);
 		id_type = type_ser.first;
-		if (id_type == FieldType::text || id_type == FieldType::string) {
+		if (id_type == FieldType::text) {
 			id_type = FieldType::keyword;
 		}
 		spc_id.set_type(id_type);

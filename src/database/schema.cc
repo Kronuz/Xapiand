@@ -69,7 +69,6 @@
 
 
 constexpr static auto EMPTY      = static_string::string(EMPTY_CHAR);
-constexpr static auto STRING     = static_string::string(STRING_CHAR);
 constexpr static auto TIMEDELTA  = static_string::string(TIMEDELTA_CHAR);
 constexpr static auto ARRAY      = static_string::string(ARRAY_CHAR);
 constexpr static auto BOOLEAN    = static_string::string(BOOLEAN_CHAR);
@@ -943,10 +942,7 @@ _get_type(std::string_view str_type)
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::keyword }};
 			return _;
 		}
-		case _.fhhl("string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::string }};
-			return _;
-		}
+		case _.fhhl("string"):
 		case _.fhhl("text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::empty, FieldType::text }};
 			return _;
@@ -1022,10 +1018,7 @@ _get_type(std::string_view str_type)
 			return _;
 		}
 		case _.fhhl("string/array"):
-		case _.fhhl("array/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::string }};
-			return _;
-		}
+		case _.fhhl("array/string"):
 		case _.fhhl("text/array"):
 		case _.fhhl("array/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::empty, FieldType::array, FieldType::text }};
@@ -1105,10 +1098,7 @@ _get_type(std::string_view str_type)
 			return _;
 		}
 		case _.fhhl("string/foreign"):
-		case _.fhhl("foreign/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::string }};
-			return _;
-		}
+		case _.fhhl("foreign/string"):
 		case _.fhhl("text/foreign"):
 		case _.fhhl("foreign/text"): {
 			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::empty, FieldType::text }};
@@ -1241,10 +1231,7 @@ _get_type(std::string_view str_type)
 		case _.fhhl("array/string/foreign"):
 		case _.fhhl("array/foreign/string"):
 		case _.fhhl("foreign/string/array"):
-		case _.fhhl("foreign/array/string"): {
-			static const std::array<FieldType, SPC_TOTAL_TYPES> _{{ FieldType::foreign, FieldType::array, FieldType::string }};
-			return _;
-		}
+		case _.fhhl("foreign/array/string"):
 		case _.fhhl("text/array/foreign"):
 		case _.fhhl("text/foreign/array"):
 		case _.fhhl("array/text/foreign"):
@@ -1320,7 +1307,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY + EMPTY + POSITIVE),
 		hh(EMPTY + EMPTY + SCRIPT),
 		hh(EMPTY + EMPTY + KEYWORD),
-		hh(EMPTY + EMPTY + STRING),
 		hh(EMPTY + EMPTY + TEXT),
 		hh(EMPTY + EMPTY + TIME),
 		hh(EMPTY + EMPTY + TIMEDELTA),
@@ -1337,7 +1323,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(EMPTY + ARRAY + POSITIVE),
 		hh(EMPTY + ARRAY + SCRIPT),
 		hh(EMPTY + ARRAY + KEYWORD),
-		hh(EMPTY + ARRAY + STRING),
 		hh(EMPTY + ARRAY + TEXT),
 		hh(EMPTY + ARRAY + TIME),
 		hh(EMPTY + ARRAY + TIMEDELTA),
@@ -1354,7 +1339,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(FOREIGN + EMPTY + POSITIVE),
 		hh(FOREIGN + EMPTY + SCRIPT),
 		hh(FOREIGN + EMPTY + KEYWORD),
-		hh(FOREIGN + EMPTY + STRING),
 		hh(FOREIGN + EMPTY + TEXT),
 		hh(FOREIGN + EMPTY + TIME),
 		hh(FOREIGN + EMPTY + TIMEDELTA),
@@ -1371,7 +1355,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		hh(FOREIGN + ARRAY + POSITIVE),
 		hh(FOREIGN + ARRAY + SCRIPT),
 		hh(FOREIGN + ARRAY + KEYWORD),
-		hh(FOREIGN + ARRAY + STRING),
 		hh(FOREIGN + ARRAY + TEXT),
 		hh(FOREIGN + ARRAY + TIME),
 		hh(FOREIGN + ARRAY + TIMEDELTA),
@@ -1411,9 +1394,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		}
 		case _.fhh(EMPTY + EMPTY + KEYWORD): {
 			return std::string_view("keyword");
-		}
-		case _.fhh(EMPTY + EMPTY + STRING): {
-			return std::string_view("string");
 		}
 		case _.fhh(EMPTY + EMPTY + TEXT): {
 			return std::string_view("text");
@@ -1460,9 +1440,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		case _.fhh(EMPTY + ARRAY + KEYWORD): {
 			return std::string_view("array/keyword");
 		}
-		case _.fhh(EMPTY + ARRAY + STRING): {
-			return std::string_view("array/string");
-		}
 		case _.fhh(EMPTY + ARRAY + TEXT): {
 			return std::string_view("array/text");
 		}
@@ -1508,9 +1485,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		case _.fhh(FOREIGN + EMPTY + KEYWORD): {
 			return std::string_view("foreign/keyword");
 		}
-		case _.fhh(FOREIGN + EMPTY + STRING): {
-			return std::string_view("foreign/string");
-		}
 		case _.fhh(FOREIGN + EMPTY + TEXT): {
 			return std::string_view("foreign/text");
 		}
@@ -1555,9 +1529,6 @@ _get_str_type(const std::array<FieldType, SPC_TOTAL_TYPES>& sep_types)
 		}
 		case _.fhh(FOREIGN + ARRAY + KEYWORD): {
 			return std::string_view("foreign/array/keyword");
-		}
-		case _.fhh(FOREIGN + ARRAY + STRING): {
-			return std::string_view("foreign/array/string");
 		}
 		case _.fhh(FOREIGN + ARRAY + TEXT): {
 			return std::string_view("foreign/array/text");
@@ -2301,7 +2272,6 @@ specification_t::global_type(FieldType field_type)
 		case FieldType::keyword:
 			return field_type;
 
-		case FieldType::string:
 		case FieldType::text:
 			return FieldType::text;
 
@@ -2359,7 +2329,6 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_UUID, FieldType::uuid, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::string:
 		case FieldType::keyword:
 		case FieldType::text: {
 			static const specification_t spc(DB_SLOT_STRING, FieldType::text, default_spc.accuracy, default_spc.acc_prefix);
@@ -2841,7 +2810,6 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 					term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					break;
 				case FieldType::text:
-				case FieldType::string:
 				case FieldType::keyword: {
 					// Try getting a new ID which can currently be indexed (active node)
 					size_t n_shards = db_handler.endpoints.size();
@@ -2893,7 +2861,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::empty: {
 					const auto type_ser = Serialise::guess_serialise(document_id);
 					id_type = type_ser.first;
-					if (id_type == FieldType::text || id_type == FieldType::string) {
+					if (id_type == FieldType::text) {
 						id_type = FieldType::keyword;
 					}
 					spc_id.set_type(id_type);
@@ -2909,7 +2877,6 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 				case FieldType::positive:
 				case FieldType::floating:
 				case FieldType::text:
-				case FieldType::string:
 				case FieldType::keyword:
 					document_id = Cast::cast(id_type, document_id);
 					unprefixed_term_id = Serialise::serialise(spc_id, document_id);
@@ -4796,7 +4763,6 @@ Schema::validate_required_namespace_data()
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::string:
 		case FieldType::text:
 			// Language could be needed, for soundex.
 			if (specification.aux_language.empty() && !specification.aux_stem_language.empty()) {
@@ -4992,7 +4958,6 @@ Schema::validate_required_data(MsgPack& mut_properties)
 			specification.flags.concrete = true;
 			break;
 
-		case FieldType::string:
 		case FieldType::text:
 			mut_properties[RESERVED_NGRAM] = static_cast<bool>(specification.flags.ngram);
 			mut_properties[RESERVED_CJK_NGRAM] = static_cast<bool>(specification.flags.cjk_ngram);
@@ -5655,7 +5620,6 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 			}
 		}
 
-		case FieldType::string:
 		case FieldType::text: {
 			if (value.is_string()) {
 				auto ser_value = value.str();
@@ -9180,8 +9144,8 @@ Schema::set_default_spc_id(MsgPack& mut_properties)
 		specification.flags.has_index = true;
 	}
 
-	// ID_FIELD_NAME cannot be TEXT nor STRING.
-	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text || specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::string) {
+	// ID_FIELD_NAME cannot be TEXT.
+	if (specification.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 		specification.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 		L_DEBUG("{} cannot be type string or text, it's type was changed to keyword", ID_FIELD_NAME);
 	}
@@ -9587,7 +9551,6 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				}
 				break;
 			}
-			case FieldType::string:
 			case FieldType::text: {
 				auto ngram_it = properties.find(RESERVED_NGRAM);
 				if (ngram_it != it_e) {
@@ -9647,7 +9610,6 @@ Schema::get_data_field(std::string_view field_name, bool is_range) const
 				}
 				break;
 			}
-			case FieldType::string:
 			case FieldType::text: {
 				auto ngram_it = properties.find(RESERVED_NGRAM);
 				if (ngram_it != it_e) {
@@ -9748,7 +9710,6 @@ Schema::get_slot_field(std::string_view field_name) const
 			}
 			break;
 		}
-		case FieldType::string:
 		case FieldType::text: {
 			auto ngram_it = properties.find(RESERVED_NGRAM);
 			if (ngram_it != it_e) {
@@ -9945,7 +9906,7 @@ Schema::get_prefixed_global(FieldType namespace_type, const std::string& prefix_
 		// If the namespace field is ID_FIELD_NAME, restart its default values.
 		if (prefix_namespace == NAMESPACE_PREFIX_ID_FIELD_NAME) {
 			// ID_FIELD_NAME cannot be text or string.
-			if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::text || spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::string) {
+			if (spc.sep_types[SPC_CONCRETE_TYPE] == FieldType::text) {
 				spc.sep_types[SPC_CONCRETE_TYPE] = FieldType::keyword;
 			}
 		}

@@ -52,7 +52,6 @@ get_func_value_handle(FieldType type)
 			return &HandledSubAggregation<Handler>::_aggregate_boolean;
 		case FieldType::keyword:
 		case FieldType::text:
-		case FieldType::string:
 			return &HandledSubAggregation<Handler>::_aggregate_string;
 		case FieldType::geo:
 			return &HandledSubAggregation<Handler>::_aggregate_geo;

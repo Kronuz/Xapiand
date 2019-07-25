@@ -49,7 +49,6 @@ Cast::cast(const MsgPack& obj)
 				return boolean(it.value());
 			case HashType::KEYWORD:
 			case HashType::TEXT:
-			case HashType::STRING:
 				return string(it.value());
 			case HashType::UUID:
 				return uuid(it.value());
@@ -97,7 +96,6 @@ Cast::cast(FieldType type, const MsgPack& obj)
 			return boolean(obj);
 		case FieldType::keyword:
 		case FieldType::text:
-		case FieldType::string:
 			return string(obj);
 		case FieldType::uuid:
 			return uuid(obj);
@@ -398,7 +396,6 @@ Cast::get_field_type(std::string_view cast_word)
 		case HashType::BOOLEAN:           return FieldType::boolean;
 		case HashType::KEYWORD:           return FieldType::keyword;
 		case HashType::TEXT:              return FieldType::text;
-		case HashType::STRING:            return FieldType::string;
 		case HashType::UUID:              return FieldType::uuid;
 		case HashType::DATETIME:          return FieldType::datetime;
 		case HashType::TIME:              return FieldType::time;

@@ -180,7 +180,6 @@ Serialise::object(const required_spc_t& field_spc, const class MsgPack& o)
 				return boolean(field_spc.get_type(), Cast::boolean(o.at(str_key)));
 			case Cast::HashType::KEYWORD:
 			case Cast::HashType::TEXT:
-			case Cast::HashType::STRING:
 				return string(field_spc, Cast::string(o.at(str_key)));
 			case Cast::HashType::UUID:
 				return string(field_spc, Cast::uuid(o.at(str_key)));
@@ -236,7 +235,6 @@ Serialise::serialise(const required_spc_t& field_spc, const class MsgPack& field
 			return boolean(field_value.boolean());
 		case FieldType::keyword:
 		case FieldType::text:
-		case FieldType::string:
 			return field_value.str();
 		case FieldType::geo:
 			return geospatial(field_value);
@@ -271,7 +269,6 @@ Serialise::serialise(const required_spc_t& field_spc, std::string_view field_val
 			return boolean(field_value);
 		case FieldType::keyword:
 		case FieldType::text:
-		case FieldType::string:
 			return std::string(field_value);
 		case FieldType::geo:
 			return geospatial(field_value);
@@ -298,7 +295,6 @@ Serialise::string(const required_spc_t& field_spc, std::string_view field_value)
 			return boolean(field_value);
 		case FieldType::keyword:
 		case FieldType::text:
-		case FieldType::string:
 			return std::string(field_value);
 		case FieldType::geo:
 			return geospatial(field_value);
@@ -333,7 +329,7 @@ Serialise::datetime(const required_spc_t& field_spc, const class MsgPack& field_
 					return time(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
 				case FieldType::timedelta:
 					return timedelta(Datetime::timestamp(Datetime::DatetimeParser(field_value)));
-				case FieldType::string:
+				case FieldType::text:
 					return Datetime::iso8601(Datetime::DatetimeParser(field_value));
 				default:
 					THROW(SerialisationError, "Type: {} is not a datetime", enum_name(field_value.get_type()));
@@ -892,8 +888,6 @@ Serialise::guess_type(const class MsgPack& field_value)
 						return FieldType::keyword;
 					case Cast::HashType::TEXT:
 						return FieldType::text;
-					case Cast::HashType::STRING:
-						return FieldType::string;
 					case Cast::HashType::UUID:
 						return FieldType::uuid;
 					case Cast::HashType::DATETIME:
@@ -1017,8 +1011,6 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 						return std::make_pair(FieldType::keyword, Cast::string(it.value()));
 					case Cast::HashType::TEXT:
 						return std::make_pair(FieldType::text, Cast::string(it.value()));
-					case Cast::HashType::STRING:
-						return std::make_pair(FieldType::string, Cast::string(it.value()));
 					case Cast::HashType::UUID:
 						return std::make_pair(FieldType::uuid, uuid(Cast::uuid(it.value())));
 					case Cast::HashType::DATETIME:
@@ -1083,7 +1075,6 @@ Unserialise::MsgPack(FieldType field_type, std::string_view serialised_val)
 			break;
 		case FieldType::keyword:
 		case FieldType::text:
-		case FieldType::string:
 			result = serialised_val;
 			break;
 		case FieldType::geo: {
@@ -1373,9 +1364,6 @@ Unserialise::get_field_type(std::string_view str_type)
 		case _.fhhl("p"):
 		case _.fhhl("positive"):
 			return FieldType::positive;
-		case _.fhhl("s"):
-		case _.fhhl("string"):
-			return FieldType::string;
 		case _.fhhl("term"):  // FIXME: remove legacy term
 		case _.fhhl("k"):
 		case _.fhhl("keyword"):
@@ -1385,6 +1373,9 @@ Unserialise::get_field_type(std::string_view str_type)
 		case _.fhhl("x"):
 		case _.fhhl("script"):
 			return FieldType::script;
+		case _.fhhl("s"):
+		case _.fhhl("string"):
+		case _.fhhl("t"):
 		case _.fhhl("text"):
 			return FieldType::text;
 		case _.fhhl("time"):

@@ -42,7 +42,6 @@ constexpr const char FLOATING_STR[]  = "floating";
 constexpr const char INTEGER_STR[]   = "integer";
 constexpr const char POSITIVE_STR[]  = "positive";
 constexpr const char KEYWORD_STR[]   = "keyword";
-constexpr const char STRING_STR[]    = "string";
 constexpr const char TEXT_STR[]      = "text";
 constexpr const char DATE_STR[]      = "date";
 constexpr const char DATETIME_STR[]  = "datetime";
