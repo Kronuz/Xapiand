@@ -352,7 +352,7 @@ DatabaseHandler::prepare(const MsgPack& document_id, Xapian::rev document_ver, c
 			break;
 		}
 		if (t == 0) {
-			THROW(Error, "Cannot update schema, too many retries");
+			THROW(Error, "Cannot update schema while preparing: Too many retries");
 		}
 	}
 
@@ -646,7 +646,7 @@ DatabaseHandler::update_schema(const MsgPack& obj)
 			break;
 		}
 		if (t == 0) {
-			THROW(Error, "Cannot update schema, too many retries");
+			THROW(Error, "Cannot update schema: Too many retries");
 		}
 	}
 
@@ -662,7 +662,7 @@ DatabaseHandler::update_schema(const MsgPack& obj)
 				break;
 			}
 			if (t == 0) {
-				THROW(Error, "Cannot update foreign schema, too many retries");
+				THROW(Error, "Cannot update foreign schema: Too many retries");
 			}
 		}
 	}
@@ -683,7 +683,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 			break;
 		}
 		if (t == 0) {
-			THROW(Error, "Cannot write schema, too many retries");
+			THROW(Error, "Cannot write schema: Too many retries");
 		}
 	}
 
@@ -699,7 +699,7 @@ DatabaseHandler::write_schema(const MsgPack& obj)
 				break;
 			}
 			if (t == 0) {
-				THROW(Error, "Cannot write foreign schema, too many retries");
+				THROW(Error, "Cannot write foreign schema: Too many retries");
 			}
 		}
 	}
