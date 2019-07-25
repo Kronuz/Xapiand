@@ -832,18 +832,22 @@ SchemasLRU::dump_schemas(int level) const
 		std::lock_guard<std::mutex> versions_lk(versions_mtx);
 		for (auto schema_it = schemas.begin(); schema_it != schemas.end(); ++schema_it) {
 			auto& schema = *schema_it;
-			Xapian::rev schema_version = schema.second->get_flags();
-			std::string outdated;
-			auto version_it = versions.find(schema.first);
-			if (version_it != versions.end() && version_it->second > schema_version) {
-				if (schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
-					outdated = " " + DARK_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
-				} else {
-					outdated = " " + DARK_ORANGE + "(outdated)" + STEEL_BLUE;
-				}
-			}
 			ret += indent + indent;
-			ret += strings::format("<Schema {} {{version:{}}}{}>", repr(schema.first), schema_version, outdated);
+			if (schema.second) {
+				Xapian::rev schema_version = schema.second->get_flags();
+				std::string outdated;
+				auto version_it = versions.find(schema.first);
+				if (version_it != versions.end() && version_it->second > schema_version) {
+					if (schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
+						outdated = " " + DARK_STEEL_BLUE + "(outdated)" + STEEL_BLUE;
+					} else {
+						outdated = " " + DARK_ORANGE + "(outdated)" + STEEL_BLUE;
+					}
+				}
+				ret += strings::format("<Schema {} {{version:{}}}{}>", repr(schema.first), schema_version, outdated);
+			} else {
+				ret += strings::format("<Schema {} {{version:" + RED + "??" + STEEL_BLUE + "}}>", repr(schema.first));
+			}
 			ret.push_back('\n');
 		}
 	}
