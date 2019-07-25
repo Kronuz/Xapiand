@@ -1063,7 +1063,7 @@ DatabaseHandler::prepare_document(MsgPack& body, size_t seq)
 }
 
 
-Xapian::MSet
+std::tuple<Xapian::MSet, MsgPack, Xapian::Query>
 DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl, AggregationMatchSpy* aggs)
 {
 	L_CALL("DatabaseHandler::get_mset({}, {})", repr(strings::join(query_field.query, " & ")), qdsl ? repr(qdsl->to_string()) : "null");
@@ -1173,7 +1173,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		check_at_least = 1;
 	}
 
-	return get_mset(
+	return std::make_tuple(get_mset(
 		query,
 		first,
 		maxitems,
@@ -1186,7 +1186,7 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 		order,
 		aggs,
 		query_field.is_fuzzy ? &query_field.fuzzy : nullptr,
-		query_field.is_nearest ? &query_field.nearest : nullptr);
+		query_field.is_nearest ? &query_field.nearest : nullptr), std::move(qdsl_query), std::move(query));
 }
 
 

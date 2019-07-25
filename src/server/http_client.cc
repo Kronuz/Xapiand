@@ -2477,7 +2477,7 @@ HttpClient::search_view(Request& request)
 
 	auto selector = query_field.selector.empty() ? request.path_parser.get_slc() : query_field.selector;
 
-	Xapian::MSet mset;
+	std::tuple<Xapian::MSet, MsgPack, Xapian::Query> mset_tuple;
 	MsgPack aggregations;
 
 	request.processing = std::chrono::steady_clock::now();
@@ -2492,7 +2492,7 @@ HttpClient::search_view(Request& request)
 		}
 
 		if (request.raw.empty()) {
-			mset = db_handler.get_mset(query_field, nullptr, nullptr);
+			mset_tuple = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
 			if (!decoded_body.is_map()) {
@@ -2511,21 +2511,28 @@ HttpClient::search_view(Request& request)
 				}
 			}
 
-			mset = db_handler.get_mset(query_field, &decoded_body, &aggs);
+			mset_tuple = db_handler.get_mset(query_field, &decoded_body, &aggs);
 			aggregations = aggs.get_aggregation().at(RESERVED_AGGS_AGGREGATIONS);
 		}
 	} catch (const Xapian::DatabaseNotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
+	auto& mset = std::get<0>(mset_tuple);
+	auto& qdsl = std::get<1>(mset_tuple);
+	auto& query = std::get<2>(mset_tuple);
 
 	MsgPack obj;
-	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
-	obj[RESPONSE_COUNT] = mset.size();
 	if (aggregations) {
 		obj[RESPONSE_AGGREGATIONS] = aggregations;
 	}
 	obj[RESPONSE_HITS] = MsgPack::ARRAY();
+	if (request.comments && opts.verbosity >= 3) {
+		obj["#query"] = qdsl;
+		obj["#xapian_query"] = query.get_description();
+	}
+	obj[RESPONSE_COUNT] = mset.size();
+	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
 
 	auto& hits = obj[RESPONSE_HITS];
 
@@ -2619,7 +2626,7 @@ HttpClient::count_view(Request& request)
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	resolve_index_endpoints(request, query_field);
 
-	Xapian::MSet mset;
+	std::tuple<Xapian::MSet, MsgPack, Xapian::Query> mset_tuple;
 
 	request.processing = std::chrono::steady_clock::now();
 
@@ -2633,20 +2640,28 @@ HttpClient::count_view(Request& request)
 		}
 
 		if (request.raw.empty()) {
-			mset = db_handler.get_mset(query_field, nullptr, nullptr);
+			mset_tuple = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
 			if (!decoded_body.is_map()) {
 				THROW(ClientError, "Invalid request body");
 			}
-			mset = db_handler.get_mset(query_field, &decoded_body, nullptr);
+			mset_tuple = db_handler.get_mset(query_field, &decoded_body, nullptr);
 		}
 	} catch (const Xapian::DatabaseNotFoundError&) {
 		/* At the moment when the endpoint does not exist and it is chunck it will return 200 response
 		 * with zero matches this behavior may change in the future for instance ( return 404 ) */
 	}
 
+	auto& mset = std::get<0>(mset_tuple);
+	auto& qdsl = std::get<1>(mset_tuple);
+	auto& query = std::get<2>(mset_tuple);
+
 	MsgPack obj;
+	if (request.comments && opts.verbosity >= 3) {
+		obj["#query"] = qdsl;
+		obj["#xapian_query"] = query.get_description();
+	}
 	obj[RESPONSE_TOTAL] = mset.get_matches_estimated();
 
 	request.ready = std::chrono::steady_clock::now();

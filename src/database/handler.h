@@ -120,7 +120,7 @@ public:
 	bool has_positions();
 
 	Xapian::RSet get_rset(const Xapian::Query& query, Xapian::doccount maxitems);
-	Xapian::MSet get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
+	std::tuple<Xapian::MSet, MsgPack, Xapian::Query> get_mset(const query_field_t& e, const MsgPack* qdsl, AggregationMatchSpy* aggs);
 	Xapian::MSet get_mset(
 		const Xapian::Query& query = Xapian::Query(std::string()),
 		Xapian::doccount first = 0,
