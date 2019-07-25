@@ -88,7 +88,7 @@ class RoutingSelector(ConnectionSelector):
     Select a connection from hashing url or routing param
     """
     def select(self, pool, **kwargs):
-        routing = kwargs['params'].get('routing', kwargs['path'][0])
+        routing = kwargs['params'].get('routing', kwargs['path'])
         connections = pool.orig_connections
         size = len(connections)
         idx = jump_consistent_hash(routing, size)
