@@ -105,12 +105,6 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(endpoints, read_flags, context);
-		std::string_view selector;
-		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
-		if (needle != std::string_view::npos) {
-			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
-			id = id.substr(0, needle);
-		}
 		Xapian::rev version;
 		auto document = _db_handler.get_document(id);
 		auto obj = document.get_obj();
@@ -128,7 +122,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 			}
 			version = sortable_unserialise(version_ser);
 		}
-		obj = selector.empty() ? obj[SCHEMA_FIELD_NAME] : obj.select(selector);
+		obj = obj[SCHEMA_FIELD_NAME];
 		Schema::check<Error>(obj, "Foreign schema is invalid: ", false);
 		context->erase(path);
 		return std::make_pair(version, obj);
@@ -166,9 +160,8 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 			THROW(ClientError, "Cannot resolve endpoint: {}", endpoint.to_string());
 		}
 		DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
-		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = _db_handler.update(id.substr(0, needle), version, false, true, MsgPack({
+		auto updated = _db_handler.update(id, version, false, true, MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, schema },
 		}), false, msgpack_type);

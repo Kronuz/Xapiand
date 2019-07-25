@@ -137,13 +137,7 @@ Processor::Processor(const Script& script) :
 		foreign_path = urldecode(foreign_path_view);
 		foreign_id = urldecode(foreign_id_view);
 		std::string_view id = foreign_id;
-		std::string_view selector;
-		auto needle = id.find_first_of(".{", 1);  // Find first of either '.' (Drill Selector) or '{' (Field selector)
-		if (needle != std::string_view::npos) {
-			selector = id.substr(id[needle] == '.' ? needle + 1 : needle);
-			id = id.substr(0, needle);
-		}
-		MsgPack o;
+		MsgPack obj;
 		try {
 			Endpoint endpoint(foreign_path);
 			auto endpoints = XapiandManager::resolve_index_endpoints(endpoint);
@@ -152,19 +146,15 @@ Processor::Processor(const Script& script) :
 			}
 			DatabaseHandler _db_handler(endpoints, DB_OPEN);
 			auto doc = _db_handler.get_document(id);
-			o = doc.get_obj();
+			obj = doc.get_obj();
 		} catch (const Xapian::DocNotFoundError&) {
 			THROW(ClientError, "Foreign script {}/{} doesn't exist", foreign_path, id);
 		} catch (const Xapian::DatabaseNotFoundError& exc) {
 			THROW(ClientError, "Foreign script database {} doesn't exist", repr(foreign_path));
 		}
-		if (selector.empty()) {
-			// If there's no selector use "script" (to be consistent with "schema" field):
-			o = o[SCRIPT_FIELD_NAME];
-		} else {
-			o = o.select(selector);
-		}
-		Script foreign_script(o);
+		// If there's no selector use "script" (to be consistent with "schema" field):
+		obj = obj[SCRIPT_FIELD_NAME];
+		Script foreign_script(obj);
 		auto foreign_sep_type = foreign_script.get_types();
 		if (foreign_sep_type[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 			THROW(ClientError, "Nested foreign scripts not supported!");
