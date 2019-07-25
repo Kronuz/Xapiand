@@ -639,10 +639,16 @@ QueryDSL::get_global_query(const required_spc_t& field_spc, const MsgPack& obj, 
 			break;
 	}
 
-	auto ser_type = Serialise::guess_serialise(obj);
-	auto spc = Schema::get_prefixed_global(std::get<0>(ser_type), field_spc.prefix());
+	auto type_ser = Serialise::guess_serialise(obj);
 
-	return get_term_query(spc, std::get<1>(ser_type), default_op, wqf, flags);
+	auto& type = std::get<0>(type_ser);
+	if (type == FieldType::keyword || type == FieldType::string) {
+		type = FieldType::text;
+	}
+
+	auto spc = Schema::get_prefixed_global(type, field_spc.prefix());
+
+	return get_term_query(spc, std::get<1>(type_ser), default_op, wqf, flags);
 }
 
 
