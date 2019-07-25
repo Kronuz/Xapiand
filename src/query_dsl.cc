@@ -812,7 +812,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				case Xapian::Query::OP_SCALE_WEIGHT:
 				case Xapian::Query::OP_WILDCARD:
 				case Xapian::Query::OP_EDIT_DISTANCE:
-				default:
 					if (!field_spc.language.empty()) {
 						parser.set_stopper(getStopper(field_spc.language).get());
 						// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
@@ -821,6 +820,9 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 						parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
 						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 					}
+					break;
+				default:
+					break;
 			}
 			if (field_spc.flags.cjk_ngram) {
 				flags |= Xapian::QueryParser::FLAG_CJK_NGRAM;
@@ -1239,7 +1241,7 @@ QueryDSL::get_query(const MsgPack& obj)
 	if (obj.is_string() && obj.str_view() == "*") {
 		query = Xapian::Query(std::string());
 	} else {
-		query = process(Xapian::Query::OP_AND, "", obj, Xapian::Query::OP_OR, 1, 0, false);
+		query = process(Xapian::Query::OP_AND, "", obj, Xapian::Query::OP_INVALID, 1, 0, false);
 	}
 
 	L_QUERY("query = " + STEEL_BLUE + "{}" + CLEAR_COLOR + "\n" + DIM_GREY + "{}" + CLEAR_COLOR, query.get_description(), repr(query.serialise()));
