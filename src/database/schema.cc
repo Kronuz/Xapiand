@@ -2359,11 +2359,8 @@ specification_t::get_global(FieldType field_type)
 			static const specification_t spc(DB_SLOT_UUID, FieldType::uuid, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
 		}
-		case FieldType::keyword: {
-			static const specification_t spc(DB_SLOT_STRING, FieldType::keyword, default_spc.accuracy, default_spc.acc_prefix);
-			return spc;
-		}
 		case FieldType::string:
+		case FieldType::keyword:
 		case FieldType::text: {
 			static const specification_t spc(DB_SLOT_STRING, FieldType::text, default_spc.accuracy, default_spc.acc_prefix);
 			return spc;
@@ -5630,11 +5627,14 @@ Schema::index_item(Xapian::Document& doc, const MsgPack& item, size_t pos)
 			if (value.is_string()) {
 				auto ser_value = value.str();
 				if (global_terms) {
-					if (g_specification.flags.bool_term) {
-						index_term(doc, prefixed(ser_value, g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
-					} else {
-						index_term(doc, prefixed(strings::lower(ser_value), g_specification.prefix.field, g_specification.get_ctype()), g_specification, pos);
-					}
+					GenerateTerms::text(doc,
+						g_specification.prefix.field + g_specification.get_ctype(), ser_value,
+						g_specification.positions[getPos(pos, g_specification.positions.size())],
+						g_specification.flags.bool_term ? 0 : g_specification.weight[getPos(pos, g_specification.weight.size())],
+						g_specification.flags.cjk_ngram, g_specification.flags.cjk_words,
+						g_specification.language, g_specification.stem_language,
+						getGeneratorStopStrategy(g_specification.stop_strategy),
+						getGeneratorStemStrategy(g_specification.stem_strategy));
 				}
 				if (field_terms) {
 					if (specification.flags.bool_term) {
