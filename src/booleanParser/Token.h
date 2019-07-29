@@ -46,6 +46,8 @@ class Token {
 public:
 	Token() = default;
 
+	Token(TokenType type_) : type(type_) {};
+
 	void set_type(TokenType type_) {
 		type = type_;
 	}
