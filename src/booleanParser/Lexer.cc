@@ -63,7 +63,7 @@ Lexer::NextToken()
 		symbol += currentSymbol.symbol;
 		switch (currentState) {
 			case LexerState::INIT:
-				switch(currentSymbol.symbol) {
+				switch (currentSymbol.symbol) {
 					case LEFT_SQUARE_BRACKET:
 						lexeme += currentSymbol.symbol;
 						currentState = LexerState::INIT_SQUARE_BRACKET;
@@ -120,7 +120,7 @@ Lexer::NextToken()
 				break;
 
 			case LexerState::TOKEN:
-				switch(currentSymbol.symbol) {
+				switch (currentSymbol.symbol) {
 					case DOUBLEQUOTE:
 						lexeme += currentSymbol.symbol;
 						currentState = LexerState::TOKEN_QUOTE;
@@ -175,7 +175,7 @@ Lexer::NextToken()
 				break;
 
 			case LexerState::ESCAPE:
-				switch(currentSymbol.symbol) {
+				switch (currentSymbol.symbol) {
 					case '\0': {
 						std::string msj = "Symbol EOF not expected";
 						throw LexicalException(msj);
@@ -240,7 +240,7 @@ Lexer::NextToken()
 
 			case LexerState::SYMBOL_OP:
 				token.set_lexeme(lexeme);
-				switch(lexeme.at(0)) {
+				switch (lexeme.at(0)) {
 					case '(':
 						token.set_type(TokenType::LeftParenthesis);
 						break;
