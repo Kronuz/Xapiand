@@ -36,6 +36,9 @@
 #include "XorNode.h"
 
 
+constexpr auto DEFAULT_OPERATOR = TokenType::Or;
+
+
 BooleanTree::BooleanTree(std::string_view input_)
 	: input(std::make_unique<char[]>(input_.size() + 1))
 {
@@ -103,11 +106,22 @@ void
 BooleanTree::toRPN()
 {
 	currentToken = lexer->NextToken();
+	bool last_token_is_id = false;
 
 	while (currentToken.get_type() != TokenType::EndOfFile) {
 		switch (currentToken.get_type()) {
 			case TokenType::Id:
 				stack_output.push_back(currentToken);
+				if (last_token_is_id) {
+					while (!stack_operator.empty() && precedence(DEFAULT_OPERATOR) > precedence(stack_operator.back().get_type())) {
+						Token token_back = stack_operator.back();
+						stack_operator.pop_back();
+						stack_output.push_back(token_back);
+					}
+					Token default_op(DEFAULT_OPERATOR);
+					stack_operator.push_back(default_op);
+				}
+				last_token_is_id = true;
 				break;
 
 			case TokenType::LeftParenthesis:
@@ -137,12 +151,13 @@ BooleanTree::toRPN()
 			case TokenType::And:
 			case TokenType::Maybe:
 			case TokenType::Xor:
-				while (!stack_operator.empty() && precedence(currentToken.get_type()) >= precedence(stack_operator.back().get_type())) {
+				while (!stack_operator.empty() && precedence(currentToken.get_type()) > precedence(stack_operator.back().get_type())) {
 					Token token_back = stack_operator.back();
 					stack_operator.pop_back();
 					stack_output.push_back(token_back);
 				}
 				stack_operator.push_back(currentToken);
+				last_token_is_id = false;
 				break;
 
 			case TokenType::EndOfFile:
