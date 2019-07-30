@@ -349,11 +349,7 @@ void
 XapiandManager::signal_sig(int sig)
 {
 	atom_sig = sig;
-	if (is_running_loop()) {
-		signal_sig_async.send();
-	} else {
-		signal_sig_impl();
-	}
+	signal_sig_async.send();
 }
 
 
@@ -386,13 +382,13 @@ XapiandManager::signal_sig_impl()
 	int sig = atom_sig;
 
 	if (sig < 0) {
-		shutdown_sig(sig, is_running_loop());
+		shutdown_sig(sig, true);
 	}
 
 	switch (sig) {
 		case SIGTERM:
 		case SIGINT:
-			shutdown_sig(sig, is_running_loop());
+			shutdown_sig(sig, true);
 			break;
 		case SIGUSR1:
 #if defined(__APPLE__) || defined(__FreeBSD__)
