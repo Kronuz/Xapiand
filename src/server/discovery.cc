@@ -92,6 +92,7 @@ Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_lo
 	  raft_leader_election_timeout(*ev_loop),
 	  raft_leader_heartbeat(*ev_loop),
 	  raft_request_vote_async(*ev_loop),
+	  raft_relinquish_leadership_async(*ev_loop),
 	  raft_add_command_async(*ev_loop),
 	  message_send_async(*ev_loop),
 	  raft_role(Role::RAFT_FOLLOWER),
