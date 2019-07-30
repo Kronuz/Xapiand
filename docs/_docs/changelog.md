@@ -16,7 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
-## [0.29.0] - 2019-07-24
+## [0.30.0] - 2019-07-30
+{: #v0-30-0 }
+
+### Changed
+- Adds default operator for queries parsed with the boolean parser
+
+### Fixed
+- Discovery protocol callback executed by appropriate thread
+- Fixes race condition during shutdown
+
+
+---
+## [0.29.0] - 2019-07-25
 {: #v0-29-0 }
 
 ### Changed
@@ -28,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix foreign schemas URIs
 - Fixes issue #19
 - Fixes issue #20
+
 
 ---
 ## [0.28.0] - 2019-07-24
@@ -853,7 +866,8 @@ data associated with it)
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/Kronuz/Xapiand/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/Kronuz/Xapiand/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/Kronuz/Xapiand/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/Kronuz/Xapiand/compare/v0.26.0...v0.27.0
