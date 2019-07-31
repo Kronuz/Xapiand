@@ -35,8 +35,9 @@ const int DB_RESTORE                    = 0x00020000;  // Flag database as being
 const int DB_REPLICA                    = 0x00040000;  // Flag database as being replicated
 const int DB_DISABLE_AUTOCOMMIT         = 0x00080000;  // Disable autocommit
 const int DB_DISABLE_WAL                = 0x00100000;  // Disable open WAL file
-const int DB_SYNCHRONOUS_WAL            = 0x00200000;  // Using synchronous WAL
-const int DB_TRIGGER_REPLICATION        = 0x00400000;  // Allow trigger replication
+const int DB_DISABLE_WRITES             = 0x00200000;  // Disable write operations
+const int DB_SYNCHRONOUS_WAL            = 0x00400000;  // Using synchronous WAL
+const int DB_TRIGGER_REPLICATION        = 0x00800000;  // Allow trigger replication
 
 const int DB_RETRIES                    = 10;     // Number of tries to do an operation on a Xapian::Database or Document
 
@@ -76,8 +77,13 @@ inline bool has_db_replica(int flags) {
 inline bool has_db_disable_autocommit(int flags) {
 	return (flags & DB_DISABLE_AUTOCOMMIT) == DB_DISABLE_AUTOCOMMIT;
 }
+
 inline bool has_db_disable_wal(int flags) {
 	return (flags & DB_DISABLE_WAL) == DB_DISABLE_WAL;
+}
+
+inline bool has_db_disable_writes(int flags) {
+	return (flags & DB_DISABLE_WRITES) == DB_DISABLE_WRITES;
 }
 
 inline bool has_db_synchronous_wal(int flags) {
@@ -99,6 +105,7 @@ inline std::string readable_flags(int flags) {
 	if (has_db_replica(flags)) values.push_back("DB_REPLICA");
 	if (has_db_disable_autocommit(flags)) values.push_back("DB_DISABLE_AUTOCOMMIT");
 	if (has_db_disable_wal(flags)) values.push_back("DB_DISABLE_WAL");
+	if (has_db_disable_writes(flags)) values.push_back("DB_DISABLE_WRITES");
 	if (has_db_synchronous_wal(flags)) values.push_back("DB_SYNCHRONOUS_WAL");
 	return strings::join(values, "|");
 }
