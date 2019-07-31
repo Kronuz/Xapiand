@@ -177,7 +177,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 
 	// Get fast write lock for replication or retry later
 	try {
-		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT | DB_REPLICA, false);
+		lk_shard_ptr = std::make_unique<lock_shard>(dst_endpoint, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT | DB_REPLICA, false);
 		lk_shard_ptr->lock(0, [=] {
 			// If it cannot checkout because database is busy, retry when ready...
 			trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), dst_endpoint.path, src_endpoint, dst_endpoint);
@@ -343,7 +343,8 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		return;
 	}
 
-	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE | DB_DISABLE_AUTOCOMMIT, false);
+	Endpoint endpoint{endpoint_path};
+	lock_shard lk_shard(endpoint, DB_OPEN | DB_WRITABLE | DB_DISABLE_WRITES | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT, false);
 
 	auto db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
