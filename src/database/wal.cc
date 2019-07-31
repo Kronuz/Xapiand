@@ -1262,6 +1262,7 @@ DatabaseWALWriter::write_add_spelling(bool synchronous, const std::string& path,
 	}
 }
 
+
 void
 DatabaseWALWriter::delete_wal(bool synchronous, const std::string& path)
 {
