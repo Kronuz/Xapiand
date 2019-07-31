@@ -135,6 +135,10 @@ public:
 		return is_writable() && is_local() && !has_db_disable_wal(flags);
 	}
 
+	bool is_write_active() const {
+		return !has_db_disable_writes(flags);
+	}
+
 	bool is_busy() const {
 		return _busy.load(std::memory_order_relaxed);
 	}

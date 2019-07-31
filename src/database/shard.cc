@@ -692,6 +692,7 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 	L_CALL("Shard::commit({})", wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	auto local = is_local();
 
@@ -789,6 +790,7 @@ Shard::begin_transaction(bool flushed)
 	L_CALL("Shard::begin_transaction({})", flushed);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	if (!is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -806,6 +808,7 @@ Shard::commit_transaction()
 	L_CALL("Shard::commit_transaction()");
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	if (is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -823,6 +826,7 @@ Shard::cancel_transaction()
 	L_CALL("Shard::cancel_transaction()");
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	if (is_transactional()) {
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
@@ -840,6 +844,7 @@ Shard::delete_document(Xapian::docid shard_did, bool commit_, bool wal_, bool ve
 	L_CALL("Shard::delete_document({}, {}, {})", shard_did, commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -941,6 +946,7 @@ Shard::delete_document_term(const std::string& term, bool commit_, bool wal_, bo
 	L_CALL("Shard::delete_document_term({}, {}, {})", repr(term), commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1077,6 +1083,7 @@ Shard::storage_push_blobs(std::string&& doc_data)
 	L_CALL("Shard::storage_push_blobs()");
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	std::pair<std::string, std::string> pushed;
 	if (doc_data.empty()) {
@@ -1135,6 +1142,7 @@ Shard::add_document(Xapian::Document&& doc, bool commit_, bool wal_, bool versio
 	L_CALL("Shard::add_document(<doc>, {}, {})", commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1259,6 +1267,7 @@ Shard::replace_document(Xapian::docid shard_did, Xapian::Document&& doc, bool co
 	L_CALL("Shard::replace_document({}, <doc>, {}, {})", shard_did, commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1398,6 +1407,7 @@ Shard::replace_document_term(const std::string& term, Xapian::Document&& doc, bo
 	L_CALL("Shard::replace_document_term({}, <doc>, {}, {}, {})", repr(term), commit_, wal_, version_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1619,6 +1629,7 @@ Shard::add_spelling(const std::string& word, Xapian::termcount freqinc, bool com
 	L_CALL("Shard::add_spelling(<word, <freqinc>, {}, {})", commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1687,6 +1698,7 @@ Shard::remove_spelling(const std::string& word, Xapian::termcount freqdec, bool 
 	L_CALL("Shard::remove_spelling(<word>, <freqdec>, {}, {})", commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
@@ -1958,6 +1970,7 @@ Shard::set_metadata(const std::string& key, const std::string& value, bool commi
 	L_CALL("Shard::set_metadata({}, {}, {}, {})", repr(key), repr(value), commit_, wal_);
 
 	assert(is_writable());
+	assert(is_write_active());
 
 	RANDOM_ERRORS_DB_THROW(Xapian::DatabaseError, "Random Error");
 
