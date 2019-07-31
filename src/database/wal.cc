@@ -37,7 +37,7 @@
 #include "database/utils.h"         // for read_uuid
 #include "exception.h"              // for THROW, Error
 #include "error.hh"                 // for error:name, error::description
-#include "fs.hh"                    // for exists, delete_files
+#include "fs.hh"                    // for exists, delete_files, normalize_path
 #include "io.hh"                    // for io::*
 #include "log.h"                    // for L_OBJ, L_CALL, L_INFO, L_ERR, L_WARNING
 #include "manager.h"                // for XapiandManager

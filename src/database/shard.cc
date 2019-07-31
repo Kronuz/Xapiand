@@ -758,7 +758,9 @@ Shard::commit([[maybe_unused]] bool wal_, bool send_update)
 #endif
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
-					db_updater()->debounce(endpoint.path, current_revision, endpoint.path);
+					if (send_update) {
+						db_updater()->debounce(endpoint.path, current_revision, endpoint.path);
+					}
 				}
 #endif
 			}
