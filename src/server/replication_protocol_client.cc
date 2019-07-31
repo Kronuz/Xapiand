@@ -645,7 +645,11 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 		}
 
 		// Now we are sure no readers are using the database before moving the files
-		delete_files(shard->endpoint.path, {"*glass", "wal.*", "flintlock"});
+		XapiandManager::manager(true)->wal_writer->delete_wal(
+			shard->is_synchronous_wal(),
+			shard->endpoint.path
+		);
+		delete_files(shard->endpoint.path, {"*glass", "flintlock"});
 		move_files(switch_shard_path, shard->endpoint.path);
 
 		// release exclusive lock

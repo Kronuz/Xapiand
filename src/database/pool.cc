@@ -402,7 +402,10 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 #if XAPIAND_DATABASE_WAL
 		// Delete WAL during checking of a restore
 		if (shard->is_restore()) {
-			XapiandManager::manager(true)->wal_writer->delete_wal(shard->is_synchronous_wal(), path);
+			XapiandManager::manager(true)->wal_writer->delete_wal(
+				shard->is_synchronous_wal(),
+				path
+			);
 		}
 #endif
 		L_SHARD_LOG_TIMED_CLEAR();
