@@ -343,8 +343,27 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		return;
 	}
 
-	Endpoint endpoint{endpoint_path};
-	lock_shard lk_shard(endpoint, DB_OPEN | DB_WRITABLE | DB_DISABLE_WRITES | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT, false);
+	auto index_settings = XapiandManager::resolve_index_settings(endpoint_path, true);
+	if (index_settings.shards.size() != 1) {
+		send_message(ReplicationReplyType::REPLY_FAIL, "Ignore getting changesets of unknown index");
+		return;
+	}
+	const auto& shard_nodes = index_settings.shards[0].nodes;
+	if (shard_nodes.empty()) {
+		send_message(ReplicationReplyType::REPLY_FAIL, "Ignore getting changesets of misconfigured index");
+		return;
+	}
+	auto node = Node::get_node(shard_nodes[0]);
+	if (!node) {
+		send_message(ReplicationReplyType::REPLY_FAIL, "Ignore getting changesets of unexistent node");
+		return;
+	}
+	if (!node->is_local()) {
+		send_message(ReplicationReplyType::REPLY_FAIL, "Ignore getting changesets of a replicated index");
+		return;
+	}
+
+	lock_shard lk_shard(Endpoint{endpoint_path}, DB_OPEN | DB_WRITABLE | DB_DISABLE_WRITES | DB_DISABLE_WAL | DB_DISABLE_AUTOCOMMIT, false);
 
 	auto db = lk_shard.lock()->db();
 	auto uuid = db->get_uuid();
