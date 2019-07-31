@@ -1134,15 +1134,31 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 	if (node) {
 		Endpoint local_endpoint(path);
 		if (local_endpoint.empty()) {
-			L_WARNING("Ignoring update for empty database path: {}!", repr(path));
+			L_WARNING("Ignoring update for empty index: {}!", repr(path));
 		} else {
 			// Replicate database from the other node
-			Endpoint remote_endpoint(path, node);
-			trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), local_endpoint.path, remote_endpoint, local_endpoint);
+			auto index_settings = XapiandManager::resolve_index_settings(local_endpoint.path, true);
+			if (index_settings.shards.size() == 1) {
+				const auto& shard_nodes = index_settings.shards[0].nodes;
+				if (!shard_nodes.empty()) {
+					node = Node::get_node(shard_nodes[0]);
+					if (node) {
+						Endpoint remote_endpoint(path, node);
+						if (local_endpoint != remote_endpoint) {
+							trigger_replication()->delayed_debounce(std::chrono::milliseconds(random_int(0, 3000)), local_endpoint.path, remote_endpoint, local_endpoint);
+						}
+					} else {
+						L_WARNING("Ignoring update from unexistent node {}: {}!", repr(shard_nodes[0]), repr(path));
+					}
+				} else {
+					L_WARNING("Ignoring update for misconfigured index: {}!", repr(path));
+				}
+			} else {
+				L_WARNING("Ignoring update for unknown index: {}!", repr(path));
+			}
 		}
 	}
 }
-
 
 
 void
