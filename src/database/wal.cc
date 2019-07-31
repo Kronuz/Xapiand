@@ -129,10 +129,6 @@ DatabaseWAL::DatabaseWAL(Shard* shard)
 	  _revision(0),
 	  _shard(shard)
 {
-	if (!_shard->is_wal_active()) {
-		THROW(Error, "Database is not suitable");
-	}
-
 	_uuid = UUID(_shard->db()->get_uuid());
 	_uuid_le = UUID(_uuid.get_bytes(), true);
 }
