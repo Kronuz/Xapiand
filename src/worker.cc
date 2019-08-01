@@ -378,8 +378,8 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 
 #ifdef LOG_WORKER
 	std::string child_repr;
-	long child_use_count;
 #endif
+	long child_use_count;
 
 	std::this_thread::yield();
 
@@ -389,8 +389,12 @@ Worker::_detach_impl(const std::weak_ptr<Worker>& weak_child)
 		}
 #ifdef LOG_WORKER
 		child_repr = child->__repr__();
-		child_use_count = child.use_count();
 #endif
+		child_use_count = child.use_count();
+		if (child_use_count > 2) {
+			return;
+		}
+
 		__detach(child);
 		lk.unlock();
 		child.reset();
