@@ -1354,8 +1354,12 @@ HttpClient::node_obj()
 		node_obj["name"] = node->name();
 		if (node->is_active()) {
 			node_obj["active"] = true;
-			node_obj["leader"] = node->is_leader();
-			node_obj["local"] = node->is_local();
+#ifdef XAPIAND_CLUSTERING
+			if (!opts.solo) {
+				node_obj["leader"] = node->is_leader();
+				node_obj["local"] = node->is_local();
+			}
+#endif
 			node_obj["host"] = node->host();
 			node_obj["http_port"] = node->http_port;
 			node_obj["remote_port"] = node->remote_port;
