@@ -1352,12 +1352,14 @@ HttpClient::node_obj()
 	for (auto& node : Node::nodes()) {
 		auto node_obj = MsgPack::MAP();
 		node_obj["name"] = node->name();
-		if (Node::is_active(node)) {
+		if (node->is_active()) {
+			node_obj["active"] = true;
+			node_obj["leader"] = node->is_leader();
+			node_obj["local"] = node->is_local();
 			node_obj["host"] = node->host();
 			node_obj["http_port"] = node->http_port;
 			node_obj["remote_port"] = node->remote_port;
 			node_obj["replication_port"] = node->replication_port;
-			node_obj["active"] = true;
 		} else {
 			node_obj["active"] = false;
 		}
