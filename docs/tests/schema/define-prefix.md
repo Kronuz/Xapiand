@@ -26,7 +26,10 @@ PUT /test/define-prefix/doc
 {% comment %}
 ```js
 pm.test("Response is success", function() {
-  pm.response.to.be.success;
+  pm.expect(pm.response.code).to.satisfy(function(code) {
+    // Also compare with 400 in case the index with the document exist already
+    return code === 200 || code === 400;
+  });
 });
 ```
 {% endcomment %}
