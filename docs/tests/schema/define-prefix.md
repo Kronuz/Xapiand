@@ -13,7 +13,7 @@ PUT /test/define-prefix/doc
 
 {
   "foo": {
-    "_type": "string",
+    "_type": "text",
     "_value": "foo and bar",
     "_index": "field_terms",
     "_prefix": "bar."
@@ -53,7 +53,7 @@ pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
   pm.expect(jsonData._schema.foo._prefix).to.equal('bar.');
   pm.expect(jsonData._schema.foo._index).to.equal('field_terms');
-  pm.expect(jsonData._schema.foo._type).to.equal('string');
+  pm.expect(jsonData._schema.foo._type).to.equal('text');
   pm.expect(jsonData._schema.foo._ngram).to.equal(false);
   pm.expect(jsonData._schema.foo._cjk_ngram).to.equal(false);
   pm.expect(jsonData._schema.foo._cjk_words).to.equal(false);

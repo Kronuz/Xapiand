@@ -156,7 +156,7 @@ We're placing the script inside the `"script"` field, but we also use
 `"_recurse": false` so `"script"` doesn't get recursed and analyzed as a regular
 field by the Schema.
 
-We then can use the foreign script by specifying the `_endpoint` (i.e. the full
+We then can use the foreign script by specifying the `_foreign` (i.e. the full
 index path, the document ID and the selector). In the example, the index is
 `path/to/my_scripts`, the document ID is `multiplier` and the selector is a
 [Drill Selector]({{ '/docs/exploration#drill-selector' | relative_url }}) that
@@ -171,7 +171,7 @@ PUT /twitter/user/John
   "multiplied_field": 7,
   "_script": {
     "_type": "foreign/object",
-    "_endpoint": "path/to/my_scripts/multiplier.script",
+    "_foreign": "path/to/my_scripts/multiplier.script",
     "_params": {
       "multiplier": 3
     }

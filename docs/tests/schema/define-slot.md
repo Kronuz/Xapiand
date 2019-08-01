@@ -13,7 +13,7 @@ PUT /test/define-slot/doc
 
 {
   "foo": {
-    "_type": "string",
+    "_type": "text",
     "_value": "foo and bar",
     "_index": "field_values",
     "_slot": 100
@@ -57,7 +57,7 @@ pm.test("Value is valid", function() {
   pm.expect(jsonData._schema.foo._cjk_ngram).to.equal(false);
   pm.expect(jsonData._schema.foo._cjk_words).to.equal(false);
   pm.expect(jsonData._schema.foo._slot).to.equal(100);
-  pm.expect(jsonData._schema.foo._type).to.equal('string');
+  pm.expect(jsonData._schema.foo._type).to.equal('text');
 });
 ```
 {% endcomment %}

@@ -17,9 +17,9 @@ PUT /headlines/
 {
   "_schema": {
     "_type": "foreign/object",
-    "_endpoint": ".schemas/319b4e5e-41af-4906-b3cd-cce91502dda3",
+    "_foreign": ".schemas/319b4e5e-41af-4906-b3cd-cce91502dda3",
     "_id": {
-      "_type": "string"
+      "_type": "keyword"
     },
     "title": {
       "_type": "text"
@@ -48,7 +48,7 @@ PUT /banners/
 {
   "_schema": {
     "_type": "foreign/object",
-    "_endpoint": ".schemas/319b4e5e-41af-4906-b3cd-cce91502dda3"
+    "_foreign": ".schemas/319b4e5e-41af-4906-b3cd-cce91502dda3"
   }
 }
 ```

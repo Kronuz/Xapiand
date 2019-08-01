@@ -137,7 +137,7 @@ PUT /twitter/tweets/
 {
   "_schema": {
     "_type": "foreign/object",
-    "_endpoint": ".schemas/00000000-0000-1000-8000-010000000000",
+    "_foreign": ".schemas/00000000-0000-1000-8000-010000000000",
     "_meta": {
       "description": "Twitter Schema"
     },
