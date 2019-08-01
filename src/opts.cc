@@ -331,6 +331,7 @@ parseOptions(int argc, char** argv)
 			"microseconds",
 			"thread-names",
 			"locations",
+			"replicas",
 		});
 		ValuesConstraint<std::string> log_constraint(log_allowed);
 		MultiArg<std::string> log("", "log", "Enable logging settings.", false, &log_constraint, cmd);
@@ -460,6 +461,9 @@ parseOptions(int argc, char** argv)
 					break;
 				case fnv1ah32::hash("locations"):
 					o.log_location = true;
+					break;
+				case fnv1ah32::hash("replicas"):
+					o.log_replicas = true;
 					break;
 			}
 		}

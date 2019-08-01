@@ -333,9 +333,11 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 		destroy();
 		detach();
 
-		auto ends = std::chrono::steady_clock::now();
-		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
-		L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+		if (opts.log_replicas) {
+			auto ends = std::chrono::steady_clock::now();
+			_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
+			L(LOG_NOTICE, rgb(190, 30, 10), "SENDING {}: FAILURE {} {}", repr(endpoint_path), strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+		}
 		return;
 	}
 
@@ -438,9 +440,11 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 					destroy();
 					detach();
 
-					auto ends = std::chrono::steady_clock::now();
-					_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
-					L(LOG_NOTICE, rgba(190, 30, 10, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> FAILURE {} {}", repr(endpoint_path), remote_uuid, remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+					if (opts.log_replicas) {
+						auto ends = std::chrono::steady_clock::now();
+						_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
+						L(LOG_NOTICE, rgb(190, 30, 10), "SENDING {}: FAILURE {} {}", repr(endpoint_path), strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+					}
 					return;
 				} else if (--whole_db_copies_left == 0) {
 					db = lk_shard.lock()->db();
@@ -488,12 +492,14 @@ ReplicationProtocolClient::msg_get_changesets(const std::string& message)
 
 	send_message(ReplicationReplyType::REPLY_END_OF_CHANGES);
 
-	auto ends = std::chrono::steady_clock::now();
-	_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
-	if (from_revision == to_revision) {
-		L(LOG_DEBUG, rgba(116, 100, 77, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT EMPTY {} {}", repr(endpoint_path), remote_uuid, remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
-	} else {
-		L(LOG_DEBUG, rgba(55, 100, 79, 0.6), "MSG_GET_CHANGESETS {} {{db:{}, rev:{}}} -> SENT [{}..{}] {} {}", repr(endpoint_path), remote_uuid, remote_revision, from_revision, to_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+	if (opts.log_replicas) {
+		auto ends = std::chrono::steady_clock::now();
+		_total_sent_bytes = total_sent_bytes - _total_sent_bytes;
+		if (from_revision != to_revision) {
+			L(LOG_DEBUG, rgb(55, 100, 79), "SENDING {}: From revision {} to {} {} {}", repr(endpoint_path), from_revision, to_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+		} else {
+			L(LOG_DEBUG, rgb(116, 100, 77), "SENDING {}: No changes at revision {} {}", repr(endpoint_path), remote_revision, strings::from_bytes(_total_sent_bytes), strings::from_delta(begins, ends));
+		}
 	}
 }
 
@@ -672,14 +678,17 @@ ReplicationProtocolClient::reply_end_of_changes(const std::string&)
 	}
 
 	auto db = shard->db();
-	if (switching && changesets) {
-		L(LOG_DEBUG, rgb(55, 100, 79), "REPLY_END_OF_CHANGES {} {{db:{}, rev:{}}}: From a full copy and a set of {} {}{}", repr(shard->endpoint.path), db->get_uuid(), db->get_revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
-	} else if (changesets) {
-		L(LOG_DEBUG, rgb(55, 100, 79), "REPLY_END_OF_CHANGES {} {{db:{}, rev:{}}}: From a set of {} {}{}", repr(shard->endpoint.path), db->get_uuid(), db->get_revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
-	} else if (switching) {
-		L(LOG_DEBUG, rgb(55, 100, 79), "REPLY_END_OF_CHANGES {} {{db:{}, rev:{}}}: From a full copy{}", repr(shard->endpoint.path), db->get_uuid(), db->get_revision(), switch_shard ? " (to switch database)" : "");
-	} else {
-		L(LOG_DEBUG, rgb(116, 100, 77), "REPLY_END_OF_CHANGES {} {{db:{}, rev:{}}}: No changes", repr(shard->endpoint.path), db->get_uuid(), db->get_revision(), switch_shard ? " (to switch database)" : "");
+
+	if (opts.log_replicas) {
+		if (switching && changesets) {
+			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a full copy and a set of {} {}{}", repr(shard->endpoint.path),  db->get_revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
+		} else if (changesets) {
+			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a set of {} {}{}", repr(shard->endpoint.path),  db->get_revision(), changesets, changesets == 1 ? "changeset" : "changesets", switch_shard ? " (to switch database)" : "");
+		} else if (switching) {
+			L(LOG_DEBUG, rgb(55, 100, 79), "RECEIVED {} at revision {}: From a full copy{}", repr(shard->endpoint.path),  db->get_revision(), switch_shard ? " (to switch database)" : "");
+		} else {
+			L(LOG_DEBUG, rgb(116, 100, 77), "RECEIVED {} at revision {}: No changes{}", repr(shard->endpoint.path),  db->get_revision(), switch_shard ? " (to switch database)" : "");
+		}
 	}
 
 	if (cluster_database) {
@@ -708,7 +717,9 @@ ReplicationProtocolClient::reply_fail(const std::string& msg)
 	assert(lk_shard_ptr);
 	L_REPLICATION("FAIL: {}", repr((*lk_shard_ptr)->endpoint.path));
 
-	L(LOG_DEBUG, rgb(190, 30, 10), "REPLY_FAIL {}: {}", repr((*lk_shard_ptr)->endpoint.path), msg);
+	if (opts.log_replicas) {
+		L(LOG_NOTICE, rgb(190, 30, 10), "RECEIVED {}: FAILURE: {}", repr((*lk_shard_ptr)->endpoint.path), msg);
+	}
 
 	reset();
 	close();

@@ -98,6 +98,7 @@ extern struct opts_t {
 	bool log_microseconds = false;
 	bool log_threads = false;
 	bool log_location = false;
+	bool log_replicas = false;
 	double random_errors_db = 0;
 	double random_errors_io = 0;
 	double random_errors_net = 0;
