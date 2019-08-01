@@ -811,6 +811,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				case Xapian::Query::OP_SCALE_WEIGHT:
 				case Xapian::Query::OP_WILDCARD:
 				case Xapian::Query::OP_EDIT_DISTANCE:
+				default:
 					if (!field_spc.language.empty()) {
 						parser.set_stopper(getStopper(field_spc.language).get());
 						// parser.set_stopper_strategy(getQueryParserStopStrategy(field_spc.stop_strategy));
@@ -819,9 +820,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 						parser.set_stemmer(Xapian::Stem(field_spc.stem_language));
 						parser.set_stemming_strategy(getQueryParserStemStrategy(field_spc.stem_strategy));
 					}
-					break;
-				default:
-					break;
 			}
 			if (field_spc.flags.cjk_ngram) {
 				flags |= Xapian::QueryParser::FLAG_CJK_NGRAM;
