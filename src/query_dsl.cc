@@ -803,7 +803,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				case Xapian::Query::OP_OR:
 					parser.set_default_op(default_op);
 					flags |= Xapian::QueryParser::FLAG_BOOLEAN;
-					flags |= Xapian::QueryParser::FLAG_BOOLEAN_ANY_CASE;
 					[[fallthrough]];
 				case Xapian::Query::OP_AND_NOT:
 				case Xapian::Query::OP_XOR:
