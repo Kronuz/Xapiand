@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.32.0] - 2019-08-05
+{: #v0-32-0 }
+
+### Fixed
+- Using stemmer during queries
+
+
+---
 ## [0.31.0] - 2019-08-01
 {: #v0-31-0 }
 
@@ -879,7 +887,8 @@ data associated with it)
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.32.0...HEAD
+[0.32.0]: https://github.com/Kronuz/Xapiand/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/Kronuz/Xapiand/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/Kronuz/Xapiand/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/Kronuz/Xapiand/compare/v0.28.0...v0.29.0
