@@ -177,6 +177,7 @@ XapiandManager::XapiandManager()
 	  _shutdown_now(0),
 	  _new_cluster(0),
 	  _process_start(std::chrono::steady_clock::now()),
+	  _try_shutdown(0),
 	  atom_sig(0)
 {
 }
@@ -208,6 +209,7 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _shutdown_now(0),
 	  _new_cluster(0),
 	  _process_start(process_start_),
+	  _try_shutdown(0),
 	  try_shutdown_timer(*ev_loop),
 	  signal_sig_async(*ev_loop),
 	  setup_node_async(*ev_loop),
@@ -464,6 +466,11 @@ XapiandManager::shutdown_sig(int sig, bool async)
 		if (now >= _shutdown_asap + 200) {
 			_shutdown_asap = now;
 		}
+	} else {
+		if (_try_shutdown++ > 6) {
+			auto now = epoch::now<std::chrono::milliseconds>();
+			_shutdown_now = now;
+		}
 	}
 
 	shutdown(_shutdown_asap, _shutdown_now, async);
@@ -479,11 +486,13 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 
 	if (asap) {
 		if (!ready_to_end_http()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down (HTTP is busy)...", "Continuing shutdown process!");
+			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
+		} else if (database_pool->is_pending()) {
+			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Waiting for replicators...", "Continuing shutdown process!");
 		} else if (!ready_to_end_remote()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down (Remote Protocol is busy)...", "Continuing shutdown process!");
+			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Remote Protocol is busy...", "Continuing shutdown process!");
 		} else if (!ready_to_end_replication()) {
-			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down (Replication Protocol is busy)...", "Continuing shutdown process!");
+			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: Replication Protocol is busy...", "Continuing shutdown process!");
 		} else {
 			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
 		}
@@ -492,7 +501,7 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 		try_shutdown_timer.again();
 		L_EV("Configured try shutdown timer ({})", try_shutdown_timer.repeat);
 
-		if (now != 0 || ready_to_end()) {
+		if (now != 0 || ready_to_end(true)) {
 			stop(false);
 			destroy(false);
 			if (is_runner()) {
@@ -1341,7 +1350,7 @@ XapiandManager::join()
 
 
 bool
-XapiandManager::ready_to_end_http()
+XapiandManager::ready_to_end_http(bool /*notify*/)
 {
 	return (
 		!http_clients
@@ -1350,56 +1359,56 @@ XapiandManager::ready_to_end_http()
 
 
 bool
-XapiandManager::ready_to_end_remote()
+XapiandManager::ready_to_end_remote(bool notify)
 {
 	return (
 		!remote_clients &&
-		!database_pool->is_pending(true)
+		!database_pool->is_pending(notify)
 	);
 }
 
 
 bool
-XapiandManager::ready_to_end_replication()
+XapiandManager::ready_to_end_replication(bool notify)
 {
 	return (
 		!replication_clients &&
-		!database_pool->is_pending(true)
+		!database_pool->is_pending(notify)
 	);
 }
 
 
 bool
-XapiandManager::ready_to_end_database_cleanup()
+XapiandManager::ready_to_end_database_cleanup(bool notify)
 {
 	return (
-		ready_to_end_http() &&
-		ready_to_end_remote() &&
-		ready_to_end_replication()
+		ready_to_end_http(notify) &&
+		ready_to_end_remote(notify) &&
+		ready_to_end_replication(notify)
 	);
 }
 
 
 bool
-XapiandManager::ready_to_end_discovery()
+XapiandManager::ready_to_end_discovery(bool notify)
 {
 	return (
-		ready_to_end_http() &&
-		ready_to_end_remote() &&
-		ready_to_end_replication()
+		ready_to_end_http(notify) &&
+		ready_to_end_remote(notify) &&
+		ready_to_end_replication(notify)
 	);
 }
 
 
 bool
-XapiandManager::ready_to_end()
+XapiandManager::ready_to_end(bool notify)
 {
 	return (
-		ready_to_end_http() &&
-		ready_to_end_remote() &&
-		ready_to_end_replication() &&
-		ready_to_end_database_cleanup() &&
-		ready_to_end_discovery()
+		ready_to_end_http(notify) &&
+		ready_to_end_remote(notify) &&
+		ready_to_end_replication(notify) &&
+		ready_to_end_database_cleanup(notify) &&
+		ready_to_end_discovery(notify)
 	);
 }
 

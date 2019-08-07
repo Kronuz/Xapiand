@@ -204,6 +204,7 @@ private:
 	int _new_cluster;
 	std::chrono::steady_clock::time_point _process_start;
 
+	int _try_shutdown;
 	ev::timer try_shutdown_timer;
 	ev::async signal_sig_async;
 	ev::async setup_node_async;
@@ -257,12 +258,12 @@ public:
 	void run();
 	void join();
 
-	bool ready_to_end_http();
-	bool ready_to_end_remote();
-	bool ready_to_end_replication();
-	bool ready_to_end_database_cleanup();
-	bool ready_to_end_discovery();
-	bool ready_to_end();
+	bool ready_to_end_http(bool notify = false);
+	bool ready_to_end_remote(bool notify = false);
+	bool ready_to_end_replication(bool notify = false);
+	bool ready_to_end_database_cleanup(bool notify = false);
+	bool ready_to_end_discovery(bool notify = false);
+	bool ready_to_end(bool notify = false);
 
 	std::string __repr__() const override;
 
