@@ -604,15 +604,16 @@ dump_callstacks()
 		sched_yield();
 	}
 
-
 	// print tracebacks:
-	// The first idx is main thread, skip 4 frames:
-	//     callstacks_snapshot -> setup_node_async_cb -> ev::base -> ev_invoke_pending
-	//     collect_callstacks -> signal_sig_impl -> ev::base -> ev_invoke_pending
-	std::string ret;
-	size_t skip = 4;
+	// The first idx is main thread:
+	//   skip 4 frames:  callstacks_snapshot -> setup_node_async_cb -> ev::base -> ev_invoke_pending
+	size_t skip_snap = 4;
+	//   skip 5 frames:  dump_callstacks -> signal_sig_impl -> signal_sig_async_cb -> ev::base -> ev_invoke_pending
+	size_t skip_call = 5;
+
 	size_t idx = 0;
 	size_t active = 0;
+	std::string ret;
 	for (; idx < pthreads.size() && idx < pthreads_cnt.load(std::memory_order_acquire); ++idx) {
 		auto& thread_info = pthreads[idx];
 		auto pthread = thread_info.pthread.load(std::memory_order_relaxed);
@@ -638,18 +639,19 @@ dump_callstacks()
 				ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info.name, !snapshot_frames ? " " + DARK_STEEL_BLUE + "(no snapshot)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(no callstack)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 				if (callstack_frames) {
 	#if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
-					ret.append(strings::format(DEBUG_COL + "{}\n", strings::indent(traceback(thread_info.name, "", idx, callstack, skip), ' ', 8, true)));
+					ret.append(strings::format(DEBUG_COL + "{}\n", strings::indent(traceback(thread_info.name, "", idx, callstack, skip_call), ' ', 8, true)));
 	#endif
 				}
-			} else if (callstack[1 + skip] != snapshot[1 + skip]) {
+			} else if (callstack[1 + skip_call] != snapshot[1 + skip_snap]) {
 				++active;
-				ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info.name, callstack[1 + skip] == snapshot[1 + skip] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " " + DARK_ORANGE + "(active)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
+				ret.append(strings::format("        " + STEEL_BLUE + "<Thread {}: {}{}{}>\n", idx, thread_info.name, callstack[1 + skip_call] == snapshot[1 + skip_snap] ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : " " + DARK_ORANGE + "(active)" + STEEL_BLUE, errnum ? " " + RED + "(" + error::name(errnum) + ")" + STEEL_BLUE : ""));
 	#if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
-				ret.append(strings::format(DEBUG_COL + "{}\n", strings::indent(traceback(thread_info.name, "", idx, callstack, skip), ' ', 8, true)));
+				ret.append(strings::format(DEBUG_COL + "{}\n", strings::indent(traceback(thread_info.name, "", idx, callstack, skip_call), ' ', 8, true)));
 	#endif
 			}
 		}
-		skip = 0;
+		skip_call = 0;
+		skip_snap = 0;
 	}
 	return strings::format("    " + STEEL_BLUE + "<Threads {{total:{}, active:{}}}>\n", idx, active) + ret;
 }
