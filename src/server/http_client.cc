@@ -1173,7 +1173,7 @@ HttpClient::prepare()
 				new_request->query_parser.rewind();
 				int flush_clients = new_request->query_parser.next("clients");
 				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::manager(true)->database_pool->cleanup(true);
+					XapiandManager::manager(true)->database_pool->cleanup(true, false);
 				}
 				if (flush_clients != -1 || flush_databases == -1) {
 					XapiandManager::manager(true)->shutdown(0, 0);

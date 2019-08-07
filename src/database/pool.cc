@@ -655,16 +655,25 @@ ShardEndpoint::_is_pending(const IndexSettings& index_settings) const
 
 
 bool
-ShardEndpoint::is_pending(bool notify) const
+ShardEndpoint::is_pending(const IndexSettings& index_settings, bool notify) const
 {
 	L_CALL("ShardEndpoint::is_pending()");
 
-	auto pending = _is_pending(_get_pending_index_settings());
+	auto pending = _is_pending(index_settings);
 	if (pending && notify) {
 		auto pending_rev = pending_revision.load(std::memory_order_relaxed);
 		db_updater()->debounce(path, pending_rev, path);
 	}
 	return pending;
+}
+
+
+bool
+ShardEndpoint::is_pending(bool notify) const
+{
+	L_CALL("ShardEndpoint::is_pending()");
+
+	return is_pending(_get_pending_index_settings(), notify);
 }
 
 
@@ -1064,7 +1073,7 @@ DatabasePool::join(std::chrono::steady_clock::time_point wakeup)
 
 
 void
-DatabasePool::cleanup(bool immediate)
+DatabasePool::cleanup(bool immediate, bool notify)
 {
 	L_CALL("DatabasePool::cleanup()");
 
@@ -1086,7 +1095,7 @@ DatabasePool::cleanup(bool immediate)
 					L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return DropAction::leave;
 				}
-				if (endpoint_database_endpoint.second->_is_pending(index_settings)) {
+				if (endpoint_database_endpoint.second->is_pending(index_settings, notify)) {
 					L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 					return DropAction::leave;
 				}
@@ -1107,7 +1116,7 @@ DatabasePool::cleanup(bool immediate)
 				L_DATABASE("Leave used endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::leave;
 			}
-			if (endpoint_database_endpoint.second->_is_pending(index_settings)) {
+			if (endpoint_database_endpoint.second->is_pending(index_settings, notify)) {
 				L_DATABASE("Leave pending endpoint: {}", repr(endpoint_database_endpoint.second->to_string()));
 				return DropAction::leave;
 			}

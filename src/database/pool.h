@@ -132,6 +132,7 @@ public:
 	bool is_used() const;
 
 	bool is_pending(bool notify = false) const;
+	bool is_pending(const IndexSettings& index_settings, bool notify = false) const;
 
 	std::string __repr__() const;
 	std::string dump_databases(int level) const;
@@ -200,7 +201,7 @@ public:
 		return join(std::chrono::steady_clock::now() + timeout);
 	}
 
-	void cleanup(bool immediate = false);
+	void cleanup(bool immediate = false, bool notify = true);
 
 	bool clear();
 
