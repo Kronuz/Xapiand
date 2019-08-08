@@ -2263,7 +2263,7 @@ Schema::check(const MsgPack& object, const char* prefix, bool allow_foreign, boo
 				return std::make_pair(&endpoint, &object);
 			}
 			if (sep_types[SPC_OBJECT_TYPE] != FieldType::OBJECT) {
-				THROW(ErrorType, "%sschema object has an unsupported type: %s", prefix, SCHEMA_FIELD_NAME, type_name);
+				THROW(ErrorType, "%sschema object has an unsupported type: %s", prefix, type_name);
 			}
 		}
 	} else {
