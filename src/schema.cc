@@ -6268,6 +6268,8 @@ inline bool
 has_dispatch_process_concrete_properties(uint32_t key)
 {
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
+		hh(RESERVED_SETTINGS),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6340,6 +6342,8 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	L_CALL("Schema::_dispatch_process_concrete_properties(%s)", repr(prop_name));
 
 	constexpr static auto _ = phf::make_phf({
+		hh(RESERVED_META),
+		hh(RESERVED_SETTINGS),
 		hh(RESERVED_DATA),
 		hh(RESERVED_WEIGHT),
 		hh(RESERVED_POSITION),
@@ -6405,6 +6409,12 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 	});
 
 	switch (_.find(key)) {
+		case _.fhh(RESERVED_META):
+			Schema::process_meta(prop_name, value);
+			return true;
+		case _.fhh(RESERVED_SETTINGS):
+			Schema::process_settings(prop_name, value);
+			return true;
 		case _.fhh(RESERVED_DATA):
 			Schema::process_data(prop_name, value);
 			return true;
@@ -7859,6 +7869,22 @@ Schema::process_position(std::string_view prop_name, const MsgPack& doc_position
 	} catch (const msgpack::type_error&) {
 		THROW(ClientError, "Data inconsistency, %s must be a positive integer or a not-empty array of positive integers", repr(prop_name));
 	}
+}
+
+
+inline void
+Schema::process_meta(std::string_view /*unused*/, const MsgPack& /*unused*/)
+{
+	// RESERVED_META is ignored by the schema.
+	L_CALL("Schema::process_meta()");
+}
+
+
+inline void
+Schema::process_settings(std::string_view /*unused*/, const MsgPack& /*unused*/)
+{
+	// RESERVED_SETTINGS is ignored by the schema.
+	L_CALL("Schema::process_settings()");
 }
 
 

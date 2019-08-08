@@ -71,6 +71,7 @@ constexpr const char RESERVED_PARTIAL_PATHS[]       = "_partial_paths";
 constexpr const char RESERVED_INDEX_UUID_FIELD[]    = "_index_uuid_field";
 constexpr const char RESERVED_SCHEMA[]              = "_schema";
 constexpr const char RESERVED_ENDPOINT[]            = "_endpoint";
+constexpr const char RESERVED_META[]                = "_meta";
 // Reserved words for detecting types.
 constexpr const char RESERVED_DATE_DETECTION[]      = "_date_detection";
 constexpr const char RESERVED_TIME_DETECTION[]      = "_time_detection";
@@ -86,6 +87,7 @@ constexpr const char RESERVED_UUID_DETECTION[]      = "_uuid_detection";
 constexpr const char RESERVED_VALUES[]              = "_values";
 constexpr const char RESERVED_TERMS[]               = "_terms";
 constexpr const char RESERVED_DATA[]                = "_data";
+constexpr const char RESERVED_SETTINGS[]            = "_settings";
 constexpr const char RESERVED_BLOB[]                = "_blob";
 constexpr const char RESERVED_CONTENT_TYPE[]        = "_content_type";
 // Reserved words used in schema only for TEXT fields.
