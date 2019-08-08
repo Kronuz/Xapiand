@@ -502,11 +502,45 @@ DatabaseHandler::run_script(const MsgPack& object, std::string_view term_id, std
 
 
 std::tuple<std::string, Xapian::Document, MsgPack>
-DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& obj, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
+DatabaseHandler::prepare(const MsgPack& document_id, const MsgPack& o, Data& data, std::shared_ptr<std::pair<std::string, const Data>> old_document_pair)
 {
-	L_CALL("DatabaseHandler::prepare(%s, %s, <data>)", repr(document_id.to_string()), repr(obj.to_string()));
+	L_CALL("DatabaseHandler::prepare(%s, %s, <data>)", repr(document_id.to_string()), repr(o.to_string()));
 
 	std::tuple<std::string, Xapian::Document, MsgPack> prepared;
+
+	MsgPack obj_holder(MsgPack::Type::MAP);
+	const MsgPack& obj = [&]() {
+		auto its = o.find(RESERVED_SCHEMA);
+		if (its == o.end()) return o;
+		obj_holder = o;
+		obj_holder.erase(RESERVED_SCHEMA);  // FIXME: TSAN fails without this... why!?
+		obj_holder[RESERVED_SCHEMA] = {
+			{ SCHEMA_FIELD_NAME, o[RESERVED_SCHEMA] }
+		};
+		auto& schema_obj = obj_holder[RESERVED_SCHEMA];
+		auto& schema_field = schema_obj[SCHEMA_FIELD_NAME];
+		auto it1 = schema_field.find(RESERVED_TYPE);
+		if (it1 != schema_field.end()) {
+			schema_obj[RESERVED_TYPE] = it1.value();
+			schema_field.erase(it1);
+		}
+		auto it2 = schema_field.find(RESERVED_ENDPOINT);
+		if (it2 != schema_field.end()) {
+			schema_obj[RESERVED_ENDPOINT] = it2.value();
+			schema_field.erase(it2);
+		}
+		auto it3 = schema_field.find("_foreign");
+		if (it3 != schema_field.end()) {
+			schema_obj[RESERVED_ENDPOINT] = it3.value();
+			schema_field.erase(it3);
+		}
+		auto it4 = schema_field.find("_meta");
+		if (it4 != schema_field.end()) {
+			schema_obj["description"] = it4.value();
+			schema_field.erase(it4);
+		}
+		return obj_holder;
+	}();
 
 #if defined(XAPIAND_CHAISCRIPT) || defined(XAPIAND_V8)
 	while (true) {
