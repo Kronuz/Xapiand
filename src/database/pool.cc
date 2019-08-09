@@ -660,10 +660,14 @@ ShardEndpoint::is_pending(const IndexSettings& index_settings, bool notify) cons
 	L_CALL("ShardEndpoint::is_pending()");
 
 	auto pending = _is_pending(index_settings);
-	if (pending && notify) {
-		auto pending_rev = pending_revision.load(std::memory_order_relaxed);
-		db_updater()->debounce(path, pending_rev, path);
+#ifdef XAPIAND_CLUSTERING
+	if (!opts.solo) {
+		if (pending && notify) {
+			auto pending_rev = pending_revision.load(std::memory_order_relaxed);
+			db_updater()->debounce(path, pending_rev, path);
+		}
 	}
+#endif
 	return pending;
 }
 
