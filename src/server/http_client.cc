@@ -1625,7 +1625,7 @@ HttpClient::update_document_view(Request& request)
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
 		indexed = db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
-	} else if (HTTP_UPSERT) {
+	} else if (request.method == HTTP_UPSERT) {
 		operation = "update";
 		bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
 		indexed = db_handler.update(document_id, query_field.version, stored, true, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
