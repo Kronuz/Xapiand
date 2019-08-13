@@ -107,6 +107,9 @@ catch_http_errors(Func&& func)
 	} catch (const ClientError& exc) {
 		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
+	} catch (const chaiscript::exception::eval_error& exc) {
+		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.pretty_print();
 	} catch (const BaseException& exc) {
 		http_errors.error_code = HTTP_STATUS_INTERNAL_SERVER_ERROR;
 		http_errors.error = *exc.get_message() != 0 ? exc.get_message() : "Unkown BaseException!";
