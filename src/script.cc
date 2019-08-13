@@ -173,10 +173,12 @@ Script::get_types(bool strict) const
 			THROW(ClientError, "Script already specified value in '{}' and '{}'", RESERVED_FOREIGN);
 		}
 	} else {
-		if (strict) {
-			THROW(MissingTypeError, "Type of field '{}' is missing", RESERVED_TYPE);
+		if (_sep_types[SPC_CONCRETE_TYPE] == FieldType::empty) {
+			if (strict) {
+				THROW(MissingTypeError, "Type of field '{}' is missing", RESERVED_SCRIPT);
+			}
+			_sep_types[SPC_CONCRETE_TYPE] = FieldType::script;
 		}
-		_sep_types[SPC_CONCRETE_TYPE] = FieldType::script;
 		if (_sep_types[SPC_CONCRETE_TYPE] != FieldType::script) {
 			THROW(ClientError, "Only type {} is allowed in '{}'", enum_name(FieldType::script), RESERVED_SCRIPT);
 		}
