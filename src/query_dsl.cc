@@ -789,6 +789,10 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 
+			if (strings::endswith(serialised_term, " *")) {
+				serialised_term.remove_suffix(2);
+			}
+
 			// There cannot be non-keyword fields with bool_term
 			Xapian::QueryParser parser;
 			switch (default_op) {
