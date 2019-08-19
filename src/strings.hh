@@ -324,6 +324,38 @@ replace(std::string_view str, std::string_view search, std::string_view replacem
 }
 
 
+inline std::string_view
+ltrim(std::string_view str)
+{
+	auto found = str.find_first_not_of(" \n\r\t\f\v");
+	if (found == std::string_view::npos) {
+		found = str.size();
+	}
+	str.remove_prefix(found);
+	return str;
+}
+
+
+inline std::string_view
+rtrim(std::string_view str)
+{
+	auto found = str.find_last_not_of(" \n\r\t\f\v");
+	if (found == std::string_view::npos) {
+		found = str.size();
+	} else {
+		found = str.size() - found - 1;
+	}
+	str.remove_suffix(found);
+	return str;
+}
+
+inline std::string_view
+trim(std::string_view str)
+{
+	return rtrim(ltrim(str));
+}
+
+
 std::string from_bytes(size_t bytes, const char* prefix = "", bool colored = false);
 std::string from_small_time(long double seconds, const char* prefix = "", bool colored = false);
 std::string from_time(long double seconds, const char* prefix = "", bool colored = false);
