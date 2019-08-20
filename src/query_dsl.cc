@@ -789,8 +789,12 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 
-			if (strings::endswith(serialised_term, " *")) {
-				serialised_term.remove_suffix(2);
+			auto sz = serialised_term.size();
+			if (sz > 2 && serialised_term[sz - 1] == '*') {
+				auto c = serialised_term[sz - 2];
+				if (c < '0' || c > '9' && c < 'A' || c > 'Z' && c < 'a' || c > 'z' && c < 128) {
+					serialised_term.remove_suffix(1);
+				}
 			}
 
 			// There cannot be non-keyword fields with bool_term
