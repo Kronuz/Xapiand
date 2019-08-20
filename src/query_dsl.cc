@@ -791,7 +791,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 
 			auto sz = serialised_term.size();
 			if (sz > 2 && serialised_term[sz - 1] == '*') {
-				auto c = serialised_term[sz - 2];
+				unsigned char c = serialised_term[sz - 2];
 				if (c < '0' || (c > '9' && c < 'A') || (c > 'Z' && c < 'a') || (c > 'z' && c < 128)) {
 					serialised_term.remove_suffix(1);
 				}
