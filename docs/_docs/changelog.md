@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.34.0] - 2019-08-20
+{: #v0-34-0 }
+
+### Changed
+- Allow specifying partial using ** at the end
+
+### Fixed
+- Badly placed Wildcards
+- Partials for keywords
+
+---
 ## [0.33.0] - 2019-08-19
 {: #v0-33-0 }
 
@@ -901,7 +912,8 @@ data associated with it)
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/Kronuz/Xapiand/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/Kronuz/Xapiand/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/Kronuz/Xapiand/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/Kronuz/Xapiand/compare/v0.30.0...v0.31.0
