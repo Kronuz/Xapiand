@@ -1,10 +1,10 @@
 /**
  *
  * @file A fantasy name generator library.
- * @version 1.0.1
+ * @version 1.1.0
  * @license Public Domain
  * @authors:
- *   German M. Bravo (Kronuz)
+ *   German Mendez Bravo (Kronuz)
  *
  */
 
