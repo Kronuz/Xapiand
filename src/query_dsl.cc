@@ -691,8 +691,16 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				serialised_term_holder = strings::lower(serialised_term);
 				serialised_term = serialised_term_holder;
 			}
+
+			// Cleanup for wildcard, partial and fuzzy
 			if (strings::endswith(serialised_term, '*')) {
-				flags |= Xapian::QueryParser::FLAG_WILDCARD;
+				serialised_term.remove_suffix(1);
+				if (strings::endswith(serialised_term, '*')) {
+					serialised_term.remove_suffix(1);
+					flags |= Xapian::QueryParser::FLAG_PARTIAL;
+				} else {
+					flags |= Xapian::QueryParser::FLAG_WILDCARD;
+				}
 			} else if (strings::endswith(serialised_term, '~')) {
 				serialised_term.remove_suffix(1);
 				flags |= Xapian::QueryParser::FLAG_FUZZY;
@@ -712,11 +720,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_WILDCARD) {
-				if (serialised_term.find_first_of("?*") == std::string::npos) {
-					serialised_term_holder = std::string(serialised_term) + '*';
-					serialised_term = serialised_term_holder;
-				}
-
 				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
 				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
@@ -730,10 +733,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_FUZZY) {
-				if (strings::endswith(serialised_term, '~')) {
-					serialised_term.remove_suffix(1);
-				}
-
 				auto fuzzy_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount fuzzy_max_expansion = DEFAULT_FUZZY_MAX_EXPANSION;
 				int fuzzy_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
@@ -789,11 +788,20 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 					field_spc.prefix().size() + 1 + fuzzy_prefix_length);
 			}
 
+			// Cleanup for wildcard and partial
+			//   + remove wildcard in <invalid>*
+			//   + remove double ** and make it partial instead
 			auto sz = serialised_term.size();
-			if (sz > 2 && serialised_term[sz - 1] == '*') {
-				unsigned char c = serialised_term[sz - 2];
-				if (c < '0' || (c > '9' && c < 'A') || (c > 'Z' && c < 'a') || (c > 'z' && c < 128)) {
-					serialised_term.remove_suffix(1);
+			if (sz >= 2) {
+				unsigned char c = serialised_term[sz - 1];
+				if (c == '*') {
+					unsigned char cc = serialised_term[sz - 2];
+					if (cc == '*') {
+						flags |= Xapian::QueryParser::FLAG_PARTIAL;
+						serialised_term.remove_suffix(2);
+					} else if (cc < '0' || (cc > '9' && cc < 'A') || (cc > 'Z' && cc < 'a') || (cc > 'z' && cc < 128)) {
+						serialised_term.remove_suffix(1);
+					}
 				}
 			}
 
