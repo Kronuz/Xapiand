@@ -55,6 +55,10 @@ constexpr const char RESERVED_NOT[] = "_not";
 constexpr const char RESERVED_AND_MAYBE[] = "_and_maybe";
 
 
+#define DEFAULT_WILDCARD_MAX_EXPANSION 0
+#define DEFAULT_PARTIAL_MAX_EXPANSION 50
+
+
 /* A domain-specific language (DSL) for query */
 
 
@@ -824,8 +828,49 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 {
 	L_CALL("QueryDSL::get_term_query(<field_spc>, %s, <wqf>, <q_flags>, %s)", repr(serialised_term), is_wildcard ? "true" : "false");
 
+	std::string serialised_term_holder;
+
 	switch (field_spc.get_type()) {
 		case FieldType::TEXT: {
+
+			// Cleanup for wildcard, partial and fuzzy
+			if (string::endswith(serialised_term, "**")) {
+				serialised_term.remove_suffix(2);
+				q_flags |= Xapian::QueryParser::FLAG_PARTIAL;
+			} else if (string::endswith(serialised_term, '*')) {
+				auto sz = serialised_term.size();
+				if (sz >= 2) {
+					unsigned char cc = serialised_term[sz - 2];
+					if ((cc >= 128) || (cc >= '0' && cc <= '9') || (cc >= 'A' && cc <= 'Z') || (cc >= 'a' && cc <= 'z')) {
+						q_flags |= Xapian::QueryParser::FLAG_WILDCARD;
+					} else {
+						serialised_term.remove_suffix(1);
+					}
+				} else {
+					q_flags |= Xapian::QueryParser::FLAG_WILDCARD;
+				}
+			}
+
+			if (q_flags & Xapian::QueryParser::FLAG_WILDCARD) {
+				auto pos = serialised_term.find_first_of("?*");
+				if (pos == std::string::npos) {
+					auto sz = serialised_term.size();
+					if (sz >= 1) {
+						unsigned char cc = serialised_term[sz - 1];
+						if ((cc >= 128) || (cc >= '0' && cc <= '9') || (cc >= 'A' && cc <= 'Z') || (cc >= 'a' && cc <= 'z')) {
+							serialised_term_holder = std::string(serialised_term) + '*';
+							serialised_term = serialised_term_holder;
+						}
+					} else {
+						serialised_term_holder = "*";
+						serialised_term = serialised_term_holder;
+					}
+				} else if (pos != serialised_term.size() - 1) {
+					q_flags |= Xapian::QueryParser::FLAG_WILDCARD_SINGLE;
+					q_flags |= Xapian::QueryParser::FLAG_WILDCARD_MULTI;
+				}
+			}
+
 			Xapian::QueryParser parser;
 			if (field_spc.flags.bool_term) {
 				parser.add_boolean_prefix("_", field_spc.prefix() + field_spc.get_ctype());
@@ -850,15 +895,55 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 		}
 
 		case FieldType::KEYWORD: {
-			std::string lower;
+			int k_flags = 0;
 			if (!field_spc.flags.bool_term) {
-				lower = string::lower(serialised_term);
-				serialised_term = lower;
+				serialised_term_holder = string::lower(serialised_term);
+				serialised_term = serialised_term_holder;
 			}
+
+			// Cleanup for wildcard, partial and fuzzy
 			if (string::endswith(serialised_term, '*')) {
 				serialised_term.remove_suffix(1);
-				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
+				if (string::endswith(serialised_term, '*')) {
+					serialised_term.remove_suffix(1);
+					k_flags |= Xapian::QueryParser::FLAG_PARTIAL;
+				} else {
+					k_flags |= Xapian::QueryParser::FLAG_WILDCARD;
+				}
+			} else if (string::endswith(serialised_term, '~')) {
+				serialised_term.remove_suffix(1);
+				// Fuzzy not supported in this version
 			}
+
+			if (k_flags & Xapian::QueryParser::FLAG_PARTIAL) {
+				auto partial_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
+				Xapian::termcount partial_max_expansion = DEFAULT_PARTIAL_MAX_EXPANSION;
+				int partial_flags = Xapian::Query::WILDCARD_LIMIT_MOST_FREQUENT;
+				return Xapian::Query(Xapian::Query::OP_OR,
+					Xapian::Query(Xapian::Query::OP_WILDCARD,
+						partial_term,
+						partial_max_expansion,
+						partial_flags,
+						Xapian::Query::OP_SYNONYM),
+					Xapian::Query(partial_term, 1, 1));
+			}
+
+			if (k_flags & Xapian::QueryParser::FLAG_WILDCARD) {
+				auto wildcard_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
+				Xapian::termcount wildcard_max_expansion = DEFAULT_WILDCARD_MAX_EXPANSION;
+				int wildcard_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
+				auto pos = serialised_term.find_first_of("?*");
+				if (pos != std::string::npos && pos != serialised_term.size() - 1) {
+					wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_SINGLE;
+					wildcard_flags |= Xapian::Query::WILDCARD_PATTERN_MULTI;
+				}
+				return Xapian::Query(Xapian::Query::OP_WILDCARD,
+					wildcard_term,
+					wildcard_max_expansion,
+					wildcard_flags,
+					Xapian::Query::OP_SYNONYM);
+			}
+
 			if (is_wildcard) {
 				return Xapian::Query(Xapian::Query::OP_WILDCARD, prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype()));
 			}
