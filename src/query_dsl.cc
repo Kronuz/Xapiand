@@ -687,6 +687,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 
 	switch (field_spc.get_type()) {
 		case FieldType::keyword: {
+			unsigned fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
 			if (!field_spc.flags.bool_term) {
 				serialised_term_holder = strings::lower(serialised_term);
 				serialised_term = serialised_term_holder;
@@ -704,6 +705,15 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			} else if (strings::endswith(serialised_term, '~')) {
 				serialised_term.remove_suffix(1);
 				flags |= Xapian::QueryParser::FLAG_FUZZY;
+			} else if (serialised_term[serialised_term.size() - 2] == '~') {
+				int errno_save = 0;
+				fuzzy_edit_distance = strict_stou(&errno_save, serialised_term.substr(serialised_term.size() - 1));
+				if (errno_save != 0) {
+					fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
+				} else {
+					flags |= Xapian::QueryParser::FLAG_FUZZY;
+					serialised_term.remove_suffix(2);
+				}
 			}
 
 			if (flags & Xapian::QueryParser::FLAG_PARTIAL) {
@@ -739,7 +749,6 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 				auto fuzzy_term = prefixed(serialised_term, field_spc.prefix(), field_spc.get_ctype());
 				Xapian::termcount fuzzy_max_expansion = DEFAULT_FUZZY_MAX_EXPANSION;
 				int fuzzy_flags = Xapian::Query::WILDCARD_LIMIT_ERROR;
-				unsigned fuzzy_edit_distance = DEFAULT_FUZZY_EDIT_DISTANCE;
 				size_t fuzzy_prefix_length = 0;
 				return Xapian::Query(Xapian::Query::OP_EDIT_DISTANCE,
 					fuzzy_term,
