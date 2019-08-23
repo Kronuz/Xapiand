@@ -17,7 +17,7 @@ PUT /test/querydsl/partial/keyword/doc
     },
     "field": {
         "_type": "keyword",
-        "_value": "dynamic categorisation"
+        "_value": "categorisation"
     }
 }
 ```
@@ -45,7 +45,7 @@ SEARCH /test/querydsl/partial/keyword/
 
 {% comment %}
 ---
-params: query=field:dynamic%20cate**
+params: query=field:cate**
 ---
 
 ```js
