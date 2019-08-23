@@ -99,7 +99,7 @@ class IndicesClient(NamespacedClient):
             params=params)
 
     @query_params('q', 'query', 'refresh', 'timeout')
-    def count(self, index=None, body=None, params=None):
+    def count(self, index=None, body=None, headers=None, params=None):
         """
         Execute a query and get the number of matches for that query.
 
