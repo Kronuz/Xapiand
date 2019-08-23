@@ -62,7 +62,7 @@ class RequestsHttpConnection(Connection):
             elif isinstance(http_auth, string_types):
                 http_auth = tuple(http_auth.split(':', 1))
             self.session.auth = http_auth
-        self.base_url = 'http%s://%s:%d%s' % ('s' if self.use_ssl else '', host, port, self.url_prefix)
+        self.base_url = 'http%s://%s:%d' % ('s' if self.use_ssl else '', host, port)
         self.session.verify = verify_certs
         if not client_key:
             self.session.cert = client_cert

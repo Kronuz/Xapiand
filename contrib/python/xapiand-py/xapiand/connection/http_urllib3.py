@@ -63,7 +63,6 @@ class Urllib3HttpConnection(Connection):
 
     :arg host: hostname of the node (default: localhost)
     :arg port: port to use (integer, default: 8880)
-    :arg url_prefix: optional url prefix
     :arg timeout: default timeout in seconds (float, default: 10)
     :arg http_auth: optional http auth information as either ':' separated
         string or a tuple
@@ -157,11 +156,8 @@ class Urllib3HttpConnection(Connection):
 
         self.pool = pool_class(host, port=port, timeout=self.timeout, maxsize=maxsize, **kw)
 
-    def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None, ignore_url_prefix=None):
-        if ignore_url_prefix:
-            full_url = url
-        else:
-            full_url = self.url_prefix + url
+    def perform_request(self, method, url, params=None, body=None, timeout=None, ignore=(), headers=None, deserializer=None):
+        full_url = url
         if params:
             full_url = '%s?%s' % (full_url, urlencode(params, doseq=True))
         full_url = self.host + full_url

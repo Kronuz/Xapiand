@@ -48,11 +48,10 @@ class Connection(object):
 
     Also responsible for logging.
     """
-    def __init__(self, host='localhost', port=8880, use_ssl=False, url_prefix='', timeout=10, scheme='http', idx=None, name=None, active=None):
+    def __init__(self, host='localhost', port=8880, use_ssl=False, timeout=10, scheme='http', idx=None, name=None, active=None):
         """
         :arg host: hostname of the node (default: localhost)
         :arg port: port to use (integer, default: 8880)
-        :arg url_prefix: optional url prefix for Xapiand
         :arg timeout: default timeout in seconds (float, default: 10)
         """
         self.idx = idx
@@ -64,9 +63,6 @@ class Connection(object):
         self.use_ssl = use_ssl
 
         self.host = '%s://%s:%s' % (scheme, host, port)
-        if url_prefix:
-            url_prefix = '/' + url_prefix.strip('/')
-        self.url_prefix = url_prefix
         self.timeout = timeout
 
     def __repr__(self):

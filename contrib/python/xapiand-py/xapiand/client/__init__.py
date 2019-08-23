@@ -62,9 +62,6 @@ def _normalize_hosts(hosts):
                 h['http_auth'] = '%s:%s' % (unquote(parsed_url.username),
                                             unquote(parsed_url.password))
 
-            if parsed_url.path and parsed_url.path != '/':
-                h['url_prefix'] = parsed_url.path
-
             out.append(h)
         else:
             out.append(host)
@@ -108,10 +105,10 @@ class Xapiand(object):
     specify those::
 
         # connect to localhost directly and another node using port 8881
-        # and an url_prefix. Note that ``port`` needs to be an int.
+        Note that ``port`` needs to be an int.
         client = Xapiand([
             {'host': 'localhost'},
-            {'host': 'other_host', 'port': 8881, 'url_prefix': 'production'},
+            {'host': 'other_host', 'port': 8881},
         ])
 
     Alternatively you can use RFC-1738 formatted URLs, as long as they are not

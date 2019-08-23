@@ -209,7 +209,7 @@ class Transport(object):
                 try:
                     # use small timeout for the sniffing request, should be a fast api call
                     _, headers, response = c.perform_request('GET', '/',
-                        timeout=self.sniff_timeout if not initial else None, ignore_url_prefix=True)
+                        timeout=self.sniff_timeout if not initial else None)
                     response = self.deserializer.loads(response, headers.get('content-type'))
                     break
                 except (ConnectionError, SerializationError):
