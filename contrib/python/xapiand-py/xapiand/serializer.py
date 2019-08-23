@@ -122,6 +122,19 @@ class JSONSerializer(Serializer):
         return 'application/x-ndjson', b'\n'.join(map(self.dumps, serialized_list)) + b'\n'
 
 
+class UnknownSerializer(Serializer):
+    mimetype = '*/*'
+
+    def loads(self, serialized):
+        return serialized
+
+    def dumps(self, data):
+        return data
+
+    def nddumps(self, serialized_list):
+        return '*/*', b'\r\n\r\n'.join(map(self.dumps, serialized_list)) + b'\r\n\r\n'
+
+
 DEFAULT_SERIALIZERS = {
     JSONSerializer.mimetype: JSONSerializer(),
     TextSerializer.mimetype: TextSerializer(),
@@ -150,6 +163,6 @@ class Deserializer(object):
             try:
                 deserializer = self.serializers[mimetype]
             except KeyError:
-                raise SerializationError("Unknown mimetype, unable to deserialize: %s" % mimetype)
+                deserializer = UnknownSerializer()
 
         return deserializer.loads(s)
