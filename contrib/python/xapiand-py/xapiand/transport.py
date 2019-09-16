@@ -208,9 +208,9 @@ class Transport(object):
             for c in chain(self.connection_pool.connections, self.seed_connections):
                 try:
                     # use small timeout for the sniffing request, should be a fast api call
-                    _, headers, response = c.perform_request('GET', '/',
+                    _, headers, response = c.perform_request('GET', '/.nodes',
                         timeout=self.sniff_timeout if not initial else None)
-                    response = self.deserializer.loads(response, headers.get('content-type'))
+                    nodes = self.deserializer.loads(response, headers.get('content-type'))
                     break
                 except (ConnectionError, SerializationError):
                     pass
@@ -223,7 +223,7 @@ class Transport(object):
                 return []
             raise
 
-        return response['nodes']
+        return nodes
 
     def _get_node_info(self, node_info):
         name = node_info.get('name')
