@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.36.0] - 2019-09-16
+{: #v0-36-0 }
+
+### Added
+- Added `--primary-node` option to fix a primary node
+
+### Fixed
+- Doing `GET /.nodes` only reads nodes internally
+
+
+---
 ## [0.35.0] - 2019-08-20
 {: #v0-35-0 }
 
