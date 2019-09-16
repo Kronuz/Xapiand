@@ -76,8 +76,9 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 // Values in seconds
 constexpr double RAFT_LEADER_HEARTBEAT_TIMEOUT    = HEARTBEAT_TIMEOUT;
 
-constexpr double RAFT_LEADER_ELECTION_MIN         = 2.5 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
-constexpr double RAFT_LEADER_ELECTION_MAX         = 5.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
+constexpr double RAFT_LEADER_ELECTION_INIT        = 6.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
+constexpr double RAFT_LEADER_ELECTION_MIN         = 25.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;  // same as NODE_LIFESPAN
+constexpr double RAFT_LEADER_ELECTION_MAX         = 50.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
 
 constexpr double CLUSTER_DISCOVERY_WAITING_FAST   = RAFT_LEADER_HEARTBEAT_TIMEOUT / 3.0 * 2.0;
 constexpr double CLUSTER_DISCOVERY_WAITING_SLOW   = RAFT_LEADER_HEARTBEAT_TIMEOUT * 2.0;
@@ -415,7 +416,7 @@ Discovery::cluster_wave([[maybe_unused]] Message type, const std::string& messag
 
 		// After receiving WAVE, flag as WAITING_MORE so it waits just a little longer
 		// (prevent it from switching to slow waiting)
-		if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
+		if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 4s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 			// L_DEBUG("State changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
 		}
 	}
@@ -447,7 +448,7 @@ Discovery::cluster_sneer([[maybe_unused]] Message type, const std::string& messa
 	if (remote_node == *local_node) {
 		if (XapiandManager::manager(true)->node_name.empty()) {
 			L_DISCOVERY("Node name {} already taken. Retrying other name...", local_node->name());
-			if (XapiandManager::exchange_state(XapiandManager::get_state(), XapiandManager::State::RESET, 3s, "Node resetting is taking too long...", "Node reset done!")) {
+			if (XapiandManager::exchange_state(XapiandManager::get_state(), XapiandManager::State::RESET, 4s, "Node resetting is taking too long...", "Node reset done!")) {
 				Node::reset();
 				start();
 			}
@@ -728,7 +729,7 @@ Discovery::raft_request_vote_response([[maybe_unused]] Message type, const std::
 					serialise_length(raft_commit_index));
 
 				// First time we elect a leader's, we setup node
-				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
+				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 4s, "Node setup is taking too long...", "Node setup is finally done!")) {
 					// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
 					XapiandManager::setup_node();
 				}
@@ -932,7 +933,7 @@ Discovery::raft_append_entries(Message type, const std::string& message)
 
 			if (leader_commit == raft_commit_index) {
 				// First time we reach leader's commit, we setup node
-				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
+				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 4s, "Node setup is taking too long...", "Node setup is finally done!")) {
 					// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
 					XapiandManager::setup_node();
 				}
@@ -1426,7 +1427,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 			}
 			Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
 			local_node = Node::get_local_node();
-			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
+			if (XapiandManager::exchange_state(XapiandManager::State::RESET, XapiandManager::State::WAITING, 4s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 				// L_DEBUG("State changed: {} -> {}", enum_name(XapiandManager::State::RESET), enum_name(XapiandManager::get_state()));
 				L_INFO("Advertising as {}{}" + INFO_COL + "...", local_node->col().ansi(), local_node->name());
 				send_message(Message::CLUSTER_HELLO, local_node->serialise());
@@ -1441,7 +1442,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 			cluster_discovery.again();
 			L_EV("Reset discovery's cluster_discovery event ({})", cluster_discovery.repeat);
 
-			if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 3s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
+			if (XapiandManager::exchange_state(XapiandManager::State::WAITING, XapiandManager::State::WAITING_MORE, 4s, "Waiting for other nodes is taking too long...", "Waiting for other nodes is finally done!")) {
 				// L_DEBUG("State changed: {} -> {}", enum_name(XapiandManager::State::WAITING), enum_name(XapiandManager::get_state()));
 			}
 			break;
@@ -1450,7 +1451,7 @@ Discovery::cluster_discovery_cb(ev::timer&, [[maybe_unused]] int revents)
 			cluster_discovery.stop();
 			L_EV("Stop discovery's cluster_discovery event");
 
-			if (XapiandManager::exchange_state(XapiandManager::State::WAITING_MORE, XapiandManager::State::JOINING, 3s, "Joining cluster is taking too long...", "Joining cluster is finally done!")) {
+			if (XapiandManager::exchange_state(XapiandManager::State::WAITING_MORE, XapiandManager::State::JOINING, 4s, "Joining cluster is taking too long...", "Joining cluster is finally done!")) {
 				// L_DEBUG("State changed: {} -> {}", enum_name(XapiandManager::State::WAITING_MORE), enum_name(XapiandManager::get_state()));
 				L_INFO("Joining cluster {}...", repr(opts.cluster_name));
 				_raft_request_vote(false);
@@ -1488,7 +1489,7 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 				_raft_set_leader_node(local_node);
 
 				// First time we elect a leader's, we setup node
-				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 3s, "Node setup is taking too long...", "Node setup is finally done!")) {
+				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 4s, "Node setup is taking too long...", "Node setup is finally done!")) {
 					// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
 					XapiandManager::setup_node();
 				}
@@ -1741,7 +1742,7 @@ Discovery::_raft_request_vote(bool immediate)
 		raft_match_indexes.clear();
 
 		if (raft_current_term == 0) {
-			_raft_leader_election_timeout_reset(RAFT_LEADER_ELECTION_MAX);
+			_raft_leader_election_timeout_reset(RAFT_LEADER_ELECTION_INIT);
 		} else {
 			_raft_leader_election_timeout_reset(random_real(RAFT_LEADER_ELECTION_MIN, RAFT_LEADER_ELECTION_MAX));
 		}

@@ -43,8 +43,8 @@
 #include "stringified.hh"       // for stringified
 
 
-constexpr double HEARTBEAT_TIMEOUT                = 0.300;  // in seconds
-constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 2.5 * 1000.0));
+constexpr double HEARTBEAT_TIMEOUT                = 0.500;  // in seconds
+constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 50.0 * 1000.0));  // same as RAFT_LEADER_ELECTION_MAX
 
 
 class Node {
