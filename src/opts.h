@@ -58,6 +58,7 @@ extern struct opts_t {
 	std::string logfile = "";
 	std::string uid = "";
 	std::string gid = "";
+	std::string primary_node = "";
 	ssize_t num_http_servers = 1;
 	ssize_t num_http_clients = 1;
 	ssize_t num_remote_servers = 1;

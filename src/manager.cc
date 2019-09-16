@@ -665,8 +665,8 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	callstacks_snapshot();
 
 	std::shared_ptr<const Node> local_node;
-	std::shared_ptr<const Node> leader_node;
-	Endpoint cluster_endpoint;
+	std::shared_ptr<const Node> primary_node;
+	Endpoint primary_endpoint;
 
 	_new_cluster = 0;
 	bool found = false;
@@ -674,11 +674,11 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	for (int t = 10; !found && t >= 0; --t) {
 		nanosleep(100000000);  // sleep for 100 miliseconds
 		local_node = Node::get_local_node();
-		leader_node = Node::get_leader_node();
-		cluster_endpoint = Endpoint{".xapiand/nodes", leader_node};
+		primary_node = Node::get_primary_node();
+		primary_endpoint = Endpoint{".xapiand/nodes", primary_node};
 
 		try {
-			DatabaseHandler db_handler(Endpoints{cluster_endpoint});
+			DatabaseHandler db_handler(Endpoints{primary_endpoint});
 			if (!db_handler.get_metadata(std::string_view(RESERVED_SCHEMA)).empty()) {
 #ifdef XAPIAND_CLUSTERING
 				if (!opts.solo) {
@@ -701,14 +701,19 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				}
 			}
 		} catch (const Xapian::DatabaseNotAvailableError&) {
-			if (t == 0) { throw; }
+			if (t == 0) {
+				if (!primary_node->is_active()) {
+					L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
+				}
+				throw;
+			}
 			continue;
 		} catch (const Xapian::DocNotFoundError&) {
 		} catch (const Xapian::DatabaseNotFoundError&) { }
 
 		if (!found) {
 			try {
-				DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
+				DatabaseHandler db_handler(Endpoints{primary_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
 				MsgPack obj({
 					{ ID_FIELD_NAME, {
 						{ RESERVED_TYPE,  KEYWORD_STR },
@@ -725,17 +730,20 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 				if (!opts.solo) {
 					add_node(local_node->name());
 
-					if (Node::is_superset(local_node, leader_node)) {
+					if (Node::is_superset(local_node, primary_node)) {
 						L_INFO("Cluster database doesn't exist. Generating database...");
 					} else {
-						if (!leader_node->is_active()) {
+						if (!primary_node || primary_node->empty()) {
+							throw Xapian::NetworkError("Endpoint node is invalid");
+						}
+						if (!primary_node->is_active()) {
 							throw Xapian::NetworkError("Endpoint node is inactive");
 						}
-						auto port = leader_node->remote_port;
+						auto port = primary_node->remote_port;
 						if (port == 0) {
 							throw Xapian::NetworkError("Endpoint node without a valid port");
 						}
-						auto& host = leader_node->host();
+						auto& host = primary_node->host();
 						if (host.empty()) {
 							throw Xapian::NetworkError("Endpoint node without a valid host");
 						}
@@ -762,20 +770,20 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		if (Node::is_superset(local_node, leader_node)) {
+		if (Node::is_superset(local_node, primary_node)) {
 			// The local node is the leader
 			load_nodes();
 			set_cluster_database_ready_impl();
 		} else {
-			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", leader_node->col().ansi(), leader_node->to_string());
+			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", primary_node->col().ansi(), primary_node->to_string());
 			_new_cluster = 2;
 			// Replicate cluster database from the leader
-			replication->trigger_replication({cluster_endpoint, Endpoint{".xapiand/nodes"}, true});
+			replication->trigger_replication({primary_endpoint, Endpoint{".xapiand/nodes"}, true});
 			// Request updates from indices database shards
 			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"}, true);
 			assert(!endpoints.empty());
 			for (auto& endpoint : endpoints) {
-				Endpoint remote_endpoint{endpoint.path, leader_node};
+				Endpoint remote_endpoint{endpoint.path, primary_node};
 				Endpoint local_endpoint{endpoint.path};
 				replication->trigger_replication({remote_endpoint, local_endpoint, false});
 			}
@@ -1481,9 +1489,12 @@ XapiandManager::load_nodes()
 	// See if our local database has all nodes currently commited.
 	// If any is missing, it gets added.
 
-	auto leader_node = Node::get_leader_node();
-	Endpoint cluster_endpoint{".xapiand/nodes", leader_node};
-	DatabaseHandler db_handler(Endpoints{cluster_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	auto primary_node = Node::get_primary_node();
+	if (!primary_node->is_active()) {
+		L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
+	}
+	Endpoint primary_endpoint{".xapiand/nodes", primary_node};
+	DatabaseHandler db_handler(Endpoints{primary_endpoint}, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	auto mset = db_handler.get_mset();
 
 	std::vector<std::string> db_nodes;
@@ -2067,11 +2078,11 @@ XapiandManager::resolve_index_settings_impl(std::string_view normalized_path, bo
 		}
 
 		// Primary databases in .xapiand are always in the master (or local, if master is unavailable)
+		primary_node = Node::get_primary_node();
+		if (!primary_node->is_active()) {
+			L_WARNING("Primary node {}{}" + WARNING_COL + " is not active!", primary_node->col().ansi(), primary_node->to_string());
+		}
 		IndexSettingsShard shard;
-		auto leader_node = Node::get_leader_node();
-		primary_node = (leader_node && !leader_node->empty() && leader_node->is_active())
-			? leader_node
-			: Node::get_local_node();
 		shard.nodes.push_back(primary_node->name());
 		for (const auto& node : Node::nodes()) {
 			if (!Node::is_superset(node, primary_node)) {

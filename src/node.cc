@@ -31,6 +31,7 @@
 #include "length.h"             // for serialise_length, unserialise_length, ser...
 #include "log.h"                // for L_CALL
 #include "logger.h"             // for Logging::tab_title, Logging::badge
+#include "opts.h"               // for opts::*
 #include "serialise.h"          // for Serialise
 #include "strings.hh"           // for strings::format, strings::lower
 #include "xapian.h"             // for SerialisationError
@@ -243,6 +244,31 @@ Node::get_leader_node()
 	auto node = _leader_node.load(std::memory_order_acquire);
 
 	L_NODE_NODES("get_leader_node() => {}", node->__repr__());
+
+	assert(node);
+
+	return node;
+}
+
+
+std::shared_ptr<const Node>
+Node::get_primary_node()
+{
+	std::shared_ptr<const Node> node;
+
+	if (opts.primary_node.empty()) {
+		auto leader_node = get_leader_node();
+		node = (leader_node && !leader_node->empty() && leader_node->is_active())
+			? leader_node
+			: get_local_node();
+	} else {
+		node = get_node(opts.primary_node);
+		if (!node || node->empty()) {
+			Node new_node;
+			new_node.name(opts.primary_node);
+			node = Node::touch_node(new_node, false, false).first;
+		}
+	}
 
 	assert(node);
 

@@ -313,6 +313,8 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
 
 #ifdef XAPIAND_CLUSTERING
+		ValueArg<std::string> primary_node("", "primary-node", "Primary node (the one with the primary cluster database).", false, "", "name", cmd);
+
 		ValueArg<unsigned int> remote_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
 		ValueArg<unsigned int> replication_port("", "replica-port", "Xapiand replication protocol TCP port number to listen on.", false, 0, "port", cmd);
 #endif
@@ -482,6 +484,7 @@ parseOptions(int argc, char** argv)
 		o.bind_address = bind_address.getValue();
 		o.node_name = node_name.getValue();
 #ifdef XAPIAND_CLUSTERING
+		o.primary_node = primary_node.getValue();
 		o.cluster_name = cluster_name.getValue();
 		o.remote_port = remote_port.getValue();
 		o.replication_port = replication_port.getValue();

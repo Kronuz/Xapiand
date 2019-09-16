@@ -332,6 +332,8 @@ public:
 
 	static std::shared_ptr<const Node> get_leader_node();
 
+	static std::shared_ptr<const Node> get_primary_node();
+
 	static bool set_local_node(std::shared_ptr<const Node> node);
 
 	static bool set_leader_node(std::shared_ptr<const Node> node);
