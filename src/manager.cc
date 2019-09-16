@@ -615,9 +615,10 @@ XapiandManager::run()
 
 	} catch (...) {
 		L_EXC("Exception");
-		shutdown_sig(0, false);
+		int sig = 0;
+		atom_sig.compare_exchange_strong(sig, -EX_SOFTWARE);
+		shutdown_sig(atom_sig.load(), false);
 		join();
-		sig_exit(-EX_SOFTWARE);
 	}
 }
 
