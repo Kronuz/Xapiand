@@ -1347,30 +1347,6 @@ HttpClient::node_obj()
 
 	auto obj = document.get_obj();
 
-#ifdef XAPIAND_CLUSTERING
-	auto nodes = MsgPack::ARRAY();
-	for (auto& node : Node::nodes()) {
-		auto node_obj = MsgPack::MAP();
-		node_obj["name"] = node->name();
-		if (node->is_active()) {
-			node_obj["active"] = true;
-#ifdef XAPIAND_CLUSTERING
-			if (!opts.solo) {
-				node_obj["leader"] = node->is_leader();
-				node_obj["local"] = node->is_local();
-			}
-#endif
-			node_obj["host"] = node->host();
-			node_obj["http_port"] = node->http_port;
-			node_obj["remote_port"] = node->remote_port;
-			node_obj["replication_port"] = node->replication_port;
-		} else {
-			node_obj["active"] = false;
-		}
-		nodes.push_back(node_obj);
-	}
-#endif
-
 	obj.update(MsgPack({
 #ifdef XAPIAND_CLUSTERING
 		{ "cluster_name", opts.cluster_name },
@@ -1434,9 +1410,6 @@ HttpClient::node_obj()
 #endif
 			} },
 		} },
-#ifdef XAPIAND_CLUSTERING
-		{ "nodes", nodes },
-#endif
 	}));
 
 	return obj;
@@ -1892,15 +1865,42 @@ HttpClient::database_exists_view(Request& request)
 
 
 MsgPack
-HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
+HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, std::string_view selector)
 {
 	L_CALL("HttpClient::retrieve_database()");
 
-	MsgPack schema;
-	MsgPack settings;
+#ifdef XAPIAND_CLUSTERING
+	auto nodes = MsgPack::ARRAY();
+	if (is_root) {
+		for (auto& node : Node::nodes()) {
+			auto node_obj = MsgPack::MAP();
+			node_obj["name"] = node->name();
+			if (node->is_active()) {
+				node_obj["active"] = true;
+				if (!opts.solo) {
+					node_obj["leader"] = node->is_leader();
+					node_obj["local"] = node->is_local();
+				}
+				node_obj["host"] = node->host();
+				node_obj["http_port"] = node->http_port;
+				node_obj["remote_port"] = node->remote_port;
+				node_obj["replication_port"] = node->replication_port;
+			} else {
+				node_obj["active"] = false;
+			}
+			nodes.push_back(node_obj);
+		}
+
+		if (selector == "nodes") {
+			return nodes;
+		}
+	}
+#endif
+
 	auto obj = MsgPack::MAP();
 
 	// Get active schema
+	MsgPack schema;
 	try {
 		DatabaseHandler db_handler;
 		if (query_field.writable || query_field.primary) {
@@ -1922,6 +1922,7 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 	}
 
 	// Get index settings (from .xapiand/indices)
+	MsgPack settings;
 	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path).first);
 	endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/indices"},
@@ -1970,6 +1971,9 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 	// Add node information for '/':
 	if (is_root) {
 		obj.update(node_obj());
+#ifdef XAPIAND_CLUSTERING
+		obj["nodes"] = nodes;
+#endif
 	}
 
 	if (!settings.empty()) {
@@ -1978,6 +1982,10 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root)
 
 	if (!schema.empty()) {
 		obj[RESERVED_SCHEMA].update(schema);
+	}
+
+	if (!selector.empty()) {
+		obj = obj.select(selector);
 	}
 
 	return obj;
@@ -2002,11 +2010,7 @@ HttpClient::retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	auto obj = retrieve_database(query_field, is_root);
-
-	if (!selector.empty()) {
-		obj = obj.select(selector);
-	}
+	auto obj = retrieve_database(query_field, is_root, selector);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -2065,11 +2069,7 @@ HttpClient::write_database_view(Request& request)
 	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
-		auto obj = retrieve_database(query_field, is_root);
-
-		if (!selector.empty()) {
-			obj = obj.select(selector);
-		}
+		auto obj = retrieve_database(query_field, is_root, selector);
 
 		write_http_response(request, HTTP_STATUS_OK, obj);
 	} else {

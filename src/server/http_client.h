@@ -316,7 +316,7 @@ class HttpClient : public BaseClient<HttpClient> {
 	int prepare();
 
 	MsgPack node_obj();
-	MsgPack retrieve_database(const query_field_t& query_field, bool is_root);
+	MsgPack retrieve_database(const query_field_t& query_field, bool is_root, std::string_view selector);
 
 	void metrics_view(Request& request);
 	void info_view(Request& request);
