@@ -44,7 +44,7 @@
 
 
 constexpr double HEARTBEAT_TIMEOUT                = 0.300;  // in seconds
-constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 5.0 * 1000.0));  // same as RAFT_LEADER_ELECTION_MAX
+constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 5.0 * 1000.0));  // same as RAFT_LEADER_ELECTION_MIN
 
 
 class Node {
