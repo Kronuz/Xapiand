@@ -51,6 +51,8 @@ public:
 		colors(std::move(colors_)),
 		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 0)))
 	{
+		assert(base > 0);
+		assert(units.size() > 0);
 		assert(scaling.size() == units.size());
 		assert(colors.size() == units.size() + 1);
 		assert(needle >= 0);
@@ -61,19 +63,20 @@ public:
 	}
 
 	std::string operator()(long double delta, const char* prefix, bool colored, long double rounding) const {
+		long double num = delta;
+
 		if (delta < 0) {
 			delta = -delta;
 		}
 
-		long double num = delta;
 		ssize_t last = units.size();
-
 		ssize_t order = (delta == 0) ? last - 1 : -std::floor(std::log(delta) / div);
 		order += needle;
+		if (order >= last) {
+			order = last - 1;
+		}
 		if (order < 0) {
 			order = 0;
-		} else if (order >= last) {
-			order = last - 1;
 		}
 
 		num = std::round(rounding * num / scaling[order]) / rounding;
@@ -89,6 +92,7 @@ public:
 	}
 };
 
+
 // MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
 // MEDIUM_SEA_GREEN  -> rgb(60, 179, 113)
 // SEA_GREEN         -> rgb(46, 139, 87);
@@ -99,7 +103,10 @@ public:
 // SADDLE_BROWN      -> rgb(139, 69, 19);
 // BROWN             -> rgb(165, 42, 42);
 
-static inline std::string _from_bytes(size_t bytes, const char* prefix, bool colored) {
+
+static inline std::string
+_from_bytes(size_t bytes, const char* prefix, bool colored)
+{
 	static const Humanize humanize(
 		1024,
 		{ 8, 7, 6, 5, 4, 3, 2, 1, 0 },
@@ -109,12 +116,17 @@ static inline std::string _from_bytes(size_t bytes, const char* prefix, bool col
 	return humanize(bytes, prefix, colored, 10.0L);
 }
 
-std::string strings::from_bytes(size_t bytes, const char* prefix, bool colored) {
+
+std::string
+strings::from_bytes(size_t bytes, const char* prefix, bool colored)
+{
 	return _from_bytes(bytes, prefix, colored);
 }
 
 
-static inline std::string _from_small_time(long double seconds, const char* prefix, bool colored) {
+static inline std::string
+_from_small_time(long double seconds, const char* prefix, bool colored)
+{
 	static const Humanize humanize(
 		1000,
 		{ 0, -1, -2, -3, -4 },
@@ -124,11 +136,17 @@ static inline std::string _from_small_time(long double seconds, const char* pref
 	return humanize(seconds, prefix, colored, 1000.0L);
 }
 
-std::string strings::from_small_time(long double seconds, const char* prefix, bool colored) {
+
+std::string
+strings::from_small_time(long double seconds, const char* prefix, bool colored)
+{
 	return _from_small_time(seconds, prefix, colored);
 }
 
-static inline std::string _from_time(long double seconds, const char* prefix, bool colored) {
+
+static inline std::string
+_from_time(long double seconds, const char* prefix, bool colored)
+{
 	static const Humanize humanize(
 		60,
 		{ 2, 1, 0 },
@@ -138,16 +156,24 @@ static inline std::string _from_time(long double seconds, const char* prefix, bo
 	return humanize(seconds, prefix, colored, 100.0L);
 }
 
-std::string strings::from_time(long double seconds, const char* prefix, bool colored) {
+
+std::string
+strings::from_time(long double seconds, const char* prefix, bool colored)
+{
 	return _from_time(seconds, prefix, colored);
 }
 
 
-static inline std::string _from_delta(long double nanoseconds, const char* prefix, bool colored) {
+static inline std::string
+_from_delta(long double nanoseconds, const char* prefix, bool colored)
+{
 	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
 	return (seconds < 1) ? _from_small_time(seconds, prefix, colored) : _from_time(seconds, prefix, colored);
 }
 
-std::string strings::from_delta(long double nanoseconds, const char* prefix, bool colored) {
+
+std::string
+strings::from_delta(long double nanoseconds, const char* prefix, bool colored)
+{
 	return _from_delta(nanoseconds, prefix, colored);
 }
