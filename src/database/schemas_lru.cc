@@ -161,7 +161,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 		}
 		DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = _db_handler.update(id, version, false, true, MsgPack({
+		auto updated = _db_handler.update(id, UNKNOWN_REVISION, false, true, MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, schema },
 		}), false, msgpack_type);
