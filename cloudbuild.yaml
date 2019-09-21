@@ -3,3 +3,4 @@ steps:
   args: [ 'build', '-t', 'gcr.io/$PROJECT_ID/xapiand', 'contrib/docker/xapiand' ]
 images:
 - 'gcr.io/$PROJECT_ID/xapiand'
+timeout: 2h
