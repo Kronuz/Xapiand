@@ -302,8 +302,10 @@ Shard::reopen_writable()
 			if (!has_db_create_or_open(flags)) {
 				throw;
 			}
-			build_path_index(endpoint.path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+			if (!build_path_index(endpoint.path)) {
+				L_WARNING("Cannot build path for index {}", endpoint.path);
+			}
 			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
 			created = true;
 		}
@@ -452,8 +454,10 @@ Shard::reopen_readable()
 			if (!has_db_create_or_open(flags))  {
 				throw;
 			}
-			build_path_index(endpoint.path);
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+			if (!build_path_index(endpoint.path)) {
+				L_WARNING("Cannot build path for index {}", endpoint.path);
+			}
 			Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE);
 			created = true;
 
