@@ -135,6 +135,8 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 		if (!client->init(client_sock)) {
 			io::close(client_sock);
 			client->detach();
+			client.reset();
+			detach_children();
 			return;
 		}
 

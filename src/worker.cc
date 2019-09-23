@@ -422,7 +422,7 @@ Worker::_detach_children_impl()
 	for (auto& weak_child : weak_children) {
 		if (auto child = weak_child.lock()) {
 			auto async = (child->ev_loop->raw_loop != ev_loop->raw_loop);
-			child->_detach_children(async);
+			child->detach_children(async);
 			if (!child->_detaching || async) {
 				continue;
 			}
@@ -510,9 +510,9 @@ Worker::stop(bool async)
 
 
 void
-Worker::_detach_children(bool async)
+Worker::detach_children(bool async)
 {
-	L_CALL("Worker::_detach_children() {}", __repr__());
+	L_CALL("Worker::detach_children() {}", __repr__());
 
 	if (async) {
 		_detach_children_async.send();
@@ -530,7 +530,7 @@ Worker::detach(bool async)
 	_detaching = true;
 	auto p = parent();
 	if (p) {
-		p->_detach_children(async);
+		p->detach_children(async);
 	}
 }
 
@@ -545,7 +545,7 @@ Worker::redetach(bool async)
 	if (_detaching) {
 		auto p = parent();
 		if (p) {
-			p->_detach_children(async);
+			p->detach_children(async);
 		}
 	}
 }

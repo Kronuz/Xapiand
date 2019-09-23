@@ -109,7 +109,6 @@ private:
 	void _detach_impl(const std::weak_ptr<Worker>& weak_child);
 	void _detach_children_impl();
 
-	void _detach_children(bool async);
 
 public:
 	std::string dump_tree(int level=1);
@@ -132,6 +131,7 @@ public:
 	void destroy(bool async = true);
 	void detach(bool async = true);
 	void redetach(bool async = true);
+	void detach_children(bool async = true);
 
 	auto is_deinited() const {
 		return _deinited;

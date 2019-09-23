@@ -145,6 +145,8 @@ ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int re
 		if (!client->init_replication(client_sock)) {
 			io::close(client_sock);
 			client->detach();
+			client.reset();
+			detach_children();
 			return;
 		}
 
@@ -334,6 +336,8 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 	if (!client->init_replication(host, port, args.src_endpoint, args.dst_endpoint)) {
 		client->detach();
+		client.reset();
+		detach_children();
 		if (args.cluster_database) {
 			L_CRIT("Cannot replicate cluster database");
 			sig_exit(-EX_SOFTWARE);
