@@ -297,12 +297,7 @@ Shard::reopen_writable()
 		L_DATABASE("Opening local writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		try {
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			try {
-				*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
-			} catch (const Xapian::DatabaseCreateError&) {
-				build_path_index(endpoint.path);  // It could happen that the parent directory doesn't exist
-				*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
-			}
+			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_OPEN | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
 		} catch (const Xapian::DatabaseNotFoundError&) {
 			if (!has_db_create_or_open(flags)) {
 				throw;
