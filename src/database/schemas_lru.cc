@@ -134,7 +134,7 @@ load_shared(std::string_view id, const Endpoint& endpoint, int read_flags, std::
 
 
 static inline std::pair<Xapian::rev, MsgPack>
-save_shared(std::string_view id, const MsgPack& schema, Xapian::rev, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
+save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, const Endpoint& endpoint, std::shared_ptr<std::unordered_set<std::string>> context)
 {
 	L_CALL("save_shared({}, {}, {}. {}, {})", repr(id), schema.to_string(), version, repr(endpoint.to_string()), context ? std::to_string(context->size()) : "nullptr");
 
@@ -161,7 +161,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev, const Endpo
 		}
 		DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 		// FIXME: Process the subfields instead of ignoring.
-		auto updated = _db_handler.update(id, UNKNOWN_REVISION, false, true, MsgPack({
+		auto updated = _db_handler.update(id, version, false, true, MsgPack({
 			{ RESERVED_IGNORE, SCHEMA_FIELD_NAME },
 			{ SCHEMA_FIELD_NAME, schema },
 		}), false, msgpack_type);
