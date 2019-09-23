@@ -185,9 +185,11 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 
 		temp_directory_template = dst_endpoint.path + "/.tmp.XXXXXX";
 	} catch (const Xapian::DatabaseNotAvailableError&) {
+		lk_shard_ptr.reset();
 		L_REPLICATION("Replication deferred (not available): {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 		return false;
 	} catch (...) {
+		lk_shard_ptr.reset();
 		L_EXC("ERROR: Replication initialization ended with an unhandled exception (1)");
 		return false;
 	}
