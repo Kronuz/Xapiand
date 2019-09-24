@@ -623,6 +623,11 @@ Discovery::raft_request_vote([[maybe_unused]] Message type, const std::string& m
 		} else {
 			L_RAFT("I already voted {} for term {}", raft_voted_for.to_string(), term);
 		}
+		// First time we elect a leader's, we setup node
+		if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 4s, "Node setup is taking too long...", "Node setup is finally done!")) {
+			// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
+			XapiandManager::setup_node();
+		}
 	}
 
 	// L_DIM_GREY("\n{}", Node::dump_nodes());
@@ -1475,6 +1480,11 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 
 	switch (XapiandManager::get_state()) {
 		case XapiandManager::State::JOINING:
+			// First time we elect a leader's, we setup node
+			if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 4s, "Node setup is taking too long...", "Node setup is finally done!")) {
+				// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
+				XapiandManager::setup_node();
+			}
 			if (raft_current_term == 0) {
 				++raft_current_term;
 
@@ -1488,11 +1498,6 @@ Discovery::raft_leader_election_timeout_cb(ev::timer&, [[maybe_unused]] int reve
 				_raft_leader_heartbeat_reset(RAFT_LEADER_HEARTBEAT_TIMEOUT);
 				_raft_set_leader_node(local_node);
 
-				// First time we elect a leader's, we setup node
-				if (XapiandManager::exchange_state(XapiandManager::State::JOINING, XapiandManager::State::SETUP, 4s, "Node setup is taking too long...", "Node setup is finally done!")) {
-					// L_DEBUG("Role changed: {} -> {}", enum_name(state), enum_name(XapiandManager::get_state()));
-					XapiandManager::setup_node();
-				}
 				return;
 			}
 			[[fallthrough]];
