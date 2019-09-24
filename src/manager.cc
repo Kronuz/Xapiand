@@ -770,9 +770,12 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
-		if (Node::is_superset(local_node, primary_node)) {
+		auto leader_node = Node::get_leader_node();
+		if (local_node->is_leader()) {
 			// The local node is the leader
 			load_nodes();
+		}
+		if (Node::is_superset(local_node, primary_node)) {
 			set_cluster_database_ready_impl();
 		} else {
 			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", primary_node->col().ansi(), primary_node->to_string());
@@ -1536,13 +1539,14 @@ XapiandManager::new_leader()
 	auto leader_node = Node::get_leader_node();
 	if (leader_node && !leader_node->empty()) {
 		L_INFO("New leader of cluster {} is {}{}", repr(opts.cluster_name), leader_node->col().ansi(), leader_node->to_string());
-
-		if (state == State::READY && leader_node->is_local()) {
-			try {
-				// If we get promoted to leader, we immediately try to load the nodes.
-				load_nodes();
-			} catch (...) {
-				L_EXC("ERROR: Cannot load local nodes!");
+		if (leader_node->is_local()) {
+			if (state == State::READY) {
+				try {
+					// If we get promoted to leader, we immediately try to load the nodes.
+					load_nodes();
+				} catch (...) {
+					L_EXC("ERROR: Cannot load local nodes!");
+				}
 			}
 		}
 	} else {
