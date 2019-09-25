@@ -65,6 +65,9 @@
 
 #include "xapian/common/safesysstat.h"
 #include <sys/types.h>
+#include <string.h>
+#include <limits.h>
+#include <errno.h>
 
 #include <algorithm>
 #include <cerrno>
@@ -75,6 +78,32 @@
 using namespace std;
 using namespace Xapian;
 using Xapian::Internal::intrusive_ptr;
+
+int mkdir_p(const char *path, mode_t mode)
+{
+    char tmp[PATH_MAX];
+    errno = 0;
+    if (strlen(path) > sizeof(tmp) - 1) {
+	errno = ENAMETOOLONG;
+	return -1;
+    }
+    strcpy(tmp, path);
+    for (char *p = tmp + 1; *p; ++p) {
+	if (*p == '/') {
+	    *p = '\0';
+	    if (mkdir(tmp, mode) != 0) {
+		if (errno != EEXIST)
+		    return -1;
+	    }
+	    *p = '/';
+	}
+    }
+    if (mkdir(tmp, mode) != 0) {
+	if (errno != EEXIST)
+	    return -1;
+    }
+    return 0;
+}
 
 // The maximum safe term length is determined by the postlist.  There we
 // store the term using pack_string_preserving_sort() which takes the
@@ -134,7 +163,7 @@ GlassDatabase::GlassDatabase(const string &glass_dir, int flags,
     if (action != Xapian::DB_OPEN && !database_exists()) {
 	// Create the directory for the database, if it doesn't exist
 	// already.
-	if (mkdir(db_dir.c_str(), 0755) < 0) {
+	if (mkdir_p(db_dir.c_str(), 0755) < 0) {
 	    int mkdir_errno = errno;
 	    if (mkdir_errno != EEXIST || !dir_exists(db_dir)) {
 		throw Xapian::DatabaseCreateError(db_dir + ": mkdir failed",
