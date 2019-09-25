@@ -33,7 +33,6 @@
 #include "database/utils.h"       // for DB_SLOT_VERSION
 #include "database/wal.h"         // for DatabaseWAL
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
-#include "fs.hh"                  // for build_path_index
 #include "length.h"               // for serialise_string
 #include "log.h"                  // for L_CALL
 #include "manager.h"              // for XapiandManager, trigger_replication
@@ -303,9 +302,6 @@ Shard::reopen_writable()
 				throw;
 			}
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			if (!build_path_index(endpoint.path)) {
-				L_WARNING("Cannot build path for index {}", endpoint.path);
-			}
 			*new_database = Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE | Xapian::DB_RETRY_LOCK | XAPIAN_DB_SYNC_MODE);
 			created = true;
 		}
@@ -455,9 +451,6 @@ Shard::reopen_readable()
 				throw;
 			}
 			RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
-			if (!build_path_index(endpoint.path)) {
-				L_WARNING("Cannot build path for index {}", endpoint.path);
-			}
 			Xapian::WritableDatabase(endpoint.path, Xapian::DB_CREATE);
 			created = true;
 
