@@ -165,7 +165,9 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 	auto ser_start = Serialise::timestamp(timestamp_s);
 	auto ser_end = Serialise::timestamp(timestamp_e);
 
-	auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
+	// FIXME: Temporarily not use terms filter until get fixed
+	/* auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix); */
+	auto query = Xapian::Query();
 
 	if (field_spc.slot != Xapian::BAD_VALUENO) {
 		if (!start) {
