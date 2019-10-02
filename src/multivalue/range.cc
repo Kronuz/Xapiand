@@ -40,6 +40,10 @@
 #include "serialise_list.h"                       // for StringList
 
 
+#define TIMESTAMP_MIN 1
+#define TIMESTAMP_MAX 2147483648
+
+
 template <typename T, typename = std::enable_if_t<std::is_integral<std::decay_t<T>>::value>>
 Xapian::Query
 getNumericQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
@@ -155,8 +159,8 @@ getStringQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgP
 Xapian::Query
 getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPack* end)
 {
-	double timestamp_s = start ? Datetime::timestamp(Datetime::DatetimeParser(*start)) : min<double>(field_spc.accuracy);
-	double timestamp_e = end ? Datetime::timestamp(Datetime::DatetimeParser(*end)) : max<double>(field_spc.accuracy);
+	double timestamp_s = start ? Datetime::timestamp(Datetime::DatetimeParser(*start)) : TIMESTAMP_MIN;
+	double timestamp_e = end ? Datetime::timestamp(Datetime::DatetimeParser(*end)) : TIMESTAMP_MAX;
 
 	if (timestamp_s > timestamp_e) {
 		return Xapian::Query();
@@ -165,9 +169,7 @@ getDateQuery(const required_spc_t& field_spc, const MsgPack* start, const MsgPac
 	auto ser_start = Serialise::timestamp(timestamp_s);
 	auto ser_end = Serialise::timestamp(timestamp_e);
 
-	// FIXME: Temporarily not use terms filter until get fixed
-	/* auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix); */
-	auto query = Xapian::Query();
+	auto query = GenerateTerms::datetime(timestamp_s, timestamp_e, field_spc.accuracy, field_spc.acc_prefix);
 
 	if (field_spc.slot != Xapian::BAD_VALUENO) {
 		if (!start) {
