@@ -1535,7 +1535,7 @@ DatabaseHandler::get_mset(
 			Xapian::Query::unserialise(serialised_query, registry),  // FIXME: unserialise shouldn't be needed
 			msets.back(),
 			first,
-			maxitems,
+			first + maxitems,
 			check_at_least,
 			sorter,
 			collapse_key,
