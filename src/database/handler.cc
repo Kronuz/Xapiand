@@ -1534,8 +1534,8 @@ DatabaseHandler::get_mset(
 			flags,
 			Xapian::Query::unserialise(serialised_query, registry),  // FIXME: unserialise shouldn't be needed
 			msets.back(),
-			first,
-			first + maxitems,
+			0,                 // We need to fetch the first "first" results too, as merging may
+			first + maxitems,  // push those down into the part of the merged MSet we care about.
 			check_at_least,
 			sorter,
 			collapse_key,
