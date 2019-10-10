@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ---
+## [0.38.0] - 2019-10-10
+{: #v0-38-0 }
+
+### Fixed
+- Search offsets when merging results
+
+
+---
 ## [0.37.0] - 2019-09-17
 {: #v0-37-0 }
 
@@ -939,7 +947,8 @@ data associated with it)
 - Birthday!
 
 
-[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/Kronuz/Xapiand/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/Kronuz/Xapiand/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/Kronuz/Xapiand/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/Kronuz/Xapiand/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/Kronuz/Xapiand/compare/v0.34.0...v0.35.0
