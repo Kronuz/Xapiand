@@ -428,6 +428,8 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		readables_cond.notify_one();
 	}
 
+	assert(shard->refs() <= 1);
+
 	shard.reset();
 
 	while (pending_callbacks.call()) {};
