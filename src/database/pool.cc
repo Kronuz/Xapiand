@@ -248,12 +248,13 @@ ShardEndpoint::_readable_checkout(int flags, double timeout, std::packaged_task<
 					for (auto& readable : readables) {
 						if (readable) {
 							if (!readable->_busy.exchange(true)) {
-								assert(readable->flags != flags);
-								if (writable->is_local()) {
-									writable->flags = flags;
-								} else {
-									readable.reset();
-									readable = std::make_shared<Shard>(*this, flags, true);
+								if (readable->flags != flags) {
+									if (readable->is_local()) {
+										readable->flags = flags;
+									} else {
+										readable.reset();
+										readable = std::make_shared<Shard>(*this, flags, true);
+									}
 								}
 								assert(readable->flags == flags);
 								assert(readable->is_busy());
