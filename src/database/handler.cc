@@ -1459,56 +1459,6 @@ DatabaseHandler::get_mset(
 		return Xapian::MSet{};
 	}
 
-	std::vector<std::unique_ptr<lock_shard>> shards;
-
-	{
-		Xapian::Database database;
-
-		for (auto& endpoint : endpoints) {
-			shards.push_back(std::make_unique<lock_shard>(endpoint, flags));
-			database.add_database(*(*shards.back())->db());
-		}
-
-		Xapian::Enquire enquire(database);
-		enquire.set_collapse_key(collapse_key, collapse_max);
-		enquire.set_cutoff(percent_threshold, weight_threshold);
-		enquire.set_docid_order(order);
-
-		if (aggs) {
-			enquire.add_matchspy(aggs);
-		}
-		if (sorter) {
-			enquire.set_sort_by_key_then_relevance(sorter, false);
-		}
-
-		auto final_query = query;
-
-		std::unique_ptr<Xapian::ExpandDecider> nearest_edecider;
-		Xapian::RSet nearest_rset;
-		if (nearest) {
-			nearest_edecider = get_edecider(*nearest);
-			nearest_rset = get_rset(query, nearest->n_rset);
-			auto eset = enquire.get_eset(nearest->n_eset, nearest_rset, nearest_edecider.get());
-			final_query = Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), nearest->n_term);
-		}
-
-		std::unique_ptr<Xapian::ExpandDecider> fuzzy_edecider;
-		Xapian::RSet fuzzy_rset;
-		if (fuzzy) {
-			fuzzy_edecider = get_edecider(*fuzzy);
-			fuzzy_rset = get_rset(query, fuzzy->n_rset);
-			auto eset = enquire.get_eset(fuzzy->n_eset, fuzzy_rset, fuzzy_edecider.get());
-			final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
-		}
-
-		enquire.set_query(final_query);
-
-		auto merged_mset = enquire.get_mset(first, maxitems, check_at_least);
-		merged_mset.set_database(Xapian::Database{});
-		return merged_mset;
-	}
-
-/*
 	bool full_db_has_positions = has_positions();
 
 	Xapian::doccount doccount = 0;
@@ -1669,7 +1619,7 @@ DatabaseHandler::get_mset(
 	auto merged_mset = merger.merge_mset(msets, doccount, first, maxitems);
 	merged_mset.set_database(Xapian::Database{});
 	return merged_mset;
-*/
+
 }
 
 
