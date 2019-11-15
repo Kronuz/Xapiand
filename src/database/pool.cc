@@ -385,6 +385,7 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 	assert(shard);
 	assert(shard->is_busy());
 	assert(&shard->endpoint == this);
+	assert(shard->refs() <= 1);
 
 	TaskQueue<std::packaged_task<void()>> pending_callbacks;
 	{
@@ -427,8 +428,6 @@ ShardEndpoint::checkin(std::shared_ptr<Shard>& shard) noexcept
 		shard->_busy.store(false);
 		readables_cond.notify_one();
 	}
-
-	assert(shard->refs() <= 1);
 
 	shard.reset();
 
