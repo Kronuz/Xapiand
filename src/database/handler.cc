@@ -1564,9 +1564,9 @@ DatabaseHandler::get_mset(
 
 	for (int t = DB_RETRIES; t >= 0; --t) {
 		try {
-			ready.wait(ready_lk, [&]{
+			while (!ready.wait_for(ready_lk, 100ms, [&]{
 				return !pending.load(std::memory_order_acquire);
-			});
+			})) {}
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
@@ -1581,9 +1581,9 @@ DatabaseHandler::get_mset(
 				manager->doc_matcher_pool->enqueue(matcher);
 			}
 
-			ready.wait(ready_lk, [&]{
+			while (!ready.wait_for(ready_lk, 100ms, [&]{
 				return !pending.load(std::memory_order_acquire);
-			});
+			})) {}
 
 			for (auto& matcher : matchers) {
 				if (matcher->eptr) {
