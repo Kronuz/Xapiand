@@ -186,7 +186,6 @@ public:
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> replication_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> replication_server_pool;
 #endif
-	std::unique_ptr<ThreadPool<std::shared_ptr<DocMatcher>, ThreadPolicyType::doc_matchers>> doc_matcher_pool;
 	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> doc_preparer_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> doc_indexer_pool;
 

@@ -1193,8 +1193,6 @@ DatabaseHandler::get_mset(const query_field_t& query_field, const MsgPack* qdsl,
 DocMatcher::DocMatcher(
 	const std::string& query_id,
 	bool full_db_has_positions,
-	std::atomic_size_t& pending,
-	std::condition_variable& ready,
 	size_t shard_num,
 	const Endpoints& endpoints,
 	int flags,
@@ -1218,14 +1216,11 @@ DocMatcher::DocMatcher(
 	std::unique_ptr<Xapian::ExpandDecider>&& fuzzy_edecider,
 	const Xapian::Enquire& merger
 ) :
-	dispatcher(&DocMatcher::prepare_mset),
 	doccount(0),
 	revision(0),
 	enquire(Xapian::Database()),
 	query_id(query_id),
 	full_db_has_positions(full_db_has_positions),
-	pending(pending),
-	ready(ready),
 	shard_num(shard_num),
 	endpoints(endpoints),
 	flags(flags),
@@ -1319,8 +1314,6 @@ DocMatcher::prepare_mset()
 		}
 		lk_shard->reopen();
 	}
-
-	dispatcher = &DocMatcher::get_mset;
 }
 
 
@@ -1374,24 +1367,6 @@ DocMatcher::get_mset()
 			THROW(ClientError, exc.get_description());
 		}
 		lk_shard->reopen();
-	}
-
-	dispatcher = nullptr;
-}
-
-
-void
-DocMatcher::operator()()
-{
-	try {
-		assert(dispatcher);
-		(this->*dispatcher)();
-	} catch (...) {
-		eptr = std::current_exception();
-	}
-
-	if (pending.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-		ready.notify_one();
 	}
 }
 
@@ -1484,15 +1459,12 @@ DatabaseHandler::get_mset(
 	std::vector<std::shared_ptr<DocMatcher>> matchers;
 	std::vector<Xapian::MSet> msets;
 
-	std::atomic_size_t pending;
 	std::mutex ready_mtx;
-	std::condition_variable ready;
 
 	size_t n_shards = endpoints.size();
 
 	matchers.reserve(n_shards);
 	msets.reserve(n_shards);
-	pending.store(n_shards, std::memory_order_release);
 
 	// FIXME: Serialising/unserialising query shouldn't be necessary, but
 	//        Xapian is not cloning PostingSources when queries get copied?
@@ -1531,8 +1503,6 @@ DatabaseHandler::get_mset(
 		auto matcher = std::make_shared<DocMatcher>(
 			query_id,
 			full_db_has_positions,
-			pending,
-			ready,
 			shard_num,
 			endpoints,
 			flags,
@@ -1557,62 +1527,18 @@ DatabaseHandler::get_mset(
 			merger
 		);
 		matchers.emplace_back(matcher);
-		manager->doc_matcher_pool->enqueue(matcher);
 	}
 
-	std::unique_lock<std::mutex> ready_lk(ready_mtx);
+	for (auto& matcher : matchers) {
+		matcher->prepare_mset();
+		merger.add_prepared_mset(matcher->mset);
+		doccount += matcher->doccount;
+	}
 
-	for (int t = DB_RETRIES; t >= 0; --t) {
-		try {
-			while (!ready.wait_for(ready_lk, 100ms, [&]{
-				return !pending.load(std::memory_order_acquire);
-			})) {}
-
-			for (auto& matcher : matchers) {
-				if (matcher->eptr) {
-					std::rethrow_exception(matcher->eptr);
-				}
-				merger.add_prepared_mset(matcher->mset);
-				doccount += matcher->doccount;
-			}
-
-			pending.store(n_shards, std::memory_order_release);
-			for (auto& matcher : matchers) {
-				manager->doc_matcher_pool->enqueue(matcher);
-			}
-
-			while (!ready.wait_for(ready_lk, 100ms, [&]{
-				return !pending.load(std::memory_order_acquire);
-			})) {}
-
-			for (auto& matcher : matchers) {
-				if (matcher->eptr) {
-					std::rethrow_exception(matcher->eptr);
-				}
-				if (aggs) {
-					aggs->merge_results(*matcher->aggs);
-				}
-			}
-
-			break;
-		} catch (const Xapian::DatabaseModifiedError&) {
-			if (t == 0) { throw; }
-		}
-		for (auto& endpoint : endpoints) {
-			lock_shard lk_shard(endpoint, flags);
-			lk_shard->reopen();
-		}
-		pending.store(n_shards, std::memory_order_release);
-		for (auto& matcher : matchers) {
-			matcher->eptr = nullptr;
-			matcher->dispatcher = &DocMatcher::prepare_mset;
-			if (nearest) {
-				matcher->nearest_edecider = get_edecider(*nearest);
-			}
-			if (fuzzy) {
-				matcher->fuzzy_edecider = get_edecider(*fuzzy);
-			}
-			manager->doc_matcher_pool->enqueue(matcher);
+	for (auto& matcher : matchers) {
+		matcher->get_mset();
+		if (aggs) {
+			aggs->merge_results(*matcher->aggs);
 		}
 	}
 
