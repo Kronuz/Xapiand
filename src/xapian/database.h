@@ -118,6 +118,8 @@ class XAPIAN_VISIBILITY_DEFAULT Database {
     /** Return number of shards in this Database object. */
     size_t size() const;
 
+    unsigned refs() const;
+
     /** Construct a Database containing no shards.
      *
      *  You can then add shards by calling add_database().  A Database

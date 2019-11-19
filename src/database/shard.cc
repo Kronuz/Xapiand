@@ -563,6 +563,18 @@ Shard::db()
 }
 
 
+unsigned
+Shard::refs() const
+{
+    L_CALL("Shard::refs()");
+
+    if (database) {
+        return database->refs();
+    }
+    return 0;
+}
+
+
 std::shared_ptr<const Node>
 Shard::node() const
 {

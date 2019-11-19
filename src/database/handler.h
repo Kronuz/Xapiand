@@ -186,9 +186,6 @@ public:
 class DocMatcher {
 	friend DatabaseHandler;
 
-	using dispatch_func = void (DocMatcher::*)();
-	dispatch_func dispatcher;
-
 	Xapian::doccount doccount;
 	Xapian::rev revision;
 	Xapian::Enquire enquire;
@@ -196,8 +193,6 @@ class DocMatcher {
 	std::string query_id;
 	bool full_db_has_positions;
 
-	std::atomic_size_t& pending;
-	std::condition_variable& ready;
 	size_t shard_num;
 	const Endpoints& endpoints;
 	int flags;
@@ -225,13 +220,10 @@ class DocMatcher {
 
 public:
 	Xapian::MSet& mset;
-	std::exception_ptr eptr;
 
 	DocMatcher(
 		const std::string& query_id,
 		bool full_db_has_positions,
-		std::atomic_size_t& pending,
-		std::condition_variable& ready,
 		size_t shard_num,
 		const Endpoints& endpoints,
 		int flags,
@@ -255,8 +247,6 @@ public:
 		std::unique_ptr<Xapian::ExpandDecider>&& fuzzy_edecider,
 		const Xapian::Enquire& merger
 	);
-
-	void operator()();
 };
 
 

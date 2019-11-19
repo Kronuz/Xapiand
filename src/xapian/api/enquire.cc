@@ -310,6 +310,10 @@ Enquire::Internal::set_database(const Database& db_) const
     if (prepared_mset && prepared_mset->internal->get_stats()) {
 	prepared_mset->internal->get_stats()->set_bounds_from_db(db);
     }
+
+    if (prepared_mset) {
+	prepared_mset->set_database(db);
+    }
 }
 
 const MSet&

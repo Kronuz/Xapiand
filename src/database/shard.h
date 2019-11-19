@@ -161,6 +161,7 @@ public:
 	bool reopen();
 
 	Xapian::Database* db();
+	unsigned refs() const;
 
 	std::shared_ptr<const Node> node() const;
 
