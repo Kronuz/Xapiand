@@ -69,6 +69,14 @@ PUT /blog/1
 {% endcapture %}
 {% include curl.html req=req %}
 
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+{% endcomment %}
+
 The response body tells us that this newly created document has `_version`
 number `1`. Now imagine that we want to edit the document: we load its data into
 a web form, make our changes, and then save the new version.
@@ -111,6 +119,17 @@ PUT /blog/1?version=1
 ```
 {% endcapture %}
 {% include curl.html req=req %}
+
+{% comment %}
+```js
+pm.test("Response is success", function() {
+  pm.expect(pm.response.code).to.satisfy(function(code) {
+    // Also compare with 409 in case the index with the document exist already with the same version
+    return code === 200 || code === 409;
+  });
+});
+```
+{% endcomment %}
 
 This request succeeds, and the response body tells us that the `_version` has
 been incremented to 2:
