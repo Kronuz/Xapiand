@@ -65,7 +65,7 @@ PUT /test/querydsl/wildcard/text/doc
 
 {
     "_id": {
-        "_type": "text",
+        "_type": "keyword",
     },
     "field": {
         "_type": "text",
