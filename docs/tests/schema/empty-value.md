@@ -49,7 +49,7 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData).to.all.keys(['_id', '_version', '#docid', '#shard']);
+  pm.expect(jsonData._id).to.equal('doc');
 });
 ```
 {% endcomment %}
