@@ -51,7 +51,7 @@ public:
 		colors(std::move(colors_)),
 		needle(std::distance(scaling.begin(), std::find(scaling.begin(), scaling.end(), 0)))
 	{
-		assert(base > 0);
+		assert(base >= 0);
 		assert(units.size() > 0);
 		assert(scaling.size() == units.size());
 		assert(colors.size() == units.size() + 1);
@@ -63,7 +63,8 @@ public:
 	}
 
 	std::string operator()(long double delta, const char* prefix, bool colored, long double rounding) const {
-		assert(std::isnormal(delta));
+		assert(!std::isinf(delta));
+		assert(!std::isnan(delta));
 
 		long double num = delta;
 
@@ -129,8 +130,9 @@ strings::from_bytes(size_t bytes, const char* prefix, bool colored)
 static inline std::string
 _from_small_time(long double seconds, const char* prefix, bool colored)
 {
-	assert(std::isnormal(seconds));
-	assert(seconds > 0);
+	assert(!std::isinf(seconds));
+	assert(!std::isnan(seconds));
+	assert(seconds >= 0);
 	static const Humanize humanize(
 		1000,
 		{ 0, -1, -2, -3, -4 },
@@ -151,8 +153,9 @@ strings::from_small_time(long double seconds, const char* prefix, bool colored)
 static inline std::string
 _from_time(long double seconds, const char* prefix, bool colored)
 {
-	assert(std::isnormal(seconds));
-	assert(seconds > 0);
+	assert(!std::isinf(seconds));
+	assert(!std::isnan(seconds));
+	assert(seconds >= 0);
 	static const Humanize humanize(
 		60,
 		{ 2, 1, 0 },
@@ -173,8 +176,9 @@ strings::from_time(long double seconds, const char* prefix, bool colored)
 static inline std::string
 _from_delta(long double nanoseconds, const char* prefix, bool colored)
 {
-	assert(std::isnormal(nanoseconds));
-	assert(nanoseconds > 0);
+	assert(!std::isinf(nanoseconds));
+	assert(!std::isnan(nanoseconds));
+	assert(nanoseconds >= 0);
 	long double seconds = nanoseconds / 1e9;  // convert nanoseconds to seconds (as a double)
 	return (seconds < 1) ? _from_small_time(seconds, prefix, colored) : _from_time(seconds, prefix, colored);
 }
