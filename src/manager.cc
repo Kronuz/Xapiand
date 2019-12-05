@@ -308,9 +308,36 @@ XapiandManager::host_address()
 {
 	L_CALL("XapiandManager::host_address()");
 
+	auto hostname = opts.bind_address.empty() ? nullptr : opts.bind_address.c_str();
+
+	auto address = host_address(hostname);
+	if (address.first.sin_addr.s_addr && !address.second.empty()) {
+		return address;
+	} else {
+		L_WARNING("WARNING: host_address: Cannot find the node's IP address!");
+	}
+
+	L_WARNING("WARNING: host_address: Fallback to loopback IP address!");
+
+	address = host_address("127.0.0.1");
+	if (address.first.sin_addr.s_addr && !address.second.empty()) {
+		return address;
+	} else {
+		L_CRIT("ERROR: host_address: Cannot fallback to loopback IP address!");
+	}
+
+	sig_exit(-EX_CONFIG);
+	return {{}, ""};
+}
+
+
+std::pair<struct sockaddr_in, std::string>
+XapiandManager::host_address(const char *hostname)
+{
+	L_CALL("XapiandManager::host_address(<hostname>)");
+
 	struct sockaddr_in addr{};
 
-	auto hostname = opts.bind_address.empty() ? nullptr : opts.bind_address.c_str();
 	if (hostname) {
 		if (inet_aton(hostname, &addr.sin_addr) == -1) {
 			L_CRIT("ERROR: inet_aton {}: {} ({}): {}", hostname, error::name(errno), errno, error::description(errno));
@@ -339,8 +366,6 @@ XapiandManager::host_address()
 	}
 
 	freeifaddrs(if_addr_struct);
-	L_CRIT("ERROR: host_address: Cannot find the node's IP address!");
-	sig_exit(-EX_CONFIG);
 	return {{}, ""};
 }
 

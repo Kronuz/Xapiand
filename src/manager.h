@@ -143,6 +143,7 @@ class XapiandManager : public Worker  {
 	~XapiandManager() noexcept;
 
 	std::pair<struct sockaddr_in, std::string> host_address();
+	std::pair<struct sockaddr_in, std::string> host_address(const char *hostname);
 
 	void shutdown_impl(long long asap, long long now) override;
 
