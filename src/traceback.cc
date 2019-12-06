@@ -433,51 +433,58 @@ exception_callstack(std::exception_ptr& eptr)
 
 extern "C" {
 
-typedef void* (*cxa_allocate_exception_type)(size_t thrown_size);
-void* __cxa_allocate_exception(size_t thrown_size) noexcept
-{
-	// call original __cxa_allocate_exception (reserving extra space for the callstack):
-	static cxa_allocate_exception_type orig_cxa_allocate_exception = (cxa_allocate_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_exception");
-	assert(orig_cxa_allocate_exception != nullptr);
-	return static_cast<void***>(orig_cxa_allocate_exception(sizeof(void**) + thrown_size)) + 1;
-}
-
-typedef void (*cxa_free_exception_type)(void* thrown_object);
-void __cxa_free_exception(void* thrown_object) noexcept
-{
-	// free callstack (if any):
-	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
-	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
-	if (*callstack != nullptr) {
-		free(*callstack);
+typedef void *(*malloc_type)(size_t);
+void* malloc(size_t size) {
+	static malloc_type orig_malloc = (malloc_type)dlsym(RTLD_NEXT, "malloc");
+	assert(orig_malloc != nullptr);
+	void* p = orig_malloc(size + alignof(max_align_t));
+	if (p) {
+		memset(p, 0, alignof(max_align_t));
+		p = static_cast<char*>(p) + alignof(max_align_t);
 	}
-	// call original __cxa_free_exception:
-	static cxa_free_exception_type orig_cxa_free_exception = (cxa_free_exception_type)dlsym(RTLD_NEXT, "__cxa_free_exception");
-	assert(orig_cxa_free_exception != nullptr);
-	orig_cxa_free_exception(static_cast<void***>(thrown_object) - 1);
+	return p;
 }
 
-typedef void* (*cxa_allocate_dependent_exception_type)(size_t thrown_size);
-void* __cxa_allocate_dependent_exception(size_t thrown_size) noexcept
-{
-	// call original __cxa_allocate_dependent_exception (reserving extra space for the callstack):
-	static cxa_allocate_dependent_exception_type orig_cxa_allocate_dependent_exception = (cxa_allocate_dependent_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_dependent_exception");
-	assert(orig_cxa_allocate_dependent_exception != nullptr);
-	return static_cast<void***>(orig_cxa_allocate_dependent_exception(sizeof(void**) + thrown_size)) + 1;
-}
-
-typedef void (*cxa_free_dependent_exception_type)(void* dependent_exception);
-void __cxa_free_dependent_exception(void* dependent_exception) noexcept
-{
-	// free callstack (if any):
-	auto callstack = static_cast<void***>(static_cast<void*>(dependent_exception)) - 1;
-	if (*callstack != nullptr) {
-		free(*callstack);
+void* calloc(size_t count, size_t size) {
+	static malloc_type orig_malloc = (malloc_type)dlsym(RTLD_NEXT, "malloc");
+	assert(orig_malloc != nullptr);
+	void *p = orig_malloc(count * size + alignof(max_align_t));
+	if (p) {
+		memset(p, 0, count * size + alignof(max_align_t));
+		p = static_cast<char*>(p) + alignof(max_align_t);
 	}
-	// call original __cxa_free_dependent_exception:
-	static cxa_free_dependent_exception_type orig_cxa_free_dependent_exception = (cxa_free_dependent_exception_type)dlsym(RTLD_NEXT, "__cxa_free_dependent_exception");
-	assert(orig_cxa_free_dependent_exception != nullptr);
-	orig_cxa_free_dependent_exception(static_cast<void***>(dependent_exception) - 1);
+	return p;
+}
+
+typedef void *(*realloc_type)(void*, size_t);
+void* realloc(void* p, size_t size) {
+	auto pp = p ? *(static_cast<void**>(p) - 1) : nullptr;
+	if (p) {
+		p = static_cast<char*>(p) - alignof(max_align_t);
+	}
+	static realloc_type orig_realloc = (realloc_type)dlsym(RTLD_NEXT, "realloc");
+	assert(orig_realloc != nullptr);
+	p = orig_realloc(p, size + alignof(max_align_t));
+	if (p) {
+		memset(p, 0, alignof(max_align_t));
+		*static_cast<void**>(p) = pp;
+		p = static_cast<char*>(p) + alignof(max_align_t);
+	}
+	return p;
+}
+
+typedef void (*free_type)(void*);
+void free(void *p) {
+	if (p) {
+		auto pp = static_cast<void**>(p) - 1;
+		if (*pp != nullptr) {
+			free(*pp);
+		}
+		p = static_cast<char*>(p) - alignof(max_align_t);
+	}
+	static free_type orig_free = (free_type)dlsym(RTLD_NEXT, "free");
+	assert(orig_free != nullptr);
+	orig_free(p);
 }
 
 // GCC's built-in protype for __cxa_throw uses 'void *', not 'std::type_info *'
@@ -491,7 +498,7 @@ void __cxa_throw(void* thrown_object, __cxa_throw_type_info_t* tinfo, void (*des
 {
 	// save callstack for exception (at the start of the reserved memory)
 	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
-	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
+	auto callstack = static_cast<void**>(static_cast<void*>(exception_header)) - 1;
 	*callstack = backtrace();
 	// call original __cxa_throw:
 	static cxa_throw_type orig_cxa_throw = (cxa_throw_type)dlsym(RTLD_NEXT, "__cxa_throw");
