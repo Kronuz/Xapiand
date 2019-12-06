@@ -439,7 +439,7 @@ void* __cxa_allocate_exception(size_t thrown_size) noexcept
 	// call original __cxa_allocate_exception (reserving extra space for the callstack):
 	static cxa_allocate_exception_type orig_cxa_allocate_exception = (cxa_allocate_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_exception");
 	assert(orig_cxa_allocate_exception != nullptr);
-	void* thrown_object = orig_cxa_allocate_exception(sizeof(void**) + thrown_size);
+	void* thrown_object = static_cast<void***>(orig_cxa_allocate_exception(sizeof(void**) + thrown_size)) + 1;
 	return thrown_object;
 }
 
@@ -455,7 +455,7 @@ void __cxa_free_exception(void* thrown_object) noexcept
 	// call original __cxa_free_exception:
 	static cxa_free_exception_type orig_cxa_free_exception = (cxa_free_exception_type)dlsym(RTLD_NEXT, "__cxa_free_exception");
 	assert(orig_cxa_free_exception != nullptr);
-	orig_cxa_free_exception(thrown_object);
+	orig_cxa_free_exception(static_cast<void***>(thrown_object) - 1);
 }
 
 typedef void* (*cxa_allocate_dependent_exception_type)(size_t thrown_size);
