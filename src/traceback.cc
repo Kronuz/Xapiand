@@ -439,8 +439,7 @@ void* __cxa_allocate_exception(size_t thrown_size) noexcept
 	// call original __cxa_allocate_exception (reserving extra space for the callstack):
 	static cxa_allocate_exception_type orig_cxa_allocate_exception = (cxa_allocate_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_exception");
 	assert(orig_cxa_allocate_exception != nullptr);
-	void* thrown_object = static_cast<void***>(orig_cxa_allocate_exception(sizeof(void**) + thrown_size)) + 1;
-	return thrown_object;
+	return static_cast<void***>(orig_cxa_allocate_exception(sizeof(void**) + thrown_size)) + 1;
 }
 
 typedef void (*cxa_free_exception_type)(void* thrown_object);
@@ -464,23 +463,21 @@ void* __cxa_allocate_dependent_exception(size_t thrown_size) noexcept
 	// call original __cxa_allocate_dependent_exception (reserving extra space for the callstack):
 	static cxa_allocate_dependent_exception_type orig_cxa_allocate_dependent_exception = (cxa_allocate_dependent_exception_type)dlsym(RTLD_NEXT, "__cxa_allocate_dependent_exception");
 	assert(orig_cxa_allocate_dependent_exception != nullptr);
-	void* thrown_object = orig_cxa_allocate_dependent_exception(sizeof(void**) + thrown_size);
-	return thrown_object;
+	return static_cast<void***>(orig_cxa_allocate_dependent_exception(sizeof(void**) + thrown_size)) + 1;
 }
 
-typedef void (*cxa_free_dependent_exception_type)(void* thrown_object);
-void __cxa_free_dependent_exception(void* thrown_object) noexcept
+typedef void (*cxa_free_dependent_exception_type)(void* dependent_exception);
+void __cxa_free_dependent_exception(void* dependent_exception) noexcept
 {
 	// free callstack (if any):
-	auto exception_header = static_cast<__cxa_exception*>(thrown_object) - 1;
-	auto callstack = static_cast<void***>(static_cast<void*>(exception_header)) - 1;
+	auto callstack = static_cast<void***>(static_cast<void*>(dependent_exception)) - 1;
 	if (*callstack != nullptr) {
 		free(*callstack);
 	}
 	// call original __cxa_free_dependent_exception:
 	static cxa_free_dependent_exception_type orig_cxa_free_dependent_exception = (cxa_free_dependent_exception_type)dlsym(RTLD_NEXT, "__cxa_free_dependent_exception");
 	assert(orig_cxa_free_dependent_exception != nullptr);
-	orig_cxa_free_dependent_exception(thrown_object);
+	orig_cxa_free_dependent_exception(static_cast<void***>(dependent_exception) - 1);
 }
 
 // GCC's built-in protype for __cxa_throw uses 'void *', not 'std::type_info *'
