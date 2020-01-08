@@ -1163,7 +1163,8 @@ Discovery::db_updated([[maybe_unused]] Message type, const std::string& message)
 				} else {
 					L_WARNING("Ignoring update for unknown index: {}!", repr(path));
 				}
-			} catch (const Xapian::DatabaseNotAvailableError&) { }
+			} catch (const Xapian::DatabaseNotAvailableError&) {
+			} catch (const MissingTypeError&) { }
 		}
 	}
 }
