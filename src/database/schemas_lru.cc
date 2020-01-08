@@ -211,9 +211,25 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		validate_schema<ClientError>(*schema_obj, "Schema metadata is corrupt: ", foreign_uri, foreign_path, foreign_id);
 	}
 
+	// check if the schema hasn't been flagged as outdated
+	bool local_outdated = false;
+	if (local_schema_ptr) {
+		std::lock_guard<std::mutex> lk(versions_mtx);
+		auto version_it = versions.find(local_schema_path);
+		if (version_it != versions.end()) {
+			Xapian::rev latest_version = version_it->second;
+			Xapian::rev schema_version = local_schema_ptr->get_flags();
+			if (latest_version <= schema_version) {
+				versions.erase(version_it);
+			} else {
+				local_outdated = true;
+			}
+		}
+	}
+
 	// Whatever was passed by the user doesn't specify a foreign schema,
 	// or there it wasn't passed anything.
-	if (local_schema_ptr) {
+	if (local_schema_ptr && !local_outdated) {
 		// Schema was in the cache
 		L_SCHEMA("{}" + DARK_GREEN + "Schema [{}] found in cache (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), local_schema_ptr->get_flags(), repr(local_schema_ptr->to_string()));
 		if (!foreign_uri.empty()) {
@@ -250,7 +266,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 		}
 	} else {
 		// Schema needs to be read
-		L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
+		if (local_outdated) {
+			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] is outdated, try reloading from metadata", prefix, repr(local_schema_path));
+		} else {
+			L_SCHEMA("{}" + DARK_TURQUOISE + "Local Schema [{}] not found in cache, try loading from metadata", prefix, repr(local_schema_path));
+		}
 		std::string schema_ser;
 		try {
 			DatabaseHandler _db_handler(endpoints, read_flags, context);
@@ -404,7 +424,24 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				std::lock_guard<std::mutex> lk(schemas_mtx);
 				foreign_schema_ptr = schemas[foreign_uri];
 			}
-			if (foreign_schema_ptr && (!new_schema || compare_schema(*new_schema, *foreign_schema_ptr))) {
+
+			// check if the schema hasn't been flagged as outdated
+			bool foreign_outdated = false;
+			if (foreign_schema_ptr) {
+				std::lock_guard<std::mutex> lk(versions_mtx);
+				auto version_it = versions.find(foreign_uri);
+				if (version_it != versions.end()) {
+					Xapian::rev latest_version = version_it->second;
+					Xapian::rev schema_version = foreign_schema_ptr->get_flags();
+					if (latest_version <= schema_version) {
+						versions.erase(version_it);
+					} else {
+						foreign_outdated = true;
+					}
+				}
+			}
+
+			if (foreign_schema_ptr && !foreign_outdated && (!new_schema || compare_schema(*new_schema, *foreign_schema_ptr))) {
 				// Same Foreign Schema was in the cache
 				schema_ptr = foreign_schema_ptr;
 				assert(schema_ptr);
@@ -413,7 +450,11 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 			} else if (new_schema) {
 				if (foreign_schema_ptr) {
 					new_schema->set_flags(foreign_schema_ptr->get_flags());
-					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] found in cache, but it was different so try using new schema", prefix, repr(foreign_uri));
+					if (foreign_outdated) {
+						L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] is outdated, try using new schema", prefix, repr(foreign_uri));
+					} else {
+						L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] found in cache, but it was different so try using new schema", prefix, repr(foreign_uri));
+					}
 				} else {
 					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try using new schema", prefix, repr(foreign_uri));
 				}
@@ -445,7 +486,15 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				}
 			} else {
 				// Foreign Schema needs to be read
-				L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] {} try loading from {} id={}", prefix, repr(foreign_uri), foreign_schema_ptr ? "found in cache, but it was different so" : "not found in cache,", repr(foreign_path), repr(foreign_id));
+				if (foreign_schema_ptr) {
+					if (foreign_outdated) {
+						L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] is outdated, try using new schema", prefix, repr(foreign_uri));
+					} else {
+						L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] found in cache, but it was different so try loading from {} id={}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
+					}
+				} else {
+					L_SCHEMA("{}" + DARK_TURQUOISE + "Foreign Schema [{}] not found in cache, try loading from {} id={}", prefix, repr(foreign_uri), repr(foreign_path), repr(foreign_id));
+				}
 				try {
 					auto shared = load_shared(foreign_id, Endpoint(foreign_path), read_flags, context);
 					schema_ptr = std::make_shared<const MsgPack>(shared.second);
@@ -664,69 +713,7 @@ SchemasLRU::get(DatabaseHandler* db_handler, const MsgPack* obj)
 
 	auto up = _update("GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN, db_handler->context);
 	auto schema_ptr = std::get<1>(up);
-	auto local_schema_path = std::get<2>(up);
 	auto foreign_uri = std::get<3>(up);
-
-	// The versions LRU contains versions of schemas received as notices
-	// from other nodes. In the event such version exists and is newer
-	// than the currently loaded version of the schema, we try to reload
-	// the new schema or otherwise lower the schema's lifespan in the LRU.
-	auto& path = foreign_uri.empty() ? local_schema_path : foreign_uri;
-	Xapian::rev schema_version = schema_ptr->get_flags();
-	Xapian::rev latest_version = 0;
-	{
-		std::lock_guard<std::mutex> lk(versions_mtx);
-		auto version_it = versions.find(path);
-		if (version_it != versions.end()) {
-			latest_version = version_it->second;
-			if (latest_version <= schema_version) {
-				versions.erase(version_it);
-			}
-		}
-	}
-	if (latest_version > schema_version) {
-		// If the schema was flagged as outdated (newer version exists), try
-		// erasing the schema, retry _update, and re-check outdated status.
-		bool retry = false;
-		{
-			std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
-			auto schema_it = schemas.find(path);
-			if (schema_it != schemas.end() && schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
-				schemas.erase(schema_it);
-				retry = true;
-			}
-		}
-		if (retry) {
-			L_SCHEMA("GET: " + DARK_CORAL + "Schema {} is outdated, try reloading {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
-			up = _update("RETRY GET: ", writable, nullptr, schema_obj, db_handler->endpoints, DB_OPEN | DB_WRITABLE, db_handler->context);
-			schema_ptr = std::get<1>(up);
-			local_schema_path = std::get<2>(up);
-			foreign_uri = std::get<3>(up);
-			auto& path_ = foreign_uri.empty() ? local_schema_path : foreign_uri;
-			schema_version = schema_ptr->get_flags();
-			{
-				std::lock_guard<std::mutex> lk(versions_mtx);
-				auto version_it = versions.find(path_);
-				if (version_it != versions.end()) {
-					latest_version = version_it->second;
-				}
-			}
-			if (latest_version > schema_version) {
-				L_SCHEMA("GET: " + DARK_RED + "Schema {} is still outdated, relink with a shorter lifespan (10s) {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
-				std::lock_guard<std::mutex> schemas_lk(schemas_mtx);
-				auto schema_it = schemas.find(path_);
-				if (schema_it != schemas.end() && schema_it.expiration() > std::chrono::steady_clock::now() + 10s) {
-					schema_it.relink(10s);
-				}
-			} else {
-				L_SCHEMA("GET: " + GREEN + "Schema {} was outdated but it was reloaded {{latest_version:{}, schema_version:{}}}", repr(path_), latest_version, schema_version);
-			}
-		} else {
-			L_SCHEMA("GET: " + DARK_RED + "Schema {} is still outdated {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
-		}
-	} else {
-		L_SCHEMA("GET: " + GREEN + "Schema {} is current {{latest_version:{}, schema_version:{}}}", repr(path), latest_version, schema_version);
-	}
 
 	if (schema_obj && schema_obj->is_map()) {
 		MsgPack o = *schema_obj;
