@@ -312,6 +312,7 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 
 	// If we still need to save the metadata, we save it:
 	if (writable && schema_ptr->get_flags() == 0) {
+		bool save_metadata = false;
 		try {
 			DatabaseHandler _db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE, context);
 			// Try writing (only if there's no metadata there alrady)
@@ -326,10 +327,12 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] new metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+					save_metadata = true;
 				} else if (local_schema_ptr && schema_ser == local_schema_ptr->serialise()) {
 					_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 					schema_ptr->set_flags(1);
 					L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was overwritten (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+					save_metadata = true;
 				} else {
 					local_schema_ptr = schema_ptr;
 					schema_ptr = std::make_shared<const MsgPack>(MsgPack::unserialise(schema_ser));
@@ -358,6 +361,16 @@ SchemasLRU::_update([[maybe_unused]] const char* prefix, bool writable, const st
 				_db_handler.set_metadata(RESERVED_SCHEMA, schema_ptr->serialise());
 				schema_ptr->set_flags(1);
 				L_SCHEMA("{}" + YELLOW_GREEN + "Local Schema [{}] metadata was written (version {}): " + DIM_GREY + "{}", prefix, repr(local_schema_path), schema_ptr->get_flags(), repr(schema_ptr->to_string()));
+				save_metadata = true;
+			}
+			if (save_metadata) {
+#ifdef XAPIAND_CLUSTERING
+					if (!opts.solo) {
+						if (schema_ptr->get_flags()) {
+							schema_updater()->debounce(local_schema_path, schema_ptr->get_flags(), local_schema_path);
+						}
+					}
+#endif
 			}
 		} catch (...) {
 			L_EXC("Error saving local schema: endpoint:{}", repr(endpoints.to_string()));
