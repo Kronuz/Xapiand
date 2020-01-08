@@ -28,10 +28,11 @@
 #include "database/flags.h"       // for readable_flags
 #include "database/shard.h"       // for Shard
 #include "exception.h"            // for THROW, Error, MSG_Error, Exception, DocNot...
+#include "index_resolver_lru.h"   // for IndexSettings
 #include "log.h"                  // for L_CALL
 #include "logger.h"               // for Logging (database->log)
 #include "node.h"                 // for Node
-#include "manager.h"              // for IndexSettings, XapiandManager
+#include "manager.h"              // for XapiandManager
 #include "server/discovery.h"     // for db_updater
 #include "wal.h"                  // for DatabaseWALWriter
 

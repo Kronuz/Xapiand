@@ -40,6 +40,7 @@
 #include "exception_xapian.h"                 // for InvalidArgumentError
 #include "fs.hh"                              // for delete_files, build_path_index
 #include "io.hh"                              // for io::*
+#include "index_resolver_lru.h"               // for IndexSettings
 #include "length.h"                           // for serialise_length, unserialise_length
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics

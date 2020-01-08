@@ -30,7 +30,6 @@
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
 #include <string_view>                        // for std::string_view
-#include <vector>                             // for std::vector
 
 #include "base_x.hh"                          // for Base62
 #include "database/utils.h"                   // for UNKNOWN_REVISION
@@ -69,6 +68,8 @@ class DatabasePool;
 class DatabaseWALWriter;
 class DatabaseCleanup;
 class SchemasLRU;
+class IndexResolverLRU;
+struct IndexSettings;
 
 extern void sig_exit(int sig);
 
@@ -97,15 +98,6 @@ ENUM_CLASS(XapiandManagerState, int,
 )
 
 
-struct IndexSettingsShard {
-	Xapian::rev version;
-	bool modified;
-
-	std::vector<std::string> nodes;
-
-	IndexSettingsShard();
-};
-
 ENUM_CLASS(XapiandManagerCommand, int,
 	RAFT_APPLY_COMMAND,
 	RAFT_SET_LEADER_NODE,
@@ -114,25 +106,6 @@ ENUM_CLASS(XapiandManagerCommand, int,
 	ASYNC_ELECT_PRIMARY,
 	ASYNC_ELECT_PRIMARY_RESPONSE
 )
-
-struct IndexSettings {
-	Xapian::rev version;
-	bool loaded;
-	bool saved;
-	bool modified;
-
-	std::chrono::steady_clock::time_point stalled;
-
-	size_t num_shards;
-	size_t num_replicas_plus_master;
-	std::vector<IndexSettingsShard> shards;
-
-	IndexSettings();
-
-	IndexSettings(Xapian::rev version, bool loaded, bool saved, bool modified, std::chrono::steady_clock::time_point stalled, size_t num_shards, size_t num_replicas_plus_master, const std::vector<IndexSettingsShard>& shards);
-
-	std::string __repr__() const;
-};
 
 
 class XapiandManager : public Worker  {
@@ -177,6 +150,7 @@ public:
 	std::unique_ptr<SchemasLRU> schemas;
 	std::unique_ptr<DatabasePool> database_pool;
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
+	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
 	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>> http_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> http_server_pool;
@@ -286,11 +260,7 @@ public:
 		_manager.reset();
 	}
 
-	static IndexSettings resolve_index_settings(std::string_view normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false) {
-		return manager(true)->resolve_index_settings_impl(normalized_path, writable, primary, settings, primary_node, reload, rebuild, clear);
-	}
-
-	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_nodes(const IndexSettings& index_settings);
+	static IndexSettings resolve_index_settings(std::string_view normalized_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
 
 	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
 		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, primary, settings);

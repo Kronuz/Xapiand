@@ -36,6 +36,7 @@
 #include "database/schemas_lru.h"           // for SchemasLRU
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
+#include "index_resolver_lru.h"             // for IndexSettings
 #include "exception_xapian.h"               // for InvalidArgumentError
 #include "manager.h"                        // for XapiandManager, XapiandManager::State
 #include "namegen.h"                        // for name_generator
@@ -1355,7 +1356,7 @@ Discovery::_ASYNC_elect_primary_response(const std::string& message)
 		emplaced.first->second.revision = revision;
 		emplaced.first->second.eligible = eligible;
 		if (Node::quorum(total_nodes, voters.size())) {
-			auto nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
+			auto nodes = IndexResolverLRU::resolve_nodes(XapiandManager::resolve_index_settings(normalized_path));
 			assert(nodes.size() == 1);
 			if (nodes.size() == 1) {
 				Xapian::rev max_revision = 0;

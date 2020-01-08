@@ -33,6 +33,7 @@
 #include "database/shard.h"                 // for Shard
 #include "database/utils.h"                 // for query_field_t
 #include "error.hh"                         // for error:name, error::description
+#include "index_resolver_lru.h"             // for IndexResolverLRU, IndexSettings
 #include "fs.hh"                            // for exists
 #include "manager.h"                        // for XapiandManager
 #include "readable_revents.hh"              // for readable_revents
@@ -200,7 +201,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 	if (!replicated) {
 		// Otherwise, check if the local node resolves as replicator
 		auto local_node = Node::get_local_node();
-		nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
+		nodes = IndexResolverLRU::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
 		assert(nodes.size() == 1);
 		if (nodes.size() != 1) {
 			L_ERR("Replication ignored endpoint: {}", repr(args.dst_endpoint.to_string()));
@@ -222,7 +223,7 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 
 			// Get nodes for the endpoint.
 			if (nodes.empty()) {
-				nodes = XapiandManager::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
+				nodes = IndexResolverLRU::resolve_nodes(XapiandManager::resolve_index_settings(args.dst_endpoint.path));
 				assert(nodes.size() == 1);
 				if (nodes.size() != 1) {
 					L_ERR("Replication ignored endpoint: {}", repr(args.dst_endpoint.to_string()));
