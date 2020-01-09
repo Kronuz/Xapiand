@@ -77,6 +77,7 @@ ENUM_CLASS(DiscoveryMessage, int,
 	RAFT_ADD_COMMAND,             // Tell the leader to add a command to the log
 	DB_UPDATED,                   // Database has been updated, trigger replication
 	SCHEMA_UPDATED,               // Schema has been updated, invalidate schema from LRU
+	INDEX_SETTINGS_UPDATED,       // Schema has been updated, invalidate cache from index settings LRU
 	PRIMARY_UPDATED,              // Primary shard has been updated, invalidate index from LRU
 	ELECT_PRIMARY,                // Invoked by leader to gather votes to promote a primary shard
 	ELECT_PRIMARY_RESPONSE,       // Gather primary shard votes
@@ -156,6 +157,7 @@ private:
 	void raft_add_command(Message type, const std::string& message);
 	void db_updated(Message type, const std::string& message);
 	void schema_updated(Message type, const std::string& message);
+	void index_settings_updated(Message type, const std::string& message);
 
 	void cluster_discovery_cb(ev::timer& watcher, int revents);
 

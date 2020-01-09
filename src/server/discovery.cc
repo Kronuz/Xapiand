@@ -337,6 +337,9 @@ Discovery::discovery_server(Message type, const std::string& message)
 		case Message::SCHEMA_UPDATED:
 			schema_updated(type, message);
 			return;
+		case Message::INDEX_SETTINGS_UPDATED:
+			index_settings_updated(type, message);
+			return;
 		case Message::PRIMARY_UPDATED:
 			// Dispatch the following asynchronously...
 			// it could be too slow for doing inside Discovery thread:
@@ -1208,6 +1211,52 @@ Discovery::schema_updated([[maybe_unused]] Message type, const std::string& mess
 
 
 void
+Discovery::index_settings_updated([[maybe_unused]] Message type, const std::string& message)
+{
+	L_CALL("Discovery::index_settings_updated({}, <message>) {{ state:{} }}", enum_name(type), enum_name(XapiandManager::get_state()));
+
+	switch (XapiandManager::get_state()) {
+		case XapiandManager::State::READY:
+			break;
+		default:
+			L_RAFT_PROTO(">>> INDEX_SETTINGS_UPDATED (invalid state: {}) {{ current_term:{} }}",
+				enum_name(XapiandManager::get_state()), raft_current_term);
+			return;
+	}
+
+	const char *p = message.data();
+	const char *p_end = p + message.size();
+
+	auto remote_node = Node::unserialise(&p, p_end);
+	auto local_node = Node::get_local_node();
+	if (Node::is_superset(local_node, remote_node)) {
+		// It's just me, do nothing!
+		return;
+	}
+
+	Xapian::rev version = unserialise_length(&p, p_end);
+
+	auto uri = std::string(p, p_end - p);
+
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		std::unique_lock<std::mutex> lk(manager->index_settings_resolver->resolve_index_lru_mtx);
+		Endpoint endpoint(uri);
+		auto unsharded = unsharded_path(endpoint.path);
+		std::string unsharded_normalized_path = std::string(unsharded.first);
+		if (unsharded_normalized_path.back() == '/') {
+			unsharded_normalized_path.pop_back();
+		}
+		auto it_e = manager->index_settings_resolver->resolve_index_lru.end();
+		auto it = manager->index_settings_resolver->resolve_index_lru.find(unsharded_normalized_path);
+		if (it != it_e) {
+			manager->index_settings_resolver->resolve_index_lru.erase(it);
+		}
+	}
+}
+
+
+void
 Discovery::_ASYNC_primary_updated(const std::string& message)
 {
 	L_CALL("Discovery::_ASYNC_primary_updated(<message>) {{ state:{} }}", enum_name(XapiandManager::get_state()));
@@ -1952,6 +2001,8 @@ Discovery::schema_updated_send(Xapian::rev revision, std::string_view path)
 	message.append(path);
 
 	message_send_args.enqueue(std::make_pair(Message::SCHEMA_UPDATED, message));
+
+	message_send_args.enqueue(std::make_pair(Message::INDEX_SETTINGS_UPDATED, message));
 
 	message_send_async.send();
 }
