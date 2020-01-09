@@ -329,6 +329,19 @@ endif ()
 
 
 ########################################################################
+# Capabilities Library
+########################################################################
+
+find_library(CAP_LIBRARIES cap)
+if (CAP_LIBRARIES)
+	set (HAVE_CAP 1)
+else ()
+	set (HAVE_CAP 0)
+	set (CAP_LIBRARIES "")
+endif ()
+
+
+########################################################################
 # UUID Library
 ########################################################################
 
@@ -663,6 +676,7 @@ target_link_libraries(XAPIAND_OBJ PUBLIC
 	${UUID_LIBRARIES}
 	${M_LIBRARIES}
 	${DL_LIBRARIES}
+	${CAP_LIBRARIES}
 	${RT_LIBRARIES}
 	${EXECINFO_LIBRARIES}
 )
