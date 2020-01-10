@@ -1244,9 +1244,6 @@ Discovery::index_settings_updated([[maybe_unused]] Message type, const std::stri
 		Endpoint endpoint(uri);
 		auto unsharded = unsharded_path(endpoint.path);
 		std::string unsharded_normalized_path = std::string(unsharded.first);
-		if (unsharded_normalized_path.back() == '/') {
-			unsharded_normalized_path.pop_back();
-		}
 		auto it_e = manager->index_settings_resolver->resolve_index_lru.end();
 		auto it = manager->index_settings_resolver->resolve_index_lru.find(unsharded_normalized_path);
 		if (it != it_e) {
