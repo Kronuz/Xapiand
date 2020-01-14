@@ -75,8 +75,11 @@ public:
 	IndexSettings resolve_index_settings(std::string_view normalized_slashed_path, bool writable, bool primary, const MsgPack* settings, std::shared_ptr<const Node> primary_node, bool reload, bool rebuild, bool clear);
 	Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable, bool primary, const MsgPack* settings);
 
+	static void invalidate_settings(const std::string& uri);
+
 	static std::vector<std::vector<std::shared_ptr<const Node>>> resolve_nodes(const IndexSettings& index_settings);
 
+private:
     static std::mutex resolve_index_lru_mtx;
     static lru::lru<std::string, IndexSettings> resolve_index_lru;
 };

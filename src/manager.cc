@@ -962,6 +962,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	db_updater();
 	schema_updater();
+	settings_updater();
 	primary_updater();
 	trigger_replication();
 #endif
@@ -1188,6 +1189,21 @@ XapiandManager::join()
 
 		L_MANAGER("Waiting for {} schema updater{}...", schema_updater_obj->running_size(), (schema_updater_obj->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the schema updaters...", "Schema updaters finished!");
+		while (!schema_updater_obj->join(500ms)) {
+			int sig = atom_sig;
+			if (sig < 0) {
+				throw SystemExit(-sig);
+			}
+		}
+	}
+
+	auto& settings_updater_obj = schema_updater(false);
+	if (settings_updater_obj) {
+		L_MANAGER("Finishing settings updater!");
+		settings_updater_obj->finish();
+
+		L_MANAGER("Waiting for {} settings updater{}...", settings_updater_obj->running_size(), (settings_updater_obj->running_size() == 1) ? "" : "s");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the settings updaters...", "Settings updaters finished!");
 		while (!schema_updater_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {

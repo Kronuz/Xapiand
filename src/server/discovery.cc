@@ -1234,22 +1234,9 @@ Discovery::index_settings_updated([[maybe_unused]] Message type, const std::stri
 		return;
 	}
 
-	Xapian::rev version = unserialise_length(&p, p_end);
-
 	auto uri = std::string(p, p_end - p);
 
-	auto manager = XapiandManager::manager();
-	if (manager) {
-		std::unique_lock<std::mutex> lk(manager->index_settings_resolver->resolve_index_lru_mtx);
-		Endpoint endpoint(uri);
-		auto unsharded = unsharded_path(endpoint.path);
-		std::string unsharded_normalized_path = std::string(unsharded.first);
-		auto it_e = manager->index_settings_resolver->resolve_index_lru.end();
-		auto it = manager->index_settings_resolver->resolve_index_lru.find(unsharded_normalized_path);
-		if (it != it_e) {
-			manager->index_settings_resolver->resolve_index_lru.erase(it);
-		}
-	}
+	IndexResolverLRU::invalidate_settings(uri);
 }
 
 
@@ -1999,6 +1986,17 @@ Discovery::schema_updated_send(Xapian::rev revision, std::string_view path)
 
 	message_send_args.enqueue(std::make_pair(Message::SCHEMA_UPDATED, message));
 
+	message_send_async.send();
+}
+
+
+void
+Discovery::settings_updated_send([[maybe_unused]] Xapian::rev revision, std::string_view path)
+{
+	L_CALL("Discovery::settings_updated_send({}, {})", revision, repr(path));
+
+	auto message = std::string(path);
+
 	message_send_args.enqueue(std::make_pair(Message::INDEX_SETTINGS_UPDATED, message));
 
 	message_send_async.send();
@@ -2056,6 +2054,15 @@ schema_updated_send(Xapian::rev revision, std::string path)
 	auto manager = XapiandManager::manager();
 	if (manager) {
 		manager->discovery->schema_updated_send(revision, path);
+	}
+}
+
+void
+settings_updated_send(Xapian::rev revision, std::string path)
+{
+	auto manager = XapiandManager::manager();
+	if (manager) {
+		manager->discovery->settings_updated_send(revision, path);
 	}
 }
 

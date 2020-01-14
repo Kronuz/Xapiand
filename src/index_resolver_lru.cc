@@ -285,6 +285,8 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 
 	assert(index_settings.shards.size() == index_settings.num_shards);
 
+	bool settings_saved_old = index_settings.saved;
+
 	if (index_settings.num_shards == 1) {
 		save_shards(unsharded_normalized_path, index_settings.num_replicas_plus_master, index_settings.shards[0]);
 		index_settings.saved = true;
@@ -330,6 +332,9 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 		}
 		index_settings.saved = true;
 		index_settings.loaded = true;
+	}
+	if (!settings_saved_old && index_settings.saved) {
+		settings_updater()->debounce(unsharded_normalized_path,  index_settings.version, unsharded_normalized_path);
 	}
 }
 
@@ -844,5 +849,28 @@ IndexResolverLRU::resolve_index_endpoints(const Endpoint& endpoint, bool writabl
 		} catch (const Xapian::DocVersionConflictError&) {
 			if (--t == 0) { throw; }
 		}
+	}
+}
+
+
+void
+IndexResolverLRU::invalidate_settings(const std::string& uri)
+{
+	L_CALL("IndexResolverLRU::invalidate_settings({})", repr(uri));
+
+	std::unique_lock<std::mutex> lk(resolve_index_lru_mtx);
+	Endpoint endpoint(uri);
+	auto unsharded = unsharded_path(endpoint.path);
+	std::string unsharded_normalized_path = std::string(unsharded.first);
+	auto it_e = resolve_index_lru.end();
+	auto it = resolve_index_lru.find(unsharded_normalized_path);
+	if (it != it_e) {
+		auto index_settings = it->second;
+		if (index_settings.num_shards > 1) {
+			for (size_t i = 1; i <= index_settings.num_shards; ++i) {
+				resolve_index_lru.erase(strings::format("{}/.__{}", unsharded_normalized_path, i));
+			}
+		}
+		resolve_index_lru.erase(it);
 	}
 }

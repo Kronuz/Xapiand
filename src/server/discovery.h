@@ -204,6 +204,7 @@ public:
 	void raft_relinquish_leadership();
 	void db_updated_send(Xapian::rev revision, std::string_view path);
 	void schema_updated_send(Xapian::rev revision, std::string_view path);
+	void settings_updated_send(Xapian::rev revision, std::string_view path);
 	void primary_updated_send(size_t shards, std::string_view path);
 
 	// Messages executed asynchronously from MAIN thread
@@ -231,6 +232,14 @@ inline auto& schema_updater(bool create = true) {
 	static auto schema_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, schema_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
 	assert(!create || schema_updater);
 	return schema_updater;
+}
+
+void settings_updated_send(Xapian::rev revision, std::string path);
+
+inline auto& settings_updater(bool create = true) {
+	static auto settings_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, settings_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
+	assert(!create || settings_updater);
+	return settings_updater;
 }
 
 void primary_updated_send(size_t shards, std::string path);
