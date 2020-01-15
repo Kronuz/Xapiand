@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Dubalu LLC
+ * Copyright (c) 2015-2020 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1813,8 +1813,6 @@ Shard::get_docid_term(const std::string& term)
 		} catch (const Xapian::DatabaseError&) {
 			do_close();
 			throw;
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw Xapian::DocNotFoundError("Document not found");
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
@@ -1857,8 +1855,6 @@ Shard::get_document(Xapian::docid shard_did, unsigned doc_flags)
 		} catch (const Xapian::DatabaseError&) {
 			do_close();
 			throw;
-		} catch (const Xapian::InvalidArgumentError&) {
-			throw Xapian::DocNotFoundError("Document not found");
 		}
 		reopen();
 		rdb = static_cast<Xapian::Database *>(db());
