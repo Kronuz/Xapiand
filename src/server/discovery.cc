@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Dubalu LLC
+ * Copyright (c) 2015-2020 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -77,9 +77,9 @@ constexpr uint16_t XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION = 0;
 // Values in seconds
 constexpr double RAFT_LEADER_HEARTBEAT_TIMEOUT    = HEARTBEAT_TIMEOUT;
 
-constexpr double RAFT_LEADER_ELECTION_INIT        = 6.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
-constexpr double RAFT_LEADER_ELECTION_MIN         = 5.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;  // same as NODE_LIFESPAN
-constexpr double RAFT_LEADER_ELECTION_MAX         = 9.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
+constexpr double RAFT_LEADER_ELECTION_INIT        = 4.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
+constexpr double RAFT_LEADER_ELECTION_MIN         = 10.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;  // same as NODE_LIFESPAN
+constexpr double RAFT_LEADER_ELECTION_MAX         = 30.0 * RAFT_LEADER_HEARTBEAT_TIMEOUT;
 
 constexpr double CLUSTER_DISCOVERY_WAITING_FAST   = RAFT_LEADER_HEARTBEAT_TIMEOUT / 3.0 * 2.0;
 constexpr double CLUSTER_DISCOVERY_WAITING_SLOW   = RAFT_LEADER_HEARTBEAT_TIMEOUT * 2.0;

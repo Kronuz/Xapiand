@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019 Dubalu LLC
+ * Copyright (c) 2015-2020 Dubalu LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,8 +43,8 @@
 #include "stringified.hh"       // for stringified
 
 
-constexpr double HEARTBEAT_TIMEOUT                = 0.300;  // in seconds
-constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 5.0 * 1000.0));  // same as RAFT_LEADER_ELECTION_MIN
+constexpr double HEARTBEAT_TIMEOUT                = 1.0;  // in seconds
+constexpr auto NODE_LIFESPAN = std::chrono::milliseconds(static_cast<long long>(HEARTBEAT_TIMEOUT * 10.0 * 1000.0));  // same as RAFT_LEADER_ELECTION_MIN
 
 
 class Node {
