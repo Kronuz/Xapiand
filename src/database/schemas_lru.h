@@ -54,7 +54,7 @@ class SchemasLRU {
 		const Endpoints& endpoints, int read_flags, std::shared_ptr<std::unordered_set<std::string>> context);
 
 public:
-	SchemasLRU(ssize_t max_size = -1);
+	SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age);
 
 	std::tuple<std::shared_ptr<const MsgPack>, std::unique_ptr<MsgPack>, std::string> get(DatabaseHandler* db_handler, const MsgPack* obj);
 

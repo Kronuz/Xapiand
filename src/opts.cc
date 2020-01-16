@@ -105,6 +105,8 @@
 #define MAX_DISCOVERERS                5
 #define MIN_DISCOVERERS                1
 
+#define SCHEMA_POOL_TIMEOUT                          3600000
+
 #define COMMITTER_THROTTLE_TIME                            0
 #define COMMITTER_DEBOUNCE_TIMEOUT                      1000
 #define COMMITTER_DEBOUNCE_BUSY_TIMEOUT                 3000
@@ -607,11 +609,16 @@ parseOptions(int argc, char** argv)
 				throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
 			}
 		}
+		if (!o.hostname_list_str.empty()) {
+			o.hostname_list = parse_hostnames(o.hostname_list_str);
+		}
 
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
 		std::exit(EX_USAGE);
 	}
+
+	o.schema_pool_timeout = SCHEMA_POOL_TIMEOUT;
 
 	o.committer_throttle_time = COMMITTER_THROTTLE_TIME;
 	o.committer_debounce_timeout = COMMITTER_DEBOUNCE_TIMEOUT;

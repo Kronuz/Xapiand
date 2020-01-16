@@ -103,6 +103,7 @@ extern struct opts_t {
 	double random_errors_db = 0;
 	double random_errors_io = 0;
 	double random_errors_net = 0;
+	unsigned long long schema_pool_timeout = 3600000;
 	unsigned long long committer_throttle_time = 0;
 	unsigned long long committer_debounce_timeout = 1000;
 	unsigned long long committer_debounce_busy_timeout = 1000;
