@@ -95,9 +95,6 @@ IndexSettings::__repr__() const {
 }
 
 
-std::mutex IndexResolverLRU::resolve_index_lru_mtx;
-lru::lru<std::string, IndexSettings> IndexResolverLRU::resolve_index_lru(opts.resolver_cache_size);
-
 constexpr int CONFLICT_RETRIES = 10;   // Number of tries for resolving version conflicts
 
 
@@ -484,6 +481,12 @@ shards_to_obj(const std::vector<IndexSettingsShard>& shards)
 }
 
 
+IndexResolverLRU::IndexResolverLRU(ssize_t resolver_cache_size, std::chrono::milliseconds resolver_cache_timeout)
+	: resolve_index_lru(resolver_cache_size, resolver_cache_timeout)
+{
+}
+
+
 std::vector<std::vector<std::shared_ptr<const Node>>>
 IndexResolverLRU::resolve_nodes(const IndexSettings& index_settings)
 {
@@ -598,6 +601,7 @@ IndexResolverLRU::resolve_index_settings(std::string_view normalized_path, bool 
 	if (!reload) {
 		it = resolve_index_lru.find(unsharded_normalized_path);
 	}
+
 	if (it != it_e) {
 		if (clear) {
 			resolve_index_lru.erase(it);

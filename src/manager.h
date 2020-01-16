@@ -213,6 +213,7 @@ private:
 
 	IndexSettings resolve_index_settings_impl(std::string_view normalized_slashed_path, bool writable = false, bool primary = false, const MsgPack* settings = nullptr, std::shared_ptr<const Node> primary_node = nullptr, bool reload = false, bool rebuild = false, bool clear = false);
 	Endpoints resolve_index_endpoints_impl(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr);
+	void invalidate_settings_impl(const std::string& uri);
 
 	std::string server_metrics_impl();
 
@@ -264,6 +265,10 @@ public:
 
 	static Endpoints resolve_index_endpoints(const Endpoint& endpoint, bool writable = false, bool primary = false, const MsgPack* settings = nullptr) {
 		return manager(true)->resolve_index_endpoints_impl(endpoint, writable, primary, settings);
+	}
+
+	static void invalidate_settings(const std::string& uri) {
+		return manager(true)->invalidate_settings_impl(uri);
 	}
 
 	static void setup_node() {

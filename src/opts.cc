@@ -106,6 +106,7 @@
 #define MIN_DISCOVERERS                1
 
 #define SCHEMA_POOL_TIMEOUT                          3600000
+#define RESOLVER_CACHE_TIMEOUT                         60000
 
 #define COMMITTER_THROTTLE_TIME                            0
 #define COMMITTER_DEBOUNCE_TIMEOUT                      1000
@@ -619,6 +620,7 @@ parseOptions(int argc, char** argv)
 	}
 
 	o.schema_pool_timeout = SCHEMA_POOL_TIMEOUT;
+	o.resolver_cache_timeout = RESOLVER_CACHE_TIMEOUT;
 
 	o.committer_throttle_time = COMMITTER_THROTTLE_TIME;
 	o.committer_debounce_timeout = COMMITTER_DEBOUNCE_TIMEOUT;

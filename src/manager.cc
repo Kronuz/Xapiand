@@ -154,10 +154,10 @@ XapiandManager::XapiandManager()
 	  http_clients(0),
 	  remote_clients(0),
 	  replication_clients(0),
-	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
+	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
-	  index_settings_resolver(),
+	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
 	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
@@ -186,9 +186,10 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  http_clients(0),
 	  remote_clients(0),
 	  replication_clients(0),
-	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size)),
+	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
+	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
 	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
@@ -1636,6 +1637,15 @@ XapiandManager::resolve_index_endpoints_impl(const Endpoint& endpoint, bool writ
 	L_CALL("XapiandManager::resolve_index_endpoints_impl()");
 
 	return index_settings_resolver->resolve_index_endpoints(endpoint, writable, primary, settings);
+}
+
+
+void
+XapiandManager::invalidate_settings_impl(const std::string& uri)
+{
+	L_CALL("XapiandManager::invalidate_settings_impl()");
+
+	index_settings_resolver->invalidate_settings(uri);
 }
 
 
