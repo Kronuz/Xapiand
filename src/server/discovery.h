@@ -237,7 +237,7 @@ inline auto& schema_updater(bool create = true) {
 void settings_updated_send(Xapian::rev revision, std::string path);
 
 inline auto& settings_updater(bool create = true) {
-	static auto settings_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("SU--", "SU{:02}", opts.num_discoverers, settings_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
+	static auto settings_updater = create ? make_unique_debouncer<std::string, ThreadPolicyType::updaters>("IU--", "SE{:02}", opts.num_discoverers, settings_updated_send, std::chrono::milliseconds(opts.db_updater_throttle_time), std::chrono::milliseconds(opts.db_updater_debounce_timeout), std::chrono::milliseconds(opts.db_updater_debounce_busy_timeout), std::chrono::milliseconds(opts.db_updater_debounce_min_force_timeout), std::chrono::milliseconds(opts.db_updater_debounce_max_force_timeout)) : nullptr;
 	assert(!create || settings_updater);
 	return settings_updater;
 }
