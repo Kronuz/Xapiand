@@ -269,6 +269,9 @@ Shard::reopen_writable()
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote writable shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		if (is_replica()) {
+			throw Xapian::DatabaseNotAvailableError("Endpoint must be local for replicas");
+		}
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
 			L_DEBUG("Writable endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
@@ -379,6 +382,9 @@ Shard::reopen_readable()
 	if (!endpoint.is_local()) {
 		L_DATABASE("Opening remote shard {} ({})", repr(endpoint.to_string()), readable_flags(flags));
 		RANDOM_ERRORS_DB_THROW(Xapian::DatabaseOpeningError, "Random Error");
+		if (is_replica()) {
+			throw Xapian::DatabaseNotAvailableError("Endpoint must be local for replicas");
+		}
 		auto node = endpoint.node();
 		if (!node || node->empty()) {
 			L_DEBUG("Endpoint {} ({}) is invalid.", repr(endpoint.to_string()), readable_flags(flags));
