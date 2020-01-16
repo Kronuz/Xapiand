@@ -1236,7 +1236,7 @@ Discovery::index_settings_updated([[maybe_unused]] Message type, const std::stri
 
 	auto uri = std::string(p, p_end - p);
 
-	IndexResolverLRU::invalidate_settings(uri);
+	XapiandManager::invalidate_settings(uri);
 }
 
 

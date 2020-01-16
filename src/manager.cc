@@ -1205,7 +1205,7 @@ XapiandManager::join()
 
 		L_MANAGER("Waiting for {} settings updater{}...", settings_updater_obj->running_size(), (settings_updater_obj->running_size() == 1) ? "" : "s");
 		L_MANAGER_TIMED(1s, "Is taking too long to finish the settings updaters...", "Settings updaters finished!");
-		while (!settings_updater->join(500ms)) {
+		while (!settings_updater_obj->join(500ms)) {
 			int sig = atom_sig;
 			if (sig < 0) {
 				throw SystemExit(-sig);

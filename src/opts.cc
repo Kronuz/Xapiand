@@ -610,9 +610,6 @@ parseOptions(int argc, char** argv)
 				throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
 			}
 		}
-		if (!o.hostname_list_str.empty()) {
-			o.hostname_list = parse_hostnames(o.hostname_list_str);
-		}
 
 	} catch (const ArgException& exc) { // catch any exceptions
 		std::fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
