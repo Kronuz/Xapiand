@@ -178,7 +178,7 @@ private:
 	int _new_cluster;
 	std::chrono::steady_clock::time_point _process_start;
 
-	int _try_shutdown;
+	std::atomic_int _try_shutdown;
 	ev::timer try_shutdown_timer;
 	ev::async signal_sig_async;
 	ev::async setup_node_async;
