@@ -1869,6 +1869,15 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, st
 {
 	L_CALL("HttpClient::retrieve_database()");
 
+	if (is_root) {
+		if (selector == "state") {
+			auto manager = XapiandManager::manager();
+			if (manager) {
+				return enum_name(manager->state.load());
+			}
+		}
+	}
+
 #ifdef XAPIAND_CLUSTERING
 	auto nodes = MsgPack::ARRAY();
 	if (is_root) {
@@ -1974,6 +1983,10 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, st
 #ifdef XAPIAND_CLUSTERING
 		obj["nodes"] = nodes;
 #endif
+		auto manager = XapiandManager::manager();
+		if (manager) {
+			obj["state"] = enum_name(manager->state.load());
+		}
 	}
 
 	if (!settings.empty()) {
