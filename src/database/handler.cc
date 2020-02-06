@@ -1530,16 +1530,20 @@ DatabaseHandler::get_mset(
 	}
 
 	for (auto& matcher : matchers) {
-		matcher->prepare_mset();
-		merger.add_prepared_mset(matcher->mset);
-		doccount += matcher->doccount;
+		try {
+			matcher->prepare_mset();
+			merger.add_prepared_mset(matcher->mset);
+			doccount += matcher->doccount;
+		} catch (const Xapian::DatabaseNotFoundError& e) { /* In case a index doesn't exist in a multi index search (just skip it)*/ }
 	}
 
 	for (auto& matcher : matchers) {
-		matcher->get_mset();
-		if (aggs) {
-			aggs->merge_results(*matcher->aggs);
-		}
+		try {
+			matcher->get_mset();
+			if (aggs) {
+				aggs->merge_results(*matcher->aggs);
+			}
+		} catch (const Xapian::DatabaseNotFoundError& e) { /* In case a index doesn't exist in a multi index search (just skip it) */ }
 	}
 
 	auto merged_mset = merger.merge_mset(msets, doccount, first, maxitems);
