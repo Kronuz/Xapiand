@@ -331,8 +331,10 @@ save_settings(const std::string& unsharded_normalized_path, IndexSettings& index
 		index_settings.loaded = true;
 	}
 #ifdef XAPIAND_CLUSTERING
-	if (!settings_saved_old && index_settings.saved) {
-		settings_updater()->debounce(unsharded_normalized_path,  index_settings.version, unsharded_normalized_path);
+	if (!opts.solo) {
+		if (!settings_saved_old && index_settings.saved) {
+			settings_updater()->debounce(unsharded_normalized_path,  index_settings.version, unsharded_normalized_path);
+		}
 	}
 #endif
 }
