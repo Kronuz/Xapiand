@@ -51,7 +51,7 @@ RUN CONFIG="\
     -DCMAKE_INSTALL_PREFIX:PATH=/usr \
   " \
   && mkdir -p /usr/src \
-  && git clone --single-branch --depth=1 "https://github.com/Kronuz/Xapiand" /usr/src/Xapiand \
+  && git clone -b stable "https://github.com/Kronuz/Xapiand" /usr/src/Xapiand \
   && mkdir /usr/src/Xapiand/build \
   && cd /usr/src/Xapiand/build \
   && cmake -GNinja $CONFIG .. \
