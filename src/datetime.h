@@ -93,10 +93,11 @@ namespace Datetime {
 		int min;
 		int sec;
 		double fsec;
+		bool is_utc;
 
-		tm_t(int y=DATETIME_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, double fs=0.0)
+		tm_t(int y=DATETIME_EPOCH, int M=1, int d=1, int h=0, int m=0, int s=0, double fs=0.0, bool is_utc=false)
 			: year(y), mon(M), day(d), hour(h),
-			  min(m), sec(s), fsec(fs) { }
+			  min(m), sec(s), fsec(fs), is_utc(is_utc) { }
 	};
 
 	enum class Format : uint8_t {

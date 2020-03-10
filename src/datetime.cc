@@ -682,6 +682,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 		case 20: // 0000-00-00[T ]00:00:00Z
 			if (datetime[4] == '-' && datetime[7] == '-' && (datetime[10] == 'T' || datetime[10] == ' ') && datetime[13] == ':' &&
 				datetime[16] == ':' && datetime[19] == 'Z') {
+				tm.is_utc = true;
 				tm.year  = strict_stoul(&errno_save, datetime.substr(0, 4));
 				if (errno_save != 0) { return Format::ERROR; }
 				tm.mon   = strict_stoul(&errno_save, datetime.substr(5, 2));
@@ -729,6 +730,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 								switch (datetime[19]) {
 									case '+':
 									case '-':
+									    tm.is_utc = true;
 										if (size == 25 && datetime[22] == ':') {
 											tm.fsec = 0.0;
 											auto tz_h = datetime.substr(20, 2);
@@ -754,6 +756,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 											if (c < '0' || c > '9') {
 												switch (c) {
 													case 'Z':
+														tm.is_utc = true;
 														if ((aux + 1) == it_e) {
 															auto fsec = strict_stod(&errno_save, std::string_view(it, aux - it));
 															if (errno_save != 0) { return Format::ERROR; }
@@ -763,6 +766,7 @@ Datetime::Iso8601Parser(std::string_view datetime, tm_t& tm)
 														return Format::ERROR;
 													case '+':
 													case '-':
+														tm.is_utc = true;
 														if ((it_e - aux) == 6) {
 															auto aux_end = aux + 3;
 															if (*aux_end == ':') {
@@ -1416,10 +1420,13 @@ std::string
 Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 {
 	if (trim) {
-		auto res = strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}",
+		auto res = strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}{}",
 			tm.year, tm.mon, tm.day, sep,
-			tm.hour, tm.min, tm.sec);
+			tm.hour, tm.min, tm.sec, tm.is_utc ? "Z" : "");
 		if (tm.fsec > 0.0) {
+			if (tm.is_utc) {
+				res.pop_back();
+			}
 			res += strings::format("{:.6f}", tm.fsec).erase(0, 1);
 			auto it_e = res.end();
 			auto it = it_e - 1;
@@ -1428,6 +1435,9 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 				++it;
 			}
 			res.erase(it, it_e);
+			if (tm.is_utc) {
+				res.push_back('Z');
+			}
 		}
 		return res;
 	}
@@ -1437,12 +1447,15 @@ Datetime::iso8601(const tm_t& tm, bool trim, char sep)
 			tm.year, tm.mon, tm.day, sep,
 			tm.hour, tm.min, tm.sec);
 		res += strings::format("{:.6f}", tm.fsec).erase(0, 1);
+		if (tm.is_utc) {
+				res.push_back('Z');
+		}
 		return res;
 	}
 
-	return strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}.000000",
+	return strings::format("{:04}-{:02}-{:02}{}{:02}:{:02}:{:02}.000000{}",
 		tm.year, tm.mon, tm.day, sep,
-		tm.hour, tm.min, tm.sec);
+		tm.hour, tm.min, tm.sec, tm.is_utc ? "Z" : "");
 }
 
 
