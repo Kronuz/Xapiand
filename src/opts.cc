@@ -44,7 +44,9 @@
 
 #define SCRIPTS_CACHE_SIZE           100          // Scripts cache
 #define RESOLVER_CACHE_SIZE          100          // Endpoint resolver cache
+#define WAL_WRITER_CACHE_SIZE        100          // Wal writer cache
 #define SCHEMA_POOL_SIZE             100          // Maximum number of schemas in schema pool
+#define SCHEMAS_VERSIONS_CACHE_SIZE  100          // Schema versions cache
 #define DATABASE_POOL_SIZE           200          // Maximum number of database endpoints in database pool
 #define MAX_DATABASE_READERS          10          // Maximum number simultaneous readers per database
 #define MAX_CLIENTS                 1000          // Maximum number of open client connections
@@ -285,8 +287,10 @@ parseOptions(int argc, char** argv)
 		ValueArg<std::size_t> max_database_readers("", "max-database-readers", "Max number of open databases.", false, MAX_DATABASE_READERS, "databases", cmd);
 		ValueArg<std::size_t> database_pool_size("", "database-pool-size", "Maximum number of databases in database pool.", false, DATABASE_POOL_SIZE, "size", cmd);
 		ValueArg<std::size_t> schema_pool_size("", "schema-pool-size", "Maximum number of schemas in schema pool.", false, SCHEMA_POOL_SIZE, "size", cmd);
+		ValueArg<std::size_t> schema_versions_size("", "schema-versions-size", "Maximum number of versions of schema in cache.", false, SCHEMAS_VERSIONS_CACHE_SIZE, "size", cmd);
 		ValueArg<std::size_t> scripts_cache_size("", "scripts-cache-size", "Cache size for scripts.", false, SCRIPTS_CACHE_SIZE, "size", cmd);
 		ValueArg<std::size_t> resolver_cache_size("", "resolver-cache-size", "Cache size for index resolver.", false, RESOLVER_CACHE_SIZE, "size", cmd);
+		ValueArg<std::size_t> wal_writer_cache_size("", "wal-writer-cache-size", "Cache size wal writer.", false, WAL_WRITER_CACHE_SIZE, "size", cmd);
 
 		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, 0, "fsynchers", cmd);
 #ifdef XAPIAND_CLUSTERING
@@ -500,8 +504,10 @@ parseOptions(int argc, char** argv)
 		o.gid = gid.getValue();
 		o.database_pool_size = database_pool_size.getValue();
 		o.schema_pool_size = schema_pool_size.getValue();
+		o.schema_versions_size =  schema_versions_size.getValue();
 		o.scripts_cache_size = scripts_cache_size.getValue();
 		o.resolver_cache_size = resolver_cache_size.getValue();
+		o.wal_writer_cache_size = wal_writer_cache_size.getValue();
 #if XAPIAND_DATABASE_WAL
 		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif

@@ -811,7 +811,8 @@ DatabaseWAL::get_current_line(uint32_t end_off)
  */
 
 DatabaseWALWriterThread::DatabaseWALWriterThread() noexcept :
-	_wal_writer(nullptr)
+	_wal_writer(nullptr),
+	lru(opts.wal_writer_cache_size)
 {
 }
 

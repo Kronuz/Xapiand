@@ -178,7 +178,7 @@ save_shared(std::string_view id, const MsgPack& schema, Xapian::rev version, con
 
 SchemasLRU::SchemasLRU(ssize_t max_size, std::chrono::milliseconds max_age) :
 	schemas(max_size, max_age),
-	versions(0, max_age)
+	versions(opts.schema_versions_size, max_age)
 {
 }
 
