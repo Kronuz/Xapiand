@@ -868,6 +868,7 @@ check_include_files("execinfo.h" HAVE_EXECINFO_H)
 check_include_files("libunwind.h" HAVE_LIBUNWIND_H)
 check_include_files("sys/sysctl.h" HAVE_SYS_SYSCTL_H)
 check_include_files("sys/capability.h" HAVE_SYS_CAPABILITY_H)
+check_include_files("sys/prctl.h" HAVE_SYS_PRCTL_H)
 
 check_include_file_cxx("sstream" HAVE_SSTREAM)
 check_include_file_cxx("strstream" HAVE_STRSTREAM)

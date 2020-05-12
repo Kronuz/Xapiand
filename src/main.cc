@@ -39,9 +39,11 @@
 #include <unistd.h>                               // for unlink, STDERR_FILENO, chdir
 #include <vector>                                 // for vector
 
+#ifdef HAVE_SYS_PRCTL_H
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
 #include <sys/prctl.h>
+#endif
 #endif
 
 #ifdef USE_ICU
@@ -529,6 +531,7 @@ void demote(const char* username, const char* group) {
 			group = gr->gr_name;
 		}
 
+		#ifdef HAVE_SYS_PRCTL_H
 		#ifdef HAVE_SYS_CAPABILITY_H
 		// Create an empty set of capabilities.
 		cap_t capabilities = cap_init();
@@ -567,6 +570,7 @@ void demote(const char* username, const char* group) {
 			throw SystemExit(EX_OSERR);
 		}
 		#endif
+		#endif
 
 		// Drop extra privileges (aside from capabilities) by switching
 		// to the target group and user:
@@ -575,6 +579,7 @@ void demote(const char* username, const char* group) {
 			throw SystemExit(EX_OSERR);
 		}
 
+		#ifdef HAVE_SYS_PRCTL_H
 		#ifdef HAVE_SYS_CAPABILITY_H
 		// We can still switch to a different user due to having the CAP_SETUID
 		// capability. Let's clear the capability set, except for the CAP_SYS_NICE
@@ -596,6 +601,7 @@ void demote(const char* username, const char* group) {
 			L_CRIT("Cannot set capabilities as user: {} ({}) {}", error::name(errno), errno, error::description(errno));
 			throw SystemExit(EX_OSERR);
 		}
+		#endif
 		#endif
 
 		L_NOTICE("Running as {}:{}", username, group);
