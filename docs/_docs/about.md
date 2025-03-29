@@ -68,6 +68,6 @@ It features:
 *The {{ site.name }} Core Team's responsibility is to ensure the development and
 community around the {{ site.name }} ecosystem thrive.*
 
-* [Germán Méndez Bravo (Kronuz)](https://kronuz.io)
+* [Germán Méndez Bravo (Kronuz)](https://Kronuz.github.io)
 * [José Madrigal Cárdenas (YosefMac)](https://github.com/YosefMac){:target="_blank"}
 * [José María Valencia Ramírez (JoseMariaVR)](https://github.com/JoseMariaVR){:target="_blank"}

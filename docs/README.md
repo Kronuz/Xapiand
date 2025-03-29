@@ -1,11 +1,11 @@
 # Xapiand docs site
 
-This directory contains the code for the [Xapiand docs site](https://kronuz.io/Xapiand).
+This directory contains the code for the [Xapiand docs site](https://Kronuz.github.io/Xapiand).
 
 
 ## Contributing
 
-For information about contributing, see the [Contributing page](https://kronuz.io/Xapiand/contributing/).
+For information about contributing, see the [Contributing page](https://Kronuz.github.io/Xapiand/contributing/).
 
 
 ## Running locally
