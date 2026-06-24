@@ -31,6 +31,7 @@
 #include <sysexits.h>                             // for EX_USAGE
 
 #include "cmdoutput.h"                            // for CmdOutput
+#include "tclap/ZshCompletionOutput.h"            // for ZshCompletionOutput (not pulled in by CmdLine.h)
 #include "ev/ev++.h"                              // for ev_supported
 #include "hashes.hh"                              // for fnv1ah32
 #include "strings.hh"                             // for strings::lower

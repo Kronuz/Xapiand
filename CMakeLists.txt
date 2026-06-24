@@ -444,6 +444,30 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
 
 ########################################################################
+# Vendored third-party header-only libraries, now pulled via FetchContent
+# instead of living under src/. We only need their headers, so populate the
+# sources and add them to the include path; their own CMakeLists are not run.
+########################################################################
+# (msgpack stays vendored under src/msgpack/: its exception.hpp is forked to make
+# every msgpack exception inherit Xapiand's BaseException, so it can't be swapped
+# for stock upstream without reworking the MsgPack wrapper's error handling.)
+FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0)
+FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2)
+FetchContent_Declare(tclap     GIT_REPOSITORY https://github.com/mirror/tclap.git       GIT_TAG v1.2.2)
+foreach(dep rapidjson cppcodec tclap)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${rapidjson_SOURCE_DIR}/include"   # rapidjson/...
+	"${cppcodec_SOURCE_DIR}"            # cppcodec/...
+	"${tclap_SOURCE_DIR}/include"       # tclap/...
+)
+
+
+########################################################################
 # Lua + sol2 — the document-scripting engine
 ########################################################################
 if(LUA)
