@@ -30,7 +30,7 @@
 #include <string_view>        // for std::string_view
 
 #include "chars.hh"          // for chars::tolower
-#include "lz4/xxhash.h"
+#include "xxhash.h"
 #include "static_string.hh"  // for static_string::
 
 

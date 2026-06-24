@@ -41,8 +41,8 @@
 #include "exception.h"      // for Error
 #include "io.hh"            // for close, open
 #include "likely.h"         // for likely, unlikely
-#include "lz4/lz4.h"        // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
-#include "lz4/xxhash.h"     // for XXH32_createState, XXH32_reset, XXH32_digest
+#include "lz4.h"        // for LZ4_COMPRESSBOUND, LZ4_resetStream, LZ4_stre...
+#include "xxhash.h"     // for XXH32_createState, XXH32_reset, XXH32_digest
 #include "stringified.hh"   // for stringified
 
 

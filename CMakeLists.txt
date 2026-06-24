@@ -454,7 +454,10 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2)
 FetchContent_Declare(tclap     GIT_REPOSITORY https://github.com/mirror/tclap.git       GIT_TAG v1.2.2)
-foreach(dep rapidjson cppcodec tclap)
+# lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
+# its sources populated, not its own CMake.
+FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1)
+foreach(dep rapidjson cppcodec tclap lz4)
 	FetchContent_GetProperties(${dep})
 	if(NOT ${dep}_POPULATED)
 		FetchContent_Populate(${dep})
@@ -464,7 +467,14 @@ include_directories(
 	"${rapidjson_SOURCE_DIR}/include"   # rapidjson/...
 	"${cppcodec_SOURCE_DIR}"            # cppcodec/...
 	"${tclap_SOURCE_DIR}/include"       # tclap/...
+	"${lz4_SOURCE_DIR}/lib"             # lz4.h, lz4frame.h, lz4hc.h, xxhash.h
 )
+
+# (yaml/libyaml and libev stay vendored under src/: libyaml's build is wired into
+# Xapiand's generated config.h feature detection and its sources are entangled
+# with the vendored y2j wrapper in YAML_OBJ; libev likewise depends on Xapiand's
+# config.h feature macros and carries local warning-suppression pragmas. Neither
+# swaps cleanly to stock upstream without reworking that build glue.)
 
 
 ########################################################################
@@ -681,7 +691,7 @@ add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 ########################################################################
 
 file(GLOB LZ4_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/lz4/*.c*" "${PROJECT_SOURCE_DIR}/src/lz4/*.h*"
+	"${lz4_SOURCE_DIR}/lib/*.c"
 )
 list(APPEND LZ4_SRC_LIST ${XAPIAN_H_LIST})
 add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
