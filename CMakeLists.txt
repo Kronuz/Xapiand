@@ -409,9 +409,10 @@ FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno
 FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG 7d26e993c076efe88c8801b53605c5b1eb20f413)
 FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG a455f3317967d2c91e0d5c2064e47441dc04dcfb)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 183957c9ccda6591886306a331ee29cf38e30aed)
+FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG de129160e1da79ea4863e19e7d06c40553c29021)
 # uinteger_t is declared before base_x so base_x's own FetchContent of it dedups
 # to this pinned copy.
-FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names stash uinteger_t base_x)
+FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names stash uinteger_t base_x located_exception)
 
 # Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
 # +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh"), so put their source dirs
@@ -425,6 +426,16 @@ include_directories(
 	"${uinteger_t_SOURCE_DIR}"
 	"${base_x_SOURCE_DIR}"
 )
+
+# located-exception ships exception.h + exception.cc. Xapiand keeps a thin
+# src/exception.h wrapper that includes the library header by its explicit path
+# (LOCATED_EXCEPTION_HEADER, to avoid the same-name collision that breaks
+# #include_next when the includer lives in src/) and re-adds the Xapiand-specific
+# subclasses (ClientError, etc.) the standalone library drops. The library's
+# exception.cc is compiled as part of Xapiand below (in C++17, so its formatting
+# backend is {fmt}, matching the rest of the tree) rather than via the library's
+# own C++20 target.
+add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR}/exception.h")
 
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
@@ -704,6 +715,9 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/package.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
+# Compile the located-exception library's out-of-line implementation as part of
+# Xapiand (C++17 + {fmt}), instead of linking its standalone C++20 target.
+list(APPEND XAPIAND_SRC_LIST "${located_exception_SOURCE_DIR}/exception.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC
