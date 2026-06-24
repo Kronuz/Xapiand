@@ -467,6 +467,28 @@ endif()
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 
+# Compile-time string toolkit, extracted from Xapiand into four standalone repos.
+# All header-only: populate and put on the include path. hashes.hh includes
+# static_string.hh + chars.hh, so all four dirs go on the path; its runtime
+# xxHash fast paths light up automatically because xxhash.h (from lz4) is on the
+# path too.
+FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 43a2e67a31a10031eb9e0d8bef61c8b6c14cd958)
+FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 8094f0f1e209cd5ca1c4b6ce9a788139f77cdf8e)
+FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 599d980cb8253f3b8f1cf20e4aca63681f1a12a6)
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 39dac05d199cc414ab4c5335f9090a64917bedf3)
+foreach(dep static_string char_classify strict_stox hashes)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${static_string_SOURCE_DIR}"   # static_string.hh
+	"${char_classify_SOURCE_DIR}"   # chars.hh
+	"${strict_stox_SOURCE_DIR}"     # strict_stox.hh
+	"${hashes_SOURCE_DIR}"          # hashes.hh
+)
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own

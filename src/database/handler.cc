@@ -91,9 +91,9 @@ to_docid(std::string_view document_id)
 		document_id.remove_prefix(1);
 		try {
 			return static_cast<Xapian::docid>(strict_stoull(document_id));
-		} catch (const InvalidArgument& er) {
+		} catch (const std::invalid_argument& er) {
 			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(document_id), er.what());
-		} catch (const OutOfRange& er) {
+		} catch (const std::out_of_range& er) {
 			THROW(ClientError, "Value {} cannot be cast to integer [{}]", repr(document_id), er.what());
 		}
 	}

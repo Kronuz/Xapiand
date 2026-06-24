@@ -97,9 +97,9 @@ EWKT::EWKT(std::string_view str)
 					return;
 				}
 				THROW(EWKTError, "Sintax error in '{}'", std::string(first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Invalid SRID '{}' [{}]", str_srid, err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Invalid SRID '{}' [{}]", str_srid, err.what());
 			}
 		}
@@ -129,108 +129,108 @@ EWKT::parse_geometry(int SRID, Geometry::Type type, bool empty, Iterator first, 
 		case Geometry::Type::POINT:
 			try {
 				geometry = std::make_shared<Point>(_parse_point(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for POINT is '(lon lat[ height])' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for POINT is '(lon lat[ height])' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::MULTIPOINT:
 			try {
 				geometry = std::make_shared<MultiPoint>(_parse_multipoint(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for MULTIPOINT is '(lon lat [height], ..., lon lat [height]) or ((lon lat [height]), ..., (lon lat [height]))' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for MULTIPOINT is '(lon lat [height], ..., lon lat [height]) or ((lon lat [height]), ..., (lon lat [height]))' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::CIRCLE:
 			try {
 				geometry = std::make_shared<Circle>(_parse_circle(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for CIRCLE is '(lon lat[ height], radius)' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for CIRCLE is '(lon lat[ height], radius)' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::CONVEX:
 			try {
 				geometry = std::make_shared<Convex>(_parse_convex(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for CONVEX is '((lon lat[ height], radius), ... (lon lat[ height], radius))' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for CONVEX is '((lon lat[ height], radius), ... (lon lat[ height], radius))' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::POLYGON:
 			try {
 				geometry = std::make_shared<Polygon>(_parse_polygon(SRID, first, last, Geometry::Type::POLYGON));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for POLYGON is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for POLYGON is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::CHULL:
 			try {
 				geometry = std::make_shared<Polygon>(_parse_polygon(SRID, first, last, Geometry::Type::CHULL));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for CHULL is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for CHULL is '((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height]))' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::MULTICIRCLE:
 			try {
 				geometry = std::make_shared<MultiCircle>(_parse_multicircle(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for MULTICIRCLE is '((lon lat [height], radius), ... (lon lat [height], radius))' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for MULTICIRCLE is '((lon lat [height], radius), ... (lon lat [height], radius))' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::MULTICONVEX:
 			try {
 				geometry = std::make_shared<MultiConvex>(_parse_multiconvex(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lon lat [height], radius), ... (lon lat [height], radius)), ...)' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for MULTICONVEX is '(..., ((lon lat [height], radius), ... (lon lat [height], radius)), ...)' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::MULTIPOLYGON:
 			try {
 				geometry = std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, first, last, Geometry::Type::POLYGON));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for MULTIPOLYGON is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::MULTICHULL:
 			try {
 				geometry = std::make_shared<MultiPolygon>(_parse_multipolygon(SRID, first, last, Geometry::Type::CHULL));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for MULTICHULL is '(..., ((lon lat [height], ..., lon lat [height]), (lon lat [height], ..., lon lat [height])), ...)' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::COLLECTION:
 			try {
 				geometry = std::make_shared<Collection>(_parse_geometry_collection(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for GEOMETRYCOLLECTION is '(geometry_1, ..., geometry_n)' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for GEOMETRYCOLLECTION is '(geometry_1, ..., geometry_n)' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
 		case Geometry::Type::INTERSECTION:
 			try {
 				geometry = std::make_shared<Intersection>(_parse_geometry_intersection(SRID, first, last));
-			} catch (const InvalidArgument& err) {
+			} catch (const std::invalid_argument& err) {
 				THROW(EWKTError, "Specification for GEOMETRYINTERSECTION is '(geometry_1, ..., geometry_n)' [({}) -> {}]", std::string(first, last), err.what());
-			} catch (const OutOfRange& err) {
+			} catch (const std::out_of_range& err) {
 				THROW(EWKTError, "Specification for GEOMETRYINTERSECTION is '(geometry_1, ..., geometry_n)' [({}) -> {}]", std::string(first, last), err.what());
 			}
 			return;
