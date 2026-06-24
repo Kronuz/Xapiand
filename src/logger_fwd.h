@@ -28,7 +28,7 @@
 #include <string_view>        // for std::string_view
 #include <syslog.h>           // for LOG_DEBUG, LOG_WARNING, LOG_CRIT, LOG_ALERT
 
-#include "fmt/format.h"       // for fmt::format_args, fmt::vsformat, fmt::make_format_args
+#include <format>             // for std::format_args, std::make_format_args
 #include "hashes.hh"          // for fnv1ah32
 #include "lazy.hh"            // for LAZY
 #include "traceback.h"        // for TRACEBACK
@@ -63,9 +63,9 @@ public:
 
 	template <typename... Args>
 	void unlog(int priority, void** callstack, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-		vunlog(priority, callstack, function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
+		vunlog(priority, callstack, function, filename, line, format, std::make_format_args(args...));
 	}
-	void vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args);
+	void vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, std::format_args args);
 
 	bool clear();
 	std::chrono::nanoseconds age();
@@ -73,27 +73,27 @@ public:
 };
 
 
-void vprintln(bool collect, bool with_endl, std::string_view format, fmt::format_args args);
+void vprintln(bool collect, bool with_endl, std::string_view format, std::format_args args);
 
 
 template <typename... Args>
 static void print(std::string_view format, Args&&... args) {
-	return vprintln(false, true, format, fmt::make_format_args(std::forward<Args>(args)...));
+	return vprintln(false, true, format, std::make_format_args(args...));
 }
 
 
 template <typename... Args>
 static void collect(std::string_view format, Args&&... args) {
-	return vprintln(true, true, format, fmt::make_format_args(std::forward<Args>(args)...));
+	return vprintln(true, true, format, std::make_format_args(args...));
 }
 
 
-Log vlog(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args);
+Log vlog(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, std::format_args args);
 
 
 template <typename... Args>
 inline Log log(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, Args&&... args) {
-	return vlog(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, fmt::make_format_args(std::forward<Args>(args)...));
+	return vlog(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, std::make_format_args(args...));
 }
 
 

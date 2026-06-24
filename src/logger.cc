@@ -140,14 +140,14 @@ validated_priority(int priority)
 
 
 void
-vprintln(bool collect, bool with_endl, std::string_view format, fmt::format_args args)
+vprintln(bool collect, bool with_endl, std::string_view format, std::format_args args)
 {
 	Logging::do_println(collect, with_endl, format, args);
 }
 
 
 Log
-vlog(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+vlog(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, std::format_args args)
 {
 	return Logging::do_log(clears, wakeup, async, info, stacked, once, priority, std::move(eptr), callstack, function, filename, line, format, args);
 }
@@ -185,7 +185,7 @@ Log::operator=(Log&& o)
 
 
 void
-Log::vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
+Log::vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, std::format_args args)
 {
 	if (log) {
 		log->vunlog(_priority, _callstack, _function, _filename, _line, format, args);
@@ -711,7 +711,7 @@ Logging::operator()()
 
 
 void
-Logging::vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, fmt::format_args args)
+Logging::vunlog(int _priority, void** _callstack, const char* _function, const char* _filename, int _line, std::string_view format, std::format_args args)
 {
 	unlog_priority = _priority;
 	unlog_callstack = _callstack;
@@ -719,7 +719,7 @@ Logging::vunlog(int _priority, void** _callstack, const char* _function, const c
 	unlog_filename = _filename;
 	unlog_line = _line;
 	try {
-		unlog_str = fmt::vformat(format, args);
+		unlog_str = std::vformat(format, args);
 	} catch(...) {
 		L_EXC("Cannot format {}", repr(format));
 		unlog_str = format;
@@ -728,11 +728,11 @@ Logging::vunlog(int _priority, void** _callstack, const char* _function, const c
 
 
 void
-Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::format_args args)
+Logging::do_println(bool collect, bool with_endl, std::string_view format, std::format_args args)
 {
 	std::string str;
 	try {
-		str = fmt::vformat(format, args);
+		str = std::vformat(format, args);
 	} catch(...) {
 		L_EXC("Cannot format {}", repr(format));
 		str = format;
@@ -747,12 +747,12 @@ Logging::do_println(bool collect, bool with_endl, std::string_view format, fmt::
 
 
 Log
-Logging::do_log(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, fmt::format_args args)
+Logging::do_log(bool clears, std::chrono::steady_clock::time_point wakeup, bool async, bool info, bool stacked, uint64_t once, int priority, std::exception_ptr&& eptr, void** callstack, const char* function, const char* filename, int line, std::string_view format, std::format_args args)
 {
 	if (priority <= log_level) {
 		std::string str;
 		try {
-			str = fmt::vformat(format, args);
+			str = std::vformat(format, args);
 		} catch(...) {
 			L_EXC("Cannot format {}", repr(format));
 			str = format;

@@ -26,7 +26,7 @@
 #include <type_traits>       // for std::enable_if_t
 #include <utility>           // for std::forward, std::move
 
-#include "fmt/format.h"      // for fmt::formatter
+#include <format>            // for std::formatter
 
 
 template <typename F, std::enable_if_t<std::is_invocable<F&>::value, int> = 0>
@@ -68,9 +68,9 @@ public:
 
 
 template <typename L>
-struct fmt::formatter<lazy_eval<L>> : fmt::formatter<typename lazy_eval<L>::type> {
-	auto format(const lazy_eval<L>& val, format_context& ctx) {
-		return fmt::formatter<typename lazy_eval<L>::type>::format(val(), ctx);
+struct std::formatter<lazy_eval<L>> : std::formatter<typename lazy_eval<L>::type> {
+	auto format(const lazy_eval<L>& val, std::format_context& ctx) const {
+		return std::formatter<typename lazy_eval<L>::type>::format(val(), ctx);
 	}
 };
 

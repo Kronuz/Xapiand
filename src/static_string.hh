@@ -32,13 +32,19 @@
 
 #include <cassert>            // for assert
 #include <cstddef>            // for std::size_t
-#include <iostream>
 #include <string>             // for std::string
 #include <string_view>        // for std::string_view
 #include <type_traits>
 #include <utility>
 
-#include "fmt/format.h"       // for fmt::formatter
+// Optional std::format support: when compiled as C++20 (with <format>), provide
+// a std::formatter so static_string values work directly in std::format(...).
+// It is only a convenience; static_string also converts implicitly to
+// std::string_view. Disable with STATIC_STRING_NO_FORMAT.
+#if !defined(STATIC_STRING_NO_FORMAT) && defined(__cpp_lib_format) && __has_include(<format>)
+#  include <format>
+#  define STATIC_STRING_HAS_FORMAT 1
+#endif
 
 
 namespace static_string {
@@ -281,11 +287,13 @@ std::string operator+(const TL& l, const static_string<NR, TR>& r)
 } // namespace static_string
 
 
+#ifdef STATIC_STRING_HAS_FORMAT
 template <std::size_t N, typename T>
-struct fmt::formatter<static_string::static_string<N, T>> : fmt::formatter<std::string_view> {
-	auto format(const static_string::static_string<N, T>& val, format_context& ctx) {
-		return fmt::formatter<std::string_view>::format(std::string_view(val.data(), val.size()), ctx);
+struct std::formatter<static_string::static_string<N, T>> : std::formatter<std::string_view> {
+	auto format(const static_string::static_string<N, T>& val, std::format_context& ctx) const {
+		return std::formatter<std::string_view>::format(std::string_view(val.data(), val.size()), ctx);
 	}
 };
+#endif
 
 #endif // STATIC_STRING_HH
