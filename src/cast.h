@@ -27,7 +27,7 @@
 #include "database/utils.h"      // for get_hashed
 #include "msgpack.h"             // for MsgPack
 #include "enum.h"                // for ENUM_CLASS
-#include "reserved/schema.h"     // for RESERVED_CHAI
+#include "reserved/schema.h"     // for RESERVED_LUA
 #include "reserved/types.h"      // for RESERVED_BOOLEAN, ...
 
 
@@ -63,7 +63,7 @@ namespace Cast {
 		OPTION(MULTICHULL) \
 		OPTION(GEO_COLLECTION) \
 		OPTION(GEO_INTERSECTION) \
-		OPTION(CHAI)
+		OPTION(LUA)
 
 	constexpr static auto cast_hash = phf::make_phf({
 		#define OPTION(name) hh(RESERVED_##name),

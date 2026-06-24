@@ -59,7 +59,7 @@
 #include "aggregations/bucket.h"
 #include "aggregations/metrics.h"
 #include "booleanParser/BooleanParser.h"
-#include "chaipp/chaipp.h"
+#include "lua/processor.h"
 #include "cuuid/uuid.h"
 #include "geospatial/geometry.h"
 #include "geospatial/geospatial.h"
@@ -346,9 +346,9 @@ CHECK_MAX_SIZE(SMALL, (ReplicationProtocolClient))
 // server/discovery.h
 CHECK_MAX_SIZE(SMALL, (Discovery))
 
-#if XAPIAND_CHAISCRIPT
-// chaipp/chaipp.h
-CHECK_MAX_SIZE(SMALL, (chaipp::Processor))
+#if XAPIAND_LUA
+// lua/processor.h
+CHECK_MAX_SIZE(SMALL, (lua::Processor))
 #endif
 
 }

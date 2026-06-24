@@ -58,7 +58,7 @@ option(TRACEBACKS    "Enable tracebacks (on by default in Debug)"   OFF)
 option(ASSERTS       "Enable asserts (on by default in Debug)"      OFF)
 option(TRACKED_MEM   "Enable tracked memory allocator"              OFF)
 option(CHECK_IO_FDES "Check file descriptors"                       OFF)
-option(CHAISCRIPT    "Enable ChaiScript engine"                      ON)
+option(LUA           "Enable Lua scripting engine"               ON)
 option(UUID_ENCODED  "Allow encoded (base59) as UUID encoding"       ON)
 option(UUID_GUID     "Allow GUID as UUID encoding"                  OFF)
 option(UUID_URN      "Allow URN as UUID encoding"                   OFF)
@@ -67,7 +67,7 @@ option(CHECK_SIZES   "Print the objects sizes"                      OFF)
 option(LTO           "Link Time Optimizations"                       ON)
 
 
-foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES CHAISCRIPT UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
+foreach (opt CLUSTERING DATABASE_WAL DATA_STORAGE TRACEBACKS ASSERTS TRACKED_MEM CHECK_IO_FDES LUA UUID_ENCODED UUID_GUID UUID_URN RANDOM_ERRORS CHECK_SIZES LTO)
 	if (${opt})
 		set ("XAPIAND_${opt}" 1)
 		message(STATUS "Option ${opt} - on")
@@ -444,9 +444,9 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
 
 ########################################################################
-# Lua + sol2 — the document-scripting engine (replaces vendored ChaiScript)
+# Lua + sol2 — the document-scripting engine
 ########################################################################
-if(CHAISCRIPT)
+if(LUA)
 	# Lua 5.4: official sources ship no CMake, so build a static object lib from
 	# src/*.c (minus the interpreter/compiler driver mains).
 	FetchContent_Declare(lua URL https://www.lua.org/ftp/lua-5.4.7.tar.gz)
@@ -724,7 +724,7 @@ add_library(XAPIAND_PACKAGE_OBJ OBJECT ${XAPIAND_PACKAGE_SRC_LIST})
 
 file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/*.c*" "${PROJECT_SOURCE_DIR}/src/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/chaipp/*.c*" "${PROJECT_SOURCE_DIR}/src/chaipp/*.h*"
+	"${PROJECT_SOURCE_DIR}/src/lua/*.c*" "${PROJECT_SOURCE_DIR}/src/lua/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/database/*.c*" "${PROJECT_SOURCE_DIR}/src/database/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/aggregations/*.c*" "${PROJECT_SOURCE_DIR}/src/aggregations/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/geospatial/*.c*" "${PROJECT_SOURCE_DIR}/src/geo/*.h*"

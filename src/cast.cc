@@ -412,7 +412,7 @@ Cast::get_field_type(std::string_view cast_word)
 		case HashType::MULTICHULL:        return FieldType::geo;
 		case HashType::GEO_COLLECTION:    return FieldType::geo;
 		case HashType::GEO_INTERSECTION:  return FieldType::geo;
-		case HashType::CHAI:              return FieldType::script;
+		case HashType::LUA:              return FieldType::script;
 		default:
 			THROW(CastError, "Unknown cast type {}", repr(cast_word));
 	}

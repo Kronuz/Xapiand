@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "config.h"                               // for XAPIAND_CHAISCRIPT, XAPIAND_UUID...
+#include "config.h"                               // for XAPIAND_LUA, XAPIAND_UUID...
 
 #include <chrono>                                 // for std::chrono::
 #include <clocale>                                // for std::setlocale, LC_CTYPE
@@ -50,7 +50,7 @@
 #include <unicode/uvernum.h>
 #endif
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 #include <lua.h>                                  // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
 #endif
 
@@ -740,7 +740,7 @@ void banner() {
 
 	std::vector<std::string> values({
 			strings::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 			strings::format("Lua v{}.{}", LUA_VERSION_MAJOR, LUA_VERSION_MINOR),
 #endif
 #ifdef USE_ICU

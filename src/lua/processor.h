@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "config.h"  // for XAPIAND_CHAISCRIPT
+#include "config.h"  // for XAPIAND_LUA
 
-#if XAPIAND_CHAISCRIPT
+#if XAPIAND_LUA
 
 #include <memory>            // for std::shared_ptr
 #include <mutex>             // for std::mutex
@@ -33,7 +33,7 @@
 // Xapiand's logging system defines a function-like macro `L(...)`, which
 // collides with sol2's pervasive `lua_State* L` members (written as `L(...)` in
 // constructor initializer lists throughout sol2). Shield the sol2 include from
-// it: this is order-independent, so chaipp.h is safe to include after log.h.
+// it: this is order-independent, so processor.h is safe to include after log.h.
 #pragma push_macro("L")
 #undef L
 #include <sol/sol.hpp>       // the Lua (sol2) scripting engine
@@ -43,7 +43,7 @@
 #include "script.h"          // for Script
 
 
-namespace chaipp {
+namespace lua {
 
 // Document-transform scripting, backed by Lua (sol2). A script runs with the
 // globals `_method`, `_doc`, `_old_doc`, and the script's parameters (each by
@@ -52,7 +52,7 @@ namespace chaipp {
 // idiomatic Lua.
 class Processor {
 	size_t hash;
-	sol::state lua;
+	sol::state state;
 	sol::protected_function func;   // the compiled script body
 	MsgPack script_params;
 	std::mutex mtx;                 // a Lua state is not re-entrant; serialize calls
@@ -68,6 +68,6 @@ public:
 	}
 };
 
-}; // End namespace chaipp
+}; // End namespace lua
 
 #endif

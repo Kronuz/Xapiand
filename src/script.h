@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "config.h"                // for XAPIAND_CHAISCRIPT
+#include "config.h"                // for XAPIAND_LUA
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 
 #include <string>
 #include <unordered_map>
@@ -43,7 +43,7 @@ public:
 class Script {
 	enum class Type : uint8_t {
 		EMPTY,
-		CHAI,
+		LUA,
 	};
 
 	Type type;

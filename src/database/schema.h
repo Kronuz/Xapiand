@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"                               // for XAPIAND_CHAISCRIPT
+#include "config.h"                               // for XAPIAND_LUA
 
 #include <array>                                  // for std::array
 #include <cstdint>                                // for uint8_t
@@ -337,7 +337,7 @@ struct required_spc_t {
 		bool uuid_field:1;           // Flag if the field is uuid
 		bool uuid_path:1;            // Flag if the paths has uuid fields.
 		bool inside_namespace:1;     // Flag if the field is inside a namespace
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 		bool normalized_script:1;    // Flag if the script is normalized.
 #endif
 
@@ -506,7 +506,7 @@ struct specification_t : required_spc_t {
 	std::unique_ptr<const MsgPack> value_rec;
 	std::unique_ptr<const MsgPack> value;
 	std::unique_ptr<const MsgPack> doc_acc;
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	std::unique_ptr<const MsgPack> script;
 #endif
 
@@ -916,14 +916,14 @@ class Schema {
 	void consistency_text_detection(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_uuid_detection(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_namespace(std::string_view prop_name, const MsgPack& prop_obj);
-	void consistency_chai(std::string_view prop_name, const MsgPack& prop_obj);
+	void consistency_lua(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_ecma(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_script(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_schema(std::string_view prop_name, const MsgPack& prop_obj);
 	void consistency_settings(std::string_view prop_name, const MsgPack& prop_obj);
 
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	/*
 	 * Auxiliar functions for RESERVED_SCRIPT.
 	 */

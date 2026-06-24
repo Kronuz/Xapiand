@@ -20,16 +20,16 @@
  * THE SOFTWARE.
  */
 
-#include "chaipp.h"
+#include "processor.h"
 
-#if XAPIAND_CHAISCRIPT
+#if XAPIAND_LUA
 
 #include <cstdint>                                // for int64_t
 #include <functional>                             // for std::hash
 #include <string>
 #include <string_view>
 
-#include "chaipp/exception.h"                     // for chaipp::ScriptSyntaxError
+#include "lua/exception.h"                        // for lua::ScriptSyntaxError
 #include "database/handler.h"                     // for DatabaseHandler
 #include "exception.h"                            // for ClientError, THROW
 #include "log.h"                                  // for L_ERR, L_INFO
@@ -39,7 +39,7 @@
 #include "repr.hh"                                // for repr
 #include "url_parser.h"                           // for urldecode
 
-namespace chaipp {
+namespace lua {
 
 namespace internal {
 
@@ -50,37 +50,37 @@ namespace internal {
 // after the script runs. This keeps scripts idiomatic Lua and removes the need to
 // bind the MsgPack type into the engine.
 
-static sol::object msgpack_to_lua(sol::state_view lua, const MsgPack& m) {
+static sol::object msgpack_to_lua(sol::state_view state, const MsgPack& m) {
 	switch (m.get_type()) {
 		case MsgPack::Type::MAP: {
-			sol::table t = lua.create_table();
+			sol::table t = state.create_table();
 			for (auto it = m.begin(); it != m.end(); ++it) {
-				t[it->str()] = msgpack_to_lua(lua, it.value());
+				t[it->str()] = msgpack_to_lua(state, it.value());
 			}
 			return t;
 		}
 		case MsgPack::Type::ARRAY: {
-			sol::table t = lua.create_table();
+			sol::table t = state.create_table();
 			lua_Integer i = 1;
 			for (auto it = m.begin(); it != m.end(); ++it) {
-				t[i++] = msgpack_to_lua(lua, it.value());
+				t[i++] = msgpack_to_lua(state, it.value());
 			}
 			return t;
 		}
 		case MsgPack::Type::STR:
-			return sol::make_object(lua, m.str_view());
+			return sol::make_object(state, m.str_view());
 		case MsgPack::Type::BOOLEAN:
-			return sol::make_object(lua, m.boolean());
+			return sol::make_object(state, m.boolean());
 		case MsgPack::Type::POSITIVE_INTEGER:
-			return sol::make_object(lua, static_cast<lua_Integer>(m.u64()));
+			return sol::make_object(state, static_cast<lua_Integer>(m.u64()));
 		case MsgPack::Type::NEGATIVE_INTEGER:
-			return sol::make_object(lua, static_cast<lua_Integer>(m.i64()));
+			return sol::make_object(state, static_cast<lua_Integer>(m.i64()));
 		case MsgPack::Type::FLOAT:
-			return sol::make_object(lua, m.f64());
+			return sol::make_object(state, m.f64());
 		case MsgPack::Type::NIL:
 		case MsgPack::Type::UNDEFINED:
 		default:
-			return sol::make_object(lua, sol::lua_nil);
+			return sol::make_object(state, sol::lua_nil);
 	}
 }
 
@@ -225,7 +225,7 @@ Processor::Processor(const Script& script)
 {
 	// A safe subset of the Lua standard library: enough to transform documents,
 	// without io/os (no filesystem or process access from a script).
-	lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table, sol::lib::math, sol::lib::utf8);
+	state.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table, sol::lib::math, sol::lib::utf8);
 
 	auto sep_type = script.get_types();
 
@@ -276,7 +276,7 @@ Processor::Processor(const Script& script)
 
 	script_params.lock();
 
-	sol::load_result loaded = lua.load(script_body, std::string(script_name));
+	sol::load_result loaded = state.load(script_body, std::string(script_name));
 	if (!loaded.valid()) {
 		sol::error err = loaded;
 		THROW(ClientError, "Script {} syntax error: {}", repr(script_name), err.what());
@@ -293,7 +293,7 @@ Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_
 {
 	std::lock_guard<std::mutex> lk(mtx);
 
-	sol::state_view view(lua);
+	sol::state_view view(state);
 
 	view["_method"] = std::string(method);
 	view["_doc"] = internal::msgpack_to_lua(view, doc);
@@ -325,6 +325,6 @@ Processor::compile(const Script& script)
 }
 
 
-}; // End namespace chaipp
+}; // End namespace lua
 
 #endif

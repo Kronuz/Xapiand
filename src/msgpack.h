@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "config.h"              // for XAPIAND_CHAISCRIPT
+#include "config.h"              // for XAPIAND_LUA
 
 #include "likely.h"              // for likely, unlikely
 

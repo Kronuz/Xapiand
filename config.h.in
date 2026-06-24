@@ -264,8 +264,8 @@
 #cmakedefine UUID_CFUUID @UUID_CFUUID@
 #cmakedefine UUID_FREEBSD @UUID_FREEBSD@
 
-/* Enable CHAISCRIPT engine */
-#cmakedefine XAPIAND_CHAISCRIPT @XAPIAND_CHAISCRIPT@
+/* Enable Lua scripting engine */
+#cmakedefine XAPIAND_LUA @XAPIAND_LUA@
 
 #cmakedefine XAPIAND_UUID_ENCODED @XAPIAND_UUID_ENCODED@
 #cmakedefine XAPIAND_UUID_GUID @XAPIAND_UUID_GUID@

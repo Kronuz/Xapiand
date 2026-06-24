@@ -1910,7 +1910,7 @@ required_spc_t::flags_t::flags_t()
 	  uuid_field(false),
 	  uuid_path(false),
 	  inside_namespace(false),
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	  normalized_script(false),
 #endif
 	  has_uuid_prefix(false),
@@ -2069,7 +2069,7 @@ required_spc_t::to_obj() const
 	obj_flags["uuid_field"] = flags.uuid_field;
 	obj_flags["uuid_path"] = flags.uuid_path;
 	obj_flags["inside_namespace"] = flags.inside_namespace;
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	obj_flags["normalized_script"] = flags.normalized_script;
 #endif
 	obj_flags["has_uuid_prefix"] = flags.has_uuid_prefix;
@@ -2162,7 +2162,7 @@ specification_t::specification_t(const specification_t& o)
 	  value_rec(o.value_rec ? std::make_unique<const MsgPack>(*o.value_rec) : nullptr),
 	  value(o.value ? std::make_unique<const MsgPack>(*o.value) : nullptr),
 	  doc_acc(o.doc_acc ? std::make_unique<const MsgPack>(*o.doc_acc) : nullptr),
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	  script(o.script ? std::make_unique<const MsgPack>(*o.script) : nullptr),
 #endif
 	  endpoint(o.endpoint),
@@ -2186,7 +2186,7 @@ specification_t::specification_t(specification_t&& o) noexcept
 	  value_rec(std::move(o.value_rec)),
 	  value(std::move(o.value)),
 	  doc_acc(std::move(o.doc_acc)),
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	  script(std::move(o.script)),
 #endif
 	  endpoint(std::move(o.endpoint)),
@@ -2211,7 +2211,7 @@ specification_t::operator=(const specification_t& o)
 	value_rec = o.value_rec ? std::make_unique<const MsgPack>(*o.value_rec) : nullptr;
 	value = o.value ? std::make_unique<const MsgPack>(*o.value) : nullptr;
 	doc_acc = o.doc_acc ? std::make_unique<const MsgPack>(*o.doc_acc) : nullptr;
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	script = o.script ? std::make_unique<const MsgPack>(*o.script) : nullptr;
 #endif
 	endpoint = o.endpoint;
@@ -2239,7 +2239,7 @@ specification_t::operator=(specification_t&& o) noexcept
 	value_rec = std::move(o.value_rec);
 	value = std::move(o.value);
 	doc_acc = std::move(o.doc_acc);
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	script = std::move(o.script);
 #endif
 	endpoint = std::move(o.endpoint);
@@ -2398,7 +2398,7 @@ specification_t::to_obj() const
 	obj["value_rec"] = value_rec ? value_rec->to_string() : MsgPack::NIL();
 	obj["value"] = value ? value->to_string() : MsgPack::NIL();
 	obj["doc_acc"] = doc_acc ? doc_acc->to_string() : MsgPack::NIL();
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	obj["script"] = script ? script->to_string() : MsgPack::NIL();
 #endif
 
@@ -2887,7 +2887,7 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 			term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 		}
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 		std::unique_ptr<MsgPack> mut_object;
 		if (specification.script) {
 			mut_object = db_handler.call_script(object, term_id, *specification.script, data);
@@ -5914,7 +5914,7 @@ Schema::dispatch_process_concrete_properties(const MsgPack& object, Fields& fiel
 		}
 	}
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	normalize_script();
 #endif
 }
@@ -5946,7 +5946,7 @@ Schema::dispatch_process_all_properties(const MsgPack& object, Fields& fields, F
 		}
 	}
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	normalize_script();
 #endif
 }
@@ -5989,7 +5989,7 @@ Schema::dispatch_write_concrete_properties(MsgPack& mut_properties, const MsgPac
 		}
 	}
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	write_script(mut_properties);
 #endif
 }
@@ -6428,7 +6428,7 @@ has_dispatch_process_concrete_properties(uint32_t key)
 		hh(RESERVED_MULTICHULL),
 		hh(RESERVED_GEO_COLLECTION),
 		hh(RESERVED_GEO_INTERSECTION),
-		hh(RESERVED_CHAI),
+		hh(RESERVED_LUA),
 		// Next functions only check the consistency of user provided data.
 		hh(RESERVED_SLOT),
 		hh(RESERVED_NGRAM),
@@ -6505,7 +6505,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		hh(RESERVED_MULTICHULL),
 		hh(RESERVED_GEO_COLLECTION),
 		hh(RESERVED_GEO_INTERSECTION),
-		hh(RESERVED_CHAI),
+		hh(RESERVED_LUA),
 		// Next functions only check the consistency of user provided data.
 		hh(RESERVED_SLOT),
 		hh(RESERVED_NGRAM),
@@ -6652,7 +6652,7 @@ Schema::_dispatch_process_concrete_properties(uint32_t key, std::string_view pro
 		case _.fhh(RESERVED_GEO_INTERSECTION):
 			Schema::process_cast_object(prop_name, value);
 			return true;
-		case _.fhh(RESERVED_CHAI):
+		case _.fhh(RESERVED_LUA):
 			Schema::process_cast_object(prop_name, value);
 			return true;
 		// Next functions only check the consistency of user provided data.
@@ -6768,7 +6768,7 @@ Schema::dispatch_write_all_properties(MsgPack& mut_properties, const MsgPack& ob
 		}
 	}
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	write_script(mut_properties);
 #endif
 }
@@ -7492,7 +7492,7 @@ Schema::feed_script([[maybe_unused]] const MsgPack& prop_obj)
 {
 	L_CALL("Schema::feed_script({})", repr(prop_obj.to_string()));
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	specification.script = std::make_unique<const MsgPack>(prop_obj);
 	specification.flags.normalized_script = true;
 #else
@@ -8418,7 +8418,7 @@ Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPa
 	// RESERVED_SCRIPT isn't heritable.
 	L_CALL("Schema::process_script({})", repr(prop_obj.to_string()));
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	specification.script = std::make_unique<const MsgPack>(prop_obj);
 	specification.flags.normalized_script = false;
 #else
@@ -9095,7 +9095,7 @@ Schema::consistency_settings(std::string_view prop_name, const MsgPack& prop_obj
 }
 
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 inline void
 Schema::write_script(MsgPack& mut_properties)
 {

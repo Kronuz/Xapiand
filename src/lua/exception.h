@@ -26,7 +26,7 @@
 #include <string>       // for string
 
 
-namespace chaipp {
+namespace lua {
 
 class Error : public std::runtime_error {
 	using std::runtime_error::runtime_error;
@@ -56,4 +56,4 @@ public:
 	explicit InvalidArgument(const std::string& what_arg) : Error(what_arg) { }
 };
 
-}; // End namespace chaipp
+}; // End namespace lua

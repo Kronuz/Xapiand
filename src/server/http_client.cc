@@ -22,7 +22,7 @@
 
 #include "http_client.h"
 
-#include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_CHAISCRIPT, XAPIAND_DATABASE_WAL
+#include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
 #include <cassert>                          // for assert
 #include <errno.h>                          // for errno
@@ -38,7 +38,7 @@
 #include <unicode/uvernum.h>
 #endif
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 #include <lua.h>                              // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
@@ -1365,7 +1365,7 @@ HttpClient::node_obj()
 		{ "versions", {
 			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : strings::format("{}_{}", Package::VERSION, Package::REVISION) },
 			{ "Xapian", strings::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 			{ "Lua", LUA_VERSION_MAJOR "." LUA_VERSION_MINOR },
 #endif
 #ifdef USE_ICU

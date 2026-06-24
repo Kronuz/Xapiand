@@ -30,7 +30,7 @@
 #include <utility>                          // for std::move
 
 #include "cast.h"                           // for Cast
-#include "chaipp/exception.h"               // for chaipp::Error
+#include "lua/exception.h"               // for lua::Error
 #include "database/lock.h"                  // for lock_shard
 #include "database/schema.h"                // for Schema, required_spc_t
 #include "database/schemas_lru.h"           // for SchemasLRU
@@ -61,8 +61,8 @@
 #include "serialise.h"                      // for cast, serialise, type
 #include "server/http_utils.h"              // for catch_http_errors
 
-#ifdef XAPIAND_CHAISCRIPT
-#include "chaipp/chaipp.h"                  // for chaipp namespace
+#ifdef XAPIAND_LUA
+#include "lua/processor.h"                  // for lua namespace
 #endif
 
 
@@ -298,8 +298,8 @@ DatabaseHandler::check()
 std::unique_ptr<MsgPack>
 DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, const Script& script, const Data& data)
 {
-#ifdef XAPIAND_CHAISCRIPT
-	auto processor = chaipp::Processor::compile(script);
+#ifdef XAPIAND_LUA
+	auto processor = lua::Processor::compile(script);
 	if (processor) {
 		std::string method;  // TODO: Fill vriable "method" to pass to script
 
@@ -326,7 +326,7 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 	}
 	return nullptr;
 #else
-	THROW(ClientError, "Script type 'chai' (Lua scripting) not available.");
+	THROW(ClientError, "Script type 'lua' (Lua scripting) not available.");
 #endif
 }
 

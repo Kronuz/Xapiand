@@ -23,9 +23,9 @@
 #include "script.h"
 
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 
-#include "chaipp/chaipp.h"
+#include "lua/processor.h"
 #include "hash/md5.h"
 #include "reserved/schema.h"
 #include "serialise.h"
@@ -49,7 +49,7 @@ Script::Script(const MsgPack& _obj)
 				constexpr static auto _ = phf::make_phf({
 					hh(RESERVED_TYPE),
 					hh(RESERVED_VALUE),
-					hh(RESERVED_CHAI),
+					hh(RESERVED_LUA),
 					hh(RESERVED_BODY),
 					hh(RESERVED_NAME),
 					hh(RESERVED_PARAMS),
@@ -65,8 +65,8 @@ Script::Script(const MsgPack& _obj)
 					case _.fhh(RESERVED_VALUE):
 						process_value(val);
 						break;
-					case _.fhh(RESERVED_CHAI):
-						type = Type::CHAI;
+					case _.fhh(RESERVED_LUA):
+						type = Type::LUA;
 						process_value(val);
 						break;
 					case _.fhh(RESERVED_BODY):
@@ -97,7 +97,7 @@ Script::Script(const MsgPack& _obj)
 						if (_sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
 							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_FOREIGN, RESERVED_PARAMS);
 						} else {
-							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_CHAI, RESERVED_PARAMS);
+							THROW(ClientError, "{} in '{}' must be one of {}, {} or {}", repr(str_key), RESERVED_VALUE, RESERVED_TYPE, RESERVED_LUA, RESERVED_PARAMS);
 						}
 				}
 			}
@@ -236,11 +236,11 @@ Script::process_script([[maybe_unused]] bool strict) const
 {
 	L_CALL("Script::process_script({})", strict);
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	auto sep_types = get_types(strict);
 
 	if (sep_types[SPC_FOREIGN_TYPE] == FieldType::foreign) {
-		chaipp::Processor::compile(*this);
+		lua::Processor::compile(*this);
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
 			{ RESERVED_FOREIGN, get_endpoint() },
@@ -252,10 +252,10 @@ Script::process_script([[maybe_unused]] bool strict) const
 		return script_data;
 	} else {
 		auto name_body = get_name_body();
-		chaipp::Processor::compile(*this);
+		lua::Processor::compile(*this);
 		MsgPack script_data({
 			{ RESERVED_TYPE, required_spc_t::get_str_type(sep_types) },
-			{ RESERVED_CHAI, {
+			{ RESERVED_LUA, {
 				{ RESERVED_NAME,      name_body.first },
 				{ RESERVED_BODY,      name_body.second },
 			}}
@@ -267,7 +267,7 @@ Script::process_script([[maybe_unused]] bool strict) const
 		return script_data;
 	}
 #else
-	THROW(ClientError, "Script type 'chai' (Lua scripting) not available.");
+	THROW(ClientError, "Script type 'lua' (Lua scripting) not available.");
 #endif
 }
 

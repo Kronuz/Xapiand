@@ -77,7 +77,7 @@ class DatabaseHandler {
 
 	std::shared_ptr<std::unordered_set<std::string>> context;
 
-#ifdef XAPIAND_CHAISCRIPT
+#ifdef XAPIAND_LUA
 	static std::mutex documents_mtx;
 	static std::unordered_map<std::string, std::shared_ptr<std::pair<std::string, const Data>>> documents;
 
