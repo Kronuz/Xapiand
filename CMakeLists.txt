@@ -406,17 +406,31 @@ FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfe
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 1b537db2e41883d81cc06daf0ea3e997d47b7a00)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 36659c7d725becb7bce11e293b530465f0d03d6d)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG ea5cfbb54db957db324a5f08fbb4225ca2dce4d4)
-FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names)
+FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG 7d26e993c076efe88c8801b53605c5b1eb20f413)
+FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG a455f3317967d2c91e0d5c2064e47441dc04dcfb)
+FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 183957c9ccda6591886306a331ee29cf38e30aed)
+# uinteger_t is declared before base_x so base_x's own FetchContent of it dedups
+# to this pinned copy.
+FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names stash uinteger_t base_x)
 
-# These ship header-only and are included as "phf.hh", "split.h", "lru.h",
-# "error.hh" (which pulls "errnos.h"), so put their source dirs on the global
-# include path now that the vendored copies are gone.
+# Header-only libs, included by name ("phf.hh", "split.h", "lru.h", "error.hh"
+# +"errnos.h", "stash.h", "uinteger_t.hh", "base_x.hh"), so put their source dirs
+# on the global include path now that the vendored copies are gone.
 include_directories(
 	"${perfect_hash_SOURCE_DIR}"
 	"${split_SOURCE_DIR}"
 	"${lru_cache_SOURCE_DIR}"
 	"${errno_names_SOURCE_DIR}"
+	"${stash_SOURCE_DIR}"
+	"${uinteger_t_SOURCE_DIR}"
+	"${base_x_SOURCE_DIR}"
 )
+
+# stash traces through injectable hooks (no-op by default). Point it at a small
+# Xapiand trace header that restores the colored, logged output by mapping
+# stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
+# targets (defined below), not the fetched libraries.
+add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
 
 ########################################################################
