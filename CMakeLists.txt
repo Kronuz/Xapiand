@@ -453,6 +453,20 @@ add_compile_definitions(
 	THREADPOOL_THREAD_NAME_PREFIX="Xapiand:"
 )
 
+# scheduler: the timer-wheel scheduler + debouncer, extracted from Xapiand. It is
+# header-driven (scheduler.h, debouncer.h, callable_traits.hh) and builds on stash
+# + threadpool (fetched above). Its random_time helper is provided by Xapiand's
+# own random.cc, so we populate headers only and do NOT compile the library's
+# random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
+# the color palette onto Xapiand's log.h + colors.h.
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 5e780a93a8c464ce75c1a4c856fcc92ab35d3917)
+FetchContent_GetProperties(scheduler)
+if(NOT scheduler_POPULATED)
+	FetchContent_Populate(scheduler)
+endif()
+include_directories("${scheduler_SOURCE_DIR}")
+add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
