@@ -436,6 +436,23 @@ include_directories(
 # like the rest of the tree) rather than via the library's own target.
 add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR}/exception.h")
 
+# threadpool: the thread pool + Thread primitive, extracted from Xapiand. Like
+# located-exception, we compile its one out-of-line file (thread.cc) as part of
+# Xapiand (below) so it picks up Xapiand's config.h and the trace injection,
+# rather than linking the library's own target. The trace header maps the
+# library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
+# prefix restores the "Xapiand:" thread-name prefix.
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 2c48981c9a0f2c3391d337ca552a3ba8f78b1951)
+FetchContent_GetProperties(threadpool)
+if(NOT threadpool_POPULATED)
+	FetchContent_Populate(threadpool)
+endif()
+include_directories("${threadpool_SOURCE_DIR}")
+add_compile_definitions(
+	THREADPOOL_TRACE_HEADER="xapiand_threadpool_trace.h"
+	THREADPOOL_THREAD_NAME_PREFIX="Xapiand:"
+)
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -776,6 +793,8 @@ list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
 # Xapiand (C++20 + std::format), instead of linking its standalone target.
 list(APPEND XAPIAND_SRC_LIST "${located_exception_SOURCE_DIR}/exception.cc")
+# Same for the threadpool library's out-of-line implementation.
+list(APPEND XAPIAND_SRC_LIST "${threadpool_SOURCE_DIR}/thread.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC

@@ -38,8 +38,10 @@
 #include "likely.h"              // for likely, unlikely
 #include "logger.h"
 #include "opts.h"                // for opts::*
+#include "repr.hh"               // for repr
 #include "strict_stox.hh"        // for strict_stoull
 #include "stringified.hh"        // for stringified
+#include "strings.hh"            // for strings::format, strings::from_delta
 #include "thread.hh"             // for ThreadPolicyType::*
 #include "xapian.h"              // for Xapian::DatabaseNotFoundError
 
