@@ -432,9 +432,8 @@ include_directories(
 # (LOCATED_EXCEPTION_HEADER, to avoid the same-name collision that breaks
 # #include_next when the includer lives in src/) and re-adds the Xapiand-specific
 # subclasses (ClientError, etc.) the standalone library drops. The library's
-# exception.cc is compiled as part of Xapiand below (in C++17, so its formatting
-# backend is {fmt}, matching the rest of the tree) rather than via the library's
-# own C++20 target.
+# exception.cc is compiled as part of Xapiand below (C++20, so it uses std::format
+# like the rest of the tree) rather than via the library's own target.
 add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR}/exception.h")
 
 # stash traces through injectable hooks (no-op by default). Point it at a small
@@ -679,11 +678,6 @@ add_library(YAML_OBJ OBJECT ${YAML_SRC_LIST})
 # Xapiand package configuration target
 ########################################################################
 
-file(GLOB FMT_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/fmt/*.c*" "${PROJECT_SOURCE_DIR}/src/fmt/*.h*"
-)
-add_library(FMT_OBJ OBJECT ${FMT_SRC_LIST})
-
 
 ########################################################################
 # Xapiand package configuration target
@@ -716,7 +710,7 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
-# Xapiand (C++17 + {fmt}), instead of linking its standalone C++20 target.
+# Xapiand (C++20 + std::format), instead of linking its standalone target.
 list(APPEND XAPIAND_SRC_LIST "${located_exception_SOURCE_DIR}/exception.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
@@ -753,7 +747,6 @@ target_link_libraries(${PROJECT_NAME}
 	CUUID_OBJ
 	PROMETHEUS_OBJ
 	YAML_OBJ
-	FMT_OBJ
 )
 
 
@@ -838,7 +831,7 @@ endif ()
 ########################################################################
 
 # Add compiler flags.
-add_required_cxx_compiler_flag("-std=c++17")
+add_required_cxx_compiler_flag("-std=c++20")
 add_cxx_compiler_flag("-fno-common")
 
 if (XAPIAND_LTO)
@@ -1368,7 +1361,6 @@ if (BUILD_TESTS)
 				CUUID_OBJ
 				PROMETHEUS_OBJ
 				YAML_OBJ
-				FMT_OBJ
 			)
 
 			target_include_directories(${PROJECT_TEST} PRIVATE ${GTEST_INCLUDE_DIRS})

@@ -32,7 +32,7 @@
 #include <vector>             // for std::vector
 
 #include "chars.hh"           // for chars::tolower
-#include "fmt/format.h"       // for fmt::format
+#include <format>             // for std::vformat
 #include "log.h"              // for L_DEBUG_TRY
 #include "repr.hh"            // for repr
 #include "split.h"            // for Split
@@ -143,7 +143,7 @@ template <typename... Args>
 inline std::string format(std::string_view format, Args&&... args) {
 	std::string str;
 	try {
-		str = fmt::format(format, std::forward<Args>(args)...);
+		str = std::vformat(format, std::make_format_args(args...));
 	} catch(...) {
 		L_EXC("Cannot format {}", repr(format));
 		str = format;
