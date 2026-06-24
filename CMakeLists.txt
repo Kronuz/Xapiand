@@ -489,6 +489,20 @@ include_directories(
 	"${hashes_SOURCE_DIR}"          # hashes.hh
 )
 
+# term-color: compile-time ANSI color palette, extracted from Xapiand. The
+# library ships only the palette + escape machinery; Xapiand keeps a thin
+# src/colors.h wrapper that re-adds its colored-logging shortcut macros (L_RED,
+# ...). The wrapper pulls the palette by absolute path (TERM_COLOR_PALETTE_HEADER)
+# to avoid the same-name collision, the way located-exception is wired. ansi_color.hh
+# and color_tools.hh are consumed directly from the library's dir on the path.
+FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG c312b0a43a6d8d86c03545bd94b38c18312a957c)
+FetchContent_GetProperties(term_color)
+if(NOT term_color_POPULATED)
+	FetchContent_Populate(term_color)
+endif()
+include_directories("${term_color_SOURCE_DIR}")
+add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colors.h")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
