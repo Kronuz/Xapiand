@@ -543,6 +543,18 @@ collect_callstack_sig_handler(int /*signum*/, siginfo_t* /*info*/, void* ptr)
 	#else
 		#error Unsupported OS.
 	#endif
+#elif defined(__aarch64__) || defined(__arm64__)
+	// On AArch64 the frame pointer is x29; the frame record it points at is
+	// { saved x29, saved x30 (return address) }, matching `frameinfo`.
+	#if defined(__FreeBSD__)
+		auto frame = uc ? ((const frameinfo*)uc->uc_mcontext.mc_gpregs.gp_x[29]) : nullptr;
+	#elif defined(__linux__)
+		auto frame = uc ? ((const frameinfo*)uc->uc_mcontext.regs[29]) : nullptr;
+	#elif defined(__APPLE__)
+		auto frame = uc && uc->uc_mcontext ? ((const frameinfo*)uc->uc_mcontext->__ss.__fp) : nullptr;
+	#else
+		#error Unsupported OS.
+	#endif
 #else
 	#error Unsupported architecture.
 #endif

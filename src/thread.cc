@@ -45,6 +45,7 @@ static std::unordered_map<std::thread::id, std::string> thread_names;
 
 
 #ifdef __APPLE__
+#if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>
 int
 sched_getcpu()
@@ -57,6 +58,16 @@ sched_getcpu()
 	// info[1] is EBX, bits 24-31 are APIC ID
 	return (unsigned)info[1] >> 24;
 }
+#else
+int
+sched_getcpu()
+{
+	// Apple Silicon (and other non-x86 macOS): there is no reliable way to read
+	// the current CPU from user space, so report "unknown". Callers treat a
+	// negative result as "don't know".
+	return -1;
+}
+#endif
 #endif
 
 
