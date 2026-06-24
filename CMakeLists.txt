@@ -444,6 +444,36 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 
 
 ########################################################################
+# Lua + sol2 — the document-scripting engine (replaces vendored ChaiScript)
+########################################################################
+if(CHAISCRIPT)
+	# Lua 5.4: official sources ship no CMake, so build a static object lib from
+	# src/*.c (minus the interpreter/compiler driver mains).
+	FetchContent_Declare(lua URL https://www.lua.org/ftp/lua-5.4.7.tar.gz)
+	FetchContent_MakeAvailable(lua)
+	file(GLOB LUA_SRC_LIST "${lua_SOURCE_DIR}/src/*.c")
+	list(REMOVE_ITEM LUA_SRC_LIST
+		"${lua_SOURCE_DIR}/src/lua.c"
+		"${lua_SOURCE_DIR}/src/luac.c"
+		"${lua_SOURCE_DIR}/src/onelua.c")
+	add_library(LUA_OBJ OBJECT ${LUA_SRC_LIST})
+	target_include_directories(LUA_OBJ PUBLIC "${lua_SOURCE_DIR}/src")
+
+	# sol2: header-only C++ binding; use its headers directly.
+	FetchContent_Declare(sol2 GIT_REPOSITORY https://github.com/ThePhD/sol2.git GIT_TAG develop)
+	FetchContent_GetProperties(sol2)
+	if(NOT sol2_POPULATED)
+		FetchContent_Populate(sol2)
+	endif()
+
+	include_directories(
+		"${lua_SOURCE_DIR}/src"
+		"${sol2_SOURCE_DIR}/include"
+	)
+endif()
+
+
+########################################################################
 # Xapian library target
 ########################################################################
 
@@ -747,6 +777,7 @@ target_link_libraries(${PROJECT_NAME}
 	CUUID_OBJ
 	PROMETHEUS_OBJ
 	YAML_OBJ
+	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 )
 
 

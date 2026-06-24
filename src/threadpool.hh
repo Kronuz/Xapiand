@@ -269,7 +269,7 @@ public:
 
 	template <typename Func, typename... Args>
 	auto package(Func&& func, Args&&... args) {
-		auto packaged_task = PackagedTask<std::result_of_t<Func(Args...)>()>([
+		auto packaged_task = PackagedTask<std::invoke_result_t<Func, Args...>()>([
 			func = std::forward<Func>(func),
 			args = std::make_tuple(std::forward<Args>(args)...)
 		]() mutable {

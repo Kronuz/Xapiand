@@ -326,7 +326,7 @@ DatabaseHandler::call_script(const MsgPack& object, const std::string& term_id, 
 	}
 	return nullptr;
 #else
-	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+	THROW(ClientError, "Script type 'chai' (Lua scripting) not available.");
 #endif
 }
 

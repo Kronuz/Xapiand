@@ -23,6 +23,7 @@
 #ifndef STRINGIFIED_HH
 #define STRINGIFIED_HH
 
+#include <format>                // for std::formatter
 #include <string>                // for std::string
 #include <string_view>           // for std::string_view
 #include <ostream>               // for std::ostream
@@ -139,6 +140,16 @@ public:
 
 	friend std::ostream& operator<<(std::ostream& os, const stringified& obj) {
 		return os << obj._str_view;
+	}
+};
+
+
+// std::format support: a stringified is a string_view wrapper, so format it as one.
+template <>
+struct std::formatter<stringified> : std::formatter<std::string_view> {
+	template <typename Ctx>
+	auto format(const stringified& val, Ctx& ctx) const {
+		return std::formatter<std::string_view>::format(std::string_view(val), ctx);
 	}
 };
 

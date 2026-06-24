@@ -45,10 +45,6 @@
 #include <utility>                               // for std::move
 #include <vector>                                // for std::vector
 
-#ifdef XAPIAND_CHAISCRIPT
-#include "chaiscript/chaiscript_defines.hpp"     // for chaiscript::Build_Info
-#endif
-
 #include "allocators.h"                          // for allocators::total_allocated
 #include "color_tools.hh"                        // for color
 #include "database/cleanup.h"                    // for DatabaseCleanup

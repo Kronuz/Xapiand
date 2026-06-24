@@ -249,5 +249,16 @@ int http_body_is_final(const http_parser *parser);
 
 #ifdef __cplusplus
 }
+
+#include <format>  // for std::formatter
+
+// std::format support: render an http_status as its numeric code (e.g. 200).
+template <>
+struct std::formatter<http_status> : std::formatter<unsigned> {
+	template <typename Ctx>
+	auto format(http_status val, Ctx& ctx) const {
+		return std::formatter<unsigned>::format(static_cast<unsigned>(val), ctx);
+	}
+};
 #endif
 #endif

@@ -24,15 +24,17 @@
 
 #if XAPIAND_CHAISCRIPT
 
+#include <cstdint>                                // for int64_t
 #include <functional>                             // for std::hash
+#include <string>
 #include <string_view>
 
+#include "chaipp/exception.h"                     // for chaipp::ScriptSyntaxError
 #include "database/handler.h"                     // for DatabaseHandler
-#include "exception.h"                            // for chaipp::Error
-#include "log.h"                                  // for L_EXC
+#include "exception.h"                            // for ClientError, THROW
+#include "log.h"                                  // for L_ERR, L_INFO
 #include "lru.h"                                  // for lru::lru
 #include "manager.h"                              // for XapiandManager::*
-#include "module.h"                               // for chaipp::Module
 #include "msgpack.h"                              // for MsgPack
 #include "repr.hh"                                // for repr
 #include "url_parser.h"                           // for urldecode
@@ -40,6 +42,105 @@
 namespace chaipp {
 
 namespace internal {
+
+// --- MsgPack <-> Lua conversion -------------------------------------------
+//
+// The document is handed to scripts as a plain Lua table (objects -> string-keyed
+// tables, arrays -> 1-based tables, scalars -> Lua values) and converted back
+// after the script runs. This keeps scripts idiomatic Lua and removes the need to
+// bind the MsgPack type into the engine.
+
+static sol::object msgpack_to_lua(sol::state_view lua, const MsgPack& m) {
+	switch (m.get_type()) {
+		case MsgPack::Type::MAP: {
+			sol::table t = lua.create_table();
+			for (auto it = m.begin(); it != m.end(); ++it) {
+				t[it->str()] = msgpack_to_lua(lua, it.value());
+			}
+			return t;
+		}
+		case MsgPack::Type::ARRAY: {
+			sol::table t = lua.create_table();
+			lua_Integer i = 1;
+			for (auto it = m.begin(); it != m.end(); ++it) {
+				t[i++] = msgpack_to_lua(lua, it.value());
+			}
+			return t;
+		}
+		case MsgPack::Type::STR:
+			return sol::make_object(lua, m.str_view());
+		case MsgPack::Type::BOOLEAN:
+			return sol::make_object(lua, m.boolean());
+		case MsgPack::Type::POSITIVE_INTEGER:
+			return sol::make_object(lua, static_cast<lua_Integer>(m.u64()));
+		case MsgPack::Type::NEGATIVE_INTEGER:
+			return sol::make_object(lua, static_cast<lua_Integer>(m.i64()));
+		case MsgPack::Type::FLOAT:
+			return sol::make_object(lua, m.f64());
+		case MsgPack::Type::NIL:
+		case MsgPack::Type::UNDEFINED:
+		default:
+			return sol::make_object(lua, sol::lua_nil);
+	}
+}
+
+
+static MsgPack lua_to_msgpack(const sol::object& o) {
+	switch (o.get_type()) {
+		case sol::type::table: {
+			sol::table t = o.as<sol::table>();
+			// A table is an array iff its only keys are the contiguous integers
+			// 1..#t; otherwise it is treated as a map.
+			std::size_t seq = t.size();
+			std::size_t count = 0;
+			bool pure_seq = true;
+			for (auto&& kv : t) {
+				++count;
+				if (kv.first.get_type() != sol::type::number) {
+					pure_seq = false;
+				}
+			}
+			if (pure_seq && seq > 0 && count == seq) {
+				MsgPack arr = MsgPack::ARRAY();
+				for (std::size_t i = 1; i <= seq; ++i) {
+					arr.push_back(lua_to_msgpack(t[i]));
+				}
+				return arr;
+			}
+			MsgPack map = MsgPack::MAP();
+			for (auto&& kv : t) {
+				std::string key;
+				auto kt = kv.first.get_type();
+				if (kt == sol::type::string) {
+					key = kv.first.as<std::string>();
+				} else if (kt == sol::type::number) {
+					key = std::to_string(kv.first.as<lua_Integer>());
+				} else {
+					continue;
+				}
+				map.put(key, lua_to_msgpack(kv.second));
+			}
+			return map;
+		}
+		case sol::type::string:
+			return MsgPack(o.as<std::string>());
+		case sol::type::number: {
+			double d = o.as<double>();
+			auto li = o.as<lua_Integer>();
+			if (static_cast<double>(li) == d) {
+				return MsgPack(static_cast<int64_t>(li));
+			}
+			return MsgPack(d);
+		}
+		case sol::type::boolean:
+			return MsgPack(o.as<bool>());
+		case sol::type::lua_nil:
+		case sol::type::none:
+		default:
+			return MsgPack::NIL();
+	}
+}
+
 
 class ScriptLRU : public lru::lru<std::string, std::shared_ptr<Processor>> {
 public:
@@ -86,7 +187,7 @@ Engine::compile(const Script& script)
 	std::shared_ptr<Processor> processor;
 
 	std::unique_lock<std::mutex> lk(mtx);
-	auto it = script_lru.find(std::string(script_name));  // FIXME: This copies script_name as LRU's std::unordered_map cannot find std::string_view
+	auto it = script_lru.find(std::string(script_name));  // FIXME: copies; LRU map can't find string_view
 	if (it != script_lru.end()) {
 		processor = it->second;
 	}
@@ -120,10 +221,12 @@ Engine::engine() {
 }; // End namespace internal
 
 
-Processor::Processor(const Script& script) :
-	chai(Module::library(),
-	std::make_unique<chaiscript::parser::ChaiScript_Parser<chaiscript::eval::Noop_Tracer, chaiscript::optimizer::Optimizer_Default>>())
+Processor::Processor(const Script& script)
 {
+	// A safe subset of the Lua standard library: enough to transform documents,
+	// without io/os (no filesystem or process access from a script).
+	lua.open_libraries(sol::lib::base, sol::lib::string, sol::lib::table, sol::lib::math, sol::lib::utf8);
+
 	auto sep_type = script.get_types();
 
 	std::string script_name;
@@ -173,8 +276,12 @@ Processor::Processor(const Script& script) :
 
 	script_params.lock();
 
-	ast = chai.get_parser().parse(script_body, script_name);
-	// L_MAGENTA(ast->to_string());
+	sol::load_result loaded = lua.load(script_body, std::string(script_name));
+	if (!loaded.valid()) {
+		sol::error err = loaded;
+		THROW(ClientError, "Script {} syntax error: {}", repr(script_name), err.what());
+	}
+	func = loaded;
 
 	std::hash<std::string_view> hash_fn;
 	hash = hash_fn(script_body);
@@ -184,33 +291,30 @@ Processor::Processor(const Script& script) :
 void
 Processor::operator()(std::string_view method, MsgPack& doc, const MsgPack& old_doc, const MsgPack& params)
 {
-	chai.add(chaiscript::const_var(std::ref(method)), "_method");
+	std::lock_guard<std::mutex> lk(mtx);
 
-	chai.add(chaiscript::var(std::ref(doc)), "_doc");
-	chai.add(chaiscript::const_var(std::ref(old_doc)), "_old_doc");
+	sol::state_view view(lua);
+
+	view["_method"] = std::string(method);
+	view["_doc"] = internal::msgpack_to_lua(view, doc);
+	view["_old_doc"] = internal::msgpack_to_lua(view, old_doc);
 
 	auto merged_params = script_params;
 	merged_params.update(params);
 	for (auto it = merged_params.begin(); it != merged_params.end(); ++it) {
-		chai.add(chaiscript::const_var(std::ref(it.value())), it->str());
+		view[it->str()] = internal::msgpack_to_lua(view, it.value());
 	}
 
-	try {
-		chai.eval(*ast);
-	} catch (chaiscript::Boxed_Value &bv) {
-		try {
-			auto exc = chai.boxed_cast<chaiscript::exception::eval_error>(bv);
-			L_ERR(exc.pretty_print());
-		} catch (const chaiscript::exception::bad_boxed_cast &) {
-			try {
-				auto exc = chai.boxed_cast<std::exception>(bv);
-				L_ERR("Exception: {}", exc.what());
-			} catch (const chaiscript::exception::bad_boxed_cast &exc) {
-				L_ERR("Exception (bad_boxed_cast): {}", exc.what());
-				throw;
-			}
-		}
+	sol::protected_function_result result = func();
+	if (!result.valid()) {
+		sol::error err = result;
+		L_ERR("Script error: {}", err.what());
+		return;  // leave the document unchanged on error
 	}
+
+	// Apply the script's changes back onto the document.
+	sol::object out = view["_doc"];
+	doc = internal::lua_to_msgpack(out);
 }
 
 

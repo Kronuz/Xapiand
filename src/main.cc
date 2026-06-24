@@ -51,7 +51,7 @@
 #endif
 
 #ifdef XAPIAND_CHAISCRIPT
-#include "chaiscript/chaiscript_defines.hpp"      // for chaiscript::Build_Info
+#include <lua.h>                                  // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
 #endif
 
 #include "check_size.h"                           // for check_size
@@ -741,7 +741,7 @@ void banner() {
 	std::vector<std::string> values({
 			strings::format("Xapian v{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()),
 #ifdef XAPIAND_CHAISCRIPT
-			strings::format("ChaiScript v{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()),
+			strings::format("Lua v{}.{}", LUA_VERSION_MAJOR, LUA_VERSION_MINOR),
 #endif
 #ifdef USE_ICU
 			strings::format("ICU v{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM),

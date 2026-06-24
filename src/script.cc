@@ -267,7 +267,7 @@ Script::process_script([[maybe_unused]] bool strict) const
 		return script_data;
 	}
 #else
-	THROW(ClientError, "Script type 'chai' (ChaiScript) not available.");
+	THROW(ClientError, "Script type 'chai' (Lua scripting) not available.");
 #endif
 }
 

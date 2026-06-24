@@ -39,7 +39,7 @@
 #endif
 
 #ifdef XAPIAND_CHAISCRIPT
-#include "chaiscript/chaiscript_defines.hpp"  // for chaiscript::Build_Info
+#include <lua.h>                              // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
 #endif
 #include "cppcodec/base64_rfc4648.hpp"      // for cppcodec::base64_rfc4648
 #include "database/handler.h"               // for DatabaseHandler, DocIndexer
@@ -443,7 +443,7 @@ HttpClient::on_read(const char* buf, ssize_t received)
 
 		auto state = HTTP_PARSER_STATE(&new_request->parser);
 		if (state != s_start_req) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), state, reason);
+			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), enum_name(state), reason);
 			close();
 			return received;
 		}
@@ -1366,7 +1366,7 @@ HttpClient::node_obj()
 			{ "Xapiand", Package::REVISION.empty() ? Package::VERSION : strings::format("{}_{}", Package::VERSION, Package::REVISION) },
 			{ "Xapian", strings::format("{}.{}.{}", Xapian::major_version(), Xapian::minor_version(), Xapian::revision()) },
 #ifdef XAPIAND_CHAISCRIPT
-			{ "ChaiScript", strings::format("{}.{}", chaiscript::Build_Info::version_major(), chaiscript::Build_Info::version_minor()) },
+			{ "Lua", LUA_VERSION_MAJOR "." LUA_VERSION_MINOR },
 #endif
 #ifdef USE_ICU
 			{ "ICU", strings::format("{}.{}", U_ICU_VERSION_MAJOR_NUM, U_ICU_VERSION_MINOR_NUM) },
@@ -3212,7 +3212,7 @@ HttpClient::end_http_request(Request& request)
 			.xapiand_http_requests_summary
 			.Add({
 				{"method", http_method_str(request.method)},
-				{"status", strings::format("{}", request.response.status)},
+				{"status", strings::format("{}", request.response.status.load())},
 			})
 			.Observe(took / 1e9);
 

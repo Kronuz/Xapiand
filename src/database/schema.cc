@@ -7496,7 +7496,7 @@ Schema::feed_script([[maybe_unused]] const MsgPack& prop_obj)
 	specification.script = std::make_unique<const MsgPack>(prop_obj);
 	specification.flags.normalized_script = true;
 #else
-	THROW(ClientError, "{} only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "{} only is allowed when Lua scripting is active", RESERVED_SCRIPT);
 #endif
 }
 
@@ -8422,7 +8422,7 @@ Schema::process_script(std::string_view /*unused*/, [[maybe_unused]] const MsgPa
 	specification.script = std::make_unique<const MsgPack>(prop_obj);
 	specification.flags.normalized_script = false;
 #else
-	THROW(ClientError, "'{}' only is allowed when ChaiScript is actived", RESERVED_SCRIPT);
+	THROW(ClientError, "'{}' only is allowed when Lua scripting is active", RESERVED_SCRIPT);
 #endif
 }
 

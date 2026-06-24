@@ -44,9 +44,6 @@
 #include "xchange/rapidjson.hpp"
 #endif
 #include "xchange/string_view.hpp"
-#if XAPIAND_CHAISCRIPT
-#include "xchange/chaiscript.hpp"
-#endif
 
 
 constexpr size_t  MSGPACK_STR_INIT_SIZE   = 4;
