@@ -393,6 +393,33 @@ link_libraries(
 
 
 ########################################################################
+# Extracted leaf libraries (fetched from their own repositories)
+########################################################################
+# These small, dependency-free utilities were split out of Xapiand into
+# standalone repositories and are now consumed directly instead of being
+# vendored under src/. Pinned to commit SHAs for reproducible builds; bump to a
+# release tag once the libraries cut releases. For offline/hermetic builds, set
+# FETCHCONTENT_SOURCE_DIR_<NAME> (or populate FETCHCONTENT_BASE_DIR) to a local
+# checkout.
+include(FetchContent)
+FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfect-hash.git GIT_TAG 660c416338cdba45c7110053b6cf8258979aecc8)
+FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 1b537db2e41883d81cc06daf0ea3e997d47b7a00)
+FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 36659c7d725becb7bce11e293b530465f0d03d6d)
+FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG ea5cfbb54db957db324a5f08fbb4225ca2dce4d4)
+FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names)
+
+# These ship header-only and are included as "phf.hh", "split.h", "lru.h",
+# "error.hh" (which pulls "errnos.h"), so put their source dirs on the global
+# include path now that the vendored copies are gone.
+include_directories(
+	"${perfect_hash_SOURCE_DIR}"
+	"${split_SOURCE_DIR}"
+	"${lru_cache_SOURCE_DIR}"
+	"${errno_names_SOURCE_DIR}"
+)
+
+
+########################################################################
 # Xapian library target
 ########################################################################
 
