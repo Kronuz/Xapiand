@@ -315,7 +315,7 @@ std::ostream& operator<<(std::ostream& os, const UUID& uuid) {
 
 static inline unsigned char hexPairToChar(const char** ptr) {
 	auto dec = chars::hexdec(ptr);
-	if (dec < 256) {
+	if (dec >= 0) {
 		return dec;
 	}
 	THROW(InvalidArgument, "Invalid UUID string hex character");

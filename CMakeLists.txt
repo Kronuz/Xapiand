@@ -406,7 +406,7 @@ FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfe
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 1b537db2e41883d81cc06daf0ea3e997d47b7a00)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 36659c7d725becb7bce11e293b530465f0d03d6d)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG ea5cfbb54db957db324a5f08fbb4225ca2dce4d4)
-FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG 7d26e993c076efe88c8801b53605c5b1eb20f413)
+FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG 381482a70cf9bd62ee31448c546af4cf43d6e911)
 FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG a455f3317967d2c91e0d5c2064e47441dc04dcfb)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 183957c9ccda6591886306a331ee29cf38e30aed)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG de129160e1da79ea4863e19e7d06c40553c29021)
@@ -442,7 +442,7 @@ add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG 2c48981c9a0f2c3391d337ca552a3ba8f78b1951)
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG e828cb5e23420ff67547131e449b3c103fcc2163)
 FetchContent_GetProperties(threadpool)
 if(NOT threadpool_POPULATED)
 	FetchContent_Populate(threadpool)
@@ -459,7 +459,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 5e780a93a8c464ce75c1a4c856fcc92ab35d3917)
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 10fdda04feb2bd735a4df309504dfe85a9d8a937)
 FetchContent_GetProperties(scheduler)
 if(NOT scheduler_POPULATED)
 	FetchContent_Populate(scheduler)
@@ -472,10 +472,10 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime
 # xxHash fast paths light up automatically because xxhash.h (from lz4) is on the
 # path too.
-FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG 43a2e67a31a10031eb9e0d8bef61c8b6c14cd958)
-FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 8094f0f1e209cd5ca1c4b6ce9a788139f77cdf8e)
+FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG ab7269a00b90f5899ed8ee38aea1c25c16fa24b5)
+FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 58689399d64f97b93132bde291d34c6a99560884)
 FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 599d980cb8253f3b8f1cf20e4aca63681f1a12a6)
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 39dac05d199cc414ab4c5335f9090a64917bedf3)
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 99b46027325de6f131f6f9f0ae9c4d3552c0043b)
 foreach(dep static_string char_classify strict_stox hashes)
 	FetchContent_GetProperties(${dep})
 	if(NOT ${dep}_POPULATED)
@@ -495,7 +495,7 @@ include_directories(
 # ...). The wrapper pulls the palette by absolute path (TERM_COLOR_PALETTE_HEADER)
 # to avoid the same-name collision, the way located-exception is wired. ansi_color.hh
 # and color_tools.hh are consumed directly from the library's dir on the path.
-FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG c312b0a43a6d8d86c03545bd94b38c18312a957c)
+FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 7dfa498071d9cfb1cd5f125c25cc1782f24b0ad9)
 FetchContent_GetProperties(term_color)
 if(NOT term_color_POPULATED)
 	FetchContent_Populate(term_color)
