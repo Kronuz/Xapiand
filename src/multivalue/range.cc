@@ -31,6 +31,7 @@
 #include "cast.h"                                 // for Cast
 #include "database/schema.h"                      // for required_spc_t, FieldType
 #include "datetime.h"                             // for timestamp
+#include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 #include "exception.h"                            // for MSG_QueryParserError, Quer...
 #include "generate_terms.h"                       // for datetime, geo, numeric
 #include "geospatialrange.h"                      // for GeoSpatialRange

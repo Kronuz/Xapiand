@@ -522,6 +522,18 @@ include_directories(
 	"${boolean_parser_SOURCE_DIR}"    # BooleanParser.h, LexicalException.h, ...
 )
 
+# datetime: the pure ISO-8601 + date-math + time/timedelta string parser,
+# extracted from Xapiand. Like located-exception, its datetime.cc compiles as
+# part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
+# Xapiand as src/datetime_msgpack.{h,cc}. datetime.cc uses strict_stox, already
+# on the path.
+FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG 533c7cb70aad16b7e234f964d47b75d6df748b79)
+FetchContent_GetProperties(datetime)
+if(NOT datetime_POPULATED)
+	FetchContent_Populate(datetime)
+endif()
+include_directories("${datetime_SOURCE_DIR}")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -863,6 +875,10 @@ list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 list(APPEND XAPIAND_SRC_LIST "${located_exception_SOURCE_DIR}/exception.cc")
 # Same for the threadpool library's out-of-line implementation.
 list(APPEND XAPIAND_SRC_LIST "${threadpool_SOURCE_DIR}/thread.cc")
+# Same for the datetime library's pure ISO-8601/date-math core; the MsgPack
+# structured-object glue (src/datetime_msgpack.cc) stays in Xapiand and is
+# globbed above.
+list(APPEND XAPIAND_SRC_LIST "${datetime_SOURCE_DIR}/datetime.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC

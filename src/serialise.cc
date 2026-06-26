@@ -21,6 +21,7 @@
  */
 
 #include "serialise.h"
+#include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 
 #include <stdexcept>                                  // for std::out_of_range, std::invalid_argument
 #include <string_view>                                // for std::string_view

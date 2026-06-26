@@ -24,6 +24,7 @@
 
 #include <string>                                 // std::string
 
+#include "datetime.h"                             // for DatetimeError
 #include "exception.h"                            // for Exception
 #include "hashes.hh"                              // for hhl
 #include "log.h"                                  // for L_EXC
@@ -104,6 +105,12 @@ catch_http_errors(Func&& func)
 				http_errors.error = exc.get_description();
 				L_EXC("ERROR: Dispatching HTTP request");
 		}
+	} catch (const DatetimeError& exc) {
+		// DatetimeError is now std::runtime_error-based (it comes from the
+		// standalone datetime library, no longer a ClientError), so catch it
+		// explicitly to keep malformed dates a 400 rather than a 500.
+		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
 	} catch (const ClientError& exc) {
 		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();

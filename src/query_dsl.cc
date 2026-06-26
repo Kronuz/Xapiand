@@ -45,6 +45,7 @@
 #include "reserved/query_dsl.h"                   // for RESERVED_QUERYDSL_*
 #include "reserved/types.h"                       // for RESERVED_POSITIVE,...
 #include "serialise.h"                            // for MsgPack, get_range_type...
+#include "datetime_msgpack.h"          // for the Datetime MsgPack overloads
 #include "stopper.h"                              // for getStopper
 #include "strings.hh"                             // for strings::startswith
 
