@@ -503,6 +503,25 @@ endif()
 include_directories("${term_color_SOURCE_DIR}")
 add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colors.h")
 
+# enum-reflection: reflective ENUM_CLASS (enum <-> string, perfect-hash lookup),
+# extracted from Xapiand. Header-only; enum.h includes phf.hh + hashes.hh, which
+# are already on the include path above. boolean-parser: the boolean-expression
+# query parser (lexer + shunting-yard + AST + RPN), compiled into BOOLEAN_PARSER_OBJ
+# from the fetched sources below. Its headers sit at the repo root with a Boolean
+# prefix on the generic ones, so they go on the include path directly.
+FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG 7aff69f82972771d83fce4007fdcf6cfbf1c1751)
+FetchContent_Declare(boolean_parser  GIT_REPOSITORY https://github.com/Kronuz/boolean-parser.git  GIT_TAG 84cc5513ba5d4cc3c4b1a63967502bd03c0aaab4)
+foreach(dep enum_reflection boolean_parser)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${enum_reflection_SOURCE_DIR}"   # enum.h
+	"${boolean_parser_SOURCE_DIR}"    # BooleanParser.h, LexicalException.h, ...
+)
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -728,9 +747,8 @@ target_link_libraries(XAPIAN_OBJ PUBLIC
 ########################################################################
 
 file(GLOB BOOLEAN_PARSER_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/booleanParser/*.c*" "${PROJECT_SOURCE_DIR}/src/booleanParser/*.h*"
+	"${boolean_parser_SOURCE_DIR}/*.cc"
 )
-list(APPEND BOOLEAN_PARSER_SRC_LIST ${XAPIAN_H_LIST})
 add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 

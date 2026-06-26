@@ -58,7 +58,7 @@
 #include "aggregations/aggregations.h"
 #include "aggregations/bucket.h"
 #include "aggregations/metrics.h"
-#include "booleanParser/BooleanParser.h"
+#include "BooleanParser.h"
 #include "lua/processor.h"
 #include "cuuid/uuid.h"
 #include "geospatial/geometry.h"

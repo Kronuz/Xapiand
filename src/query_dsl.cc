@@ -26,9 +26,9 @@
 #include <strings.h>                              // for strncasecmp
 #include <utility>
 
-#include "booleanParser/BooleanParser.h"          // for BooleanTree
-#include "booleanParser/LexicalException.h"       // for LexicalException
-#include "booleanParser/SyntacticException.h"     // for SyntacticException
+#include "BooleanParser.h"          // for BooleanTree
+#include "LexicalException.h"       // for LexicalException
+#include "SyntacticException.h"     // for SyntacticException
 #include "cast.h"                                 // for Cast
 #include "database/utils.h"                       // for prefixed
 #include "exception.h"                            // for THROW, QueryDslError
