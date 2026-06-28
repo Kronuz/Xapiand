@@ -30,10 +30,11 @@
 #include <thread>                                 // for std::thread
 #include <sysexits.h>                             // for EX_USAGE
 
-#include "cmdoutput.h"                            // for CmdOutput
-#include "tclap/ZshCompletionOutput.h"            // for ZshCompletionOutput (not pulled in by CmdLine.h)
+#include <CLI/CLI.hpp>                            // for CLI::App (command-line parser)
+
 #include "ev/ev++.h"                              // for ev_supported
 #include "hashes.hh"                              // for fnv1ah32
+#include "package.h"                              // for Package::VERSION
 #include "strings.hh"                             // for strings::lower
 
 #define XAPIAND_PID_FILE         "xapiand.pid"
@@ -222,33 +223,39 @@ parseOptions(int argc, char** argv)
 
 	const double hardware_concurrency = std::thread::hardware_concurrency();
 
-	using namespace TCLAP;
+	CLI::App app{"", "xapiand"};
+	app.set_version_flag("--version", std::string(Package::VERSION));
+	app.set_help_flag("-h,--help", "Display usage information and exit.");
+	// Unknown options are an error, as TCLAP enforced. The old ZSH_COMPLETE
+	// zsh-completion path and the manual -Dx / --x=y arg pre-splitting are dropped:
+	// CLI11 has no drop-in zsh equivalent and parses both attached forms natively.
 
 	try {
-		CmdLine cmd("", ' ', Package::VERSION);
-
-		CmdOutput output;
-		ZshCompletionOutput zshoutput;
-
-		if (std::getenv("ZSH_COMPLETE") != nullptr) {
-			cmd.setOutput(&zshoutput);
-		} else {
-			cmd.setOutput(&output);
-		}
+		// Every option binds to a variable named after the old TCLAP arg, so the
+		// value-extraction block below stays valid with the  calls gone.
 
 #ifdef XAPIAND_RANDOM_ERRORS
-		ValueArg<double> random_errors_net("", "random-errors-net", "Inject random network errors with this probability (0-1)", false, 0, "probability", cmd);
-		ValueArg<double> random_errors_io("", "random-errors-io", "Inject random IO errors with this probability (0-1)", false, 0, "probability", cmd);
-		ValueArg<double> random_errors_db("", "random-errors-db", "Inject random database errors with this probability (0-1)", false, 0, "probability", cmd);
+		double random_errors_net = 0;
+		app.add_option("--random-errors-net", random_errors_net, "Inject random network errors with this probability (0-1)");
+		double random_errors_io = 0;
+		app.add_option("--random-errors-io", random_errors_io, "Inject random IO errors with this probability (0-1)");
+		double random_errors_db = 0;
+		app.add_option("--random-errors-db", random_errors_db, "Inject random database errors with this probability (0-1)");
 #endif
 
-		ValueArg<std::string> out("o", "out", "Output filename for dump.", false, "", "file", cmd);
-		ValueArg<std::string> dump_documents("", "dump", "Dump endpoint to stdout.", false, "", "endpoint", cmd);
-		ValueArg<std::string> in("i", "in", "Input filename for restore.", false, "", "file", cmd);
-		ValueArg<std::string> restore_documents("", "restore", "Restore endpoint from stdin.", false, "", "endpoint", cmd);
+		std::string out;
+		app.add_option("-o,--out", out, "Output filename for dump.");
+		std::string dump_documents;
+		app.add_option("--dump", dump_documents, "Dump endpoint to stdout.");
+		std::string in;
+		app.add_option("-i,--in", in, "Input filename for restore.");
+		std::string restore_documents;
+		app.add_option("--restore", restore_documents, "Restore endpoint from stdin.");
 
-		MultiSwitchArg verbose("v", "verbose", "Increase verbosity.", cmd);
-		ValueArg<unsigned int> verbosity("", "verbosity", "Set verbosity.", false, 0, "verbosity", cmd);
+		int verbose = 0;
+		app.add_flag("-v,--verbose", verbose, "Increase verbosity.");
+		unsigned int verbosity = 0;
+		app.add_option("--verbosity", verbosity, "Set verbosity.");
 
 		std::vector<std::string> uuid_allowed({
 			"vanilla",
@@ -264,73 +271,112 @@ parseOptions(int argc, char** argv)
 			"partition",
 #endif
 		});
-		ValuesConstraint<std::string> uuid_constraint(uuid_allowed);
-		MultiArg<std::string> uuid("", "uuid", "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.", false, &uuid_constraint, cmd);
+		std::vector<std::string> uuid;
+		app.add_option("--uuid", uuid, "Toggle modes for compact and/or encoded UUIDs and UUID index path partitioning.")
+			->check(CLI::IsMember(uuid_allowed));
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<unsigned int> discovery_port("", "discovery-port", "Discovery UDP port number to listen on.", false, 0, "port", cmd);
-		ValueArg<std::string> discovery_group("", "discovery-group", "Discovery UDP group name.", false, XAPIAND_DISCOVERY_GROUP, "group", cmd);
-		ValueArg<std::string> cluster_name("", "cluster", "Cluster name to join.", false, XAPIAND_CLUSTER_NAME, "cluster", cmd);
+		unsigned int discovery_port = 0;
+		app.add_option("--discovery-port", discovery_port, "Discovery UDP port number to listen on.");
+		std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
+		app.add_option("--discovery-group", discovery_group, "Discovery UDP group name.");
+		std::string cluster_name = XAPIAND_CLUSTER_NAME;
+		app.add_option("--cluster", cluster_name, "Cluster name to join.");
 #endif
-		ValueArg<std::string> node_name("", "name", "Node name.", false, "", "node", cmd);
+		std::string node_name;
+		app.add_option("--name", node_name, "Node name.");
 
 #if XAPIAND_DATABASE_WAL
-		ValueArg<std::size_t> num_async_wal_writers("", "writers", "Number of database async wal writers.", false, 0, "writers", cmd);
+		std::size_t num_async_wal_writers = 0;
+		app.add_option("--writers", num_async_wal_writers, "Number of database async wal writers.");
 #endif
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_replicas("", "replicas", "Default number of database replicas per index.", false, NUM_REPLICAS, "replicas", cmd);
-		ValueArg<std::size_t> num_shards("", "shards", "Default number of database shards per index.", false, NUM_SHARDS, "shards", cmd);
+		std::size_t num_replicas = NUM_REPLICAS;
+		app.add_option("--replicas", num_replicas, "Default number of database replicas per index.");
+		std::size_t num_shards = NUM_SHARDS;
+		app.add_option("--shards", num_shards, "Default number of database shards per index.");
 #endif
-		ValueArg<std::size_t> num_doc_matchers("", "matchers", "Number of threads handling parallel document matching.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_doc_preparers("", "bulk-preparers", "Number of threads handling bulk documents preparing.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_doc_indexers("", "bulk-indexers", "Number of threads handling bulk documents indexing.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_committers("", "committers", "Number of threads handling the commits.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> max_database_readers("", "max-database-readers", "Max number of open databases.", false, MAX_DATABASE_READERS, "databases", cmd);
-		ValueArg<std::size_t> database_pool_size("", "database-pool-size", "Maximum number of databases in database pool.", false, DATABASE_POOL_SIZE, "size", cmd);
-		ValueArg<std::size_t> schema_pool_size("", "schema-pool-size", "Maximum number of schemas in schema pool.", false, SCHEMA_POOL_SIZE, "size", cmd);
-		ValueArg<std::size_t> schema_versions_size("", "schema-versions-size", "Maximum number of versions of schema in cache.", false, SCHEMAS_VERSIONS_CACHE_SIZE, "size", cmd);
-		ValueArg<std::size_t> scripts_cache_size("", "scripts-cache-size", "Cache size for scripts.", false, SCRIPTS_CACHE_SIZE, "size", cmd);
-		ValueArg<std::size_t> resolver_cache_size("", "resolver-cache-size", "Cache size for index resolver.", false, RESOLVER_CACHE_SIZE, "size", cmd);
-		ValueArg<std::size_t> wal_writer_cache_size("", "wal-writer-cache-size", "Cache size wal writer.", false, WAL_WRITER_CACHE_SIZE, "size", cmd);
+		std::size_t num_doc_matchers = 0;
+		app.add_option("--matchers", num_doc_matchers, "Number of threads handling parallel document matching.");
+		std::size_t num_doc_preparers = 0;
+		app.add_option("--bulk-preparers", num_doc_preparers, "Number of threads handling bulk documents preparing.");
+		std::size_t num_doc_indexers = 0;
+		app.add_option("--bulk-indexers", num_doc_indexers, "Number of threads handling bulk documents indexing.");
+		std::size_t num_committers = 0;
+		app.add_option("--committers", num_committers, "Number of threads handling the commits.");
+		std::size_t max_database_readers = MAX_DATABASE_READERS;
+		app.add_option("--max-database-readers", max_database_readers, "Max number of open databases.");
+		std::size_t database_pool_size = DATABASE_POOL_SIZE;
+		app.add_option("--database-pool-size", database_pool_size, "Maximum number of databases in database pool.");
+		std::size_t schema_pool_size = SCHEMA_POOL_SIZE;
+		app.add_option("--schema-pool-size", schema_pool_size, "Maximum number of schemas in schema pool.");
+		std::size_t schema_versions_size = SCHEMAS_VERSIONS_CACHE_SIZE;
+		app.add_option("--schema-versions-size", schema_versions_size, "Maximum number of versions of schema in cache.");
+		std::size_t scripts_cache_size = SCRIPTS_CACHE_SIZE;
+		app.add_option("--scripts-cache-size", scripts_cache_size, "Cache size for scripts.");
+		std::size_t resolver_cache_size = RESOLVER_CACHE_SIZE;
+		app.add_option("--resolver-cache-size", resolver_cache_size, "Cache size for index resolver.");
+		std::size_t wal_writer_cache_size = WAL_WRITER_CACHE_SIZE;
+		app.add_option("--wal-writer-cache-size", wal_writer_cache_size, "Cache size wal writer.");
 
-		ValueArg<std::size_t> num_fsynchers("", "fsynchers", "Number of threads handling the fsyncs.", false, 0, "fsynchers", cmd);
+		std::size_t num_fsynchers = 0;
+		app.add_option("--fsynchers", num_fsynchers, "Number of threads handling the fsyncs.");
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_replicators("", "replicators", "Number of replicators triggering database replication.", false, 0, "replicators", cmd);
-		ValueArg<std::size_t> num_discoverers("", "discoverers", "Number of discoverers doing cluster discovery.", false, 0, "discoverers", cmd);
+		std::size_t num_replicators = 0;
+		app.add_option("--replicators", num_replicators, "Number of replicators triggering database replication.");
+		std::size_t num_discoverers = 0;
+		app.add_option("--discoverers", num_discoverers, "Number of discoverers doing cluster discovery.");
 #endif
 
-		ValueArg<std::size_t> max_files("", "max-files", "Maximum number of files to open.", false, 0, "files", cmd);
-		ValueArg<std::size_t> flush_threshold("", "flush-threshold", "Xapian flush threshold.", false, FLUSH_THRESHOLD, "threshold", cmd);
+		std::size_t max_files = 0;
+		app.add_option("--max-files", max_files, "Maximum number of files to open.");
+		std::size_t flush_threshold = FLUSH_THRESHOLD;
+		app.add_option("--flush-threshold", flush_threshold, "Xapian flush threshold.");
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::size_t> num_remote_clients("", "remote-clients", "Number of remote protocol client threads.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_remote_servers("", "remote-servers", "Number of remote protocol servers.", false, 0, "servers", cmd);
-		ValueArg<std::size_t> num_replication_clients("", "replication-clients", "Number of replication protocol client threads.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_replication_servers("", "replication-servers", "Number of replication protocol servers.", false, 0, "servers", cmd);
+		std::size_t num_remote_clients = 0;
+		app.add_option("--remote-clients", num_remote_clients, "Number of remote protocol client threads.");
+		std::size_t num_remote_servers = 0;
+		app.add_option("--remote-servers", num_remote_servers, "Number of remote protocol servers.");
+		std::size_t num_replication_clients = 0;
+		app.add_option("--replication-clients", num_replication_clients, "Number of replication protocol client threads.");
+		std::size_t num_replication_servers = 0;
+		app.add_option("--replication-servers", num_replication_servers, "Number of replication protocol servers.");
 
-		ValueArg<double> database_stall_time("", "database-stall-time", "Seconds before allowing a shard to be promoted to primary.", false, DATABASE_STALL_TIME, "seconds", cmd);
+		double database_stall_time = DATABASE_STALL_TIME;
+		app.add_option("--database-stall-time", database_stall_time, "Seconds before allowing a shard to be promoted to primary.");
 #endif
-		ValueArg<std::size_t> num_http_clients("", "http-clients", "Number of http client threads.", false, 0, "threads", cmd);
-		ValueArg<std::size_t> num_http_servers("", "http-servers", "Number of http servers.", false, 0, "servers", cmd);
-		ValueArg<std::size_t> max_clients("", "max-clients", "Max number of open client connections.", false, MAX_CLIENTS, "clients", cmd);
+		std::size_t num_http_clients = 0;
+		app.add_option("--http-clients", num_http_clients, "Number of http client threads.");
+		std::size_t num_http_servers = 0;
+		app.add_option("--http-servers", num_http_servers, "Number of http servers.");
+		std::size_t max_clients = MAX_CLIENTS;
+		app.add_option("--max-clients", max_clients, "Max number of open client connections.");
 
-		ValueArg<double> processors("", "processors", "Number of processors to use.", false, hardware_concurrency, "processors", cmd);
+		double processors = hardware_concurrency;
+		app.add_option("--processors", processors, "Number of processors to use.");
 
 		auto use_allowed = ev_supported();
-		ValuesConstraint<std::string> use_constraint(use_allowed);
-		ValueArg<std::string> use("", "use", "Connection processing backend.", false, "auto", &use_constraint, cmd);
+		std::string use = "auto";
+		app.add_option("--use", use, "Connection processing backend.")
+			->check(CLI::IsMember(use_allowed));
 
 #ifdef XAPIAND_CLUSTERING
-		ValueArg<std::string> primary_node("", "primary-node", "Primary node (the one with the primary cluster database).", false, "", "name", cmd);
-
-		ValueArg<unsigned int> remote_port("", "xapian-port", "Xapian binary protocol TCP port number to listen on.", false, 0, "port", cmd);
-		ValueArg<unsigned int> replication_port("", "replica-port", "Xapiand replication protocol TCP port number to listen on.", false, 0, "port", cmd);
+		std::string primary_node;
+		app.add_option("--primary-node", primary_node, "Primary node (the one with the primary cluster database).");
+		unsigned int remote_port = 0;
+		app.add_option("--xapian-port", remote_port, "Xapian binary protocol TCP port number to listen on.");
+		unsigned int replication_port = 0;
+		app.add_option("--replica-port", replication_port, "Xapiand replication protocol TCP port number to listen on.");
 #endif
-		ValueArg<unsigned int> http_port("", "port", "TCP HTTP port number to listen on for REST API.", false, 0, "port", cmd);
+		unsigned int http_port = 0;
+		app.add_option("--port", http_port, "TCP HTTP port number to listen on for REST API.");
 
-		ValueArg<std::string> bind_address("", "bind-address", "Bind address to listen to.", false, "", "bind", cmd);
+		std::string bind_address;
+		app.add_option("--bind-address", bind_address, "Bind address to listen to.");
 
-		SwitchArg iterm2("", "iterm2", "Set marks, tabs, title, badges and growl.", cmd, false);
+		bool iterm2 = false;
+		app.add_flag("--iterm2", iterm2, "Set marks, tabs, title, badges and growl.");
 
 		std::vector<std::string> log_allowed({
 			"epoch",
@@ -343,110 +389,97 @@ parseOptions(int argc, char** argv)
 			"locations",
 			"replicas",
 		});
-		ValuesConstraint<std::string> log_constraint(log_allowed);
-		MultiArg<std::string> log("", "log", "Enable logging settings.", false, &log_constraint, cmd);
+		std::vector<std::string> log;
+		app.add_option("--log", log, "Enable logging settings.")
+			->check(CLI::IsMember(log_allowed));
 
-		ValueArg<std::string> gid("", "gid", "Group ID.", false, "", "gid", cmd);
-		ValueArg<std::string> uid("", "uid", "User ID.", false, "", "uid", cmd);
+		std::string gid;
+		app.add_option("--gid", gid, "Group ID.");
+		std::string uid;
+		app.add_option("--uid", uid, "User ID.");
 
-		ValueArg<std::string> pidfile("P", "pidfile", "Save PID in <file>.", false, "", "file", cmd);
-		ValueArg<std::string> logfile("L", "logfile", "Save logs in <file>.", false, "", "file", cmd);
+		std::string pidfile;
+		app.add_option("-P,--pidfile", pidfile, "Save PID in <file>.");
+		std::string logfile;
+		app.add_option("-L,--logfile", logfile, "Save logs in <file>.");
 
-		SwitchArg admin_commands("", "admin-commands", "Enables administrative HTTP commands.", cmd, false);
+		bool admin_commands = false;
+		app.add_flag("--admin-commands", admin_commands, "Enables administrative HTTP commands.");
 
-		SwitchArg no_colors("", "no-colors", "Disables colors on the console.", cmd, false);
-		SwitchArg colors("", "colors", "Enables colors on the console.", cmd, false);
-		SwitchArg no_pretty("", "no-pretty", "Disables pretty results.", cmd, false);
-		SwitchArg pretty("", "pretty", "Enables pretty results.", cmd, false);
-		SwitchArg no_comments("", "no-comments", "Disables result comments.", cmd, false);
-		SwitchArg comments("", "comments", "Enables result comments.", cmd, false);
-		SwitchArg no_echo("", "no-echo", "Disables objects echo in results.", cmd, false);
-		SwitchArg echo("", "echo", "Enables objects echo in results.", cmd, false);
-		SwitchArg no_human("", "no-human", "Disables objects humanizer in results.", cmd, false);
-		SwitchArg human("", "human", "Enables objects humanizer in results.", cmd, false);
+		bool no_colors = false;
+		app.add_flag("--no-colors", no_colors, "Disables colors on the console.");
+		bool colors = false;
+		app.add_flag("--colors", colors, "Enables colors on the console.");
+		bool no_pretty = false;
+		app.add_flag("--no-pretty", no_pretty, "Disables pretty results.");
+		bool pretty = false;
+		app.add_flag("--pretty", pretty, "Enables pretty results.");
+		bool no_comments = false;
+		app.add_flag("--no-comments", no_comments, "Disables result comments.");
+		bool comments = false;
+		app.add_flag("--comments", comments, "Enables result comments.");
+		bool no_echo = false;
+		app.add_flag("--no-echo", no_echo, "Disables objects echo in results.");
+		bool echo = false;
+		app.add_flag("--echo", echo, "Enables objects echo in results.");
+		bool no_human = false;
+		app.add_flag("--no-human", no_human, "Disables objects humanizer in results.");
+		bool human = false;
+		app.add_flag("--human", human, "Enables objects humanizer in results.");
 
-		SwitchArg detach("d", "detach", "detach process. (run in background)", cmd);
+		bool detach = false;
+		app.add_flag("-d,--detach", detach, "detach process. (run in background)");
 #ifdef XAPIAND_CLUSTERING
-		SwitchArg solo("", "solo", "Run solo indexer. (no replication or discovery)", cmd, false);
+		bool solo = false;
+		app.add_flag("--solo", solo, "Run solo indexer. (no replication or discovery)");
 #endif
-		SwitchArg strict("", "strict", "Force the user to define the type for each field.", cmd, false);
-		SwitchArg force("", "force", "Force using path as the root of the node.", cmd, false);
-		ValueArg<std::string> database("D", "database", "Path to the root of the node.", false, XAPIAND_ROOT "/var/db/xapiand", "path", cmd);
+		bool strict = false;
+		app.add_flag("--strict", strict, "Force the user to define the type for each field.");
+		bool force = false;
+		app.add_flag("--force", force, "Force using path as the root of the node.");
+		std::string database = XAPIAND_ROOT "/var/db/xapiand";
+		app.add_option("-D,--database", database, "Path to the root of the node.");
 
-		std::vector<std::string> args;
-		for (int i = 0; i < argc; ++i) {
-			if (i == 0) {
-				const char* a = std::strrchr(argv[i], '/');
-				if (a != nullptr) {
-					++a;
-				} else {
-					a = argv[i];
-				}
-				args.emplace_back(a);
-			} else {
-				// Split arguments when possible (e.g. -Dnode, --verbosity=3)
-				const char* arg = argv[i];
-				if (arg[0] == '-') {
-					if (arg[1] != '-' && arg[1] != 'v') {  // skip long arguments (e.g. --verbosity) or multiswitch (e.g. -vvv)
-						std::string tmp(arg, 2);
-						args.push_back(tmp);
-						arg += 2;
-					}
-				}
-				const char* a = std::strchr(arg, '=');
-				if (a != nullptr) {
-					if ((a - arg) != 0) {
-						std::string tmp(arg, a - arg);
-						args.push_back(tmp);
-					}
-					arg = a + 1;
-				}
-				if (*arg != 0) {
-					args.emplace_back(arg);
-				}
-			}
-		}
-
-		cmd.parse(args);
+		app.parse(argc, argv);
 
 #ifdef XAPIAND_RANDOM_ERRORS
-		o.random_errors_db = random_errors_db.getValue();
-		o.random_errors_io = random_errors_io.getValue();
-		o.random_errors_net = random_errors_net.getValue();
+		o.random_errors_db = random_errors_db;
+		o.random_errors_io = random_errors_io;
+		o.random_errors_net = random_errors_net;
 #endif
 
-		o.processors = std::max(1.0, std::min(processors.getValue(), hardware_concurrency));
-		o.verbosity = verbosity.getValue() + verbose.getValue();
-		o.detach = detach.getValue();
+		o.processors = std::max(1.0, std::min(processors, hardware_concurrency));
+		o.verbosity = verbosity + verbose;
+		o.detach = detach;
 
 #ifdef XAPIAND_CLUSTERING
-		o.solo = solo.getValue();
+		o.solo = solo;
 #else
 		o.solo = true;
 #endif
-		o.strict = strict.getValue();
-		o.force = force.getValue();
+		o.strict = strict;
+		o.force = force;
 
-		o.echo = echo.getValue();
-		o.no_echo = no_echo.getValue();
+		o.echo = echo;
+		o.no_echo = no_echo;
 
-		o.human = human.getValue();
-		o.no_human = no_human.getValue();
+		o.human = human;
+		o.no_human = no_human;
 
-		o.comments = comments.getValue();
-		o.no_comments = no_comments.getValue();
+		o.comments = comments;
+		o.no_comments = no_comments;
 
-		o.pretty = pretty.getValue();
-		o.no_pretty = no_pretty.getValue();
+		o.pretty = pretty;
+		o.no_pretty = no_pretty;
 
-		o.colors = colors.getValue();
-		o.no_colors = no_colors.getValue();
+		o.colors = colors;
+		o.no_colors = no_colors;
 
-		o.admin_commands = admin_commands.getValue();
+		o.admin_commands = admin_commands;
 
-		o.iterm2 = iterm2.getValue();
+		o.iterm2 = iterm2;
 
-		for (const auto& u : log.getValue()) {
+		for (const auto& u : log) {
 			switch (fnv1ah32::hash(u)) {
 				case fnv1ah32::hash("epoch"):
 					o.log_epoch = true;
@@ -484,59 +517,59 @@ parseOptions(int argc, char** argv)
 		}
 #endif
 
-		o.database = database.getValue();
+		o.database = database;
 		if (o.database.empty()) {
 			o.database = ".";
 		}
-		o.http_port = http_port.getValue();
-		o.bind_address = bind_address.getValue();
-		o.node_name = node_name.getValue();
+		o.http_port = http_port;
+		o.bind_address = bind_address;
+		o.node_name = node_name;
 #ifdef XAPIAND_CLUSTERING
-		o.primary_node = primary_node.getValue();
-		o.cluster_name = cluster_name.getValue();
-		o.remote_port = remote_port.getValue();
-		o.replication_port = replication_port.getValue();
-		o.discovery_port = discovery_port.getValue();
-		o.discovery_group = discovery_group.getValue();
+		o.primary_node = primary_node;
+		o.cluster_name = cluster_name;
+		o.remote_port = remote_port;
+		o.replication_port = replication_port;
+		o.discovery_port = discovery_port;
+		o.discovery_group = discovery_group;
 #endif
-		o.pidfile = pidfile.getValue();
-		o.logfile = logfile.getValue();
-		o.uid = uid.getValue();
-		o.gid = gid.getValue();
-		o.database_pool_size = database_pool_size.getValue();
-		o.schema_pool_size = schema_pool_size.getValue();
-		o.schema_versions_size =  schema_versions_size.getValue();
-		o.scripts_cache_size = scripts_cache_size.getValue();
-		o.resolver_cache_size = resolver_cache_size.getValue();
-		o.wal_writer_cache_size = wal_writer_cache_size.getValue();
+		o.pidfile = pidfile;
+		o.logfile = logfile;
+		o.uid = uid;
+		o.gid = gid;
+		o.database_pool_size = database_pool_size;
+		o.schema_pool_size = schema_pool_size;
+		o.schema_versions_size =  schema_versions_size;
+		o.scripts_cache_size = scripts_cache_size;
+		o.resolver_cache_size = resolver_cache_size;
+		o.wal_writer_cache_size = wal_writer_cache_size;
 #if XAPIAND_DATABASE_WAL
-		o.num_async_wal_writers = fallback(num_async_wal_writers.getValue(), std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
+		o.num_async_wal_writers = fallback(num_async_wal_writers, std::max(MIN_ASYNC_WAL_WRITERS, std::min(MAX_ASYNC_WAL_WRITERS, static_cast<int>(std::ceil(NUM_ASYNC_WAL_WRITERS * o.processors)))));
 #endif
 #ifdef XAPIAND_CLUSTERING
-		o.num_shards = num_shards.getValue();
-		o.num_replicas = num_replicas.getValue();
-		o.num_replicators = fallback(num_replicators.getValue(), std::max(MIN_REPLICATORS, std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors)))));
-		o.num_discoverers = fallback(num_discoverers.getValue(), std::max(MIN_DISCOVERERS, std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors)))));
+		o.num_shards = num_shards;
+		o.num_replicas = num_replicas;
+		o.num_replicators = fallback(num_replicators, std::max(MIN_REPLICATORS, std::min(MAX_REPLICATORS, static_cast<int>(std::ceil(NUM_REPLICATORS * o.processors)))));
+		o.num_discoverers = fallback(num_discoverers, std::max(MIN_DISCOVERERS, std::min(MAX_DISCOVERERS, static_cast<int>(std::ceil(NUM_DISCOVERERS * o.processors)))));
 #endif
-		o.num_doc_matchers = fallback(num_doc_matchers.getValue(), std::max(MIN_DOC_MATCHERS, std::min(MAX_DOC_MATCHERS, static_cast<int>(std::ceil(NUM_DOC_MATCHERS * o.processors)))));
-		o.num_doc_preparers = fallback(num_doc_preparers.getValue(), std::max(MIN_DOC_PREPARERS, std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors)))));
-		o.num_doc_indexers = fallback(num_doc_indexers.getValue(), std::max(MIN_DOC_INDEXERS, std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors)))));
-		o.num_committers = fallback(num_committers.getValue(), std::max(MIN_COMMITTERS, std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)))));
-		o.num_fsynchers = fallback(num_fsynchers.getValue(), std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)))));
+		o.num_doc_matchers = fallback(num_doc_matchers, std::max(MIN_DOC_MATCHERS, std::min(MAX_DOC_MATCHERS, static_cast<int>(std::ceil(NUM_DOC_MATCHERS * o.processors)))));
+		o.num_doc_preparers = fallback(num_doc_preparers, std::max(MIN_DOC_PREPARERS, std::min(MAX_DOC_PREPARERS, static_cast<int>(std::ceil(NUM_DOC_PREPARERS * o.processors)))));
+		o.num_doc_indexers = fallback(num_doc_indexers, std::max(MIN_DOC_INDEXERS, std::min(MAX_DOC_INDEXERS, static_cast<int>(std::ceil(NUM_DOC_INDEXERS * o.processors)))));
+		o.num_committers = fallback(num_committers, std::max(MIN_COMMITTERS, std::min(MAX_COMMITTERS, static_cast<int>(std::ceil(NUM_COMMITTERS * o.processors)))));
+		o.num_fsynchers = fallback(num_fsynchers, std::max(MIN_FSYNCHERS, std::min(MAX_FSYNCHERS, static_cast<int>(std::ceil(NUM_FSYNCHERS * o.processors)))));
 
-		o.max_clients = max_clients.getValue();
-		o.max_database_readers = max_database_readers.getValue();
-		o.max_files = max_files.getValue();
-		o.flush_threshold = flush_threshold.getValue();
-		o.num_http_clients = fallback(num_http_clients.getValue(), std::max(MIN_HTTP_CLIENTS, std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)))));
-		o.num_http_servers = fallback(num_http_servers.getValue(), std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));
+		o.max_clients = max_clients;
+		o.max_database_readers = max_database_readers;
+		o.max_files = max_files;
+		o.flush_threshold = flush_threshold;
+		o.num_http_clients = fallback(num_http_clients, std::max(MIN_HTTP_CLIENTS, std::min(MAX_HTTP_CLIENTS, static_cast<int>(std::ceil(NUM_HTTP_CLIENTS * o.processors)))));
+		o.num_http_servers = fallback(num_http_servers, std::max(MIN_HTTP_SERVERS, std::min(MAX_HTTP_SERVERS, static_cast<int>(std::ceil(NUM_HTTP_SERVERS * o.processors)))));
 #ifdef XAPIAND_CLUSTERING
-		o.num_remote_clients = fallback(num_remote_clients.getValue(), std::max(MIN_REMOTE_CLIENTS, std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors)))));
-		o.num_remote_servers = fallback(num_remote_servers.getValue(), std::max(MIN_REMOTE_SERVERS, std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors)))));
-		o.num_replication_clients = fallback(num_replication_clients.getValue(), std::max(MIN_REPLICATION_CLIENTS, std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors)))));
-		o.num_replication_servers = fallback(num_replication_servers.getValue(), std::max(MIN_REPLICATION_SERVERS, std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors)))));
+		o.num_remote_clients = fallback(num_remote_clients, std::max(MIN_REMOTE_CLIENTS, std::min(MAX_REMOTE_CLIENTS, static_cast<int>(std::ceil(NUM_REMOTE_CLIENTS * o.processors)))));
+		o.num_remote_servers = fallback(num_remote_servers, std::max(MIN_REMOTE_SERVERS, std::min(MAX_REMOTE_SERVERS, static_cast<int>(std::ceil(NUM_REMOTE_SERVERS * o.processors)))));
+		o.num_replication_clients = fallback(num_replication_clients, std::max(MIN_REPLICATION_CLIENTS, std::min(MAX_REPLICATION_CLIENTS, static_cast<int>(std::ceil(NUM_REPLICATION_CLIENTS * o.processors)))));
+		o.num_replication_servers = fallback(num_replication_servers, std::max(MIN_REPLICATION_SERVERS, std::min(MAX_REPLICATION_SERVERS, static_cast<int>(std::ceil(NUM_REPLICATION_SERVERS * o.processors)))));
 
-		o.database_stall_time = database_stall_time.getValue() * 1000.0;
+		o.database_stall_time = database_stall_time * 1000.0;
 #endif
 		if (o.detach) {
 			if (o.logfile.empty()) {
@@ -546,10 +579,10 @@ parseOptions(int argc, char** argv)
 				o.pidfile = XAPIAND_ROOT "/var/run/" XAPIAND_PID_FILE;
 			}
 		}
-		o.ev_flags = ev_backend(use.getValue());
+		o.ev_flags = ev_backend(use);
 
 		bool uuid_configured = false;
-		for (const auto& u : uuid.getValue()) {
+		for (const auto& u : uuid) {
 			switch (fnv1ah32::hash(u)) {
 				case fnv1ah32::hash("vanilla"):
 					o.uuid_repr = fnv1ah32::hash("vanilla");
@@ -590,37 +623,42 @@ parseOptions(int argc, char** argv)
 			o.uuid_compact = true;
 		}
 
-		o.dump_documents = dump_documents.getValue();
-		auto out_filename = out.getValue();
-		o.restore_documents = restore_documents.getValue();
-		auto in_filename = in.getValue();
+		o.dump_documents = dump_documents;
+		auto out_filename = out;
+		o.restore_documents = restore_documents;
+		auto in_filename = in;
+		auto usage_error = [](const char* msg) {
+			std::fprintf(stderr, "Error: %s\n", msg);
+			std::exit(EX_USAGE);
+		};
 		if ((!o.dump_documents.empty()) && !o.restore_documents.empty()) {
-			throw CmdLineParseException("Cannot dump and restore at the same time");
+			usage_error("Cannot dump and restore at the same time");
 		} else if (!o.dump_documents.empty() || !o.restore_documents.empty()) {
 			if (!o.restore_documents.empty()) {
 				if (!out_filename.empty()) {
-					throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
+					usage_error("Option invalid: --out <file> can be used only with --dump");
 				}
 				o.filename = in_filename;
 			} else {
 				if (!in_filename.empty()) {
-					throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
+					usage_error("Option invalid: --in <file> can be used only with --restore");
 				}
 				o.filename = out_filename;
 			}
 			o.detach = false;
 		} else {
 			if (!in_filename.empty()) {
-				throw CmdLineParseException("Option invalid: --in <file> can be used only with --restore");
+				usage_error("Option invalid: --in <file> can be used only with --restore");
 			}
 			if (!out_filename.empty()) {
-				throw CmdLineParseException("Option invalid: --out <file> can be used only with --dump");
+				usage_error("Option invalid: --out <file> can be used only with --dump");
 			}
 		}
 
-	} catch (const ArgException& exc) { // catch any exceptions
-		std::fprintf(stderr, "Error: %s for arg %s\n", exc.error().c_str(), exc.argId().c_str());
-		std::exit(EX_USAGE);
+	} catch (const CLI::ParseError& exc) {
+		// Handles --help, --version, and any parse/validation error: CLI11 prints
+		// (via our formatter) and returns the appropriate exit code.
+		std::exit(app.exit(exc));
 	}
 
 	o.schema_pool_timeout = SCHEMA_POOL_TIMEOUT;

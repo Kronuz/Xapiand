@@ -551,11 +551,11 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # for stock upstream without reworking the MsgPack wrapper's error handling.)
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2)
-FetchContent_Declare(tclap     GIT_REPOSITORY https://github.com/mirror/tclap.git       GIT_TAG v1.2.2)
+FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2)
 # lz4 is compiled (its lib/*.c is built into LZ4_OBJ below); we still only need
 # its sources populated, not its own CMake.
 FetchContent_Declare(lz4       GIT_REPOSITORY https://github.com/lz4/lz4.git            GIT_TAG v1.8.1)
-foreach(dep rapidjson cppcodec tclap lz4)
+foreach(dep rapidjson cppcodec cli11 lz4)
 	FetchContent_GetProperties(${dep})
 	if(NOT ${dep}_POPULATED)
 		FetchContent_Populate(${dep})
@@ -564,7 +564,7 @@ endforeach()
 include_directories(
 	"${rapidjson_SOURCE_DIR}/include"   # rapidjson/...
 	"${cppcodec_SOURCE_DIR}"            # cppcodec/...
-	"${tclap_SOURCE_DIR}/include"       # tclap/...
+	"${cli11_SOURCE_DIR}/include"       # CLI/CLI.hpp (header-only)
 	"${lz4_SOURCE_DIR}/lib"             # lz4.h, lz4frame.h, lz4hc.h, xxhash.h
 )
 
