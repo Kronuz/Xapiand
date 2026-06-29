@@ -34,8 +34,6 @@ extern struct opts_t {
 	bool solo = false;
 	bool strict = false;
 	bool force = false;
-	bool colors = false;     // deprecated alias for --color=always
-	bool no_colors = false;  // deprecated alias for --color=never
 	std::string color = "auto";  // --color=<mode>: auto/always/never/truecolor/256/16/stacked
 	bool pretty = false;
 	bool no_pretty = false;
