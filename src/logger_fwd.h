@@ -82,10 +82,21 @@ inline void print(std::string_view fmt, Args&&... args) {
 #define L_UNINDENTED(priority, color, ...) LOG(0, (priority), __VA_ARGS__)
 #define L_STACKED(priority, color, ...)    LOG(0, (priority), __VA_ARGS__); ::LogIndent L_UNIQUE_NAME
 
-// (4) Deferred variants Xapiand uses that the core does not ship. Color dropped.
+// (4) Deferred variants. Xapiand's call sites carry a `color` argument (resolved
+// from priority by the sink here, so it is accepted and dropped) and use the
+// unlog forms as expressions, so these override the core's colorless versions.
 #define L_DELAYED_600(...) auto __log_delayed = L_DELAYED(true, std::chrono::milliseconds(600), LOG_WARNING, __VA_ARGS__)
+
+// An expression yielding a Log handle (e.g. `auto x = L_DELAYED_BACKTRACE(...)`).
+// The core has no callstack-carrying variant; this is a plain deferred line.
 #define L_DELAYED_BACKTRACE(clears, delay, priority, color, ...) \
-	auto __log_delayed = L_DELAYED((clears), (delay), (priority), __VA_ARGS__)
+	L_DELAYED((clears), (delay), (priority), __VA_ARGS__)
+
+// Swap/cancel a pending deferred line. Xapiand passes (priority, color, fmt, ...).
+#undef L_DELAYED_UNLOG
+#define L_DELAYED_UNLOG(priority, color, ...) unlog((priority), ::format_msg(__VA_ARGS__))
+#undef L_DELAYED_N_UNLOG
+#define L_DELAYED_N_UNLOG(...) __log_delayed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
 
 // (5) Timing macros Xapiand keeps disabled by default (as the in-tree logger did).
 // The core ships a real L_TIMED; override it to a no-op to preserve behavior.
