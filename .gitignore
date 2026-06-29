@@ -63,3 +63,4 @@ Makefile.mk
 *.out
 *.app
 /xapiand
+.cache/

@@ -1,31 +1,32 @@
 /*
- * Trace/coloring hooks for the `stash` library, wired to Xapiand's logging.
+ * Trace hooks for the `stash` library.
  *
- * The standalone stash (github.com/Kronuz/stash) traces through four no-op
- * hooks: L_STASH / L_DEBUG_HOOK / L_EXC and STASH_OP_COLOR(op). Pointing
- * STASH_TRACE_HEADER at this file (see CMakeLists.txt) restores the exact
- * colored, logged output the vendored copy produced, by mapping those hooks onto
- * Xapiand's own log.h macros and colors.h palette.
- *
- * L_STASH stays L_NOTHING (off) by default, like before; L_DEBUG_HOOK / L_EXC
- * come from log.h, and the per-operation color matches the old Stash::_col().
+ * Self-contained no-op stubs. The previous version included Xapiand's log.h to
+ * "restore" colored stash traces, but the extracted logger's macros expand to
+ * Logging::do_log (needs the full Logging class), and stash is a dependency of
+ * the logger, so pulling log.h here created a circular include. stash's own trace
+ * lines (L_STASH / L_DEBUG_HOOK) were L_NOTHING (off) by default anyway, so
+ * stubbing them changes nothing; L_EXC (a swallowed-exception trace inside stash)
+ * reduces to a no-op, matching the standalone library. Xapiand's own logging is
+ * unaffected and fully real.
  */
 
 #pragma once
 
-#include "log.h"       // L_NOTHING, L_DEBUG_HOOK, L_EXC
-#include "colors.h"    // CLEAR_COLOR, DIM_GREY, PURPLE, CYAN, ... (used by trace lines)
+// stash.h self-guards and cleans up L_STASH, so it is not defined here. It uses
+// L_DEBUG_HOOK / L_EXC / L_COLLECT, stubbed to no-ops (their default).
+#ifndef L_NOTHING
+#define L_NOTHING(...)
+#endif
+#ifndef L_DEBUG_HOOK
+#define L_DEBUG_HOOK L_NOTHING
+#endif
+#ifndef L_EXC
+#define L_EXC L_NOTHING
+#endif
+#ifndef L_COLLECT
+#define L_COLLECT L_NOTHING
+#endif
 
-// Per-operation color, matching the original Stash::_col(): walk -> clear,
-// peep -> dim grey, clean -> purple. Returns a pointer valid for the trace call
-// (function-local statics, as in the original).
-inline const char* xapiand_stash_op_color(int op) {
-	switch (op) {
-		case 0: { static constexpr auto c = CLEAR_COLOR; return c.c_str(); }  // walk
-		case 1: { static constexpr auto c = DIM_GREY;    return c.c_str(); }  // peep
-		case 2: { static constexpr auto c = PURPLE;      return c.c_str(); }  // clean
-		default: { static constexpr auto c = CLEAR_COLOR; return c.c_str(); }
-	}
-}
-
-#define STASH_OP_COLOR(op) xapiand_stash_op_color(static_cast<int>(op))
+// Per-operation color is unused now that L_STASH is a no-op; return no color.
+#define STASH_OP_COLOR(op) ""

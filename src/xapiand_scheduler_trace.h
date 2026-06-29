@@ -1,19 +1,29 @@
 /*
- * Trace/coloring hooks for the `scheduler` library, wired to Xapiand's logging.
+ * Trace hooks for the `scheduler` library.
  *
- * The standalone scheduler (github.com/Kronuz/scheduler) traces through no-op
- * hooks: L_SCHEDULER / L_DEBUG_HOOK / L_EXC / L_CALL, plus the color identifiers
- * those trace lines reference (BROWN, CLEAR_COLOR, LIGHT_SKY_BLUE, DIM_GREY,
- * PURPLE, STEEL_BLUE, DODGER_BLUE, LIGHT_GREEN, FOREST_GREEN). Pointing
- * SCHEDULER_TRACE_HEADER at this file (see CMakeLists.txt) restores exactly the
- * traced, colored output the vendored copy produced, by making Xapiand's own
- * log.h macros and colors.h palette visible to scheduler.h / debouncer.h.
+ * Self-contained no-op stubs. The previous version included Xapiand's log.h to
+ * "restore" colored scheduler traces, but the extracted logger's macros expand to
+ * Logging::do_log (needs the full Logging class) and the scheduler is a dependency
+ * of the logger, so pulling log.h here created a circular include.
  *
- * L_SCHEDULER follows log.h (scheduler.h leaves it untouched when already
- * defined); the rest come from log.h, and the colors from colors.h.
+ * scheduler.h self-guards and cleans up L_SCHEDULER (and only mentions L_PRINT /
+ * L_BLUE in a comment or inside no-op trace args), so those need not be defined
+ * here. It does use L_DEBUG_HOOK / L_EXC / L_CALL, which we stub to no-ops (their
+ * default; off in Xapiand by default anyway). L_EXC is later #undef'd and made
+ * real by the logger for Xapiand's own call sites.
  */
 
 #pragma once
 
-#include "log.h"       // L_NOTHING, L_SCHEDULER, L_DEBUG_HOOK, L_EXC, L_CALL
-#include "colors.h"    // BROWN, CLEAR_COLOR, LIGHT_SKY_BLUE, ... (used by trace lines)
+#ifndef L_NOTHING
+#define L_NOTHING(...)
+#endif
+#ifndef L_DEBUG_HOOK
+#define L_DEBUG_HOOK L_NOTHING
+#endif
+#ifndef L_EXC
+#define L_EXC L_NOTHING
+#endif
+#ifndef L_CALL
+#define L_CALL L_NOTHING
+#endif

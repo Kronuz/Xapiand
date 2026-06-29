@@ -748,7 +748,7 @@ void banner() {
 #endif
 	});
 
-	if (Logging::log_level >= LOG_NOTICE) {
+	if (Logging::config.log_level >= LOG_NOTICE) {
 		constexpr auto outer = rgb(0, 128, 0);
 		constexpr auto inner = rgb(144, 238, 144);
 		constexpr auto top = rgb(255, 255, 255);
@@ -951,9 +951,34 @@ int main(int argc, char **argv) {
 			handlers.push_back(std::make_unique<StderrLogger>());
 		}
 
-		Logging::log_level += opts.verbosity;
-		Logging::colors = opts.colors;
-		Logging::no_colors = opts.no_colors;
+		Logging::config.log_level += opts.verbosity;
+		Logging::config.colors = opts.colors && !opts.no_colors;
+		Logging::config.with_threads = true;
+		Logging::config.with_location = false;
+
+		// Wire the extracted logger's pluggable hooks to Xapiand's richer
+		// implementations: exception description (incl. Xapian::Error), thread
+		// names, and the in-tree traceback() (atos file:line + crash-dumper).
+		Logging::hooks.describe_exception = [](std::exception_ptr eptr) -> std::string {
+			try {
+				std::rethrow_exception(eptr);
+			} catch (const Xapian::Error& exc) {
+				return exc.get_description();
+			} catch (const BaseException& exc) {
+				auto msg = exc.get_message();
+				return (msg != nullptr && *msg != 0) ? std::string(msg) : std::string("Unknown BaseException");
+			} catch (const std::exception& exc) {
+				return exc.what();
+			} catch (...) {
+				return "Unknown exception!";
+			}
+		};
+		Logging::hooks.thread_name = [](std::thread::id id) -> std::string {
+			return get_thread_name(id);
+		};
+		Logging::hooks.backtrace = []() -> std::string {
+			return traceback(nullptr, nullptr, 0);
+		};
 
 		demote(opts.uid.c_str(), opts.gid.c_str());
 

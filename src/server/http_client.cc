@@ -323,7 +323,7 @@ HttpClient::http_response(Request& request, enum http_status status, int mode, c
 	auto this_response_size = response_body.size();
 	request.response.size += this_response_size;
 
-	if (Logging::log_level >= LOG_DEBUG) {
+	if (Logging::config.log_level >= LOG_DEBUG) {
 		request.response.head += head;
 		request.response.headers += headers;
 	}
@@ -693,7 +693,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 	L_HTTP_PROTO("on_header_value {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
 	auto _header_value = std::string_view(at, length);
-	if (Logging::log_level >= LOG_DEBUG) {
+	if (Logging::config.log_level >= LOG_DEBUG) {
 		new_request->headers.append(new_request->_header_name);
 		new_request->headers.append(": ");
 		new_request->headers.append(_header_value);
@@ -863,7 +863,7 @@ HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t
 	if likely(!closed) {
 		if likely(!new_request->atom_ending) {
 			bool signal_pending = false;
-			if (Logging::log_level >= LOG_DEBUG || new_request->view) {
+			if (Logging::config.log_level >= LOG_DEBUG || new_request->view) {
 				signal_pending = new_request->append(at, length);
 			}
 			if likely(new_request->view) {
@@ -897,7 +897,7 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser));
 
-	if (Logging::log_level > LOG_DEBUG) {
+	if (Logging::config.log_level > LOG_DEBUG) {
 		log_request(*new_request);
 	}
 
@@ -909,7 +909,7 @@ HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
 			request->atom_ending = true;
 
 			bool signal_pending = false;
-			if (Logging::log_level >= LOG_DEBUG || request->view) {
+			if (Logging::config.log_level >= LOG_DEBUG || request->view) {
 				request->append(nullptr, 0);  // flush pending stuff
 				signal_pending = true;  // always signal pending
 			}
@@ -1221,7 +1221,7 @@ HttpClient::prepare()
 			return 1;
 	}
 
-	if (!new_request->view && Logging::log_level < LOG_DEBUG) {
+	if (!new_request->view && Logging::config.log_level < LOG_DEBUG) {
 		return 1;
 	}
 
@@ -3198,9 +3198,9 @@ HttpClient::end_http_request(Request& request)
 			fmt = fmt_5xx.c_str();
 			priority = LOG_NOTICE;
 		}
-		if (Logging::log_level > LOG_DEBUG) {
+		if (Logging::config.log_level > LOG_DEBUG) {
 			log_response(request.response);
-		} else if (Logging::log_level == LOG_DEBUG) {
+		} else if (Logging::config.log_level == LOG_DEBUG) {
 			if ((int)request.response.status >= 400 && (int)request.response.status != 404) {
 				log_request(request);
 				log_response(request.response);
@@ -3405,7 +3405,7 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 
 	try {
 		auto result = serialize_response(obj, resolved_ct_type, request.indented, (int)status >= 400);
-		if (Logging::log_level >= LOG_DEBUG && request.response.size <= 1024 * 10) {
+		if (Logging::config.log_level >= LOG_DEBUG && request.response.size <= 1024 * 10) {
 			if (resolved_ct_type == json_type) {
 				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
 			} else if (resolved_ct_type == x_json_type) {
@@ -3956,7 +3956,7 @@ Request::to_text(bool decode)
 			} else {
 				request_text += "<body " + repr(raw, true, true, 500) + ">";
 			}
-		} else if (Logging::log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
+		} else if (Logging::config.log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(raw);
@@ -4070,7 +4070,7 @@ Response::to_text(bool decode)
 			} else {
 				response_text += "<blob " + repr(blob, true, true, 500) + ">";
 			}
-		} else if (Logging::log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
+		} else if (Logging::config.log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
 			// From [https://www.iterm2.com/documentation-images.html]
 			std::string b64_name = cppcodec::base64_rfc4648::encode("");
 			std::string b64_data = cppcodec::base64_rfc4648::encode(blob);

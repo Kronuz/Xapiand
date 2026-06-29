@@ -467,6 +467,27 @@ endif()
 include_directories("${scheduler_SOURCE_DIR}")
 add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 
+# logger: the lock-free, cancellable, deferred logger extracted from Xapiand and
+# modernized (std::source_location, iTerm2, backpressure, pluggable hooks). Built
+# on the scheduler. We populate headers and compile its logger.cc into XAPIAND_OBJ
+# below; src/logger_fwd.h + log.h + colors.h adapt its macro surface, and main.cc
+# wires its config/hooks to opts + traceback at startup. Its logger.h replaces
+# Xapiand's in-tree one (src/logger.h is now a thin shim).
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 426da51dbe25fe251c78a2b0ca8958760cfa8757)  # source_location + iTerm2
+FetchContent_GetProperties(logger)
+if(NOT logger_POPULATED)
+	FetchContent_Populate(logger)
+endif()
+include_directories("${logger_SOURCE_DIR}")
+
+# NOTE: the extracted traceback box (github.com/Kronuz/traceback) is the reusable,
+# modern core of this file's stack-trace code, published standalone. Xapiand keeps
+# its own src/traceback.cc here because that file also carries the signal-time
+# all-thread crash dumper (out of scope for the box), and the logger's backtrace
+# hook is wired to Xapiand's richer traceback() (atos file:line) in main.cc. The
+# two headers share the name "traceback.h"; fully de-vendoring Xapiand onto the
+# extracted core (a rename + dropping the in-tree copy) is a follow-up.
+
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime
@@ -868,6 +889,7 @@ file(GLOB XAPIAND_SRC_LIST
 list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/main.cc"
 "${PROJECT_SOURCE_DIR}/src/package.cc"
+"${PROJECT_SOURCE_DIR}/src/logger.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -879,6 +901,9 @@ list(APPEND XAPIAND_SRC_LIST "${threadpool_SOURCE_DIR}/thread.cc")
 # structured-object glue (src/datetime_msgpack.cc) stays in Xapiand and is
 # globbed above.
 list(APPEND XAPIAND_SRC_LIST "${datetime_SOURCE_DIR}/datetime.cc")
+# The extracted logger's out-of-line implementation, in place of the removed
+# src/logger.cc. (Xapiand keeps its own src/traceback.cc; see the note above.)
+list(APPEND XAPIAND_SRC_LIST "${logger_SOURCE_DIR}/logger.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC
