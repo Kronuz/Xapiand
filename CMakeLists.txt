@@ -406,7 +406,7 @@ FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfe
 FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 1b537db2e41883d81cc06daf0ea3e997d47b7a00)
 FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 36659c7d725becb7bce11e293b530465f0d03d6d)
 FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG ea5cfbb54db957db324a5f08fbb4225ca2dce4d4)
-FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG e722677804d33337d017f0c2f406c1bd5162211b)
+FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG a42e173c20a77a517055d0567c2f5466859f845d)  # sentinel frontier
 FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG a455f3317967d2c91e0d5c2064e47441dc04dcfb)
 FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 183957c9ccda6591886306a331ee29cf38e30aed)
 FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG de129160e1da79ea4863e19e7d06c40553c29021)
@@ -459,7 +459,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG a55596ff3ad58fb960676d0a07394f51813091b7)
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 4e38b059c54cc492623ed61ae86d7da7ce3b7658)  # on sentinel stash
 FetchContent_GetProperties(scheduler)
 if(NOT scheduler_POPULATED)
 	FetchContent_Populate(scheduler)
