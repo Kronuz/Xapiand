@@ -72,29 +72,82 @@ inline void print(std::string_view fmt, Args&&... args) {
 	::print_msg(fmt, std::forward<Args>(args)...);
 }
 
-// (3) Color-aware wrappers over the extracted logger. The color argument is
-// accepted and ignored (the sink colorizes by priority); this is the surface
-// colors.h builds its L_RED / L_STACKED_* / L_UNINDENTED_* shortcuts on. The
-// extracted header defines colorless L / L_STACKED, so undefine them first.
-#undef L
-#undef L_STACKED
-#define L(priority, color, ...)            LOG(0, (priority), __VA_ARGS__)
-#define L_UNINDENTED(priority, color, ...) LOG(0, (priority), __VA_ARGS__)
-#define L_STACKED(priority, color, ...)    LOG(0, (priority), __VA_ARGS__); ::LogIndent L_UNIQUE_NAME
+// (3) Color-aware wrappers over the extracted logger. Xapiand colors a whole line
+// by prepending the macro's color to the format (the sink keeps embedded color);
+// the extracted core instead colors only the priority marker by a generic palette.
+// To preserve Xapiand's look, prepend the color here. LOG_C routes through the
+// core's LOG (once, priority) with `(color) + (format)` as the message. This is
+// also the surface colors.h builds its L_RED / L_STACKED_* shortcuts on.
+#define LOG_C(once, priority, color, format, ...) \
+	LOG((once), (priority), ((color) + (format)), ##__VA_ARGS__)
 
-// (4) Deferred variants. Xapiand's call sites carry a `color` argument (resolved
-// from priority by the sink here, so it is accepted and dropped) and use the
-// unlog forms as expressions, so these override the core's colorless versions.
-#define L_DELAYED_600(...) auto __log_delayed = L_DELAYED(true, std::chrono::milliseconds(600), LOG_WARNING, __VA_ARGS__)
+#undef L
+#undef L_UNINDENTED
+#undef L_STACKED
+#define L(priority, color, ...)            LOG_C(0, (priority), color, __VA_ARGS__)
+#define L_UNINDENTED(priority, color, ...) LOG_C(0, (priority), color, __VA_ARGS__)
+#define L_STACKED(priority, color, ...)    LOG_C(0, (priority), color, __VA_ARGS__); ::LogIndent L_UNIQUE_NAME
+
+// The severity macros prepend Xapiand's per-level color (INFO_COL, ERR_COL, ...)
+// from log.h, restoring the colored lines the in-tree logger produced.
+#undef L_INFO
+#undef L_NOTICE
+#undef L_WARNING
+#undef L_ERR
+#undef L_CRIT
+#undef L_ALERT
+#undef L_EMERG
+#define L_INFO(...)    LOG_C(0, LOG_INFO,    INFO_COL,    __VA_ARGS__)
+#define L_NOTICE(...)  LOG_C(0, LOG_NOTICE,  NOTICE_COL,  __VA_ARGS__)
+#define L_WARNING(...) LOG_C(0, LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_ERR(...)     LOG_C(0, LOG_ERR,     ERR_COL,     __VA_ARGS__)
+#define L_CRIT(...)    LOG_C(0, LOG_CRIT,    CRIT_COL,    __VA_ARGS__)
+#define L_ALERT(...)   LOG_C(0, LOG_ALERT,   ALERT_COL,   __VA_ARGS__)
+#define L_EMERG(...)   LOG_C(0, LOG_EMERG,   EMERG_COL,   __VA_ARGS__)
+
+#undef L_INFO_ONCE
+#undef L_NOTICE_ONCE
+#undef L_WARNING_ONCE
+#undef L_ERR_ONCE
+#define L_INFO_ONCE(...)    LOG_C(1, LOG_INFO,    INFO_COL,    __VA_ARGS__)
+#define L_NOTICE_ONCE(...)  LOG_C(1, LOG_NOTICE,  NOTICE_COL,  __VA_ARGS__)
+#define L_WARNING_ONCE(...) LOG_C(1, LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_ERR_ONCE(...)     LOG_C(1, LOG_ERR,     ERR_COL,     __VA_ARGS__)
+
+#undef L_WARNING_ONCE_PER_MINUTE
+#undef L_ERR_ONCE_PER_MINUTE
+#define L_WARNING_ONCE_PER_MINUTE(...) LOG_C(L_ONCE_PER_MINUTE_TOKEN, LOG_WARNING, WARNING_COL, __VA_ARGS__)
+#define L_ERR_ONCE_PER_MINUTE(...)     LOG_C(L_ONCE_PER_MINUTE_TOKEN, LOG_ERR,     ERR_COL,     __VA_ARGS__)
+
+// L_EXC: in-flight exception at CRIT, async, with the error color prepended.
+#undef L_EXC
+#define L_EXC(format, ...) \
+	L_LOG_BASE(false, std::chrono::milliseconds(0), true, true, 0, LOG_CRIT, std::current_exception(), ((ERR_COL) + (format)), ##__VA_ARGS__)
+
+// (4) Deferred variants. Xapiand's call sites carry a `color` argument (prepended
+// to the message, like the severity macros) and use these as expressions, so they
+// override the core's colorless versions. The deferred lines are LIGHT_PURPLE.
+#undef L_DELAYED
+#define L_DELAYED(clears, delay, priority, color, format, ...) \
+	L_LOG_BASE((clears), (delay), true, true, 0, (priority), std::exception_ptr{}, ((color) + (format)), ##__VA_ARGS__)
+#undef L_DELAYED_100
+#undef L_DELAYED_200
+#undef L_DELAYED_1000
+#undef L_DELAYED_N
+#define L_DELAYED_100(...)  auto __log_delayed = L_DELAYED(true, std::chrono::milliseconds(100),  LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_200(...)  auto __log_delayed = L_DELAYED(true, std::chrono::milliseconds(200),  LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_600(...)  auto __log_delayed = L_DELAYED(true, std::chrono::milliseconds(600),  LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_1000(...) auto __log_delayed = L_DELAYED(true, std::chrono::milliseconds(1000), LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
+#define L_DELAYED_N(delay, ...) auto __log_delayed = L_DELAYED(true, (delay), LOG_WARNING, LIGHT_PURPLE, __VA_ARGS__)
 
 // An expression yielding a Log handle (e.g. `auto x = L_DELAYED_BACKTRACE(...)`).
-// The core has no callstack-carrying variant; this is a plain deferred line.
+// The core has no callstack-carrying variant; this is a plain colored deferred line.
 #define L_DELAYED_BACKTRACE(clears, delay, priority, color, ...) \
-	L_DELAYED((clears), (delay), (priority), __VA_ARGS__)
+	L_DELAYED((clears), (delay), (priority), color, __VA_ARGS__)
 
 // Swap/cancel a pending deferred line. Xapiand passes (priority, color, fmt, ...).
 #undef L_DELAYED_UNLOG
-#define L_DELAYED_UNLOG(priority, color, ...) unlog((priority), ::format_msg(__VA_ARGS__))
+#define L_DELAYED_UNLOG(priority, color, format, ...) unlog((priority), ::format_msg(((color) + (format)), ##__VA_ARGS__))
 #undef L_DELAYED_N_UNLOG
 #define L_DELAYED_N_UNLOG(...) __log_delayed.L_DELAYED_UNLOG(LOG_WARNING, PURPLE, __VA_ARGS__)
 
