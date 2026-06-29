@@ -406,10 +406,18 @@ parseOptions(int argc, char** argv)
 		bool admin_commands = false;
 		app.add_flag("--admin-commands", admin_commands, "Enables administrative HTTP commands.");
 
+		std::string color = "auto";
+		auto color_opt = app.add_option("--color", color,
+			"When to colorize console output: auto, always, never, truecolor, 256, 16.")
+			->type_name("MODE")
+			->check(CLI::IsMember({"auto", "always", "on", "never", "off",
+				"truecolor", "24bit", "256", "256color", "16", "ansi", "stacked"}));
+		bool no_color = false;
+		app.add_flag("--no-color", no_color, "Disables colors on the console (alias for --color=never).");
 		bool no_colors = false;
-		app.add_flag("--no-colors", no_colors, "Disables colors on the console.");
+		app.add_flag("--no-colors", no_colors, "Disables colors on the console. (deprecated: use --no-color)");
 		bool colors = false;
-		app.add_flag("--colors", colors, "Enables colors on the console.");
+		app.add_flag("--colors", colors, "Enables colors on the console. (deprecated: use --color=always)");
 		bool no_pretty = false;
 		app.add_flag("--no-pretty", no_pretty, "Disables pretty results.");
 		bool pretty = false;
@@ -474,6 +482,17 @@ parseOptions(int argc, char** argv)
 
 		o.colors = colors;
 		o.no_colors = no_colors;
+		// Resolve the final color mode: an explicit --color wins; otherwise fold in
+		// the standard --no-color and the deprecated --colors / --no-colors flags.
+		if (color_opt->count() > 0) {
+			o.color = color;
+		} else if (no_color || no_colors) {
+			o.color = "never";
+		} else if (colors) {
+			o.color = "always";
+		} else {
+			o.color = "auto";
+		}
 
 		o.admin_commands = admin_commands;
 

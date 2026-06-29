@@ -473,7 +473,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 426da51dbe25fe251c78a2b0ca8958760cfa8757)  # source_location + iTerm2
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 431eca0723e260b3662d81c328f7246ec37684cd)  # color rendering + iTerm2 restore at exit
 FetchContent_GetProperties(logger)
 if(NOT logger_POPULATED)
 	FetchContent_Populate(logger)
@@ -516,7 +516,7 @@ include_directories(
 # ...). The wrapper pulls the palette by absolute path (TERM_COLOR_PALETTE_HEADER)
 # to avoid the same-name collision, the way located-exception is wired. ansi_color.hh
 # and color_tools.hh are consumed directly from the library's dir on the path.
-FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 7dfa498071d9cfb1cd5f125c25cc1782f24b0ad9)
+FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 48069caadbfa6da3911d9828abd6583adead569f)  # worst-tier-first stack + resolution layer
 FetchContent_GetProperties(term_color)
 if(NOT term_color_POPULATED)
 	FetchContent_Populate(term_color)

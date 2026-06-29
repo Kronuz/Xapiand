@@ -952,9 +952,47 @@ int main(int argc, char **argv) {
 		}
 
 		Logging::config.log_level += opts.verbosity;
-		Logging::config.colors = opts.colors && !opts.no_colors;
-		Logging::config.with_threads = true;
-		Logging::config.with_location = false;
+
+		// Color: --color=<mode>, already normalized in opts (it folds in the
+		// deprecated --colors / --no-colors / --no-color). In automatic mode the
+		// logger/term-color handle the tty check and NO_COLOR; always + an explicit
+		// tier force color and override NO_COLOR. `stacked` emits the full portable
+		// stack and lets the terminal resolve it (undocumented power mode).
+		if (opts.color == "never" || opts.color == "off") {
+			Logging::config.color = LogColorMode::never;
+		} else if (opts.color == "always" || opts.color == "on") {
+			Logging::config.color = LogColorMode::always;
+			Logging::config.color_depth = LogColorDepth::automatic;
+		} else if (opts.color == "truecolor" || opts.color == "24bit") {
+			Logging::config.color = LogColorMode::always;
+			Logging::config.color_depth = LogColorDepth::truecolor;
+		} else if (opts.color == "256" || opts.color == "256color") {
+			Logging::config.color = LogColorMode::always;
+			Logging::config.color_depth = LogColorDepth::ansi256;
+		} else if (opts.color == "16" || opts.color == "ansi") {
+			Logging::config.color = LogColorMode::always;
+			Logging::config.color_depth = LogColorDepth::ansi16;
+		} else if (opts.color == "stacked") {
+			Logging::config.color = LogColorMode::always;
+			Logging::config.color_depth = LogColorDepth::stacked;
+		} else {  // "auto"
+			Logging::config.color = LogColorMode::automatic;
+			Logging::config.color_depth = LogColorDepth::automatic;
+		}
+
+		// Timestamp: format + sub-second precision from the existing opts, with
+		// Xapiand's long-standing grey gradient. Defaults (no flags) reproduce the
+		// compact YYYYMMDDHHMMSS ramp.
+		Logging::config.with_timestamp = !opts.log_timeless;
+		Logging::config.timestamp = opts.log_iso8601 ? LogTimestamp::iso8601
+			: opts.log_epoch ? LogTimestamp::epoch
+			: LogTimestamp::datetime;
+		Logging::config.precision = opts.log_microseconds ? LogPrecision::microseconds
+			: opts.log_milliseconds ? LogPrecision::milliseconds
+			: LogPrecision::seconds;
+		Logging::config.timestamp_gradient = true;
+		Logging::config.with_threads = opts.log_threads;
+		Logging::config.with_location = opts.log_location;
 
 		// Wire the extracted logger's pluggable hooks to Xapiand's richer
 		// implementations: exception description (incl. Xapian::Error), thread
