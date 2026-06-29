@@ -524,6 +524,19 @@ endif()
 include_directories("${term_color_SOURCE_DIR}")
 add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colors.h")
 
+# fantasyname: the C++ fantasy name generator (German's, upstreamed to and based on
+# skeeto/fantasyname). We compile its c++/namegen.cc into XAPIAND_OBJ below; Xapiand
+# keeps a thin src/namegen.h wrapper that re-adds its name_generator() helper. The
+# wrapper pulls the library header by absolute path (FANTASYNAME_HEADER) to avoid the
+# same-name "namegen.h" collision -- the c++/ dir is deliberately NOT put on the
+# include path, the way colors.h is wired for term-color.
+FetchContent_Declare(fantasyname GIT_REPOSITORY https://github.com/Kronuz/fantasyname.git GIT_TAG master)  # track tip
+FetchContent_GetProperties(fantasyname)
+if(NOT fantasyname_POPULATED)
+	FetchContent_Populate(fantasyname)
+endif()
+add_compile_definitions(FANTASYNAME_HEADER="${fantasyname_SOURCE_DIR}/c++/namegen.h")
+
 # enum-reflection: reflective ENUM_CLASS (enum <-> string, perfect-hash lookup),
 # extracted from Xapiand. Header-only; enum.h includes phf.hh + hashes.hh, which
 # are already on the include path above. boolean-parser: the boolean-expression
@@ -890,6 +903,7 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/main.cc"
 "${PROJECT_SOURCE_DIR}/src/package.cc"
 "${PROJECT_SOURCE_DIR}/src/logger.cc"
+"${PROJECT_SOURCE_DIR}/src/namegen.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -904,6 +918,10 @@ list(APPEND XAPIAND_SRC_LIST "${datetime_SOURCE_DIR}/datetime.cc")
 # The extracted logger's out-of-line implementation, in place of the removed
 # src/logger.cc. (Xapiand keeps its own src/traceback.cc; see the note above.)
 list(APPEND XAPIAND_SRC_LIST "${logger_SOURCE_DIR}/logger.cc")
+# The fantasy name generator's out-of-line implementation, in place of the removed
+# src/namegen.cc. It includes its own "namegen.h" (same dir), so c++/ does not need
+# to be on the include path; src/namegen.h reaches it via FANTASYNAME_HEADER.
+list(APPEND XAPIAND_SRC_LIST "${fantasyname_SOURCE_DIR}/c++/namegen.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC
