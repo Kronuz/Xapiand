@@ -402,14 +402,14 @@ link_libraries(
 # FETCHCONTENT_SOURCE_DIR_<NAME> (or populate FETCHCONTENT_BASE_DIR) to a local
 # checkout.
 include(FetchContent)
-FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfect-hash.git GIT_TAG 660c416338cdba45c7110053b6cf8258979aecc8)
-FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG 1b537db2e41883d81cc06daf0ea3e997d47b7a00)
-FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG 36659c7d725becb7bce11e293b530465f0d03d6d)
-FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG ea5cfbb54db957db324a5f08fbb4225ca2dce4d4)
-FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG a42e173c20a77a517055d0567c2f5466859f845d)  # sentinel frontier
-FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG a455f3317967d2c91e0d5c2064e47441dc04dcfb)
-FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG 183957c9ccda6591886306a331ee29cf38e30aed)
-FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG de129160e1da79ea4863e19e7d06c40553c29021)
+FetchContent_Declare(perfect_hash GIT_REPOSITORY https://github.com/Kronuz/perfect-hash.git GIT_TAG main)
+FetchContent_Declare(split        GIT_REPOSITORY https://github.com/Kronuz/split.git        GIT_TAG main)
+FetchContent_Declare(lru_cache    GIT_REPOSITORY https://github.com/Kronuz/lru-cache.git    GIT_TAG main)
+FetchContent_Declare(errno_names  GIT_REPOSITORY https://github.com/Kronuz/errno-names.git  GIT_TAG main)
+FetchContent_Declare(stash        GIT_REPOSITORY https://github.com/Kronuz/stash.git        GIT_TAG main)  # track tip
+FetchContent_Declare(uinteger_t   GIT_REPOSITORY https://github.com/Kronuz/uinteger_t.git   GIT_TAG master)
+FetchContent_Declare(base_x       GIT_REPOSITORY https://github.com/Kronuz/base-x.git        GIT_TAG master)
+FetchContent_Declare(located_exception GIT_REPOSITORY https://github.com/Kronuz/located-exception.git GIT_TAG main)
 # uinteger_t is declared before base_x so base_x's own FetchContent of it dedups
 # to this pinned copy.
 FetchContent_MakeAvailable(perfect_hash split lru_cache errno_names stash uinteger_t base_x located_exception)
@@ -442,7 +442,7 @@ add_compile_definitions(LOCATED_EXCEPTION_HEADER="${located_exception_SOURCE_DIR
 # rather than linking the library's own target. The trace header maps the
 # library's no-op hooks back onto Xapiand's log.h + traceback.h, and the name
 # prefix restores the "Xapiand:" thread-name prefix.
-FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG e828cb5e23420ff67547131e449b3c103fcc2163)
+FetchContent_Declare(threadpool GIT_REPOSITORY https://github.com/Kronuz/threadpool.git GIT_TAG main)
 FetchContent_GetProperties(threadpool)
 if(NOT threadpool_POPULATED)
 	FetchContent_Populate(threadpool)
@@ -459,7 +459,7 @@ add_compile_definitions(
 # own random.cc, so we populate headers only and do NOT compile the library's
 # random.cc. The trace header restores L_SCHEDULER/L_DEBUG_HOOK/L_EXC/L_CALL and
 # the color palette onto Xapiand's log.h + colors.h.
-FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG 4e38b059c54cc492623ed61ae86d7da7ce3b7658)  # on sentinel stash
+FetchContent_Declare(scheduler GIT_REPOSITORY https://github.com/Kronuz/scheduler.git GIT_TAG main)  # track tip
 FetchContent_GetProperties(scheduler)
 if(NOT scheduler_POPULATED)
 	FetchContent_Populate(scheduler)
@@ -473,7 +473,7 @@ add_compile_definitions(SCHEDULER_TRACE_HEADER="xapiand_scheduler_trace.h")
 # below; src/logger_fwd.h + log.h + colors.h adapt its macro surface, and main.cc
 # wires its config/hooks to opts + traceback at startup. Its logger.h replaces
 # Xapiand's in-tree one (src/logger.h is now a thin shim).
-FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG 431eca0723e260b3662d81c328f7246ec37684cd)  # color rendering + iTerm2 restore at exit
+FetchContent_Declare(logger GIT_REPOSITORY https://github.com/Kronuz/logger.git GIT_TAG main)  # track tip
 FetchContent_GetProperties(logger)
 if(NOT logger_POPULATED)
 	FetchContent_Populate(logger)
@@ -493,10 +493,10 @@ include_directories("${logger_SOURCE_DIR}")
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime
 # xxHash fast paths light up automatically because xxhash.h (from lz4) is on the
 # path too.
-FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG ab7269a00b90f5899ed8ee38aea1c25c16fa24b5)
-FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG 58689399d64f97b93132bde291d34c6a99560884)
-FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG 599d980cb8253f3b8f1cf20e4aca63681f1a12a6)
-FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG 99b46027325de6f131f6f9f0ae9c4d3552c0043b)
+FetchContent_Declare(static_string GIT_REPOSITORY https://github.com/Kronuz/static-string.git GIT_TAG main)
+FetchContent_Declare(char_classify GIT_REPOSITORY https://github.com/Kronuz/char-classify.git GIT_TAG main)
+FetchContent_Declare(strict_stox  GIT_REPOSITORY https://github.com/Kronuz/strict-stox.git  GIT_TAG main)
+FetchContent_Declare(hashes       GIT_REPOSITORY https://github.com/Kronuz/hashes.git       GIT_TAG main)
 foreach(dep static_string char_classify strict_stox hashes)
 	FetchContent_GetProperties(${dep})
 	if(NOT ${dep}_POPULATED)
@@ -516,7 +516,7 @@ include_directories(
 # ...). The wrapper pulls the palette by absolute path (TERM_COLOR_PALETTE_HEADER)
 # to avoid the same-name collision, the way located-exception is wired. ansi_color.hh
 # and color_tools.hh are consumed directly from the library's dir on the path.
-FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG 48069caadbfa6da3911d9828abd6583adead569f)  # worst-tier-first stack + resolution layer
+FetchContent_Declare(term_color GIT_REPOSITORY https://github.com/Kronuz/term-color.git GIT_TAG main)  # track tip
 FetchContent_GetProperties(term_color)
 if(NOT term_color_POPULATED)
 	FetchContent_Populate(term_color)
@@ -530,8 +530,8 @@ add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colo
 # query parser (lexer + shunting-yard + AST + RPN), compiled into BOOLEAN_PARSER_OBJ
 # from the fetched sources below. Its headers sit at the repo root with a Boolean
 # prefix on the generic ones, so they go on the include path directly.
-FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG 7aff69f82972771d83fce4007fdcf6cfbf1c1751)
-FetchContent_Declare(boolean_parser  GIT_REPOSITORY https://github.com/Kronuz/boolean-parser.git  GIT_TAG 84cc5513ba5d4cc3c4b1a63967502bd03c0aaab4)
+FetchContent_Declare(enum_reflection GIT_REPOSITORY https://github.com/Kronuz/enum-reflection.git GIT_TAG main)
+FetchContent_Declare(boolean_parser  GIT_REPOSITORY https://github.com/Kronuz/boolean-parser.git  GIT_TAG main)
 foreach(dep enum_reflection boolean_parser)
 	FetchContent_GetProperties(${dep})
 	if(NOT ${dep}_POPULATED)
@@ -548,7 +548,7 @@ include_directories(
 # part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
 # Xapiand as src/datetime_msgpack.{h,cc}. datetime.cc uses strict_stox, already
 # on the path.
-FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG 533c7cb70aad16b7e234f964d47b75d6df748b79)
+FetchContent_Declare(datetime GIT_REPOSITORY https://github.com/Kronuz/datetime.git GIT_TAG main)
 FetchContent_GetProperties(datetime)
 if(NOT datetime_POPULATED)
 	FetchContent_Populate(datetime)
