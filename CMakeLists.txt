@@ -524,6 +524,42 @@ endif()
 include_directories("${term_color_SOURCE_DIR}")
 add_compile_definitions(TERM_COLOR_PALETTE_HEADER="${term_color_SOURCE_DIR}/colors.h")
 
+# Six more utilities extracted from Xapiand into standalone repos: endian (header
+# only) and repr / escape / times / strings / url_parser (each a small .cc compiled
+# into XAPIAND_OBJ below, the logger way). Their headers go on the include path and
+# Xapiand's in-tree copies are dropped; they build on char-classify / split /
+# static-string / term-color (already on the path above) + repr.
+FetchContent_Declare(endian     GIT_REPOSITORY https://github.com/Kronuz/endian.git     GIT_TAG main)
+FetchContent_Declare(repr       GIT_REPOSITORY https://github.com/Kronuz/repr.git       GIT_TAG main)
+FetchContent_Declare(escape     GIT_REPOSITORY https://github.com/Kronuz/escape.git     GIT_TAG main)
+FetchContent_Declare(times      GIT_REPOSITORY https://github.com/Kronuz/times.git      GIT_TAG main)
+FetchContent_Declare(strings    GIT_REPOSITORY https://github.com/Kronuz/strings.git    GIT_TAG main)
+FetchContent_Declare(url_parser GIT_REPOSITORY https://github.com/Kronuz/url-parser.git GIT_TAG main)
+foreach(dep endian repr escape times strings url_parser)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${endian_SOURCE_DIR}"
+	"${repr_SOURCE_DIR}"
+	"${escape_SOURCE_DIR}"
+	"${times_SOURCE_DIR}"
+	"${url_parser_SOURCE_DIR}"
+)
+# strings is special: Xapiand files historically obtained log.h transitively through
+# strings.hh (the extracted library correctly no longer pulls it). So strings_SOURCE_DIR
+# is deliberately NOT on the include path; Xapiand keeps a thin src/strings.hh wrapper
+# that re-adds log.h and chains to the real header by absolute path (STRINGS_HEADER),
+# the same trick as src/colors.h / src/namegen.h. strings.cc finds its own strings.hh
+# in its source dir (a quoted include searches there first).
+add_compile_definitions(STRINGS_HEADER="${strings_SOURCE_DIR}/strings.hh")
+# times.cc's Apple fallback redefines clock_gettime unless HAVE_CLOCK_GETTIME is
+# set. It is available on every Xapiand target platform (macOS 10.12+, Linux), and
+# the extracted times.h no longer pulls Xapiand's config.h.
+add_compile_definitions(HAVE_CLOCK_GETTIME)
+
 # fantasyname: the C++ fantasy name generator (German's, upstreamed to and based on
 # skeeto/fantasyname). We compile its c++/namegen.cc into XAPIAND_OBJ below; Xapiand
 # keeps a thin src/namegen.h wrapper that re-adds its name_generator() helper. The
@@ -904,6 +940,11 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/package.cc"
 "${PROJECT_SOURCE_DIR}/src/logger.cc"
 "${PROJECT_SOURCE_DIR}/src/namegen.cc"
+"${PROJECT_SOURCE_DIR}/src/repr.cc"
+"${PROJECT_SOURCE_DIR}/src/escape.cc"
+"${PROJECT_SOURCE_DIR}/src/times.cc"
+"${PROJECT_SOURCE_DIR}/src/strings.cc"
+"${PROJECT_SOURCE_DIR}/src/url_parser.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -922,6 +963,13 @@ list(APPEND XAPIAND_SRC_LIST "${logger_SOURCE_DIR}/logger.cc")
 # src/namegen.cc. It includes its own "namegen.h" (same dir), so c++/ does not need
 # to be on the include path; src/namegen.h reaches it via FANTASYNAME_HEADER.
 list(APPEND XAPIAND_SRC_LIST "${fantasyname_SOURCE_DIR}/c++/namegen.cc")
+# The six just-extracted utilities' out-of-line implementations, in place of the
+# removed src/{repr,escape,times,strings,url_parser}.cc (endian is header-only).
+list(APPEND XAPIAND_SRC_LIST "${repr_SOURCE_DIR}/repr.cc")
+list(APPEND XAPIAND_SRC_LIST "${escape_SOURCE_DIR}/escape.cc")
+list(APPEND XAPIAND_SRC_LIST "${times_SOURCE_DIR}/times.cc")
+list(APPEND XAPIAND_SRC_LIST "${strings_SOURCE_DIR}/strings.cc")
+list(APPEND XAPIAND_SRC_LIST "${url_parser_SOURCE_DIR}/url_parser.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC
