@@ -359,7 +359,6 @@ class HttpClient : public BaseClient<HttpClient> {
 	void log_request(Request& request);
 	void log_response(Response& response);
 
-	std::string http_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void end_http_request(Request& request);
 
 	const ct_type_t& resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types);

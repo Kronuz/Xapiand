@@ -243,9 +243,12 @@ HttpClient::~HttpClient() noexcept
 }
 
 
-std::string
-HttpClient::http_response(Request& request, enum http_status status, int mode, const std::string& body, const std::string& location, const std::string& ct_type, const std::string& ct_encoding, size_t content_length) {
-	L_CALL("HttpClient::http_response()");
+// Format the raw HTTP/1.1 response bytes (status line, headers, encoded body) from
+// the negotiated request state. Uses only `request`, no other client state, so it
+// is a file-scope free function the forthcoming SearchApplication can reuse.
+// (Leg 2 stage 1.) The argument defaults moved here from the former class decl.
+static std::string
+http_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0) {
 
 	std::string head;
 	std::string headers;
