@@ -756,6 +756,18 @@ endif()
 include_directories("${compressors_SOURCE_DIR}")
 add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
 
+# zstd: the storage library's codec-in-header dispatch references the Zstandard
+# backend (compressor_zstd.{h,cc}), so zstd must be available now even though
+# Xapiand used only deflate + lz4 before. Found from the system (Homebrew on
+# macOS); its header goes on the include path, compressor_zstd.cc compiles into
+# XAPIAND_OBJ, and libzstd links below.
+find_library(ZSTD_LIBRARY NAMES zstd libzstd)
+find_path(ZSTD_INCLUDE_DIR zstd.h)
+if(NOT (ZSTD_LIBRARY AND ZSTD_INCLUDE_DIR))
+	message(FATAL_ERROR "zstd not found (required by the storage library's codec dispatch); install libzstd")
+endif()
+include_directories("${ZSTD_INCLUDE_DIR}")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -1157,10 +1169,12 @@ list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/constraint.cc")
 # The Double Metaphone encoder's out-of-line implementation (the string-similarity
 # metrics are header-only; only this encoder ships a .cc).
 list(APPEND XAPIAND_SRC_LIST "${double_metaphone_SOURCE_DIR}/double_metaphone.cc")
-# compressors (deflate + lz4 only; no zstd), in place of the removed
-# src/compressor_deflate.cc and src/compressor_lz4.cc.
+# compressors (deflate + lz4 + zstd), in place of the removed
+# src/compressor_deflate.cc and src/compressor_lz4.cc. zstd was added when the
+# storage library's codec-in-header dispatch started referencing it.
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_deflate.cc")
 list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_lz4.cc")
+list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_zstd.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC
@@ -1171,6 +1185,7 @@ target_include_directories(XAPIAND_OBJ PUBLIC
 
 target_link_libraries(XAPIAND_OBJ PUBLIC
 	${ZLIB_LIBRARIES}
+	${ZSTD_LIBRARY}
 	${UUID_LIBRARIES}
 	${M_LIBRARIES}
 	${DL_LIBRARIES}
