@@ -3338,10 +3338,13 @@ HttpClient::get_acceptable_type(Request& request, const T& ct)
 }
 
 
-std::pair<std::string, std::string>
-HttpClient::serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
+// Content negotiation: render a MsgPack object as the bytes + content-type for a
+// negotiated ct_type. Pure (no client state) -- a file-scope free function so the
+// forthcoming SearchApplication can format responses without an HttpClient. (Leg 2
+// stage 1: extracting the shared response helpers off HttpClient `this`.)
+static std::pair<std::string, std::string>
+serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error)
 {
-	L_CALL("HttpClient::serialize_response({}, {}, {}, {})", repr(obj.to_string(), true, '\'', 200), repr(ct_type.to_string()), indent, serialize_error);
 
 	if (ct_type == no_type) {
 		return std::make_pair("", "");

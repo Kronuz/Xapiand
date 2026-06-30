@@ -361,7 +361,6 @@ class HttpClient : public BaseClient<HttpClient> {
 
 	std::string http_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0);
 	void end_http_request(Request& request);
-	std::pair<std::string, std::string> serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, bool serialize_error = false);
 
 	const ct_type_t& resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types);
 	const ct_type_t& resolve_ct_type(Request& request, const ct_type_t& ct_type = no_type);
