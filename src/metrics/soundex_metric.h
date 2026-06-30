@@ -26,6 +26,29 @@
 
 
 /*
+ * The Soundex encoders now come from the standalone soundex library
+ * (github.com/Kronuz/soundex), which is the pure algorithm and deliberately
+ * drops the serialise()/unserialise() persistence (that is index storage, not
+ * phonetics). SoundexMetric still has to persist the encoder's cached code, so
+ * re-attach it here: a thin subclass that (de)serialises the protected _code_str
+ * the library's Soundex base keeps. Nothing soundex-specific lives in here.
+ */
+template <typename SoundexLan>
+class SerialisableSoundex : public SoundexLan {
+public:
+	using SoundexLan::SoundexLan;
+
+	std::string serialise() const {
+		return serialise_string(this->_code_str);
+	}
+
+	void unserialise(const char** p, const char* p_end) {
+		this->_code_str = unserialise_string(p, p_end);
+	}
+};
+
+
+/*
  * String Metric based in Soundex.
  *
  * First encodes the strings using SoundexLan and after
@@ -35,7 +58,7 @@
  */
 template <typename SoundexLan, typename Metric>
 class SoundexMetric : public Metric {
-	SoundexLan _soundex;
+	SerialisableSoundex<SoundexLan> _soundex;
 
 	double _distance(std::string_view str1, std::string_view str2) const {
 		return Metric::distance(_soundex.encode(str1), _soundex.encode(str2));

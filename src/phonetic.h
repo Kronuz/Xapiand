@@ -22,8 +22,12 @@
 
 #pragma once
 
-#include "phonetic/english_soundex.h"
-#include "phonetic/french_soundex.h"
-#include "phonetic/german_soundex.h"
-#include "phonetic/soundex.h"
-#include "phonetic/spanish_soundex.h"
+// The Soundex encoders now come from the standalone phonetic library
+// (github.com/Kronuz/phonetic), whose headers sit flat at its root (no phonetic/
+// prefix). The serialise persistence Xapiand needs is re-added in
+// metrics/soundex_metric.h, not here.
+#include "english_soundex.h"
+#include "french_soundex.h"
+#include "german_soundex.h"
+#include "soundex.h"
+#include "spanish_soundex.h"

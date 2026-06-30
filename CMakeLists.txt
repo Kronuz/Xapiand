@@ -657,6 +657,18 @@ include_directories(
 	"${bloom_filter_SOURCE_DIR}"   # bloom_filter.hh
 )
 
+# soundex: the language Soundex encoders (english/french/german/spanish). The
+# library is the pure algorithm; the serialise()/unserialise() persistence Xapiand
+# needs is re-attached Xapiand-side in src/metrics/soundex_metric.h
+# (SerialisableSoundex), so it stays out of the library. Depends on strings
+# (already on the path); header-only, so it just goes on the include path.
+FetchContent_Declare(soundex GIT_REPOSITORY https://github.com/Kronuz/soundex.git GIT_TAG main)
+FetchContent_GetProperties(soundex)
+if(NOT soundex_POPULATED)
+	FetchContent_Populate(soundex)
+endif()
+include_directories("${soundex_SOURCE_DIR}")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
