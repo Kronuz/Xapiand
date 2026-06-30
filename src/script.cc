@@ -26,7 +26,7 @@
 #ifdef XAPIAND_LUA
 
 #include "lua/processor.h"
-#include "hash/md5.h"
+#include "md5.h"
 #include "reserved/schema.h"
 #include "serialise.h"
 #include "phf.hh"                                 // for phf

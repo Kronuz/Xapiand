@@ -23,6 +23,7 @@
 #pragma once
 
 #include "circle.h"
+#include "exception.h"   // for GeometryError (no longer transitive via cartesian.h)
 
 class Polygon : public Geometry {
 public:

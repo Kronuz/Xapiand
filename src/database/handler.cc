@@ -38,7 +38,7 @@
 #include "database/utils.h"                 // for split_path_id, UNKNOWN_REVISION
 #include "database/wal.h"                   // for DatabaseWAL
 #include "exception.h"                      // for ClientError
-#include "hash/sha256.h"                    // for SHA256
+#include "sha256.h"                         // for SHA256
 #include "io.hh"                            // for io::write (for MsgPack::serialise)
 #include "length.h"                         // for serialise_string, unserialise_string
 #include "log.h"                            // for L_CALL

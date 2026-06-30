@@ -22,6 +22,7 @@
 
 #include "geospatial.h"
 
+#include "exception.h"                            // for GeoSpatialError (no longer transitive via cartesian.h)
 #include "cast.h"                                 // for Cast
 #include "hashes.hh"                              // for fnv1ah32
 #include "repr.hh"                                // for repr

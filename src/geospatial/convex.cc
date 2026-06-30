@@ -21,6 +21,7 @@
  */
 
 #include "convex.h"
+#include "exception.h"   // for GeometryError/NullConvex (no longer transitive via cartesian.h)
 
 #include <algorithm>
 #include <cmath>

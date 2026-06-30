@@ -21,6 +21,7 @@
  */
 
 #include "circle.h"
+#include "exception.h"   // for GeometryError (no longer transitive via cartesian.h)
 
 
 bool

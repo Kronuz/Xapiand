@@ -27,6 +27,7 @@
 #include <set>
 
 #include "collection.h"
+#include "exception.h"   // for HTMError (no longer transitive via cartesian.h)
 #include "strings.hh"
 
 

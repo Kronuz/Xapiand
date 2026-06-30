@@ -32,11 +32,10 @@ public:
 };
 
 
-class CartesianError : public GeoSpatialError {
-public:
-	template<typename... Args>
-	CartesianError(Args&&... args) : GeoSpatialError(std::forward<Args>(args)...) { }
-};
+// CartesianError now lives in the standalone cartesian library
+// (github.com/Kronuz/cartesian) as a std::runtime_error-based type, decoupled
+// from ClientError. catch_http_errors() in src/server/http_utils.h catches it
+// explicitly and re-maps it to HTTP 400 (the DatetimeError pattern).
 
 
 class GeometryError : public GeoSpatialError {

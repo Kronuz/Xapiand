@@ -604,6 +604,43 @@ if(NOT datetime_POPULATED)
 endif()
 include_directories("${datetime_SOURCE_DIR}")
 
+# More extracted utilities, consumed via FetchContent in place of the in-tree
+# copies under src/. md5/sha256 are content digests (they link endian, already on
+# the path); random/epoch/nanosleep/stringified are small standalone utilities;
+# allocators is the tracked-memory allocator; cartesian is the WGS84/geodesy core.
+# Header-only ones just need their dir on the include path; the compiled ones
+# (md5/sha256/random/allocators/cartesian) get their .cc added to XAPIAND_OBJ below.
+FetchContent_Declare(md5         GIT_REPOSITORY https://github.com/Kronuz/md5.git         GIT_TAG main)
+FetchContent_Declare(sha256      GIT_REPOSITORY https://github.com/Kronuz/sha256.git      GIT_TAG main)
+FetchContent_Declare(random      GIT_REPOSITORY https://github.com/Kronuz/random.git      GIT_TAG main)
+FetchContent_Declare(epoch       GIT_REPOSITORY https://github.com/Kronuz/epoch.git       GIT_TAG main)
+FetchContent_Declare(nanosleep   GIT_REPOSITORY https://github.com/Kronuz/nanosleep.git   GIT_TAG main)
+FetchContent_Declare(stringified GIT_REPOSITORY https://github.com/Kronuz/stringified.git GIT_TAG main)
+FetchContent_Declare(allocators  GIT_REPOSITORY https://github.com/Kronuz/allocators.git  GIT_TAG main)
+FetchContent_Declare(cartesian   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git   GIT_TAG main)
+foreach(dep md5 sha256 random epoch nanosleep stringified allocators cartesian)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${md5_SOURCE_DIR}"           # md5.h
+	"${sha256_SOURCE_DIR}"        # sha256.h
+	"${random_SOURCE_DIR}"        # random.hh
+	"${epoch_SOURCE_DIR}"         # epoch.hh
+	"${nanosleep_SOURCE_DIR}"     # nanosleep.h
+	"${stringified_SOURCE_DIR}"   # stringified.hh
+	"${allocators_SOURCE_DIR}"    # allocators.h
+	"${cartesian_SOURCE_DIR}"     # cartesian.h (+ its decoupled CartesianError)
+)
+# allocators dropped its #include "config.h"; supply the one feature macro it reads
+# when tracking is enabled. HAS_THREAD_LOCAL is self-detected by the library (its
+# own in-source probe), so it needs nothing here.
+if(TRACKED_MEM)
+	add_compile_definitions(XAPIAND_TRACKED_MEM)
+endif()
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -945,6 +982,11 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/times.cc"
 "${PROJECT_SOURCE_DIR}/src/strings.cc"
 "${PROJECT_SOURCE_DIR}/src/url_parser.cc"
+"${PROJECT_SOURCE_DIR}/src/hash/md5.cc"
+"${PROJECT_SOURCE_DIR}/src/hash/sha256.cc"
+"${PROJECT_SOURCE_DIR}/src/random.cc"
+"${PROJECT_SOURCE_DIR}/src/allocators.cc"
+"${PROJECT_SOURCE_DIR}/src/geospatial/cartesian.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -970,6 +1012,14 @@ list(APPEND XAPIAND_SRC_LIST "${escape_SOURCE_DIR}/escape.cc")
 list(APPEND XAPIAND_SRC_LIST "${times_SOURCE_DIR}/times.cc")
 list(APPEND XAPIAND_SRC_LIST "${strings_SOURCE_DIR}/strings.cc")
 list(APPEND XAPIAND_SRC_LIST "${url_parser_SOURCE_DIR}/url_parser.cc")
+# The newly extracted compiled utilities, in place of the removed
+# src/hash/{md5,sha256}.cc, src/random.cc, src/allocators.cc,
+# src/geospatial/cartesian.cc (the rest are header-only).
+list(APPEND XAPIAND_SRC_LIST "${md5_SOURCE_DIR}/md5.cc")
+list(APPEND XAPIAND_SRC_LIST "${sha256_SOURCE_DIR}/sha256.cc")
+list(APPEND XAPIAND_SRC_LIST "${random_SOURCE_DIR}/random.cc")
+list(APPEND XAPIAND_SRC_LIST "${allocators_SOURCE_DIR}/allocators.cc")
+list(APPEND XAPIAND_SRC_LIST "${cartesian_SOURCE_DIR}/cartesian.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC

@@ -24,6 +24,7 @@
 
 #include <string>                                 // std::string
 
+#include "cartesian.h"                            // for CartesianError
 #include "datetime.h"                             // for DatetimeError
 #include "exception.h"                            // for Exception
 #include "hashes.hh"                              // for hhl
@@ -109,6 +110,12 @@ catch_http_errors(Func&& func)
 		// DatetimeError is now std::runtime_error-based (it comes from the
 		// standalone datetime library, no longer a ClientError), so catch it
 		// explicitly to keep malformed dates a 400 rather than a 500.
+		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
+		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
+	} catch (const CartesianError& exc) {
+		// CartesianError, like DatetimeError, comes from a standalone library
+		// (cartesian) as a std::runtime_error subtype rather than a ClientError,
+		// so catch it explicitly to keep a bad coordinate/SRID a 400 not a 500.
 		http_errors.error_code = HTTP_STATUS_BAD_REQUEST;
 		http_errors.error = std::string(http_status_str(http_errors.error_code)) + ": " + exc.what();
 	} catch (const ClientError& exc) {

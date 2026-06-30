@@ -22,6 +22,7 @@
 
 #include "ewkt.h"
 
+#include "exception.h"       // for EWKTError (no longer transitive via cartesian.h)
 #include "hashes.hh"         // for fnv1ah32
 #include "phf.hh"            // for phf
 #include "repr.hh"           // for repr
