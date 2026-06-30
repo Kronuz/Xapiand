@@ -824,6 +824,14 @@ include_directories(
 	"${lz4_SOURCE_DIR}/lib"             # lz4.h, lz4frame.h, lz4hc.h, xxhash.h
 )
 
+# Stock rapidjson parses strictly by default, but Xapiand's previously-vendored copy
+# customized RAPIDJSON_PARSE_DEFAULT_FLAGS to accept comments, trailing commas, and
+# NaN/Inf -- relaxed JSON the REST API (and every doc example) relies on. De-vendoring
+# to upstream rapidjson dropped that, so bare doc.Parse() started rejecting it. Restore
+# it globally to match the prior behavior. (Caught by the docs E2E suite: dozens of
+# PUT/SEARCH bodies with trailing commas or // comments were 400ing.)
+add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag)")
+
 # (yaml/libyaml and libev stay vendored under src/: libyaml's build is wired into
 # Xapiand's generated config.h feature detection and its sources are entangled
 # with the vendored y2j wrapper in YAML_OBJ; libev likewise depends on Xapiand's
