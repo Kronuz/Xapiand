@@ -30,7 +30,7 @@
 #include <vector>                                 // for vector, allocator
 
 #include "database/utils.h"                       // for prefixed
-#include "geospatial/htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
+#include "htm.h"                       // for HTM_BITS_ID, range_t (ptr only)
 #include "serialise.h"                            // for serialise
 #include "xapian.h"                               // for Query, Query::op::OP_OR, Query::op::OP_AND
 

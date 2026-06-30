@@ -32,7 +32,7 @@
 
 #include "datetime.h"               // for Datetime::tm_t (ptr only), Datetime::timestamp
 #include "cartesian.h"              // for Cartesian
-#include "geospatial/htm.h"         // for range_t
+#include "htm.h"         // for range_t
 #include "msgpack.h"                // for MsgPack
 #include "sortable_serialise.h"     // for sortable_serialise, sortable_unserialise
 #include "hashes.hh"                // for fnv1ah32

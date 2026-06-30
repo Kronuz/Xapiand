@@ -669,6 +669,22 @@ if(NOT soundex_POPULATED)
 endif()
 include_directories("${soundex_SOURCE_DIR}")
 
+# htm: the Hierarchical Triangular Mesh spatial index, with the Constraint
+# spherical-cap primitive and the earth-radius constants absorbed in (they used to
+# live in src/geospatial/geometry.{h,cc}). Xapiand's geometry.h now gets Constraint
+# + those constants from the library transitively (htm.h -> constraint.h), so their
+# definitions are removed from geometry.h; geometry.cc held ONLY the Constraint
+# impl, so it is dropped entirely in favor of the library's constraint.cc. The
+# Geometry/Collection-coupled debug viz writers the library dropped were already
+# dead in Xapiand (only a commented-out call). Depends on cartesian (already on the
+# path); compiled (htm.cc + constraint.cc into XAPIAND_OBJ).
+FetchContent_Declare(htm GIT_REPOSITORY https://github.com/Kronuz/htm.git GIT_TAG main)
+FetchContent_GetProperties(htm)
+if(NOT htm_POPULATED)
+	FetchContent_Populate(htm)
+endif()
+include_directories("${htm_SOURCE_DIR}")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -1015,6 +1031,8 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/random.cc"
 "${PROJECT_SOURCE_DIR}/src/allocators.cc"
 "${PROJECT_SOURCE_DIR}/src/geospatial/cartesian.cc"
+"${PROJECT_SOURCE_DIR}/src/geospatial/htm.cc"
+"${PROJECT_SOURCE_DIR}/src/geospatial/geometry.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -1048,6 +1066,10 @@ list(APPEND XAPIAND_SRC_LIST "${sha256_SOURCE_DIR}/sha256.cc")
 list(APPEND XAPIAND_SRC_LIST "${random_SOURCE_DIR}/random.cc")
 list(APPEND XAPIAND_SRC_LIST "${allocators_SOURCE_DIR}/allocators.cc")
 list(APPEND XAPIAND_SRC_LIST "${cartesian_SOURCE_DIR}/cartesian.cc")
+# htm (Hierarchical Triangular Mesh) + the Constraint primitive it absorbed, in
+# place of the removed src/geospatial/htm.cc and src/geospatial/geometry.cc.
+list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/htm.cc")
+list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/constraint.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC

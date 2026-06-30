@@ -34,7 +34,7 @@
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...
 #include "geospatial/geospatial.h"                    // for GeoSpatial, EWKT
-#include "geospatial/htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
+#include "htm.h"                           // for Cartesian, HTM_MAX_LENGTH_NAME, HTM_BYTES_ID, range_t
 #include "msgpack.h"                                  // for MsgPack, object::object, type_error
 #include "phf.hh"                                     // for phf
 #include "query_dsl.h"                                // for QUERYDSL_FROM, QUERYDSL_TO

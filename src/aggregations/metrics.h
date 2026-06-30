@@ -36,7 +36,9 @@
 
 #include "aggregations.h"           // for BaseAggregation
 #include "exception.h"              // for AggregationError, MSG_AggregationError
+#include "log.h"                    // for L_CALL (was transitive via htm.h -> strings.hh)
 #include "msgpack.h"                // for MsgPack, object::object
+#include "repr.hh"                  // for repr (was transitive via htm.h -> strings.hh)
 #include "reserved/aggregations.h"  // for RESERVED_AGGS_*
 #include "serialise_list.h"         // for StringList, RangeList
 #include "xapian.h"                 // for valueno

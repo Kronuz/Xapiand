@@ -38,7 +38,7 @@
 
 #include "database/utils.h"
 #include "enum.h"                                 // for ENUM_CLASS
-#include "geospatial/htm.h"                       // for range_t, GeoSpatial
+#include "htm.h"                       // for range_t, GeoSpatial
 #include "log.h"                                  // for L_CALL
 #include "msgpack.h"                              // for MsgPack
 #include "repr.hh"                                // for repr
