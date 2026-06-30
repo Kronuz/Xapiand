@@ -70,15 +70,15 @@
 #include "geospatial/multipolygon.h"
 #include "geospatial/point.h"
 #include "geospatial/polygon.h"
-#include "metrics/basic_string_metric.h"
-#include "metrics/jaccard.h"
-#include "metrics/jaro.h"
-#include "metrics/jaro_winkler.h"
-#include "metrics/lcsubsequence.h"
-#include "metrics/lcsubstr.h"
-#include "metrics/levenshtein.h"
-#include "metrics/sorensen_dice.h"
-#include "metrics/soundex_metric.h"
+#include "basic_string_metric.h"
+#include "jaccard.h"
+#include "jaro.h"
+#include "jaro_winkler.h"
+#include "lcsubsequence.h"
+#include "lcsubstr.h"
+#include "levenshtein.h"
+#include "sorensen_dice.h"
+#include "phonetic_metric.h"
 #include "multivalue/geospatialrange.h"
 #include "multivalue/keymaker.h"
 #include "multivalue/range.h"
@@ -272,24 +272,24 @@ CHECK_MAX_SIZE(SMALL, (Point))
 // geospatial/polygon.h
 CHECK_MAX_SIZE(SMALL, (Polygon))
 
-// metrics/basic_string_metric.h
+// basic_string_metric.h
 CHECK_MAX_SIZE(SMALL, (Counter))
-// metrics/jaccard.h
+// jaccard.h
 CHECK_MAX_SIZE(SMALL, (Jaccard))
-// metrics/jaro.h
+// jaro.h
 CHECK_MAX_SIZE(SMALL, (Jaro))
-// metrics/jaro_winkler.h
+// jaro_winkler.h
 CHECK_MAX_SIZE(SMALL, (Jaro_Winkler))
-// metrics/lcsubsequence.h
+// lcsubsequence.h
 CHECK_MAX_SIZE(SMALL, (LCSubsequence))
-// metrics/lcsubstr.h
+// lcsubstr.h
 CHECK_MAX_SIZE(SMALL, (LCSubstr))
-// metrics/levenshtein.h
+// levenshtein.h
 CHECK_MAX_SIZE(SMALL, (Levenshtein))
-// metrics/sorensen_dice.h
+// sorensen_dice.h
 CHECK_MAX_SIZE(SMALL, (Sorensen_Dice))
-// metrics/soundex_metric.h
-// CHECK_MAX_SIZE(SMALL, (SoundexMetric))
+// phonetic_metric.h
+// CHECK_MAX_SIZE(SMALL, (PhoneticMetric))
 
 // multivalue/geospatialrange.h
 CHECK_MAX_SIZE(SMALL, (GeoSpatialRange))

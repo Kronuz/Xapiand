@@ -39,7 +39,7 @@
 #include "phonetic.h"                             // for SoundexEnglish, SoundexFrench...
 #include "serialise_list.h"                       // for StringList, ...
 #include "strict_stox.hh"                         // for strict_stoull
-#include "string_metric.h"                        // for Jaccard, Jaro, Jaro_Winkler...
+#include "string_metric.h"                        // for Jaccard, Jaro, ..., Serialisable* wrappers, DoubleMetaphone
 #include "xapian.h"                               // for valueno, KeyMaker
 
 
@@ -412,57 +412,62 @@ public:
 
 	template <typename... Args>
 	void add_string_levenshtein(Args... args) {
-		slots.push_back(std::make_unique<StringKey<Levenshtein>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableLevenshtein>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_jaro(Args... args) {
-		slots.push_back(std::make_unique<StringKey<Jaro>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableMetric<Jaro>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_jaro_winkler(Args... args) {
-		slots.push_back(std::make_unique<StringKey<Jaro_Winkler>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableJaroWinkler>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_sorensen_dice(Args... args) {
-		slots.push_back(std::make_unique<StringKey<Sorensen_Dice>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableMetric<Sorensen_Dice>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_jaccard(Args... args) {
-		slots.push_back(std::make_unique<StringKey<Jaccard>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableMetric<Jaccard>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_lcs(Args... args) {
-		slots.push_back(std::make_unique<StringKey<LCSubstr>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableMetric<LCSubstr>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_lcsq(Args... args) {
-		slots.push_back(std::make_unique<StringKey<LCSubsequence>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisableMetric<LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_en(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexEnglish, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_fr(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexFrench, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_de(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexGerman, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>
 	void add_string_soundex_es(Args... args) {
-		slots.push_back(std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>(std::forward<Args>(args)...));
+		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexSpanish, LCSubsequence>>>(std::forward<Args>(args)...));
+	}
+
+	template <typename... Args>
+	void add_string_double_metaphone(Args... args) {
+		slots.push_back(std::make_unique<StringKey<SerialisablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>(std::forward<Args>(args)...));
 	}
 
 	template <typename... Args>

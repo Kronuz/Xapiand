@@ -25,7 +25,7 @@
 // The Soundex encoders now come from the standalone phonetic library
 // (github.com/Kronuz/phonetic), whose headers sit flat at its root (no phonetic/
 // prefix). The serialise persistence Xapiand needs is re-added in
-// metrics/soundex_metric.h, not here.
+// metric_serialise.h (the Serialisable* wrappers), not here.
 #include "english_soundex.h"
 #include "french_soundex.h"
 #include "german_soundex.h"

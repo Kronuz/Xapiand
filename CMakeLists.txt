@@ -669,6 +669,31 @@ if(NOT soundex_POPULATED)
 endif()
 include_directories("${soundex_SOURCE_DIR}")
 
+# string-similarity: the pure string-metric algorithms (Levenshtein, Jaro,
+# Jaro-Winkler, Jaccard, Sorensen-Dice, LCSubstr, LCSubsequence, and the
+# encoder-agnostic PhoneticMetric). Header-only, headers flat at the repo root.
+# Like soundex, the library is the pure algorithms and deliberately drops the
+# serialise()/unserialise() persistence (that pulled length.h + GPL
+# serialise-double); Xapiand re-attaches it Xapiand-side via the thin Serialisable*
+# subclasses in src/metric_serialise.h, pulled in by src/string_metric.h. Depends
+# on strings + soundex (both already on the path); just goes on the include path.
+# double-metaphone: the Double Metaphone phonetic encoder, a selectable encoder
+# alongside the soundex family for PhoneticMetric. Its one out-of-line file
+# (double_metaphone.cc) compiles as part of Xapiand below (the cartesian/htm way),
+# and its header goes on the include path.
+FetchContent_Declare(string_similarity GIT_REPOSITORY https://github.com/Kronuz/string-similarity.git GIT_TAG main)
+FetchContent_Declare(double_metaphone  GIT_REPOSITORY https://github.com/Kronuz/double-metaphone.git  GIT_TAG main)
+foreach(dep string_similarity double_metaphone)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${string_similarity_SOURCE_DIR}"   # basic_string_metric.h, levenshtein.h, ..., phonetic_metric.h
+	"${double_metaphone_SOURCE_DIR}"    # double_metaphone.h
+)
+
 # htm: the Hierarchical Triangular Mesh spatial index, with the Constraint
 # spherical-cap primitive and the earth-radius constants absorbed in (they used to
 # live in src/geospatial/geometry.{h,cc}). Xapiand's geometry.h now gets Constraint
@@ -1070,6 +1095,9 @@ list(APPEND XAPIAND_SRC_LIST "${cartesian_SOURCE_DIR}/cartesian.cc")
 # place of the removed src/geospatial/htm.cc and src/geospatial/geometry.cc.
 list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/htm.cc")
 list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/constraint.cc")
+# The Double Metaphone encoder's out-of-line implementation (the string-similarity
+# metrics are header-only; only this encoder ships a .cc).
+list(APPEND XAPIAND_SRC_LIST "${double_metaphone_SOURCE_DIR}/double_metaphone.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC

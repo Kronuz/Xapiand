@@ -1408,6 +1408,9 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 								hh("lcsq"),
 								hh("soundex"),
 								hh("sound"),
+								hh("doublemetaphone"),
+								hh("dmetaphone"),
+								hh("metaphone"),
 								hh("jaro"),
 							});
 							switch (_.fhh(metric)) {
@@ -1438,6 +1441,11 @@ QueryDSL::get_sorter(const std::unique_ptr<Multi_MultiValueKeyMaker>& sorter, co
 								case _.fhh("soundex"):
 								case _.fhh("sound"):
 									sorter->add_string_soundex(field_spc.language, field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
+									break;
+								case _.fhh("doublemetaphone"):
+								case _.fhh("dmetaphone"):
+								case _.fhh("metaphone"):
+									sorter->add_string_double_metaphone(field_spc.slot, descending, Cast::cast(FieldType::text, *value).str_view(), icase);
 									break;
 								case _.fhh("jaro"):
 								default:

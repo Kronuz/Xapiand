@@ -28,7 +28,7 @@
 
 #include "aggregations.h"                         // for Aggregation
 #include "database/schema.h"                      // for Schema, required_spc_t
-#include "metrics/basic_string_metric.h"          // for Counter
+#include "basic_string_metric.h"                  // for Counter
 #include "serialise.h"                            // for Serialise::MsgPack
 
 

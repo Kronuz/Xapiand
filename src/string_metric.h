@@ -22,12 +22,21 @@
 
 #pragma once
 
-#include "metrics/basic_string_metric.h"
-#include "metrics/jaccard.h"
-#include "metrics/jaro.h"
-#include "metrics/jaro_winkler.h"
-#include "metrics/lcsubsequence.h"
-#include "metrics/lcsubstr.h"
-#include "metrics/levenshtein.h"
-#include "metrics/sorensen_dice.h"
-#include "metrics/soundex_metric.h"
+// The string-metric algorithms now come from the standalone string-similarity
+// library (github.com/Kronuz/string-similarity), whose headers sit flat at its
+// root (no metrics/ prefix). The serialise()/unserialise() persistence the
+// library drops is re-attached below via metric_serialise.h (the Serialisable*
+// wrappers), and double_metaphone.h adds the Double Metaphone encoder selectable
+// for PhoneticMetric alongside the soundex family.
+#include "basic_string_metric.h"
+#include "jaccard.h"
+#include "jaro.h"
+#include "jaro_winkler.h"
+#include "lcsubsequence.h"
+#include "lcsubstr.h"
+#include "levenshtein.h"
+#include "sorensen_dice.h"
+#include "phonetic_metric.h"
+
+#include "metric_serialise.h"
+#include "double_metaphone.h"

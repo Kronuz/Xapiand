@@ -622,6 +622,7 @@ Multi_MultiValueKeyMaker::unserialise(const std::string& serialised, const Xapia
 		hh("SoundexFrench"),
 		hh("SoundexGerman"),
 		hh("SoundexSpanish"),
+		hh("dmetaphone"),
 	});
 
 	auto sorter = std::make_unique<Multi_MultiValueKeyMaker>();
@@ -656,37 +657,43 @@ Multi_MultiValueKeyMaker::unserialise(const std::string& serialised, const Xapia
 				slot = std::make_unique<GeoKey>();
 				break;
 			case _.fhh("Levenshtein"):
-				slot = std::make_unique<StringKey<Levenshtein>>();
+				slot = std::make_unique<StringKey<SerialisableLevenshtein>>();
 				break;
 			case _.fhh("Jaro"):
-				slot = std::make_unique<StringKey<Jaro>>();
+				slot = std::make_unique<StringKey<SerialisableMetric<Jaro>>>();
 				break;
 			case _.fhh("Jaro_Winkler"):
-				slot = std::make_unique<StringKey<Jaro_Winkler>>();
+				slot = std::make_unique<StringKey<SerialisableJaroWinkler>>();
 				break;
 			case _.fhh("Sorensen_Dice"):
-				slot = std::make_unique<StringKey<Sorensen_Dice>>();
+				slot = std::make_unique<StringKey<SerialisableMetric<Sorensen_Dice>>>();
 				break;
 			case _.fhh("Jaccard"):
-				slot = std::make_unique<StringKey<Jaccard>>();
+				slot = std::make_unique<StringKey<SerialisableMetric<Jaccard>>>();
 				break;
 			case _.fhh("LCSubstr"):
-				slot = std::make_unique<StringKey<LCSubstr>>();
+				slot = std::make_unique<StringKey<SerialisableMetric<LCSubstr>>>();
 				break;
 			case _.fhh("LCSubsequence"):
-				slot = std::make_unique<StringKey<LCSubsequence>>();
+				slot = std::make_unique<StringKey<SerialisableMetric<LCSubsequence>>>();
 				break;
 			case _.fhh("SoundexEnglish"):
-				slot = std::make_unique<StringKey<SoundexMetric<SoundexEnglish, LCSubsequence>>>();
+				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexEnglish, LCSubsequence>>>();
 				break;
 			case _.fhh("SoundexFrench"):
-				slot = std::make_unique<StringKey<SoundexMetric<SoundexFrench, LCSubsequence>>>();
+				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexFrench, LCSubsequence>>>();
 				break;
 			case _.fhh("SoundexGerman"):
-				slot = std::make_unique<StringKey<SoundexMetric<SoundexGerman, LCSubsequence>>>();
+				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexGerman, LCSubsequence>>>();
 				break;
 			case _.fhh("SoundexSpanish"):
-				slot = std::make_unique<StringKey<SoundexMetric<SoundexSpanish, LCSubsequence>>>();
+				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<SoundexSpanish, LCSubsequence>>>();
+				break;
+			// The persistence dispatch key is the encoder's name() ("dmetaphone"),
+			// the same convention the Soundex slots use (key == encoder name()), so
+			// the name written by serialise() round-trips here.
+			case _.fhh("dmetaphone"):
+				slot = std::make_unique<StringKey<SerialisablePhoneticMetric<DoubleMetaphone, LCSubsequence>>>();
 				break;
 			default:
 				THROW(SerialisationError, "{} not implemented");
