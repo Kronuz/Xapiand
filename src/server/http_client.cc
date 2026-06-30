@@ -112,6 +112,20 @@ static const std::regex header_accept_encoding_re(R"(([-a-z+]+|\*)((?:\s*;\s*[a-
 static const std::string eol("\r\n");
 
 
+// Content negotiation helpers, lifted off HttpClient `this` so the forthcoming
+// SearchApplication can negotiate without an HttpClient (Leg 2 stage 2a). They use
+// only `request` (+ the file-scope AcceptLRU caches), so they are file-scope free
+// functions; forward-declared here because the views below call them before their
+// definitions (and they call one another out of order).
+static const ct_type_t& resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types);
+static const ct_type_t& resolve_ct_type(Request& request, const ct_type_t& ct_type = no_type);
+static const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t* ct_type);
+static const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<const ct_type_t*>& ct_types);
+template <typename T>
+static const ct_type_t& get_acceptable_type(Request& request, const T& ct);
+static Encoding resolve_encoding(Request& request);
+
+
 // Available commands
 
 #define METHODS_OPTIONS() \
@@ -3237,8 +3251,8 @@ HttpClient::end_http_request(Request& request)
 }
 
 
-const ct_type_t&
-HttpClient::resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types)
+static const ct_type_t&
+resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types)
 {
 	L_CALL("HttpClient::resolve_ct_type(<request>, <ct_types>)");
 
@@ -3252,8 +3266,8 @@ HttpClient::resolve_ct_type(Request& request, const std::vector<const ct_type_t*
 }
 
 
-const ct_type_t&
-HttpClient::resolve_ct_type(Request& request, const ct_type_t& ct_type)
+static const ct_type_t&
+resolve_ct_type(Request& request, const ct_type_t& ct_type)
 {
 	L_CALL("HttpClient::resolve_ct_type(<request>, {})", repr(ct_type.to_string()));
 
@@ -3282,8 +3296,8 @@ HttpClient::resolve_ct_type(Request& request, const ct_type_t& ct_type)
 }
 
 
-const ct_type_t*
-HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t* ct_type)
+static const ct_type_t*
+is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t* ct_type)
 {
 	L_CALL("HttpClient::is_acceptable_type({}, {})", repr(ct_type_pattern.to_string()), repr(ct_type->to_string()));
 
@@ -3305,8 +3319,8 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t
 }
 
 
-const ct_type_t*
-HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<const ct_type_t*>& ct_types)
+static const ct_type_t*
+is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<const ct_type_t*>& ct_types)
 {
 	L_CALL("HttpClient::is_acceptable_type(({}, <ct_types>)", repr(ct_type_pattern.to_string()));
 
@@ -3320,8 +3334,8 @@ HttpClient::is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vect
 
 
 template <typename T>
-const ct_type_t&
-HttpClient::get_acceptable_type(Request& request, const T& ct)
+static const ct_type_t&
+get_acceptable_type(Request& request, const T& ct)
 {
 	L_CALL("HttpClient::get_acceptable_type()");
 
@@ -3458,8 +3472,8 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 }
 
 
-Encoding
-HttpClient::resolve_encoding(Request& request)
+static Encoding
+resolve_encoding(Request& request)
 {
 	L_CALL("HttpClient::resolve_encoding()");
 
