@@ -710,6 +710,21 @@ if(NOT htm_POPULATED)
 endif()
 include_directories("${htm_SOURCE_DIR}")
 
+# compressors: the deflate (zlib) + lz4 buffer/file-streaming codecs. The *File
+# classes use the library's own EINTR-safe open/close (compressors::detail), not
+# Xapiand's io::. The library carries its own exception.h, but redirect it to
+# Xapiand's via COMPRESSORS_EXCEPTION_HEADER so Error/THROW are not redefined (the
+# located-exception trick). lz4.h comes from the lz4 FetchContent already on the
+# path, zlib from the system. Xapiand uses deflate + lz4 only (no zstd), so only
+# those two .cc compile into XAPIAND_OBJ.
+FetchContent_Declare(compressors GIT_REPOSITORY https://github.com/Kronuz/compressors.git GIT_TAG main)
+FetchContent_GetProperties(compressors)
+if(NOT compressors_POPULATED)
+	FetchContent_Populate(compressors)
+endif()
+include_directories("${compressors_SOURCE_DIR}")
+add_compile_definitions(COMPRESSORS_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
@@ -1058,6 +1073,8 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/geospatial/cartesian.cc"
 "${PROJECT_SOURCE_DIR}/src/geospatial/htm.cc"
 "${PROJECT_SOURCE_DIR}/src/geospatial/geometry.cc"
+"${PROJECT_SOURCE_DIR}/src/compressor_deflate.cc"
+"${PROJECT_SOURCE_DIR}/src/compressor_lz4.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -1098,6 +1115,10 @@ list(APPEND XAPIAND_SRC_LIST "${htm_SOURCE_DIR}/constraint.cc")
 # The Double Metaphone encoder's out-of-line implementation (the string-similarity
 # metrics are header-only; only this encoder ships a .cc).
 list(APPEND XAPIAND_SRC_LIST "${double_metaphone_SOURCE_DIR}/double_metaphone.cc")
+# compressors (deflate + lz4 only; no zstd), in place of the removed
+# src/compressor_deflate.cc and src/compressor_lz4.cc.
+list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_deflate.cc")
+list(APPEND XAPIAND_SRC_LIST "${compressors_SOURCE_DIR}/compressor_lz4.cc")
 add_library(XAPIAND_OBJ OBJECT ${XAPIAND_SRC_LIST})
 
 target_include_directories(XAPIAND_OBJ PUBLIC

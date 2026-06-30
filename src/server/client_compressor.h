@@ -23,6 +23,7 @@
 #pragma once
 
 #include "compressor_lz4.h"      // for LZ4CompressFile, LZ4DecompressData
+#include "io.hh"                 // for io::read, io::lseek (was transitive via the old compressor_lz4.h)
 #include "length.h"              // for serialise_length
 #include "log.h"                 // for L_CALL, L_ERR, L_EV_BEGIN, L_CONN
 #include "xxhash.h"          // for XXH32_createState, XXH32_digest, XXH32_state_t, XXH32_reset
