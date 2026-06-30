@@ -641,6 +641,22 @@ if(TRACKED_MEM)
 	add_compile_definitions(XAPIAND_TRACKED_MEM)
 endif()
 
+# Two more header-only utilities. queue is the bounded blocking double-ended MPMC
+# queue (pure std, self-contained); bloom-filter is the probabilistic set (depends
+# on hashes, already on the include path). Header-only, so they just go on the path.
+FetchContent_Declare(queue        GIT_REPOSITORY https://github.com/Kronuz/queue.git        GIT_TAG main)
+FetchContent_Declare(bloom_filter GIT_REPOSITORY https://github.com/Kronuz/bloom-filter.git GIT_TAG main)
+foreach(dep queue bloom_filter)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${queue_SOURCE_DIR}"          # queue.h
+	"${bloom_filter_SOURCE_DIR}"   # bloom_filter.hh
+)
+
 # stash traces through injectable hooks (no-op by default). Point it at a small
 # Xapiand trace header that restores the colored, logged output by mapping
 # stash's hooks onto Xapiand's log.h + colors.h. Applies only to Xapiand's own
