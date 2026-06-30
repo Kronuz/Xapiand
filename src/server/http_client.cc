@@ -125,6 +125,14 @@ template <typename T>
 static const ct_type_t& get_acceptable_type(Request& request, const T& ct);
 static Encoding resolve_encoding(Request& request);
 
+// More request-only helpers lifted off HttpClient `this` (Leg 2 stage 2b/2c): URL +
+// query parsing and the response-body encoder. They read/write only their argument
+// (request or response), so they are file-scope free functions too; forward-declared
+// here because they are used above their definitions (e.g. prepare(), write_http_response).
+static void url_resolve(Request& request);
+static query_field_t query_field_maker(Request& request, int flags);
+static std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
+
 
 // Available commands
 
@@ -2723,8 +2731,8 @@ HttpClient::write_status_response(Request& request, enum http_status status, con
 }
 
 
-void
-HttpClient::url_resolve(Request& request)
+static void
+url_resolve(Request& request)
 {
 	L_CALL("HttpClient::url_resolve(request)");
 
@@ -2905,8 +2913,8 @@ HttpClient::expand_paths(Request& request)
 }
 
 
-query_field_t
-HttpClient::query_field_maker(Request& request, int flags)
+static query_field_t
+query_field_maker(Request& request, int flags)
 {
 	L_CALL("HttpClient::query_field_maker(<request>, <flags>)");
 
@@ -3525,8 +3533,8 @@ HttpClient::readable_encoding(Encoding e)
 }
 
 
-std::string
-HttpClient::encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
+static std::string
+encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
 {
 	L_CALL("HttpClient::encoding_http_response({})", repr(response_obj));
 

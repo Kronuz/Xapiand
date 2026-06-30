@@ -355,10 +355,8 @@ class HttpClient : public BaseClient<HttpClient> {
 	void wal_view(Request& request);
 #endif
 
-	void url_resolve(Request& request);
 	std::vector<std::string> expand_paths(Request& request);
 	size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
-	query_field_t query_field_maker(Request& request, int flags);
 
 	void log_request(Request& request);
 	void log_response(Response& response);
@@ -368,7 +366,6 @@ class HttpClient : public BaseClient<HttpClient> {
 	void write_status_response(Request& request, enum http_status status, const std::string& message = "");
 	void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
 	std::string readable_encoding(Encoding e);
-	std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
 
 	friend Worker;
 
