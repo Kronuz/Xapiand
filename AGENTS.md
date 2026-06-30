@@ -52,6 +52,24 @@ C++17, CMake ≥ 3.12. The feature toggles matter when reproducing behavior:
 attributes memory to call sites. Tests/benchmarks are off by default
 (`BUILD_TESTS`, `BUILD_BENCHMARKS`).
 
+## Verifying changes end-to-end (the docs ARE a test suite)
+
+The documentation examples double as an E2E regression suite — the best safety net
+for the library-extraction / de-vendor work, since it exercises the real HTTP API
+against a running server. Each `docs/**/*.md` example is a request (a ` ```json `
+block: `METHOD /url` + headers + body or `@file` fixture) plus ` ```js `
+`pm.test(...)` assertions. `docs_to_postman.py` compiles all of it (~303 requests,
+~188 with assertions) into a Postman collection:
+
+```sh
+python3 docs_to_postman.py | newman run /dev/stdin     # against a live Xapiand on :8880
+```
+
+Requirements: `python3` (the script was ported from Python 2), `newman`
+(`npm i -g newman`), a running de-vendored Xapiand on `:8880`, and the fixtures in
+`docs/assets/` (`twitter.msgpack` is currently missing — generate or skip that one).
+Run it before and after a de-vendor to prove Xapiand still works end-to-end.
+
 ## Conventions you'll see everywhere
 
 - **Logging macros `L_*`.** Logging is pervasive (~2,790 call sites). Most

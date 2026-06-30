@@ -7,8 +7,8 @@ import os
 import sys
 import json
 import copy
-import email
-import urlparse
+import email.message
+import urllib.parse as urlparse
 
 
 PARSER_RE = re.compile(r'\n```\s*([a-z]*)(.*?)\n```|\n(#+)\s*([^\n]+)|\n([a-z]+)\s*:\s*([^\n]+)', re.DOTALL)
@@ -146,7 +146,7 @@ def main():
         url = ""
         method = None
         body = []
-        headers = email.Message.Message()
+        headers = email.message.Message()
         for i, line in enumerate(test['request'].split('\n')):
             line = line.strip()
             if i == 0:
