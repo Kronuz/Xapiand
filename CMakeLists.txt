@@ -480,13 +480,23 @@ if(NOT logger_POPULATED)
 endif()
 include_directories("${logger_SOURCE_DIR}")
 
-# NOTE: the extracted traceback box (github.com/Kronuz/traceback) is the reusable,
-# modern core of this file's stack-trace code, published standalone. Xapiand keeps
-# its own src/traceback.cc here because that file also carries the signal-time
-# all-thread crash dumper (out of scope for the box), and the logger's backtrace
-# hook is wired to Xapiand's richer traceback() (atos file:line) in main.cc. The
-# two headers share the name "traceback.h"; fully de-vendoring Xapiand onto the
-# extracted core (a rename + dropping the in-tree copy) is a follow-up.
+# traceback: the crash-traceback toolkit (formatting box + signal-time all-thread
+# crash dumper), extracted from Xapiand and modernized, published standalone. The
+# library puts everything in namespace traceback; the heavy dumper (thread
+# registry, SIGUSR2 stack-walk handler, dump_callstacks/snapshot, __cxa_throw +
+# allocator interposition) is gated behind TRACEBACK_HOOKS, which Xapiand turns on
+# below since it uses the dumper. Its one out-of-line file (traceback.cc) compiles
+# as part of Xapiand (the logger/htm way) so it picks up the same toolchain. The
+# library's deps (strings, errno-names, term-color, nanosleep) are all already on
+# the FetchContent include path. The logger's backtrace hook is wired to the
+# library's traceback() (atos file:line) in main.cc.
+FetchContent_Declare(traceback GIT_REPOSITORY https://github.com/Kronuz/traceback.git GIT_TAG main)
+FetchContent_GetProperties(traceback)
+if(NOT traceback_POPULATED)
+	FetchContent_Populate(traceback)
+endif()
+include_directories("${traceback_SOURCE_DIR}")
+add_compile_definitions(TRACEBACK_HOOKS=1)
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -1075,6 +1085,7 @@ list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/geospatial/geometry.cc"
 "${PROJECT_SOURCE_DIR}/src/compressor_deflate.cc"
 "${PROJECT_SOURCE_DIR}/src/compressor_lz4.cc"
+"${PROJECT_SOURCE_DIR}/src/traceback.cc"
 )
 list(APPEND XAPIAND_SRC_LIST ${XAPIAN_H_LIST})
 # Compile the located-exception library's out-of-line implementation as part of
@@ -1087,8 +1098,18 @@ list(APPEND XAPIAND_SRC_LIST "${threadpool_SOURCE_DIR}/thread.cc")
 # globbed above.
 list(APPEND XAPIAND_SRC_LIST "${datetime_SOURCE_DIR}/datetime.cc")
 # The extracted logger's out-of-line implementation, in place of the removed
-# src/logger.cc. (Xapiand keeps its own src/traceback.cc; see the note above.)
+# src/logger.cc.
 list(APPEND XAPIAND_SRC_LIST "${logger_SOURCE_DIR}/logger.cc")
+# The extracted traceback toolkit's out-of-line implementation, in place of the
+# removed src/traceback.cc. Built with TRACEBACK_HOOKS (set above) so the
+# signal-time all-thread crash dumper compiles in. The library #includes "colors.h"
+# and aliases `#define DEBUG_COL DIM_GRAY` (term-color's name for rgb(105,105,105)).
+# In Xapiand's tree that include resolves to src/colors.h, which pulls in src/log.h
+# where DEBUG_COL is already #defined to the *same* rgb(105,105,105); the values are
+# identical, so silence the (value-equal) macro-redefinition warning for just this
+# one file rather than patching the published library or Xapiand's DEBUG_COL.
+list(APPEND XAPIAND_SRC_LIST "${traceback_SOURCE_DIR}/traceback.cc")
+set_source_files_properties("${traceback_SOURCE_DIR}/traceback.cc" PROPERTIES COMPILE_OPTIONS "-Wno-macro-redefined")
 # The fantasy name generator's out-of-line implementation, in place of the removed
 # src/namegen.cc. It includes its own "namegen.h" (same dir), so c++/ does not need
 # to be on the include path; src/namegen.h reaches it via FANTASYNAME_HEADER.

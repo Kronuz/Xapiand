@@ -80,7 +80,8 @@
 #include "storage.h"                             // for Storage
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
-#include "thread.hh"                             // for callstacks_snapshot, dump_callstacks
+#include "thread.hh"                             // for ThreadPool
+#include "traceback.h"                           // for traceback::{callstacks_snapshot, dump_callstacks}
 
 #ifdef XAPIAND_CLUSTERING
 #include "server/remote_protocol.h"              // for RemoteProtocol
@@ -422,9 +423,9 @@ XapiandManager::signal_sig_impl()
 		case SIGINFO:
 #endif
 #ifdef XAPIAND_CLUSTERING
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas(), Node::dump_nodes());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", traceback::dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas(), Node::dump_nodes());
 #else
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", traceback::dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas());
 #endif
 			break;
 	}
@@ -687,7 +688,7 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 	make_servers();
 
 	// Once all threads have started, get a callstacks snapshot:
-	callstacks_snapshot();
+	traceback::callstacks_snapshot();
 
 	std::shared_ptr<const Node> local_node;
 	std::shared_ptr<const Node> primary_node;

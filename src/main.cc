@@ -72,7 +72,7 @@
 #include "package.h"                              // for Package::
 #include "strings.hh"                             // for strings::format, strings::center
 #include "system.hh"                              // for get_max_files_per_proc, get_open_files_system_wide
-#include "traceback.h"                            // for backtrace, traceback, collect_callstack_sig_handler
+#include "traceback.h"                            // for traceback::{backtrace, traceback, collect_callstack_sig_handler}
 #include "xapian.h"                               // for XAPIAN_HAS_GLASS_BACKEND, XAPIAN...
 
 #if defined(__linux__) && !defined(__GLIBC__)
@@ -260,7 +260,7 @@ void sig_handler(int signum) {
 void backtrace_sig_handler(int signum)
 {
 	// print traceback
-	auto tb = traceback(signals.name(signum).c_str(), nullptr, 0, backtrace(), 4);
+	auto tb = traceback::traceback(signals.name(signum).c_str(), nullptr, 0, traceback::backtrace(), 4);
 	if (is_tty) {
 		::write(STDERR_FILENO, DEBUG_COL);
 		::write(STDERR_FILENO, tb);
@@ -310,7 +310,7 @@ void setup_signal_handlers() {
 #endif
 
 	sa.sa_flags |= SA_SIGINFO;
-	sa.sa_sigaction = collect_callstack_sig_handler;
+	sa.sa_sigaction = traceback::collect_callstack_sig_handler;
 	sigaction(SIGUSR2, &sa, nullptr);
 }
 
@@ -1015,7 +1015,7 @@ int main(int argc, char **argv) {
 			return get_thread_name(id);
 		};
 		Logging::hooks.backtrace = []() -> std::string {
-			return traceback(nullptr, nullptr, 0);
+			return traceback::traceback(nullptr, nullptr, 0);
 		};
 
 		demote(opts.uid.c_str(), opts.gid.c_str());
