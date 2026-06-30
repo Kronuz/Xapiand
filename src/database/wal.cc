@@ -45,6 +45,7 @@
 #include "msgpack.h"                // for MsgPack
 #include "opts.h"                   // for opts::*
 #include "repr.hh"                  // for repr
+#include "xapiand_fsyncher.h"       // for fsyncher (the WAL's injected async-fsync hook)
 #include "server/discovery.h"       // for db_updater
 #include "strings.hh"               // for strings::format
 #include "utype.hh"                 // for toUType
@@ -109,7 +110,7 @@ WalHeader::validate(void* param, void* /*unused*/)
 
 
 DatabaseWAL::DatabaseWAL(std::string_view base_path_)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this),
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(base_path_, this, [](int fd, bool full_fsync) { fsyncher()->debounce(fd, fd, full_fsync); }),
 	  validate_uuid(false),
 	  _revision(0),
 	  _shard(nullptr)
@@ -124,7 +125,7 @@ DatabaseWAL::DatabaseWAL(std::string_view base_path_)
 
 
 DatabaseWAL::DatabaseWAL(Shard* shard)
-	: Storage<WalHeader, WalBinHeader, WalBinFooter>(shard->endpoint.path, this),
+	: Storage<WalHeader, WalBinHeader, WalBinFooter>(shard->endpoint.path, this, [](int fd, bool full_fsync) { fsyncher()->debounce(fd, fd, full_fsync); }),
 	  validate_uuid(true),
 	  _revision(0),
 	  _shard(shard)

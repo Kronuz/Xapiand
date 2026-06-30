@@ -498,6 +498,27 @@ endif()
 include_directories("${traceback_SOURCE_DIR}")
 add_compile_definitions(TRACEBACK_HOOKS=1)
 
+# storage: the compressed append-only multi-volume blob store, extracted from
+# Xapiand. Header-only Storage<Header, BinHeader, Footer, IO> engine; on-disk
+# format byte-identical, so existing volumes read unchanged. Its deps
+# (compressors, errno-names, strict-stox, stringified) are already on the
+# FetchContent include path above. Two seams are wired to Xapiand by absolute
+# path: STORAGE_IO_HEADER -> xapiand_storage_io.h (routes every storage IO
+# through io.cc + sets the default IO policy), STORAGE_TRACE_HEADER ->
+# xapiand_storage_trace.h (the L_* logger). The async-fsync hook (the debounced
+# thread pool that used to live in storage.h, now src/xapiand_fsyncher.h) is
+# handed to the WAL at construction; the data store stays on synchronous fsync.
+FetchContent_Declare(storage GIT_REPOSITORY https://github.com/Kronuz/storage.git GIT_TAG main)
+FetchContent_GetProperties(storage)
+if(NOT storage_POPULATED)
+	FetchContent_Populate(storage)
+endif()
+include_directories("${storage_SOURCE_DIR}")
+add_compile_definitions(
+	STORAGE_IO_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_io.h"
+	STORAGE_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_trace.h"
+)
+
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime

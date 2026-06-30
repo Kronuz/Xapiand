@@ -41,7 +41,7 @@
 #include "rapidjson/error/en.h"                      // for GetParseError_En
 #include "rapidjson/error/error.h"                   // for ParseResult
 #include "serialise.h"                               // for Serialise
-#include "strings.h"                                 // for strings::format
+#include "strings.hh"                                // for strings::format (was transitive via the old storage.h)
 #include "storage.h"                                 // for STORAGE_BIN_HEADER_MAGIC and STORAGE_BIN_FOOTER_MAGIC
 #include "y2j/y2j.h"                                 // for y2j::yamlParseBytes
 

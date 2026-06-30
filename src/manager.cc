@@ -78,6 +78,7 @@
 #include "server/http_client.h"                  // for HttpClient
 #include "server/http_server.h"                  // for HttpServer
 #include "storage.h"                             // for Storage
+#include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
 #include "strict_stox.hh"                        // for strict_stoll
 #include "system.hh"                             // for get_open_files_per_proc, get_max_files_per_proc
 #include "thread.hh"                             // for ThreadPool
