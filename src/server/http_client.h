@@ -219,6 +219,11 @@ public:
 
 	ct_type_t ct_type;
 
+	// Resolved index endpoints for this request. Was an HttpClient member, but it
+	// is per-request state (and a connection-level member is wrong under request
+	// pipelining), so it lives on the Request now. (Leg 2 stage 1.)
+	Endpoints endpoints;
+
 	size_t size;
 
 	bool echo;
@@ -289,7 +294,6 @@ class HttpClient : public BaseClient<HttpClient> {
 	mutable std::mutex runner_mutex;
 	std::shared_ptr<Request> new_request;
 	std::deque<std::shared_ptr<Request>> requests;
-	Endpoints endpoints;
 
 	static int message_begin_cb(http_parser* parser);
 	static int url_cb(http_parser* parser, const char* at, size_t length);
@@ -316,7 +320,7 @@ class HttpClient : public BaseClient<HttpClient> {
 	int prepare();
 
 	MsgPack node_obj();
-	MsgPack retrieve_database(const query_field_t& query_field, bool is_root, std::string_view selector);
+	MsgPack retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
 
 	void metrics_view(Request& request);
 	void info_view(Request& request);

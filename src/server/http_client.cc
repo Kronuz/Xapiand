@@ -277,8 +277,8 @@ http_response(Request& request, enum http_status status, int mode, const std::st
 	if ((mode & HTTP_HEADER_RESPONSE) != 0) {
 		headers += "Server: " + Package::STRING + eol;
 
-		// if (!endpoints.empty()) {
-		// 	headers += "Database: " + endpoints.to_string() + eol;
+		// if (!request.endpoints.empty()) {
+		// 	headers += "Database: " + request.endpoints.to_string() + eol;
 		// }
 
 		request.ends = std::chrono::steady_clock::now();
@@ -1339,6 +1339,7 @@ HttpClient::node_obj()
 {
 	L_CALL("HttpClient::node_obj()");
 
+	Endpoints endpoints;  // local scratch for the nodes lookup (was the HttpClient member)
 	endpoints.clear();
 	auto leader_node = Node::get_leader_node();
 	endpoints.add(Endpoint{".xapiand/nodes", leader_node});
@@ -1444,7 +1445,7 @@ HttpClient::document_exists_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN);
 
 	db_handler.get_document(request.path_parser.get_id()).validate();
 
@@ -1468,7 +1469,7 @@ HttpClient::delete_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	db_handler.delete_document(document_id, query_field.commit);
 	request.ready = std::chrono::steady_clock::now();
@@ -1505,7 +1506,7 @@ HttpClient::write_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	bool stored = !request.ct_type.empty() && request.ct_type != json_type && request.ct_type != x_json_type && request.ct_type != yaml_type && request.ct_type != x_yaml_type && request.ct_type != msgpack_type && request.ct_type != x_msgpack_type;
 	auto indexed = db_handler.index(document_id, query_field.version, stored, decoded_body, query_field.commit, request.ct_type.empty() ? mime_type(selector) : request.ct_type);
 
@@ -1523,10 +1524,10 @@ HttpClient::write_document_view(Request& request)
 		if (document_id.empty()) {
 			if (it == response_obj.end()) {
 				auto document_id_obj = db_handler.unserialise_term_id(info.term);
-				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
+				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, document_id_obj.as_str());
 				response_obj[ID_FIELD_NAME] = std::move(document_id_obj);
 			} else {
-				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
+				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, it.value().as_str());
 			}
 		} else {
 			if (it == response_obj.end()) {
@@ -1539,10 +1540,10 @@ HttpClient::write_document_view(Request& request)
 		if (request.comments) {
 			response_obj[RESPONSE_xDOCID] = info.did;
 
-			size_t n_shards = endpoints.size();
+			size_t n_shards = request.endpoints.size();
 			size_t shard_num = (info.did - 1) % n_shards;
 			response_obj[RESPONSE_xSHARD] = shard_num + 1;
-			// response_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+			// response_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
 		}
 
 		if (!selector.empty()) {
@@ -1555,9 +1556,9 @@ HttpClient::write_document_view(Request& request)
 			auto it = response_obj.find(ID_FIELD_NAME);
 			if (it == response_obj.end()) {
 				auto document_id_obj = db_handler.unserialise_term_id(info.term);
-				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, document_id_obj.as_str());
+				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, document_id_obj.as_str());
 			} else {
-				location = strings::format("/{}/{}", unsharded_path(endpoints[0].path).first, it.value().as_str());
+				location = strings::format("/{}/{}", unsharded_path(request.endpoints[0].path).first, it.value().as_str());
 			}
 		}
 
@@ -1597,7 +1598,7 @@ HttpClient::update_document_view(Request& request)
 
 	std::string operation;
 	DocumentInfo indexed;
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 	if (request.method == HTTP_PATCH) {
 		operation = "patch";
 		indexed = db_handler.patch(document_id, query_field.version, false, decoded_body, query_field.commit);
@@ -1628,10 +1629,10 @@ HttpClient::update_document_view(Request& request)
 		if (request.comments) {
 			response_obj[RESPONSE_xDOCID] = info.did;
 
-			size_t n_shards = endpoints.size();
+			size_t n_shards = request.endpoints.size();
 			size_t shard_num = (info.did - 1) % n_shards;
 			response_obj[RESPONSE_xSHARD] = shard_num + 1;
-			// response_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+			// response_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
 		}
 
 		if (!selector.empty()) {
@@ -1673,9 +1674,9 @@ HttpClient::retrieve_metadata_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN);
+		db_handler.reset(request.endpoints, DB_OPEN);
 	}
 
 	auto key = request.path_parser.get_cmd();
@@ -1737,9 +1738,9 @@ HttpClient::write_metadata_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN);
+		db_handler.reset(request.endpoints, DB_OPEN);
 	}
 
 	auto key = request.path_parser.get_cmd();
@@ -1808,9 +1809,9 @@ HttpClient::info_view(Request& request)
 
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN);
+		db_handler.reset(request.endpoints, DB_OPEN);
 	}
 
 	// Info about a specific document was requested
@@ -1857,7 +1858,7 @@ HttpClient::database_exists_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN);
+	DatabaseHandler db_handler(request.endpoints, DB_OPEN);
 
 	db_handler.reopen();  // Ensure it can be opened.
 
@@ -1868,7 +1869,7 @@ HttpClient::database_exists_view(Request& request)
 
 
 MsgPack
-HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, std::string_view selector)
+HttpClient::retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector)
 {
 	L_CALL("HttpClient::retrieve_database()");
 
@@ -1916,9 +1917,9 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, st
 	try {
 		DatabaseHandler db_handler;
 		if (query_field.writable || query_field.primary) {
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN);
+			db_handler.reset(request.endpoints, DB_OPEN);
 		}
 
 		// Retrieve full schema
@@ -1935,8 +1936,8 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, st
 
 	// Get index settings (from .xapiand/indices)
 	MsgPack settings;
-	auto id = std::string(endpoints.size() == 1 ? endpoints[0].path : unsharded_path(endpoints[0].path).first);
-	endpoints = XapiandManager::resolve_index_endpoints(
+	auto id = std::string(request.endpoints.size() == 1 ? request.endpoints[0].path : unsharded_path(request.endpoints[0].path).first);
+	request.endpoints = XapiandManager::resolve_index_endpoints(
 		Endpoint{".xapiand/indices"},
 		query_field.writable,
 		query_field.primary);
@@ -1944,9 +1945,9 @@ HttpClient::retrieve_database(const query_field_t& query_field, bool is_root, st
 	try {
 		DatabaseHandler db_handler;
 		if (query_field.writable || query_field.primary) {
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN);
+			db_handler.reset(request.endpoints, DB_OPEN);
 		}
 
 		// Retrive document ID
@@ -2026,7 +2027,7 @@ HttpClient::retrieve_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	auto obj = retrieve_database(query_field, is_root, selector);
+	auto obj = retrieve_database(request, query_field, is_root, selector);
 
 	request.ready = std::chrono::steady_clock::now();
 
@@ -2066,7 +2067,7 @@ HttpClient::write_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	if (decoded_body.is_map()) {
 		auto schema_it = decoded_body.find(RESERVED_SCHEMA);
@@ -2085,7 +2086,7 @@ HttpClient::write_database_view(Request& request)
 	request.ready = std::chrono::steady_clock::now();
 
 	if (request.echo) {
-		auto obj = retrieve_database(query_field, is_root, selector);
+		auto obj = retrieve_database(request, query_field, is_root, selector);
 
 		write_http_response(request, HTTP_STATUS_OK, obj);
 	} else {
@@ -2123,7 +2124,7 @@ HttpClient::commit_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
+	DatabaseHandler db_handler(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE);
 
 	db_handler.commit();  // Ensure touch.
 
@@ -2158,7 +2159,7 @@ HttpClient::dump_document_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN);
+	DatabaseHandler db_handler(request.endpoints, DB_OPEN);
 
 	auto obj = db_handler.dump_document(document_id);
 
@@ -2190,7 +2191,7 @@ HttpClient::dump_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints, DB_OPEN);
+	DatabaseHandler db_handler(request.endpoints, DB_OPEN);
 
 	auto& ct_type = resolve_ct_type(request);
 	if (ct_type.empty()) {
@@ -2235,7 +2236,7 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				indexer = DocIndexer::make_shared(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field);
+				indexer = DocIndexer::make_shared(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field);
 				request.indexer.store(indexer);
 			}
 			indexer->prepare(std::move(obj));
@@ -2254,7 +2255,7 @@ HttpClient::restore_database_view(Request& request)
 
 				request.processing = std::chrono::steady_clock::now();
 
-				indexer = DocIndexer::make_shared(endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field);
+				indexer = DocIndexer::make_shared(request.endpoints, DB_CREATE_OR_OPEN | DB_WRITABLE | DB_DISABLE_WAL | DB_RESTORE | DB_DISABLE_AUTOCOMMIT, request.echo, request.comments, query_field);
 				request.indexer.store(indexer);
 			}
 			indexer->prepare(std::move(obj));
@@ -2270,7 +2271,7 @@ HttpClient::restore_database_view(Request& request)
 		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
 
 		MsgPack response_obj = {
-			// { RESPONSE_ENDPOINT, endpoints.to_string() },
+			// { RESPONSE_ENDPOINT, request.endpoints.to_string() },
 			{ RESPONSE_PREPARED, indexer ? indexer->prepared() : 0 },
 			{ RESPONSE_PROCESSED, indexer ? indexer->processed() : 0 },
 			{ RESPONSE_INDEXED, indexer ? indexer->indexed() : 0 },
@@ -2311,7 +2312,7 @@ HttpClient::wal_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints);
+	DatabaseHandler db_handler(request.endpoints);
 
 	request.query_parser.rewind();
 	bool unserialised = request.query_parser.next("raw") == -1;
@@ -2346,7 +2347,7 @@ HttpClient::check_database_view(Request& request)
 
 	request.processing = std::chrono::steady_clock::now();
 
-	DatabaseHandler db_handler(endpoints);
+	DatabaseHandler db_handler(request.endpoints);
 
 	auto status = db_handler.check();
 
@@ -2385,9 +2386,9 @@ HttpClient::retrieve_document_view(Request& request)
 	// Open database
 	DatabaseHandler db_handler;
 	if (query_field.primary) {
-		db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+		db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 	} else {
-		db_handler.reset(endpoints, DB_OPEN);
+		db_handler.reset(request.endpoints, DB_OPEN);
 	}
 
 	// Retrive document ID
@@ -2432,10 +2433,10 @@ HttpClient::retrieve_document_view(Request& request)
 		if (request.comments) {
 			obj[RESPONSE_xDOCID] = did;
 
-			size_t n_shards = endpoints.size();
+			size_t n_shards = request.endpoints.size();
 			size_t shard_num = (did - 1) % n_shards;
 			obj[RESPONSE_xSHARD] = shard_num + 1;
-			// obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+			// obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
 		}
 
 		if (!selector.empty()) {
@@ -2508,9 +2509,9 @@ HttpClient::search_view(Request& request)
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.primary) {
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN);
+			db_handler.reset(request.endpoints, DB_OPEN);
 		}
 
 		if (request.raw.empty()) {
@@ -2591,10 +2592,10 @@ HttpClient::search_view(Request& request)
 		if (request.comments) {
 			hit_obj[RESPONSE_xDOCID] = did;
 
-			size_t n_shards = endpoints.size();
+			size_t n_shards = request.endpoints.size();
 			size_t shard_num = (did - 1) % n_shards;
 			hit_obj[RESPONSE_xSHARD] = shard_num + 1;
-			// hit_obj[RESPONSE_xENDPOINT] = endpoints[shard_num].to_string();
+			// hit_obj[RESPONSE_xENDPOINT] = request.endpoints[shard_num].to_string();
 
 			hit_obj[RESPONSE_xRANK] = m.get_rank();
 			hit_obj[RESPONSE_xWEIGHT] = m.get_weight();
@@ -2656,9 +2657,9 @@ HttpClient::count_view(Request& request)
 	DatabaseHandler db_handler;
 	try {
 		if (query_field.primary) {
-			db_handler.reset(endpoints, DB_OPEN | DB_WRITABLE);
+			db_handler.reset(request.endpoints, DB_OPEN | DB_WRITABLE);
 		} else {
-			db_handler.reset(endpoints, DB_OPEN);
+			db_handler.reset(request.endpoints, DB_OPEN);
 		}
 
 		if (request.raw.empty()) {
@@ -2807,7 +2808,7 @@ HttpClient::resolve_index_endpoints(Request& request, const query_field_t& query
 
 	auto paths = expand_paths(request);
 
-	endpoints.clear();
+	request.endpoints.clear();
 	for (const auto& path : paths) {
 		auto index_endpoints = XapiandManager::resolve_index_endpoints(
 			Endpoint(path),
@@ -2818,10 +2819,10 @@ HttpClient::resolve_index_endpoints(Request& request, const query_field_t& query
 			throw Xapian::NetworkError("Endpoint node not available");
 		}
 		for (auto& endpoint : index_endpoints) {
-			endpoints.add(endpoint);
+			request.endpoints.add(endpoint);
 		}
 	}
-	L_HTTP("Endpoint: -> {}", endpoints.to_string());
+	L_HTTP("Endpoint: -> {}", request.endpoints.to_string());
 
 	return paths.size();
 }
