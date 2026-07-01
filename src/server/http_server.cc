@@ -29,13 +29,36 @@
 #include "base_server.h"                    // for BaseServer
 #include "error.hh"                         // for error:name, error::description
 #include "ev/ev++.h"                        // for io, ::READ, loop_ref (ptr only)
-#include "http.h"                           // for Http
-#include "http_client.h"                    // for HttpClient
-#include "io.hh"                            // for ignored_errno
-#include "log.h"                            // for L_EV, L_OBJ, L_CALL, L_ERR
-#include "manager.h"                        // for XapiandManager
-#include "readable_revents.hh"              // for readable_revents
-#include "worker.h"                         // for Worker
+#include "http.h"                            // for Http
+#include "http_client.h"                     // for HttpClient
+#include "http_connection.h"                 // Kronuz/http: HttpConnection (Leg 2 stage 3c)
+#include "http_dispatcher.h"                 // Kronuz/http: Dispatcher (Leg 2 stage 3c)
+#include "search_application.h"              // for SearchApplication (Leg 2 stage 3c)
+#include "io.hh"                             // for ignored_errno
+#include "log.h"                             // for L_EV, L_OBJ, L_CALL, L_ERR
+#include "manager.h"                         // for XapiandManager
+#include "opts.h"                            // for opts::num_http_clients
+#include "readable_revents.hh"               // for readable_revents
+#include "worker.h"                          // for Worker
+
+
+// Leg 2 stage 3c: Xapiand's search HTTP API served through the generic Kronuz/http
+// connection instead of the bespoke HttpClient. SearchApplication is stateless (its
+// handle() builds all per-request state locally), so one shared instance is safe
+// across threads. The Dispatcher is the un-stallable worker pool that runs the
+// (blocking, Xapian-bound) handler off the reactor -- created once, lazily, sized like
+// the retiring http_client_pool. Response transforms (compression/conditional/range)
+// stay off for now (parity first). A single pool here is the simplest correct wiring;
+// a per-reactor Dispatcher (shared-nothing) is a later refinement.
+static SearchApplication search_app;
+static http::ResponseOptions search_response_options;
+
+static http::Dispatcher&
+search_dispatcher()
+{
+	static http::Dispatcher dispatcher(opts.num_http_clients ? opts.num_http_clients : 1, 1000);
+	return dispatcher;
+}
 
 
 // #undef L_DEBUG
@@ -130,7 +153,7 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 
 	int client_sock = accept();
 	if (client_sock != -1) {
-		auto client = Worker::make_shared<HttpClient>(share_this<HttpServer>(), ev_loop, ev_flags);
+		auto client = Worker::make_shared<http::HttpConnection>(share_this<HttpServer>(), ev_loop, ev_flags, search_app, &search_dispatcher(), &search_response_options);
 
 		if (!client->init(client_sock)) {
 			io::close(client_sock);

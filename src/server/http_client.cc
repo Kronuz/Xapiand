@@ -55,6 +55,7 @@
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
 #include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
+#include "search_application.h"             // for SearchApplication (Leg 2 stage 3c)
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
 #include "logger.h"                         // for Logging
@@ -831,6 +832,129 @@ HttpClient::on_header_field([[maybe_unused]] http_parser* parser, const char* at
 	return 0;
 }
 
+// The per-header processing lifted out of on_header_value (Leg 2 stage 3c): fills
+// request state (accept / accept-encoding via the LRU caches, content-type, the
+// Expect flag, and the method-override verbs) from one header name/value. A free
+// function so SearchApplication::handle() can replay it over http::Request.headers
+// exactly as the parser callback does. An invalid method override sets
+// request.parser.http_errno (the same object on_header_value already writes).
+static void
+process_header(Request& request, std::string_view header_name, std::string_view header_value)
+{
+		constexpr static auto _ = phf::make_phf({
+			hhl("expect"),
+			hhl("100-continue"),
+			hhl("content-type"),
+			hhl("accept"),
+			hhl("accept-encoding"),
+			hhl("http-method-override"),
+			hhl("x-http-method-override"),
+		});
+
+		switch (_.fhhl(header_name)) {
+			case _.fhhl("expect"):
+			case _.fhhl("100-continue"):
+				// Respond with HTTP/1.1 100 Continue
+				request.expect_100 = true;
+				break;
+
+			case _.fhhl("content-type"):
+				request.ct_type = ct_type_t(header_value);
+				break;
+
+			case _.fhhl("accept"): {
+				static AcceptLRU accept_sets;
+				auto value = strings::lower(header_value);
+				auto lookup = accept_sets.lookup(value);
+				if (!lookup.first) {
+					std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
+					std::sregex_iterator end;
+					int i = 0;
+					while (next != end) {
+						int indent = -1;
+						double q = 1.0;
+						if (next->length(3) != 0) {
+							auto param = next->str(3);
+							std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
+							while (next_param != end) {
+								if (next_param->str(1) == "q") {
+									q = strict_stod(next_param->str(2));
+								} else if (next_param->str(1) == "indent") {
+									indent = strict_stoi(next_param->str(2));
+									if (indent < 0) { indent = 0;
+									} else if (indent > 16) { indent = 16; }
+								}
+								++next_param;
+							}
+						}
+						lookup.second.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
+						++next;
+						++i;
+					}
+					accept_sets.emplace(value, lookup.second);
+				}
+				request.accept_set = std::move(lookup.second);
+				break;
+			}
+
+			case _.fhhl("accept-encoding"): {
+				static AcceptEncodingLRU accept_encoding_sets;
+				auto value = strings::lower(header_value);
+				auto lookup = accept_encoding_sets.lookup(value);
+				if (!lookup.first) {
+					std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
+					std::sregex_iterator end;
+					int i = 0;
+					while (next != end) {
+						double q = 1.0;
+						if (next->length(2) != 0) {
+							auto param = next->str(2);
+							std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
+							while (next_param != end) {
+								if (next_param->str(1) == "q") {
+									q = strict_stod(next_param->str(2));
+								}
+								++next_param;
+							}
+						} else {
+						}
+						lookup.second.emplace(i, q, next->str(1));
+						++next;
+						++i;
+					}
+					accept_encoding_sets.emplace(value, lookup.second);
+				}
+				request.accept_encoding_set = std::move(lookup.second);
+				break;
+			}
+
+			case _.fhhl("x-http-method-override"):
+			case _.fhhl("http-method-override"): {
+				switch (http_methods.fhhl(header_value)) {
+					#define OPTION(name, str) \
+					case http_methods.fhhl(str): \
+						if ( \
+							request.method != HTTP_POST && \
+							request.method != HTTP_GET && \
+							request.method != HTTP_##name \
+						) { \
+							THROW(ClientError, "{} header must use the POST method", repr(header_name)); \
+						} \
+						request.method = HTTP_##name; \
+						break;
+					METHODS_OPTIONS()
+					#undef OPTION
+					default:
+						L_HTTP_PROTO("Invalid HTTP method override: {}", repr(header_value));
+						request.parser.http_errno = HPE_INVALID_METHOD;
+						break;
+				}
+				break;
+			}
+		}
+}
+
+
 int
 HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at, size_t length)
 {
@@ -846,117 +970,7 @@ HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at
 		new_request->headers.append(eol);
 	}
 
-	constexpr static auto _ = phf::make_phf({
-		hhl("expect"),
-		hhl("100-continue"),
-		hhl("content-type"),
-		hhl("accept"),
-		hhl("accept-encoding"),
-		hhl("http-method-override"),
-		hhl("x-http-method-override"),
-	});
-
-	switch (_.fhhl(new_request->_header_name)) {
-		case _.fhhl("expect"):
-		case _.fhhl("100-continue"):
-			// Respond with HTTP/1.1 100 Continue
-			new_request->expect_100 = true;
-			break;
-
-		case _.fhhl("content-type"):
-			new_request->ct_type = ct_type_t(_header_value);
-			break;
-
-		case _.fhhl("accept"): {
-			static AcceptLRU accept_sets;
-			auto value = strings::lower(_header_value);
-			auto lookup = accept_sets.lookup(value);
-			if (!lookup.first) {
-				std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
-				std::sregex_iterator end;
-				int i = 0;
-				while (next != end) {
-					int indent = -1;
-					double q = 1.0;
-					if (next->length(3) != 0) {
-						auto param = next->str(3);
-						std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
-						while (next_param != end) {
-							if (next_param->str(1) == "q") {
-								q = strict_stod(next_param->str(2));
-							} else if (next_param->str(1) == "indent") {
-								indent = strict_stoi(next_param->str(2));
-								if (indent < 0) { indent = 0;
-								} else if (indent > 16) { indent = 16; }
-							}
-							++next_param;
-						}
-					}
-					lookup.second.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
-					++next;
-					++i;
-				}
-				accept_sets.emplace(value, lookup.second);
-			}
-			new_request->accept_set = std::move(lookup.second);
-			break;
-		}
-
-		case _.fhhl("accept-encoding"): {
-			static AcceptEncodingLRU accept_encoding_sets;
-			auto value = strings::lower(_header_value);
-			auto lookup = accept_encoding_sets.lookup(value);
-			if (!lookup.first) {
-				std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
-				std::sregex_iterator end;
-				int i = 0;
-				while (next != end) {
-					double q = 1.0;
-					if (next->length(2) != 0) {
-						auto param = next->str(2);
-						std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
-						while (next_param != end) {
-							if (next_param->str(1) == "q") {
-								q = strict_stod(next_param->str(2));
-							}
-							++next_param;
-						}
-					} else {
-					}
-					lookup.second.emplace(i, q, next->str(1));
-					++next;
-					++i;
-				}
-				accept_encoding_sets.emplace(value, lookup.second);
-			}
-			new_request->accept_encoding_set = std::move(lookup.second);
-			break;
-		}
-
-		case _.fhhl("x-http-method-override"):
-		case _.fhhl("http-method-override"): {
-			switch (http_methods.fhhl(_header_value)) {
-				#define OPTION(name, str) \
-				case http_methods.fhhl(str): \
-					if ( \
-						new_request->method != HTTP_POST && \
-						new_request->method != HTTP_GET && \
-						new_request->method != HTTP_##name \
-					) { \
-						THROW(ClientError, "{} header must use the POST method", repr(new_request->_header_name)); \
-					} \
-					new_request->method = HTTP_##name; \
-					break;
-				METHODS_OPTIONS()
-				#undef OPTION
-				default:
-					L_HTTP_PROTO("Invalid HTTP method override: {}", repr(_header_value));
-					parser->http_errno = HPE_INVALID_METHOD;
-					break;
-			}
-			break;
-		}
-	}
+	process_header(*new_request, new_request->_header_name, _header_value);
 
 	return 0;
 }
@@ -1110,6 +1124,275 @@ HttpClient::on_chunk_complete([[maybe_unused]] http_parser* parser)
 		enum_name(HTTP_PARSER_STATE(parser)),
 		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
 		readable_http_parser_flags(parser));
+
+	return 0;
+}
+
+
+// The request dispatch for the http::HttpConnection path (Leg 2 stage 3c): a copy of
+// HttpClient::prepare()'s setup + method/URL dispatch, adapted for a request served
+// through an http::ResponseWriter -- OPTIONS emits via emit_response, HTTP_QUIT marks
+// the connection closing, and Expect: 100-continue is left to the transport. Returns
+// non-zero when there is no view to run (a terminal response was already emitted).
+static int
+dispatch_request(Request& request)
+{
+
+
+	request.received = std::chrono::steady_clock::now();
+
+	if (request.parser.http_major == 0 || (request.parser.http_major == 1 && request.parser.http_minor == 0)) {
+		request.closing = true;
+	}
+	if ((request.parser.flags & F_CONNECTION_KEEP_ALIVE) == F_CONNECTION_KEEP_ALIVE) {
+		request.closing = false;
+	}
+	if ((request.parser.flags & F_CONNECTION_CLOSE) == F_CONNECTION_CLOSE) {
+		request.closing = true;
+	}
+
+	if (request.accept_set.empty()) {
+		if (!request.ct_type.empty()) {
+			request.accept_set.emplace(0, 1.0, request.ct_type, 0);
+		}
+		request.accept_set.emplace(1, 1.0, any_type, 0);
+	}
+
+	request.type_encoding = resolve_encoding(request);
+	if (request.type_encoding == Encoding::unknown) {
+		write_status_response(request, HTTP_STATUS_NOT_ACCEPTABLE, "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header");
+		return 1;
+	}
+
+	url_resolve(request);
+
+	auto id = request.path_parser.get_id();
+	auto has_pth = request.path_parser.has_pth();
+	auto cmd = request.path_parser.get_cmd();
+
+	if (!cmd.empty()) {
+		auto mapping = cmd;
+		mapping.remove_prefix(1);
+		switch (http_methods.fhhl(mapping)) {
+			#define OPTION(name, str) \
+			case http_methods.fhhl(str): \
+				if ( \
+					request.method != HTTP_POST && \
+					request.method != HTTP_GET && \
+					request.method != HTTP_##name \
+				) { \
+					THROW(ClientError, "HTTP Mappings must use GET or POST method"); \
+				} \
+				request.method = HTTP_##name; \
+				cmd = ""; \
+				break;
+			METHODS_OPTIONS()
+			#undef OPTION
+		}
+	}
+
+	switch (request.method) {
+		case HTTP_SEARCH:
+			if (id.empty()) {
+				request.view = &search_view;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_COUNT:
+			if (id.empty()) {
+				request.view = &count_view;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_INFO:
+			if (id.empty()) {
+				request.view = &info_view;
+			} else {
+				request.view = &info_view;
+			}
+			break;
+
+		case HTTP_HEAD:
+			if (id.empty()) {
+				request.view = &database_exists_view;
+			} else {
+				request.view = &document_exists_view;
+			}
+			break;
+
+		case HTTP_GET:
+			if (!cmd.empty() && id.empty()) {
+				if (!has_pth && cmd == ":metrics") {
+					request.view = &metrics_view;
+				} else {
+					request.view = &retrieve_metadata_view;
+				}
+			} else if (!id.empty()) {
+				if (is_range(id)) {
+					request.view = &search_view;
+				} else {
+					request.view = &retrieve_document_view;
+				}
+			} else {
+				request.view = &retrieve_database_view;
+			}
+			break;
+
+		case HTTP_POST:
+			if (!cmd.empty() && id.empty()) {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			} else if (!id.empty()) {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			} else {
+				request.view = &write_document_view;
+			}
+			break;
+
+		case HTTP_PUT:
+			if (!cmd.empty() && id.empty()) {
+				request.view = &write_metadata_view;
+			} else if (!id.empty()) {
+				request.view = &write_document_view;
+			} else {
+				request.view = &write_database_view;
+			}
+			break;
+
+		case HTTP_PATCH:
+		case HTTP_UPDATE:
+		case HTTP_UPSERT:
+			if (!cmd.empty() && id.empty()) {
+				request.view = &update_metadata_view;
+			} else if (!id.empty()) {
+				request.view = &update_document_view;
+			} else {
+				request.view = &write_database_view;
+			}
+			break;
+
+		case HTTP_DELETE:
+			if (!cmd.empty() && id.empty()) {
+				request.view = &delete_metadata_view;
+			} else if (!id.empty()) {
+				request.view = &delete_document_view;
+			} else if (has_pth) {
+				request.view = &delete_database_view;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_COMMIT:
+			if (id.empty()) {
+				request.view = &commit_database_view;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_DUMP:
+			if (id.empty()) {
+				request.view = &dump_database_view;
+			} else {
+				request.view = &dump_document_view;
+			}
+			break;
+
+		case HTTP_RESTORE:
+			if (id.empty()) {
+				if ((request.parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
+					if (request.ct_type == ndjson_type || request.ct_type == x_ndjson_type) {
+						request.mode = Request::Mode::STREAM_NDJSON;
+					} else if (request.ct_type == msgpack_type || request.ct_type == x_msgpack_type) {
+						request.mode = Request::Mode::STREAM_MSGPACK;
+					}
+				}
+				request.view = &restore_database_view;
+			} else {
+				request.view = &write_document_view;
+			}
+			break;
+
+		case HTTP_CHECK:
+			if (id.empty()) {
+				request.view = &check_database_view;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_FLUSH:
+			if (opts.admin_commands && id.empty() && !has_pth) {
+				// Flush both databases and clients by default (unless one is specified)
+				request.query_parser.rewind();
+				int flush_databases = request.query_parser.next("databases");
+				request.query_parser.rewind();
+				int flush_clients = request.query_parser.next("clients");
+				if (flush_databases != -1 || flush_clients == -1) {
+					XapiandManager::manager(true)->database_pool->cleanup(true, false);
+				}
+				if (flush_clients != -1 || flush_databases == -1) {
+					XapiandManager::manager(true)->shutdown(0, 0);
+				}
+				write_http_response(request, HTTP_STATUS_OK);
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+		case HTTP_OPTIONS:
+			emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE);
+			break;
+
+		case HTTP_QUIT:
+			if (opts.admin_commands && !has_pth && id.empty()) {
+				XapiandManager::try_shutdown(true);
+				write_http_response(request, HTTP_STATUS_OK);
+				request.closing = true;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+
+#if XAPIAND_DATABASE_WAL
+		case HTTP_WAL:
+			if (id.empty()) {
+				request.view = &wal_view;
+			} else {
+				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			}
+			break;
+#endif
+
+		case HTTP_OPEN:
+		case HTTP_CLOSE:
+			write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+			break;
+
+		default:
+			L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(request.method));
+			write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			request.parser.http_errno = HPE_INVALID_METHOD;
+			return 1;
+	}
+
+	if (!request.view && Logging::config.log_level < LOG_DEBUG) {
+		return 1;
+	}
+
+	// (Expect: 100-continue is a transport concern handled by http::HttpConnection.)
+
+	if ((request.parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && request.parser.content_length) {
+		if (request.mode == Request::Mode::STREAM_MSGPACK) {
+			request.unpacker.reserve_buffer(request.parser.content_length);
+		} else {
+			request.raw.reserve(request.parser.content_length);
+		}
+	}
 
 	return 0;
 }
@@ -4253,4 +4536,101 @@ Response::to_text(bool decode)
 	}
 
 	return response_text;
+}
+
+
+// ---------------------------------------------------------------------------
+// SearchApplication (Leg 2 stage 3c): Xapiand's search engine as one
+// http::HttpHandler. Defined here (not in search_application.cc) because it
+// drives the file-scope request pipeline above -- process_header, url_resolve,
+// dispatch_request, the *_view functions, emit_response -- all internal to this
+// translation unit. When http::HttpConnection serves a request it calls handle();
+// the legacy HttpClient path is unchanged and retires once the swap is proven.
+// ---------------------------------------------------------------------------
+
+// Map an HTTP method name (as http-parser parsed it into http::Request.method,
+// e.g. "COUNT") back to the enum the dispatch switches on. Covers Xapiand's custom
+// verbs via the same METHODS_OPTIONS table used for the URL-command / override maps.
+static enum http_method
+method_from_string(std::string_view m)
+{
+	auto lower = strings::lower(m);
+	switch (http_methods.fhhl(lower)) {
+		#define OPTION(name, str) \
+		case http_methods.fhhl(str): \
+			return HTTP_##name;
+		METHODS_OPTIONS()
+		#undef OPTION
+		default:
+			return static_cast<enum http_method>(0xff);  // unknown -> dispatch default -> 405
+	}
+}
+
+
+void
+SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& response)
+{
+	Request request(nullptr);            // Mode::FULL; no HttpClient back-pointer
+	request.response_writer = &response;  // the response path emits through the library writer
+
+	// Rebuild the parser fields dispatch_request() reads (keep-alive/close, version).
+	request.parser.http_major = hreq.http_major;
+	request.parser.http_minor = hreq.http_minor;
+	if (hreq.keep_alive) {
+		request.parser.flags |= F_CONNECTION_KEEP_ALIVE;
+	} else {
+		request.parser.flags |= F_CONNECTION_CLOSE;
+	}
+
+	request.method = method_from_string(hreq.method);
+	request.path = hreq.target;          // url_resolve() splits path + query out of this
+
+	// Mirror the parser's F_CONTENTLENGTH so dispatch_request() picks the same body mode
+	// the legacy parser would (a RESTORE/bulk with an NDJSON/MsgPack content-type streams,
+	// and streams gracefully even when the body is empty). A request carrying a body
+	// advertises it with a Content-Length and/or a Content-Type.
+	if (!hreq.header("Content-Length").empty() || !hreq.content_type().empty() || !hreq.body.empty()) {
+		request.parser.flags |= F_CONTENTLENGTH;
+	}
+
+	// Replay the header processing the parser callback does (accept / accept-encoding /
+	// content-type / expect / method-override), so content negotiation matches exactly.
+	for (const auto& kv : hreq.headers) {
+		process_header(request, kv.first, kv.second);
+	}
+
+	request.atom_ending = true;
+	request.atom_ended = true;
+	request.ending = true;
+	request.received = std::chrono::steady_clock::now();
+
+	// Dispatch, then feed the (already fully-received) body and run the selected view,
+	// mapping Xapian/ClientError -> HTTP status at the boundary (the job
+	// HttpClient::handled_errors does on the legacy path).
+	auto http_errors = catch_http_errors([&]{
+		if (dispatch_request(request) == 0 && request.view != nullptr) {
+			// append() routes the body to raw (FULL mode, read via decoded_body()) or
+			// parses it into the objects deque (STREAM_NDJSON/MSGPACK, read via
+			// next_object()), exactly as on_body did incrementally on the legacy path.
+			if (!hreq.body.empty()) {
+				request.append(hreq.body.data(), hreq.body.size());
+			}
+			request.append(nullptr, 0);  // flush any trailing streamed object
+			request.view(request);
+		}
+		return 0;
+	});
+	if (http_errors.error_code != HTTP_STATUS_OK) {
+		if (request.response.status == static_cast<http_status>(0)) {
+			write_status_response(request, http_errors.error_code, http_errors.error);
+		} else {
+			// A response was already emitted before the error; the writer is one-shot,
+			// so just close the connection (mirrors handled_errors' detach()).
+			response.set_close();
+		}
+	}
+
+	if (request.closing) {
+		response.set_close();
+	}
 }

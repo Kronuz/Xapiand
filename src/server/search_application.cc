@@ -23,30 +23,6 @@
 #include "search_application.h"
 
 
-void
-SearchApplication::handle(const http::Request& request, http::ResponseWriter& response)
-{
-	// SCAFFOLD (Leg 2 stage 3c-2): not yet wired into HttpServer, so this never runs.
-	//
-	// The port plan for the real body (each step E2E-green):
-	//   1. Build Xapiand's per-request state from `request` (method, path, query,
-	//      headers, body) -- the work HttpClient::on_headers_complete + url_resolve +
-	//      the content-negotiation helpers do today (all now file-scope free functions
-	//      taking a Request&, after stages 2-3b).
-	//   2. Run HttpClient::prepare()'s method + URL-predicate dispatch to pick the view
-	//      (kept as a custom switch here -- it is not radix-router-clean).
-	//   3. Invoke the selected *_view against that request state.
-	//   4. Rewrite the response path onto `response`: serialize the MsgPack result
-	//      (serialize_response, already free) then response.status()/set_header()/
-	//      write()/end(), letting the library own framing + the compression knob (this
-	//      replaces http_response()/manual gzip-deflate; deflate -> zstd/gzip is the
-	//      documented parity change).
-	//   5. Map Xapian/ClientError -> HTTP status at this boundary (reuse catch_http_errors).
-	(void)request;
-	response.send(501, "SearchApplication not yet wired", "text/plain; charset=utf-8");
-}
-
-
 bool
 SearchApplication::should_offload(const http::Request& /*request*/) const
 {
