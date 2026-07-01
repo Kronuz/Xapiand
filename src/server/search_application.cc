@@ -24,7 +24,22 @@
 
 
 bool
-SearchApplication::should_offload(const http::Request& /*request*/) const
+SearchApplication::should_offload(const http::Request& request) const
 {
+	// The un-stallable fast path: cheap, non-blocking endpoints run inline on the
+	// reactor; only the Xapian-bound (blocking, potentially slow) endpoints offload to
+	// a worker so they never stall the loop. Classified here from the method + path
+	// alone (before the view is chosen), so it is a conservative split: the couple of
+	// genuinely trivial reads run inline, everything that can touch a database offloads.
+	if (request.method == "OPTIONS") {
+		return false;   // no body, no database work
+	}
+	if (request.method == "GET") {
+		// GET / (node/cluster info) and GET /:metrics (Prometheus) are cheap and
+		// non-blocking; every other GET is a database read.
+		if (request.path == "/" || request.path.find(":metrics") != std::string::npos) {
+			return false;
+		}
+	}
 	return true;
 }

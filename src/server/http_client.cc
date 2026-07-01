@@ -284,135 +284,10 @@ bool can_preview(const ct_type_t& ct_type) {
  */
 
 
-HttpClient::HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_)
-	: BaseClient<HttpClient>(std::move(parent_), ev_loop_, ev_flags_),
-	  new_request(std::make_shared<Request>(this))
-{
-	auto manager = XapiandManager::manager();
-	if (manager) {
-		++manager->http_clients;
-	}
-
-	Metrics::metrics()
-		.xapiand_http_connections
-		.Increment();
-
-	// Initialize new_request->begins as soon as possible (for correctly timing disconnecting clients)
-	new_request->begins = std::chrono::steady_clock::now();
-
-	L_CONN("New Http Client, {} client(s) of a total of {} connected.", manager ? manager->http_clients.load() : 0, manager ? manager->total_clients.load() : 0);
-}
 
 
-HttpClient::~HttpClient() noexcept
-{
-	try {
-		if (auto manager = XapiandManager::manager()) {
-			if (manager->http_clients.fetch_sub(1) == 0) {
-				L_CRIT("Inconsistency in number of http clients");
-				sig_exit(-EX_SOFTWARE);
-			}
-		}
-
-		if (is_shutting_down() && !is_idle()) {
-			L_INFO("HTTP client killed!");
-		}
-	} catch (...) {
-		L_EXC("Unhandled exception in destructor");
-	}
-}
 
 
-// Format the raw HTTP/1.1 response bytes (status line, headers, encoded body) from
-// the negotiated request state. Uses only `request`, no other client state, so it
-// is a file-scope free function the forthcoming SearchApplication can reuse.
-// (Leg 2 stage 1.) The argument defaults moved here from the former class decl.
-static std::string
-http_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0) {
-
-	std::string head;
-	std::string headers;
-	std::string head_sep;
-	std::string headers_sep;
-	std::string response_body;
-
-	if ((mode & HTTP_STATUS_RESPONSE) != 0) {
-		assert(request.response.status == static_cast<http_status>(0));
-		request.response.status = status;
-		auto http_major = request.parser.http_major;
-		auto http_minor = request.parser.http_minor;
-		if (http_major == 0 && http_minor == 0) {
-			http_major = 1;
-		}
-		head += strings::format("HTTP/{}.{} {} ", http_major, http_minor, status);
-		head += http_status_str(status);
-		head_sep += eol;
-		if ((mode & HTTP_HEADER_RESPONSE) == 0) {
-			headers_sep += eol;
-		}
-	}
-
-	assert(request.response.status != static_cast<http_status>(0));
-
-	if ((mode & HTTP_HEADER_RESPONSE) != 0) {
-		headers += "Server: " + Package::STRING + eol;
-
-		// if (!request.endpoints.empty()) {
-		// 	headers += "Database: " + request.endpoints.to_string() + eol;
-		// }
-
-		request.ends = std::chrono::steady_clock::now();
-
-		if (request.human) {
-			headers += strings::format("Response-Time: {}", strings::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count())) + eol;
-			if (request.ready >= request.processing) {
-				headers += strings::format("Operation-Time: {}", strings::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count())) + eol;
-			}
-		} else {
-			headers += strings::format("Response-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9) + eol;
-			if (request.ready >= request.processing) {
-				headers += strings::format("Operation-Time: {}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9) + eol;
-			}
-		}
-
-		if ((mode & HTTP_OPTIONS_RESPONSE) != 0) {
-			headers += "Allow: GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS" + eol;
-		}
-
-		if (!location.empty()) {
-			headers += "Location: " + location + eol;
-		}
-
-		if ((mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 && !ct_type.empty()) {
-			headers += "Content-Type: " + ct_type + eol;
-		}
-
-		if ((mode & HTTP_CONTENT_ENCODING_RESPONSE) != 0 && !ct_encoding.empty()) {
-			headers += "Content-Encoding: " + ct_encoding + eol;
-		}
-
-		if ((mode & HTTP_CONTENT_LENGTH_RESPONSE) != 0) {
-			headers += strings::format("Content-Length: {}", content_length) + eol;
-		} else {
-			headers += strings::format("Content-Length: {}", body.size()) + eol;
-		}
-		headers_sep += eol;
-	}
-
-	if ((mode & HTTP_BODY_RESPONSE) != 0) {
-		response_body += body;
-	}
-
-	auto this_response_size = response_body.size();
-	request.response.size += this_response_size;
-
-	if (Logging::config.log_level >= LOG_DEBUG) {
-		request.response.head += head;
-		request.response.headers += headers;
-	}
-
-	return head + head_sep + headers + headers_sep + response_body;
-}
 
 
 // Emit a response through the generic HTTP library's ResponseWriter (Leg 2 stage
@@ -464,215 +339,35 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 }
 
 
-// The single response emit point. Routes to the generic library's ResponseWriter
-// when this request is served through http::HttpConnection (Leg 2 stage 3c), or to
-// the legacy HttpClient raw-bytes transport otherwise. Same argument shape as
-// http_response() so it is a drop-in for the former request.client->write(...) sites.
+// The single response emit point (Leg 2 stage 3c): the request is served through an
+// http::HttpConnection, so the response is framed by the library's ResponseWriter.
+// The `mode` flags carry which response parts apply (Content-Type / Content-Encoding /
+// Allow-for-OPTIONS); the Writer owns Content-Length + Connection + the status line.
 static void
 emit_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0)
 {
-	if (request.response_writer != nullptr) {
-		emit_via_writer(request, status, body, location, (mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 ? ct_type : std::string(), (mode & HTTP_CONTENT_ENCODING_RESPONSE) != 0 ? ct_encoding : std::string(), (mode & HTTP_OPTIONS_RESPONSE) != 0);
-	} else {
-		request.client->write(http_response(request, status, mode, body, location, ct_type, ct_encoding, content_length));
-	}
+	(void)content_length;  // the Writer derives Content-Length from the body it frames
+	emit_via_writer(request, status, body, location, (mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 ? ct_type : std::string(), (mode & HTTP_CONTENT_ENCODING_RESPONSE) != 0 ? ct_encoding : std::string(), (mode & HTTP_OPTIONS_RESPONSE) != 0);
 }
 
 
-template <typename Func>
-int
-HttpClient::handled_errors(Request& request, Func&& func)
-{
-	L_CALL("HttpClient::handled_errors()");
-
-	auto http_errors = catch_http_errors(std::forward<Func>(func));
-
-	if (http_errors.error_code != HTTP_STATUS_OK) {
-		if (request.response.status != static_cast<http_status>(0)) {
-			// There was an error, but request already had written stuff...
-			// disconnect client!
-			detach();
-		} else {
-			write_status_response(request, http_errors.error_code, http_errors.error);
-		}
-		request.atom_ending = true;
-	}
-
-	return http_errors.ret;
-}
 
 
-size_t
-HttpClient::pending_requests() const
-{
-	std::lock_guard<std::mutex> lk(runner_mutex);
-	auto requests_size = requests.size();
-	if (requests_size && requests.front()->response.status != static_cast<http_status>(0)) {
-		--requests_size;
-	}
-	return requests_size;
-}
 
 
-bool
-HttpClient::is_idle() const
-{
-	L_CALL("HttpClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_requests:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_requests());
-
-	return !is_waiting() && !is_running() && write_queue.empty() && !pending_requests();
-}
 
 
-void
-HttpClient::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("HttpClient::shutdown_impl({}, {})", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		shutting_down = true;
-		auto manager = XapiandManager::manager();
-		if (now != 0 || !manager || manager->ready_to_end_http() || is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	} else {
-		if (is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	}
-}
 
 
-void
-HttpClient::destroy_impl()
-{
-	L_CALL("HttpClient::destroy_impl()");
-
-	BaseClient<HttpClient>::destroy_impl();
-
-	// HttpClient could be using indexer (which would block)
-	// if destroying is received, finish indexer:
-	std::unique_lock<std::mutex> lk(runner_mutex);
-	if (!requests.empty()) {
-		auto& request = *requests.front();
-		auto indexer = request.indexer.load();
-		if (indexer) {
-			indexer->finish();
-			request.indexer.store(nullptr);
-		}
-	}
-}
 
 
-ssize_t
-HttpClient::on_read(const char* buf, ssize_t received)
-{
-	L_CALL("HttpClient::on_read(<buf>, {})", received);
-
-	if (received <= 0) {
-		std::string reason;
-
-		if (received < 0) {
-			reason = strings::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
-			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("HTTP client connection closed unexpectedly after {}: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
-				close();
-				return received;
-			}
-		} else {
-			reason = "EOF";
-		}
-
-		auto state = HTTP_PARSER_STATE(&new_request->parser);
-		if (state != s_start_req) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: Not in final HTTP state ({}): {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), enum_name(state), reason);
-			close();
-			return received;
-		}
-
-		if (is_waiting()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There was still a request in progress: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
-			close();
-			return received;
-		}
-
-		if (!write_queue.empty()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There is still pending data: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
-			close();
-			return received;
-		}
-
-		if (pending_requests()) {
-			L_NOTICE("HTTP client closed unexpectedly after {}: There are still pending requests: {}", strings::from_delta(new_request->begins, std::chrono::steady_clock::now()), reason);
-			close();
-			return received;
-		}
-
-		// HTTP client normally closed connection.
-		close();
-		return received;
-	}
-
-	L_HTTP_WIRE("HttpClient::on_read: {} bytes", received);
-	ssize_t parsed = http_parser_execute(&new_request->parser, &parser_settings, buf, received);
-	if (parsed != received) {
-		http_errno err = HTTP_PARSER_ERRNO(&new_request->parser);
-		if (err == HPE_INVALID_METHOD) {
-			if (new_request->response.status == static_cast<http_status>(0)) {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-				end_http_request(*new_request);
-			}
-		} else {
-			std::string message(http_errno_description(err));
-			L_DEBUG("HTTP parser error: {}", HTTP_PARSER_ERRNO(&new_request->parser) != HPE_OK ? message : "incomplete request");
-			if (new_request->response.status == static_cast<http_status>(0)) {
-				write_status_response(*new_request, HTTP_STATUS_BAD_REQUEST, message);
-				end_http_request(*new_request);
-			}
-		}
-		detach();
-	}
-
-	return received;
-}
 
 
-void
-HttpClient::on_read_file(const char* /*buf*/, ssize_t received)
-{
-	L_CALL("HttpClient::on_read_file(<buf>, {})", received);
-
-	L_ERR("Not Implemented: HttpClient::on_read_file: {} bytes", received);
-}
 
 
-void
-HttpClient::on_read_file_done()
-{
-	L_CALL("HttpClient::on_read_file_done()");
-
-	L_ERR("Not Implemented: HttpClient::on_read_file_done");
-}
 
 
 // HTTP parser callbacks.
-const http_parser_settings HttpClient::parser_settings = {
-	HttpClient::message_begin_cb,
-	HttpClient::url_cb,
-	HttpClient::status_cb,
-	HttpClient::header_field_cb,
-	HttpClient::header_value_cb,
-	HttpClient::headers_complete_cb,
-	HttpClient::body_cb,
-	HttpClient::message_complete_cb,
-	HttpClient::chunk_header_cb,
-	HttpClient::chunk_complete_cb,
-};
 
 
 inline std::string readable_http_parser_flags(http_parser* parser) {
@@ -689,148 +384,20 @@ inline std::string readable_http_parser_flags(http_parser* parser) {
 }
 
 
-int
-HttpClient::message_begin_cb(http_parser* parser)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_message_begin(parser);
-	});
-}
-
-int
-HttpClient::url_cb(http_parser* parser, const char* at, size_t length)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_url(parser, at, length);
-	});
-}
-
-int
-HttpClient::status_cb(http_parser* parser, const char* at, size_t length)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_status(parser, at, length);
-	});
-}
-
-int
-HttpClient::header_field_cb(http_parser* parser, const char* at, size_t length)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_header_field(parser, at, length);
-	});
-}
-
-int
-HttpClient::header_value_cb(http_parser* parser, const char* at, size_t length)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_header_value(parser, at, length);
-	});
-}
-
-int
-HttpClient::headers_complete_cb(http_parser* parser)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_headers_complete(parser);
-	});
-}
-
-int
-HttpClient::body_cb(http_parser* parser, const char* at, size_t length)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_body(parser, at, length);
-	});
-}
-
-int
-HttpClient::message_complete_cb(http_parser* parser)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_message_complete(parser);
-	});
-}
-
-int
-HttpClient::chunk_header_cb(http_parser* parser)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_chunk_header(parser);
-	});
-}
-
-int
-HttpClient::chunk_complete_cb(http_parser* parser)
-{
-	auto http_client = static_cast<HttpClient *>(parser->data);
-	return http_client->handled_errors(*http_client->new_request, [&]{
-		return http_client->on_chunk_complete(parser);
-	});
-}
 
 
-int
-HttpClient::on_message_begin([[maybe_unused]] http_parser* parser)
-{
-	L_CALL("HttpClient::on_message_begin(<parser>)");
 
-	L_HTTP_PROTO("on_message_begin {{state:{}, header_state:{}}}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)));
 
-	waiting = true;
-	new_request->begins = std::chrono::steady_clock::now();
-	L_TIMED_VAR(new_request->log, 10s,
-		"Request taking too long...",
-		"Request took too long!");
 
-	return 0;
-}
 
-int
-HttpClient::on_url(http_parser* parser, const char* at, size_t length)
-{
-	L_CALL("HttpClient::on_url(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_url {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
-	new_request->method = HTTP_PARSER_METHOD(parser);
 
-	new_request->path.append(at, length);
 
-	return 0;
-}
 
-int
-HttpClient::on_status([[maybe_unused]] http_parser* parser, [[maybe_unused]] const char* at, [[maybe_unused]] size_t length)
-{
-	L_CALL("HttpClient::on_status(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_status {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
-	return 0;
-}
 
-int
-HttpClient::on_header_field([[maybe_unused]] http_parser* parser, const char* at, size_t length)
-{
-	L_CALL("HttpClient::on_header_field(<parser>, <at>, <length>)");
-
-	L_HTTP_PROTO("on_header_field {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
-
-	new_request->_header_name = std::string(at, length);
-
-	return 0;
-}
 
 // The per-header processing lifted out of on_header_value (Leg 2 stage 3c): fills
 // request state (accept / accept-encoding via the LRU caches, content-type, the
@@ -955,178 +522,11 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 }
 
 
-int
-HttpClient::on_header_value([[maybe_unused]] http_parser* parser, const char* at, size_t length)
-{
-	L_CALL("HttpClient::on_header_value(<parser>, <at>, <length>)");
 
-	L_HTTP_PROTO("on_header_value {{state:{}, header_state:{}}}: {}", enum_name(HTTP_PARSER_STATE(parser)), enum_name(HTTP_PARSER_HEADER_STATE(parser)), repr(at, length));
 
-	auto _header_value = std::string_view(at, length);
-	if (Logging::config.log_level >= LOG_DEBUG) {
-		new_request->headers.append(new_request->_header_name);
-		new_request->headers.append(": ");
-		new_request->headers.append(_header_value);
-		new_request->headers.append(eol);
-	}
 
-	process_header(*new_request, new_request->_header_name, _header_value);
 
-	return 0;
-}
 
-int
-HttpClient::on_headers_complete([[maybe_unused]] http_parser* parser)
-{
-	L_CALL("HttpClient::on_headers_complete(<parser>)");
-
-	L_HTTP_PROTO("on_headers_complete {{state:{}, header_state:{}, flags:[{}]}}",
-		enum_name(HTTP_PARSER_STATE(parser)),
-		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
-		readable_http_parser_flags(parser));
-
-	// Prepare the request view
-	if (int err = prepare()) {
-		end_http_request(*new_request);
-		return err;
-	}
-
-	if likely(!closed) {
-		if likely(!new_request->atom_ending) {
-			if likely(new_request->view) {
-				if (new_request->mode != Request::Mode::FULL) {
-					std::lock_guard<std::mutex> lk(runner_mutex);
-					if (requests.empty() || new_request != requests.front()) {
-						requests.push_back(new_request);  // Enqueue streamed request
-					}
-				}
-			}
-		}
-	}
-
-	return 0;
-}
-
-int
-HttpClient::on_body([[maybe_unused]] http_parser* parser, const char* at, size_t length)
-{
-	L_CALL("HttpClient::on_body(<parser>, <at>, {})", length);
-
-	L_HTTP_PROTO("on_body {{state:{}, header_state:{}, flags:[{}]}}: {}",
-		enum_name(HTTP_PARSER_STATE(parser)),
-		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
-		readable_http_parser_flags(parser),
-		repr(at, length));
-
-	new_request->size += length;
-
-	if likely(!closed) {
-		if likely(!new_request->atom_ending) {
-			bool signal_pending = false;
-			if (Logging::config.log_level >= LOG_DEBUG || new_request->view) {
-				signal_pending = new_request->append(at, length);
-			}
-			if likely(new_request->view) {
-				if (signal_pending) {
-					{
-						std::lock_guard<std::mutex> pending_lk(new_request->pending_mtx);
-						new_request->has_pending = true;
-						new_request->pending.notify_one();
-					}
-
-					std::lock_guard<std::mutex> lk(runner_mutex);
-					if (!running) {  // Start a runner if not running
-						running = true;
-						XapiandManager::manager(true)->http_client_pool->enqueue(share_this<HttpClient>());
-					}
-				}
-			}
-		}
-	}
-
-	return 0;
-}
-
-int
-HttpClient::on_message_complete([[maybe_unused]] http_parser* parser)
-{
-	L_CALL("HttpClient::on_message_complete(<parser>)");
-
-	L_HTTP_PROTO("on_message_complete {{state:{}, header_state:{}, flags:[{}]}}",
-		enum_name(HTTP_PARSER_STATE(parser)),
-		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
-		readable_http_parser_flags(parser));
-
-	if (Logging::config.log_level > LOG_DEBUG) {
-		log_request(*new_request);
-	}
-
-	if likely(!closed) {
-		std::shared_ptr<Request> request = std::make_shared<Request>(this);
-		std::swap(new_request, request);
-
-		if likely(!request->atom_ending) {
-			request->atom_ending = true;
-
-			bool signal_pending = false;
-			if (Logging::config.log_level >= LOG_DEBUG || request->view) {
-				request->append(nullptr, 0);  // flush pending stuff
-				signal_pending = true;  // always signal pending
-			}
-			if likely(request->view) {
-				if (signal_pending) {
-					{
-						// always signal, so view continues ending
-						std::lock_guard<std::mutex> pending_lk(request->pending_mtx);
-						request->has_pending = true;
-						request->pending.notify_one();
-					}
-
-					std::lock_guard<std::mutex> lk(runner_mutex);
-					if (requests.empty() || request != requests.front()) {
-						requests.push_back(std::move(request));  // Enqueue request
-					}
-					if (!running) {  // Start a runner if not running
-						running = true;
-						XapiandManager::manager(true)->http_client_pool->enqueue(share_this<HttpClient>());
-					}
-				}
-			} else {
-				end_http_request(*request);
-			}
-		}
-	}
-
-	waiting = false;
-
-	return 0;
-}
-
-int
-HttpClient::on_chunk_header([[maybe_unused]] http_parser* parser)
-{
-	L_CALL("HttpClient::on_chunk_header(<parser>)");
-
-	L_HTTP_PROTO("on_chunk_header {{state:{}, header_state:{}, flags:[{}]}}",
-		enum_name(HTTP_PARSER_STATE(parser)),
-		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
-		readable_http_parser_flags(parser));
-
-	return 0;
-}
-
-int
-HttpClient::on_chunk_complete([[maybe_unused]] http_parser* parser)
-{
-	L_CALL("HttpClient::on_chunk_complete(<parser>)");
-
-	L_HTTP_PROTO("on_chunk_complete {{state:{}, header_state:{}, flags:[{}]}}",
-		enum_name(HTTP_PARSER_STATE(parser)),
-		enum_name(HTTP_PARSER_HEADER_STATE(parser)),
-		readable_http_parser_flags(parser));
-
-	return 0;
-}
 
 
 // The request dispatch for the http::HttpConnection path (Leg 2 stage 3c): a copy of
@@ -1398,366 +798,10 @@ dispatch_request(Request& request)
 }
 
 
-int
-HttpClient::prepare()
-{
-	L_CALL("HttpClient::prepare()");
-
-	L_TIMED_VAR(request.log, 1s,
-		"Response taking too long: {}",
-		"Response took too long: {}",
-		request.head());
-
-	new_request->received = std::chrono::steady_clock::now();
-
-	if (new_request->parser.http_major == 0 || (new_request->parser.http_major == 1 && new_request->parser.http_minor == 0)) {
-		new_request->closing = true;
-	}
-	if ((new_request->parser.flags & F_CONNECTION_KEEP_ALIVE) == F_CONNECTION_KEEP_ALIVE) {
-		new_request->closing = false;
-	}
-	if ((new_request->parser.flags & F_CONNECTION_CLOSE) == F_CONNECTION_CLOSE) {
-		new_request->closing = true;
-	}
-
-	if (new_request->accept_set.empty()) {
-		if (!new_request->ct_type.empty()) {
-			new_request->accept_set.emplace(0, 1.0, new_request->ct_type, 0);
-		}
-		new_request->accept_set.emplace(1, 1.0, any_type, 0);
-	}
-
-	new_request->type_encoding = resolve_encoding(*new_request);
-	if (new_request->type_encoding == Encoding::unknown) {
-		write_status_response(*new_request, HTTP_STATUS_NOT_ACCEPTABLE, "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header");
-		return 1;
-	}
-
-	url_resolve(*new_request);
-
-	auto id = new_request->path_parser.get_id();
-	auto has_pth = new_request->path_parser.has_pth();
-	auto cmd = new_request->path_parser.get_cmd();
-
-	if (!cmd.empty()) {
-		auto mapping = cmd;
-		mapping.remove_prefix(1);
-		switch (http_methods.fhhl(mapping)) {
-			#define OPTION(name, str) \
-			case http_methods.fhhl(str): \
-				if ( \
-					new_request->method != HTTP_POST && \
-					new_request->method != HTTP_GET && \
-					new_request->method != HTTP_##name \
-				) { \
-					THROW(ClientError, "HTTP Mappings must use GET or POST method"); \
-				} \
-				new_request->method = HTTP_##name; \
-				cmd = ""; \
-				break;
-			METHODS_OPTIONS()
-			#undef OPTION
-		}
-	}
-
-	switch (new_request->method) {
-		case HTTP_SEARCH:
-			if (id.empty()) {
-				new_request->view = &search_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_COUNT:
-			if (id.empty()) {
-				new_request->view = &count_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_INFO:
-			if (id.empty()) {
-				new_request->view = &info_view;
-			} else {
-				new_request->view = &info_view;
-			}
-			break;
-
-		case HTTP_HEAD:
-			if (id.empty()) {
-				new_request->view = &database_exists_view;
-			} else {
-				new_request->view = &document_exists_view;
-			}
-			break;
-
-		case HTTP_GET:
-			if (!cmd.empty() && id.empty()) {
-				if (!has_pth && cmd == ":metrics") {
-					new_request->view = &metrics_view;
-				} else {
-					new_request->view = &retrieve_metadata_view;
-				}
-			} else if (!id.empty()) {
-				if (is_range(id)) {
-					new_request->view = &search_view;
-				} else {
-					new_request->view = &retrieve_document_view;
-				}
-			} else {
-				new_request->view = &retrieve_database_view;
-			}
-			break;
-
-		case HTTP_POST:
-			if (!cmd.empty() && id.empty()) {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			} else if (!id.empty()) {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			} else {
-				new_request->view = &write_document_view;
-			}
-			break;
-
-		case HTTP_PUT:
-			if (!cmd.empty() && id.empty()) {
-				new_request->view = &write_metadata_view;
-			} else if (!id.empty()) {
-				new_request->view = &write_document_view;
-			} else {
-				new_request->view = &write_database_view;
-			}
-			break;
-
-		case HTTP_PATCH:
-		case HTTP_UPDATE:
-		case HTTP_UPSERT:
-			if (!cmd.empty() && id.empty()) {
-				new_request->view = &update_metadata_view;
-			} else if (!id.empty()) {
-				new_request->view = &update_document_view;
-			} else {
-				new_request->view = &write_database_view;
-			}
-			break;
-
-		case HTTP_DELETE:
-			if (!cmd.empty() && id.empty()) {
-				new_request->view = &delete_metadata_view;
-			} else if (!id.empty()) {
-				new_request->view = &delete_document_view;
-			} else if (has_pth) {
-				new_request->view = &delete_database_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_COMMIT:
-			if (id.empty()) {
-				new_request->view = &commit_database_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_DUMP:
-			if (id.empty()) {
-				new_request->view = &dump_database_view;
-			} else {
-				new_request->view = &dump_document_view;
-			}
-			break;
-
-		case HTTP_RESTORE:
-			if (id.empty()) {
-				if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
-					if (new_request->ct_type == ndjson_type || new_request->ct_type == x_ndjson_type) {
-						new_request->mode = Request::Mode::STREAM_NDJSON;
-					} else if (new_request->ct_type == msgpack_type || new_request->ct_type == x_msgpack_type) {
-						new_request->mode = Request::Mode::STREAM_MSGPACK;
-					}
-				}
-				new_request->view = &restore_database_view;
-			} else {
-				new_request->view = &write_document_view;
-			}
-			break;
-
-		case HTTP_CHECK:
-			if (id.empty()) {
-				new_request->view = &check_database_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_FLUSH:
-			if (opts.admin_commands && id.empty() && !has_pth) {
-				// Flush both databases and clients by default (unless one is specified)
-				new_request->query_parser.rewind();
-				int flush_databases = new_request->query_parser.next("databases");
-				new_request->query_parser.rewind();
-				int flush_clients = new_request->query_parser.next("clients");
-				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::manager(true)->database_pool->cleanup(true, false);
-				}
-				if (flush_clients != -1 || flush_databases == -1) {
-					XapiandManager::manager(true)->shutdown(0, 0);
-				}
-				write_http_response(*new_request, HTTP_STATUS_OK);
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_OPTIONS:
-			write(http_response(*new_request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE));
-			break;
-
-		case HTTP_QUIT:
-			if (opts.admin_commands && !has_pth && id.empty()) {
-				XapiandManager::try_shutdown(true);
-				write_http_response(*new_request, HTTP_STATUS_OK);
-				destroy();
-				detach();
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-#if XAPIAND_DATABASE_WAL
-		case HTTP_WAL:
-			if (id.empty()) {
-				new_request->view = &wal_view;
-			} else {
-				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-#endif
-
-		case HTTP_OPEN:
-		case HTTP_CLOSE:
-			write_status_response(*new_request, HTTP_STATUS_NOT_IMPLEMENTED);
-			break;
-
-		default:
-			L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(new_request->method));
-			write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			new_request->parser.http_errno = HPE_INVALID_METHOD;
-			return 1;
-	}
-
-	if (!new_request->view && Logging::config.log_level < LOG_DEBUG) {
-		return 1;
-	}
-
-	if (new_request->expect_100) {
-		// Return "100 Continue" if client sent "Expect: 100-continue"
-		write(http_response(*new_request, HTTP_STATUS_CONTINUE, HTTP_STATUS_RESPONSE));
-		// Go back to unknown response state:
-		new_request->response.head.clear();
-		new_request->response.status = static_cast<http_status>(0);
-	}
-
-	if ((new_request->parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && new_request->parser.content_length) {
-		if (new_request->mode == Request::Mode::STREAM_MSGPACK) {
-			new_request->unpacker.reserve_buffer(new_request->parser.content_length);
-		} else {
-			new_request->raw.reserve(new_request->parser.content_length);
-		}
-	}
-
-	return 0;
-}
 
 
-void
-HttpClient::process(Request& request)
-{
-	L_CALL("HttpClient::process()");
-
-	L_OBJ_BEGIN("HttpClient::process:BEGIN");
-	L_OBJ_END("HttpClient::process:END");
-
-	handled_errors(request, [&]{
-		request.view(request);
-		return 0;
-	});
-}
 
 
-void
-HttpClient::operator()()
-{
-	L_CALL("HttpClient::operator()()");
-
-	L_CONN("Start running in worker...");
-
-	std::unique_lock<std::mutex> lk(runner_mutex);
-
-	while (!requests.empty() && !closed) {
-		Request& request = *requests.front();
-		if (request.atom_ended) {
-			requests.pop_front();
-			continue;
-		}
-		request.ending = request.atom_ending.load();
-		lk.unlock();
-
-		// wait for the request to be ready
-		if (!request.ending && !request.wait()) {
-			lk.lock();
-			continue;
-		}
-
-		try {
-			assert(request.view);
-			process(request);
-			request.begining = false;
-		} catch (...) {
-			request.begining = false;
-			end_http_request(request);
-			lk.lock();
-			requests.pop_front();
-			running = false;
-			L_CONN("Running in worker ended with an exception.");
-			lk.unlock();
-			L_EXC("ERROR: HTTP client ended with an unhandled exception");
-			detach();
-			throw;
-		}
-		if (request.ending) {
-			end_http_request(request);
-			auto closing = request.closing;
-			lk.lock();
-			requests.pop_front();
-			if (closing) {
-				running = false;
-				L_CONN("Running in worker ended after request closing.");
-				lk.unlock();
-				destroy();
-				detach();
-				return;
-			}
-		} else {
-			lk.lock();
-		}
-	}
-
-	running = false;
-	L_CONN("Running in replication worker ended. {{requests_empty:{}, closed:{}, is_shutting_down:{}}}", requests.empty(), closed.load(), is_shutting_down());
-	lk.unlock();
-
-	if (is_shutting_down() && is_idle()) {
-		detach();
-		return;
-	}
-
-	redetach();  // try re-detaching if already flagged as detaching
-}
 
 
 static MsgPack
@@ -3543,124 +2587,10 @@ query_field_maker(Request& request, int flags)
 }
 
 
-void
-HttpClient::log_request(Request& request)
-{
-	L_CALL("HttpClient::log_request()");
-
-	std::string request_prefix = " 🌎  ";
-	int priority = LOG_DEBUG;
-	if ((int)request.response.status >= 400 && (int)request.response.status <= 499) {
-		priority = LOG_INFO;
-	} else if ((int)request.response.status >= 500 && (int)request.response.status <= 599) {
-		priority = LOG_NOTICE;
-	}
-	auto request_text = request.to_text(true);
-	L(priority, NO_COLOR, "{}{}", request_prefix, strings::indent(request_text, ' ', 4, false));
-}
 
 
-void
-HttpClient::log_response(Response& response)
-{
-	L_CALL("HttpClient::log_response()");
-
-	std::string response_prefix = " 💊  ";
-	int priority = LOG_DEBUG;
-	if ((int)response.status >= 300 && (int)response.status <= 399) {
-		response_prefix = " 💫  ";
-	} else if ((int)response.status == 404) {
-		response_prefix = " 🕸  ";
-	} else if ((int)response.status >= 400 && (int)response.status <= 499) {
-		response_prefix = " 💥  ";
-		priority = LOG_INFO;
-	} else if ((int)response.status >= 500 && (int)response.status <= 599) {
-		response_prefix = " 🔥  ";
-		priority = LOG_NOTICE;
-	}
-	auto response_text = response.to_text(true);
-	L(priority, NO_COLOR, "{}{}", response_prefix, strings::indent(response_text, ' ', 4, false));
-}
 
 
-void
-HttpClient::end_http_request(Request& request)
-{
-	L_CALL("HttpClient::end_http_request()");
-
-	request.ends = std::chrono::steady_clock::now();
-	request.atom_ending = true;
-	request.atom_ended = true;
-	waiting = false;
-
-	auto indexer = request.indexer.load();
-	if (indexer) {
-		indexer->finish();
-		request.indexer.store(nullptr);
-	}
-
-	if (request.log) {
-		request.log->clear();
-		request.log.reset();
-	}
-
-	if (request.parser.http_errno != 0u) {
-		L(LOG_ERR, LIGHT_RED, "HTTP parsing error ({}): {}", http_errno_name(HTTP_PARSER_ERRNO(&request.parser)), http_errno_description(HTTP_PARSER_ERRNO(&request.parser)));
-	} else {
-		static constexpr auto fmt_defaut = RED + "\"{}\" {} {} {}";
-		auto fmt = fmt_defaut.c_str();
-		int priority = LOG_DEBUG;
-
-		if ((int)request.response.status >= 200 && (int)request.response.status <= 299) {
-			static constexpr auto fmt_2xx = LIGHT_GREY + "\"{}\" {} {} {}";
-			fmt = fmt_2xx.c_str();
-		} else if ((int)request.response.status >= 300 && (int)request.response.status <= 399) {
-			static constexpr auto fmt_3xx = STEEL_BLUE + "\"{}\" {} {} {}";
-			fmt = fmt_3xx.c_str();
-		} else if ((int)request.response.status >= 400 && (int)request.response.status <= 499) {
-			static constexpr auto fmt_4xx = SADDLE_BROWN + "\"{}\" {} {} {}";
-			fmt = fmt_4xx.c_str();
-			if ((int)request.response.status != 404) {
-				priority = LOG_INFO;
-			}
-		} else if ((int)request.response.status >= 500 && (int)request.response.status <= 599) {
-			static constexpr auto fmt_5xx = LIGHT_PURPLE + "\"{}\" {} {} {}";
-			fmt = fmt_5xx.c_str();
-			priority = LOG_NOTICE;
-		}
-		if (Logging::config.log_level > LOG_DEBUG) {
-			log_response(request.response);
-		} else if (Logging::config.log_level == LOG_DEBUG) {
-			if ((int)request.response.status >= 400 && (int)request.response.status != 404) {
-				log_request(request);
-				log_response(request.response);
-			}
-		}
-
-		auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count();
-		Metrics::metrics()
-			.xapiand_http_requests_summary
-			.Add({
-				{"method", http_method_str(request.method)},
-				{"status", strings::format("{}", request.response.status.load())},
-			})
-			.Observe(took / 1e9);
-
-		L(priority, NO_COLOR, fmt, request.head(), (int)request.response.status, strings::from_bytes(request.response.size), strings::from_delta(request.begins, request.ends));
-	}
-
-	L_TIME("Full request took {}, response took {}", strings::from_delta(request.begins, request.ends), strings::from_delta(request.received, request.ends));
-
-	auto sent = total_sent_bytes.exchange(0);
-	Metrics::metrics()
-		.xapiand_http_sent_bytes
-		.Increment(sent);
-
-	auto received = total_received_bytes.exchange(0);
-	Metrics::metrics()
-		.xapiand_http_received_bytes
-		.Increment(received);
-}
 
 
 static const ct_type_t&
@@ -3980,26 +2910,10 @@ encoding_http_response(Response& response, Encoding e, const std::string& respon
 }
 
 
-std::string
-HttpClient::__repr__() const
-{
-	return strings::format(STEEL_BLUE + "<HttpClient {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
-		use_count(),
-		sock,
-		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
-		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
-		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "",
-		is_idle() ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : "",
-		is_waiting() ? " " + LIGHT_STEEL_BLUE + "(waiting)" + STEEL_BLUE : "",
-		is_running() ? " " + DARK_ORANGE + "(running)" + STEEL_BLUE : "",
-		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
-		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "");
-}
 
 
-Request::Request(HttpClient* client) :
+Request::Request() :
 	mode(Mode::FULL),
-	client(client),
 	view(nullptr),
 	type_encoding(Encoding::none),
 	begining(true),
@@ -4017,7 +2931,7 @@ Request::Request(HttpClient* client) :
 	closing(false),
 	begins(std::chrono::steady_clock::now())
 {
-	parser.data = client;
+	parser.data = nullptr;
 	http_parser_init(&parser, HTTP_REQUEST);
 }
 
@@ -4215,39 +3129,6 @@ Request::append(const char* at, size_t length)
 
 	return signal_pending;
 }
-
-bool
-Request::wait()
-{
-	if (mode != Request::Mode::FULL) {
-		// Wait for a pending raw body for one second and clear pending
-		// flag before processing the request, otherwise retry
-		// checking for empty/ended requests or closed connections.
-		std::unique_lock<std::mutex> pending_lk(pending_mtx);
-		while (!pending.wait_for(pending_lk, 1s, [this]() {
-			return has_pending || (client && client->is_closed());
-		})) {}
-		has_pending = false;
-	}
-	return true;
-}
-
-bool
-Request::next(std::string_view& str_view)
-{
-	L_CALL("Request::next(<&str_view>)");
-
-	assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
-	assert(mode == Mode::STREAM);
-
-	if (raw_offset == raw.size()) {
-		return false;
-	}
-	str_view = std::string_view(raw).substr(raw_offset);
-	raw_offset = raw.size();
-	return true;
-}
-
 
 bool
 Request::next_object(MsgPack& obj)
@@ -4570,7 +3451,7 @@ method_from_string(std::string_view m)
 void
 SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& response)
 {
-	Request request(nullptr);            // Mode::FULL; no HttpClient back-pointer
+	Request request;                     // Mode::FULL
 	request.response_writer = &response;  // the response path emits through the library writer
 
 	// Rebuild the parser fields dispatch_request() reads (keep-alive/close, version).

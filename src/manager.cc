@@ -156,7 +156,6 @@ XapiandManager::XapiandManager()
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
 	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
 	  remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
@@ -188,7 +187,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-	  http_client_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>>("CH{:02}", opts.num_http_clients)),
 	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
 	  remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
@@ -1055,21 +1053,6 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (http_client_pool) {
-		L_MANAGER("Finishing http client threads pool!");
-		http_client_pool->finish();
-
-		L_MANAGER("Waiting for {} http client thread{}...", http_client_pool->running_size(), (http_client_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP clients...", "HTTP clients finished!");
-		while (!http_client_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-	////////////////////////////////////////////////////////////////////
 	if (doc_preparer_pool) {
 		L_MANAGER("Finishing bulk document preparer threads pool!");
 		doc_preparer_pool->finish();
@@ -1359,7 +1342,6 @@ XapiandManager::join()
 
 	wal_writer.reset();
 
-	http_client_pool.reset();
 	http_server_pool.reset();
 
 	doc_indexer_pool.reset();
@@ -1656,11 +1638,12 @@ XapiandManager::server_metrics_impl()
 
 	metrics.xapiand_uptime.Set(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - _process_start).count());
 
-	// http client tasks:
-	metrics.xapiand_http_clients_running.Set(http_client_pool->running_size());
-	metrics.xapiand_http_clients_queue_size.Set(http_client_pool->size());
-	metrics.xapiand_http_clients_pool_size.Set(http_client_pool->threadpool_size());
-	metrics.xapiand_http_clients_capacity.Set(http_client_pool->threadpool_capacity());
+	// http client tasks: the bespoke http_client_pool retired with HttpClient (Leg 2
+	// stage 3c); the http::Dispatcher that replaced it is not yet observable from here.
+	metrics.xapiand_http_clients_running.Set(0);
+	metrics.xapiand_http_clients_queue_size.Set(0);
+	metrics.xapiand_http_clients_pool_size.Set(0);
+	metrics.xapiand_http_clients_capacity.Set(0);
 
 #ifdef XAPIAND_CLUSTERING
 	// remote protocol client tasks:

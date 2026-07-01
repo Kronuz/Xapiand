@@ -132,15 +132,13 @@ ENUM_CLASS(Encoding, int,
 
 class Request;
 class Response;
-class HttpClient;
 // The endpoint views are now file-scope free functions (Leg 2 stage 3c-3), so a
 // request's selected view is a plain function pointer, not a member pointer.
 using view_function = void(*)(Request&);
 
 // The generic HTTP library's output seam (Kronuz/http). Forward-declared so a
-// Request can carry a pointer to the ResponseWriter it is being served through
-// when it runs under http::HttpConnection (Leg 2 stage 3c); the legacy HttpClient
-// transport leaves it null and writes raw bytes via BaseClient::write instead.
+// Request can carry a pointer to the ResponseWriter it is served through by the
+// http::HttpConnection that runs it (Leg 2 stage 3c).
 namespace http { class ResponseWriter; }
 
 
@@ -190,11 +188,8 @@ public:
 
 	Response response;
 
-	HttpClient* client;
-	// Non-null when this request is served through the generic HTTP library
-	// (http::HttpConnection): the response is emitted via this writer instead of
-	// HttpClient's raw BaseClient::write. Null on the legacy HttpClient path.
-	// (Leg 2 stage 3c.)
+	// The ResponseWriter this request is served through (set by SearchApplication::handle
+	// from the http::HttpConnection). The response path emits through it. (Leg 2 stage 3c.)
 	http::ResponseWriter* response_writer = nullptr;
 	view_function view;
 
@@ -259,8 +254,7 @@ public:
 
 	atomic_shared_ptr<DocIndexer> indexer;
 
-	Request() : client(nullptr), view(nullptr) { }
-	Request(class HttpClient* client);
+	Request();
 	~Request() noexcept;
 
 	Request(const Request&) = delete;
@@ -270,9 +264,6 @@ public:
 
 	bool append(const char* at, size_t length);
 
-	bool wait();
-
-	bool next(std::string_view& str_view);
 	bool next_object(MsgPack& obj);
 
 	MsgPack& decoded_body();
@@ -280,72 +271,4 @@ public:
 	std::string head();
 
 	std::string to_text(bool decode);
-};
-
-
-// A single instance of a non-blocking Xapiand HTTP protocol handler.
-class HttpClient : public BaseClient<HttpClient> {
-	friend BaseClient<HttpClient>;
-
-	template <typename Func>
-	int handled_errors(Request& request, Func&& func);
-
-	size_t pending_requests() const;
-
-	bool is_idle() const;
-
-	void shutdown_impl(long long asap, long long now) override;
-
-	void destroy_impl() override;
-
-	ssize_t on_read(const char* buf, ssize_t received);
-	void on_read_file(const char* buf, ssize_t received);
-	void on_read_file_done();
-
-	static const http_parser_settings parser_settings;
-
-	mutable std::mutex runner_mutex;
-	std::shared_ptr<Request> new_request;
-	std::deque<std::shared_ptr<Request>> requests;
-
-	static int message_begin_cb(http_parser* parser);
-	static int url_cb(http_parser* parser, const char* at, size_t length);
-	static int status_cb(http_parser* parser, const char* at, size_t length);
-	static int header_field_cb(http_parser* parser, const char* at, size_t length);
-	static int header_value_cb(http_parser* parser, const char* at, size_t length);
-	static int headers_complete_cb(http_parser* parser);
-	static int body_cb(http_parser* parser, const char* at, size_t length);
-	static int message_complete_cb(http_parser* parser);
-	static int chunk_header_cb(http_parser* parser);
-	static int chunk_complete_cb(http_parser* parser);
-
-	int on_message_begin(http_parser* parser);
-	int on_url(http_parser* parser, const char* at, size_t length);
-	int on_status(http_parser* parser, const char* at, size_t length);
-	int on_header_field(http_parser* parser, const char* at, size_t length);
-	int on_header_value(http_parser* parser, const char* at, size_t length);
-	int on_headers_complete(http_parser* parser);
-	int on_body(http_parser* parser, const char* at, size_t length);
-	int on_message_complete(http_parser* parser);
-	int on_chunk_header(http_parser* parser);
-	int on_chunk_complete(http_parser* parser);
-
-	int prepare();
-
-	void log_request(Request& request);
-	void log_response(Response& response);
-
-	void end_http_request(Request& request);
-
-	friend Worker;
-
-public:
-	HttpClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
-
-	~HttpClient() noexcept;
-
-	void process(Request& request);
-	void operator()();
-
-	std::string __repr__() const override;
 };

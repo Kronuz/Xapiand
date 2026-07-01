@@ -62,7 +62,6 @@ class DocPreparer;
 class DocIndexer;
 
 class MsgPack;
-class HttpClient;
 class HttpServer;
 class DatabasePool;
 class DatabaseWALWriter;
@@ -152,7 +151,6 @@ public:
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpClient>, ThreadPolicyType::http_clients>> http_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> http_server_pool;
 #ifdef XAPIAND_CLUSTERING
 	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> remote_client_pool;

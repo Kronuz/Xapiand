@@ -58,7 +58,6 @@ Http::shutdown_impl(long long asap, long long now)
 		if (now != 0 || !manager || manager->ready_to_end_http()) {
 			if (manager) {
 				manager->http_server_pool->finish();
-				manager->http_client_pool->finish();
 			}
 
 			destroy(false);

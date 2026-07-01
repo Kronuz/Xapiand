@@ -30,7 +30,6 @@
 #include "error.hh"                         // for error:name, error::description
 #include "ev/ev++.h"                        // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                            // for Http
-#include "http_client.h"                     // for HttpClient
 #include "http_connection.h"                 // Kronuz/http: HttpConnection (Leg 2 stage 3c)
 #include "http_dispatcher.h"                 // Kronuz/http: Dispatcher (Leg 2 stage 3c)
 #include "search_application.h"              // for SearchApplication (Leg 2 stage 3c)
