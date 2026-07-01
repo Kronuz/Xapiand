@@ -662,6 +662,19 @@ if(NOT http_parser_POPULATED)
 endif()
 include_directories("${http_parser_SOURCE_DIR}")
 
+# http: the generic HTTP/1.1 application layer (Kronuz/http) -- the seam Xapiand's
+# search collapses onto (Leg 2, architecture B: SearchApplication : http::HttpHandler).
+# Header-only. The seam headers it needs first (http_handler.h / http_message.h) are
+# stdlib-only, so putting the repo root on the include path is enough for now. The
+# connection/dispatcher headers used at the transport swap additionally pull in
+# Kronuz/queue + Kronuz/compressors; those get wired at that step.
+FetchContent_Declare(http_lib GIT_REPOSITORY https://github.com/Kronuz/http.git GIT_TAG main)
+FetchContent_GetProperties(http_lib)
+if(NOT http_lib_POPULATED)
+	FetchContent_Populate(http_lib)
+endif()
+include_directories("${http_lib_SOURCE_DIR}")
+
 # datetime: the pure ISO-8601 + date-math + time/timedelta string parser,
 # extracted from Xapiand. Like located-exception, its datetime.cc compiles as
 # part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
