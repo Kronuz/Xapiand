@@ -319,9 +319,6 @@ class HttpClient : public BaseClient<HttpClient> {
 
 	int prepare();
 
-	MsgPack node_obj();
-	MsgPack retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
-
 	void metrics_view(Request& request);
 	void info_view(Request& request);
 
@@ -354,9 +351,6 @@ class HttpClient : public BaseClient<HttpClient> {
 #if XAPIAND_DATABASE_WAL
 	void wal_view(Request& request);
 #endif
-
-	std::vector<std::string> expand_paths(Request& request);
-	size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 
 	void log_request(Request& request);
 	void log_response(Response& response);

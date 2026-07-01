@@ -133,6 +133,16 @@ static void url_resolve(Request& request);
 static query_field_t query_field_maker(Request& request, int flags);
 static std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
 
+// The DB-bound prep helpers lifted off HttpClient `this` (Leg 2 stage 3a). They
+// touch only their `request` argument plus the manager/DB singletons -- never any
+// HttpClient/connection state -- so they are file-scope free functions, the seam
+// the forthcoming SearchApplication shares. Forward-declared here because the views
+// above call them before their definitions.
+static MsgPack node_obj();
+static MsgPack retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector);
+static std::vector<std::string> expand_paths(Request& request);
+static size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
+
 
 // Available commands
 
@@ -1356,10 +1366,10 @@ HttpClient::operator()()
 }
 
 
-MsgPack
-HttpClient::node_obj()
+static MsgPack
+node_obj()
 {
-	L_CALL("HttpClient::node_obj()");
+	L_CALL("node_obj()");
 
 	Endpoints endpoints;  // local scratch for the nodes lookup (was the HttpClient member)
 	endpoints.clear();
@@ -1890,10 +1900,10 @@ HttpClient::database_exists_view(Request& request)
 }
 
 
-MsgPack
-HttpClient::retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector)
+static MsgPack
+retrieve_database(Request& request, const query_field_t& query_field, bool is_root, std::string_view selector)
 {
-	L_CALL("HttpClient::retrieve_database()");
+	L_CALL("retrieve_database()");
 
 	if (is_root) {
 		if (selector == "state") {
@@ -2823,10 +2833,10 @@ url_resolve(Request& request)
 }
 
 
-size_t
-HttpClient::resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings)
+static size_t
+resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings)
 {
-	L_CALL("HttpClient::resolve_index_endpoints(<request>, <query_field>, <settings>)");
+	L_CALL("resolve_index_endpoints(<request>, <query_field>, <settings>)");
 
 	auto paths = expand_paths(request);
 
@@ -2850,10 +2860,10 @@ HttpClient::resolve_index_endpoints(Request& request, const query_field_t& query
 }
 
 
-std::vector<std::string>
-HttpClient::expand_paths(Request& request)
+static std::vector<std::string>
+expand_paths(Request& request)
 {
-	L_CALL("HttpClient::expand_paths(<request>)");
+	L_CALL("expand_paths(<request>)");
 
 	std::vector<std::string> paths;
 
