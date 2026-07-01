@@ -156,6 +156,39 @@ static std::string readable_encoding(Encoding e);
 static void write_status_response(Request& request, enum http_status status, const std::string& message = "");
 static void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
 
+// The ~23 endpoint views lifted off HttpClient `this` (Leg 2 stage 3c-3). Their
+// bodies use only their `request` argument + the file-scope helpers above +
+// the manager/DB singletons -- no HttpClient/connection state -- so they are
+// free functions, dispatched through a plain function pointer (Request::view is
+// now `void(*)(Request&)`). This is what SearchApplication::handle() will call.
+// Forward-declared here because prepare() takes their address before their defs.
+static void metrics_view(Request& request);
+static void info_view(Request& request);
+static void retrieve_metadata_view(Request& request);
+static void write_metadata_view(Request& request);
+static void update_metadata_view(Request& request);
+static void delete_metadata_view(Request& request);
+static void document_exists_view(Request& request);
+static void retrieve_document_view(Request& request);
+static void write_document_view(Request& request);
+static void update_document_view(Request& request);
+static void delete_document_view(Request& request);
+static void dump_document_view(Request& request);
+static void database_exists_view(Request& request);
+static void retrieve_database_view(Request& request);
+static void write_database_view(Request& request);
+static void delete_database_view(Request& request);
+static void dump_database_view(Request& request);
+static void restore_database_view(Request& request);
+static void check_database_view(Request& request);
+static void commit_database_view(Request& request);
+static void search_view(Request& request);
+static void count_view(Request& request);
+#if XAPIAND_DATABASE_WAL
+static void wal_view(Request& request);
+#endif
+
+
 
 // Available commands
 
@@ -1082,7 +1115,7 @@ HttpClient::prepare()
 	switch (new_request->method) {
 		case HTTP_SEARCH:
 			if (id.empty()) {
-				new_request->view = &HttpClient::search_view;
+				new_request->view = &search_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1090,7 +1123,7 @@ HttpClient::prepare()
 
 		case HTTP_COUNT:
 			if (id.empty()) {
-				new_request->view = &HttpClient::count_view;
+				new_request->view = &count_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1098,35 +1131,35 @@ HttpClient::prepare()
 
 		case HTTP_INFO:
 			if (id.empty()) {
-				new_request->view = &HttpClient::info_view;
+				new_request->view = &info_view;
 			} else {
-				new_request->view = &HttpClient::info_view;
+				new_request->view = &info_view;
 			}
 			break;
 
 		case HTTP_HEAD:
 			if (id.empty()) {
-				new_request->view = &HttpClient::database_exists_view;
+				new_request->view = &database_exists_view;
 			} else {
-				new_request->view = &HttpClient::document_exists_view;
+				new_request->view = &document_exists_view;
 			}
 			break;
 
 		case HTTP_GET:
 			if (!cmd.empty() && id.empty()) {
 				if (!has_pth && cmd == ":metrics") {
-					new_request->view = &HttpClient::metrics_view;
+					new_request->view = &metrics_view;
 				} else {
-					new_request->view = &HttpClient::retrieve_metadata_view;
+					new_request->view = &retrieve_metadata_view;
 				}
 			} else if (!id.empty()) {
 				if (is_range(id)) {
-					new_request->view = &HttpClient::search_view;
+					new_request->view = &search_view;
 				} else {
-					new_request->view = &HttpClient::retrieve_document_view;
+					new_request->view = &retrieve_document_view;
 				}
 			} else {
-				new_request->view = &HttpClient::retrieve_database_view;
+				new_request->view = &retrieve_database_view;
 			}
 			break;
 
@@ -1136,17 +1169,17 @@ HttpClient::prepare()
 			} else if (!id.empty()) {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			} else {
-				new_request->view = &HttpClient::write_document_view;
+				new_request->view = &write_document_view;
 			}
 			break;
 
 		case HTTP_PUT:
 			if (!cmd.empty() && id.empty()) {
-				new_request->view = &HttpClient::write_metadata_view;
+				new_request->view = &write_metadata_view;
 			} else if (!id.empty()) {
-				new_request->view = &HttpClient::write_document_view;
+				new_request->view = &write_document_view;
 			} else {
-				new_request->view = &HttpClient::write_database_view;
+				new_request->view = &write_database_view;
 			}
 			break;
 
@@ -1154,21 +1187,21 @@ HttpClient::prepare()
 		case HTTP_UPDATE:
 		case HTTP_UPSERT:
 			if (!cmd.empty() && id.empty()) {
-				new_request->view = &HttpClient::update_metadata_view;
+				new_request->view = &update_metadata_view;
 			} else if (!id.empty()) {
-				new_request->view = &HttpClient::update_document_view;
+				new_request->view = &update_document_view;
 			} else {
-				new_request->view = &HttpClient::write_database_view;
+				new_request->view = &write_database_view;
 			}
 			break;
 
 		case HTTP_DELETE:
 			if (!cmd.empty() && id.empty()) {
-				new_request->view = &HttpClient::delete_metadata_view;
+				new_request->view = &delete_metadata_view;
 			} else if (!id.empty()) {
-				new_request->view = &HttpClient::delete_document_view;
+				new_request->view = &delete_document_view;
 			} else if (has_pth) {
-				new_request->view = &HttpClient::delete_database_view;
+				new_request->view = &delete_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1176,7 +1209,7 @@ HttpClient::prepare()
 
 		case HTTP_COMMIT:
 			if (id.empty()) {
-				new_request->view = &HttpClient::commit_database_view;
+				new_request->view = &commit_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1184,9 +1217,9 @@ HttpClient::prepare()
 
 		case HTTP_DUMP:
 			if (id.empty()) {
-				new_request->view = &HttpClient::dump_database_view;
+				new_request->view = &dump_database_view;
 			} else {
-				new_request->view = &HttpClient::dump_document_view;
+				new_request->view = &dump_document_view;
 			}
 			break;
 
@@ -1199,15 +1232,15 @@ HttpClient::prepare()
 						new_request->mode = Request::Mode::STREAM_MSGPACK;
 					}
 				}
-				new_request->view = &HttpClient::restore_database_view;
+				new_request->view = &restore_database_view;
 			} else {
-				new_request->view = &HttpClient::write_document_view;
+				new_request->view = &write_document_view;
 			}
 			break;
 
 		case HTTP_CHECK:
 			if (id.empty()) {
-				new_request->view = &HttpClient::check_database_view;
+				new_request->view = &check_database_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1250,7 +1283,7 @@ HttpClient::prepare()
 #if XAPIAND_DATABASE_WAL
 		case HTTP_WAL:
 			if (id.empty()) {
-				new_request->view = &HttpClient::wal_view;
+				new_request->view = &wal_view;
 			} else {
 				write_status_response(*new_request, HTTP_STATUS_METHOD_NOT_ALLOWED);
 			}
@@ -1302,7 +1335,7 @@ HttpClient::process(Request& request)
 	L_OBJ_END("HttpClient::process:END");
 
 	handled_errors(request, [&]{
-		(this->*request.view)(request);
+		request.view(request);
 		return 0;
 	});
 }
@@ -1465,8 +1498,8 @@ node_obj()
 }
 
 
-void
-HttpClient::metrics_view(Request& request)
+static void
+metrics_view(Request& request)
 {
 	L_CALL("HttpClient::metrics_view()");
 
@@ -1476,12 +1509,12 @@ HttpClient::metrics_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
-	write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size()));
+	request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size()));
 }
 
 
-void
-HttpClient::document_exists_view(Request& request)
+static void
+document_exists_view(Request& request)
 {
 	L_CALL("HttpClient::document_exists_view()");
 
@@ -1500,8 +1533,8 @@ HttpClient::document_exists_view(Request& request)
 }
 
 
-void
-HttpClient::delete_document_view(Request& request)
+static void
+delete_document_view(Request& request)
 {
 	L_CALL("HttpClient::delete_document_view()");
 
@@ -1533,8 +1566,8 @@ HttpClient::delete_document_view(Request& request)
 }
 
 
-void
-HttpClient::write_document_view(Request& request)
+static void
+write_document_view(Request& request)
 {
 	L_CALL("HttpClient::write_document_view()");
 
@@ -1622,8 +1655,8 @@ HttpClient::write_document_view(Request& request)
 }
 
 
-void
-HttpClient::update_document_view(Request& request)
+static void
+update_document_view(Request& request)
 {
 	L_CALL("HttpClient::update_document_view()");
 
@@ -1701,8 +1734,8 @@ HttpClient::update_document_view(Request& request)
 }
 
 
-void
-HttpClient::retrieve_metadata_view(Request& request)
+static void
+retrieve_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_metadata_view()");
 
@@ -1765,8 +1798,8 @@ HttpClient::retrieve_metadata_view(Request& request)
 }
 
 
-void
-HttpClient::write_metadata_view(Request& request)
+static void
+write_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::write_metadata_view()");
 
@@ -1818,8 +1851,8 @@ HttpClient::write_metadata_view(Request& request)
 }
 
 
-void
-HttpClient::update_metadata_view(Request& request)
+static void
+update_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::update_metadata_view()");
 
@@ -1827,8 +1860,8 @@ HttpClient::update_metadata_view(Request& request)
 }
 
 
-void
-HttpClient::delete_metadata_view(Request& request)
+static void
+delete_metadata_view(Request& request)
 {
 	L_CALL("HttpClient::delete_metadata_view()");
 
@@ -1836,8 +1869,8 @@ HttpClient::delete_metadata_view(Request& request)
 }
 
 
-void
-HttpClient::info_view(Request& request)
+static void
+info_view(Request& request)
 {
 	L_CALL("HttpClient::info_view()");
 
@@ -1891,8 +1924,8 @@ HttpClient::info_view(Request& request)
 }
 
 
-void
-HttpClient::database_exists_view(Request& request)
+static void
+database_exists_view(Request& request)
 {
 	L_CALL("HttpClient::database_exists_view()");
 
@@ -2054,8 +2087,8 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 }
 
 
-void
-HttpClient::retrieve_database_view(Request& request)
+static void
+retrieve_database_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_database_view()");
 
@@ -2092,8 +2125,8 @@ HttpClient::retrieve_database_view(Request& request)
 }
 
 
-void
-HttpClient::write_database_view(Request& request)
+static void
+write_database_view(Request& request)
 {
 	L_CALL("HttpClient::write_database_view()");
 
@@ -2150,8 +2183,8 @@ HttpClient::write_database_view(Request& request)
 }
 
 
-void
-HttpClient::delete_database_view(Request& request)
+static void
+delete_database_view(Request& request)
 {
 	L_CALL("HttpClient::delete_database_view()");
 
@@ -2159,8 +2192,8 @@ HttpClient::delete_database_view(Request& request)
 }
 
 
-void
-HttpClient::commit_database_view(Request& request)
+static void
+commit_database_view(Request& request)
 {
 	L_CALL("HttpClient::commit_database_view()");
 
@@ -2189,8 +2222,8 @@ HttpClient::commit_database_view(Request& request)
 }
 
 
-void
-HttpClient::dump_document_view(Request& request)
+static void
+dump_document_view(Request& request)
 {
 	L_CALL("HttpClient::dump_document_view()");
 
@@ -2224,8 +2257,8 @@ HttpClient::dump_document_view(Request& request)
 }
 
 
-void
-HttpClient::dump_database_view(Request& request)
+static void
+dump_database_view(Request& request)
 {
 	L_CALL("HttpClient::dump_database_view()");
 
@@ -2263,8 +2296,8 @@ HttpClient::dump_database_view(Request& request)
 }
 
 
-void
-HttpClient::restore_database_view(Request& request)
+static void
+restore_database_view(Request& request)
 {
 	L_CALL("HttpClient::restore_database_view()");
 
@@ -2345,8 +2378,8 @@ HttpClient::restore_database_view(Request& request)
 
 
 #if XAPIAND_DATABASE_WAL
-void
-HttpClient::wal_view(Request& request)
+static void
+wal_view(Request& request)
 {
 	L_CALL("HttpClient::wal_view()");
 
@@ -2380,8 +2413,8 @@ HttpClient::wal_view(Request& request)
 #endif
 
 
-void
-HttpClient::check_database_view(Request& request)
+static void
+check_database_view(Request& request)
 {
 	L_CALL("HttpClient::check_database_view()");
 
@@ -2412,8 +2445,8 @@ HttpClient::check_database_view(Request& request)
 }
 
 
-void
-HttpClient::retrieve_document_view(Request& request)
+static void
+retrieve_document_view(Request& request)
 {
 	L_CALL("HttpClient::retrieve_document_view()");
 
@@ -2510,12 +2543,12 @@ HttpClient::retrieve_document_view(Request& request)
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, request.response.blob, false, true, true);
 			if (!encoded.empty() && encoded.size() <= request.response.blob.size()) {
-				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding)));
+				request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string(), readable_encoding(Encoding::identity)));
+				request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string(), readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string()));
+			request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string()));
 		}
 	}
 
@@ -2533,8 +2566,8 @@ HttpClient::retrieve_document_view(Request& request)
 }
 
 
-void
-HttpClient::search_view(Request& request)
+static void
+search_view(Request& request)
 {
 	L_CALL("HttpClient::search_view()");
 
@@ -2686,8 +2719,8 @@ HttpClient::search_view(Request& request)
 }
 
 
-void
-HttpClient::count_view(Request& request)
+static void
+count_view(Request& request)
 {
 	L_CALL("HttpClient::count_view()");
 

@@ -133,7 +133,9 @@ ENUM_CLASS(Encoding, int,
 class Request;
 class Response;
 class HttpClient;
-using view_function = void(HttpClient::*)(Request&);
+// The endpoint views are now file-scope free functions (Leg 2 stage 3c-3), so a
+// request's selected view is a plain function pointer, not a member pointer.
+using view_function = void(*)(Request&);
 
 
 class Response {
@@ -318,39 +320,6 @@ class HttpClient : public BaseClient<HttpClient> {
 	int on_chunk_complete(http_parser* parser);
 
 	int prepare();
-
-	void metrics_view(Request& request);
-	void info_view(Request& request);
-
-	void retrieve_metadata_view(Request& request);
-	void write_metadata_view(Request& request);
-	void update_metadata_view(Request& request);
-	void delete_metadata_view(Request& request);
-
-	void document_exists_view(Request& request);
-	void retrieve_document_view(Request& request);
-	void write_document_view(Request& request);
-	void update_document_view(Request& request);
-	void delete_document_view(Request& request);
-	void dump_document_view(Request& request);
-
-	void database_exists_view(Request& request);
-	void retrieve_database_view(Request& request);
-	void write_database_view(Request& request);
-	void update_database_view(Request& request);
-	void delete_database_view(Request& request);
-	void dump_database_view(Request& request);
-	void restore_database_view(Request& request);
-
-	void check_database_view(Request& request);
-	void commit_database_view(Request& request);
-
-	void search_view(Request& request);
-	void count_view(Request& request);
-
-#if XAPIAND_DATABASE_WAL
-	void wal_view(Request& request);
-#endif
 
 	void log_request(Request& request);
 	void log_response(Response& response);
