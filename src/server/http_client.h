@@ -137,6 +137,12 @@ class HttpClient;
 // request's selected view is a plain function pointer, not a member pointer.
 using view_function = void(*)(Request&);
 
+// The generic HTTP library's output seam (Kronuz/http). Forward-declared so a
+// Request can carry a pointer to the ResponseWriter it is being served through
+// when it runs under http::HttpConnection (Leg 2 stage 3c); the legacy HttpClient
+// transport leaves it null and writes raw bytes via BaseClient::write instead.
+namespace http { class ResponseWriter; }
+
 
 class Response {
 public:
@@ -185,6 +191,11 @@ public:
 	Response response;
 
 	HttpClient* client;
+	// Non-null when this request is served through the generic HTTP library
+	// (http::HttpConnection): the response is emitted via this writer instead of
+	// HttpClient's raw BaseClient::write. Null on the legacy HttpClient path.
+	// (Leg 2 stage 3c.)
+	http::ResponseWriter* response_writer = nullptr;
 	view_function view;
 
 	Encoding type_encoding;

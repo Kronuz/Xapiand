@@ -54,6 +54,7 @@
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
+#include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
 #include "logger.h"                         // for Logging
@@ -410,6 +411,70 @@ http_response(Request& request, enum http_status status, int mode, const std::st
 	}
 
 	return head + head_sep + headers + headers_sep + response_body;
+}
+
+
+// Emit a response through the generic HTTP library's ResponseWriter (Leg 2 stage
+// 3c). Mirrors the header set http_response() produces on the legacy path, minus
+// Content-Length + Connection, which the library's Writer frames itself (and the
+// status line/reason). Sets the same request.response bookkeeping so the error
+// handling (handled_errors' "already wrote something" check) behaves identically.
+static void
+emit_via_writer(Request& request, enum http_status status, const std::string& body, const std::string& location, const std::string& ct_type, const std::string& ct_encoding, bool options)
+{
+	auto& writer = *request.response_writer;
+
+	assert(request.response.status == static_cast<http_status>(0));
+	request.response.status = status;
+	request.ends = std::chrono::steady_clock::now();
+
+	writer.status(static_cast<int>(status));
+
+	writer.set_header("Server", Package::STRING);
+
+	if (request.human) {
+		writer.set_header("Response-Time", strings::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count()));
+		if (request.ready >= request.processing) {
+			writer.set_header("Operation-Time", strings::from_delta(std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count()));
+		}
+	} else {
+		writer.set_header("Response-Time", strings::format("{}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ends - request.begins).count() / 1e9));
+		if (request.ready >= request.processing) {
+			writer.set_header("Operation-Time", strings::format("{}", std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count() / 1e9));
+		}
+	}
+
+	if (options) {
+		writer.set_header("Allow", "GET, POST, PUT, PATCH, UPDATE, STORE, DELETE, HEAD, OPTIONS");
+	}
+	if (!location.empty()) {
+		writer.set_header("Location", location);
+	}
+	if (!ct_type.empty()) {
+		writer.set_header("Content-Type", ct_type);
+	}
+	if (!ct_encoding.empty()) {
+		writer.set_header("Content-Encoding", ct_encoding);
+	}
+
+	writer.write(body);
+	writer.end();
+	request.response.size += body.size();
+}
+
+
+// The single response emit point. Routes to the generic library's ResponseWriter
+// when this request is served through http::HttpConnection (Leg 2 stage 3c), or to
+// the legacy HttpClient raw-bytes transport otherwise. Same argument shape as
+// http_response() so it is a drop-in for the former request.client->write(...) sites.
+static void
+emit_response(Request& request, enum http_status status, int mode, const std::string& body = "", const std::string& location = "", const std::string& ct_type = "application/json; charset=UTF-8", const std::string& ct_encoding = "", size_t content_length = 0)
+{
+	if (request.response_writer != nullptr) {
+		emit_via_writer(request, status, body, location, (mode & HTTP_CONTENT_TYPE_RESPONSE) != 0 ? ct_type : std::string(), (mode & HTTP_CONTENT_ENCODING_RESPONSE) != 0 ? ct_encoding : std::string(), (mode & HTTP_OPTIONS_RESPONSE) != 0);
+	} else {
+		request.client->write(http_response(request, status, mode, body, location, ct_type, ct_encoding, content_length));
+	}
 }
 
 
@@ -1509,7 +1574,7 @@ metrics_view(Request& request)
 	request.processing = std::chrono::steady_clock::now();
 
 	auto server_info =  XapiandManager::server_metrics();
-	request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size()));
+	emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_LENGTH_RESPONSE | HTTP_BODY_RESPONSE, server_info, "", "text/plain", "", server_info.size());
 }
 
 
@@ -2543,12 +2608,12 @@ retrieve_document_view(Request& request)
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, request.response.blob, false, true, true);
 			if (!encoded.empty() && encoded.size() <= request.response.blob.size()) {
-				request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding)));
+				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding));
 			} else {
-				request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string(), readable_encoding(Encoding::identity)));
+				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string(), readable_encoding(Encoding::identity));
 			}
 		} else {
-			request.client->write(http_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string()));
+			emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string());
 		}
 	}
 
@@ -3475,7 +3540,7 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 	L_CALL("write_http_response()");
 
 	if (obj.is_undefined()) {
-		request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+		emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location);
 		return;
 	}
 
@@ -3483,7 +3548,7 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 
 	if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
 		if (resolved_ct_type.empty()) {
-			request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+			emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location);
 			return;
 		}
 	}
@@ -3514,16 +3579,16 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding)));
+				emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding));
 			} else {
-				request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, result.first, location, result.second, readable_encoding(Encoding::identity)));
+				emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, result.first, location, result.second, readable_encoding(Encoding::identity));
 			}
 		} else {
-			request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second));
+			emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second);
 		}
 	} catch (const SerialisationError& exc) {
 		if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
-			request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+			emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location);
 		} else {
 			write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE, MsgPack({
 				{ RESPONSE_STATUS, static_cast<unsigned>(HTTP_STATUS_NOT_ACCEPTABLE) },
