@@ -645,6 +645,23 @@ include_directories(
 	"${boolean_parser_SOURCE_DIR}"    # BooleanParser.h, LexicalException.h, ...
 )
 
+# http-parser: the Joyent http_parser fork (accepts Xapiand's custom REST verbs
+# COUNT/INFO/DUMP/RESTORE/... that a validating parser like llhttp would reject).
+# De-vendored onto Kronuz/http-parser -- byte-identical to the former in-tree
+# src/http_parser.{c,h,enums.h} (same 2.7.1, same enums split), so this is a pure
+# de-vendor with no behavior change. Its http_parser_enums.h #includes "enum.h"
+# (enum_reflection, already on the path above) and http_parser.cc #includes
+# "likely.h" (already provided by the server/threadpool/... deps). The ~2.4k-line
+# state machine lives in http_parser.cc, compiled into XAPIAND_OBJ below (the
+# "logger way"), so we Populate + put the headers on the path here. This unifies
+# the parser with Kronuz/http, whose HttpConnection uses the same fork.
+FetchContent_Declare(http_parser GIT_REPOSITORY https://github.com/Kronuz/http-parser.git GIT_TAG main)
+FetchContent_GetProperties(http_parser)
+if(NOT http_parser_POPULATED)
+	FetchContent_Populate(http_parser)
+endif()
+include_directories("${http_parser_SOURCE_DIR}")
+
 # datetime: the pure ISO-8601 + date-math + time/timedelta string parser,
 # extracted from Xapiand. Like located-exception, its datetime.cc compiles as
 # part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
@@ -1163,6 +1180,10 @@ list(APPEND XAPIAND_SRC_LIST "${datetime_SOURCE_DIR}/datetime.cc")
 # The extracted logger's out-of-line implementation, in place of the removed
 # src/logger.cc.
 list(APPEND XAPIAND_SRC_LIST "${logger_SOURCE_DIR}/logger.cc")
+# The de-vendored http-parser state machine, in place of the removed
+# src/http_parser.c (+ its http_parser.h / http_parser_enums.h headers). Compiled
+# as C++ (.cc) into XAPIAND_OBJ; byte-identical to the former in-tree parser.
+list(APPEND XAPIAND_SRC_LIST "${http_parser_SOURCE_DIR}/http_parser.cc")
 # The extracted traceback toolkit's out-of-line implementation, in place of the
 # removed src/traceback.cc. Built with TRACEBACK_HOOKS (set above) so the
 # signal-time all-thread crash dumper compiles in. The library #includes "colors.h"
