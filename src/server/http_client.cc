@@ -143,6 +143,19 @@ static MsgPack retrieve_database(Request& request, const query_field_t& query_fi
 static std::vector<std::string> expand_paths(Request& request);
 static size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 
+// The response/transport helpers lifted off HttpClient `this` (Leg 2 stage 3b). The
+// response is formatted from `request` state (content negotiation, serialization,
+// optional encoding) and the raw HTTP/1.1 bytes go on the wire through the single
+// transport seam `request.client->write()` -- the one remaining coupling to the
+// connection, which the transport swap onto http::HttpConnection replaces. With these
+// off HttpClient, every request/response helper is a file-scope free function and
+// HttpClient is reduced to the async heart (parser callbacks + prepare() dispatch +
+// the runner) that the library's HttpConnection + Dispatcher take over. readable_encoding
+// is a pure switch. Forward-declared here since prepare()/views call them above.
+static std::string readable_encoding(Encoding e);
+static void write_status_response(Request& request, enum http_status status, const std::string& message = "");
+static void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
+
 
 // Available commands
 
@@ -2725,10 +2738,10 @@ HttpClient::count_view(Request& request)
 }
 
 
-void
-HttpClient::write_status_response(Request& request, enum http_status status, const std::string& message)
+static void
+write_status_response(Request& request, enum http_status status, const std::string& message)
 {
-	L_CALL("HttpClient::write_status_response()");
+	L_CALL("write_status_response()");
 
 	MsgPack response({
 		{ RESPONSE_STATUS, static_cast<unsigned>(status) },
@@ -3423,13 +3436,13 @@ serialize_response(const MsgPack& obj, const ct_type_t& ct_type, int indent, boo
 }
 
 
-void
-HttpClient::write_http_response(Request& request, enum http_status status, const MsgPack& obj, const std::string& location, const ct_type_t& ct_type)
+static void
+write_http_response(Request& request, enum http_status status, const MsgPack& obj, const std::string& location, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::write_http_response()");
+	L_CALL("write_http_response()");
 
 	if (obj.is_undefined()) {
-		write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+		request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 		return;
 	}
 
@@ -3437,7 +3450,7 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 
 	if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
 		if (resolved_ct_type.empty()) {
-			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+			request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 			return;
 		}
 	}
@@ -3468,16 +3481,16 @@ HttpClient::write_http_response(Request& request, enum http_status status, const
 		if (request.type_encoding != Encoding::none) {
 			auto encoded = encoding_http_response(request.response, request.type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding)));
+				request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding)));
 			} else {
-				write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, result.first, location, result.second, readable_encoding(Encoding::identity)));
+				request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, result.first, location, result.second, readable_encoding(Encoding::identity)));
 			}
 		} else {
-			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second));
+			request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second));
 		}
 	} catch (const SerialisationError& exc) {
 		if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
-			write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
+			request.client->write(http_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location));
 		} else {
 			write_http_response(request, HTTP_STATUS_NOT_ACCEPTABLE, MsgPack({
 				{ RESPONSE_STATUS, static_cast<unsigned>(HTTP_STATUS_NOT_ACCEPTABLE) },
@@ -3523,10 +3536,10 @@ resolve_encoding(Request& request)
 }
 
 
-std::string
-HttpClient::readable_encoding(Encoding e)
+static std::string
+readable_encoding(Encoding e)
 {
-	L_CALL("Request::readable_encoding()");
+	L_CALL("readable_encoding()");
 
 	switch (e) {
 		case Encoding::none:

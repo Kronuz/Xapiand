@@ -357,10 +357,6 @@ class HttpClient : public BaseClient<HttpClient> {
 
 	void end_http_request(Request& request);
 
-	void write_status_response(Request& request, enum http_status status, const std::string& message = "");
-	void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
-	std::string readable_encoding(Encoding e);
-
 	friend Worker;
 
 public:
