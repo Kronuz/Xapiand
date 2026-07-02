@@ -30,21 +30,19 @@
 
 // Xapiand's search engine as ONE http::HttpHandler (Leg 2, architecture B).
 //
-// SearchApplication owns everything application-specific: the request dispatch
-// that HttpClient::prepare() does today (a method + URL-structure switch, kept as
-// a custom dispatch because it is not radix-clean), the ~28 *_view endpoints, and
-// the MsgPack content-negotiation / response formatting. The generic transport --
-// HTTP parsing, HTTP/1.1 framing, the reactor, and the un-stallable worker offload
-// -- lives entirely in the library (http::HttpConnection + http::Dispatcher), which
-// drives this handler through the value-semantic seam handle(Request, ResponseWriter).
+// SearchApplication owns everything application-specific: the request dispatch that
+// HttpClient::prepare() did (now a declarative route table over the generic radix
+// router, http::MethodRouter, plus a small classifier for Xapiand's ":command" URL
+// sub-syntax), the ~28 *_view endpoints, and the MsgPack content-negotiation /
+// response formatting. The generic transport -- HTTP parsing, HTTP/1.1 framing, the
+// reactor, and the un-stallable worker offload -- lives entirely in the library
+// (http::HttpConnection + http::Dispatcher), which drives this handler through the
+// value-semantic seam handle(Request, ResponseWriter).
 //
-// STATUS: SCAFFOLD (Leg 2 stage 3c-2). This class is defined and compiled (proving
-// the library's seam headers integrate in Xapiand's build), but it is NOT yet wired
-// into HttpServer -- that still creates HttpClient, so nothing constructs or calls a
-// SearchApplication and behavior is unchanged. handle() is a placeholder. The real
-// dispatch + view logic (which already lives as file-scope free functions taking
-// Xapiand's Request&, after stages 1-3b) ports in incrementally, each step E2E-green,
-// before the final transport swap flips HttpServer to create http::HttpConnection(this).
+// STATUS: LIVE (Leg 2 stage 3c-6). HttpServer creates http::HttpConnection bound to a
+// shared stateless SearchApplication; the legacy HttpClient is gone. handle() rebuilds
+// an application Request from the library's http::Request, runs the route table's
+// selected view, and emits the response through the library ResponseWriter.
 class SearchApplication : public http::HttpHandler {
 public:
 	void handle(const http::Request& request, http::ResponseWriter& response) override;

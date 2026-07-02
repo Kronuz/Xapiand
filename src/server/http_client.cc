@@ -55,6 +55,7 @@
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
 #include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
+#include "http_router.h"                    // for http::MethodRouter (Leg 2 stage 3c-6)
 #include "search_application.h"             // for SearchApplication (Leg 2 stage 3c)
 #include "io.hh"                            // for close, write, unlink
 #include "log.h"                            // for L_CALL, L_ERR, LOG_DEBUG
@@ -186,6 +187,8 @@ static void check_database_view(Request& request);
 static void commit_database_view(Request& request);
 static void search_view(Request& request);
 static void count_view(Request& request);
+static void flush_view(Request& request);
+static void quit_view(Request& request);
 #if XAPIAND_DATABASE_WAL
 static void wal_view(Request& request);
 #endif
@@ -529,11 +532,125 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 
 
 
-// The request dispatch for the http::HttpConnection path (Leg 2 stage 3c): a copy of
-// HttpClient::prepare()'s setup + method/URL dispatch, adapted for a request served
-// through an http::ResponseWriter -- OPTIONS emits via emit_response, HTTP_QUIT marks
-// the connection closing, and Expect: 100-continue is left to the transport. Returns
-// non-zero when there is no view to run (a terminal response was already emitted).
+// The URL "kinds" Xapiand's grammar classifies into: a small, fixed set of route
+// keys the declarative table is registered under. They are internal routing tokens
+// (never user-facing paths), so they are zero-copy constants and cost no allocation
+// per request.
+static constexpr std::string_view K_DB      = "/db";        // a database / collection (no id, no command)
+static constexpr std::string_view K_DOC     = "/doc";       // a document (a trailing id)
+static constexpr std::string_view K_META    = "/meta";      // a metadata command (":command", no id)
+static constexpr std::string_view K_SEARCH  = "/search";    // GET of a range id -> a search shortcut
+static constexpr std::string_view K_METRICS = "/metrics";   // GET ":metrics" at the root
+
+
+// Map an HTTP method enum to the lowercase token the route table is keyed by (the
+// same names the METHODS_OPTIONS command table uses). Returns empty for a method not
+// in that table -- the lookup then misses and the caller answers 405.
+static std::string_view
+method_token(enum http_method method)
+{
+	switch (method) {
+		#define OPTION(name, str) \
+		case HTTP_##name: return str;
+		METHODS_OPTIONS()
+		#undef OPTION
+		default:
+			return {};
+	}
+}
+
+
+// Classify a request's URL shape into a route key. This is the whole of Xapiand's
+// URL grammar the router needs: PathParser has already tokenized the ":command" and
+// ".selector" sub-syntax (which the views read directly), leaving three structural
+// cases -- a document (trailing id), a command (":command" with no id), or a database
+// (neither) -- plus GET's two sub-forms (a range id is a search; ":metrics" at the
+// root is the metrics endpoint).
+static std::string_view
+route_key(enum http_method method, std::string_view id, std::string_view cmd, bool has_pth)
+{
+	if (!id.empty()) {
+		if (method == HTTP_GET && is_range(id)) { return K_SEARCH; }
+		return K_DOC;
+	}
+	if (!cmd.empty()) {
+		if (method == HTTP_GET && !has_pth && cmd == ":metrics") { return K_METRICS; }
+		return K_META;
+	}
+	return K_DB;
+}
+
+
+// The declarative route table: (method, URL-kind) -> view, backed by the generic
+// radix router in Kronuz/http (http::MethodRouter). Built once, on first use. This is
+// what HttpClient::prepare()'s hand-rolled method + URL switch collapses into.
+//
+// A verb that ignores the metadata axis (search/count/info/head/commit/dump/restore/
+// check/flush/quit/wal all key only on whether an id is present) registers its no-id
+// view under K_META as well as K_DB, so a stray ":command" folds to the same view the
+// old switch produced -- exact behavioral parity. A (method, kind) pair left
+// unregistered is answered 405, the same status the old switch's fall-through gave.
+static const http::MethodRouter<view_function>&
+search_routes()
+{
+	static const http::MethodRouter<view_function> router = [] {
+		http::MethodRouter<view_function> r;
+		auto add = [&r](std::string_view method, std::initializer_list<std::string_view> kinds, view_function view) {
+			for (auto kind : kinds) { r.add(method, kind, view); }
+		};
+
+		// Query verbs (a command folds to the no-id view).
+		add("search", {K_DB, K_META}, &search_view);
+		add("count",  {K_DB, K_META}, &count_view);
+		add("info",   {K_DB, K_DOC, K_META}, &info_view);
+		add("head",   {K_DB, K_META}, &database_exists_view);
+		add("head",   {K_DOC}, &document_exists_view);
+
+		// Reads (GET carries the metadata / metrics / range sub-forms).
+		add("get", {K_DB}, &retrieve_database_view);
+		add("get", {K_DOC}, &retrieve_document_view);
+		add("get", {K_SEARCH}, &search_view);
+		add("get", {K_META}, &retrieve_metadata_view);
+		add("get", {K_METRICS}, &metrics_view);
+
+		// Writes.
+		add("post", {K_DB}, &write_document_view);
+		add("put",  {K_DB}, &write_database_view);
+		add("put",  {K_DOC}, &write_document_view);
+		add("put",  {K_META}, &write_metadata_view);
+		for (std::string_view m : {std::string_view("patch"), std::string_view("update"), std::string_view("upsert")}) {
+			add(m, {K_DB}, &write_database_view);
+			add(m, {K_DOC}, &update_document_view);
+			add(m, {K_META}, &update_metadata_view);
+		}
+		add("delete", {K_DB}, &delete_database_view);
+		add("delete", {K_DOC}, &delete_document_view);
+		add("delete", {K_META}, &delete_metadata_view);
+
+		// Maintenance / admin verbs (a command folds to the no-id view).
+		add("commit",  {K_DB, K_META}, &commit_database_view);
+		add("dump",    {K_DB, K_META}, &dump_database_view);
+		add("dump",    {K_DOC}, &dump_document_view);
+		add("restore", {K_DB, K_META}, &restore_database_view);
+		add("restore", {K_DOC}, &write_document_view);
+		add("check",   {K_DB, K_META}, &check_database_view);
+		add("flush",   {K_DB, K_META}, &flush_view);
+		add("quit",    {K_DB, K_META}, &quit_view);
+#if XAPIAND_DATABASE_WAL
+		add("wal",     {K_DB, K_META}, &wal_view);
+#endif
+		return r;
+	}();
+	return router;
+}
+
+
+// The request dispatch for the http::HttpConnection path (Leg 2 stage 3c): the setup
+// HttpClient::prepare() does (keep-alive/close, content negotiation, encoding), then a
+// declarative route-table lookup that selects the view (replacing prepare()'s method +
+// URL switch, stage 3c-6). A few trivial verbs (OPTIONS, OPEN/CLOSE) are answered
+// inline; Expect: 100-continue is left to the transport. Returns non-zero when there
+// is no view to run (a terminal response was already emitted).
 static int
 dispatch_request(Request& request)
 {
@@ -591,198 +708,52 @@ dispatch_request(Request& request)
 		}
 	}
 
+	// Trivial verbs answered inline (no database work, so never offloaded): OPTIONS
+	// advertises the allowed methods, OPEN/CLOSE are unimplemented, and a method not in
+	// the command table is rejected the way prepare()'s switch default did.
 	switch (request.method) {
-		case HTTP_SEARCH:
-			if (id.empty()) {
-				request.view = &search_view;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_COUNT:
-			if (id.empty()) {
-				request.view = &count_view;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_INFO:
-			if (id.empty()) {
-				request.view = &info_view;
-			} else {
-				request.view = &info_view;
-			}
-			break;
-
-		case HTTP_HEAD:
-			if (id.empty()) {
-				request.view = &database_exists_view;
-			} else {
-				request.view = &document_exists_view;
-			}
-			break;
-
-		case HTTP_GET:
-			if (!cmd.empty() && id.empty()) {
-				if (!has_pth && cmd == ":metrics") {
-					request.view = &metrics_view;
-				} else {
-					request.view = &retrieve_metadata_view;
-				}
-			} else if (!id.empty()) {
-				if (is_range(id)) {
-					request.view = &search_view;
-				} else {
-					request.view = &retrieve_document_view;
-				}
-			} else {
-				request.view = &retrieve_database_view;
-			}
-			break;
-
-		case HTTP_POST:
-			if (!cmd.empty() && id.empty()) {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			} else if (!id.empty()) {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			} else {
-				request.view = &write_document_view;
-			}
-			break;
-
-		case HTTP_PUT:
-			if (!cmd.empty() && id.empty()) {
-				request.view = &write_metadata_view;
-			} else if (!id.empty()) {
-				request.view = &write_document_view;
-			} else {
-				request.view = &write_database_view;
-			}
-			break;
-
-		case HTTP_PATCH:
-		case HTTP_UPDATE:
-		case HTTP_UPSERT:
-			if (!cmd.empty() && id.empty()) {
-				request.view = &update_metadata_view;
-			} else if (!id.empty()) {
-				request.view = &update_document_view;
-			} else {
-				request.view = &write_database_view;
-			}
-			break;
-
-		case HTTP_DELETE:
-			if (!cmd.empty() && id.empty()) {
-				request.view = &delete_metadata_view;
-			} else if (!id.empty()) {
-				request.view = &delete_document_view;
-			} else if (has_pth) {
-				request.view = &delete_database_view;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_COMMIT:
-			if (id.empty()) {
-				request.view = &commit_database_view;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_DUMP:
-			if (id.empty()) {
-				request.view = &dump_database_view;
-			} else {
-				request.view = &dump_document_view;
-			}
-			break;
-
-		case HTTP_RESTORE:
-			if (id.empty()) {
-				if ((request.parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
-					if (request.ct_type == ndjson_type || request.ct_type == x_ndjson_type) {
-						request.mode = Request::Mode::STREAM_NDJSON;
-					} else if (request.ct_type == msgpack_type || request.ct_type == x_msgpack_type) {
-						request.mode = Request::Mode::STREAM_MSGPACK;
-					}
-				}
-				request.view = &restore_database_view;
-			} else {
-				request.view = &write_document_view;
-			}
-			break;
-
-		case HTTP_CHECK:
-			if (id.empty()) {
-				request.view = &check_database_view;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-		case HTTP_FLUSH:
-			if (opts.admin_commands && id.empty() && !has_pth) {
-				// Flush both databases and clients by default (unless one is specified)
-				request.query_parser.rewind();
-				int flush_databases = request.query_parser.next("databases");
-				request.query_parser.rewind();
-				int flush_clients = request.query_parser.next("clients");
-				if (flush_databases != -1 || flush_clients == -1) {
-					XapiandManager::manager(true)->database_pool->cleanup(true, false);
-				}
-				if (flush_clients != -1 || flush_databases == -1) {
-					XapiandManager::manager(true)->shutdown(0, 0);
-				}
-				write_http_response(request, HTTP_STATUS_OK);
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
 		case HTTP_OPTIONS:
 			emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_OPTIONS_RESPONSE | HTTP_BODY_RESPONSE);
-			break;
-
-		case HTTP_QUIT:
-			if (opts.admin_commands && !has_pth && id.empty()) {
-				XapiandManager::try_shutdown(true);
-				write_http_response(request, HTTP_STATUS_OK);
-				request.closing = true;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-
-#if XAPIAND_DATABASE_WAL
-		case HTTP_WAL:
-			if (id.empty()) {
-				request.view = &wal_view;
-			} else {
-				write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			}
-			break;
-#endif
-
+			return 1;
 		case HTTP_OPEN:
 		case HTTP_CLOSE:
 			write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
-			break;
-
-		default:
-			L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(request.method));
-			write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-			request.parser.http_errno = HPE_INVALID_METHOD;
 			return 1;
+		default:
+			break;
 	}
-
-	if (!request.view && Logging::config.log_level < LOG_DEBUG) {
+	if (method_token(request.method).empty()) {
+		L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(request.method));
+		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		request.parser.http_errno = HPE_INVALID_METHOD;
 		return 1;
 	}
+
+	// A body-carrying RESTORE of a whole database streams its objects (NDJSON / MsgPack)
+	// rather than buffering; pick the stream mode before the body is fed. A single
+	// document RESTORE (with an id) buffers like any other write.
+	if (request.method == HTTP_RESTORE && id.empty() &&
+		(request.parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
+		if (request.ct_type == ndjson_type || request.ct_type == x_ndjson_type) {
+			request.mode = Request::Mode::STREAM_NDJSON;
+		} else if (request.ct_type == msgpack_type || request.ct_type == x_msgpack_type) {
+			request.mode = Request::Mode::STREAM_MSGPACK;
+		}
+	}
+
+	// The declarative route-table lookup (method + URL-kind -> view). A miss is a 405 --
+	// the same status prepare()'s switch produced for every unmatched method/URL shape.
+	{
+		http::Params params;
+		auto key = route_key(request.method, id, cmd, has_pth);
+		if (const view_function* view = search_routes().find(method_token(request.method), key, params)) {
+			request.view = *view;
+		} else {
+			write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+			return 1;
+		}
+	}
+
 
 	// (Expect: 100-continue is a transport concern handled by http::HttpConnection.)
 
@@ -1580,7 +1551,60 @@ delete_database_view(Request& request)
 {
 	L_CALL("HttpClient::delete_database_view()");
 
+	// Deleting a database needs a path to name it; without one there is nothing to
+	// address (prepare() answered this 405 before ever selecting the view).
+	if (!request.path_parser.has_pth()) {
+		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		return;
+	}
+
 	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
+}
+
+
+// Administrative verbs. These do no per-database query work and (like the OPTIONS /
+// OPEN / CLOSE verbs) run inline on the reactor rather than the worker pool -- see
+// SearchApplication::should_offload. Their admin_commands + root-URL preconditions,
+// which prepare()'s switch enforced before dispatch, are checked here at the view.
+static void
+flush_view(Request& request)
+{
+	L_CALL("flush_view()");
+
+	if (!opts.admin_commands || request.path_parser.has_pth()) {
+		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		return;
+	}
+
+	// Flush both databases and clients by default (unless one is specified).
+	request.query_parser.rewind();
+	int flush_databases = request.query_parser.next("databases");
+	request.query_parser.rewind();
+	int flush_clients = request.query_parser.next("clients");
+	if (flush_databases != -1 || flush_clients == -1) {
+		XapiandManager::manager(true)->database_pool->cleanup(true, false);
+	}
+	if (flush_clients != -1 || flush_databases == -1) {
+		XapiandManager::manager(true)->shutdown(0, 0);
+	}
+
+	write_http_response(request, HTTP_STATUS_OK);
+}
+
+
+static void
+quit_view(Request& request)
+{
+	L_CALL("quit_view()");
+
+	if (!opts.admin_commands || request.path_parser.has_pth()) {
+		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
+		return;
+	}
+
+	XapiandManager::try_shutdown(true);
+	write_http_response(request, HTTP_STATUS_OK);
+	request.closing = true;
 }
 
 

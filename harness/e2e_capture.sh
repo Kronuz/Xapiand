@@ -59,3 +59,4 @@ newman run "$COLL" --reporters json --reporter-json-export "$OUT" --timeout-requ
 echo "newman exit $? (1 is normal: 73 pre-existing failures) -> $(wc -c < "$OUT" 2>/dev/null) bytes"
 
 kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+exit 0   # a captured report is success; the killed node's wait-status is not our verdict

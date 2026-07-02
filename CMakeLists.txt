@@ -675,6 +675,16 @@ if(NOT http_lib_POPULATED)
 endif()
 include_directories("${http_lib_SOURCE_DIR}")
 
+# radix-router: the transport-agnostic radix-tree path router (Kronuz/radix-router)
+# that http_router.h binds into http::MethodRouter -- Xapiand's declarative route table
+# (Leg 2 stage 3c-6) is registered on it. Header-only, no deps.
+FetchContent_Declare(radix_router GIT_REPOSITORY https://github.com/Kronuz/radix-router.git GIT_TAG main)
+FetchContent_GetProperties(radix_router)
+if(NOT radix_router_POPULATED)
+	FetchContent_Populate(radix_router)
+endif()
+include_directories("${radix_router_SOURCE_DIR}")
+
 # datetime: the pure ISO-8601 + date-math + time/timedelta string parser,
 # extracted from Xapiand. Like located-exception, its datetime.cc compiles as
 # part of XAPIAND_OBJ (below). The MsgPack structured-object glue stays in
