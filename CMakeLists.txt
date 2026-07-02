@@ -675,6 +675,18 @@ if(NOT http_lib_POPULATED)
 endif()
 include_directories("${http_lib_SOURCE_DIR}")
 
+# reactor: the generic Asio server runtime (Kronuz/reactor) that Kronuz/http's transport
+# (http_asio.h) now rides on -- the shared-nothing reactor pool, accept/bind strategies,
+# offload gate, and graceful shutdown, extracted from http so other services can share
+# one runtime. Header-only; needs only <asio.hpp> (provided below). Included here because
+# http_asio.h does #include "reactor.h".
+FetchContent_Declare(reactor GIT_REPOSITORY https://github.com/Kronuz/reactor.git GIT_TAG main)
+FetchContent_GetProperties(reactor)
+if(NOT reactor_POPULATED)
+	FetchContent_Populate(reactor)
+endif()
+include_directories("${reactor_SOURCE_DIR}")
+
 # Asio (standalone, header-only): the runtime + transport substrate the HTTP path
 # now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
 # co_spawn, N io_contexts share the listen port via SO_REUSEPORT. Header-only, so the
