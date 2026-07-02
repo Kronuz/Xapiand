@@ -42,7 +42,6 @@
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
 #include "http_message.h"                   // for http::Request, http::RequestExtension (Leg 2 stage 3d)
-#include "lru.h"                            // for lru::lru
 #include "msgpack.h"                        // for MsgPack
 #include "phf.hh"                           // for phf::make_phf
 #include "url_parser.h"                     // for PathParser, QueryParser
@@ -62,72 +61,6 @@ struct query_field_t;
 #define HTTP_CONTENT_ENCODING_RESPONSE  (1 << 4)
 #define HTTP_CONTENT_LENGTH_RESPONSE    (1 << 5)
 #define HTTP_OPTIONS_RESPONSE           (1 << 6)
-
-
-class AcceptLRU : private lru::lru<std::string, accept_set_t> {
-	std::mutex qmtx;
-
-public:
-	AcceptLRU()
-		: lru::lru<std::string, accept_set_t>(100) { }
-
-	std::pair<bool, accept_set_t> lookup(std::string key) {
-		std::lock_guard<std::mutex> lk(qmtx);
-		auto it = lru::lru::find(key);
-		if (it == lru::lru::end()) {
-			return std::make_pair(false, accept_set_t{});
-		}
-		return std::make_pair(true, it->second);
-	}
-
-	auto emplace(std::string key, accept_set_t set) {
-		std::lock_guard<std::mutex> lk(qmtx);
-		return lru::lru::emplace(key, set);
-	}
-};
-
-
-struct AcceptEncoding {
-	int position;
-	double priority;
-
-	std::string encoding;
-
-	AcceptEncoding(int position, double priority, std::string encoding) : position(position), priority(priority), encoding(encoding) { }
-};
-using accept_encoding_set_t = std::set<AcceptEncoding, accept_preference_comp<AcceptEncoding>>;
-
-
-class AcceptEncodingLRU : private lru::lru<std::string, accept_encoding_set_t> {
-	std::mutex qmtx;
-
-public:
-	AcceptEncodingLRU()
-	: lru::lru<std::string, accept_encoding_set_t>(100) { }
-
-	std::pair<bool, accept_encoding_set_t> lookup(std::string key) {
-		std::lock_guard<std::mutex> lk(qmtx);
-		auto it = lru::lru::find(key);
-		if (it == lru::lru::end()) {
-			return std::make_pair(false, accept_encoding_set_t{});
-		}
-		return std::make_pair(true, it->second);
-	}
-
-	auto emplace(std::string key, accept_encoding_set_t set) {
-		std::lock_guard<std::mutex> lk(qmtx);
-		return lru::lru::emplace(key, set);
-	}
-};
-
-
-ENUM_CLASS(Encoding, int,
-	none,
-	gzip,
-	deflate,
-	identity,
-	unknown
-)
 
 
 class Request;

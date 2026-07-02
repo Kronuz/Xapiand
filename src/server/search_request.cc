@@ -25,10 +25,10 @@
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
 #include <cassert>                          // for assert
+#include <charconv>                         // for std::from_chars (indent param)
 #include <errno.h>                          // for errno
 #include <exception>                        // for std::exception
 #include <functional>                       // for std::function
-#include <regex>                            // for std::regex, std::regex_constants
 #include <signal.h>                         // for SIGTERM
 #include <sysexits.h>                       // for EX_SOFTWARE
 #include <syslog.h>                         // for LOG_WARNING, LOG_ERR, LOG...
@@ -54,6 +54,7 @@
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for hhl
 #include "http_utils.h"                     // for catch_http_errors
+#include "http_accept.h"                    // for http::AcceptCache (content negotiation)
 #include "http_handler.h"                   // for http::ResponseWriter (Leg 2 stage 3c)
 #include "http_router.h"                    // for http::MethodRouter (Leg 2 stage 3c-6)
 #include "search_application.h"             // for SearchApplication (Leg 2 stage 3c)
@@ -108,15 +109,12 @@
 #define DEFAULT_INDENTATION 2
 
 
-static const std::regex header_params_re(R"(\s*;\s*([a-z]+)=(\d+(?:\.\d+)?))", std::regex::optimize);
-static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
-
 static const std::string eol("\r\n");
 
 
 // Content negotiation helpers, lifted off HttpClient `this` so the forthcoming
 // SearchApplication can negotiate without an HttpClient (Leg 2 stage 2a). They use
-// only `request` (+ the file-scope AcceptLRU caches), so they are file-scope free
+// only `request` (content negotiation caches live in the framework now), so they are file-scope free
 // functions; forward-declared here because the views below call them before their
 // definitions (and they call one another out of order).
 static const ct_type_t& resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types);
@@ -409,37 +407,30 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 				break;
 
 			case _.fhhl("accept"): {
-				static AcceptLRU accept_sets;
-				auto value = strings::lower(header_value);
-				auto lookup = accept_sets.lookup(value);
-				if (!lookup.first) {
-					std::sregex_iterator next(value.begin(), value.end(), header_accept_re, std::regex_constants::match_any);
-					std::sregex_iterator end;
-					int i = 0;
-					while (next != end) {
-						int indent = -1;
-						double q = 1.0;
-						if (next->length(3) != 0) {
-							auto param = next->str(3);
-							std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
-							while (next_param != end) {
-								if (next_param->str(1) == "q") {
-									q = strict_stod(next_param->str(2));
-								} else if (next_param->str(1) == "indent") {
-									indent = strict_stoi(next_param->str(2));
-									if (indent < 0) { indent = 0;
-									} else if (indent > 16) { indent = 16; }
-								}
-								++next_param;
-							}
-						}
-						lookup.second.emplace(i, q, ct_type_t(next->str(1), next->str(2)), indent);
-						++next;
-						++i;
+				// Parse + cache the Accept header with the framework negotiator
+				// (http::AcceptCache does the generic RFC 7231 parsing + LRU caching we
+				// used to hand-roll). Build Xapiand's ct_type_t accept_set from the parsed
+				// items, reading the custom ";indent" rendering hint off each item's
+				// parameters. Only the ct_type_t + indent mapping is Xapiand's now.
+				static http::AcceptCache accept_cache;
+				auto parsed = accept_cache.get(strings::lower(header_value));
+				accept_set_t set;
+				for (const auto& item : parsed->items()) {
+					// Content-type ranges are always "type/subtype"; skip a token-only
+					// item (e.g. a bare "*", which is malformed for Accept) so the set
+					// matches what the old type/subtype parser produced. get_accepted's
+					// wildcard handling expects "*/*", not a lone "*".
+					if (item.subtype.empty()) { continue; }
+					int indent = -1;
+					auto iv = item.param("indent");
+					if (!iv.empty()) {
+						int n = 0;
+						auto res = std::from_chars(iv.data(), iv.data() + iv.size(), n);
+						if (res.ec == std::errc()) { indent = n < 0 ? 0 : (n > 16 ? 16 : n); }
 					}
-					accept_sets.emplace(value, lookup.second);
+					set.emplace(item.order, item.q, ct_type_t(item.type, item.subtype), indent);
 				}
-				request.accept_set = std::move(lookup.second);
+				request.accept_set = std::move(set);
 				break;
 			}
 
