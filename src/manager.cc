@@ -74,9 +74,10 @@
 #include "reserved/schema.h"                     // for RESERVED_INDEX, RESERVED_TYPE, ...
 #include "serialise.h"                           // for KEYWORD_STR
 #include "serialise_list.h"                      // for StringList
-#include "server/http.h"                         // for Http
+#include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
+#include "server/search_application.h"           // for SearchApplication (the HttpHandler)
+#include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
 #include "server/http_client.h"                  // for HttpClient
-#include "server/http_server.h"                  // for HttpServer
 #include "storage.h"                             // for Storage
 #include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
 #include "strict_stox.hh"                        // for strict_stoll
@@ -132,6 +133,32 @@ std::shared_ptr<XapiandManager> XapiandManager::_manager;
 
 static ev::loop_ref* loop_ref_nil = nullptr;
 
+// The Xapiand search API served over the Asio transport. SearchApplication is a
+// stateless http::HttpHandler (its handle() builds all per-request state locally),
+// so one shared instance is safe across every reactor thread. The transport owns the
+// offload pool (blocking, Xapian-bound work runs off the reactor) and the response
+// transforms, so no bespoke dispatcher/response wiring survives here.
+static SearchApplication search_app;
+
+// The response transforms the transport applies to the buffered response: compress to
+// the codec the client advertised. Xapiand no longer encodes responses itself; it just
+// registers "deflate" (the library ships zstd + gzip) and lets the transport negotiate
+// + apply the coding from Accept-Encoding. min_size 0 matches the old "compress
+// whenever it helps" (the library still skips a coding that doesn't shrink the body).
+static http::CompressionOptions
+search_compression()
+{
+	http::CompressionOptions c;
+	c.min_size = 0;
+	c.add_coding("deflate", [](std::string_view body) {
+		std::string out;
+		DeflateCompressData d(body.data(), body.size(), /*gzip=*/false);
+		for (auto it = d.begin(); it; ++it) { out.append(*it); }
+		return out;
+	});
+	return c;
+}
+
 void sig_exit(int sig) {
 	auto manager = XapiandManager::manager();
 	if (manager) {
@@ -156,7 +183,6 @@ XapiandManager::XapiandManager()
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
 	  remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
 	  remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
@@ -187,7 +213,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-	  http_server_pool(std::make_unique<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>>("SH{:02}", opts.num_http_servers)),
 #ifdef XAPIAND_CLUSTERING
 	  remote_client_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>>("CB{:02}", opts.num_remote_clients)),
 	  remote_server_pool(std::make_unique<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>>("SB{:02}", opts.num_remote_servers)),
@@ -890,7 +915,24 @@ XapiandManager::make_servers()
 
 	auto local_node_addr = inet_ntop(local_node->addr());
 
-	http = Worker::make_shared<Http>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? 0 : http_tries);
+	// The search HTTP API, served over the Asio transport: N reactors
+	// (num_http_servers) share the listen port via SO_REUSEPORT, each with its own
+	// offload pool for the blocking Xapian-bound work. The configured client (offload)
+	// threads are spread across the reactors so the total tracks num_http_clients. The
+	// service binds + starts later, when the cluster database is ready (like http->start).
+	{
+		std::size_t reactors = opts.num_http_servers > 0 ? static_cast<std::size_t>(opts.num_http_servers) : 1;
+		std::size_t workers = opts.num_http_clients > 0
+			? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_http_clients) + reactors - 1) / reactors)
+			: 1;
+		http_service = std::make_unique<http::HttpAsioService>(search_app, reactors, workers, 1000);
+		http::AsioBindOptions bind_options;
+		bind_options.address = opts.bind_address;
+		bind_options.reuse_port = reuse_ports;
+		http_service->set_bind_options(bind_options);
+		http_service->enable_compression(search_compression());
+	}
+	this->http_port = http_port;
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -898,14 +940,6 @@ XapiandManager::make_servers()
         replication = Worker::make_shared<ReplicationProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
 	}
 #endif
-
-	for (ssize_t i = 0; i < opts.num_http_servers; ++i) {
-		auto _http_server = Worker::make_shared<HttpServer>(http, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), http_port, reuse_ports ? http_tries : 0);
-		if (_http_server->addr.sin_family) {
-			http->addr = _http_server->addr;
-		}
-		http_server_pool->enqueue(std::move(_http_server));
-	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -929,7 +963,7 @@ XapiandManager::make_servers()
 
 	// Setup local node ports.
 	auto node_copy = std::make_unique<Node>(*local_node);
-	node_copy->http_port = ntohs(http->addr.sin_port);
+	node_copy->http_port = http_port;
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		node_copy->remote_port = ntohs(remote->addr.sin_port);
@@ -939,7 +973,7 @@ XapiandManager::make_servers()
 	Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
 
 	std::string msg("Servers listening on ");
-	msg += http->getDescription();
+	msg += strings::format("TCP {}:{} (HTTP v1.1)", opts.bind_address, http_port);
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		msg += ", " + remote->getDescription();
@@ -983,7 +1017,9 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 
 	exchange_state(state.load(), State::READY);
 
-	http->start();
+	if (http_service) {
+		http_service->start(static_cast<unsigned short>(http_port));
+	}
 
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
@@ -1038,18 +1074,10 @@ XapiandManager::join()
 	L_MANAGER(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), database_pool->dump_databases(), Node::dump_nodes());
 
 	////////////////////////////////////////////////////////////////////
-	if (http_server_pool) {
-		L_MANAGER("Finishing http servers pool!");
-		http_server_pool->finish();
-
-		L_MANAGER("Waiting for {} http server{}...", http_server_pool->running_size(), (http_server_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP servers...", "HTTP servers finished!");
-		while (!http_server_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
+	if (http_service) {
+		L_MANAGER("Stopping the HTTP service!");
+		L_MANAGER_TIMED(1s, "Is taking too long to finish the HTTP service...", "HTTP service finished!");
+		http_service->stop();  // stops the reactors + joins the offload pools
 	}
 
 	////////////////////////////////////////////////////////////////////
@@ -1331,7 +1359,7 @@ XapiandManager::join()
 
 	L_MANAGER_TIMED(1s, "Is taking too long to reset manager...", "Manager reset finished!");
 
-	http.reset();
+	http_service.reset();
 #ifdef XAPIAND_CLUSTERING
 	remote.reset();
 	replication.reset();
@@ -1341,8 +1369,6 @@ XapiandManager::join()
 	database_pool.reset();
 
 	wal_writer.reset();
-
-	http_server_pool.reset();
 
 	doc_indexer_pool.reset();
 	doc_preparer_pool.reset();
@@ -1653,11 +1679,15 @@ XapiandManager::server_metrics_impl()
 	metrics.xapiand_remote_clients_capacity.Set(remote_client_pool->threadpool_capacity());
 #endif
 
-	// servers_threads:
-	metrics.xapiand_servers_running.Set(http_server_pool->running_size());
-	metrics.xapiand_servers_queue_size.Set(http_server_pool->size());
-	metrics.xapiand_servers_pool_size.Set(http_server_pool->threadpool_size());
-	metrics.xapiand_servers_capacity.Set(http_server_pool->threadpool_capacity());
+	// servers_threads: the Asio transport owns its reactors internally; expose the
+	// reactor count as the running/pool size (queue/capacity are not modelled here).
+	{
+		auto reactors = http_service ? static_cast<double>(http_service->reactors()) : 0.0;
+		metrics.xapiand_servers_running.Set(reactors);
+		metrics.xapiand_servers_queue_size.Set(0);
+		metrics.xapiand_servers_pool_size.Set(reactors);
+		metrics.xapiand_servers_capacity.Set(reactors);
+	}
 
 	// committers_threads:
 	metrics.xapiand_committers_running.Set(committer()->running_size());

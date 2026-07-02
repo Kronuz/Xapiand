@@ -46,7 +46,6 @@
 #include "xapian.h"                           // for Xapian::*
 
 
-class Http;
 #ifdef XAPIAND_CLUSTERING
 class Discovery;
 class RemoteProtocol;
@@ -62,7 +61,8 @@ class DocPreparer;
 class DocIndexer;
 
 class MsgPack;
-class HttpServer;
+
+namespace http { class HttpAsioService; }
 class DatabasePool;
 class DatabaseWALWriter;
 class DatabaseCleanup;
@@ -137,7 +137,8 @@ public:
 	std::atomic_int remote_clients;
 	std::atomic_int replication_clients;
 
-	std::shared_ptr<Http> http;
+	std::unique_ptr<http::HttpAsioService> http_service;
+	int http_port = 0;
 #ifdef XAPIAND_CLUSTERING
 	std::shared_ptr<RemoteProtocol> remote;
 	std::shared_ptr<ReplicationProtocol> replication;
@@ -151,7 +152,6 @@ public:
 	std::unique_ptr<DatabaseWALWriter> wal_writer;
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
-	std::unique_ptr<ThreadPool<std::shared_ptr<HttpServer>, ThreadPolicyType::http_servers>> http_server_pool;
 #ifdef XAPIAND_CLUSTERING
 	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> remote_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> remote_server_pool;

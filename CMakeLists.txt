@@ -675,6 +675,18 @@ if(NOT http_lib_POPULATED)
 endif()
 include_directories("${http_lib_SOURCE_DIR}")
 
+# Asio (standalone, header-only): the runtime + transport substrate the HTTP path
+# now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
+# co_spawn, N io_contexts share the listen port via SO_REUSEPORT. Header-only, so the
+# include path + ASIO_STANDALONE (no Boost) is all it needs; the coroutine support is
+# already covered by Xapiand's -std=c++20.
+set(ASIO_INCLUDE_DIR "/opt/homebrew/include" CACHE PATH "standalone Asio include dir")
+if(NOT EXISTS "${ASIO_INCLUDE_DIR}/asio.hpp")
+	message(FATAL_ERROR "standalone Asio not found at ${ASIO_INCLUDE_DIR}; set -DASIO_INCLUDE_DIR=<dir>")
+endif()
+include_directories("${ASIO_INCLUDE_DIR}")
+add_definitions(-DASIO_STANDALONE)
+
 # radix-router: the transport-agnostic radix-tree path router (Kronuz/radix-router)
 # that http_router.h binds into http::MethodRouter -- Xapiand's declarative route table
 # (Leg 2 stage 3c-6) is registered on it. Header-only, no deps.
