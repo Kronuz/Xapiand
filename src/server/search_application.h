@@ -47,6 +47,12 @@ class SearchApplication : public http::HttpHandler {
 public:
 	void handle(const http::Request& request, http::ResponseWriter& response) override;
 
+	// Build Xapiand's per-request state as the http::Request's typed extension (see
+	// http::RequestExtension). Called by the connection at headers-complete; handle()
+	// reads it back via request.ext<Request>(), so there is one request entity (the
+	// library's http::Request plus this extension), never a parallel copy.
+	std::unique_ptr<http::RequestExtension> create_extension(const http::Request& request) override;
+
 	// Search endpoints are CPU-bound/blocking (Xapian), so they must always run on a
 	// worker thread, never the reactor -- the un-stallable model. (A cheap route like
 	// a health check could return false here to stay inline; the search views do not.)

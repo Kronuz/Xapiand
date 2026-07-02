@@ -42,6 +42,7 @@
 #include "endpoint.h"                       // for Endpoints
 #include "hashes.hh"                        // for hhl
 #include "http_parser.h"                    // for http_parser, http_parser_settings
+#include "http_message.h"                   // for http::Request, http::RequestExtension (Leg 2 stage 3d)
 #include "lru.h"                            // for lru::lru
 #include "msgpack.h"                        // for MsgPack
 #include "phf.hh"                           // for phf::make_phf
@@ -176,13 +177,24 @@ ENUM_CLASS(RequestMode, int,
 )
 
 
-class Request {
+// Xapiand's per-request working state -- now the typed EXTENSION of the library's
+// http::Request (http::RequestExtension), not a parallel request object: the
+// http::HttpConnection builds one via SearchApplication::create_extension() and it
+// lives on the http::Request for the request's life. It carries only search-side
+// state (the decoded body, resolved endpoints, tokenized URL, content negotiation,
+// timings); the HTTP facts (method string, path, query, headers, body, version,
+// keep-alive) belong to the http::Request it points at via `http_req`. (Leg 2 3d.)
+class Request : public http::RequestExtension {
 	MsgPack _decoded_body;
 
 	MsgPack decode(std::string_view body);
 
 public:
 	using Mode = RequestMode;
+
+	// The library request this state extends (set in SearchApplication::handle); the
+	// source of truth for every HTTP fact, so nothing here duplicates it.
+	const http::Request* http_req = nullptr;
 
 	Mode mode;
 

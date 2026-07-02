@@ -3472,11 +3472,23 @@ method_from_string(std::string_view m)
 }
 
 
+std::unique_ptr<http::RequestExtension>
+SearchApplication::create_extension(const http::Request& /*hreq*/)
+{
+	// Allocate Xapiand's per-request state as the http::Request's extension. It is
+	// populated in handle() (which runs guarded by the connection's error backstop),
+	// because that setup -- process_header()'s Accept parsing + method override -- can
+	// throw, and create_extension() runs unguarded in the connection's parse path.
+	return std::make_unique<Request>();
+}
+
+
 void
 SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& response)
 {
-	Request request;                     // Mode::FULL
-	request.response_writer = &response;  // the response path emits through the library writer
+	Request& request = hreq.ext<Request>();   // the extension create_extension() built
+	request.http_req = &hreq;                 // the source of truth for every HTTP fact
+	request.response_writer = &response;       // the response path emits through the library writer
 
 	// Rebuild the parser fields dispatch_request() reads (keep-alive/close, version).
 	request.parser.http_major = hreq.http_major;
