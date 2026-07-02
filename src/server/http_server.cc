@@ -24,9 +24,12 @@
 
 #include <cassert>                          // for assert
 #include <errno.h>                          // for errno
+#include <string>                           // for std::string (deflate coding)
+#include <string_view>                      // for std::string_view (deflate coding)
 #include <utility>
 
 #include "base_server.h"                    // for BaseServer
+#include "compressor_deflate.h"              // for DeflateCompressData (the deflate coding)
 #include "error.hh"                         // for error:name, error::description
 #include "ev/ev++.h"                        // for io, ::READ, loop_ref (ptr only)
 #include "http.h"                            // for Http
@@ -50,7 +53,29 @@
 // stay off for now (parity first). A single pool here is the simplest correct wiring;
 // a per-reactor Dispatcher (shared-nothing) is a later refinement.
 static SearchApplication search_app;
-static http::ResponseOptions search_response_options;
+// Response transforms applied by the library: compress the buffered response to the
+// codec the client advertised. Xapiand no longer encodes responses itself (it used to
+// gzip/deflate in the views); it registers "deflate" (the library ships zstd + gzip)
+// and lets the transport negotiate + apply the coding from Accept-Encoding. min_size 0
+// matches Xapiand's old "compress whenever it helps" (the library still skips a coding
+// that doesn't shrink the body).
+static const http::ResponseOptions&
+search_response_options()
+{
+	static const http::ResponseOptions options = [] {
+		http::ResponseOptions o;
+		o.compress = true;
+		o.compression.min_size = 0;
+		o.compression.add_coding("deflate", [](std::string_view body) {
+			std::string out;
+			DeflateCompressData c(body.data(), body.size(), /*gzip=*/false);
+			for (auto it = c.begin(); it; ++it) { out.append(*it); }
+			return out;
+		});
+		return o;
+	}();
+	return options;
+}
 
 static http::Dispatcher&
 search_dispatcher()
@@ -152,7 +177,7 @@ HttpServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
 
 	int client_sock = accept();
 	if (client_sock != -1) {
-		auto client = Worker::make_shared<http::HttpConnection>(share_this<HttpServer>(), ev_loop, ev_flags, search_app, &search_dispatcher(), &search_response_options);
+		auto client = Worker::make_shared<http::HttpConnection>(share_this<HttpServer>(), ev_loop, ev_flags, search_app, &search_dispatcher(), &search_response_options());
 
 		if (!client->init(client_sock)) {
 			io::close(client_sock);

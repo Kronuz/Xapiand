@@ -174,26 +174,21 @@ public:
 	// The response being built (formerly a separate Response object; flattened here so
 	// there is no parallel response class -- it is emitted through the library's
 	// ResponseWriter). `response_blob` is the serialized body, `response_ct_type` its
-	// content-type, `response_status` the status once emitted (0 = not yet), and the
-	// compressor is the scratch encoding_http_response() drives for a stored blob.
+	// content-type, and `response_status` the status once emitted (0 = not yet).
+	// Content-Encoding is applied by the library, not here.
 	ct_type_t response_ct_type;
 	std::string response_blob;
 	std::atomic<http_status> response_status;
 	size_t response_size;
-	DeflateCompressData response_encoding_compressor;
-	DeflateCompressData::iterator response_it_compressor;
 
 	// The ResponseWriter this request is served through (set by SearchApplication::handle
 	// from the http::HttpConnection). The response path emits through it. (Leg 2 stage 3c.)
 	http::ResponseWriter* response_writer = nullptr;
 	view_function view;
 
-	Encoding type_encoding;
-
 	std::string _header_name;
 
 	accept_set_t accept_set;
-	accept_encoding_set_t accept_encoding_set;
 
 	enum http_method method;
 	std::string path;

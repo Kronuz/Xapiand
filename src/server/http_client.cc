@@ -110,7 +110,6 @@
 
 static const std::regex header_params_re(R"(\s*;\s*([a-z]+)=(\d+(?:\.\d+)?))", std::regex::optimize);
 static const std::regex header_accept_re(R"(([-a-z+]+|\*)/([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
-static const std::regex header_accept_encoding_re(R"(([-a-z+]+|\*)((?:\s*;\s*[a-z]+=\d+(?:\.\d+)?)*))", std::regex::optimize);
 
 static const std::string eol("\r\n");
 
@@ -126,15 +125,13 @@ static const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, con
 static const ct_type_t* is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<const ct_type_t*>& ct_types);
 template <typename T>
 static const ct_type_t& get_acceptable_type(Request& request, const T& ct);
-static Encoding resolve_encoding(Request& request);
 
 // More request-only helpers lifted off HttpClient `this` (Leg 2 stage 2b/2c): URL +
-// query parsing and the response-body encoder. They read/write only their argument
-// (request or response), so they are file-scope free functions too; forward-declared
-// here because they are used above their definitions (e.g. prepare(), write_http_response).
+// query parsing. They read/write only their `request` argument, so they are file-scope
+// free functions too; forward-declared here because they are used above their
+// definitions (e.g. prepare(), write_http_response).
 static void url_resolve(Request& request);
 static query_field_t query_field_maker(Request& request, int flags);
-static std::string encoding_http_response(Request& request, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
 
 // The DB-bound prep helpers lifted off HttpClient `this` (Leg 2 stage 3a). They
 // touch only their `request` argument plus the manager/DB singletons -- never any
@@ -147,15 +144,9 @@ static std::vector<std::string> expand_paths(Request& request);
 static size_t resolve_index_endpoints(Request& request, const query_field_t& query_field, const MsgPack* settings = nullptr);
 
 // The response/transport helpers lifted off HttpClient `this` (Leg 2 stage 3b). The
-// response is formatted from `request` state (content negotiation, serialization,
-// optional encoding) and the raw HTTP/1.1 bytes go on the wire through the single
-// transport seam `request.client->write()` -- the one remaining coupling to the
-// connection, which the transport swap onto http::HttpConnection replaces. With these
-// off HttpClient, every request/response helper is a file-scope free function and
-// HttpClient is reduced to the async heart (parser callbacks + prepare() dispatch +
-// the runner) that the library's HttpConnection + Dispatcher take over. readable_encoding
-// is a pure switch. Forward-declared here since prepare()/views call them above.
-static std::string readable_encoding(Encoding e);
+// response is formatted from `request` state (content negotiation, serialization) and
+// emitted through the library's ResponseWriter, which frames the bytes and applies the
+// negotiated Content-Encoding. Forward-declared here since prepare()/views call them above.
 static void write_status_response(Request& request, enum http_status status, const std::string& message = "");
 static void write_http_response(Request& request, enum http_status status, const MsgPack& obj = MsgPack(), const std::string& location = "", const ct_type_t& ct_type = no_type);
 
@@ -416,7 +407,6 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 			hhl("100-continue"),
 			hhl("content-type"),
 			hhl("accept"),
-			hhl("accept-encoding"),
 			hhl("http-method-override"),
 			hhl("x-http-method-override"),
 		});
@@ -464,37 +454,6 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 					accept_sets.emplace(value, lookup.second);
 				}
 				request.accept_set = std::move(lookup.second);
-				break;
-			}
-
-			case _.fhhl("accept-encoding"): {
-				static AcceptEncodingLRU accept_encoding_sets;
-				auto value = strings::lower(header_value);
-				auto lookup = accept_encoding_sets.lookup(value);
-				if (!lookup.first) {
-					std::sregex_iterator next(value.begin(), value.end(), header_accept_encoding_re, std::regex_constants::match_any);
-					std::sregex_iterator end;
-					int i = 0;
-					while (next != end) {
-						double q = 1.0;
-						if (next->length(2) != 0) {
-							auto param = next->str(2);
-							std::sregex_iterator next_param(param.begin(), param.end(), header_params_re, std::regex_constants::match_any);
-							while (next_param != end) {
-								if (next_param->str(1) == "q") {
-									q = strict_stod(next_param->str(2));
-								}
-								++next_param;
-							}
-						} else {
-						}
-						lookup.second.emplace(i, q, next->str(1));
-						++next;
-						++i;
-					}
-					accept_encoding_sets.emplace(value, lookup.second);
-				}
-				request.accept_encoding_set = std::move(lookup.second);
 				break;
 			}
 
@@ -673,12 +632,6 @@ dispatch_request(Request& request)
 			request.accept_set.emplace(0, 1.0, request.ct_type, 0);
 		}
 		request.accept_set.emplace(1, 1.0, any_type, 0);
-	}
-
-	request.type_encoding = resolve_encoding(request);
-	if (request.type_encoding == Encoding::unknown) {
-		write_status_response(request, HTTP_STATUS_NOT_ACCEPTABLE, "Response encoding gzip, deflate or identity not provided in the Accept-Encoding header");
-		return 1;
 	}
 
 	url_resolve(request);
@@ -1956,16 +1909,7 @@ retrieve_document_view(Request& request)
 		request.ready = std::chrono::steady_clock::now();
 
 		request.response_ct_type = ct_type;
-		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(request, request.type_encoding, request.response_blob, false, true, true);
-			if (!encoded.empty() && encoded.size() <= request.response_blob.size()) {
-				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding));
-			} else {
-				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response_blob, "", ct_type.to_string(), readable_encoding(Encoding::identity));
-			}
-		} else {
-			emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response_blob, "", ct_type.to_string());
-		}
+		emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response_blob, "", ct_type.to_string());
 	}
 
 	auto took = std::chrono::duration_cast<std::chrono::nanoseconds>(request.ready - request.processing).count();
@@ -2792,16 +2736,7 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 
 	try {
 		auto result = serialize_response(obj, resolved_ct_type, request.indented, (int)status >= 400);
-		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(request, request.type_encoding, result.first, false, true, true);
-			if (!encoded.empty() && encoded.size() <= result.first.size()) {
-				emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding));
-			} else {
-				emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, result.first, location, result.second, readable_encoding(Encoding::identity));
-			}
-		} else {
-			emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second);
-		}
+		emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE, result.first, location, result.second);
 	} catch (const SerialisationError& exc) {
 		if (status == HTTP_STATUS_NOT_ACCEPTABLE) {
 			emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE, "", location);
@@ -2817,100 +2752,6 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 }
 
 
-static Encoding
-resolve_encoding(Request& request)
-{
-	L_CALL("HttpClient::resolve_encoding()");
-
-	if (request.accept_encoding_set.empty()) {
-		return Encoding::none;
-	}
-
-	constexpr static auto _ = phf::make_phf({
-		hhl("gzip"),
-		hhl("deflate"),
-		hhl("identity"),
-		hhl("*"),
-	});
-	for (const auto& encoding : request.accept_encoding_set) {
-		switch (_.fhhl(encoding.encoding)) {
-			case _.fhhl("gzip"):
-				return Encoding::gzip;
-			case _.fhhl("deflate"):
-				return Encoding::deflate;
-			case _.fhhl("identity"):
-				return Encoding::identity;
-			case _.fhhl("*"):
-				return Encoding::identity;
-			default:
-				continue;
-		}
-	}
-	return Encoding::unknown;
-}
-
-
-static std::string
-readable_encoding(Encoding e)
-{
-	L_CALL("readable_encoding()");
-
-	switch (e) {
-		case Encoding::none:
-			return "none";
-		case Encoding::gzip:
-			return "gzip";
-		case Encoding::deflate:
-			return "deflate";
-		case Encoding::identity:
-			return "identity";
-		default:
-			return "Encoding:UNKNOWN";
-	}
-}
-
-
-static std::string
-encoding_http_response(Request& request, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
-{
-	L_CALL("HttpClient::encoding_http_response({})", repr(response_obj));
-
-	bool gzip = false;
-	switch (e) {
-		case Encoding::gzip:
-			gzip = true;
-			[[fallthrough]];
-		case Encoding::deflate: {
-			if (chunk) {
-				if (start) {
-					request.response_encoding_compressor.reset(nullptr, 0, gzip);
-					request.response_encoding_compressor.begin();
-				}
-				if (end) {
-					auto ret = request.response_encoding_compressor.next(response_obj.data(), response_obj.size(), DeflateCompressData::FINISH_COMPRESS);
-					return ret;
-				}
-				auto ret = request.response_encoding_compressor.next(response_obj.data(), response_obj.size());
-				return ret;
-			}
-
-			request.response_encoding_compressor.reset(response_obj.data(), response_obj.size(), gzip);
-			request.response_it_compressor = request.response_encoding_compressor.begin();
-			std::string encoding_respose;
-			while (request.response_it_compressor) {
-				encoding_respose.append(*request.response_it_compressor);
-				++request.response_it_compressor;
-			}
-			return encoding_respose;
-		}
-
-		case Encoding::identity:
-			return response_obj;
-
-		default:
-			return std::string();
-	}
-}
 
 
 
@@ -2918,7 +2759,6 @@ encoding_http_response(Request& request, Encoding e, const std::string& response
 Request::Request() :
 	mode(Mode::FULL),
 	view(nullptr),
-	type_encoding(Encoding::none),
 	begining(true),
 	ending(false),
 	atom_ending(false),
