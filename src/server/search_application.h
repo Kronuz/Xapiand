@@ -53,6 +53,11 @@ public:
 	// library's http::Request plus this extension), never a parallel copy.
 	std::unique_ptr<http::RequestExtension> create_extension(const http::Request& request) override;
 
+	// Map an exception that escaped handle() (Xapian / ClientError / ...) to an HTTP
+	// status + body -- Xapiand's error-to-status policy. The library calls this from
+	// its backstop and owns only the generic 500 fallback.
+	void on_error(std::exception_ptr error, const http::Request& request, http::ResponseWriter& response) override;
+
 	// Search endpoints are CPU-bound/blocking (Xapian), so they must always run on a
 	// worker thread, never the reactor -- the un-stallable model. (A cheap route like
 	// a health check could return false here to stay inline; the search views do not.)

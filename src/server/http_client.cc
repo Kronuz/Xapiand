@@ -3232,30 +3232,43 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 	request.ending = true;
 	request.received = std::chrono::steady_clock::now();
 
-	// Dispatch, then feed the (already fully-received) body and run the selected view,
-	// mapping Xapian/ClientError -> HTTP status at the boundary (the job
-	// HttpClient::handled_errors does on the legacy path).
-	auto http_errors = catch_http_errors([&]{
-		if (dispatch_request(request) == 0 && request.view != nullptr) {
-			// append() routes the body to raw (FULL mode, read via decoded_body()) or
-			// parses it into the objects deque (STREAM_NDJSON/MSGPACK, read via
-			// next_object()), exactly as on_body did incrementally on the legacy path.
-			if (!hreq.body.empty()) {
-				request.append(hreq.body.data(), hreq.body.size());
-			}
-			request.append(nullptr, 0);  // flush any trailing streamed object
-			request.view(request);
+	// Dispatch, then feed the (already fully-received) body and run the selected view.
+	// Xapian/ClientError exceptions propagate to the connection, which calls
+	// SearchApplication::on_error() -- the app's error-to-status mapping.
+	if (dispatch_request(request) == 0 && request.view != nullptr) {
+		// append() routes the body to raw (FULL mode, read via decoded_body()) or
+		// parses it into the objects deque (STREAM_NDJSON/MSGPACK, read via
+		// next_object()), exactly as on_body did incrementally on the legacy path.
+		if (!hreq.body.empty()) {
+			request.append(hreq.body.data(), hreq.body.size());
 		}
-		return 0;
-	});
-	if (http_errors.error_code != HTTP_STATUS_OK) {
-		if (request.response_status == static_cast<http_status>(0)) {
-			write_status_response(request, http_errors.error_code, http_errors.error);
-		} else {
-			// A response was already emitted before the error; the writer is one-shot,
-			// so just close the connection (mirrors handled_errors' detach()).
-			response.set_close();
-		}
+		request.append(nullptr, 0);  // flush any trailing streamed object
+		request.view(request);
+	}
+
+	if (request.closing) {
+		response.set_close();
+	}
+}
+
+
+// The application's error-to-status mapping, invoked by the http::HttpConnection when
+// handle() throws without having answered (the library owns only the generic 500
+// fallback). Rethrow to inspect the type; catch_http_errors maps Xapian / ClientError /
+// Datetime / Cartesian to the right status, then write_status_response emits it -- the
+// same mapping HttpClient::handled_errors did on the legacy path.
+void
+SearchApplication::on_error(std::exception_ptr error, const http::Request& hreq, http::ResponseWriter& response)
+{
+	Request& request = hreq.ext<Request>();
+
+	auto http_errors = catch_http_errors([&]{ std::rethrow_exception(error); return 0; });
+	if (request.response_status == static_cast<http_status>(0)) {
+		write_status_response(request, http_errors.error_code, http_errors.error);
+	} else {
+		// A response was already emitted before the error; the writer is one-shot,
+		// so just close the connection (mirrors handled_errors' detach()).
+		response.set_close();
 	}
 
 	if (request.closing) {
