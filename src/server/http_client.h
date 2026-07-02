@@ -262,4 +262,12 @@ public:
 	bool next_object(MsgPack& obj);
 
 	MsgPack& decoded_body();
+
+	// The request body, read straight from the library request (no copy). For a FULL
+	// request that IS the body; a streamed request accumulates into `raw` as scratch,
+	// so fall back to it when there is no http_req (defensive; it is always set in the
+	// handler path).
+	std::string_view body_view() const {
+		return http_req != nullptr ? std::string_view(http_req->body) : std::string_view(raw);
+	}
 };

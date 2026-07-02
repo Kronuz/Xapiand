@@ -2008,7 +2008,7 @@ search_view(Request& request)
 			db_handler.reset(request.endpoints, DB_OPEN);
 		}
 
-		if (request.raw.empty()) {
+		if (request.body_view().empty()) {
 			mset_tuple = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
@@ -2156,7 +2156,7 @@ count_view(Request& request)
 			db_handler.reset(request.endpoints, DB_OPEN);
 		}
 
-		if (request.raw.empty()) {
+		if (request.body_view().empty()) {
 			mset_tuple = db_handler.get_mset(query_field, nullptr, nullptr);
 		} else {
 			auto& decoded_body = request.decoded_body();
@@ -3039,8 +3039,9 @@ Request::decoded_body()
 	L_CALL("Request::decoded_body()");
 
 	if (_decoded_body.is_undefined()) {
-		if (!raw.empty()) {
-			_decoded_body = decode(raw);
+		auto body = body_view();
+		if (!body.empty()) {
+			_decoded_body = decode(body);
 		}
 	}
 	return _decoded_body;
@@ -3236,13 +3237,16 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 	// Xapian/ClientError exceptions propagate to the connection, which calls
 	// SearchApplication::on_error() -- the app's error-to-status mapping.
 	if (dispatch_request(request) == 0 && request.view != nullptr) {
-		// append() routes the body to raw (FULL mode, read via decoded_body()) or
-		// parses it into the objects deque (STREAM_NDJSON/MSGPACK, read via
+		// A FULL request reads its body straight from http_req (via body_view() /
+		// decoded_body()) -- no copy. A streamed request (RESTORE/bulk) still feeds
+		// append(), which parses the chunks into the objects deque (read via
 		// next_object()), exactly as on_body did incrementally on the legacy path.
-		if (!hreq.body.empty()) {
-			request.append(hreq.body.data(), hreq.body.size());
+		if (request.mode != Request::Mode::FULL) {
+			if (!hreq.body.empty()) {
+				request.append(hreq.body.data(), hreq.body.size());
+			}
+			request.append(nullptr, 0);  // flush any trailing streamed object
 		}
-		request.append(nullptr, 0);  // flush any trailing streamed object
 		request.view(request);
 	}
 
