@@ -678,7 +678,11 @@ dispatch_request(Request& request)
 
 	// (Expect: 100-continue is a transport concern handled by http::HttpConnection.)
 
-	if (request.has_content_length && request.content_length) {
+	// Reserve the body buffer up front from Content-Length -- but NOT when streaming
+	// (request.http_req->body_reader set): that body is pulled in bounded chunks, so
+	// reserving its full (possibly multi-gigabyte) length would defeat the point.
+	bool streaming = request.http_req != nullptr && request.http_req->body_reader != nullptr;
+	if (request.has_content_length && request.content_length && !streaming) {
 		if (request.mode == Request::Mode::STREAM_MSGPACK) {
 			request.unpacker.reserve_buffer(request.content_length);
 		} else {
@@ -2896,6 +2900,15 @@ Request::append(const char* at, size_t length)
 						}
 					}
 				}
+
+				// Drop the parsed prefix so `raw` holds only the unparsed remainder (a
+				// partial line) -- keeps memory O(one line + one chunk) while streaming a
+				// multi-gigabyte NDJSON body, instead of retaining the whole body.
+				if (raw_offset != 0) {
+					raw.erase(0, raw_offset);
+					raw_peek -= raw_offset;
+					raw_offset = 0;
+				}
 			}
 
 			if (!length) {
@@ -2950,13 +2963,33 @@ Request::next_object(MsgPack& obj)
 	assert(has_content_length);
 	assert(mode == Mode::STREAM_MSGPACK || mode == Mode::STREAM_NDJSON);
 
-	std::lock_guard<std::mutex> lk(objects_mtx);
-	if (objects.empty()) {
-		return false;
+	for (;;) {
+		{
+			std::lock_guard<std::mutex> lk(objects_mtx);
+			if (!objects.empty()) {
+				obj = std::move(objects.front());
+				objects.pop_front();
+				return true;
+			}
+		}
+		// The deque is drained. On the streaming path, pull the next raw body chunk from
+		// the framework's flow-controlled BodyReader and parse it (append() fills the
+		// deque); on the buffered path (no reader) the body was already fully appended, so
+		// an empty deque means done. Bounded memory: one chunk + a partial-line remainder.
+		if (http_req == nullptr || !http_req->body_reader) {
+			return false;
+		}
+		std::string chunk;
+		if (http_req->body_reader->read(chunk)) {
+			append(chunk.data(), chunk.size());
+		} else {
+			append(nullptr, 0);   // flush any trailing streamed object
+			std::lock_guard<std::mutex> lk(objects_mtx);
+			if (objects.empty()) {
+				return false;
+			}
+		}
 	}
-	obj = std::move(objects.front());
-	objects.pop_front();
-	return true;
 }
 
 
@@ -2998,6 +3031,23 @@ SearchApplication::create_extension(const http::Request& /*hreq*/)
 	// because that setup -- process_header()'s Accept parsing + method override -- can
 	// throw, and create_extension() runs unguarded in the connection's parse path.
 	return std::make_unique<Request>();
+}
+
+
+bool
+SearchApplication::wants_body_stream(const http::Request& hreq)
+{
+	// Stream a whole-database RESTORE with a bulk body (NDJSON / MsgPack, no doc id): the
+	// library runs handle() on a worker and feeds the body through Request::body_reader,
+	// which restore_database_view pulls object-by-object -- O(buffer) memory for a dump of
+	// any size. A single-document RESTORE (id present) and every other request buffer.
+	if (method_from_string(hreq.method) != HTTP_RESTORE) { return false; }
+	if (hreq.header("Content-Length").empty()) { return false; }
+	ct_type_t ct(hreq.content_type());
+	if (ct != ndjson_type && ct != x_ndjson_type && ct != msgpack_type && ct != x_msgpack_type) { return false; }
+	PathParser pp;
+	if (pp.init(hreq.path) >= PathParser::State::END) { return false; }   // invalid path
+	return pp.get_id().empty();                                           // no id -> whole database
 }
 
 
@@ -3044,15 +3094,17 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 	request.ending = true;
 	request.received = std::chrono::steady_clock::now();
 
-	// Dispatch, then feed the (already fully-received) body and run the selected view.
+	// Dispatch, then feed the body (if not streamed) and run the selected view.
 	// Xapian/ClientError exceptions propagate to the connection, which calls
 	// SearchApplication::on_error() -- the app's error-to-status mapping.
 	if (dispatch_request(request) == 0 && request.view != nullptr) {
 		// A FULL request reads its body straight from http_req (via body_view() /
-		// decoded_body()) -- no copy. A streamed request (RESTORE/bulk) still feeds
-		// append(), which parses the chunks into the objects deque (read via
-		// next_object()), exactly as on_body did incrementally on the legacy path.
-		if (request.mode != Request::Mode::FULL) {
+		// decoded_body()) -- no copy. A buffered streamed request (a whole-DB RESTORE
+		// under the buffer path) feeds append() once, which parses the chunks into the
+		// objects deque. When the body is streamed concurrently (body_reader set), the
+		// view's next_object() pulls + append()s each chunk itself, so nothing is fed
+		// here -- the body flows in bounded chunks while the view indexes them.
+		if (request.mode != Request::Mode::FULL && hreq.body_reader == nullptr) {
 			if (!hreq.body.empty()) {
 				request.append(hreq.body.data(), hreq.body.size());
 			}

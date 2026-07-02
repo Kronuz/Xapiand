@@ -62,4 +62,10 @@ public:
 	// worker thread, never the reactor -- the un-stallable model. (A cheap route like
 	// a health check could return false here to stay inline; the search views do not.)
 	bool should_offload(const http::Request& request) const override;
+
+	// A whole-database RESTORE (NDJSON / MsgPack, no doc id) streams its body: the
+	// library runs handle() on a worker and feeds the body through Request::body_reader
+	// with flow control, so the restore indexes objects as they arrive in O(buffer)
+	// memory -- a multi-gigabyte dump is never held whole. Everything else buffers.
+	bool wants_body_stream(const http::Request& request) override;
 };
