@@ -132,7 +132,6 @@ ENUM_CLASS(Encoding, int,
 
 
 class Request;
-class Response;
 // The endpoint views are now file-scope free functions (Leg 2 stage 3c-3), so a
 // request's selected view is a plain function pointer, not a member pointer.
 using view_function = void(*)(Request&);
@@ -141,32 +140,6 @@ using view_function = void(*)(Request&);
 // Request can carry a pointer to the ResponseWriter it is served through by the
 // http::HttpConnection that runs it (Leg 2 stage 3c).
 namespace http { class ResponseWriter; }
-
-
-class Response {
-public:
-	std::string head;
-	std::string headers;
-	std::string text;  // The text representation of the body (for logging purposes mostly) goes here
-
-	ct_type_t ct_type;
-	std::string blob;
-
-	std::atomic<http_status> status;
-	size_t size;
-
-	DeflateCompressData encoding_compressor;
-	DeflateCompressData::iterator it_compressor;
-
-	Response();
-
-	Response(const Response&) = delete;
-	Response(Response&&) = delete;
-	Response& operator=(const Response&) = delete;
-	Response& operator=(Response&&) = delete;
-
-	std::string to_text(bool decode);
-};
 
 
 ENUM_CLASS(RequestMode, int,
@@ -198,7 +171,17 @@ public:
 
 	Mode mode;
 
-	Response response;
+	// The response being built (formerly a separate Response object; flattened here so
+	// there is no parallel response class -- it is emitted through the library's
+	// ResponseWriter). `response_blob` is the serialized body, `response_ct_type` its
+	// content-type, `response_status` the status once emitted (0 = not yet), and the
+	// compressor is the scratch encoding_http_response() drives for a stored blob.
+	ct_type_t response_ct_type;
+	std::string response_blob;
+	std::atomic<http_status> response_status;
+	size_t response_size;
+	DeflateCompressData response_encoding_compressor;
+	DeflateCompressData::iterator response_it_compressor;
 
 	// The ResponseWriter this request is served through (set by SearchApplication::handle
 	// from the http::HttpConnection). The response path emits through it. (Leg 2 stage 3c.)
@@ -279,8 +262,4 @@ public:
 	bool next_object(MsgPack& obj);
 
 	MsgPack& decoded_body();
-
-	std::string head();
-
-	std::string to_text(bool decode);
 };

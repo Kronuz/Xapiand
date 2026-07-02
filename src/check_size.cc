@@ -321,7 +321,6 @@ CHECK_MAX_SIZE(SMALL, (Http))
 CHECK_MAX_SIZE(SMALL, (HttpServer))
 
 // server/http_client.h
-CHECK_MAX_SIZE(SMALL, (Response))
 CHECK_MAX_SIZE(SMALL, (Request))
 
 // server/remote_protocol.h

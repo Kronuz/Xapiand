@@ -134,7 +134,7 @@ static Encoding resolve_encoding(Request& request);
 // here because they are used above their definitions (e.g. prepare(), write_http_response).
 static void url_resolve(Request& request);
 static query_field_t query_field_maker(Request& request, int flags);
-static std::string encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
+static std::string encoding_http_response(Request& request, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end);
 
 // The DB-bound prep helpers lifted off HttpClient `this` (Leg 2 stage 3a). They
 // touch only their `request` argument plus the manager/DB singletons -- never any
@@ -303,8 +303,8 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 {
 	auto& writer = *request.response_writer;
 
-	assert(request.response.status == static_cast<http_status>(0));
-	request.response.status = status;
+	assert(request.response_status == static_cast<http_status>(0));
+	request.response_status = status;
 	request.ends = std::chrono::steady_clock::now();
 
 	writer.status(static_cast<int>(status));
@@ -338,7 +338,7 @@ emit_via_writer(Request& request, enum http_status status, const std::string& bo
 
 	writer.write(body);
 	writer.end();
-	request.response.size += body.size();
+	request.response_size += body.size();
 }
 
 
@@ -1943,28 +1943,28 @@ retrieve_document_view(Request& request)
 	} else {
 		// Locator has content type, return as a blob (an image for instance)
 		auto ct_type = locator.ct_type;
-		request.response.blob = locator.data();
+		request.response_blob = locator.data();
 #ifdef XAPIAND_DATA_STORAGE
 		if (locator.type == Locator::Type::stored || locator.type == Locator::Type::compressed_stored) {
-			if (request.response.blob.empty()) {
+			if (request.response_blob.empty()) {
 				auto stored = db_handler.storage_get_stored(locator, did);
-				request.response.blob = unserialise_string_at(STORED_BLOB, stored);
+				request.response_blob = unserialise_string_at(STORED_BLOB, stored);
 			}
 		}
 #endif
 
 		request.ready = std::chrono::steady_clock::now();
 
-		request.response.ct_type = ct_type;
+		request.response_ct_type = ct_type;
 		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(request.response, request.type_encoding, request.response.blob, false, true, true);
-			if (!encoded.empty() && encoded.size() <= request.response.blob.size()) {
+			auto encoded = encoding_http_response(request, request.type_encoding, request.response_blob, false, true, true);
+			if (!encoded.empty() && encoded.size() <= request.response_blob.size()) {
 				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, encoded, "", ct_type.to_string(), readable_encoding(request.type_encoding));
 			} else {
-				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string(), readable_encoding(Encoding::identity));
+				emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE | HTTP_BODY_RESPONSE, request.response_blob, "", ct_type.to_string(), readable_encoding(Encoding::identity));
 			}
 		} else {
-			emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response.blob, "", ct_type.to_string());
+			emit_response(request, HTTP_STATUS_OK, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_BODY_RESPONSE, request.response_blob, "", ct_type.to_string());
 		}
 	}
 
@@ -2792,29 +2792,8 @@ write_http_response(Request& request, enum http_status status, const MsgPack& ob
 
 	try {
 		auto result = serialize_response(obj, resolved_ct_type, request.indented, (int)status >= 400);
-		if (Logging::config.log_level >= LOG_DEBUG && request.response.size <= 1024 * 10) {
-			if (resolved_ct_type == json_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == x_json_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == yaml_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == x_yaml_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == msgpack_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == x_msgpack_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == html_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (resolved_ct_type == text_type) {
-				request.response.text.append(obj.to_string(DEFAULT_INDENTATION));
-			} else if (!obj.empty()) {
-				request.response.text.append("...");
-			}
-		}
 		if (request.type_encoding != Encoding::none) {
-			auto encoded = encoding_http_response(request.response, request.type_encoding, result.first, false, true, true);
+			auto encoded = encoding_http_response(request, request.type_encoding, result.first, false, true, true);
 			if (!encoded.empty() && encoded.size() <= result.first.size()) {
 				emit_response(request, status, HTTP_STATUS_RESPONSE | HTTP_HEADER_RESPONSE | HTTP_BODY_RESPONSE | HTTP_CONTENT_TYPE_RESPONSE | HTTP_CONTENT_ENCODING_RESPONSE, encoded, location, result.second, readable_encoding(request.type_encoding));
 			} else {
@@ -2892,7 +2871,7 @@ readable_encoding(Encoding e)
 
 
 static std::string
-encoding_http_response(Response& response, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
+encoding_http_response(Request& request, Encoding e, const std::string& response_obj, bool chunk, bool start, bool end)
 {
 	L_CALL("HttpClient::encoding_http_response({})", repr(response_obj));
 
@@ -2904,23 +2883,23 @@ encoding_http_response(Response& response, Encoding e, const std::string& respon
 		case Encoding::deflate: {
 			if (chunk) {
 				if (start) {
-					response.encoding_compressor.reset(nullptr, 0, gzip);
-					response.encoding_compressor.begin();
+					request.response_encoding_compressor.reset(nullptr, 0, gzip);
+					request.response_encoding_compressor.begin();
 				}
 				if (end) {
-					auto ret = response.encoding_compressor.next(response_obj.data(), response_obj.size(), DeflateCompressData::FINISH_COMPRESS);
+					auto ret = request.response_encoding_compressor.next(response_obj.data(), response_obj.size(), DeflateCompressData::FINISH_COMPRESS);
 					return ret;
 				}
-				auto ret = response.encoding_compressor.next(response_obj.data(), response_obj.size());
+				auto ret = request.response_encoding_compressor.next(response_obj.data(), response_obj.size());
 				return ret;
 			}
 
-			response.encoding_compressor.reset(response_obj.data(), response_obj.size(), gzip);
-			response.it_compressor = response.encoding_compressor.begin();
+			request.response_encoding_compressor.reset(response_obj.data(), response_obj.size(), gzip);
+			request.response_it_compressor = request.response_encoding_compressor.begin();
 			std::string encoding_respose;
-			while (response.it_compressor) {
-				encoding_respose.append(*response.it_compressor);
-				++response.it_compressor;
+			while (request.response_it_compressor) {
+				encoding_respose.append(*request.response_it_compressor);
+				++request.response_it_compressor;
 			}
 			return encoding_respose;
 		}
@@ -2947,6 +2926,8 @@ Request::Request() :
 	raw_peek(0),
 	raw_offset(0),
 	size(0),
+	response_status(static_cast<http_status>(0)),
+	response_size(0),
 	echo(false),
 	human(false),
 	comments(true),
@@ -3172,276 +3153,6 @@ Request::next_object(MsgPack& obj)
 }
 
 
-std::string
-Request::head()
-{
-	L_CALL("Request::head()");
-
-	auto parser_method = HTTP_PARSER_METHOD(&parser);
-
-	if (parser_method != method) {
-		return strings::format("{} <- {} {} HTTP/{}.{}",
-			http_method_str(method),
-			http_method_str(parser_method),
-			path, parser.http_major,
-			parser.http_minor);
-	}
-
-	return strings::format("{} {} HTTP/{}.{}",
-		http_method_str(parser_method),
-		path, parser.http_major,
-		parser.http_minor);
-}
-
-
-std::string
-Request::to_text(bool decode)
-{
-	L_CALL("Request::to_text({})", decode);
-
-	static constexpr auto no_col = NO_COLOR;
-	auto request_headers_color = no_col.c_str();
-	auto request_head_color = no_col.c_str();
-	auto request_text_color = no_col.c_str();
-
-	switch (method) {
-		case HTTP_OPTIONS:
-		case HTTP_INFO:
-		case HTTP_HEAD:
-		{
-			// rgb(144, 18, 254)
-			static constexpr auto _request_headers_color = rgba(100, 64, 131, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(100, 64, 131);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(100, 64, 131);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_GET:
-		case HTTP_SEARCH:
-		case HTTP_COUNT:
-		case HTTP_DUMP:
-		{
-			// rgb(101, 177, 251)
-			static constexpr auto _request_headers_color = rgba(34, 113, 191, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(34, 113, 191);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(34, 113, 191);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_POST:
-		case HTTP_RESTORE:
-		case HTTP_PATCH:
-		case HTTP_UPDATE:
-		case HTTP_UPSERT:
-		case HTTP_PUT:
-		{
-			// rgb(250, 153, 63)
-			static constexpr auto _request_headers_color = rgba(158, 90, 28, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(158, 90, 28);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(158, 90, 28);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_DELETE:
-		{
-			// rgb(250, 104, 63)
-			static constexpr auto _request_headers_color = rgba(158, 56, 28, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(158, 56, 28);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(158, 56, 28);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_COMMIT:
-		{
-			// rgb(88, 226, 194)
-			static constexpr auto _request_headers_color = rgba(51, 136, 116, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(51, 136, 116);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(51, 136, 116);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		case HTTP_OPEN:
-		case HTTP_CLOSE:
-		{
-			// rgb(250, 63, 125)
-			static constexpr auto _request_headers_color = rgba(158, 28, 71, 0.6);
-			request_headers_color = _request_headers_color.c_str();
-			static constexpr auto _request_head_color = brgb(158, 28, 71);
-			request_head_color = _request_head_color.c_str();
-			static constexpr auto _request_text_color = rgb(158, 28, 71);
-			request_text_color = _request_text_color.c_str();
-			break;
-		}
-		default:
-			break;
-	};
-
-	auto request_text = request_head_color + head() + "\n" + request_headers_color + headers + request_text_color;
-	if (!raw.empty()) {
-		if (!decode) {
-			if (raw.size() > 1024 * 10) {
-				request_text += "<body " + strings::from_bytes(raw.size()) + ">";
-			} else {
-				request_text += "<body " + repr(raw, true, true, 500) + ">";
-			}
-		} else if (Logging::config.log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
-			// From [https://www.iterm2.com/documentation-images.html]
-			std::string b64_name = cppcodec::base64_rfc4648::encode("");
-			std::string b64_data = cppcodec::base64_rfc4648::encode(raw);
-			request_text += strings::format("\033]1337;File=name={};inline=1;size={};width=20%:",
-				b64_name,
-				b64_data.size());
-			request_text += b64_data;
-			request_text += '\a';
-		} else {
-			if (raw.size() > 1024 * 10) {
-				request_text += "<body " + strings::from_bytes(raw.size()) + ">";
-			} else {
-				try {
-					auto& decoded = decoded_body();
-					if (
-						ct_type == json_type ||
-						ct_type == x_json_type ||
-						ct_type == yaml_type ||
-						ct_type == x_yaml_type ||
-						ct_type == msgpack_type ||
-						ct_type == x_msgpack_type
-					) {
-						request_text += decoded.to_string(DEFAULT_INDENTATION);
-					} else {
-						request_text += "<body " + repr(raw, true, true, 500) + ">";
-					}
-				} catch (...) {
-					request_text += "<body " + repr(raw, true, true, 500) + ">";
-				}
-			}
-		}
-	} else if (!text.empty()) {
-		if (!decode) {
-			if (text.size() > 1024 * 10) {
-				request_text += "<body " + strings::from_bytes(text.size()) + ">";
-			} else {
-				request_text += "<body " + repr(text, true, true, 500) + ">";
-			}
-		} else if (text.size() > 1024 * 10) {
-			request_text += "<body " + strings::from_bytes(text.size()) + ">";
-		} else {
-			request_text += text;
-		}
-	} else if (size) {
-		request_text += "<body " + strings::from_bytes(size) + ">";
-	}
-
-	return request_text;
-}
-
-
-Response::Response() :
-	status(static_cast<http_status>(0)),
-	size(0)
-{
-}
-
-
-std::string
-Response::to_text(bool decode)
-{
-	L_CALL("Response::to_text({})", decode);
-
-	static constexpr auto no_col = NO_COLOR;
-	auto response_headers_color = no_col.c_str();
-	auto response_head_color = no_col.c_str();
-	auto response_text_color = no_col.c_str();
-
-	if ((int)status >= 200 && (int)status <= 299) {
-		static constexpr auto _response_headers_color = rgba(68, 136, 68, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(68, 136, 68);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_text_color = rgb(68, 136, 68);
-		response_text_color = _response_text_color.c_str();
-	} else if ((int)status >= 300 && (int)status <= 399) {
-		static constexpr auto _response_headers_color = rgba(68, 136, 120, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(68, 136, 120);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_text_color = rgb(68, 136, 120);
-		response_text_color = _response_text_color.c_str();
-	} else if ((int)status == 404) {
-		static constexpr auto _response_headers_color = rgba(116, 100, 77, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(116, 100, 77);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_text_color = rgb(116, 100, 77);
-		response_text_color = _response_text_color.c_str();
-	} else if ((int)status >= 400 && (int)status <= 499) {
-		static constexpr auto _response_headers_color = rgba(183, 70, 17, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(183, 70, 17);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_text_color = rgb(183, 70, 17);
-		response_text_color = _response_text_color.c_str();
-	} else if ((int)status >= 500 && (int)status <= 599) {
-		static constexpr auto _response_headers_color = rgba(190, 30, 10, 0.6);
-		response_headers_color = _response_headers_color.c_str();
-		static constexpr auto _response_head_color = brgb(190, 30, 10);
-		response_head_color = _response_head_color.c_str();
-		static constexpr auto _response_text_color = rgb(190, 30, 10);
-		response_text_color = _response_text_color.c_str();
-	}
-
-	auto response_text = response_head_color + head + "\n" + response_headers_color + headers + response_text_color;
-	if (!blob.empty()) {
-		if (!decode) {
-			if (blob.size() > 1024 * 10) {
-				response_text += "<blob " + strings::from_bytes(blob.size()) + ">";
-			} else {
-				response_text += "<blob " + repr(blob, true, true, 500) + ">";
-			}
-		} else if (Logging::config.log_level > LOG_DEBUG + 1 && can_preview(ct_type)) {
-			// From [https://www.iterm2.com/documentation-images.html]
-			std::string b64_name = cppcodec::base64_rfc4648::encode("");
-			std::string b64_data = cppcodec::base64_rfc4648::encode(blob);
-			response_text += strings::format("\033]1337;File=name={};inline=1;size={};width=20%:",
-				b64_name,
-				b64_data.size());
-			response_text += b64_data;
-			response_text += '\a';
-		} else {
-			if (blob.size() > 1024 * 10) {
-				response_text += "<blob " + strings::from_bytes(blob.size()) + ">";
-			} else {
-				response_text += "<blob " + strings::from_bytes(blob.size()) + ">";
-			}
-		}
-	} else if (!text.empty()) {
-		if (!decode) {
-			if (size > 1024 * 10) {
-				response_text += "<body " + strings::from_bytes(size) + ">";
-			} else {
-				response_text += "<body " + repr(text, true, true, 500) + ">";
-			}
-		} else if (size > 1024 * 10) {
-			response_text += "<body " + strings::from_bytes(size) + ">";
-		} else {
-			response_text += text;
-		}
-	} else if (size) {
-		response_text += "<body " + strings::from_bytes(size) + ">";
-	}
-
-	return response_text;
-}
 
 
 // ---------------------------------------------------------------------------
@@ -3538,7 +3249,7 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 		return 0;
 	});
 	if (http_errors.error_code != HTTP_STATUS_OK) {
-		if (request.response.status == static_cast<http_status>(0)) {
+		if (request.response_status == static_cast<http_status>(0)) {
 			write_status_response(request, http_errors.error_code, http_errors.error);
 		} else {
 			// A response was already emitted before the error; the writer is one-shot,
