@@ -192,7 +192,16 @@ public:
 
 	enum http_method method;
 	std::string path;
-	struct http_parser parser;
+
+	// HTTP facts derived from the library request (formerly read off an embedded
+	// http_parser). keep_alive already folds in the version + Connection header
+	// (http_should_keep_alive); has_content_length / content_length drive the body
+	// mode + buffer reserve.
+	bool keep_alive = true;
+	int http_major = 1;
+	int http_minor = 1;
+	bool has_content_length = false;
+	size_t content_length = 0;
 
 	std::string headers;
 	std::string text;  // The text representation of the body (for logging purposes mostly) goes here

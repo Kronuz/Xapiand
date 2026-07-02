@@ -364,20 +364,6 @@ emit_response(Request& request, enum http_status status, int mode, const std::st
 // HTTP parser callbacks.
 
 
-inline std::string readable_http_parser_flags(http_parser* parser) {
-	std::vector<std::string> values;
-	if ((parser->flags & F_CHUNKED) == F_CHUNKED) values.push_back("F_CHUNKED");
-	if ((parser->flags & F_CONNECTION_KEEP_ALIVE) == F_CONNECTION_KEEP_ALIVE) values.push_back("F_CONNECTION_KEEP_ALIVE");
-	if ((parser->flags & F_CONNECTION_CLOSE) == F_CONNECTION_CLOSE) values.push_back("F_CONNECTION_CLOSE");
-	if ((parser->flags & F_CONNECTION_UPGRADE) == F_CONNECTION_UPGRADE) values.push_back("F_CONNECTION_UPGRADE");
-	if ((parser->flags & F_TRAILING) == F_TRAILING) values.push_back("F_TRAILING");
-	if ((parser->flags & F_UPGRADE) == F_UPGRADE) values.push_back("F_UPGRADE");
-	if ((parser->flags & F_SKIPBODY) == F_SKIPBODY) values.push_back("F_SKIPBODY");
-	if ((parser->flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) values.push_back("F_CONTENTLENGTH");
-	return strings::join(values, "|");
-}
-
-
 
 
 
@@ -475,7 +461,6 @@ process_header(Request& request, std::string_view header_name, std::string_view 
 					#undef OPTION
 					default:
 						L_HTTP_PROTO("Invalid HTTP method override: {}", repr(header_value));
-						request.parser.http_errno = HPE_INVALID_METHOD;
 						break;
 				}
 				break;
@@ -617,15 +602,9 @@ dispatch_request(Request& request)
 
 	request.received = std::chrono::steady_clock::now();
 
-	if (request.parser.http_major == 0 || (request.parser.http_major == 1 && request.parser.http_minor == 0)) {
-		request.closing = true;
-	}
-	if ((request.parser.flags & F_CONNECTION_KEEP_ALIVE) == F_CONNECTION_KEEP_ALIVE) {
-		request.closing = false;
-	}
-	if ((request.parser.flags & F_CONNECTION_CLOSE) == F_CONNECTION_CLOSE) {
-		request.closing = true;
-	}
+	// keep_alive already folds in the HTTP version + the Connection header
+	// (http_should_keep_alive), so it is the single source for whether to close.
+	request.closing = !request.keep_alive;
 
 	if (request.accept_set.empty()) {
 		if (!request.ct_type.empty()) {
@@ -678,15 +657,13 @@ dispatch_request(Request& request)
 	if (method_token(request.method).empty()) {
 		L_HTTP_PROTO("Invalid HTTP method: {}", enum_name(request.method));
 		write_status_response(request, HTTP_STATUS_METHOD_NOT_ALLOWED);
-		request.parser.http_errno = HPE_INVALID_METHOD;
 		return 1;
 	}
 
 	// A body-carrying RESTORE of a whole database streams its objects (NDJSON / MsgPack)
 	// rather than buffering; pick the stream mode before the body is fed. A single
 	// document RESTORE (with an id) buffers like any other write.
-	if (request.method == HTTP_RESTORE && id.empty() &&
-		(request.parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH) {
+	if (request.method == HTTP_RESTORE && id.empty() && request.has_content_length) {
 		if (request.ct_type == ndjson_type || request.ct_type == x_ndjson_type) {
 			request.mode = Request::Mode::STREAM_NDJSON;
 		} else if (request.ct_type == msgpack_type || request.ct_type == x_msgpack_type) {
@@ -710,11 +687,11 @@ dispatch_request(Request& request)
 
 	// (Expect: 100-continue is a transport concern handled by http::HttpConnection.)
 
-	if ((request.parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH && request.parser.content_length) {
+	if (request.has_content_length && request.content_length) {
 		if (request.mode == Request::Mode::STREAM_MSGPACK) {
-			request.unpacker.reserve_buffer(request.parser.content_length);
+			request.unpacker.reserve_buffer(request.content_length);
 		} else {
-			request.raw.reserve(request.parser.content_length);
+			request.raw.reserve(request.content_length);
 		}
 	}
 
@@ -2776,8 +2753,6 @@ Request::Request() :
 	closing(false),
 	begins(std::chrono::steady_clock::now())
 {
-	parser.data = nullptr;
-	http_parser_init(&parser, HTTP_REQUEST);
 }
 
 
@@ -2901,14 +2876,14 @@ Request::append(const char* at, size_t length)
 			break;
 
 		case Mode::STREAM:
-			assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+			assert(has_content_length);
 
 			raw.append(std::string_view(at, length));
 			signal_pending = true;
 			break;
 
 		case Mode::STREAM_NDJSON:
-			assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+			assert(has_content_length);
 
 			if (length) {
 				raw.append(std::string_view(at, length));
@@ -2951,7 +2926,7 @@ Request::append(const char* at, size_t length)
 			break;
 
 		case Mode::STREAM_MSGPACK:
-			assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+			assert(has_content_length);
 
 			if (length) {
 				unpacker.reserve_buffer(length);
@@ -2981,7 +2956,7 @@ Request::next_object(MsgPack& obj)
 {
 	L_CALL("Request::next_object(<&obj>)");
 
-	assert((parser.flags & F_CONTENTLENGTH) == F_CONTENTLENGTH);
+	assert(has_content_length);
 	assert(mode == Mode::STREAM_MSGPACK || mode == Mode::STREAM_NDJSON);
 
 	std::lock_guard<std::mutex> lk(objects_mtx);
@@ -3042,24 +3017,29 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 	request.http_req = &hreq;                 // the source of truth for every HTTP fact
 	request.response_writer = &response;       // the response path emits through the library writer
 
-	// Rebuild the parser fields dispatch_request() reads (keep-alive/close, version).
-	request.parser.http_major = hreq.http_major;
-	request.parser.http_minor = hreq.http_minor;
-	if (hreq.keep_alive) {
-		request.parser.flags |= F_CONNECTION_KEEP_ALIVE;
-	} else {
-		request.parser.flags |= F_CONNECTION_CLOSE;
-	}
+	// HTTP facts from the library request (keep-alive/close, version).
+	request.http_major = hreq.http_major;
+	request.http_minor = hreq.http_minor;
+	request.keep_alive = hreq.keep_alive;
 
 	request.method = method_from_string(hreq.method);
 	request.path = hreq.target;          // url_resolve() splits path + query out of this
 
-	// Mirror the parser's F_CONTENTLENGTH so dispatch_request() picks the same body mode
-	// the legacy parser would (a RESTORE/bulk with an NDJSON/MsgPack content-type streams,
-	// and streams gracefully even when the body is empty). A request carrying a body
-	// advertises it with a Content-Length and/or a Content-Type.
+	// A request carrying a body advertises it with a Content-Length and/or a
+	// Content-Type; mirror that so dispatch_request() picks the same body mode the
+	// legacy parser would (a RESTORE/bulk with an NDJSON/MsgPack content-type streams,
+	// and streams gracefully even when the body is empty). content_length feeds the
+	// buffer reserve.
 	if (!hreq.header("Content-Length").empty() || !hreq.content_type().empty() || !hreq.body.empty()) {
-		request.parser.flags |= F_CONTENTLENGTH;
+		request.has_content_length = true;
+	}
+	{
+		auto cl = hreq.header("Content-Length");
+		if (!cl.empty()) {
+			request.content_length = static_cast<size_t>(std::strtoull(std::string(cl).c_str(), nullptr, 10));
+		} else {
+			request.content_length = hreq.body.size();
+		}
 	}
 
 	// Replay the header processing the parser callback does (accept / accept-encoding /
