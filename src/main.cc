@@ -201,6 +201,13 @@ public:
 static signals_t<NSIG> signals;
 
 
+// Xapiand's runtime info-hook bitmask (declared extern in logger_fwd.h). Defined here,
+// the TU that toggles it. It was undefined in the tree -- LTO dead-code-eliminated the
+// atomic (its only effect is local to this file), which masked the missing definition;
+// a non-LTO link surfaces it as an undefined symbol.
+std::atomic<uint64_t> logger_info_hook{0};
+
+
 void toggle_hooks(int /*unused*/) {
 	if (logger_info_hook != 0u) {
 		logger_info_hook = 0;
