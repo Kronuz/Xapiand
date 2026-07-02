@@ -95,7 +95,7 @@
 #include "server/replication_protocol_server.h"
 #include "buffer.h"
 #include "server/discovery.h"
-#include "server/http_client.h"
+#include "server/search_request.h"
 #include "server/raft.h"
 #include "server/remote_protocol.h"
 #include "server/replication_protocol.h"
@@ -312,7 +312,7 @@ CHECK_MAX_SIZE(SMALL, (BaseClient<DummyClient>))
 // server/buffer.h
 CHECK_MAX_SIZE(SMALL, (Buffer))
 
-// server/http_client.h
+// server/search_request.h
 CHECK_MAX_SIZE(SMALL, (Request))
 
 // server/remote_protocol.h

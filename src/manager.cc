@@ -77,7 +77,6 @@
 #include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
 #include "server/search_application.h"           // for SearchApplication (the HttpHandler)
 #include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
-#include "server/http_client.h"                  // for HttpClient
 #include "storage.h"                             // for Storage
 #include "xapiand_fsyncher.h"                    // for fsyncher (moved out of storage.h)
 #include "strict_stox.hh"                        // for strict_stoll

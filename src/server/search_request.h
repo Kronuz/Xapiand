@@ -36,7 +36,6 @@
 #include <vector>                           // for std::vector
 
 #include "atomic_shared_ptr.h"              // for atomic_shared_ptr
-#include "base_client.h"                    // for BaseClient
 #include "compressor_deflate.h"             // for DeflateCompressData
 #include "database/data.h"                  // for ct_type_t, accept_set_t
 #include "endpoint.h"                       // for Endpoints

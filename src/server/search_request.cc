@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-#include "http_client.h"
+#include "search_request.h"
 
 #include "config.h"                         // for XAPIAND_CLUSTERING, XAPIAND_LUA, XAPIAND_DATABASE_WAL
 
@@ -527,7 +527,7 @@ route_key(enum http_method method, std::string_view id, std::string_view cmd, bo
 
 // The declarative route table: (method, URL-kind) -> view, backed by the generic
 // radix router in Kronuz/http (http::MethodRouter). Built once, on first use. This is
-// what HttpClient::prepare()'s hand-rolled method + URL switch collapses into.
+// what prepare()'s hand-rolled method + URL switch collapses into.
 //
 // A verb that ignores the metadata axis (search/count/info/head/commit/dump/restore/
 // check/flush/quit/wal all key only on whether an id is present) registers its no-id
@@ -590,7 +590,7 @@ search_routes()
 
 
 // The request dispatch for the http::HttpConnection path (Leg 2 stage 3c): the setup
-// HttpClient::prepare() does (keep-alive/close, content negotiation, encoding), then a
+// prepare() does (keep-alive/close, content negotiation, encoding), then a
 // declarative route-table lookup that selects the view (replacing prepare()'s method +
 // URL switch, stage 3c-6). A few trivial verbs (OPTIONS, OPEN/CLOSE) are answered
 // inline; Expect: 100-continue is left to the transport. Returns non-zero when there
@@ -794,7 +794,7 @@ node_obj()
 static void
 metrics_view(Request& request)
 {
-	L_CALL("HttpClient::metrics_view()");
+	L_CALL("metrics_view()");
 
 	auto query_field = query_field_maker(request, 0);
 	resolve_index_endpoints(request, query_field);
@@ -809,7 +809,7 @@ metrics_view(Request& request)
 static void
 document_exists_view(Request& request)
 {
-	L_CALL("HttpClient::document_exists_view()");
+	L_CALL("document_exists_view()");
 
 	auto query_field = query_field_maker(request, 0);
 	resolve_index_endpoints(request, query_field);
@@ -829,7 +829,7 @@ document_exists_view(Request& request)
 static void
 delete_document_view(Request& request)
 {
-	L_CALL("HttpClient::delete_document_view()");
+	L_CALL("delete_document_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_WRITABLE | QUERY_FIELD_COMMIT);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -862,7 +862,7 @@ delete_document_view(Request& request)
 static void
 write_document_view(Request& request)
 {
-	L_CALL("HttpClient::write_document_view()");
+	L_CALL("write_document_view()");
 
 	auto& decoded_body = request.decoded_body();
 
@@ -951,7 +951,7 @@ write_document_view(Request& request)
 static void
 update_document_view(Request& request)
 {
-	L_CALL("HttpClient::update_document_view()");
+	L_CALL("update_document_view()");
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1030,7 +1030,7 @@ update_document_view(Request& request)
 static void
 retrieve_metadata_view(Request& request)
 {
-	L_CALL("HttpClient::retrieve_metadata_view()");
+	L_CALL("retrieve_metadata_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -1094,7 +1094,7 @@ retrieve_metadata_view(Request& request)
 static void
 write_metadata_view(Request& request)
 {
-	L_CALL("HttpClient::write_metadata_view()");
+	L_CALL("write_metadata_view()");
 
 	auto& decoded_body = request.decoded_body();
 
@@ -1147,7 +1147,7 @@ write_metadata_view(Request& request)
 static void
 update_metadata_view(Request& request)
 {
-	L_CALL("HttpClient::update_metadata_view()");
+	L_CALL("update_metadata_view()");
 
 	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
@@ -1156,7 +1156,7 @@ update_metadata_view(Request& request)
 static void
 delete_metadata_view(Request& request)
 {
-	L_CALL("HttpClient::delete_metadata_view()");
+	L_CALL("delete_metadata_view()");
 
 	write_status_response(request, HTTP_STATUS_NOT_IMPLEMENTED);
 }
@@ -1165,7 +1165,7 @@ delete_metadata_view(Request& request)
 static void
 info_view(Request& request)
 {
-	L_CALL("HttpClient::info_view()");
+	L_CALL("info_view()");
 
 	MsgPack response_obj;
 
@@ -1220,7 +1220,7 @@ info_view(Request& request)
 static void
 database_exists_view(Request& request)
 {
-	L_CALL("HttpClient::database_exists_view()");
+	L_CALL("database_exists_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -1383,7 +1383,7 @@ retrieve_database(Request& request, const query_field_t& query_field, bool is_ro
 static void
 retrieve_database_view(Request& request)
 {
-	L_CALL("HttpClient::retrieve_database_view()");
+	L_CALL("retrieve_database_view()");
 
 	assert(request.path_parser.get_id().empty());
 
@@ -1421,7 +1421,7 @@ retrieve_database_view(Request& request)
 static void
 write_database_view(Request& request)
 {
-	L_CALL("HttpClient::write_database_view()");
+	L_CALL("write_database_view()");
 
 	assert(request.path_parser.get_id().empty());
 
@@ -1479,7 +1479,7 @@ write_database_view(Request& request)
 static void
 delete_database_view(Request& request)
 {
-	L_CALL("HttpClient::delete_database_view()");
+	L_CALL("delete_database_view()");
 
 	// Deleting a database needs a path to name it; without one there is nothing to
 	// address (prepare() answered this 405 before ever selecting the view).
@@ -1541,7 +1541,7 @@ quit_view(Request& request)
 static void
 commit_database_view(Request& request)
 {
-	L_CALL("HttpClient::commit_database_view()");
+	L_CALL("commit_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	resolve_index_endpoints(request, query_field);
@@ -1571,7 +1571,7 @@ commit_database_view(Request& request)
 static void
 dump_document_view(Request& request)
 {
-	L_CALL("HttpClient::dump_document_view()");
+	L_CALL("dump_document_view()");
 
 	auto query_field = query_field_maker(request, 0);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -1606,7 +1606,7 @@ dump_document_view(Request& request)
 static void
 dump_database_view(Request& request)
 {
-	L_CALL("HttpClient::dump_database_view()");
+	L_CALL("dump_database_view()");
 
 	auto query_field = query_field_maker(request, 0);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -1645,7 +1645,7 @@ dump_database_view(Request& request)
 static void
 restore_database_view(Request& request)
 {
-	L_CALL("HttpClient::restore_database_view()");
+	L_CALL("restore_database_view()");
 
 	auto indexer = request.indexer.load();
 
@@ -1727,7 +1727,7 @@ restore_database_view(Request& request)
 static void
 wal_view(Request& request)
 {
-	L_CALL("HttpClient::wal_view()");
+	L_CALL("wal_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -1762,7 +1762,7 @@ wal_view(Request& request)
 static void
 check_database_view(Request& request)
 {
-	L_CALL("HttpClient::check_database_view()");
+	L_CALL("check_database_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_PRIMARY);
 	if (resolve_index_endpoints(request, query_field) > 1) {
@@ -1794,7 +1794,7 @@ check_database_view(Request& request)
 static void
 retrieve_document_view(Request& request)
 {
-	L_CALL("HttpClient::retrieve_document_view()");
+	L_CALL("retrieve_document_view()");
 
 	auto id = request.path_parser.get_id();
 
@@ -1906,7 +1906,7 @@ retrieve_document_view(Request& request)
 static void
 search_view(Request& request)
 {
-	L_CALL("HttpClient::search_view()");
+	L_CALL("search_view()");
 
 	std::string selector_string_holder;
 
@@ -2059,7 +2059,7 @@ search_view(Request& request)
 static void
 count_view(Request& request)
 {
-	L_CALL("HttpClient::count_view()");
+	L_CALL("count_view()");
 
 	auto query_field = query_field_maker(request, QUERY_FIELD_VOLATILE | QUERY_FIELD_SEARCH);
 	resolve_index_endpoints(request, query_field);
@@ -2127,7 +2127,7 @@ write_status_response(Request& request, enum http_status status, const std::stri
 static void
 url_resolve(Request& request)
 {
-	L_CALL("HttpClient::url_resolve(request)");
+	L_CALL("url_resolve(request)");
 
 	struct http_parser_url u;
 	std::string b = repr(request.path, true, 0);
@@ -2309,7 +2309,7 @@ expand_paths(Request& request)
 static query_field_t
 query_field_maker(Request& request, int flags)
 {
-	L_CALL("HttpClient::query_field_maker(<request>, <flags>)");
+	L_CALL("query_field_maker(<request>, <flags>)");
 
 	query_field_t query_field;
 
@@ -2541,7 +2541,7 @@ query_field_maker(Request& request, int flags)
 static const ct_type_t&
 resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types)
 {
-	L_CALL("HttpClient::resolve_ct_type(<request>, <ct_types>)");
+	L_CALL("resolve_ct_type(<request>, <ct_types>)");
 
 	const auto& acceptable_type = get_acceptable_type(request, ct_types);
 	auto accepted_ct_type = is_acceptable_type(acceptable_type, ct_types);
@@ -2556,7 +2556,7 @@ resolve_ct_type(Request& request, const std::vector<const ct_type_t*>& ct_types)
 static const ct_type_t&
 resolve_ct_type(Request& request, const ct_type_t& ct_type)
 {
-	L_CALL("HttpClient::resolve_ct_type(<request>, {})", repr(ct_type.to_string()));
+	L_CALL("resolve_ct_type(<request>, {})", repr(ct_type.to_string()));
 
 	std::vector<const ct_type_t*> ct_types;
 	if (!ct_type.empty()) {
@@ -2586,7 +2586,7 @@ resolve_ct_type(Request& request, const ct_type_t& ct_type)
 static const ct_type_t*
 is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t* ct_type)
 {
-	L_CALL("HttpClient::is_acceptable_type({}, {})", repr(ct_type_pattern.to_string()), repr(ct_type->to_string()));
+	L_CALL("is_acceptable_type({}, {})", repr(ct_type_pattern.to_string()), repr(ct_type->to_string()));
 
 	bool type_ok = false, subtype_ok = false;
 	if (ct_type_pattern.first == "*") {
@@ -2609,7 +2609,7 @@ is_acceptable_type(const ct_type_t& ct_type_pattern, const ct_type_t* ct_type)
 static const ct_type_t*
 is_acceptable_type(const ct_type_t& ct_type_pattern, const std::vector<const ct_type_t*>& ct_types)
 {
-	L_CALL("HttpClient::is_acceptable_type(({}, <ct_types>)", repr(ct_type_pattern.to_string()));
+	L_CALL("is_acceptable_type(({}, <ct_types>)", repr(ct_type_pattern.to_string()));
 
 	for (auto ct_type : ct_types) {
 		if (is_acceptable_type(ct_type_pattern, ct_type) != nullptr) {
@@ -2624,7 +2624,7 @@ template <typename T>
 static const ct_type_t&
 get_acceptable_type(Request& request, const T& ct)
 {
-	L_CALL("HttpClient::get_acceptable_type()");
+	L_CALL("get_acceptable_type()");
 
 	if (request.accept_set.empty()) {
 		return no_type;
@@ -3080,7 +3080,7 @@ SearchApplication::handle(const http::Request& hreq, http::ResponseWriter& respo
 // handle() throws without having answered (the library owns only the generic 500
 // fallback). Rethrow to inspect the type; catch_http_errors maps Xapian / ClientError /
 // Datetime / Cartesian to the right status, then write_status_response emits it -- the
-// same mapping HttpClient::handled_errors did on the legacy path.
+// same mapping handled_errors did on the legacy path.
 void
 SearchApplication::on_error(std::exception_ptr error, const http::Request& hreq, http::ResponseWriter& response)
 {
