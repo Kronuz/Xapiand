@@ -26,17 +26,15 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <deque>                            // for std::deque
+#include <atomic>                           // for std::atomic_char
 #include <memory>                           // for shared_ptr
-#include <mutex>                            // for std::mutex
 #include <string>                           // for std::string
+#include <utility>                          // for std::pair
 #include <vector>                           // for std::vector
 
-#include "base_client.h"                    // for BaseClient
 #include "endpoint.h"                       // for Endpoint
 #include "enum.h"                           // for ENUM_CLASS
-#include "threadpool.hh"                    // for Task
-#include "xapian.h"
+#include "xapian.h"                         // for Xapian::rev
 
 
 // #define SAVE_LAST_MESSAGES
@@ -48,14 +46,6 @@
 
 
 #define FILE_FOLLOWS '\xfd'
-
-
-ENUM_CLASS(ReplicationState, int,
-	INIT_REPLICATION_CLIENT,
-	INIT_REPLICATION_SERVER,
-	REPLICATION_CLIENT,
-	REPLICATION_SERVER
-)
 
 
 ENUM_CLASS(ReplicationMessageType, int,
@@ -80,49 +70,54 @@ ENUM_CLASS(ReplicationReplyType, int,
 )
 
 
+class Logging;
 class Shard;
 class DatabaseWAL;
 class lock_shard;
 
 
-// A single instance of a non-blocking Xapiand replication protocol handler
-class ReplicationProtocolClient : public BaseClient<ReplicationProtocolClient> {
-	friend BaseClient<ReplicationProtocolClient>;
-
-	mutable std::mutex runner_mutex;
-
-	std::atomic<ReplicationState> state;
-
+// The per-connection Xapiand replication protocol handler. Transport-agnostic: it consumes
+// requests via replication_server()/replication_client() (the blocking work) and its handlers
+// write framed replies + stream whole DB files DIRECTLY to the socket fd (send_file streams in
+// bounded memory via flume, blocking the reactor pool thread it runs on -- the coroutine is
+// suspended awaiting the offload, so nothing races the socket). No libev / Worker / thread
+// pool. Two roles, driven by the coroutine (replication_protocol_asio.h): an accepted inbound
+// connection (server: greet, answer MSG_GET_CHANGESETS/MSG_SET_REVISION) and an outbound
+// connection (client: fetch changesets from a primary).
+class ReplicationProtocolClient {
 #ifdef SAVE_LAST_MESSAGES
 	std::atomic_char last_message_received;
 	std::atomic_char last_message_sent;
 #endif
 
-	int file_descriptor;
-	char file_message_type;
+	// FILE_FOLLOWS receive bookkeeping: temp files the coroutine streams an incoming file
+	// into, then dispatches with the temp path as the message body.
 	std::string temp_directory;
 	std::string temp_directory_template;
 	std::string temp_file_template;
 	std::vector<std::string> temp_files;
 
-	// Buffers that are pending write
-	std::string buffer;
-	std::deque<Buffer> messages;
 	bool cluster_database;
 
-	ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
+	// The socket fd the handlers write replies/files to (set by the coroutine) + the
+	// "close this connection" flag (the handlers' detach()/destroy()/close() set it).
+	int sock_fd_;
+	bool closing_;
 
-	size_t pending_messages() const;
+	// Running count of bytes written on this connection (the classic BaseClient counter),
+	// read by the handlers for the "SENDING ...: N bytes" progress logs.
+	std::size_t total_sent_bytes;
 
-	bool is_idle() const;
+	void send_message(char type_as_char, const std::string& message);
+	void send_file(char type_as_char, int fd);
 
-	void shutdown_impl(long long asap, long long now) override;
+	void destroy() noexcept { closing_ = true; }
+	void detach() noexcept { closing_ = true; }
+	void close() noexcept { closing_ = true; }
 
-	ssize_t on_read(const char *buf, ssize_t received);
-	void on_read_file(const char *buf, ssize_t received);
-	void on_read_file_done();
-
-	friend Worker;
+	// No copy constructor
+	ReplicationProtocolClient(const ReplicationProtocolClient&) = delete;
+	ReplicationProtocolClient& operator=(const ReplicationProtocolClient&) = delete;
 
 public:
 	std::unique_ptr<lock_shard> lk_shard_ptr;
@@ -140,10 +135,13 @@ public:
 	size_t changesets;
 	std::shared_ptr<Logging> log;
 
+	explicit ReplicationProtocolClient(bool cluster_database_ = false);
 	~ReplicationProtocolClient() noexcept;
 
 	void reset();
 
+	// Outbound setup: lock the destination shard + BLOCKING connect to the primary. Offloaded
+	// to the reactor pool by the outbound coroutine; on success sock_fd_ holds the connection.
 	bool init_replication_protocol(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
 
 	void send_message(ReplicationMessageType type, const std::string& message = "");
@@ -166,16 +164,19 @@ public:
 	void reply_changeset(const std::string& message);
 	void reply_done(const std::string& message);
 
-	char get_message(std::string &result, char max_type);
-	void send_message(char type_as_char, const std::string& message);
-	void send_file(char type_as_char, int fd);
+	// The server greeting (REPLY_WELCOME) sent as soon as an inbound connection opens.
+	void greeting() { send_message(ReplicationReplyType::REPLY_WELCOME); }
 
-	bool init_replication(int sock_) noexcept;
-	bool init_replication(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+	// --- the coroutine's hooks ---
+	void set_socket_fd(int fd) noexcept { sock_fd_ = fd; }
+	int socket_fd() const noexcept { return sock_fd_; }
+	bool closing() const noexcept { return closing_; }
 
-	void operator()();
+	// FILE_FOLLOWS receive: create + track a temp file, return {fd, path}. The coroutine
+	// streams the incoming file into fd, then dispatches with the temp path. {-1,""} on error.
+	std::pair<int, std::string> new_temp_file();
 
-	std::string __repr__() const override;
+	std::string __repr__() const;
 };
 
 #endif  /* XAPIAND_CLUSTERING */

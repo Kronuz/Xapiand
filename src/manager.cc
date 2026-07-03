@@ -76,6 +76,7 @@
 #include "serialise_list.h"                      // for StringList
 #include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
 #include "server/remote_protocol_asio.h"         // remote::RemoteProtocolAsioService (the Asio transport)
+#include "server/replication_protocol_asio.h"    // replication::ReplicationProtocolAsioService (the Asio transport)
 #include "server/search_application.h"           // for SearchApplication (the HttpHandler)
 #include "compressor_deflate.h"                  // for DeflateCompressData (the deflate coding)
 #include "storage.h"                             // for Storage
@@ -86,9 +87,6 @@
 #include "traceback.h"                           // for traceback::{callstacks_snapshot, dump_callstacks}
 
 #ifdef XAPIAND_CLUSTERING
-#include "server/replication_protocol.h"         // for ReplicationProtocol
-#include "server/replication_protocol_client.h"  // for ReplicationProtocolClient
-#include "server/replication_protocol_server.h"  // for ReplicationProtocolServer
 #include "server/discovery.h"                    // for Discovery
 #endif
 
@@ -181,8 +179,6 @@ XapiandManager::XapiandManager()
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 #ifdef XAPIAND_CLUSTERING
-	  replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
-	  replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
 	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
@@ -209,8 +205,6 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
 	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
 #ifdef XAPIAND_CLUSTERING
-	  replication_client_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>>("CR{:02}", opts.num_replication_clients)),
-	  replication_server_pool(std::make_unique<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>>("SR{:02}", opts.num_replication_servers)),
 #endif
 	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
 	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
@@ -824,14 +818,14 @@ XapiandManager::setup_node_async_cb(ev::async&, int)
 			L_INFO("Synchronizing cluster from {}{}" + INFO_COL + "...", primary_node->col().ansi(), primary_node->to_string());
 			_new_cluster = 2;
 			// Replicate cluster database from the leader
-			replication->trigger_replication({primary_endpoint, Endpoint{".xapiand/nodes"}, true});
+			replication_service->trigger_replication({primary_endpoint, Endpoint{".xapiand/nodes"}, true});
 			// Request updates from indices database shards
 			auto endpoints = XapiandManager::resolve_index_endpoints(Endpoint{".xapiand/indices"}, true);
 			assert(!endpoints.empty());
 			for (auto& endpoint : endpoints) {
 				Endpoint remote_endpoint{endpoint.path, primary_node};
 				Endpoint local_endpoint{endpoint.path};
-				replication->trigger_replication({remote_endpoint, local_endpoint, false});
+				replication_service->trigger_replication({remote_endpoint, local_endpoint, false});
 			}
 		}
 	} else
@@ -945,19 +939,27 @@ XapiandManager::make_servers()
 		}
 		this->remote_port = remote_port;
 
-		replication = Worker::make_shared<ReplicationProtocol>(shared_from_this(), ev_loop, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? 0 : replication_tries);
-	}
-#endif
-
-#ifdef XAPIAND_CLUSTERING
-	if (!opts.solo) {
-		for (ssize_t i = 0; i < opts.num_replication_servers; ++i) {
-			auto _replication_server = Worker::make_shared<ReplicationProtocolServer>(replication, nullptr, ev_flags, opts.bind_address.empty() ? nullptr : opts.bind_address.c_str(), replication_port, reuse_ports ? replication_tries : 0);
-			if (_replication_server->addr.sin_family) {
-				replication->addr = _replication_server->addr;
-			}
-			replication_server_pool->enqueue(std::move(_replication_server));
+		// The replication protocol, served over the Asio transport (same shape); the service
+		// also initiates outbound transfers (trigger_replication).
+		{
+			std::size_t reactors = opts.num_replication_servers > 0 ? static_cast<std::size_t>(opts.num_replication_servers) : 1;
+			std::size_t workers = opts.num_replication_clients > 0
+				? std::max<std::size_t>(1, (static_cast<std::size_t>(opts.num_replication_clients) + reactors - 1) / reactors)
+				: 1;
+			replication_service = std::make_unique<replication::ReplicationProtocolAsioService>(reactors, workers, 1000);
+			reactor::BindOptions bind_options;
+			bind_options.address = opts.bind_address;
+			bind_options.reuse_port = reuse_ports;
+			replication_service->set_bind_options(bind_options);
 		}
+		this->replication_port = replication_port;
+
+		// Replication must be LIVE before the node is READY: a joining node fetches the cluster
+		// database over replication DURING setup (trigger_replication -> an outbound coroutine
+		// spawned onto a reactor), so the reactors have to be running already. So start it here,
+		// not deferred to set_cluster_database_ready like http/remote (which serve client traffic
+		// only once ready). Accepting an early request is handled by the handlers (REPLY_FAIL).
+		replication_service->start(static_cast<unsigned short>(replication_port));
 	}
 #endif
 
@@ -967,7 +969,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		node_copy->remote_port = remote_port;
-		node_copy->replication_port = ntohs(replication->addr.sin_port);
+		node_copy->replication_port = replication_port;
 	}
 #endif
 	Node::set_local_node(std::shared_ptr<const Node>(node_copy.release()));
@@ -977,7 +979,7 @@ XapiandManager::make_servers()
 #ifdef XAPIAND_CLUSTERING
 	if (!opts.solo) {
 		msg += strings::format(", TCP {}:{} (Remote Protocol v{}.{})", opts.bind_address, remote_port, XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION, XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION);
-		msg += " and " + replication->getDescription();
+		msg += strings::format(" and TCP {}:{} (Replication Protocol)", opts.bind_address, replication_port);
 	}
 #endif
 	L(-LOG_NOTICE, NOTICE_COL, msg);
@@ -1026,7 +1028,6 @@ XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
 		if (remote_service) {
 			remote_service->start(static_cast<unsigned short>(remote_port));
 		}
-		replication->start();
 		discovery->cluster_enter();
 	}
 #endif
@@ -1216,33 +1217,9 @@ XapiandManager::join()
 	}
 
 	////////////////////////////////////////////////////////////////////
-	if (replication_server_pool) {
-		L_MANAGER("Finishing replication protocol servers pool!");
-		replication_server_pool->finish();
-
-		L_MANAGER("Waiting for {} replication server{}...", replication_server_pool->running_size(), (replication_server_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication protocol servers...", "Replication Protocol servers finished!");
-		while (!replication_server_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
-	}
-
-	////////////////////////////////////////////////////////////////////
-	if (replication_client_pool) {
-		L_MANAGER("Finishing replication protocol threads pool!");
-		replication_client_pool->finish();
-
-		L_MANAGER("Waiting for {} replication protocol thread{}...", replication_client_pool->running_size(), (replication_client_pool->running_size() == 1) ? "" : "s");
-		L_MANAGER_TIMED(1s, "Is taking too long to finish the replication protocol threads...", "Replication Protocol threads finished!");
-		while (!replication_client_pool->join(500ms)) {
-			int sig = atom_sig;
-			if (sig < 0) {
-				throw SystemExit(-sig);
-			}
-		}
+	if (replication_service) {
+		L_MANAGER("Stopping replication protocol service!");
+		replication_service->stop();  // aborts in-flight work, stops the reactors + joins the offload pools
 	}
 
 #endif
@@ -1340,7 +1317,7 @@ XapiandManager::join()
 	http_service.reset();
 #ifdef XAPIAND_CLUSTERING
 	remote_service.reset();
-	replication.reset();
+	replication_service.reset();
 	discovery.reset();
 #endif
 
@@ -1351,10 +1328,6 @@ XapiandManager::join()
 	doc_indexer_pool.reset();
 	doc_preparer_pool.reset();
 
-#ifdef XAPIAND_CLUSTERING
-	replication_client_pool.reset();
-	replication_server_pool.reset();
-#endif
 
 	database_cleanup.reset();
 
@@ -1748,7 +1721,7 @@ void
 trigger_replication_trigger(Endpoint src_endpoint, Endpoint dst_endpoint)
 {
 	if (auto manager = XapiandManager::manager()) {
-		manager->replication->trigger_replication({src_endpoint, dst_endpoint, false});
+		manager->replication_service->trigger_replication({src_endpoint, dst_endpoint, false});
 	}
 }
 

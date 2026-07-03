@@ -28,6 +28,7 @@
 #include <errno.h>                            // for errno
 #include <fcntl.h>
 #include <limits.h>                           // for PATH_MAX
+#include <poll.h>                             // for poll (bounded blocking writes)
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sysexits.h>
@@ -49,6 +50,8 @@
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
 #include "xapian/net/serialise-error.h"       // for serialise_error, unserialise_error
+
+#include "flume.h"                            // for flume::Sender (whole-DB-file streaming, Zstd)
 
 
 // #undef L_DEBUG
@@ -78,17 +81,55 @@
  */
 
 
-ReplicationProtocolClient::ReplicationProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: BaseClient<ReplicationProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
-	  state(ReplicationState::INIT_REPLICATION_CLIENT),
+// Write every byte to the socket fd, blocking (via poll) when the send buffer is full. Runs
+// on the reactor pool thread during a dispatch (the coroutine is suspended, so nothing else
+// touches the socket). Returns false on a real error -- including when the connection's
+// abortable shuts the fd down at server stop, which makes the pending poll return POLLHUP.
+static bool blocking_write_all(int fd, const char* data, std::size_t size) {
+	while (size > 0) {
+		ssize_t w = io::write(fd, data, size);
+		if (w > 0) { data += w; size -= static_cast<std::size_t>(w); continue; }
+		if (w < 0 && errno == EINTR) { continue; }
+		if (w < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+			struct pollfd pfd;
+			pfd.fd = fd;
+			pfd.events = POLLOUT;
+			pfd.revents = 0;
+			int pr = ::poll(&pfd, 1, -1);
+			if (pr < 0 && errno == EINTR) { continue; }
+			if (pr <= 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) { return false; }
+			continue;
+		}
+		return false;
+	}
+	return true;
+}
+
+// A flume Writer that streams compressed file blocks to the socket fd (bounded memory),
+// tallying the bytes into the connection's sent counter.
+struct SocketWriter {
+	int fd;
+	std::size_t* sent;
+	bool write(std::string_view v) {
+		if (!blocking_write_all(fd, v.data(), v.size())) { return false; }
+		if (sent != nullptr) { *sent += v.size(); }
+		return true;
+	}
+};
+
+
+ReplicationProtocolClient::ReplicationProtocolClient(bool cluster_database_)
+	:
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
 	  last_message_sent('\xff'),
 #endif
-	  file_descriptor(-1),
-	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
 	  cluster_database(cluster_database_),
+	  sock_fd_(-1),
+	  closing_(false),
+	  total_sent_bytes(0),
+	  current_revision(0),
 	  changesets(0)
 {
 	auto manager = XapiandManager::manager();
@@ -117,21 +158,12 @@ ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 			}
 		}
 
-		if (file_descriptor != -1) {
-			io::close(file_descriptor);
-			file_descriptor = -1;
-		}
-
 		for (const auto& filename : temp_files) {
 			io::unlink(filename.c_str());
 		}
 
 		if (!temp_directory.empty()) {
 			delete_files(temp_directory.c_str());
-		}
-
-		if (is_shutting_down() && !is_idle()) {
-			L_INFO("Replication Protocol client killed!");
 		}
 
 		if (cluster_database) {
@@ -141,6 +173,36 @@ ReplicationProtocolClient::~ReplicationProtocolClient() noexcept
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
+}
+
+
+std::pair<int, std::string>
+ReplicationProtocolClient::new_temp_file()
+{
+	// Create (+ track, for the destructor's cleanup) a temp file to stream an incoming
+	// FILE_FOLLOWS file into. Ported verbatim from the classic on_read FILE_FOLLOWS path.
+	char path[PATH_MAX + 1];
+	if (temp_directory.empty()) {
+		if (temp_directory_template.empty()) {
+			temp_directory = "/tmp";
+		} else {
+			strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+			build_path_index(temp_directory_template);
+			if (io::mkdtemp(path) == nullptr) {
+				L_ERR("Directory {} not created: {} ({}): {}", temp_directory_template, error::name(errno), errno, error::description(errno));
+				return {-1, std::string()};
+			}
+			temp_directory = path;
+		}
+	}
+	strncpy(path, (temp_directory + "/" + temp_file_template).c_str(), PATH_MAX);
+	int fd = io::mkstemp(path);
+	if (fd == -1) {
+		L_ERR("Cannot create temporary file: {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return {-1, std::string()};
+	}
+	temp_files.push_back(path);
+	return {fd, std::string(path)};
 }
 
 
@@ -210,11 +272,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 	}
 	L_CONN("Connected to {}! (in socket {})", repr(src_endpoint.to_string()), client_sock);
 
-	if (!init(client_sock)) {
-		io::close(client_sock);
-		lk_shard_ptr.reset();
-		return false;
-	}
+	sock_fd_ = client_sock;
 
 	L_REPLICATION("Replication initialized: {} -->  {}", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
 	return true;
@@ -868,289 +926,6 @@ ReplicationProtocolClient::reply_done(const std::string&)
 }
 
 
-size_t
-ReplicationProtocolClient::pending_messages() const
-{
-	std::lock_guard<std::mutex> lk(runner_mutex);
-	return messages.size();
-}
-
-
-bool
-ReplicationProtocolClient::is_idle() const
-{
-	L_CALL("ReplicationProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
-
-	return !is_waiting() && !is_running() && write_queue.empty() && !pending_messages();
-}
-
-
-void
-ReplicationProtocolClient::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("ReplicationProtocolClient::shutdown_impl({}, {})", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		shutting_down = true;
-		auto manager = XapiandManager::manager();
-		if (now != 0 || !manager || manager->ready_to_end_replication() || is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	} else {
-		if (is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	}
-}
-
-
-bool
-ReplicationProtocolClient::init_replication(int sock_) noexcept
-{
-	L_CALL("ReplicationProtocolClient::init_replication({})", sock_);
-
-	if (!init(sock_)) {
-		return false;
-	}
-
-	std::lock_guard<std::mutex> lk(runner_mutex);
-
-	assert(!running);
-
-	// Setup state...
-	state = ReplicationState::INIT_REPLICATION_SERVER;
-
-	// And start a runner.
-	running = true;
-	auto manager = XapiandManager::manager();
-	if (manager) {
-		manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
-	}
-	return true;
-}
-
-
-bool
-ReplicationProtocolClient::init_replication(const std::string& host, int port, const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept
-{
-	L_CALL("ReplicationProtocolClient::init_replication({}, {})", repr(src_endpoint.to_string()), repr(dst_endpoint.to_string()));
-
-	std::lock_guard<std::mutex> lk(runner_mutex);
-
-	assert(!running);
-
-	// Setup state...
-	state = ReplicationState::INIT_REPLICATION_CLIENT;
-
-	if (init_replication_protocol(host, port, src_endpoint, dst_endpoint)) {
-		// And start a runner.
-		running = true;
-		auto manager = XapiandManager::manager();
-		if (manager) {
-			manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
-		}
-		return true;
-	}
-	return false;
-}
-
-
-ssize_t
-ReplicationProtocolClient::on_read(const char *buf, ssize_t received)
-{
-	L_CALL("ReplicationProtocolClient::on_read(<buf>, {})", received);
-
-	if (received <= 0) {
-		std::string reason;
-
-		if (received < 0) {
-			reason = strings::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
-			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("Replication Protocol {} connection closed unexpectedly: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-				close();
-				return received;
-			}
-		} else {
-			reason = "EOF";
-		}
-
-		if (is_waiting()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There was still a request in progress: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-			close();
-			return received;
-		}
-
-		if (!write_queue.empty()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There is still pending data: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-			close();
-			return received;
-		}
-
-		if (pending_messages()) {
-			L_NOTICE("Replication Protocol {} closed unexpectedly: There are still pending messages: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-			close();
-			return received;
-		}
-
-		// Replication Protocol normally closed connection.
-		close();
-		return received;
-	}
-
-	L_REPLICA_WIRE("ReplicationProtocolClient::on_read: {} bytes", received);
-	ssize_t processed = -buffer.size();
-	buffer.append(buf, received);
-	while (buffer.size() >= 2) {
-		const char *o = buffer.data();
-		const char *p = o;
-		const char *p_end = p + buffer.size();
-
-		char type = *p++;
-		L_REPLICA_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), enum_name(state));
-		switch (type) {
-			case FILE_FOLLOWS: {
-				char path[PATH_MAX + 1];
-				if (temp_directory.empty()) {
-					if (temp_directory_template.empty()) {
-						temp_directory = "/tmp";
-					} else {
-						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
-						build_path_index(temp_directory_template);
-						if (io::mkdtemp(path) == nullptr) {
-							L_ERR("Directory {} not created: {} ({}): {}", temp_directory_template, error::name(errno), errno, error::description(errno));
-							detach();
-							return processed;
-						}
-						temp_directory = path;
-					}
-				}
-				strncpy(path, (temp_directory + "/" + temp_file_template).c_str(), PATH_MAX);
-				file_descriptor = io::mkstemp(path);
-				temp_files.push_back(path);
-				file_message_type = *p++;
-				if (file_descriptor == -1) {
-					L_ERR("Cannot create temporary file: {} ({}): {}", error::name(errno), errno, error::description(errno));
-					detach();
-					return processed;
-				} else {
-					L_REPLICA("Start reading file: {} ({})", path, file_descriptor);
-				}
-				read_file();
-				processed += p - o;
-				buffer.clear();
-				return processed;
-			}
-		}
-
-		ssize_t len;
-		try {
-			len = unserialise_length_and_check(&p, p_end);
-		} catch (const Xapian::SerialisationError&) {
-			return received;
-		}
-
-		if (!closed) {
-			std::lock_guard<std::mutex> lk(runner_mutex);
-			if (!running) {
-				// Enqueue message...
-				messages.push_back(Buffer(type, p, len));
-				// And start a runner.
-				running = true;
-				auto manager = XapiandManager::manager();
-				if (manager) {
-					manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
-				}
-			} else {
-				// There should be a runner, just enqueue message.
-				messages.push_back(Buffer(type, p, len));
-			}
-		}
-
-		buffer.erase(0, p - o + len);
-		processed += p - o + len;
-	}
-
-	return received;
-}
-
-
-void
-ReplicationProtocolClient::on_read_file(const char *buf, ssize_t received)
-{
-	L_CALL("ReplicationProtocolClient::on_read_file(<buf>, {})", received);
-
-	L_REPLICA_WIRE("ReplicationProtocolClient::on_read_file: {} bytes", received);
-
-	io::write(file_descriptor, buf, received);
-}
-
-
-void
-ReplicationProtocolClient::on_read_file_done()
-{
-	L_CALL("ReplicationProtocolClient::on_read_file_done()");
-
-	L_REPLICA_WIRE("ReplicationProtocolClient::on_read_file_done");
-
-	io::close(file_descriptor);
-	file_descriptor = -1;
-
-	const auto& temp_file = temp_files.back();
-
-	if (!closed) {
-		std::lock_guard<std::mutex> lk(runner_mutex);
-		if (!running) {
-			// Enqueue message...
-			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
-			// And start a runner.
-			running = true;
-			auto manager = XapiandManager::manager();
-			if (manager) {
-				manager->replication_client_pool->enqueue(share_this<ReplicationProtocolClient>());
-			}
-		} else {
-			// There should be a runner, just enqueue message.
-			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
-		}
-	}
-}
-
-
-char
-ReplicationProtocolClient::get_message(std::string &result, char max_type)
-{
-	L_CALL("ReplicationProtocolClient::get_message(<result>, <max_type>)");
-
-	auto& msg = messages.front();
-
-	char type = msg.type;
-
-#ifdef SAVE_LAST_MESSAGES
-	last_message_received.store(type, std::memory_order_relaxed);
-#endif
-
-	if (type >= max_type) {
-		std::string errmsg("Invalid message type ");
-		errmsg += std::to_string(int(type));
-		THROW(InvalidArgumentError, errmsg);
-	}
-
-	const char *msg_str = msg.dpos();
-	size_t msg_size = msg.nbytes();
-	result.assign(msg_str, msg_size);
-
-	messages.pop_front();
-
-	return type;
-}
-
-
 void
 ReplicationProtocolClient::send_message(char type_as_char, const std::string &message)
 {
@@ -1164,7 +939,8 @@ ReplicationProtocolClient::send_message(char type_as_char, const std::string &me
 	buf += type_as_char;
 	buf += serialise_length(message.size());
 	buf += message;
-	write(buf);
+	if (!blocking_write_all(sock_fd_, buf.data(), buf.size())) { closing_ = true; return; }
+	total_sent_bytes += buf.size();
 }
 
 
@@ -1176,178 +952,22 @@ ReplicationProtocolClient::send_file(char type_as_char, int fd)
 	std::string buf;
 	buf += FILE_FOLLOWS;
 	buf += type_as_char;
-	write(buf);
+	if (!blocking_write_all(sock_fd_, buf.data(), buf.size())) { closing_ = true; return; }
+	total_sent_bytes += buf.size();
 
-	BaseClient<ReplicationProtocolClient>::send_file(fd);
-}
-
-
-void
-ReplicationProtocolClient::operator()()
-{
-	L_CALL("ReplicationProtocolClient::operator()()");
-
-	L_CONN("Start running in replication worker...");
-
-	std::unique_lock<std::mutex> lk(runner_mutex);
-
-	switch (state) {
-		case ReplicationState::INIT_REPLICATION_SERVER:
-			state = ReplicationState::REPLICATION_SERVER;
-			lk.unlock();
-			try {
-				send_message(ReplicationReplyType::REPLY_WELCOME);
-			} catch (...) {
-				lk.lock();
-				running = false;
-				L_CONN("Running in worker ended with an exception.");
-				lk.unlock();
-				L_EXC("ERROR: Replication server ended with an unhandled exception");
-				detach();
-				throw;
-			}
-			lk.lock();
-			break;
-		case ReplicationState::INIT_REPLICATION_CLIENT:
-			state = ReplicationState::REPLICATION_CLIENT;
-			[[fallthrough]];
-		default:
-			break;
-	}
-
-	while (!messages.empty() && !closed) {
-		switch (state) {
-			case ReplicationState::REPLICATION_SERVER: {
-				std::string message;
-				ReplicationMessageType type = static_cast<ReplicationMessageType>(get_message(message, static_cast<char>(ReplicationMessageType::MSG_MAX)));
-				lk.unlock();
-				try {
-
-					L_REPLICA_PROTO(">> get_message[REPLICATION_SERVER] ({}): {}", enum_name(type), repr(message));
-					replication_server(type, message);
-
-					auto sent = total_sent_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_sent_bytes
-						.Increment(sent);
-
-					auto received = total_received_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_received_bytes
-						.Increment(received);
-
-				} catch (...) {
-					lk.lock();
-					running = false;
-					L_CONN("Running in worker ended with an exception.");
-					lk.unlock();
-					L_EXC("ERROR: Replication server ended with an unhandled exception");
-					detach();
-					throw;
-				}
-				lk.lock();
-				break;
-			}
-
-			case ReplicationState::REPLICATION_CLIENT: {
-				std::string message;
-				ReplicationReplyType type = static_cast<ReplicationReplyType>(get_message(message, static_cast<char>(ReplicationReplyType::REPLY_MAX)));
-				lk.unlock();
-				try {
-
-					L_REPLICA_PROTO(">> get_message[REPLICATION_CLIENT] ({}): {}", enum_name(type), repr(message));
-					replication_client(type, message);
-
-					auto sent = total_sent_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_sent_bytes
-						.Increment(sent);
-
-					auto received = total_received_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_replication_received_bytes
-						.Increment(received);
-
-				} catch (...) {
-					lk.lock();
-					running = false;
-					L_CONN("Running in worker ended with an exception.");
-					lk.unlock();
-					L_EXC("ERROR: Replication client ended with an unhandled exception");
-					detach();
-					throw;
-				}
-				lk.lock();
-				break;
-			}
-
-			default:
-				running = false;
-				L_CONN("Running in worker ended with unexpected state.");
-				lk.unlock();
-				L_ERR("ERROR: Unexpected ReplicationProtocolClient state");
-				stop();
-				reset();
-				close();
-				destroy();
-				detach();
-				return;
-		}
-	}
-
-	running = false;
-	L_CONN("Running in replication worker ended. {{messages_empty:{}, closed:{}, is_shutting_down:{}}}", messages.empty(), closed.load(), is_shutting_down());
-	lk.unlock();
-
-	if (is_shutting_down() && is_idle()) {
-		detach();
-		return;
-	}
-
-	redetach();  // try re-detaching if already flagged as detaching
+	// Stream the file, compressed + framed, in bounded memory (flume, Zstd L6).
+	SocketWriter writer{sock_fd_, &total_sent_bytes};
+	flume::Sender<SocketWriter> sender(writer, fd);
+	if (!sender.send()) { closing_ = true; }
 }
 
 
 std::string
 ReplicationProtocolClient::__repr__() const
 {
-#ifdef SAVE_LAST_MESSAGES
-	auto state_repr = ([this]() -> std::string {
-		auto received = last_message_received.load(std::memory_order_relaxed);
-		auto sent = last_message_sent.load(std::memory_order_relaxed);
-		auto st = state.load(std::memory_order_relaxed);
-		switch (st) {
-			case ReplicationState::INIT_REPLICATION_CLIENT:
-			case ReplicationState::REPLICATION_CLIENT:
-				return strings::format("{}) ({}<->{}",
-					enum_name(st),
-					enum_name(static_cast<ReplicationReplyType>(received)),
-					enum_name(static_cast<ReplicationMessageType>(sent)));
-			case ReplicationState::INIT_REPLICATION_SERVER:
-			case ReplicationState::REPLICATION_SERVER:
-				return strings::format("{}) ({}<->{}",
-					enum_name(st),
-					enum_name(static_cast<ReplicationMessageType>(received)),
-					enum_name(static_cast<ReplicationReplyType>(sent)));
-			default:
-				return "";
-		}
-	})();
-#else
-	const auto& state_repr = enum_name(state.load(std::memory_order_relaxed));
-#endif
-	return strings::format(STEEL_BLUE + "<ReplicationProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
-		state_repr,
-		use_count(),
-		sock,
-		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
-		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
-		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "",
-		is_idle() ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : "",
-		is_waiting() ? " " + LIGHT_STEEL_BLUE + "(waiting)" + STEEL_BLUE : "",
-		is_running() ? " " + DARK_ORANGE + "(running)" + STEEL_BLUE : "",
-		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
-		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "");
+	return strings::format(STEEL_BLUE + "<ReplicationProtocolClient {{ fd:{} }}{}>",
+		sock_fd_,
+		closing_ ? " " + ORANGE + "(closing)" + STEEL_BLUE : "");
 }
 
 #endif  /* XAPIAND_CLUSTERING */

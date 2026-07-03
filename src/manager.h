@@ -48,10 +48,8 @@
 
 #ifdef XAPIAND_CLUSTERING
 class Discovery;
-class ReplicationProtocol;
-class ReplicationProtocolClient;
-class ReplicationProtocolServer;
 namespace remote { class RemoteProtocolAsioService; }
+namespace replication { class ReplicationProtocolAsioService; }
 #endif
 
 class DocMatcher;
@@ -140,7 +138,8 @@ public:
 #ifdef XAPIAND_CLUSTERING
 	std::unique_ptr<remote::RemoteProtocolAsioService> remote_service;
 	int remote_port = 0;
-	std::shared_ptr<ReplicationProtocol> replication;
+	std::unique_ptr<replication::ReplicationProtocolAsioService> replication_service;
+	int replication_port = 0;
 	std::shared_ptr<Discovery> discovery;
 #endif
 
@@ -152,8 +151,6 @@ public:
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
 #ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> replication_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> replication_server_pool;
 #endif
 	std::unique_ptr<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>> doc_preparer_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>> doc_indexer_pool;

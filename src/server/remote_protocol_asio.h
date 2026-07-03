@@ -123,6 +123,7 @@ inline asio::awaitable<bool> read_message(asio::ip::tcp::socket& socket, std::st
 			}
 			::close(fd);
 			if (st != St::Done) { co_return false; }
+			buffered = receiver.leftover();   // bytes read past the file stream = the next message
 			type_out = real_type;
 			body_out = path;
 			co_return true;

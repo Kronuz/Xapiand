@@ -20,170 +20,45 @@
  * THE SOFTWARE.
  */
 
-#include "replication_protocol_server.h"
+#include "config.h"   // for XAPIAND_CLUSTERING
 
 #ifdef XAPIAND_CLUSTERING
 
+// IMPORTANT: libev (via these Xapiand headers) must be included BEFORE the Asio-pulling
+// replication_protocol_asio.h (EV_ERROR enum vs macro clash). The outbound trigger's decision
+// logic (node resolution, shard locks, stalled-DB removal) is verbatim from the classic
+// ReplicationProtocolServer::trigger_replication.
 #include <cassert>                          // for assert
-#include <errno.h>                          // for errno
 #include <sysexits.h>                       // for EX_SOFTWARE
+#include <vector>                           // for std::vector
 
+#include "database/flags.h"                 // for DB_*
 #include "database/lock.h"                  // for lock_shard
 #include "database/pool.h"                  // for DatabasePool
 #include "database/shard.h"                 // for Shard
-#include "database/utils.h"                 // for query_field_t
-#include "error.hh"                         // for error:name, error::description
-#include "index_resolver_lru.h"             // for IndexResolverLRU, IndexSettings
-#include "fs.hh"                            // for exists
+#include "fs.hh"                            // for exists, delete_files, quarantine_files
+#include "index_resolver_lru.h"             // for IndexResolverLRU
 #include "manager.h"                        // for XapiandManager
-#include "readable_revents.hh"              // for readable_revents
-#include "replication_protocol.h"           // for ReplicationProtocol
-#include "replication_protocol_client.h"    // for ReplicationProtocolClient
+#include "node.h"                           // for Node
+#include "random.hh"                        // for random_int
 #include "repr.hh"                          // for repr
-#include "strict_stox.hh"                   // for strict_stoll
-#include "tcp.h"                            // for TCP::socket
 
- // #undef L_DEBUG
- // #define L_DEBUG L_GREY
-// #undef L_CALL
-// #define L_CALL L_STACKED_DIM_GREY
-#undef L_REPLICATION
-#define L_REPLICATION L_ROSY_BROWN
-// #undef L_EV
-// #define L_EV L_MEDIUM_PURPLE
+#include "server/replication_protocol_asio.h"   // the service + connect_and_replicate (Asio)
 
+#include <asio.hpp>
 
-ReplicationProtocolServer::ReplicationProtocolServer(const std::shared_ptr<ReplicationProtocol>& replication_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv, int tries)
-	: MetaBaseServer<ReplicationProtocolServer>(replication_, ev_loop_, ev_flags_, "Replication", TCP_TCP_NODELAY | TCP_SO_REUSEPORT),
-	  replication(*replication_),
-	  trigger_replication_async(*ev_loop)
-{
-	bind(hostname, serv, tries);
+namespace replication {
 
-	trigger_replication_async.set<ReplicationProtocolServer, &ReplicationProtocolServer::trigger_replication_async_cb>(this);
-	trigger_replication_async.start();
-	L_EV("Start replication protocol's async trigger replication signal event");
-}
-
-
-ReplicationProtocolServer::~ReplicationProtocolServer() noexcept
-{
-	try {
-		Worker::deinit();
-	} catch (...) {
-		L_EXC("Unhandled exception in destructor");
-	}
+void cluster_database_replication_failed() {
+	L_CRIT("Cannot replicate cluster database");
+	sig_exit(-EX_SOFTWARE);
 }
 
 
 void
-ReplicationProtocolServer::shutdown_impl(long long asap, long long now)
+ReplicationProtocolAsioService::trigger_replication(const TriggerReplicationArgs& args)
 {
-	L_CALL("ReplicationProtocolServer::stop_impl({}, {})", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		auto manager = XapiandManager::manager();
-		if (now != 0 || !manager || manager->ready_to_end_replication()) {
-			stop(false);
-			destroy(false);
-			if (is_runner()) {
-				break_loop(false);
-			} else {
-				detach(false);
-			}
-		}
-	}
-}
-
-
-void
-ReplicationProtocolServer::start_impl()
-{
-	L_CALL("ReplicationProtocolServer::start_impl()");
-
-	Worker::start_impl();
-
-	io.start(sock == -1 ? replication.sock : sock, ev::READ);
-	L_EV("Start replication protocol's server accept event not needed {{sock:{}}}", sock == -1 ? replication.sock : sock);
-}
-
-
-int
-ReplicationProtocolServer::accept()
-{
-	L_CALL("ReplicationProtocolServer::accept()");
-
-	if (sock != -1) {
-		return TCP::accept();
-	}
-	return replication.accept();
-}
-
-
-void
-ReplicationProtocolServer::io_accept_cb([[maybe_unused]] ev::io& watcher, int revents)
-{
-	L_CALL("ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
-
-	L_EV_BEGIN("ReplicationProtocolServer::io_accept_cb:BEGIN");
-	L_EV_END("ReplicationProtocolServer::io_accept_cb:END");
-
-	assert(sock == -1 || sock == watcher.fd);
-
-	L_DEBUG_HOOK("ReplicationProtocolServer::io_accept_cb", "ReplicationProtocolServer::io_accept_cb(<watcher>, {:#x} ({})) {{sock:{}}}", revents, readable_revents(revents), watcher.fd);
-
-	if ((EV_ERROR & revents) != 0) {
-		L_EV("ERROR: got invalid replication protocol event {{sock:{}}}: {} ({}): {}", watcher.fd, error::name(errno), errno, error::description(errno));
-		return;
-	}
-
-	int client_sock = accept();
-	if (client_sock != -1) {
-		auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout);
-
-		if (!client->init_replication(client_sock)) {
-			io::close(client_sock);
-			client->detach();
-			client.reset();
-			detach_children();
-			return;
-		}
-
-		client->start();
-	}
-}
-
-
-void
-ReplicationProtocolServer::trigger_replication()
-{
-	L_CALL("ReplicationProtocolServer::trigger_replication()");
-
-	trigger_replication_async.send();
-}
-
-
-void
-ReplicationProtocolServer::trigger_replication_async_cb(ev::async&, [[maybe_unused]] int revents)
-{
-	L_CALL("ReplicationProtocolServer::trigger_replication_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
-
-	L_EV_BEGIN("ReplicationProtocolServer::trigger_replication_async_cb:BEGIN");
-	L_EV_END("ReplicationProtocolServer::trigger_replication_async_cb:END");
-
-	TriggerReplicationArgs args;
-	while (replication.trigger_replication_args.try_dequeue(args)) {
-		trigger_replication(args);
-	}
-}
-
-
-void
-ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& args)
-{
-	L_CALL("ReplicationProtocolServer::trigger_replication({{src_endpoint:{}, dst_endpoint:{}}})", args.src_endpoint.to_string(), args.dst_endpoint.to_string());
+	L_CALL("ReplicationProtocolAsioService::trigger_replication({{src_endpoint:{}, dst_endpoint:{}}})", args.src_endpoint.to_string(), args.dst_endpoint.to_string());
 
 	if (args.src_endpoint.is_local()) {
 		assert(!args.cluster_database);
@@ -333,33 +208,24 @@ ReplicationProtocolServer::trigger_replication(const TriggerReplicationArgs& arg
 		return;
 	}
 
-	auto client = Worker::make_shared<ReplicationProtocolClient>(share_this<ReplicationProtocolServer>(), ev_loop, ev_flags, active_timeout, idle_timeout, args.cluster_database);
+	// Spawn the outbound coroutine on one of the reactors (round-robin). It does the blocking
+	// lock + connect on the offload pool, then drives the client role. The retry-on-failure is
+	// scheduled inside init_replication_protocol (the delayed_debounce), and a cluster-database
+	// failure is fatal (cluster_database_replication_failed), matching the classic path.
+	std::size_t idx = next_reactor_++ % server_.reactors();
+	reactor::Reactor& r = server_.reactor(idx);
+	std::string host_copy(host);
+	int port_copy = port;
+	Endpoint src = args.src_endpoint;
+	Endpoint dst = args.dst_endpoint;
+	bool cluster_database = args.cluster_database;
+	asio::post(r.io(), [&r, host_copy, port_copy, src, dst, cluster_database]() {
+		asio::co_spawn(r.io(), detail::connect_and_replicate(&r, host_copy, port_copy, src, dst, cluster_database), asio::detached);
+	});
 
-	if (!client->init_replication(host, port, args.src_endpoint, args.dst_endpoint)) {
-		client->detach();
-		client.reset();
-		detach_children();
-		if (args.cluster_database) {
-			L_CRIT("Cannot replicate cluster database");
-			sig_exit(-EX_SOFTWARE);
-		}
-		return;
-	}
-
-	client->start();
 	L_DEBUG("Database {} being synchronized from {}{}" + DEBUG_COL + "...", repr(args.src_endpoint.path), node->col().ansi(), node->name());
 }
 
+}  // namespace replication
 
-std::string
-ReplicationProtocolServer::__repr__() const
-{
-	return strings::format(STEEL_BLUE + "<ReplicationProtocolServer {{cnt:{}, sock:{}}}{}{}{}>",
-		use_count(),
-		sock == -1 ? replication.sock : sock,
-		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
-		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
-		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "");
-}
-
-#endif /* XAPIAND_CLUSTERING */
+#endif  // XAPIAND_CLUSTERING
