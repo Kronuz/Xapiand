@@ -50,13 +50,14 @@
 // #define L_CONN L_LIGHT_GREEN
 
 
-UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags)
+UDP::UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags, const char* group_interface)
 	: sock(-1),
 	  closed(true),
 	  flags(flags),
 	  description(description),
 	  major_version(major_version),
 	  minor_version(minor_version),
+	  group_interface(group_interface ? group_interface : ""),
 	  addr{}
 {}
 
@@ -266,11 +267,32 @@ UDP::bind(const char* hostname, unsigned int serv, int tries)
 				}
 			}
 
+			// The local interface for multicast: empty => INADDR_ANY (default route),
+			// else the pinned address (multi-homed/VPN hosts). Used for both the
+			// outbound interface (IP_MULTICAST_IF) and the group join (imr_interface).
+			struct in_addr mcast_iface = {};
+			mcast_iface.s_addr = group_interface.empty()
+				? htonl(INADDR_ANY)
+				: inet_addr(group_interface.c_str());
+
+			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0 && !group_interface.empty()) {
+				if (io::setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, &mcast_iface, sizeof(mcast_iface)) == -1) {
+					freeaddrinfo(addrinfo);
+					if (!tries) {
+						L_CRIT("ERROR: {} setsockopt IP_MULTICAST_IF {{sock:{}}}: {} ({}): {}", description, sock, error::name(errno), errno, error::description(errno));
+						close();
+						sig_exit(-EX_CONFIG);
+						return;
+					}
+					break;
+				}
+			}
+
 			struct ip_mreq mreq = {};
 			if ((flags & UDP_IP_ADD_MEMBERSHIP) != 0) {
 				assert(hostname);
 				mreq.imr_multiaddr = reinterpret_cast<struct sockaddr_in*>(ai->ai_addr)->sin_addr;
-				mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+				mreq.imr_interface = mcast_iface;
 				if (io::setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) == -1) {
 					freeaddrinfo(addrinfo);
 					if (!tries) {

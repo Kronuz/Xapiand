@@ -43,6 +43,11 @@ HTTP_BASE=8880          # node i (1-based): http HTTP_BASE+i-1
 REMOTE_BASE=9880        #                   xapian(remote)  REMOTE_BASE+i-1
 REPLICA_BASE=7880       #                   replica(replication) REPLICA_BASE+i-1
 DISCOVERY_PORT=58880    # SHARED across nodes (multicast rendezvous)
+# Local interface for discovery multicast. Default to the loopback interface so a one-host
+# cluster's gossip is self-contained and immune to a VPN/utun default route that can't
+# carry multicast (INADDR_ANY/default-route multicast silently drops under most VPNs).
+# Set DISCOVERY_IFACE= (empty) to use the default route (cross-host clusters).
+DISCOVERY_IFACE="${DISCOVERY_IFACE:-127.0.0.1}"
 RUNDIR="/tmp/xcluster_$$"
 INDEX="cluster_probe"
 
@@ -72,6 +77,7 @@ launch_node() {
 	       --xapian-port  $((REMOTE_BASE  + i - 1)) \
 	       --replica-port $((REPLICA_BASE + i - 1)) \
 	       --discovery-port "$DISCOVERY_PORT" \
+	       ${DISCOVERY_IFACE:+--discovery-interface "$DISCOVERY_IFACE"} \
 	       --name "$name" --primary-node node1 -D "$dir" \
 	       >"$RUNDIR/node$i.log" 2>&1 &
 	PIDS[$i]=$!

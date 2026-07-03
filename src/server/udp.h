@@ -49,6 +49,11 @@ protected:
 	uint8_t major_version;
 	uint8_t minor_version;
 
+	// Local interface address for multicast send (IP_MULTICAST_IF) and group join
+	// (imr_interface); empty => INADDR_ANY (the OS default route). Pin it on a
+	// multi-homed/VPN host where the default interface can't carry multicast.
+	std::string group_interface;
+
 	void bind(const char* hostname, unsigned int serv, int tries);
 
 	bool close();
@@ -56,7 +61,7 @@ protected:
 public:
 	struct sockaddr_in addr;
 
-	UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags);
+	UDP(const char* description, uint8_t major_version, uint8_t minor_version, int flags, const char* group_interface = "");
 	~UDP() noexcept;
 
 	ssize_t send_message(const std::string& message);

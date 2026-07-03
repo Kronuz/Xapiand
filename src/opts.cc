@@ -280,6 +280,8 @@ parseOptions(int argc, char** argv)
 		app.add_option("--discovery-port", discovery_port, "Discovery UDP port number to listen on.");
 		std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
 		app.add_option("--discovery-group", discovery_group, "Discovery UDP group name.");
+		std::string discovery_interface;
+		app.add_option("--discovery-interface", discovery_interface, "Local interface address for discovery multicast (send + join); empty = default route. Pin (e.g. 127.0.0.1) on a multi-homed/VPN host where the default interface can't multicast.");
 		std::string cluster_name = XAPIAND_CLUSTER_NAME;
 		app.add_option("--cluster", cluster_name, "Cluster name to join.");
 #endif
@@ -541,6 +543,7 @@ parseOptions(int argc, char** argv)
 		o.replication_port = replication_port;
 		o.discovery_port = discovery_port;
 		o.discovery_group = discovery_group;
+		o.discovery_interface = discovery_interface;
 #endif
 		o.pidfile = pidfile;
 		o.logfile = logfile;

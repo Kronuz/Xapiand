@@ -53,6 +53,7 @@ extern struct opts_t {
 	unsigned int replication_port = XAPIAND_REPLICATION_SERVERPORT;
 	unsigned int discovery_port = XAPIAND_DISCOVERY_SERVERPORT;
 	std::string discovery_group = XAPIAND_DISCOVERY_GROUP;
+	std::string discovery_interface;
 	std::string pidfile = "";
 	std::string logfile = "";
 	std::string uid = "";

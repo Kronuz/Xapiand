@@ -86,7 +86,7 @@ constexpr double CLUSTER_DISCOVERY_WAITING_SLOW   = RAFT_LEADER_HEARTBEAT_TIMEOU
 
 
 Discovery::Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv)
-	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT | UDP_IP_MULTICAST_LOOP | UDP_IP_MULTICAST_TTL | UDP_IP_ADD_MEMBERSHIP),
+	: UDP("Discovery", XAPIAND_DISCOVERY_PROTOCOL_MAJOR_VERSION, XAPIAND_DISCOVERY_PROTOCOL_MINOR_VERSION, UDP_SO_REUSEPORT | UDP_IP_MULTICAST_LOOP | UDP_IP_MULTICAST_TTL | UDP_IP_ADD_MEMBERSHIP, opts.discovery_interface.c_str()),
 	  Worker(parent_, ev_loop_, ev_flags_),
 	  io(*ev_loop),
 	  cluster_discovery(*ev_loop),
