@@ -29,7 +29,7 @@
 #include "base_x.hh"                                  // for base62
 #include "cast.h"                                     // for Cast
 #include "chars.hh"                                   // for iskeyword
-#include "cuuid/uuid.h"                               // for UUID
+#include "uuid.hh"                                  // for UUID
 #include "database/schema.h"                          // for FieldType, FieldType::keyword, Fiel...
 #include "endian.hh"                                  // for htobe32, htobe56
 #include "exception.h"                                // for SerialisationError, ...

@@ -30,7 +30,7 @@
 #include <sysexits.h>                       // for EX_SOFTWARE
 
 #include "color_tools.hh"                   // for color
-#include "cuuid/uuid.h"                     // for UUID
+#include "uuid.hh"                         // for UUID
 #include "database/lock.h"                  // for lock_shard
 #include "database/shard.h"                 // for Shard
 #include "database/schemas_lru.h"           // for SchemasLRU

@@ -346,6 +346,13 @@ endif ()
 ########################################################################
 
 find_package(UUID REQUIRED)
+if (UUID_FREEBSD)
+	add_compile_definitions(UUID_FREEBSD=${UUID_FREEBSD})
+elseif (UUID_LIBUUID)
+	add_compile_definitions(UUID_LIBUUID=${UUID_LIBUUID})
+elseif (UUID_CFUUID)
+	add_compile_definitions(UUID_CFUUID=${UUID_CFUUID})
+endif ()
 
 
 ########################################################################
@@ -567,6 +574,23 @@ if(NOT system_POPULATED)
 endif()
 include_directories("${system_SOURCE_DIR}")
 add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_system_trace.h")
+
+# cuuid: condensed UUID value + binary wire codec (Kronuz/cuuid), extracted from
+# Xapiand. Same shape as io/fs/system: only the headers go on the include path;
+# uuid.cc is compiled into XAPIAND_OBJ below so its trace/exception/node seams point
+# back at Xapiand's logger, exception hierarchy, and Node registry. Its endian and
+# char-classify dependencies are populated below and are on XAPIAND_OBJ's include path.
+FetchContent_Declare(cuuid GIT_REPOSITORY https://github.com/Kronuz/cuuid.git GIT_TAG main)
+FetchContent_GetProperties(cuuid)
+if(NOT cuuid_POPULATED)
+	FetchContent_Populate(cuuid)
+endif()
+include_directories("${cuuid_SOURCE_DIR}")
+add_compile_definitions(
+	CUUID_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_trace.h"
+	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_xapian.h"
+	CUUID_NODE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_node.h"
+)
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -1187,25 +1211,6 @@ add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
 ########################################################################
-# Condensed UUID library target
-########################################################################
-
-file(GLOB CUUID_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/cuuid/*.c*" "${PROJECT_SOURCE_DIR}/src/cuuid/*.h*"
-)
-list(APPEND CUUID_SRC_LIST ${XAPIAN_H_LIST})
-add_library(CUUID_OBJ OBJECT ${CUUID_SRC_LIST})
-
-target_include_directories(CUUID_OBJ PUBLIC
-	${UUID_INCLUDE_DIRS}
-)
-
-target_link_libraries(CUUID_OBJ PUBLIC
-	${UUID_LIBRARIES}
-)
-
-
-########################################################################
 # Prometheus library target
 ########################################################################
 
@@ -1323,6 +1328,10 @@ list(APPEND XAPIAND_SRC_LIST "${fs_SOURCE_DIR}/fs.cc")
 # Replace the removed src/system.cc + src/memory_stats.cc.
 list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/system.cc")
 list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/memory_stats.cc")
+# uuid.cc from Kronuz/cuuid, compiled here (not linked from the lib's static target)
+# so its trace/exception/node seams land in Xapiand via CUUID_*_HEADER above. Replaces
+# the removed src/cuuid/uuid.cc.
+list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/uuid.cc")
 # The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
 # (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
@@ -1387,7 +1396,6 @@ target_link_libraries(${PROJECT_NAME}
 	XAPIAN_OBJ
 	BOOLEAN_PARSER_OBJ
 	LZ4_OBJ
-	CUUID_OBJ
 	PROMETHEUS_OBJ
 	YAML_OBJ
 	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
@@ -2001,7 +2009,6 @@ if (BUILD_TESTS)
 				XAPIAN_OBJ
 				BOOLEAN_PARSER_OBJ
 				LZ4_OBJ
-				CUUID_OBJ
 				PROMETHEUS_OBJ
 				YAML_OBJ
 			)

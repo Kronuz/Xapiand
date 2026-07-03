@@ -39,7 +39,7 @@
 
 #include "base_x.hh"                              // for Base64
 #include "cast.h"                                 // for Cast
-#include "cuuid/uuid.h"                           // for UUIDGenerator
+#include "uuid.hh"                                // for UUIDGenerator
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/lock.h"                        // for lock_shard
 #include "database/shard.h"                       // for Shard

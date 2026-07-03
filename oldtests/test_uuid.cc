@@ -25,7 +25,7 @@
 #include <unordered_set>
 
 #include "../src/base_x.hh"
-#include "../src/cuuid/uuid.h"
+#include "uuid.hh"
 #include "../src/random.hh"
 #include "utils.h"
 

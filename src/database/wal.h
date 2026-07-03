@@ -36,7 +36,7 @@
 #include <utility>                          // for pair, make_pair
 
 #include "blocking_concurrent_queue.h"      // for BlockingConcurrentQueue
-#include "cuuid/uuid.h"                     // for UUID
+#include "uuid.hh"                         // for UUID
 #include "endpoint.h"                       // for Endpoint
 #include "enum.h"                           // for ENUM_CLASS
 #include "lru.h"                            // for lru::lru
