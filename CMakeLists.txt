@@ -555,6 +555,19 @@ endif()
 include_directories("${fs_SOURCE_DIR}")
 add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
 
+# system: process/system resource introspection (Kronuz/system), extracted from Xapiand.
+# Same shape as io/fs: only the headers go on the include path; system.cc + memory_stats.cc
+# are compiled into XAPIAND_OBJ below (io/strings deps already on the path, so its own CMake
+# is not processed -- Populate, not MakeAvailable). SYSTEM_TRACE_HEADER wires its logging to
+# Xapiand's real logger (+ error::name/description).
+FetchContent_Declare(system GIT_REPOSITORY https://github.com/Kronuz/system.git GIT_TAG main)
+FetchContent_GetProperties(system)
+if(NOT system_POPULATED)
+	FetchContent_Populate(system)
+endif()
+include_directories("${system_SOURCE_DIR}")
+add_compile_definitions(SYSTEM_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_system_trace.h")
+
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime
@@ -1305,6 +1318,11 @@ list(APPEND XAPIAND_SRC_LIST "${io_SOURCE_DIR}/io.cc")
 # logging lands in Xapiand's logger via FS_TRACE_HEADER above. Replaces the removed
 # src/fs.cc; its io/strings/split/stringified deps are already on the include path.
 list(APPEND XAPIAND_SRC_LIST "${fs_SOURCE_DIR}/fs.cc")
+# system.cc + memory_stats.cc from Kronuz/system, compiled here (not linked from the lib's
+# static target) so their logging lands in Xapiand's logger via SYSTEM_TRACE_HEADER above.
+# Replace the removed src/system.cc + src/memory_stats.cc.
+list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/system.cc")
+list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/memory_stats.cc")
 # The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
 # (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
