@@ -542,6 +542,19 @@ add_compile_definitions(
 	IO_RANDOM_ERRORS_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_random_errors.h"
 )
 
+# fs: the filesystem helpers (Kronuz/fs), extracted from Xapiand. Same shape as io: only
+# the header goes on the include path; fs.cc is compiled into XAPIAND_OBJ below (its io /
+# strings / split / stringified dependencies are already on Xapiand's path, so its own
+# CMake is not processed -- we Populate, not MakeAvailable). FS_TRACE_HEADER wires fs's
+# logging to Xapiand's real logger (+ error::name/description, repr).
+FetchContent_Declare(fs GIT_REPOSITORY https://github.com/Kronuz/fs.git GIT_TAG main)
+FetchContent_GetProperties(fs)
+if(NOT fs_POPULATED)
+	FetchContent_Populate(fs)
+endif()
+include_directories("${fs_SOURCE_DIR}")
+add_compile_definitions(FS_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_fs_trace.h")
+
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime
@@ -1288,6 +1301,10 @@ list(APPEND XAPIAND_SRC_LIST "${fantasyname_SOURCE_DIR}/c++/namegen.cc")
 # seams are wired by the IO_TRACE_HEADER / IO_RANDOM_ERRORS_HEADER defines above. Replaces
 # the removed src/io.cc.
 list(APPEND XAPIAND_SRC_LIST "${io_SOURCE_DIR}/io.cc")
+# fs.cc from Kronuz/fs, compiled here (not linked from the lib's static target) so its
+# logging lands in Xapiand's logger via FS_TRACE_HEADER above. Replaces the removed
+# src/fs.cc; its io/strings/split/stringified deps are already on the include path.
+list(APPEND XAPIAND_SRC_LIST "${fs_SOURCE_DIR}/fs.cc")
 # The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
 # (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
