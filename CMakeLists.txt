@@ -687,6 +687,17 @@ if(NOT reactor_POPULATED)
 endif()
 include_directories("${reactor_SOURCE_DIR}")
 
+# cluster: the UDP-multicast cluster substrate (Kronuz/cluster) -- cluster::Bus (transport)
+# + cluster::Raft (consensus) that Discovery rides on, replacing the libev UDP + the in-tree
+# Raft. Header-only; needs only reactor (above) + Asio (below). The membership gossip + the
+# Node registry + the join state machine stay app-side (fed to Raft via a RaftDelegate).
+FetchContent_Declare(cluster GIT_REPOSITORY https://github.com/Kronuz/cluster.git GIT_TAG main)
+FetchContent_GetProperties(cluster)
+if(NOT cluster_POPULATED)
+	FetchContent_Populate(cluster)
+endif()
+include_directories("${cluster_SOURCE_DIR}")
+
 # Asio (standalone, header-only): the runtime + transport substrate the HTTP path
 # now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
 # co_spawn, N io_contexts share the listen port via SO_REUSEPORT. Header-only, so the
