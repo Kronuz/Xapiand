@@ -48,12 +48,10 @@
 
 #ifdef XAPIAND_CLUSTERING
 class Discovery;
-class RemoteProtocol;
-class RemoteProtocolClient;
-class RemoteProtocolServer;
 class ReplicationProtocol;
 class ReplicationProtocolClient;
 class ReplicationProtocolServer;
+namespace remote { class RemoteProtocolAsioService; }
 #endif
 
 class DocMatcher;
@@ -140,7 +138,8 @@ public:
 	std::unique_ptr<http::HttpAsioService> http_service;
 	int http_port = 0;
 #ifdef XAPIAND_CLUSTERING
-	std::shared_ptr<RemoteProtocol> remote;
+	std::unique_ptr<remote::RemoteProtocolAsioService> remote_service;
+	int remote_port = 0;
 	std::shared_ptr<ReplicationProtocol> replication;
 	std::shared_ptr<Discovery> discovery;
 #endif
@@ -153,9 +152,6 @@ public:
 	std::unique_ptr<IndexResolverLRU> index_settings_resolver;
 
 #ifdef XAPIAND_CLUSTERING
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolClient>, ThreadPolicyType::binary_clients>> remote_client_pool;
-	std::unique_ptr<ThreadPool<std::shared_ptr<RemoteProtocolServer>, ThreadPolicyType::binary_servers>> remote_server_pool;
-
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolClient>, ThreadPolicyType::binary_clients>> replication_client_pool;
 	std::unique_ptr<ThreadPool<std::shared_ptr<ReplicationProtocolServer>, ThreadPolicyType::binary_servers>> replication_server_pool;
 #endif

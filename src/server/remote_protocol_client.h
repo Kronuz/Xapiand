@@ -24,17 +24,15 @@
 
 #ifdef XAPIAND_CLUSTERING
 
-#include <deque>                              // for std::deque
+#include <atomic>                             // for std::atomic_char
 #include <memory>                             // for shared_ptr
-#include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
+#include <utility>                            // for std::pair
 #include <vector>                             // for std::vector
 
-#include "base_client.h"                      // for BaseClient
+#include "endpoint.h"                         // for Endpoint
 #include "enum.h"                             // for ENUM_CLASS
-#include "endpoint.h"                         // for Endpoints
-#include "threadpool.hh"                      // for Task
-#include "xapian.h"
+#include "xapian.h"                           // for Xapian::Registry, Xapian::rev
 
 // #define SAVE_LAST_MESSAGES
 #if defined(XAPIAND_TRACEBACKS) || defined(DEBUG)
@@ -44,38 +42,7 @@
 #endif
 
 
-// Versions:
-// 21: Overhauled remote backend supporting WritableDatabase
-// 22: Lossless double serialisation
-// 23: Support get_lastdocid() on remote databases
-// 24: Support for OP_VALUE_RANGE in query serialisation
-// 25: Support for delete_document and replace_document with unique term
-// 26: Tweak delete_document with unique term; delta encode rset and termpos
-// 27: Support for postlists (always passes the whole list across)
-// 28: Pass document length in reply to MSG_TERMLIST
-// 29: Serialisation of Xapian::Error includes error_string
-// 30: Add minor protocol version numbers, to reduce need for client upgrades
-// 30.1: Pass the prefix parameter for MSG_ALLTERMS, and use it.
-// 30.2: New REPLY_DELETEDOCUMENT returns MSG_DONE to allow exceptions.
-// 30.3: New MSG_GETMSET which passes check_at_least parameter.
-// 30.4: New query operator OP_SCALE_WEIGHT.
-// 30.5: New MSG_GETMSET which expects MSet's percent_factor to be returned.
-// 30.6: Support for OP_VALUE_GE and OP_VALUE_LE in query serialisation
-// 31: 1.1.0 Clean up for Xapian 1.1.0
-// 32: 1.1.1 Serialise termfreq and reltermfreqs together in serialise_stats.
-// 33: 1.1.3 Support for passing matchspies over the remote connection.
-// 34: 1.1.4 Support for metadata over with remote databases.
-// 35: 1.1.5 Support for add_spelling() and remove_spelling().
-// 35.1: 1.2.4 Support for metadata_keys_begin().
-// 36: 1.3.0 REPLY_UPDATE and REPLY_GREETING merged, and more...
-// 37: 1.3.1 Prefix-compress termlists.
-// 38: 1.3.2 Stats serialisation now includes collection freq, and more...
-// 39: 1.3.3 New query operator OP_WILDCARD; sort keys in serialised MSet.
-// 39.1: pre-1.5.0 MSG_POSITIONLISTCOUNT added.
-// 40: pre-1.5.0 REPLY_REMOVESPELLING added.
-// 41: pre-1.5.0 Changed REPLY_ALLTERMS, REPLY_METADATAKEYLIST, REPLY_TERMLIST.
-// 42: 1.5.0 Use little-endian IEEE for doubles
-// 43: pre-1.5.0 REPLY_DONE sent for 5 more messages; MSG_QUERY adjusted
+// The Xapian remote-backend protocol version (see the Xapian source for the full history).
 // 44: 1.5.0 pack_uint() now used; many other changes
 #define XAPIAN_REMOTE_PROTOCOL_MAJOR_VERSION 44
 #define XAPIAN_REMOTE_PROTOCOL_MINOR_VERSION 0
@@ -84,12 +51,6 @@
 
 
 class lock_shard;
-
-
-ENUM_CLASS(RemoteState, int,
-	INIT_REMOTE,
-	REMOTE_SERVER
-)
 
 
 ENUM_CLASS(RemoteMessageType, int,
@@ -168,58 +129,44 @@ struct RemoteProtocolPendingQuery {
 };
 
 
-// A single instance of a non-blocking Xapiand binary protocol handler
-class RemoteProtocolClient : public BaseClient<RemoteProtocolClient> {
-	friend BaseClient<RemoteProtocolClient>;
-
-	mutable std::mutex runner_mutex;
-
+// The per-connection Xapian binary remote-backend protocol handler. Transport-agnostic: it
+// consumes one request via remote_server() (the blocking Xapian work) and appends its framed
+// replies to reply_buffer_, which the Asio connection coroutine (remote_protocol_asio.h)
+// drains and writes. No libev / Worker / thread pool -- the coroutine owns the socket and the
+// reactor pool runs the blocking dispatch.
+class RemoteProtocolClient {
 	int flags;
 	Endpoint endpoint;
-
-	std::atomic<RemoteState> state;
 
 #ifdef SAVE_LAST_MESSAGES
 	std::atomic_char last_message_received;
 	std::atomic_char last_message_sent;
 #endif
 
-	int file_descriptor;
-	char file_message_type;
+	// FILE_FOLLOWS receive bookkeeping: temp files the coroutine streams an incoming file
+	// into, then dispatches with the temp path as the message body.
 	std::string temp_directory;
 	std::string temp_directory_template;
 	std::string temp_file_template;
 	std::vector<std::string> temp_files;
 
-	// Buffers that are pending write
-	std::string buffer;
-	std::deque<Buffer> messages;
 	bool cluster_database;
 
 	Xapian::Registry registry;
 
-	RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double active_timeout_, double idle_timeout_, bool cluster_database_ = false);
-
-	size_t pending_messages() const;
-
-	bool is_idle() const;
-
-	void shutdown_impl(long long asap, long long now) override;
-
-	ssize_t on_read(const char *buf, ssize_t received);
-	void on_read_file(const char *buf, ssize_t received);
-	void on_read_file_done();
-
-	friend Worker;
-
-public:
-	~RemoteProtocolClient() noexcept;
-
-	explicit RemoteProtocolClient(RemoteProtocolClient& client_);
+	// The reply sink (send_message appends here; the coroutine drains it) + the
+	// "close this connection" flag (the handlers' detach()/destroy() set it).
+	std::string reply_buffer_;
+	bool closing_;
 
 	void send_message(RemoteReplyType type, const std::string& message);
+	void send_message(char type_as_char, const std::string& message);
 
-	void remote_server(RemoteMessageType type, const std::string& message);
+	// The handlers signal "tear this connection down" by calling detach()/destroy() (kept
+	// verbatim from the libev version); here they just flag the coroutine to stop + close.
+	void destroy() noexcept { closing_ = true; }
+	void detach() noexcept { closing_ = true; }
+
 	void msg_allterms(const std::string& message);
 	void msg_termlist(const std::string& message);
 	void msg_positionlist(const std::string& message);
@@ -254,16 +201,32 @@ public:
 	void msg_removespelling(const std::string& message);
 	void msg_shutdown(const std::string& message);
 
-	char get_message(std::string &result, char max_type);
-	void send_message(char type_as_char, const std::string& message);
-	void send_file(char type_as_char, int fd);
+	// No copy constructor
+	RemoteProtocolClient(const RemoteProtocolClient&) = delete;
+	RemoteProtocolClient& operator=(const RemoteProtocolClient&) = delete;
 
-	bool init_remote(int sock_) noexcept;
-	bool init_replication(const Endpoint &src_endpoint, const Endpoint &dst_endpoint) noexcept;
+public:
+	explicit RemoteProtocolClient(bool cluster_database_ = false);
+	~RemoteProtocolClient() noexcept;
 
-	void operator()();
+	// The initial greeting (REPLY_UPDATE) the server sends as soon as a connection opens.
+	void greeting() { msg_update(std::string()); }
 
-	std::string __repr__() const override;
+	// Dispatch one request; replies land in reply_buffer_. Runs the blocking Xapian work,
+	// so the coroutine offloads it to the reactor pool.
+	void remote_server(RemoteMessageType type, const std::string& message);
+
+	// --- the coroutine's hooks ---
+	bool closing() const noexcept { return closing_; }
+	bool has_reply() const noexcept { return !reply_buffer_.empty(); }
+	std::string take_reply() { return std::move(reply_buffer_); }
+
+	// FILE_FOLLOWS receive: create + track a temp file, return {fd, path}. The coroutine
+	// streams the incoming file into fd, then dispatches remote_server(type, path). Returns
+	// {-1, ""} if the temp file could not be created.
+	std::pair<int, std::string> new_temp_file();
+
+	std::string __repr__() const;
 };
 
 

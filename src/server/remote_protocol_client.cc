@@ -23,6 +23,7 @@
 #ifdef XAPIAND_CLUSTERING
 
 #include <cassert>                            // for assert
+#include <cstring>                            // for strncpy
 #include <errno.h>                            // for errno
 #include <fcntl.h>
 #include <limits.h>                           // for PATH_MAX
@@ -95,18 +96,15 @@ static std::mutex pending_queries_mtx;
 static lru::aging_lru<std::string, RemoteProtocolPendingQuery> pending_queries(0, 600s);
 
 
-RemoteProtocolClient::RemoteProtocolClient(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, double /*active_timeout_*/, double /*idle_timeout_*/, bool cluster_database_)
-	: BaseClient<RemoteProtocolClient>(std::move(parent_), ev_loop_, ev_flags_),
-	  flags(0),
-	  state(RemoteState::INIT_REMOTE),
+RemoteProtocolClient::RemoteProtocolClient(bool cluster_database_)
+	: flags(0),
 #ifdef SAVE_LAST_MESSAGES
 	  last_message_received('\xff'),
 	  last_message_sent('\xff'),
 #endif
-	  file_descriptor(-1),
-	  file_message_type('\xff'),
 	  temp_file_template("xapiand.XXXXXX"),
-	  cluster_database(cluster_database_)
+	  cluster_database(cluster_database_),
+	  closing_(false)
 {
 	auto manager = XapiandManager::manager();
 	if (manager) {
@@ -138,21 +136,12 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 			}
 		}
 
-		if (file_descriptor != -1) {
-			io::close(file_descriptor);
-			file_descriptor = -1;
-		}
-
 		for (const auto& filename : temp_files) {
 			io::unlink(filename.c_str());
 		}
 
 		if (!temp_directory.empty()) {
 			delete_files(temp_directory.c_str());
-		}
-
-		if (is_shutting_down() && !is_idle()) {
-			L_INFO("Remote Protocol client killed!");
 		}
 
 		if (cluster_database) {
@@ -162,6 +151,36 @@ RemoteProtocolClient::~RemoteProtocolClient() noexcept
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
+}
+
+
+std::pair<int, std::string>
+RemoteProtocolClient::new_temp_file()
+{
+	// Create (and track, for the destructor's cleanup) a temp file to stream an incoming
+	// FILE_FOLLOWS file into. Ported verbatim from the classic on_read FILE_FOLLOWS path.
+	char path[PATH_MAX + 1];
+	if (temp_directory.empty()) {
+		if (temp_directory_template.empty()) {
+			temp_directory = "/tmp";
+		} else {
+			strncpy(path, temp_directory_template.c_str(), PATH_MAX);
+			build_path_index(temp_directory_template);
+			if (io::mkdtemp(path) == nullptr) {
+				L_ERR("Directory {} not created: {} ({}): {}", temp_directory_template, error::name(errno), errno, error::description(errno));
+				return {-1, std::string()};
+			}
+			temp_directory = path;
+		}
+	}
+	strncpy(path, (temp_directory + "/" + temp_file_template).c_str(), PATH_MAX);
+	int fd = io::mkstemp(path);
+	if (fd == -1) {
+		L_ERR("Cannot create temporary file: {} ({}): {}", error::name(errno), errno, error::description(errno));
+		return {-1, std::string()};
+	}
+	temp_files.push_back(path);
+	return {fd, std::string(path)};
 }
 
 
@@ -1416,256 +1435,6 @@ RemoteProtocolClient::msg_shutdown(const std::string &)
 }
 
 
-size_t
-RemoteProtocolClient::pending_messages() const
-{
-	std::lock_guard<std::mutex> lk(runner_mutex);
-	return messages.size();
-}
-
-
-bool
-RemoteProtocolClient::is_idle() const
-{
-	L_CALL("RemoteProtocolClient::is_idle() {{is_waiting:{}, is_running:{}, write_queue_empty:{}, pending_messages:{}}}", is_waiting(), is_running(), write_queue.empty(), pending_messages());
-
-	return !is_waiting() && !is_running() && write_queue.empty() && !pending_messages();
-}
-
-
-void
-RemoteProtocolClient::shutdown_impl(long long asap, long long now)
-{
-	L_CALL("RemoteProtocolClient::shutdown_impl({}, {})", asap, now);
-
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		shutting_down = true;
-		auto manager = XapiandManager::manager();
-		if (now != 0 || !manager || manager->ready_to_end_remote() || is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	} else {
-		if (is_idle()) {
-			stop(false);
-			destroy(false);
-			detach();
-		}
-	}
-}
-
-
-bool
-RemoteProtocolClient::init_remote(int sock_) noexcept
-{
-	L_CALL("RemoteProtocolClient::init_remote({})", sock_);
-
-	if (!init(sock_)) {
-		return false;
-	}
-
-	std::lock_guard<std::mutex> lk(runner_mutex);
-
-	assert(!running);
-
-	// Setup state...
-	state = RemoteState::INIT_REMOTE;
-
-	// And start a runner.
-	running = true;
-	XapiandManager::manager(true)->remote_client_pool->enqueue(share_this<RemoteProtocolClient>());
-	return true;
-}
-
-
-ssize_t
-RemoteProtocolClient::on_read(const char *buf, ssize_t received)
-{
-	L_CALL("RemoteProtocolClient::on_read(<buf>, {})", received);
-
-	if (received <= 0) {
-		std::string reason;
-
-		if (received < 0) {
-			reason = strings::format("{} ({}): {}", error::name(errno), errno, error::description(errno));
-			if (errno != ENOTCONN && errno != ECONNRESET && errno != ESPIPE) {
-				L_NOTICE("Remote Protocol {} connection closed unexpectedly: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-				close();
-				return received;
-			}
-		} else {
-			reason = "EOF";
-		}
-
-		if (is_waiting()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There was still a request in progress: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-			close();
-			return received;
-		}
-
-		if (!write_queue.empty()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There is still pending data: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-			close();
-			return received;
-		}
-
-		if (pending_messages()) {
-			L_NOTICE("Remote Protocol {} closed unexpectedly: There are still pending messages: {}", enum_name(state.load(std::memory_order_relaxed)), reason);
-			close();
-			return received;
-		}
-
-		// Remote Protocol normally closed connection.
-		close();
-		return received;
-	}
-
-	L_BINARY_WIRE("RemoteProtocolClient::on_read: {} bytes", received);
-	ssize_t processed = -buffer.size();
-	buffer.append(buf, received);
-	while (buffer.size() >= 2) {
-		const char *o = buffer.data();
-		const char *p = o;
-		const char *p_end = p + buffer.size();
-
-		char type = *p++;
-		L_BINARY_WIRE("on_read message: {} {{state:{}}}", repr(std::string(1, type)), enum_name(state));
-		switch (type) {
-			case FILE_FOLLOWS: {
-				char path[PATH_MAX + 1];
-				if (temp_directory.empty()) {
-					if (temp_directory_template.empty()) {
-						temp_directory = "/tmp";
-					} else {
-						strncpy(path, temp_directory_template.c_str(), PATH_MAX);
-						build_path_index(temp_directory_template);
-						if (io::mkdtemp(path) == nullptr) {
-							L_ERR("Directory {} not created: {} ({}): {}", temp_directory_template, error::name(errno), errno, error::description(errno));
-							detach();
-							return processed;
-						}
-						temp_directory = path;
-					}
-				}
-				strncpy(path, (temp_directory + "/" + temp_file_template).c_str(), PATH_MAX);
-				file_descriptor = io::mkstemp(path);
-				temp_files.push_back(path);
-				file_message_type = *p++;
-				if (file_descriptor == -1) {
-					L_ERR("Cannot create temporary file: {} ({}): {}", error::name(errno), errno, error::description(errno));
-					detach();
-					return processed;
-				} else {
-					L_BINARY("Start reading file: {} ({})", path, file_descriptor);
-				}
-				read_file();
-				processed += p - o;
-				buffer.clear();
-				return processed;
-			}
-		}
-
-		size_t len;
-		if (!unpack_uint(&p, p_end, &len)) {
-			return received;
-		}
-		if (size_t(p_end - p) != len) {
-			return received;
-		}
-
-		if (!closed) {
-			std::lock_guard<std::mutex> lk(runner_mutex);
-			if (!running) {
-				// Enqueue message...
-				messages.push_back(Buffer(type, p, len));
-				// And start a runner.
-				running = true;
-				XapiandManager::manager(true)->remote_client_pool->enqueue(share_this<RemoteProtocolClient>());
-			} else {
-				// There should be a runner, just enqueue message.
-				messages.push_back(Buffer(type, p, len));
-			}
-		}
-
-		buffer.erase(0, p - o + len);
-		processed += p - o + len;
-	}
-
-	return received;
-}
-
-
-void
-RemoteProtocolClient::on_read_file(const char *buf, ssize_t received)
-{
-	L_CALL("RemoteProtocolClient::on_read_file(<buf>, {})", received);
-
-	L_BINARY_WIRE("RemoteProtocolClient::on_read_file: {} bytes", received);
-
-	io::write(file_descriptor, buf, received);
-}
-
-
-void
-RemoteProtocolClient::on_read_file_done()
-{
-	L_CALL("RemoteProtocolClient::on_read_file_done()");
-
-	L_BINARY_WIRE("RemoteProtocolClient::on_read_file_done");
-
-	io::close(file_descriptor);
-	file_descriptor = -1;
-
-	const auto& temp_file = temp_files.back();
-
-	if (!closed) {
-		std::lock_guard<std::mutex> lk(runner_mutex);
-		if (!running) {
-			// Enqueue message...
-			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
-			// And start a runner.
-			running = true;
-			XapiandManager::manager(true)->remote_client_pool->enqueue(share_this<RemoteProtocolClient>());
-		} else {
-			// There should be a runner, just enqueue message.
-			messages.push_back(Buffer(file_message_type, temp_file.data(), temp_file.size()));
-		}
-	}
-}
-
-
-char
-RemoteProtocolClient::get_message(std::string &result, char max_type)
-{
-	L_CALL("RemoteProtocolClient::get_message(<result>, <max_type>)");
-
-	auto& msg = messages.front();
-
-	char type = msg.type;
-
-#ifdef SAVE_LAST_MESSAGES
-	last_message_received.store(type, std::memory_order_relaxed);
-#endif
-
-	if (type >= max_type) {
-		std::string errmsg("Invalid message type ");
-		errmsg += std::to_string(int(type));
-		THROW(InvalidArgumentError, errmsg);
-	}
-
-	const char *msg_str = msg.dpos();
-	size_t msg_size = msg.nbytes();
-	result.assign(msg_str, msg_size);
-
-	messages.pop_front();
-
-	return type;
-}
-
-
 void
 RemoteProtocolClient::send_message(char type_as_char, const std::string &message)
 {
@@ -1679,147 +1448,16 @@ RemoteProtocolClient::send_message(char type_as_char, const std::string &message
 	buf.push_back(type_as_char);
 	pack_uint(buf, message.size());
 	buf.append(message);
-	write(buf);
-}
-
-
-void
-RemoteProtocolClient::send_file(char type_as_char, int fd)
-{
-	L_CALL("RemoteProtocolClient::send_file(<type_as_char>, <fd>)");
-
-	std::string buf;
-	buf.push_back(FILE_FOLLOWS);
-	buf.push_back(type_as_char);
-	write(buf);
-
-	BaseClient<RemoteProtocolClient>::send_file(fd);
-}
-
-
-void
-RemoteProtocolClient::operator()()
-{
-	L_CALL("RemoteProtocolClient::operator()()");
-
-	L_CONN("Start running in binary worker...");
-
-	std::unique_lock<std::mutex> lk(runner_mutex);
-
-	switch (state) {
-		case RemoteState::INIT_REMOTE:
-			state = RemoteState::REMOTE_SERVER;
-			lk.unlock();
-			try {
-				msg_update(std::string());
-			} catch (...) {
-				lk.lock();
-				running = false;
-				L_CONN("Running in worker ended with an exception.");
-				lk.unlock();
-				L_EXC("ERROR: Remote server ended with an unhandled exception");
-				detach();
-				throw;
-			}
-			lk.lock();
-			break;
-		default:
-			break;
-	}
-
-	while (!messages.empty() && !closed) {
-		switch (state) {
-			case RemoteState::REMOTE_SERVER: {
-				std::string message;
-				RemoteMessageType type = static_cast<RemoteMessageType>(get_message(message, static_cast<char>(RemoteMessageType::MSG_MAX)));
-				lk.unlock();
-				try {
-
-					L_BINARY_PROTO(">> get_message[REMOTE_SERVER] ({}): {}", enum_name(type), repr(message));
-					remote_server(type, message);
-
-					auto sent = total_sent_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_remote_protocol_sent_bytes
-						.Increment(sent);
-
-					auto received = total_received_bytes.exchange(0);
-					Metrics::metrics()
-						.xapiand_remote_protocol_received_bytes
-						.Increment(received);
-
-				} catch (...) {
-					lk.lock();
-					running = false;
-					L_CONN("Running in worker ended with an exception.");
-					lk.unlock();
-					L_EXC("ERROR: Remote server ended with an unhandled exception");
-					detach();
-					throw;
-				}
-				lk.lock();
-				break;
-			}
-
-			default:
-				running = false;
-				L_CONN("Running in worker ended with unexpected state.");
-				lk.unlock();
-				L_ERR("ERROR: Unexpected RemoteProtocolClient state");
-				stop();
-				destroy();
-				detach();
-				return;
-		}
-	}
-
-	running = false;
-	L_CONN("Running in replication worker ended. {{messages_empty:{}, closed:{}, is_shutting_down:{}}}", messages.empty(), closed.load(), is_shutting_down());
-	lk.unlock();
-
-	if (is_shutting_down() && is_idle()) {
-		detach();
-		return;
-	}
-
-	redetach();  // try re-detaching if already flagged as detaching
+	reply_buffer_.append(buf);
 }
 
 
 std::string
 RemoteProtocolClient::__repr__() const
 {
-#ifdef SAVE_LAST_MESSAGES
-	auto state_repr = ([this]() -> std::string {
-		auto received = last_message_received.load(std::memory_order_relaxed);
-		auto sent = last_message_sent.load(std::memory_order_relaxed);
-		auto st = state.load(std::memory_order_relaxed);
-		switch (st) {
-			case RemoteState::INIT_REMOTE:
-			case RemoteState::REMOTE_SERVER:
-				return strings::format("{}) ({}<->{}",
-					enum_name(st),
-					enum_name(static_cast<RemoteMessageType>(received)),
-					enum_name(static_cast<RemoteReplyType>(sent)));
-			default:
-				return "";
-		}
-	})();
-#else
-	const auto& state_repr = enum_name(state.load(std::memory_order_relaxed));
-#endif
-	return strings::format(STEEL_BLUE + "<RemoteProtocolClient ({}) {{cnt:{}, sock:{}}}{}{}{}{}{}{}{}{}>",
-		state_repr,
-		use_count(),
-		sock,
-		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
-		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
-		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "",
-		is_idle() ? " " + DARK_STEEL_BLUE + "(idle)" + STEEL_BLUE : "",
-		is_waiting() ? " " + LIGHT_STEEL_BLUE + "(waiting)" + STEEL_BLUE : "",
-		is_running() ? " " + DARK_ORANGE + "(running)" + STEEL_BLUE : "",
-		is_shutting_down() ? " " + ORANGE + "(shutting down)" + STEEL_BLUE : "",
-		is_closed() ? " " + ORANGE + "(closed)" + STEEL_BLUE : "");
+	return strings::format(STEEL_BLUE + "<RemoteProtocolClient {{ endpoint:{} }}{}>",
+		repr(endpoint.to_string()),
+		closing_ ? " " + ORANGE + "(closing)" + STEEL_BLUE : "");
 }
 
 #endif  /* XAPIAND_CLUSTERING */
