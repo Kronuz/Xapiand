@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "config.h"          // for XAPIAN_LIB_BUILD
 #include "strings.hh"         // for strings::join
 #include "xapian.h"           // for Xapian::*
 

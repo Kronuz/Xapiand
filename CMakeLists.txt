@@ -393,6 +393,11 @@ include_directories(
 	${LIBCPP_INCLUDE_DIRS}
 )
 
+# msgpack.h used to include generated config.h before most Xapian headers. Now
+# that MsgPack is standalone, define this explicitly so Xapiand can still use
+# Xapian's internal database action mask from its own flag helpers.
+add_compile_definitions(XAPIAN_LIB_BUILD=1)
+
 link_libraries(
 	${CMAKE_THREAD_LIBS_INIT}
 	${LIBCPP_LIBRARIES}
@@ -591,6 +596,21 @@ add_compile_definitions(
 	CUUID_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception_xapian.h"
 	CUUID_NODE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_cuuid_node.h"
 )
+
+# msgpack: bundled msgpack-c fork + MsgPack COW value + xchange adaptors +
+# JSON-Patch helper (Kronuz/msgpack), extracted from Xapiand. Headers are consumed
+# directly so existing includes ("msgpack.h", "msgpack_patcher.h", "xchange/...")
+# keep working; msgpack_patcher.cc is compiled into XAPIAND_OBJ below so its
+# exceptions bind to Xapiand's real hierarchy. The vendored msgpack/exception.hpp
+# still includes "exception.h" directly; src/ is first on the include path, so
+# Xapiand's wrapper wins here.
+FetchContent_Declare(msgpack GIT_REPOSITORY https://github.com/Kronuz/msgpack.git GIT_TAG main)
+FetchContent_GetProperties(msgpack)
+if(NOT msgpack_POPULATED)
+	FetchContent_Populate(msgpack)
+endif()
+include_directories("${msgpack_SOURCE_DIR}")
+add_compile_definitions(MSGPACK_EXCEPTION_HEADER="${PROJECT_SOURCE_DIR}/src/exception.h")
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
@@ -964,10 +984,9 @@ add_compile_definitions(STASH_TRACE_HEADER="xapiand_stash_trace.h")
 # Vendored third-party header-only libraries, now pulled via FetchContent
 # instead of living under src/. We only need their headers, so populate the
 # sources and add them to the include path; their own CMakeLists are not run.
+# msgpack moved to Kronuz/msgpack above because Xapiand's forked exception.hpp
+# travels with that standalone library.
 ########################################################################
-# (msgpack stays vendored under src/msgpack/: its exception.hpp is forked to make
-# every msgpack exception inherit Xapiand's BaseException, so it can't be swapped
-# for stock upstream without reworking the MsgPack wrapper's error handling.)
 FetchContent_Declare(rapidjson GIT_REPOSITORY https://github.com/Tencent/rapidjson.git  GIT_TAG v1.1.0)
 FetchContent_Declare(cppcodec  GIT_REPOSITORY https://github.com/tplgy/cppcodec.git     GIT_TAG v0.2)
 FetchContent_Declare(cli11     GIT_REPOSITORY https://github.com/CLIUtils/CLI11.git      GIT_TAG v2.4.2)
@@ -1260,7 +1279,6 @@ file(GLOB XAPIAND_SRC_LIST
 	"${PROJECT_SOURCE_DIR}/src/multivalue/*.c*" "${PROJECT_SOURCE_DIR}/src/multivalue/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/server/*.c*" "${PROJECT_SOURCE_DIR}/src/server/*.h*"
 	"${PROJECT_SOURCE_DIR}/src/utils/*.c*" "${PROJECT_SOURCE_DIR}/src/utils/*.h*"
-	"${PROJECT_SOURCE_DIR}/src/xchange/*.c*" "${PROJECT_SOURCE_DIR}/src/xchange/*.h*"
 )
 list(REMOVE_ITEM XAPIAND_SRC_LIST
 "${PROJECT_SOURCE_DIR}/src/main.cc"
@@ -1332,6 +1350,10 @@ list(APPEND XAPIAND_SRC_LIST "${system_SOURCE_DIR}/memory_stats.cc")
 # so its trace/exception/node seams land in Xapiand via CUUID_*_HEADER above. Replaces
 # the removed src/cuuid/uuid.cc.
 list(APPEND XAPIAND_SRC_LIST "${cuuid_SOURCE_DIR}/uuid.cc")
+# msgpack_patcher.cc from Kronuz/msgpack, compiled here so MSGPACK_EXCEPTION_HEADER
+# points at Xapiand's real exception hierarchy. Replaces the removed
+# src/msgpack_patcher.cc; the rest of the msgpack family is header-only.
+list(APPEND XAPIAND_SRC_LIST "${msgpack_SOURCE_DIR}/msgpack_patcher.cc")
 # The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
 # (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
