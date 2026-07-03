@@ -525,6 +525,23 @@ add_compile_definitions(
 # its include path, its worker.cc/tcp.cc/base_server.cc units, and the host-coupling
 # shim headers (xapiand_server_hooks.h / xapiand_server_trace.h) were all removed.
 
+# io: the EINTR-safe POSIX file/socket layer (Kronuz/io), extracted from Xapiand. Only
+# the header goes on the include path; io.cc is compiled into XAPIAND_OBJ below (like the
+# other extracted out-of-line units) with the two host seams wired by absolute path:
+# IO_TRACE_HEADER restores the real L_* logger (+ error::name/description), and
+# IO_RANDOM_ERRORS_HEADER restores the opts-driven fault injection under
+# XAPIAND_RANDOM_ERRORS. Standalone the library is dependency-free with no-op defaults.
+FetchContent_Declare(io GIT_REPOSITORY https://github.com/Kronuz/io.git GIT_TAG main)
+FetchContent_GetProperties(io)
+if(NOT io_POPULATED)
+	FetchContent_Populate(io)
+endif()
+include_directories("${io_SOURCE_DIR}")
+add_compile_definitions(
+	IO_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_trace.h"
+	IO_RANDOM_ERRORS_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_io_random_errors.h"
+)
+
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes
 # static_string.hh + chars.hh, so all four dirs go on the path; its runtime
@@ -1240,6 +1257,11 @@ set_source_files_properties("${traceback_SOURCE_DIR}/traceback.cc" PROPERTIES CO
 # src/namegen.cc. It includes its own "namegen.h" (same dir), so c++/ does not need
 # to be on the include path; src/namegen.h reaches it via FANTASYNAME_HEADER.
 list(APPEND XAPIAND_SRC_LIST "${fantasyname_SOURCE_DIR}/c++/namegen.cc")
+# io.cc from Kronuz/io, compiled here (not linked from the lib's static target) so its
+# logging lands in Xapiand's logger and its ops become fault-injection points -- the two
+# seams are wired by the IO_TRACE_HEADER / IO_RANDOM_ERRORS_HEADER defines above. Replaces
+# the removed src/io.cc.
+list(APPEND XAPIAND_SRC_LIST "${io_SOURCE_DIR}/io.cc")
 # The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
 # its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
 # (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
