@@ -22,27 +22,28 @@
 
 #pragma once
 
-#include <memory>                             // for std::shared_ptr
+#include <atomic>                             // for std::atomic_bool
+#include <condition_variable>                 // for std::condition_variable
+#include <mutex>                              // for std::mutex
 
-#include "ev/ev++.h"                          // for ev::io, ev::loop_ref
 #include "thread.hh"                          // for Thread, ThreadPolicyType::*
-#include "worker.h"                           // for Worker
 
 
-class DatabaseCleanup : public Worker, public Thread<DatabaseCleanup, ThreadPolicyType::regular> {
-	friend Worker;
-
-protected:
-	ev::timer cleanup;
-
-	void shutdown_impl(long long asap, long long now) override;
-	void start_impl() override;
-	void stop_impl() override;
-
-	void cleanup_cb(ev::timer& watcher, int revents);
+// Periodic database/schema cleanup on its own background thread.
+//
+// A single self-contained job: every 60 seconds run database_pool->cleanup()
+// and schemas->cleanup(). It never shared the manager's event loop -- it only
+// ever needed "do this every 60s on a separate thread" -- so it drops the
+// Worker/libev machinery (its own ev::loop + ev::timer) in favour of the
+// ev-free Thread<> base and a plain condition-variable wait. The manager
+// drives its lifecycle explicitly: run() -> finish() -> join().
+class DatabaseCleanup : public Thread<DatabaseCleanup, ThreadPolicyType::regular> {
+	std::mutex mtx;
+	std::condition_variable wakeup;
+	std::atomic_bool finished;
 
 public:
-	DatabaseCleanup(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_);
+	DatabaseCleanup();
 
 	~DatabaseCleanup() noexcept;
 
@@ -52,5 +53,5 @@ public:
 
 	void operator()();
 
-	std::string __repr__() const override;
+	void finish();
 };

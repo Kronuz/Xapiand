@@ -22,24 +22,24 @@
 
 #include "database/cleanup.h"
 
+#include <chrono>                             // for std::chrono::seconds
+
 #include "log.h"                              // for L_CALL
 #include "manager.h"                          // for XapiandManager
 #include "database/pool.h"                    // for DatabasePool (database_pool)
 #include "database/schemas_lru.h"             // for SchemasLRU (schemas)
 
 
-DatabaseCleanup::DatabaseCleanup(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_) :
-	Worker(parent_, ev_loop_, ev_flags_),
-	cleanup(*ev_loop)
+DatabaseCleanup::DatabaseCleanup() :
+	finished(false)
 {
-	cleanup.set<DatabaseCleanup, &DatabaseCleanup::cleanup_cb>(this);
 }
 
 
 DatabaseCleanup::~DatabaseCleanup() noexcept
 {
 	try {
-		Worker::deinit();
+		finish();
 	} catch (...) {
 		L_EXC("Unhandled exception in destructor");
 	}
@@ -47,60 +47,15 @@ DatabaseCleanup::~DatabaseCleanup() noexcept
 
 
 void
-DatabaseCleanup::shutdown_impl(long long asap, long long now)
+DatabaseCleanup::finish()
 {
-	L_CALL("DatabaseCleanup::stop_impl({}, {})", asap, now);
+	L_CALL("DatabaseCleanup::finish()");
 
-	Worker::shutdown_impl(asap, now);
-
-	if (asap) {
-		auto manager = XapiandManager::manager();
-		if (now != 0 || !manager || manager->ready_to_end_database_cleanup()) {
-			stop(false);
-			destroy(false);
-			if (is_runner()) {
-				break_loop(false);
-			} else {
-				detach(false);
-			}
-		}
+	{
+		std::lock_guard<std::mutex> lk(mtx);
+		finished.store(true, std::memory_order_release);
 	}
-}
-
-
-void
-DatabaseCleanup::start_impl()
-{
-	L_CALL("DatabaseCleanup::start_impl()");
-
-	Worker::start_impl();
-
-	cleanup.repeat = 60.0;
-	cleanup.again();
-	L_EV("Start cleanup event");
-}
-
-
-void
-DatabaseCleanup::stop_impl()
-{
-	L_CALL("DatabaseCleanup::stop_impl()");
-
-	Worker::stop_impl();
-
-	cleanup.stop();
-	L_EV("Stop cleanup event");
-}
-
-
-void
-DatabaseCleanup::cleanup_cb(ev::timer& /*unused*/, [[maybe_unused]] int revents)
-{
-	L_CALL("DatabaseCleanup::cleanup_cb(<timer>, {:#04x} ({}))", revents, readable_revents(revents));
-
-	auto manager = XapiandManager::manager();
-	manager->database_pool->cleanup();
-	manager->schemas->cleanup();
+	wakeup.notify_all();
 }
 
 
@@ -110,19 +65,21 @@ DatabaseCleanup::operator()()
 	L_CALL("DatabaseCleanup::operator()()");
 
 	L_EV("Starting database cleanup loop...");
-	run_loop();
+	std::unique_lock<std::mutex> lk(mtx);
+	while (!finished.load(std::memory_order_acquire)) {
+		wakeup.wait_for(lk, std::chrono::seconds(60), [this] {
+			return finished.load(std::memory_order_acquire);
+		});
+		if (finished.load(std::memory_order_acquire)) {
+			break;
+		}
+		lk.unlock();
+		auto manager = XapiandManager::manager();
+		if (manager) {
+			manager->database_pool->cleanup();
+			manager->schemas->cleanup();
+		}
+		lk.lock();
+	}
 	L_EV("Database cleanup loop ended!");
-
-	detach(false);
-}
-
-
-std::string
-DatabaseCleanup::__repr__() const
-{
-	return strings::format(STEEL_BLUE + "<DatabaseCleanup {{cnt:{}}}{}{}{}>",
-		use_count(),
-		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
-		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
-		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "");
 }

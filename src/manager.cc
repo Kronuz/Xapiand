@@ -985,9 +985,8 @@ XapiandManager::make_servers()
 	L(-LOG_NOTICE, NOTICE_COL, msg);
 
 	// Setup database cleanup thread.
-	database_cleanup = Worker::make_shared<DatabaseCleanup>(shared_from_this(), nullptr, ev_flags);
+	database_cleanup = std::make_shared<DatabaseCleanup>();
 	database_cleanup->run();
-	database_cleanup->start();
 
 	// Start committers, fsynchers, database updaters and replicator triggers.
 	committer();
