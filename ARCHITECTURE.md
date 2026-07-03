@@ -63,6 +63,11 @@ network services, and clustering are Asio `io_context` loops; the remaining movi
 parts are plain `std::thread`s, `Thread<>` pools, and debouncers. There is no
 `Worker` tree and no shared event loop anymore.
 
+![Xapiand runtime topology: what runs on which thread, post-libev](assets/runtime.svg)
+
+<!-- Diagram: assets/runtime.svg. Edit the D2 source below and re-render with:
+     d2 --theme 0 --pad 20 <this-source>.d2 assets/runtime.svg
+
 ```d2
 # Xapiand runtime topology: what runs on which thread, post-libev.
 direction: down
@@ -118,6 +123,7 @@ clu -> main.manager: "commands\n(RAFT_*, setup)"
 main.manager -> svc: "start on READY"
 wrk.cl -> store.dbp
 ```
+-->
 
 The rules that hold the topology together:
 
@@ -143,6 +149,11 @@ Xapiand is assembled from **~57 standalone `Kronuz/*` libraries** plus a handful
 third-party ones, wired in by CMake `FetchContent`. Most of what used to be in-tree
 `src/*.hh` utilities are now their own repositories (this is the decomposition the rest
 of this document's "extraction candidate" notes were pointing at). The layering:
+
+![Xapiand dependency layering (Kronuz libraries + third-party)](assets/dependencies.svg)
+
+<!-- Diagram: assets/dependencies.svg. Edit the D2 source below and re-render with:
+     d2 --theme 0 --pad 20 <this-source>.d2 assets/dependencies.svg
 
 ```d2
 # Xapiand dependency layering (Kronuz libraries + third-party).
@@ -200,6 +211,7 @@ foundation.traceback -> foundation."errno-names"
 foundation.traceback -> foundation.strings
 foundation.scheduler -> foundation.threadpool
 ```
+-->
 
 ### Full dependency list
 
