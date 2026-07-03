@@ -1470,7 +1470,6 @@ XapiandManager::ready_to_end(bool notify)
 }
 
 
-
 void
 XapiandManager::dispatch_command_async_cb()
 {
