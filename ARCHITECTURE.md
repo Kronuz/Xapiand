@@ -148,70 +148,35 @@ The rules that hold the topology together:
 Xapiand is assembled from **~57 standalone `Kronuz/*` libraries** plus a handful of
 third-party ones, wired in by CMake `FetchContent`. Most of what used to be in-tree
 `src/*.hh` utilities are now their own repositories (this is the decomposition the rest
-of this document's "extraction candidate" notes were pointing at). The layering:
+of this document's "extraction candidate" notes were pointing at). The layering (`→`
+reads "depends on"):
 
-![Xapiand dependency layering (Kronuz libraries + third-party)](assets/dependencies.svg)
-
-<!-- Diagram: assets/dependencies.svg. Edit the D2 source below and re-render with:
-     d2 --theme 0 --pad 20 <this-source>.d2 assets/dependencies.svg
-
-```d2
-# Xapiand dependency layering (Kronuz libraries + third-party).
-direction: down
-
-xapiand: Xapiand (the app) {
-  style.fill: "#1a7f5a"; style.font-color: "#ffffff"; style.bold: true
-}
-
-runtime: Asio runtime & subsystem libraries {
-  style.fill: "#e8f5ee"
-  grid-columns: 4
-  reactor; cluster; http; flume; storage; io; fs; system
-}
-
-foundation: Foundation libraries {
-  style.fill: "#eef2f7"
-  grid-columns: 4
-  strings; repr; logger; traceback; compressors; scheduler; threadpool
-  stringified; "errno-names"; split; "term-color"; "static-string"; "char-classify"
-}
-
-thirdparty: Third-party {
-  style.fill: "#faf3e6"
-  grid-columns: 5
-  asio; lz4; zstd; "http-parser"; "radix-router"
-}
-
-xapiand -> runtime: 8 of ~57 Kronuz libs {style.stroke-dash: 3}
-
-runtime.reactor -> thirdparty.asio
-runtime.cluster -> runtime.reactor
-runtime.http -> runtime.reactor
-runtime.http -> thirdparty."http-parser"
-runtime.http -> thirdparty."radix-router"
-runtime.http -> runtime.compressors
-runtime.flume -> runtime.compressors
-runtime.storage -> runtime.compressors
-runtime.fs -> runtime.io
-runtime.fs -> foundation.strings
-runtime.fs -> foundation.split
-runtime.fs -> foundation.stringified
-runtime.system -> runtime.io
-runtime.system -> foundation.strings
-
-runtime.compressors -> thirdparty.lz4
-runtime.compressors -> thirdparty.zstd
-foundation.strings -> foundation.repr
-foundation.strings -> foundation."char-classify"
-foundation.strings -> foundation."term-color"
-foundation.repr -> foundation."char-classify"
-foundation."term-color" -> foundation."static-string"
-foundation.logger -> foundation.scheduler
-foundation.traceback -> foundation."errno-names"
-foundation.traceback -> foundation.strings
-foundation.scheduler -> foundation.threadpool
 ```
--->
+Xapiand  (the app)
+│
+├── reactor       → asio*
+├── cluster       → reactor
+├── http          → reactor · compressors · http-parser* · radix-router*
+├── flume         → compressors
+├── storage       → compressors · errno-names · strict-stox · stringified
+├── io            → (no dependencies)
+├── fs            → io · split · strings · stringified
+├── system        → io · strings
+│
+│   foundation (shared by the runtime libraries above)
+├── compressors   → lz4* · zstd*
+├── strings       → repr · split · static-string · term-color · char-classify
+├── repr          → char-classify
+├── term-color    → static-string
+├── logger        → scheduler · term-color
+├── scheduler     → stash · threadpool
+└── traceback     → errno-names · nanosleep · strings · term-color
+
+  * third-party (everything else is Kronuz/*). The graph is a layered, acyclic
+    DAG — every edge points down a layer — and the leaf libraries (split,
+    stringified, char-classify, static-string, errno-names, nanosleep, stash,
+    threadpool, strict-stox) depend on nothing of their own.
+```
 
 ### Full dependency list
 
