@@ -698,6 +698,17 @@ if(NOT cluster_POPULATED)
 endif()
 include_directories("${cluster_SOURCE_DIR}")
 
+# flume: the compressed, framed, integrity-checked file-transfer conduit (Kronuz/flume) --
+# the FILE_FOLLOWS codec for the Remote/Replication Asio migration, replacing the libev
+# ClientLZ4Compressor/Decompressor. Header-only; rides the compressors buffer-core (Zstd L6
+# by default -- ~48% fewer bytes than the classic LZ4 at line-rate).
+FetchContent_Declare(flume GIT_REPOSITORY https://github.com/Kronuz/flume.git GIT_TAG main)
+FetchContent_GetProperties(flume)
+if(NOT flume_POPULATED)
+	FetchContent_Populate(flume)
+endif()
+include_directories("${flume_SOURCE_DIR}")
+
 # Asio (standalone, header-only): the runtime + transport substrate the HTTP path
 # now rides on (http_asio.h). C++20 coroutines drive one un-stallable connection per
 # co_spawn, N io_contexts share the listen port via SO_REUSEPORT. Header-only, so the
