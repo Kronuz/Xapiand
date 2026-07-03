@@ -54,9 +54,8 @@
 #include "database/utils.h"                      // for RESERVED_TYPE, unsharded_path
 #include "database/wal.h"                        // for DatabaseWALWriter
 #include "epoch.hh"                              // for epoch::now
-#include "error.hh"                              // for error:name, error::description
-#include "ev/ev++.h"                             // for ev::async, ev::loop_ref
-#include "exception.h"                           // for SystemExit, Excep...
+#include "error.hh"                             // for error:name, error::description
+#include "exception.h"                          // for SystemExit, Excep...
 #include "hashes.hh"                             // for jump_consistent_hash
 #include "io.hh"                                 // for io::*
 #include "index_resolver_lru.h"                  // for IndexResolverLRU
@@ -70,11 +69,12 @@
 #include "nanosleep.h"                           // for nanosleep
 #include "net.hh"                                // for inet_ntop
 #include "package.h"                             // for Package
-#include "readable_revents.hh"                   // for readable_revents
 #include "reserved/schema.h"                     // for RESERVED_INDEX, RESERVED_TYPE, ...
 #include "serialise.h"                           // for KEYWORD_STR
 #include "serialise_list.h"                      // for StringList
 #include "http_asio.h"                           // Kronuz/http: HttpAsioService (the Asio transport)
+#include "reactor.h"                             // Kronuz/reactor: reactor::Reactor (the control-plane loop)
+#include "reactor_events.h"                      // Kronuz/reactor: PeriodicTimer, Signal (ev::timer/async replacements)
 #include "server/remote_protocol_asio.h"         // remote::RemoteProtocolAsioService (the Asio transport)
 #include "server/replication_protocol_asio.h"    // replication::ReplicationProtocolAsioService (the Asio transport)
 #include "server/search_application.h"           // for SearchApplication (the HttpHandler)
@@ -126,7 +126,50 @@ static const std::regex time_re("(?:(?:([0-9]+)h)?(?:([0-9]+)m)?(?:([0-9]+)s)?)(
 
 std::shared_ptr<XapiandManager> XapiandManager::_manager;
 
-static ev::loop_ref* loop_ref_nil = nullptr;
+// The manager's Asio control-plane state, kept out of manager.h (which stays Asio-free).
+// One inline reactor (0 offload workers -- every control-plane callback runs on the loop
+// thread, exactly as the ev watchers did). The ev::timer/ev::async watchers become a
+// PeriodicTimer + three Signals. The signal wake is deliberately NOT a reactor::Signal
+// (its send() does asio::post -> heap alloc + lock, which is NOT async-signal-safe): it is
+// a self-pipe (sig_pipe), written from the POSIX signal handler with a bare write() -- the
+// same async-signal-safe mechanism ev::async uses internally -- and drained on the loop.
+struct XapiandManager::Reactors {
+	reactor::Reactor reactor;
+	reactor::PeriodicTimer try_shutdown_timer;
+	reactor::Signal setup_node_async;
+	reactor::Signal set_cluster_database_ready_async;
+	reactor::Signal dispatch_command_async;
+	reactor::Signal shutdown_async;
+
+	int sig_pipe[2];                             // [0] read end (watched), [1] write end (signal handler)
+	asio::posix::stream_descriptor sig_reader;
+	char sig_drain[64];
+
+	Reactors()
+		: reactor(0, 0),
+		  try_shutdown_timer(reactor.io().get_executor()),
+		  setup_node_async(reactor.io().get_executor()),
+		  set_cluster_database_ready_async(reactor.io().get_executor()),
+		  dispatch_command_async(reactor.io().get_executor()),
+		  shutdown_async(reactor.io().get_executor()),
+		  sig_pipe{-1, -1},
+		  sig_reader(reactor.io())
+	{
+		if (::pipe(sig_pipe) == 0) {
+			for (int fd : sig_pipe) {
+				::fcntl(fd, F_SETFL, ::fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+				::fcntl(fd, F_SETFD, ::fcntl(fd, F_GETFD, 0) | FD_CLOEXEC);
+			}
+			sig_reader.assign(sig_pipe[0]);
+		}
+	}
+
+	~Reactors() {
+		asio::error_code ec;
+		sig_reader.close(ec);
+		if (sig_pipe[1] != -1) { ::close(sig_pipe[1]); }
+	}
+};
 
 // The Xapiand search API served over the Asio transport. SearchApplication is a
 // stateless http::HttpHandler (its handle() builds all per-request state locally),
@@ -168,35 +211,8 @@ void sig_exit(int sig) {
 }
 
 
-XapiandManager::XapiandManager()
-	: Worker(std::weak_ptr<Worker>{}, loop_ref_nil, 0),
-	  total_clients(0),
-	  http_clients(0),
-	  remote_clients(0),
-	  replication_clients(0),
-	  schemas(std::make_unique<SchemasLRU>(opts.schema_pool_size, std::chrono::milliseconds(opts.schema_pool_timeout))),
-	  database_pool(std::make_unique<DatabasePool>(opts.database_pool_size, opts.max_database_readers)),
-	  wal_writer(std::make_unique<DatabaseWALWriter>("WL{:02}", opts.num_async_wal_writers)),
-	  index_settings_resolver(std::make_unique<IndexResolverLRU>(opts.resolver_cache_size, std::chrono::milliseconds(opts.resolver_cache_timeout))),
-#ifdef XAPIAND_CLUSTERING
-#endif
-	  doc_preparer_pool(std::make_unique<ThreadPool<std::unique_ptr<DocPreparer>, ThreadPolicyType::doc_preparers>>("DP{:02}", opts.num_doc_preparers)),
-	  doc_indexer_pool(std::make_unique<ThreadPool<std::shared_ptr<DocIndexer>, ThreadPolicyType::doc_indexers>>("DI{:02}", opts.num_doc_indexers)),
-	  state(State::RESET),
-	  node_name(opts.node_name),
-	  _shutdown_asap(0),
-	  _shutdown_now(0),
-	  _new_cluster(0),
-	  _process_start(std::chrono::steady_clock::now()),
-	  _try_shutdown(0),
-	  atom_sig(0)
-{
-}
-
-
-XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::steady_clock::time_point process_start_)
-	: Worker(std::weak_ptr<Worker>{}, ev_loop_, ev_flags_),
-	  total_clients(0),
+XapiandManager::XapiandManager(std::chrono::steady_clock::time_point process_start_)
+	: total_clients(0),
 	  http_clients(0),
 	  remote_clients(0),
 	  replication_clients(0),
@@ -215,33 +231,25 @@ XapiandManager::XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, s
 	  _new_cluster(0),
 	  _process_start(process_start_),
 	  _try_shutdown(0),
-	  try_shutdown_timer(*ev_loop),
-	  signal_sig_async(*ev_loop),
-	  setup_node_async(*ev_loop),
-	  set_cluster_database_ready_async(*ev_loop),
-	  dispatch_command_async(*ev_loop),
+	  _running_loop(false),
+	  _deinited(false),
+	  _asap(0),
+	  _now(0),
+	  _rx(std::make_unique<Reactors>()),
 	  atom_sig(0)
 {
-	try_shutdown_timer.set<XapiandManager, &XapiandManager::try_shutdown_timer_cb>(this);
-
-	signal_sig_async.set<XapiandManager, &XapiandManager::signal_sig_async_cb>(this);
-	signal_sig_async.start();
-
-	setup_node_async.set<XapiandManager, &XapiandManager::setup_node_async_cb>(this);
-	setup_node_async.start();
-
-	set_cluster_database_ready_async.set<XapiandManager, &XapiandManager::set_cluster_database_ready_async_cb>(this);
-	set_cluster_database_ready_async.start();
-
-	dispatch_command_async.set<XapiandManager, &XapiandManager::dispatch_command_async_cb>(this);
-	dispatch_command_async.start();
+	_rx->try_shutdown_timer.set_callback([this] { try_shutdown_timer_cb(); });
+	_rx->setup_node_async.set_callback([this] { setup_node_async_cb(); });
+	_rx->set_cluster_database_ready_async.set_callback([this] { set_cluster_database_ready_async_cb(); });
+	_rx->dispatch_command_async.set_callback([this] { dispatch_command_async_cb(); });
+	_rx->shutdown_async.set_callback([this] { shutdown_async_cb(); });
 }
 
 
 XapiandManager::~XapiandManager() noexcept
 {
 	try {
-		Worker::deinit();
+		_deinited.store(true, std::memory_order_release);
 
 		join();
 
@@ -387,29 +395,65 @@ XapiandManager::host_address(const char *hostname)
 void
 XapiandManager::signal_sig(int sig)
 {
+	// Runs in a POSIX signal handler (see main.cc sig_handler) -- everything here MUST be
+	// async-signal-safe. atom_sig is an atomic store; the wake is a bare write() of one
+	// byte to the self-pipe (both safe). Do NOT use reactor::Signal here: its send() calls
+	// asio::post (heap alloc + lock), which is unsafe in a signal handler. The reactor
+	// drains the pipe on the loop thread (arm_signal_reader) and runs signal_sig_impl.
 	atom_sig = sig;
-	signal_sig_async.send();
+	if (_rx && _rx->sig_pipe[1] != -1) {
+		char byte = 1;
+		ssize_t written = ::write(_rx->sig_pipe[1], &byte, 1);
+		(void)written;  // EAGAIN (pipe full) is fine: a wake is already pending -- coalesced
+	}
 }
 
 
 void
-XapiandManager::try_shutdown_timer_cb(ev::timer& /*unused*/, [[maybe_unused]] int revents)
+XapiandManager::arm_signal_reader()
 {
-	L_CALL("XapiandManager::try_shutdown_timer_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+	if (!_rx) { return; }
+	_rx->sig_reader.async_read_some(asio::buffer(_rx->sig_drain),
+		[this](const asio::error_code& ec, std::size_t /*n*/) {
+			if (ec) { return; }  // pipe closed / read cancelled at shutdown
+			signal_sig_impl();
+			arm_signal_reader();
+		});
+}
 
-	L_EV_BEGIN("XapiandManager::try_shutdown_timer_cb:BEGIN");
-	L_EV_END("XapiandManager::try_shutdown_timer_cb:END");
+
+void
+XapiandManager::run_loop()
+{
+	L_CALL("XapiandManager::run_loop()");
+
+	assert(!is_running_loop());
+
+	_running_loop.store(true, std::memory_order_release);
+	arm_signal_reader();
+	// Keep the loop alive while idle (no pending I/O) until break_loop() stops it.
+	auto guard = asio::make_work_guard(_rx->reactor.io());
+	_rx->reactor.io().run();
+	_running_loop.store(false, std::memory_order_release);
+}
+
+
+void
+XapiandManager::break_loop()
+{
+	L_CALL("XapiandManager::break_loop()");
+
+	// io_context::stop() is thread-safe and makes a running run() return ASAP.
+	_rx->reactor.io().stop();
+}
+
+
+void
+XapiandManager::try_shutdown_timer_cb()
+{
+	L_CALL("XapiandManager::try_shutdown_timer_cb()");
 
 	try_shutdown();
-}
-
-
-void
-XapiandManager::signal_sig_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
-{
-	L_CALL("XapiandManager::signal_sig_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
-
-	signal_sig_impl();
 }
 
 
@@ -434,12 +478,36 @@ XapiandManager::signal_sig_impl()
 		case SIGINFO:
 #endif
 #ifdef XAPIAND_CLUSTERING
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", traceback::dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas(), Node::dump_nodes());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Manager:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}" + DARK_STEEL_BLUE + "Nodes:\n{}", traceback::dump_callstacks(), __repr__(), database_pool->dump_databases(), schemas->dump_schemas(), Node::dump_nodes());
 #else
-			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Workers:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", traceback::dump_callstacks(), dump_tree(), database_pool->dump_databases(), schemas->dump_schemas());
+			print(DARK_STEEL_BLUE + "Threads:\n{}" + DARK_STEEL_BLUE + "Manager:\n{}" + DARK_STEEL_BLUE + "Databases:\n{}" + DARK_STEEL_BLUE + "Schemas:\n{}", traceback::dump_callstacks(), __repr__(), database_pool->dump_databases(), schemas->dump_schemas());
 #endif
 			break;
 	}
+}
+
+
+void
+XapiandManager::shutdown(long long asap, long long now, bool async)
+{
+	L_CALL("XapiandManager::shutdown({}, {})", asap, now);
+
+	if (async) {
+		_asap.store(asap, std::memory_order_release);
+		_now.store(now, std::memory_order_release);
+		_rx->shutdown_async.send();
+	} else {
+		shutdown_impl(asap, now);
+	}
+}
+
+
+void
+XapiandManager::shutdown_async_cb()
+{
+	L_CALL("XapiandManager::shutdown_async_cb()");
+
+	shutdown_impl(_asap.load(std::memory_order_acquire), _now.load(std::memory_order_acquire));
 }
 
 
@@ -452,7 +520,7 @@ XapiandManager::shutdown_sig(int sig, bool async)
 		if (sig < 0) {
 			// System Exit with error code (-sig)
 			atom_sig = sig;
-			if (is_runner() && is_running_loop()) {
+			if (is_running_loop()) {
 				break_loop();
 			} else {
 				throw SystemExit(-sig);
@@ -467,7 +535,7 @@ XapiandManager::shutdown_sig(int sig, bool async)
 				if (now <= _shutdown_now + 1000) {
 					io::ignore_eintr().store(false);
 					atom_sig = sig = -EX_SOFTWARE;
-					if (is_runner() && is_running_loop()) {
+					if (is_running_loop()) {
 						L_WARNING("Trying breaking the loop.");
 						break_loop();
 					} else {
@@ -519,8 +587,6 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 {
 	L_CALL("XapiandManager::shutdown_impl({}, {})", asap, now);
 
-	Worker::shutdown_impl(asap, now);
-
 	if (asap) {
 		if (!ready_to_end_http()) {
 			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down: HTTP is busy...", "Continuing shutdown process!");
@@ -534,18 +600,14 @@ XapiandManager::shutdown_impl(long long asap, long long now)
 			L_MANAGER_TIMED(3s, "Is taking too long to start shutting down...", "Starting shutdown process!");
 		}
 
-		try_shutdown_timer.repeat = 5.0;
-		try_shutdown_timer.again();
-		L_EV("Configured try shutdown timer ({})", try_shutdown_timer.repeat);
+		_rx->try_shutdown_timer.set_repeat(5.0);
+		_rx->try_shutdown_timer.again();
+		L_EV("Configured try shutdown timer (5.0)");
 
 		if (now != 0 || ready_to_end(true)) {
-			stop(false);
-			destroy(false);
-			if (is_runner()) {
-				break_loop(false);
-			} else {
-				detach(false);
-			}
+			// No Worker tree to stop/destroy/detach anymore -- the manager is the sole
+			// remaining runner, so shutting down is exactly "break the control-plane loop".
+			break_loop();
 		}
 	}
 }
@@ -685,12 +747,12 @@ XapiandManager::start_discovery()
 void
 XapiandManager::setup_node_impl()
 {
-	setup_node_async.send();
+	_rx->setup_node_async.send();
 }
 
 
 void
-XapiandManager::setup_node_async_cb(ev::async&, int)
+XapiandManager::setup_node_async_cb()
 {
 	L_CALL("XapiandManager::setup_node_async_cb(...)");
 
@@ -1004,12 +1066,12 @@ XapiandManager::make_servers()
 void
 XapiandManager::set_cluster_database_ready_impl()
 {
-	set_cluster_database_ready_async.send();
+	_rx->set_cluster_database_ready_async.send();
 }
 
 
 void
-XapiandManager::set_cluster_database_ready_async_cb(ev::async&, int)
+XapiandManager::set_cluster_database_ready_async_cb()
 {
 	L_CALL("XapiandManager::set_cluster_database_ready_async_cb(...)");
 
@@ -1073,7 +1135,7 @@ XapiandManager::join()
 
 	// This method should finish and wait for all objects and threads to finish
 	// their work. Order of waiting for objects here matters!
-	L_MANAGER(STEEL_BLUE + "Workers:\n{}Databases:\n{}Nodes:\n{}", dump_tree(), database_pool->dump_databases(), Node::dump_nodes());
+	L_MANAGER(STEEL_BLUE + "Manager:\n{}Databases:\n{}Nodes:\n{}", __repr__(), database_pool->dump_databases(), Node::dump_nodes());
 
 	////////////////////////////////////////////////////////////////////
 	if (http_service) {
@@ -1410,9 +1472,9 @@ XapiandManager::ready_to_end(bool notify)
 
 
 void
-XapiandManager::dispatch_command_async_cb(ev::async& /*unused*/, [[maybe_unused]] int revents)
+XapiandManager::dispatch_command_async_cb()
 {
-	L_CALL("XapiandManager::dispatch_command_async_cb(<watcher>, {:#x} ({}))", revents, readable_revents(revents));
+	L_CALL("XapiandManager::dispatch_command_async_cb()");
 
 	std::pair<Command, std::string> command;
 	while (dispatch_command_args.try_dequeue(command)) {
@@ -1428,7 +1490,7 @@ XapiandManager::dispatch_command_impl(Command command, const std::string& data)
 
 	dispatch_command_args.enqueue(std::make_pair(command, data));
 
-	dispatch_command_async.send();
+	_rx->dispatch_command_async.send();
 }
 
 
@@ -1705,12 +1767,10 @@ XapiandManager::exchange_state(State from, State to, std::chrono::milliseconds t
 std::string
 XapiandManager::__repr__() const
 {
-	return strings::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}{}{}>",
+	return strings::format(STEEL_BLUE + "<XapiandManager ({}) {{cnt:{}}}{}>",
 		enum_name(state.load()),
-		use_count(),
-		is_runner() ? " " + DARK_STEEL_BLUE + "(runner)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(worker)" + STEEL_BLUE,
-		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE,
-		is_detaching() ? " " + ORANGE + "(detaching)" + STEEL_BLUE : "");
+		static_cast<long>(_manager.use_count()),
+		is_running_loop() ? " " + DARK_STEEL_BLUE + "(running loop)" + STEEL_BLUE : " " + DARK_STEEL_BLUE + "(stopped loop)" + STEEL_BLUE);
 }
 
 

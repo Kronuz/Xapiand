@@ -43,7 +43,6 @@
 #include "node.h"                           // for Node, local_node
 #include "opts.h"                           // for opts::*
 #include "random.hh"                        // for random_int
-#include "readable_revents.hh"              // for readable_revents
 #include "repr.hh"                          // for repr
 #include "utype.hh"                         // for toUType
 

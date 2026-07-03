@@ -804,17 +804,14 @@ void server(std::chrono::steady_clock::time_point process_start) {
 
 	setup();
 
-	ev::default_loop default_loop(opts.ev_flags);
-	L_INFO("Connection processing backend: {}", ev_backend(default_loop.backend()));
-
-	auto& manager = XapiandManager::make(&default_loop, opts.ev_flags, process_start);
+	auto& manager = XapiandManager::make(process_start);
 	manager->run();
 
 	long managers = manager.use_count() - 1;
 	if (managers == 0) {
 		L(-LOG_NOTICE, NOTICE_COL, "Xapiand is cleanly done with all work!");
 	} else {
-		L(-LOG_WARNING, WARNING_COL, "Xapiand is uncleanly done with all work ({})!\n{}", managers, manager->dump_tree());
+		L(-LOG_WARNING, WARNING_COL, "Xapiand is uncleanly done with all work ({})!\n{}", managers, manager->__repr__());
 	}
 	manager.reset();
 }

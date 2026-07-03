@@ -27,6 +27,7 @@
 #include <cassert>                            // for assert
 #include <chrono>                             // for std::chrono
 #include <atomic>                             // for std::atomic, std::atomic_int
+#include <memory>                             // for std::unique_ptr, std::shared_ptr
 #include <mutex>                              // for std::mutex
 #include <string>                             // for std::string
 #include <string_view>                        // for std::string_view
@@ -36,13 +37,11 @@
 #include "debouncer.h"                        // for Debouncer
 #include "endpoint.h"                         // for Endpoint
 #include "enum.h"                             // for ENUM_CLASS
-#include "ev/ev++.h"                          // for ev::loop_ref
 #include "length.h"                           // for serialise_length
 #include "opts.h"                             // for opts::*
 #include "node.h"                             // for Node, local_node
 #include "thread.hh"                          // for ThreadPolicyType::*
 #include "threadpool.hh"                      // for ThreadPool
-#include "worker.h"                           // for Worker
 #include "xapian.h"                           // for Xapian::*
 
 
@@ -103,17 +102,15 @@ ENUM_CLASS(XapiandManagerCommand, int,
 )
 
 
-class XapiandManager : public Worker  {
-	friend Worker;
+class XapiandManager {
 
-	XapiandManager();
-	XapiandManager(ev::loop_ref* ev_loop_, unsigned int ev_flags_, std::chrono::steady_clock::time_point process_start_ = std::chrono::steady_clock::now());
+	explicit XapiandManager(std::chrono::steady_clock::time_point process_start_ = std::chrono::steady_clock::now());
 	~XapiandManager() noexcept;
 
 	std::pair<struct sockaddr_in, std::string> host_address();
 	std::pair<struct sockaddr_in, std::string> host_address(const char *hostname);
 
-	void shutdown_impl(long long asap, long long now) override;
+	void shutdown_impl(long long asap, long long now);
 
 	void _get_stats_time(MsgPack& stats, int start, int end, int increment);
 
@@ -170,29 +167,40 @@ private:
 	std::chrono::steady_clock::time_point _process_start;
 
 	std::atomic_int _try_shutdown;
-	ev::timer try_shutdown_timer;
-	ev::async signal_sig_async;
-	ev::async setup_node_async;
-	ev::async set_cluster_database_ready_async;
+	std::atomic_bool _running_loop;
+	std::atomic_bool _deinited;
+	std::atomic_llong _asap;      // snapshot for the async shutdown hand-off
+	std::atomic_llong _now;
 
-	ev::async dispatch_command_async;
+	// All the Asio/reactor control-plane state (the loop, the timers/signals, the
+	// async-signal-safe self-pipe) lives in this pimpl so this header stays free of
+	// Asio -- mirroring how the *AsioService members are forward-declared + unique_ptr'd.
+	struct Reactors;
+	std::unique_ptr<Reactors> _rx;
+
 	ConcurrentQueue<std::pair<Command, std::string>> dispatch_command_args;
 
-	void try_shutdown_timer_cb(ev::timer& watcher, int revents);
-	void signal_sig_async_cb(ev::async&, int);
+	void run_loop();
+	void break_loop();
+	void arm_signal_reader();
+
+	void try_shutdown_timer_cb();
 	void signal_sig_impl();
 
+	void shutdown_async_cb();
 	void shutdown_sig(int sig, bool async);
 
-	void setup_node_async_cb(ev::async&, int);
+	void setup_node_async_cb();
 	void setup_node_impl();
 
-	void set_cluster_database_ready_async_cb(ev::async&, int);
+	void set_cluster_database_ready_async_cb();
 	void set_cluster_database_ready_impl();
 
-	void dispatch_command_async_cb(ev::async& watcher, int revents);
+	void dispatch_command_async_cb();
 	void dispatch_command_impl(Command command, const std::string& data);
 	void _dispatch_command(Command command, const std::string& data);
+
+	bool is_running_loop() const { return _running_loop.load(std::memory_order_relaxed); }
 
 #ifdef XAPIAND_CLUSTERING
 	void load_nodes();
@@ -221,8 +229,19 @@ public:
 
 	void signal_sig(int sig);
 
+	bool is_deinited() const { return _deinited.load(std::memory_order_relaxed); }
+
+	// Retained for callers (e.g. the restore loop) that poll "is the manager going away?".
+	// Worker set _detaching during shutdown; the equivalent now is: being torn down, or a
+	// signal (shutdown/exit) has arrived.
+	bool is_detaching() const {
+		return _deinited.load(std::memory_order_relaxed) || atom_sig.load(std::memory_order_relaxed) != 0;
+	}
+
 	void run();
 	void join();
+
+	void shutdown(long long asap, long long now, bool async = true);
 
 	bool ready_to_end_http(bool notify = false);
 	bool ready_to_end_remote(bool notify = false);
@@ -231,12 +250,17 @@ public:
 	bool ready_to_end_discovery(bool notify = false);
 	bool ready_to_end(bool notify = false);
 
-	std::string __repr__() const override;
+	std::string __repr__() const;
 
 	template<typename... Args>
 	static auto& make(Args&&... args) {
 		assert(!_manager);
-		_manager = Worker::make_shared<XapiandManager>(std::forward<Args>(args)...);
+		// std::make_shared needs a public ctor; the manager's are private, so use the
+		// same trick Worker::make_shared did -- a local subclass that exposes the ctor.
+		struct enable_make_shared : XapiandManager {
+			explicit enable_make_shared(Args&&... _args) : XapiandManager(std::forward<Args>(_args)...) {}
+		};
+		_manager = std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 		_manager->init();
 		return _manager;
 	}
