@@ -85,7 +85,6 @@ extern struct opts_t {
 	size_t num_shards = 1;
 	size_t num_replicas = 0;
 	int flush_threshold = 100000;
-	unsigned int ev_flags = 0;
 	bool uuid_compact = false;
 	uint32_t uuid_repr = 0;
 	bool uuid_partition = false;
@@ -129,9 +128,5 @@ extern struct opts_t {
 	unsigned long long trigger_replication_debounce_max_force_timeout = 1000;
 	unsigned long long database_stall_time = 0;
 } opts;
-
-const char* ev_backend(unsigned int backend);
-
-unsigned int ev_backend(const std::string& name);
 
 opts_t parseOptions(int argc, char** argv);

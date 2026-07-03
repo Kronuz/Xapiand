@@ -45,13 +45,99 @@
 #include "length.h"                           // for serialise_length, unserialise_length
 #include "manager.h"                          // for XapiandManager
 #include "metrics.h"                          // for Metrics::metrics
-#include "tcp.h"                              // for TCP::connect
+#include <netdb.h>                            // for getaddrinfo, addrinfo, gai_strerror
+#include <netinet/in.h>                       // for IPPROTO_TCP
+#include <netinet/tcp.h>                      // for TCP_NODELAY
 #include "random.hh"                          // for random_int
 #include "repr.hh"                            // for repr
 #include "utype.hh"                           // for toUType
 #include "xapian/net/serialise-error.h"       // for serialise_error, unserialise_error
 
 #include "flume.h"                            // for flume::Sender (whole-DB-file streaming, Zstd)
+
+
+// A libev-free clone of the old server-lib TCP::connect: its tcp.h dragged in worker.h ->
+// libev just to reach this static socket helper. Resolves host:servname, opens a
+// non-blocking TCP socket with the same options (KEEPALIVE / LINGER 0 / NODELAY, and
+// NOSIGPIPE where available), and starts a connect -- EINPROGRESS is expected, since the
+// caller adopts the fd into an Asio socket and awaits writability. Returns the fd, or -1.
+static int tcp_connect(const char* hostname, const char* servname) noexcept
+{
+	L_CALL("tcp_connect({}, {})", hostname, servname);
+
+	struct addrinfo hints = {};
+	hints.ai_flags = AI_ADDRCONFIG | AI_NUMERICSERV;
+	hints.ai_family = PF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	struct addrinfo* addrinfo;
+	if (int err = getaddrinfo(hostname, servname, &hints, &addrinfo)) {
+		L_ERR("Couldn't resolve host {}:{}: {}", hostname, servname, gai_strerror(err));
+		return -1;
+	}
+
+	for (auto ai = addrinfo; ai != nullptr; ai = ai->ai_next) {
+		int conn_sock;
+		int optval = 1;
+
+		if ((conn_sock = io::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol)) == -1) {
+			if (ai->ai_next == nullptr) {
+				L_ERR("ERROR: {}:{} socket: {} ({}): {}", hostname, servname, error::name(errno), errno, error::description(errno));
+				freeaddrinfo(addrinfo);
+				return -1;
+			}
+			continue;
+		}
+
+		if (io::fcntl(conn_sock, F_SETFL, io::fcntl(conn_sock, F_GETFL, 0) | O_NONBLOCK) == -1) {
+			io::close(conn_sock);
+			freeaddrinfo(addrinfo);
+			return -1;
+		}
+
+#ifdef SO_NOSIGPIPE
+		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) == -1) {
+			io::close(conn_sock);
+			freeaddrinfo(addrinfo);
+			return -1;
+		}
+#endif
+		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) == -1) {
+			io::close(conn_sock);
+			freeaddrinfo(addrinfo);
+			return -1;
+		}
+
+		struct linger linger;
+		linger.l_onoff = 1;
+		linger.l_linger = 0;
+		if (io::setsockopt(conn_sock, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1) {
+			io::close(conn_sock);
+			freeaddrinfo(addrinfo);
+			return -1;
+		}
+
+		if (io::setsockopt(conn_sock, IPPROTO_TCP, TCP_NODELAY, &optval, sizeof(optval)) == -1) {
+			io::close(conn_sock);
+			freeaddrinfo(addrinfo);
+			return -1;
+		}
+
+		if (io::connect(conn_sock, ai->ai_addr, ai->ai_addrlen) == -1 && errno != EINPROGRESS && errno != EALREADY) {
+			io::close(conn_sock);
+			freeaddrinfo(addrinfo);
+			return -1;
+		}
+
+		freeaddrinfo(addrinfo);
+		return conn_sock;
+	}
+
+	L_ERR("ERROR: connect error to {}:{}: {} ({}): {}", hostname, servname, error::name(errno), errno, error::description(errno));
+	freeaddrinfo(addrinfo);
+	return -1;
+}
 
 
 // #undef L_DEBUG
@@ -257,7 +343,7 @@ ReplicationProtocolClient::init_replication_protocol(const std::string& host, in
 		return false;
 	}
 
-	int client_sock = TCP::connect(host.c_str(), std::to_string(port).c_str());
+	int client_sock = tcp_connect(host.c_str(), std::to_string(port).c_str());
 	if (client_sock == -1) {
 		lk_shard_ptr.reset();
 		try {

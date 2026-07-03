@@ -59,7 +59,6 @@
 #include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
 #include "error.hh"                               // for error::name, error::description
-#include "ev/ev++.h"                              // for ::DEVPOLL, ::EPOLL, ::KQUEUE
 #include "exception.h"                            // for SystemExit
 #include "fs.hh"                                  // for mkdirs
 #include "hashes.hh"                              // for fnv1ah32

@@ -1115,22 +1115,11 @@ add_library(BOOLEAN_PARSER_OBJ OBJECT ${BOOLEAN_PARSER_SRC_LIST})
 
 
 ########################################################################
-# Libev library target
+# Libev library target -- RETIRED. Xapiand ran its reactors on libev; every one of
+# them (HTTP, Remote, Replication, Discovery, and the XapiandManager control plane)
+# has since moved onto the std-Asio Kronuz/reactor runtime, so the vendored libev
+# under src/ev/ was deleted and its object library dropped from every link line.
 ########################################################################
-
-file(GLOB LIBEV_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/ev/*.c*" "${PROJECT_SOURCE_DIR}/src/ev/*.h*"
-)
-list(REMOVE_ITEM LIBEV_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_epoll.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_kqueue.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_poll.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_port.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_select.c"
-	"${PROJECT_SOURCE_DIR}/src/ev/ev_win32.c"
-)
-list(APPEND LIBEV_SRC_LIST ${XAPIAN_H_LIST})
-add_library(LIBEV_OBJ OBJECT ${LIBEV_SRC_LIST})
 
 
 ########################################################################
@@ -1267,13 +1256,10 @@ set_source_files_properties("${traceback_SOURCE_DIR}/traceback.cc" PROPERTIES CO
 # src/namegen.cc. It includes its own "namegen.h" (same dir), so c++/ does not need
 # to be on the include path; src/namegen.h reaches it via FANTASYNAME_HEADER.
 list(APPEND XAPIAND_SRC_LIST "${fantasyname_SOURCE_DIR}/c++/namegen.cc")
-# The server engine's out-of-line units, in place of the removed src/worker.cc and
-# src/server/{tcp,base_server}.cc. base_client is header-only (base_client.h pulls
-# base_client.tcc), so it is NOT listed here -- the http/remote/replication clients
-# instantiate BaseClient<> from their own TUs.
-list(APPEND XAPIAND_SRC_LIST "${server_SOURCE_DIR}/worker.cc")
-list(APPEND XAPIAND_SRC_LIST "${server_SOURCE_DIR}/tcp.cc")
-list(APPEND XAPIAND_SRC_LIST "${server_SOURCE_DIR}/base_server.cc")
+# The Kronuz/server engine (worker.cc / tcp.cc / base_server.cc) is no longer compiled:
+# its libev Worker/BaseServer/TCP reactor has been fully replaced by the Kronuz/reactor
+# (Asio) runtime across HTTP, Remote, Replication, Discovery and the XapiandManager
+# control plane, so none of its translation units (nor libev) are linked anymore.
 # The six just-extracted utilities' out-of-line implementations, in place of the
 # removed src/{repr,escape,times,strings,url_parser}.cc (endian is header-only).
 list(APPEND XAPIAND_SRC_LIST "${repr_SOURCE_DIR}/repr.cc")
@@ -1333,7 +1319,6 @@ target_link_libraries(${PROJECT_NAME}
 	XAPIAND_OBJ
 	XAPIAN_OBJ
 	BOOLEAN_PARSER_OBJ
-	LIBEV_OBJ
 	LZ4_OBJ
 	CUUID_OBJ
 	PROMETHEUS_OBJ
@@ -1948,7 +1933,6 @@ if (BUILD_TESTS)
 				XAPIAND_OBJ
 				XAPIAN_OBJ
 				BOOLEAN_PARSER_OBJ
-				LIBEV_OBJ
 				LZ4_OBJ
 				CUUID_OBJ
 				PROMETHEUS_OBJ

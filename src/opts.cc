@@ -32,7 +32,6 @@
 
 #include <CLI/CLI.hpp>                            // for CLI::App (command-line parser)
 
-#include "ev/ev++.h"                              // for ev_supported
 #include "hashes.hh"                              // for fnv1ah32
 #include "package.h"                              // for Package::VERSION
 #include "strings.hh"                             // for strings::lower
@@ -148,72 +147,6 @@
 
 
 #define fallback(a, b) (a) ? (a) : (b)
-
-
-unsigned int
-ev_backend(const std::string& name)
-{
-	auto ev_use = strings::lower(name);
-	if (ev_use.empty() || ev_use.compare("auto") == 0) {
-		return ev::AUTO;
-	}
-	if (ev_use.compare(EV_SELECT_NAME) == 0) {
-		return ev::SELECT;
-	}
-	if (ev_use.compare(EV_POLL_NAME) == 0) {
-		return ev::POLL;
-	}
-	if (ev_use.compare(EV_EPOLL_NAME) == 0) {
-		return ev::EPOLL;
-	}
-	if (ev_use.compare(EV_KQUEUE_NAME) == 0) {
-		return ev::KQUEUE;
-	}
-	if (ev_use.compare(EV_DEVPOLL_NAME) == 0) {
-		return ev::DEVPOLL;
-	}
-	if (ev_use.compare(EV_PORT_NAME) == 0) {
-		return ev::PORT;
-	}
-	return -1;
-}
-
-
-const char*
-ev_backend(unsigned int backend)
-{
-	switch(backend) {
-		case ev::SELECT:
-			return EV_SELECT_NAME;
-		case ev::POLL:
-			return EV_POLL_NAME;
-		case ev::EPOLL:
-			return EV_EPOLL_NAME;
-		case ev::KQUEUE:
-			return EV_KQUEUE_NAME;
-		case ev::DEVPOLL:
-			return EV_DEVPOLL_NAME;
-		case ev::PORT:
-			return EV_PORT_NAME;
-	}
-	return "unknown";
-}
-
-
-std::vector<std::string> ev_supported() {
-	std::vector<std::string> backends;
-	unsigned int supported = ev::supported_backends();
-	if ((supported & ev::SELECT) != 0u) { backends.emplace_back(EV_SELECT_NAME); }
-	if ((supported & ev::POLL) != 0u) { backends.emplace_back(EV_POLL_NAME); }
-	if ((supported & ev::EPOLL) != 0u) { backends.emplace_back(EV_EPOLL_NAME); }
-	if ((supported & ev::KQUEUE) != 0u) { backends.emplace_back(EV_KQUEUE_NAME); }
-	if ((supported & ev::DEVPOLL) != 0u) { backends.emplace_back(EV_DEVPOLL_NAME); }
-	if ((supported & ev::PORT) != 0u) { backends.emplace_back(EV_PORT_NAME); }
-	if (backends.empty()) {
-		backends.emplace_back("auto");
-	}
-	return backends;
-}
 
 
 opts_t
@@ -357,11 +290,6 @@ parseOptions(int argc, char** argv)
 
 		double processors = hardware_concurrency;
 		app.add_option("--processors", processors, "Number of processors to use.");
-
-		auto use_allowed = ev_supported();
-		std::string use = "auto";
-		app.add_option("--use", use, "Connection processing backend.")
-			->check(CLI::IsMember(use_allowed));
 
 #ifdef XAPIAND_CLUSTERING
 		std::string primary_node;
@@ -592,7 +520,6 @@ parseOptions(int argc, char** argv)
 				o.pidfile = XAPIAND_ROOT "/var/run/" XAPIAND_PID_FILE;
 			}
 		}
-		o.ev_flags = ev_backend(use);
 
 		bool uuid_configured = false;
 		for (const auto& u : uuid) {

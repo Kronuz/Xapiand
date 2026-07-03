@@ -49,7 +49,6 @@
 #include "endpoint.h"                       // for Endpoints, Endpoint
 #include "epoch.hh"                         // for epoch::now
 #include "error.hh"                         // for error:name, error::description
-#include "ev/ev++.h"                        // for async, io, loop_ref (ptr ...
 #include "exception_xapian.h"               // for Exception, SerialisationError
 #include "field_parser.h"                   // for FieldParser, FieldParserError
 #include "hashes.hh"                        // for hhl

@@ -50,7 +50,6 @@
 class DocIndexer;
 class UUIDGenerator;
 class Logging;
-class Worker;
 struct query_field_t;
 
 
