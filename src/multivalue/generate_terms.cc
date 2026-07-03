@@ -31,7 +31,7 @@
 #include "database/schema.h"                      // for required_spc_t, FieldType, UnitTime
 #include "datetime.h"                             // for tm_t, timegm, to_tm_t
 #include "itertools.hh"                           // for iterator::map, iterator::chain
-#include "utils/math.hh"                          // for modulus
+#include "math.hh"                          // for modulus
 #include "reversed.hh"                            // for reversed
 #include "stopper.h"                              // for getStopper
 #include "utype.hh"                               // for toUType

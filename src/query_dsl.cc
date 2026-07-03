@@ -37,7 +37,7 @@
 #include "hashes.hh"                              // for fnv1ah32
 #include "itertools.hh"                           // for iterator::map, iterator::chain
 #include "log.h"                                  // for L_CALL, L
-#include "utils/math.hh"                          // for modulus
+#include "math.hh"                          // for modulus
 #include "multivalue/generate_terms.h"            // for GenerateTerms
 #include "multivalue/geospatialrange.h"           // for GeoSpatialRange
 #include "multivalue/range.h"                     // for MultipleValueRange

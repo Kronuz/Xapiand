@@ -602,6 +602,32 @@ include_directories(
 	"${times_SOURCE_DIR}"
 	"${url_parser_SOURCE_DIR}"
 )
+
+# Header-only utility libraries extracted from Xapiand into standalone repos. All are
+# pure standard-library headers: populate and put their dirs on the include path so
+# Xapiand's #include "utype.hh" / "atomic_shared_ptr.h" / "math.hh" / "lazy.hh" /
+# "itertools.hh" / "reversed.hh" resolve to the libraries, and the in-tree copies are
+# dropped. (iterators bundles itertools.hh + reversed.hh; math provides math.hh in
+# place of the in-tree src/utils/math.hh -- the three consumers now include "math.hh".)
+FetchContent_Declare(utype             GIT_REPOSITORY https://github.com/Kronuz/utype.git             GIT_TAG main)
+FetchContent_Declare(atomic_shared_ptr GIT_REPOSITORY https://github.com/Kronuz/atomic-shared-ptr.git GIT_TAG main)
+FetchContent_Declare(math              GIT_REPOSITORY https://github.com/Kronuz/math.git              GIT_TAG main)
+FetchContent_Declare(lazy              GIT_REPOSITORY https://github.com/Kronuz/lazy.git              GIT_TAG main)
+FetchContent_Declare(iterators         GIT_REPOSITORY https://github.com/Kronuz/iterators.git         GIT_TAG main)
+foreach(dep utype atomic_shared_ptr math lazy iterators)
+	FetchContent_GetProperties(${dep})
+	if(NOT ${dep}_POPULATED)
+		FetchContent_Populate(${dep})
+	endif()
+endforeach()
+include_directories(
+	"${utype_SOURCE_DIR}"
+	"${atomic_shared_ptr_SOURCE_DIR}"
+	"${math_SOURCE_DIR}"
+	"${lazy_SOURCE_DIR}"
+	"${iterators_SOURCE_DIR}"
+)
+
 # strings is special: Xapiand files historically obtained log.h transitively through
 # strings.hh (the extracted library correctly no longer pulls it). So strings_SOURCE_DIR
 # is deliberately NOT on the include path; Xapiand keeps a thin src/strings.hh wrapper
