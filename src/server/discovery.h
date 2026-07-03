@@ -34,15 +34,23 @@
 #include <vector>                           // for std::vector
 
 #include "concurrent_queue.h"               // for ConcurrentQueue
-#include "debouncer.h"                      // for make_debouncer
+#include "debouncer.h"                      // for make_debouncer (db/schema/settings updaters)
 #include "enum.h"                           // for ENUM_CLASS
 #include "lru.h"                            // for lru::aging_lru
-#include "node.h"                           // for Node
 #include "opts.h"                           // for opts::*
-#include "thread.hh"                        // for Thread, ThreadPolicyType::*
-#include "udp.h"                            // for UDP
-#include "worker.h"                         // for Worker
+#include "thread.hh"                        // for ThreadPolicyType::* (the updater debouncers)
 #include "xapian.h"                         // for Xapian::rev
+
+// IMPORTANT include order (EV_ERROR clash): the Xapiand headers pull in libev (ev/ev.h),
+// whose `enum EV_ERROR` collides with macOS <sys/event.h>'s `#define EV_ERROR` that Asio
+// pulls in. libev must be included FIRST. node.h + raft_delegate.h (which pulls node.h and
+// manager.h, both libev) come BEFORE the Asio-only cluster/reactor headers.
+#include "node.h"                           // for Node (libev)
+#include "raft_delegate.h"                  // for XapiandRaftDelegate (pulls manager.h; ev before raft.h)
+
+#include "bus.h"                            // for cluster::Bus (Asio)
+#include "raft.h"                           // for cluster::Raft / cluster::RaftMessage (Asio)
+#include "reactor_events.h"                 // for reactor::PeriodicTimer / reactor::Signal (Asio)
 
 
 struct DatabaseUpdate;
@@ -85,43 +93,27 @@ ENUM_CLASS(DiscoveryMessage, int,
 )
 
 
-// Discovery for nodes and databases
-class Discovery : public UDP, public Worker, public Thread<Discovery, ThreadPolicyType::regular> {
+// Discovery for nodes and databases -- rebuilt on the Kronuz/cluster substrate: a
+// cluster::Bus (multicast transport, replacing the libev UDP + ev::io) carries the
+// membership gossip and the app database/primary-election messages, while a cluster::Raft
+// (consensus, replacing all the former raft_* state/handlers/timers) rides the same Bus
+// through XapiandRaftDelegate. Discovery owns its Bus reactor thread, so it is no longer a
+// libev Worker/Thread; the manager drives it via run()/start()/stop()/finish()/join().
+class Discovery {
 public:
-	using Role = DiscoveryRole;
 	using Message = DiscoveryMessage;
 
 private:
-	ev::io io;
+	unsigned short port_;
+	std::string group_;                                // multicast group (for getDescription)
 
-	ev::timer cluster_discovery;
+	cluster::Bus bus_;                                 // transport (owns the reactor thread)
+	XapiandRaftDelegate delegate_;                     // the ~16 raft seams over Xapiand
+	cluster::Raft<std::shared_ptr<const Node>> raft_;  // consensus (rides bus_)
 
-	ev::async cluster_enter_async;
-
-	ev::timer raft_leader_election_timeout;
-	ev::timer raft_leader_heartbeat;
-
-	ev::async raft_request_vote_async;
-	ev::async raft_relinquish_leadership_async;
-
-	ev::async raft_add_command_async;
-	ConcurrentQueue<std::string> raft_add_command_args;
-
-	ev::async message_send_async;
-
-	Role raft_role;
-	size_t raft_votes_granted;
-	size_t raft_votes_denied;
-	std::unordered_set<std::string> raft_voters;
-
-	uint64_t raft_current_term;
-	Node raft_voted_for;
-	std::vector<RaftLogEntry> raft_log;
-
-	size_t raft_commit_index;
-	size_t raft_last_applied;
-
-	bool raft_eligible;
+	reactor::PeriodicTimer cluster_discovery_;         // exploration cadence (ev::timer replacement)
+	reactor::Signal cluster_enter_signal_;             // cross-thread cluster_enter (ev::async replacement)
+	reactor::Signal message_send_signal_;              // cross-thread app message send (ev::async replacement)
 
 	struct PrimaryShardVoter {
 		std::string uuid;
@@ -131,72 +123,48 @@ private:
 
 	lru::aging_lru<std::string, std::unordered_map<std::string, PrimaryShardVoter>> _ASYNC_elected_primaries;
 
-	std::unordered_map<std::string, size_t> raft_next_indexes;
-	std::unordered_map<std::string, size_t> raft_match_indexes;
-
 	ConcurrentQueue<std::pair<Message, std::string>> message_send_args;
 
-	void cluster_enter_async_cb(ev::async& watcher, int revents);
-
-	void _message_send(Message type, const std::string& path);
-	void message_send_async_cb(ev::async& watcher, int revents);
-
+	// transport: the Bus on_message router (runs on the bus reactor thread) + framed send
+	void on_message(int wire_type, std::string_view content, const asio::ip::udp::endpoint& from);
 	void send_message(Message type, const std::string& message);
-	void io_accept_cb(ev::io& watcher, int revents);
-	void discovery_server(Discovery::Message type, const std::string& message);
 
+	// membership gossip (ride the Bus)
 	void cluster_hello(Message type, const std::string& message);
 	void cluster_wave(Message type, const std::string& message);
 	void cluster_sneer(Message type, const std::string& message);
 	void cluster_enter(Message type, const std::string& message);
 	void cluster_bye(Message type, const std::string& message);
-	void raft_request_vote(Message type, const std::string& message);
-	void raft_request_vote_response(Message type, const std::string& message);
-	void raft_append_entries(Message type, const std::string& message);
-	void raft_append_entries_response(Message type, const std::string& message);
-	void raft_add_command(Message type, const std::string& message);
+
+	// app database/schema/settings messages
 	void db_updated(Message type, const std::string& message);
 	void schema_updated(Message type, const std::string& message);
 	void index_settings_updated(Message type, const std::string& message);
 
-	void cluster_discovery_cb(ev::timer& watcher, int revents);
-
-	void raft_leader_election_timeout_cb(ev::timer& watcher, int revents);
-	void raft_leader_heartbeat_cb(ev::timer& watcher, int revents);
-
-	void _raft_leader_heartbeat_reset(double timeout);
-	void _raft_leader_election_timeout_reset(double timeout);
-	void _raft_set_leader_node(const std::shared_ptr<const Node>& node);
-
-	void _raft_apply_command(const std::string& command);
-	void _raft_commit_log();
-
-	void _raft_request_vote(bool immediate);
-	void raft_request_vote_async_cb(ev::async& watcher, int revents);
-
-	void raft_relinquish_leadership_async_cb(ev::async& watcher, int revents);
-
-	void _raft_add_command(const std::string& command);
-	void raft_add_command_async_cb(ev::async& watcher, int revents);
-
-	void shutdown_impl(long long asap, long long now) override;
-	void destroy_impl() override;
-	void start_impl() override;
-	void stop_impl() override;
+	// discovery exploration timer + cross-thread signals (all run on the bus reactor thread)
+	void cluster_discovery_cb();
+	void cluster_enter_signal_cb();
+	void _message_send(Message type, const std::string& path);
+	void message_send_signal_cb();
 
 	// No copy constructor
 	Discovery(const Discovery&) = delete;
 	Discovery& operator=(const Discovery&) = delete;
 
 public:
-	Discovery(const std::shared_ptr<Worker>& parent_, ev::loop_ref* ev_loop_, unsigned int ev_flags_, const char* hostname, unsigned int serv);
+	Discovery(const char* group, unsigned int port);
 	~Discovery() noexcept;
 
 	const char* name() const noexcept {
 		return "DISC";
 	}
 
-	void operator()();
+	// lifecycle (the manager drives these; the Bus owns the reactor thread)
+	void run();                                       // bind + join the group + start the receive loop
+	void start();                                     // arm the exploration timer
+	void stop();                                      // relinquish leadership + wave goodbye + stop timers
+	void finish();                                    // stop the Bus reactor loop
+	bool join(std::chrono::milliseconds timeout = std::chrono::milliseconds(0));  // wait for the loop to end
 
 	void cluster_enter();
 	void raft_add_command(const std::string& command);
@@ -213,7 +181,7 @@ public:
 	void _ASYNC_elect_primary_response(const std::string& message);
 	void _ASYNC_elect_primary_send(const std::string& normalized_path);
 
-	std::string __repr__() const override;
+	std::string __repr__() const;
 
 	std::string getDescription() const;
 };

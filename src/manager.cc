@@ -682,7 +682,7 @@ XapiandManager::start_discovery()
 		auto msg = strings::format("Discovering cluster {} by listening on ", repr(opts.cluster_name));
 
 		int discovery_port = opts.discovery_port ? opts.discovery_port : XAPIAND_DISCOVERY_SERVERPORT;
-		discovery = Worker::make_shared<Discovery>(shared_from_this(), nullptr, ev_flags, opts.discovery_group.c_str(), discovery_port);
+		discovery = std::make_shared<Discovery>(opts.discovery_group.c_str(), discovery_port);
 		msg += discovery->getDescription();
 		discovery->run();
 
