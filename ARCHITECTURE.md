@@ -23,18 +23,21 @@ header files); another ~125,000 lines are bundled dependencies.
 | `src/msgpack/`, `src/msgpack/predef/` | msgpack-c. |
 | `src/rapidjson/` | RapidJSON. |
 | `src/fmt/` | the {fmt} formatting library. |
-| `src/lz4/` | LZ4 compression. |
-| `src/ev/` | libev. |
 | `src/tclap/` | command-line parsing. |
 | `src/prometheus/` | prometheus-cpp (metrics exposition). |
 | `src/yaml/`, `src/cppcodec/`, `src/chaiscript/` | YAML, base-N codecs, the ChaiScript engine. |
+
+> libev (`src/ev/`) and the `Kronuz/server` engine that once backed the network
+> services have been **removed**: the runtime now rides the standalone-Asio
+> [reactor](https://github.com/Kronuz/reactor) libraries (see
+> [Runtime architecture](#runtime-architecture)). LZ4 comes from `Kronuz/compressors`.
 
 **Xapiand's own subsystems:**
 
 | Area | Where | One line |
 |---|---|---|
 | Storage engine | `src/storage.h`, `src/database/` | Haystack-style append-only volumes, WAL, schema cache, sharding. |
-| Networking / event loop | `src/worker.*`, `src/server/`, `src/io.*`, `src/ev` wrap | A `Worker` tree over libev; one event loop per server, work offloaded to client thread pools. |
+| Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` pools; blocking work offloaded to bounded thread-pools. No libev. |
 | Clustering | `src/server/discovery.*`, `src/server/replication_protocol*`, `src/server/remote_protocol*`, `src/manager.*`, `src/node.*` | Raft control plane + asynchronous pull-based data replication. |
 | Search / query | `src/query_dsl.*`, `src/booleanParser/`, `src/aggregations/`, `src/multivalue/` | JSON/MsgPack DSL and a boolean string language, both compiling to Xapian queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
@@ -42,11 +45,189 @@ header files); another ~125,000 lines are bundled dependencies.
 | Logging | `src/logger.*`, `src/log.h`, `src/ansi_color.hh`, `src/colors.h`, `src/traceback.*` | A custom async logger with lazy args, compile-time colors, timing, and exception backtraces. |
 | Utility layer | top-level `src/*.hh` / `*.h` | Dozens of small, mostly self-contained headers (data structures, concurrency, metaprogramming, string tools). |
 
-Three components have already been spun out into their own repositories, which
-is the precedent this document leans on when flagging extraction candidates:
+Most of the utility layer has since been **spun out into standalone
+`Kronuz/*` repositories** — the [Dependencies](#dependencies) section lists all
+~57 of them — so the "extraction candidate" notes throughout this document have
+largely been acted on. The precedent this started from was
 [base-x](https://github.com/Kronuz/base-x) (`base_x.hh`),
 [uinteger_t](https://github.com/Kronuz/uinteger_t) (`uinteger_t.hh`), and
 [fantasyname](https://github.com/Kronuz/fantasyname) (`namegen.*`).
+
+---
+
+## Runtime architecture
+
+Xapiand no longer uses libev. The whole process runs on the standalone-Asio
+[reactor](https://github.com/Kronuz/reactor) runtime: the control plane, all three
+network services, and clustering are Asio `io_context` loops; the remaining moving
+parts are plain `std::thread`s, `Thread<>` pools, and debouncers. There is no
+`Worker` tree and no shared event loop anymore.
+
+```d2
+# Xapiand runtime topology: what runs on which thread, post-libev.
+direction: down
+
+clients: "clients (HTTP / Xapian remote / peer nodes)" {
+  style.fill: "#faf3e6"
+}
+
+main: "main thread" {
+  style.fill: "#e8f5ee"
+  manager: "XapiandManager\n(reactor::Reactor control-plane loop)" {
+    tsi: "PeriodicTimer\n(try_shutdown, 5s)"
+    sig: "self-pipe\n(async-signal-safe SIGINT/TERM)"
+    asy: "Signals\n(setup_node / ready / dispatch_command)"
+  }
+}
+
+svc: "client-facing services  —  each = a reactor pool (N loops) + a bounded offload thread-pool" {
+  style.fill: "#e8f5ee"
+  http: "HTTP\n(http::HttpAsioService)"
+  remote: "Remote\n(Xapian backend protocol)"
+  repl: "Replication\n(whole-DB streaming via flume)"
+}
+
+clu: "clustering" {
+  style.fill: "#e8f5ee"
+  disc: "Discovery"
+  bus: "cluster::Bus\n(multicast gossip)"
+  raft: "cluster::Raft\n(leader / consensus)"
+  disc -> bus; disc -> raft
+}
+
+wrk: "background worker threads (no libev; plain std::thread / Thread<> / debouncers)" {
+  style.fill: "#eef2f7"
+  cl: "DatabaseCleanup\n(std::thread, 60s)"
+  wal: "WAL writers\n(Thread<> pool + queue)"
+  doc: "doc preparers / indexers\n(ThreadPools)"
+  deb: "committer / fsyncher / updaters\n(debouncers)"
+}
+
+store: "storage" {
+  style.fill: "#eef2f7"
+  dbp: "DatabasePool -> Shards"
+  vol: "Storage volumes\n(append-only, compressed)"
+  dbp -> vol
+}
+
+clients -> svc: "accept" {style.stroke-dash: 3}
+clients -> clu.disc: "UDP gossip" {style.stroke-dash: 3}
+svc -> store: "offloaded blocking\nXapian/IO work"
+svc.repl -> wrk.wal
+clu -> main.manager: "commands\n(RAFT_*, setup)"
+main.manager -> svc: "start on READY"
+wrk.cl -> store.dbp
+```
+
+The rules that hold the topology together:
+
+- **One control-plane loop on the main thread.** `XapiandManager` owns a single
+  `reactor::Reactor`; its callbacks (node setup, "cluster ready", the manager command
+  queue, the shutdown-retry timer) run inline on that loop. Signals reach it through a
+  **self-pipe** (a POSIX handler does one async-signal-safe `write()`; the loop drains
+  it) — never `asio::post`, which is not async-signal-safe.
+- **Each network service is a shared-nothing reactor pool + a bounded offload pool.**
+  Accepted connections are served by per-connection coroutines; the blocking, Xapian-
+  and IO-bound work is `co_await`ed onto the offload pool so the reactor thread never
+  blocks. HTTP/Remote start when the node reaches `READY`; Replication starts at
+  construction (a joining node fetches the cluster DB *during* setup).
+- **Background work is off-loop.** `DatabaseCleanup` is a bare `std::thread` on a 60 s
+  cadence; the WAL writers are a `Thread<>` pool draining a concurrent queue;
+  committers/fsynchers/updaters are debouncers. None of them touch the control loop.
+
+---
+
+## Dependencies
+
+Xapiand is assembled from **~57 standalone `Kronuz/*` libraries** plus a handful of
+third-party ones, wired in by CMake `FetchContent`. Most of what used to be in-tree
+`src/*.hh` utilities are now their own repositories (this is the decomposition the rest
+of this document's "extraction candidate" notes were pointing at). The layering:
+
+```d2
+# Xapiand dependency layering (Kronuz libraries + third-party).
+direction: down
+
+xapiand: Xapiand (the app) {
+  style.fill: "#1a7f5a"; style.font-color: "#ffffff"; style.bold: true
+}
+
+runtime: Asio runtime & subsystem libraries {
+  style.fill: "#e8f5ee"
+  grid-columns: 4
+  reactor; cluster; http; flume; storage; io; fs; system
+}
+
+foundation: Foundation libraries {
+  style.fill: "#eef2f7"
+  grid-columns: 4
+  strings; repr; logger; traceback; compressors; scheduler; threadpool
+  stringified; "errno-names"; split; "term-color"; "static-string"; "char-classify"
+}
+
+thirdparty: Third-party {
+  style.fill: "#faf3e6"
+  grid-columns: 5
+  asio; lz4; zstd; "http-parser"; "radix-router"
+}
+
+xapiand -> runtime: 8 of ~57 Kronuz libs {style.stroke-dash: 3}
+
+runtime.reactor -> thirdparty.asio
+runtime.cluster -> runtime.reactor
+runtime.http -> runtime.reactor
+runtime.http -> thirdparty."http-parser"
+runtime.http -> thirdparty."radix-router"
+runtime.http -> runtime.compressors
+runtime.flume -> runtime.compressors
+runtime.storage -> runtime.compressors
+runtime.fs -> runtime.io
+runtime.fs -> foundation.strings
+runtime.fs -> foundation.split
+runtime.fs -> foundation.stringified
+runtime.system -> runtime.io
+runtime.system -> foundation.strings
+
+runtime.compressors -> thirdparty.lz4
+runtime.compressors -> thirdparty.zstd
+foundation.strings -> foundation.repr
+foundation.strings -> foundation."char-classify"
+foundation.strings -> foundation."term-color"
+foundation.repr -> foundation."char-classify"
+foundation."term-color" -> foundation."static-string"
+foundation.logger -> foundation.scheduler
+foundation.traceback -> foundation."errno-names"
+foundation.traceback -> foundation.strings
+foundation.scheduler -> foundation.threadpool
+```
+
+### Full dependency list
+
+Every `Kronuz/*` dependency Xapiand pulls, grouped by role (all header-or-static,
+tracked at `main`):
+
+- **Asio runtime & network subsystems:** `reactor` (the shared-nothing Asio server
+  runtime), `cluster` (Bus gossip + Raft), `http` (the HTTP transport), `flume`
+  (framed, compressed file transfer), `io` (EINTR-safe POSIX I/O), `fs` (filesystem
+  helpers), `system` (resource introspection), `storage` (append-only blob store).
+- **Concurrency & scheduling:** `threadpool`, `scheduler`, `stash`, `queue`.
+- **Text, formatting & paths:** `strings`, `repr`, `escape`, `url-parser`,
+  `stringified`, `static-string`, `char-classify`, `term-color`, `fantasyname`.
+- **Logging & diagnostics:** `logger`, `traceback`, `errno-names`, `nanosleep`.
+- **Numerics, hashing & encoding:** `base-x`, `uinteger_t`, `endian`, `strict-stox`,
+  `hashes`, `md5`, `sha256`, `random`, `compressors` (LZ4 + Zstd), `allocators`.
+- **Data structures:** `lru-cache`, `bloom-filter`, `radix-router`, `perfect-hash`.
+- **Search & domain:** `boolean-parser`, `enum-reflection`, `soundex`,
+  `double-metaphone`, `string-similarity`, `htm`, `cartesian`, `datetime`, `times`,
+  `epoch`, `located-exception`, `math`, `utype`, `atomic-shared-ptr`, `lazy`,
+  `iterators`.
+- **Third-party:** `asio` (standalone), `lz4`, `zstd`, `rapidjson`, `cppcodec`,
+  `CLI11`, `sol2`/`lua`, `http-parser`.
+
+Two guarantees make the graph maintainable: it is **acyclic and layered** (an arrow
+never points up a layer), and the leaf libraries are **dependency-free** (they build
+against nothing but the standard library). The libev vendored under `src/ev/` and the
+`Kronuz/server` engine that once sat under the network services are **both gone**.
 
 ---
 
@@ -95,54 +276,56 @@ arithmetically (`did = (info.did-1)*n_shards + shard_num + 1`, `shard.cc:1487`);
 `DatabasePool` is an LRU of shard endpoints checked out/in with busy flags
 (`pool.cc`).
 
-### Networking & the event loop (`src/worker.*`, `src/server/`)
+### Networking & the reactor runtime (`src/server/`, `http_asio.h`, `src/manager.*`)
 
-Every networked object derives from `Worker` (`worker.h:35`), an
-`enable_shared_from_this` node in a parent/children tree. Each Worker either
-borrows an event loop or owns a private `ev::dynamic_loop`. The Worker base
-installs six `ev::async` watchers — shutdown, break_loop, start, stop, destroy,
-detach_children (`worker.cc:82-104`) — and **all cross-thread/cross-loop control
-is marshalled through them**: telling a worker on another loop to shut down is
-just `_shutdown_async.send()`, executed by the owning loop in its own thread.
-The whole cross-loop story falls out of this one decision.
+Every networked service runs on [reactor](https://github.com/Kronuz/reactor), a
+shared-nothing standalone-Asio runtime. A service is a **pool of `reactor::Reactor`s**
+(each an `io_context` on its own thread) plus an optional **bounded offload
+`thread_pool`**. All `num_http_servers` reactors bind the same port with
+`SO_REUSEPORT`, so the kernel load-balances accepts (or a single acceptor distributes
+round-robin where `SO_REUSEPORT` is unavailable).
 
-Threading model: one libev loop per server *instance*. `opts.num_http_servers`
-`HttpServer` objects are each handed to a thread pool, each runs its own loop,
-and all listen on the same port via `SO_REUSEPORT` so the kernel load-balances
-accepts (`http_server.cc:50,133`). The loop only does I/O: when `BaseClient`
-assembles a complete protocol message it enqueues *itself* (`share_this()`) into
-a client thread pool and a pool thread runs the handler. The
-`running`/`runner_mutex`/`messages` triad guarantees one runner at a time, and
-the shared-pointer hand-off keeps the client alive across the boundary. Output
-is a bounded blocking queue (`WRITE_QUEUE_LIMIT = 10`), so a slow socket exerts
-real backpressure instead of buffering without limit; the input path is not
-similarly bounded (see Bugs).
+The per-connection model is a coroutine, not a state machine: each accepted socket is
+served to completion by `co_await`-driven code that reads framed messages
+(`[type][len][body]`, or a `flume` file stream), and offloads the blocking, Xapian- and
+IO-bound handler onto the reactor's `thread_pool` via `co_await co_spawn(pool)`. The
+reactor thread itself never blocks. Backpressure is the offload gate's bounded queue;
+shutdown is `io_context::stop()` plus a registry of "abortables" (tracked sockets) that
+get shut to unwedge any in-flight blocking write.
 
-A nice touch: socket close does `shutdown()` then `dup2`s a throwaway socket
-onto the same fd rather than `close()`ing it (`tcp.cc:90`, `udp.cc:84`),
-specifically so another thread can't grab the freed fd number mid-flight.
+The control plane is `XapiandManager`, itself a single `reactor::Reactor` on the main
+thread (see [Runtime architecture](#runtime-architecture)). It replaced the old
+libev `Worker` tree wholesale: `ev::timer` → `reactor::PeriodicTimer`, the cross-thread
+`ev::async` watchers → `reactor::Signal`, and the signal wake → an async-signal-safe
+self-pipe. Nothing derives from `Worker` anymore, and there is no shared loop.
+
+A safety touch that survived the migration: a service stopping shuts each tracked
+socket's fd (`shutdown()`), rather than racing a bare `close()`, so a coroutine blocked
+in a write returns instead of hanging on a fd another thread may reuse.
 
 ### Clustering (`src/server/discovery.*`, `replication_protocol*`, `remote_protocol*`)
 
 This is the part the public description ("async replication") undersells. Two
 distinct mechanisms:
 
-**Control plane — Raft over UDP multicast.** Despite the "discovery" name,
-`discovery.cc` is a full Raft implementation: terms, leader election with the
-§5.4 up-to-date-log check (`discovery.cc:598`), `AppendEntries` with
-`nextIndex`/`matchIndex`, commit-on-majority, and randomized election timeouts.
-What Raft governs is *cluster membership* and *per-shard primary election*
-(`ELECT_PRIMARY`, `discovery.cc:1283`) — **not** user data. It's the control
-plane that guarantees a single agreed primary per shard, which is the main
-defense against split-brain.
+**Control plane — Raft over multicast gossip.** Despite the "discovery" name,
+`discovery.cc` drives a full Raft: terms, leader election with the §5.4
+up-to-date-log check, `AppendEntries` with `nextIndex`/`matchIndex`, commit-on-
+majority, and randomized election timeouts. The transport is now
+[`cluster::Bus`](https://github.com/Kronuz/cluster) (multicast gossip) and the consensus
+core is `cluster::Raft`, both on the reactor runtime — the in-tree libev UDP transport
+is gone. What Raft governs is *cluster membership* and *per-shard primary election*
+(`ELECT_PRIMARY`) — **not** user data. It is the control plane that guarantees a single
+agreed primary per shard, the main defense against split-brain.
 
 **Data plane — asynchronous, pull-based replication.** When a node commits a
 local change it multicasts `DB_UPDATED` (debounced). Receivers that hold a
-replica schedule a pull after a random 0–3000 ms delay (`discovery.cc:1159`).
-The pull (`replication_protocol_client.cc`) is a one-way TCP changeset transfer:
-the replica requests changesets from its current revision, and the source either
-streams WAL changesets or, if the replica is too far behind, ships a whole-
-database file copy (the glass files into a temp dir, then an atomic swap).
+replica schedule a pull after a random 0–3000 ms delay. The pull
+(`replication_protocol_client.cc`) is a one-way TCP changeset transfer: the replica
+requests changesets from its current revision, and the source either streams WAL
+changesets or, if the replica is too far behind, ships a whole-database file copy — the
+glass files stream through [`flume`](https://github.com/Kronuz/flume) (framed,
+integrity-checked, Zstd-compressed) into a temp dir, then an atomic swap.
 
 So the real consistency model is **leader-based primary-copy with asynchronous
 followers**: a write is durable on the primary at commit, replicas converge

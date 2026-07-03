@@ -53,7 +53,8 @@ a cluster when you need it to.
 
 ## Building
 
-Requires a C++17 compiler and CMake ≥ 3.12.
+Requires a C++20 compiler and CMake ≥ 3.16. Dependencies are fetched
+automatically at configure time via CMake `FetchContent` (see below).
 
 ```sh
 mkdir build && cd build
@@ -72,6 +73,23 @@ Notable CMake options (all default on unless noted):
 | `ASSERTS` | OFF (ON in Debug) | Internal assertions. |
 | `TRACKED_MEM` | OFF | Allocator that attributes memory to call sites. |
 | `BUILD_TESTS` / `BUILD_BENCHMARKS` | OFF | Build the test / benchmark suites. |
+
+## Architecture & dependencies
+
+Xapiand runs entirely on the standalone-Asio
+[reactor](https://github.com/Kronuz/reactor) runtime (there is no libev), and is
+assembled from **~57 standalone `Kronuz/*` libraries** plus a few third-party ones,
+all wired in by CMake `FetchContent` at configure time. The runtime topology, the
+dependency layering diagram, and the **full dependency tree** live in
+[ARCHITECTURE.md](ARCHITECTURE.md) — see
+[Runtime architecture](ARCHITECTURE.md#runtime-architecture) and
+[Dependencies](ARCHITECTURE.md#dependencies).
+
+The load-bearing pieces: `reactor` (the Asio server runtime), `cluster` (Bus gossip +
+Raft), `http` (HTTP transport), `flume` (framed file transfer), `storage` (append-only
+blob store), `io` / `fs` / `system` (POSIX I/O, filesystem, resource introspection),
+plus a foundation of `strings` / `repr` / `logger` / `traceback` / `compressors` and
+the search-domain libraries.
 
 ## License
 
