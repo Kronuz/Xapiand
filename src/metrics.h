@@ -27,7 +27,11 @@
 #include <string>
 #include <memory>
 
+#include "prometheus/counter.h"
+#include "prometheus/family.h"
+#include "prometheus/gauge.h"
 #include "prometheus/registry.h"
+#include "prometheus/summary.h"
 
 
 class Metrics {
@@ -39,6 +43,8 @@ public:
 	Metrics(const std::map<std::string, std::string>& constant_labels_);
 
 	static Metrics& metrics(const std::map<std::string, std::string>& constant_labels_ = {});
+
+	static const prometheus::Summary::Quantiles& summary_quantiles();
 
 	std::string serialise();
 

@@ -24,13 +24,14 @@ header files); another ~125,000 lines are bundled dependencies.
 | `src/rapidjson/` | RapidJSON. |
 | `src/fmt/` | the {fmt} formatting library. |
 | `src/tclap/` | command-line parsing. |
-| `src/prometheus/` | prometheus-cpp (metrics exposition). |
 | `src/yaml/`, `src/cppcodec/`, `src/chaiscript/` | YAML, base-N codecs, the ChaiScript engine. |
 
 > libev (`src/ev/`) and the `Kronuz/server` engine that once backed the network
 > services have been **removed**: the runtime now rides the standalone-Asio
 > [reactor](https://github.com/Kronuz/reactor) libraries (see
-> [Runtime architecture](#runtime-architecture)). LZ4 comes from `Kronuz/compressors`.
+> [Runtime architecture](#runtime-architecture)). LZ4 comes from `Kronuz/compressors`;
+> prometheus-cpp core comes from upstream FetchContent, with Xapiand's metric catalog
+> still in `src/metrics.*`.
 
 **Xapiand's own subsystems:**
 

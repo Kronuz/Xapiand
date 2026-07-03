@@ -848,7 +848,7 @@ delete_document_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "delete"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -937,7 +937,7 @@ write_document_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "index"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1016,7 +1016,7 @@ update_document_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", operation},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1080,7 +1080,7 @@ retrieve_metadata_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "get_metadata"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1133,7 +1133,7 @@ write_metadata_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "set_metadata"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1206,7 +1206,7 @@ info_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "info"}
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1405,7 +1405,7 @@ retrieve_database_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "retrieve_database"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 
 	L_SEARCH("FINISH RETRIEVE DATABASE");
@@ -1465,7 +1465,7 @@ write_database_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "update_database"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1557,7 +1557,7 @@ commit_database_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "commit"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1592,7 +1592,7 @@ dump_document_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "dump"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1631,7 +1631,7 @@ dump_database_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "dump"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1711,7 +1711,7 @@ restore_database_view(Request& request)
 			.xapiand_operations_summary
 			.Add({
 				{"operation", "restore"},
-			})
+			}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 			.Observe(took / 1e9);
 	}
 }
@@ -1747,7 +1747,7 @@ wal_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "wal"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 #endif
@@ -1780,7 +1780,7 @@ check_database_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "db_check"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 }
 
@@ -1890,7 +1890,7 @@ retrieve_document_view(Request& request)
 		.xapiand_operations_summary
 		.Add({
 			{"operation", "retrieve"},
-		})
+		}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 		.Observe(took / 1e9);
 
 	L_SEARCH("FINISH RETRIEVE");
@@ -2035,14 +2035,14 @@ search_view(Request& request)
 			.xapiand_operations_summary
 			.Add({
 				{"operation", "aggregation"},
-			})
+			}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 			.Observe(took / 1e9);
 	} else {
 		Metrics::metrics()
 			.xapiand_operations_summary
 			.Add({
 				{"operation", "search"},
-			})
+			}, Metrics::summary_quantiles(), std::chrono::minutes(10), 5)
 			.Observe(took / 1e9);
 	}
 

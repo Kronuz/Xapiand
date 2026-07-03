@@ -22,51 +22,82 @@
 
 #include "metrics.h"
 
-#include "prometheus/serializer.h"            // for Serializer
 #include "prometheus/text_serializer.h"       // for text_serializer
-#include "prometheus/handler.h"               // for SerializeGet
 
 #include "package.h"                          // for Package::REVISION_STRING Package::HASH
 #include "system.hh"                          // for check_compiler, check_OS, check_architecture
 
 
+namespace {
+
+prometheus::Family<prometheus::Counter>&
+AddCounter(prometheus::Registry& registry, const std::string& name, const std::string& help, const prometheus::Labels& labels)
+{
+	return prometheus::BuildCounter().Name(name).Help(help).Labels(labels).Register(registry);
+}
+
+
+prometheus::Family<prometheus::Gauge>&
+AddGauge(prometheus::Registry& registry, const std::string& name, const std::string& help, const prometheus::Labels& labels)
+{
+	return prometheus::BuildGauge().Name(name).Help(help).Labels(labels).Register(registry);
+}
+
+
+prometheus::Family<prometheus::Summary>&
+AddSummary(prometheus::Registry& registry, const std::string& name, const std::string& help, const prometheus::Labels& labels)
+{
+	return prometheus::BuildSummary().Name(name).Help(help).Labels(labels).Register(registry);
+}
+
+}
+
+
+const prometheus::Summary::Quantiles&
+Metrics::summary_quantiles()
+{
+	static const prometheus::Summary::Quantiles quantiles{{0.5, 0.05}, {0.9, 0.01}, {0.99, 0.001}};
+	return quantiles;
+}
+
+
 Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	constant_labels(constant_labels_),
 	xapiand_operations_summary(
-		registry.AddSummary(
+		AddSummary(registry,
 			"xapiand_operations_summary",
 			"Operations summary",
 			constant_labels)
 	),
 	xapiand_http_requests_summary(
-		registry.AddSummary(
+		AddSummary(registry,
 			"xapiand_http_requests_summary",
 			"HTTP requests summary",
 			constant_labels)
 	),
 	xapiand_wal_errors(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_wal_errors",
 			"WAL errors",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_uptime(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_uptime",
 			"Server uptime in seconds",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_running",
 			"If the node is actually running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_info(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_info",
 			"Version string as reported by Xapiand",
 			constant_labels)
@@ -83,28 +114,28 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 		})
 	),
 	xapiand_http_clients_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_http_clients_running",
 			"Number of Http clients running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_http_clients_queue_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_http_clients_queue_size",
 			"Http clients in the queue",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_http_clients_capacity(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_http_clients_capacity",
 			"Http client queue capacity",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_http_clients_pool_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_http_clients_pool_size",
 			"Http client total pool size",
 			constant_labels)
@@ -112,56 +143,56 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	),
 #ifdef XAPIAND_CLUSTERING
 	xapiand_remote_clients_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_remote_clients_running",
 			"Number of remote protocol clients running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_remote_clients_queue_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_remote_clients_queue_size",
 			"Remote protocol clients in the queue",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_remote_clients_capacity(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_remote_clients_capacity",
 			"Remote protocol client queue capacity",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_remote_clients_pool_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_clients_pool_size",
 			"Remote protocol client total pool size",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_clients_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_replication_clients_running",
 			"Number of replication protocol clients running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_clients_queue_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_replication_clients_queue_size",
 			"Replication protocol clients in the queue",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_clients_capacity(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_replication_clients_capacity",
 			"Replication protocol client queue capacity",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_clients_pool_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_clients_pool_size",
 			"Replication protocol client total pool size",
 			constant_labels)
@@ -169,98 +200,98 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	),
 #endif
 	xapiand_servers_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_servers_running",
 			"Amount of servers running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_servers_queue_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_servers_queue_size",
 			"Servers in the queue",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_servers_capacity(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_servers_capacity",
 			"Server queue capacity",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_servers_pool_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_servers_pool_size",
 			"Server pool size",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_committers_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_committers_running",
 			"Amount of committers running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_committers_queue_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_committers_queue_size",
 			"Committers in the queue",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_committers_capacity(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_committers_capacity",
 			"Committers queue capacity",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_committers_pool_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_committers_pool_size",
 			"Server pool size",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_fsync_running(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_fsync_running",
 			"Amount of fsync running",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_fsync_queue_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_fsync_queue",
 			"Fsync in the queue",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_fsync_capacity(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_fsync_capacity",
 			"Fsync queue capacity",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_fsync_pool_size(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_fsync_pool_size",
 			"Fsync pool size",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_http_current_connections(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_http_current_connections",
 			"Current http connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_http_connections(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_http_connections",
 			"Bttp connections",
 			constant_labels)
@@ -268,28 +299,28 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	),
 #ifdef XAPIAND_CLUSTERING
 	xapiand_remote_current_connections(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_remote_current_connections",
 			"Current remote protocol connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_remote_connections(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_remote_connections",
 			"Remote protocol connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_current_connections(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_replication_current_connections",
 			"Current replication connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_connections(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_replication_connections",
 			"Replication connections",
 			constant_labels)
@@ -297,84 +328,84 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	),
 #endif
 	xapiand_http_sent_bytes(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_http_sent_bytes",
 			"Bytes sent by http connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_http_received_bytes(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_http_received_bytes",
 			"Bytes received by http connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_sent_bytes(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_replication_sent_bytes",
 			"Bytes sent by replication connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_replication_received_bytes(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_replication_received_bytes",
 			"Bytes received by replication connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_remote_protocol_sent_bytes(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_remote_protocol_sent_bytes",
 			"Bytes sent by remote protocol connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_remote_protocol_received_bytes(
-		registry.AddCounter(
+		AddCounter(registry,
 			"xapiand_remote_protocol_received_bytes",
 			"Bytes received by remote protocol connections",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_file_descriptors(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_file_descriptors",
 			"Amount of file descriptors in use",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_max_file_descriptors(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_max_file_descriptors",
 			"Maximum number of file descriptors",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_free_inodes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_free_inodes",
 			"Free inodes",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_max_inodes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_max_inodes",
 			"Maximum inodes",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_resident_memory_bytes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_resident_memory_bytes",
 			"Memory in use",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_virtual_memory_bytes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_virtual_memory_bytes",
 			"Virtual memory in use",
 			constant_labels)
@@ -382,7 +413,7 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	),
 #ifdef XAPIAND_TRACKED_MEM
 	xapiand_tracked_memory_bytes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_tracked_memory_bytes",
 			"Total memory currently allocated",
 			constant_labels)
@@ -390,42 +421,42 @@ Metrics::Metrics(const std::map<std::string, std::string>& constant_labels_) :
 	),
 #endif
 	xapiand_total_memory_system_bytes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_total_memory_system_bytes",
 			"Total memory used",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_total_virtual_memory_used(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_total_virtual_memory_used",
 			"Total virtual memory used",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_total_disk_bytes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_total_disk_bytes",
 			"Total disk size",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_free_disk_bytes(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_free_disk_bytes",
 			"Free disk size",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_endpoints(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_endpoints",
 			"Total open endpoints",
 			constant_labels)
 		.Add({})
 	),
 	xapiand_databases(
-		registry.AddGauge(
+		AddGauge(registry,
 			"xapiand_databases",
 			"Total open databases",
 			constant_labels)
@@ -453,5 +484,7 @@ Metrics::metrics(const std::map<std::string, std::string>& constant_labels_)
 std::string
 Metrics::serialise()
 {
-	return prometheus::detail::SerializeGet(registry);
+	auto collected = registry.Collect();
+	prometheus::TextSerializer serializer;
+	return serializer.Serialize(collected);
 }

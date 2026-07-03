@@ -1014,6 +1014,19 @@ include_directories(
 # PUT/SEARCH bodies with trailing commas or // comments were 400ing.)
 add_compile_definitions("RAPIDJSON_PARSE_DEFAULT_FLAGS=(kParseCommentsFlag|kParseTrailingCommasFlag|kParseNanAndInfFlag)")
 
+# prometheus-cpp: use upstream core only. Xapiand keeps its application-specific
+# metric catalog in src/metrics.*.
+set(ENABLE_PULL OFF CACHE BOOL "" FORCE)
+set(ENABLE_PUSH OFF CACHE BOOL "" FORCE)
+set(ENABLE_COMPRESSION OFF CACHE BOOL "" FORCE)
+set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(USE_THIRDPARTY_LIBRARIES OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(prometheus_cpp
+	GIT_REPOSITORY https://github.com/jupp0r/prometheus-cpp.git
+	GIT_TAG v1.2.4
+)
+FetchContent_MakeAvailable(prometheus_cpp)
+
 # (yaml/libyaml and libev stay vendored under src/: libyaml's build is wired into
 # Xapiand's generated config.h feature detection and its sources are entangled
 # with the vendored y2j wrapper in YAML_OBJ; libev likewise depends on Xapiand's
@@ -1230,17 +1243,6 @@ add_library(LZ4_OBJ OBJECT ${LZ4_SRC_LIST})
 
 
 ########################################################################
-# Prometheus library target
-########################################################################
-
-file(GLOB PROMETHEUS_SRC_LIST
-	"${PROJECT_SOURCE_DIR}/src/prometheus/*.c*" "${PROJECT_SOURCE_DIR}/src/prometheus/*.h*"
-)
-list(APPEND PROMETHEUS_SRC_LIST ${XAPIAN_H_LIST})
-add_library(PROMETHEUS_OBJ OBJECT ${PROMETHEUS_SRC_LIST})
-
-
-########################################################################
 # yaml library target
 ########################################################################
 
@@ -1395,6 +1397,7 @@ target_include_directories(XAPIAND_OBJ PUBLIC
 )
 
 target_link_libraries(XAPIAND_OBJ PUBLIC
+	prometheus-cpp::core
 	${ZLIB_LIBRARIES}
 	${ZSTD_LIBRARY}
 	${UUID_LIBRARIES}
@@ -1418,7 +1421,7 @@ target_link_libraries(${PROJECT_NAME}
 	XAPIAN_OBJ
 	BOOLEAN_PARSER_OBJ
 	LZ4_OBJ
-	PROMETHEUS_OBJ
+	prometheus-cpp::core
 	YAML_OBJ
 	$<TARGET_NAME_IF_EXISTS:LUA_OBJ>
 )
@@ -2031,7 +2034,7 @@ if (BUILD_TESTS)
 				XAPIAN_OBJ
 				BOOLEAN_PARSER_OBJ
 				LZ4_OBJ
-				PROMETHEUS_OBJ
+				prometheus-cpp::core
 				YAML_OBJ
 			)
 

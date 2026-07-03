@@ -48,7 +48,7 @@ DISCOVERY_PORT=58880    # SHARED across nodes (multicast rendezvous)
 # carry multicast (INADDR_ANY/default-route multicast silently drops under most VPNs).
 # Set DISCOVERY_IFACE= (empty) to use the default route (cross-host clusters).
 DISCOVERY_IFACE="${DISCOVERY_IFACE:-127.0.0.1}"
-RUNDIR="/tmp/xcluster_$$"
+RUNDIR="${RUNDIR:-$REPO/build/xcluster_$$}"
 INDEX="cluster_probe"
 
 if [ ! -x "$BIN" ]; then echo "missing binary: $BIN (build it or set BIN=...)"; exit 1; fi
@@ -64,8 +64,21 @@ cleanup() {
 trap cleanup EXIT
 
 # Any leftover node squatting on our ports makes a fresh node fail to bind (EADDRINUSE)
-# and exit, after which curl silently hits the STALE node -- a bogus result. Clear them.
-pkill -9 -f 'bin/xapiand' 2>/dev/null; sleep 1
+# and exit, after which curl silently hits the STALE node -- a bogus result. Fail fast.
+if command -v lsof >/dev/null 2>&1; then
+	occupied=0
+	for port in $(seq "$HTTP_BASE" $((HTTP_BASE + N - 1))) \
+	            $(seq "$REMOTE_BASE" $((REMOTE_BASE + N - 1))) \
+	            $(seq "$REPLICA_BASE" $((REPLICA_BASE + N - 1))) \
+	            "$DISCOVERY_PORT"; do
+		pids="$(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | tr '\n' ' ')"
+		if [ -n "$pids" ]; then
+			echo "port $port is already occupied by pid(s): $pids"
+			occupied=1
+		fi
+	done
+	[ "$occupied" = "0" ] || exit 1
+fi
 rm -rf "$RUNDIR"; mkdir -p "$RUNDIR"
 
 http_port() { echo $((HTTP_BASE + $1 - 1)); }

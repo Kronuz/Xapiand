@@ -13,7 +13,7 @@ src/xapian/      Xapian fork (GPL) — the search core. Large; integration point
 src/msgpack/     msgpack-c                 src/fmt/        {fmt}
 src/rapidjson/   RapidJSON                 src/lz4/        LZ4
 src/ev/          libev                     src/tclap/      CLI parsing
-src/prometheus/  prometheus-cpp           src/yaml/       libyaml
+src/yaml/        libyaml
 src/cppcodec/    base-N codecs            src/chaiscript/ ChaiScript
 ```
 
