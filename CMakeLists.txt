@@ -519,27 +519,11 @@ add_compile_definitions(
 	STORAGE_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_storage_trace.h"
 )
 
-# server: the generic, search-agnostic HTTP/TCP server engine extracted from
-# Xapiand -- the libev Worker reactor, the TCP layer, the accept-loop server base,
-# and the per-connection BaseClient FSM. Only the engine headers (the repo ROOT)
-# go on the include path; the library's compat/ shims (io.hh, length.h, colors.h,
-# strings.hh, ev/, ...) are NOT added, so Xapiand's own richer versions win and
-# only the engine itself comes from the library. The three host couplings are
-# wired back by absolute path: SERVER_HOOKS_HEADER restores sig_exit + the
-# total_clients accounting + Xapian::SerialisationError; SERVER_TRACE_HEADER
-# restores the real L_* logger. worker.cc / tcp.cc / base_server.cc compile into
-# XAPIAND_OBJ below; base_client is header-only, so Xapiand's HttpClient /
-# Remote/Replication clients instantiate BaseClient<> from their own TUs.
-FetchContent_Declare(server GIT_REPOSITORY https://github.com/Kronuz/server.git GIT_TAG main)
-FetchContent_GetProperties(server)
-if(NOT server_POPULATED)
-	FetchContent_Populate(server)
-endif()
-include_directories("${server_SOURCE_DIR}")
-add_compile_definitions(
-	SERVER_HOOKS_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_server_hooks.h"
-	SERVER_TRACE_HEADER="${PROJECT_SOURCE_DIR}/src/xapiand_server_trace.h"
-)
+# server: RETIRED. This was the generic libev HTTP/TCP server engine (Worker reactor,
+# TCP layer, accept-loop base, BaseClient FSM) extracted from Xapiand. Every consumer
+# has moved onto the std-Asio Kronuz/reactor + Kronuz/http runtime, so the dependency,
+# its include path, its worker.cc/tcp.cc/base_server.cc units, and the host-coupling
+# shim headers (xapiand_server_hooks.h / xapiand_server_trace.h) were all removed.
 
 # Compile-time string toolkit, extracted from Xapiand into four standalone repos.
 # All header-only: populate and put on the include path. hashes.hh includes

@@ -54,7 +54,6 @@
 #include <lua.h>                                  // for LUA_VERSION_MAJOR, LUA_VERSION_MINOR
 #endif
 
-#include "check_size.h"                           // for check_size
 #include "database/handler.h"                     // for DatabaseHandler
 #include "database/schema.h"                      // for default_spc
 #include "endpoint.h"                             // for Endpoint, Endpoint::cwd
@@ -910,9 +909,6 @@ cleanup_manager()
 
 
 int main(int argc, char **argv) {
-#ifdef XAPIAND_CHECK_SIZES
-	check_size();
-#endif
 
 	int exit_code = EX_OK;
 
