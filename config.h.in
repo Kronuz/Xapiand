@@ -595,6 +595,24 @@
  */
 #define XAPIAN_LIB_BUILD 1
 
+/* Mark an expression whose result deliberately relies on well-defined unsigned
+ * integer wrapping, so it isn't flagged by
+ * -fsanitize=unsigned-integer-overflow.  Xapian 2.0.0 uses this macro across
+ * its backends; we don't enable that sanitizer, so it's an identity macro.
+ */
+#ifndef UNSIGNED_OVERFLOW_OK
+# define UNSIGNED_OVERFLOW_OK(X) (X)
+#endif
+
+/* Xapian 2.0.0 assigns const pointers to zstream's next_in, which requires
+ * zlib's const-correct API.  Defining ZLIB_CONST before <zlib.h> makes
+ * next_in a `const Bytef*` (needs zlib >= 1.2.5.2, released 2011).  config.h
+ * is included before <zlib.h> in every source file that uses zlib.
+ */
+#ifndef ZLIB_CONST
+# define ZLIB_CONST
+#endif
+
 /* With Sun CC 5.13 (Studio 12.4) on Solaris 11.2, <math.h> seems to get
  * implicitly included somehow before <cmath>, and compilation fails due
  * to 'std::exception' colliding with 'struct exception'.  It's not clear
