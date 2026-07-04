@@ -10,6 +10,7 @@ import select
 import time
 import sys
 import os
+import re
 
 # Changing the buffer_size and delay, you can improve the speed and bandwidth.
 # But when buffer get to high or delay go too down, you can broke things
@@ -261,6 +262,54 @@ def enum_dict(*args):
     return ret
 
 
+def _load_remote_enum(enum_name, prefix):
+    """Parse an enum (message_type / reply_type) out of the vendored
+    src/xapian/net/remoteprotocol.h so the sniffer's decode tables stay 1:1 with
+    the C++ wire protocol automatically -- there is no separate copy to drift.
+    Returns the ordered member names (dropping the trailing _MAX sentinel), or
+    None if the header can't be found (e.g. the script was copied out of the repo,
+    in which case the hard-coded fallback below is used)."""
+    header = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                          '..', '..', 'src', 'xapian', 'net', 'remoteprotocol.h')
+    try:
+        with open(header) as f:
+            src = f.read()
+    except (IOError, OSError):
+        return None
+    m = re.search(r'enum\s+' + enum_name + r'\s*\{(.*?)\};', src, re.S)
+    if not m:
+        return None
+    names = re.findall(r'^\s*(' + prefix + r'[A-Z0-9_]+)\s*,', m.group(1), re.M)
+    return names or None
+
+
+# v47 hard-coded fallback (used only if remoteprotocol.h can't be read); the live
+# tables come from _load_remote_enum() so they never drift from the C++.
+_MSG_REMOTE_V47 = [
+    'MSG_ALLTERMS', 'MSG_COLLFREQ', 'MSG_DOCUMENT', 'MSG_TERMEXISTS', 'MSG_TERMFREQ',
+    'MSG_VALUESTATS', 'MSG_KEEPALIVE', 'MSG_DOCLENGTH', 'MSG_QUERY', 'MSG_TERMLIST',
+    'MSG_POSITIONLIST', 'MSG_POSTLIST', 'MSG_REOPEN', 'MSG_UPDATE', 'MSG_ADDDOCUMENT',
+    'MSG_CANCEL', 'MSG_DELETEDOCUMENTTERM', 'MSG_COMMIT', 'MSG_REPLACEDOCUMENT',
+    'MSG_REPLACEDOCUMENTTERM', 'MSG_DELETEDOCUMENT', 'MSG_WRITEACCESS', 'MSG_GETMETADATA',
+    'MSG_SETMETADATA', 'MSG_ADDSPELLING', 'MSG_REMOVESPELLING', 'MSG_GETMSET', 'MSG_SHUTDOWN',
+    'MSG_METADATAKEYLIST', 'MSG_FREQS', 'MSG_UNIQUETERMS', 'MSG_WDFDOCMAX',
+    'MSG_POSITIONLISTCOUNT', 'MSG_RECONSTRUCTTEXT', 'MSG_SYNONYMTERMLIST', 'MSG_SYNONYMKEYLIST',
+    'MSG_ADDSYNONYM', 'MSG_REMOVESYNONYM', 'MSG_CLEARSYNONYMS', 'MSG_REQUESTDOCUMENT',
+    'MSG_READACCESS',
+]
+_REPLY_REMOTE_V47 = [
+    'REPLY_UPDATE', 'REPLY_EXCEPTION', 'REPLY_DONE', 'REPLY_ALLTERMS', 'REPLY_COLLFREQ',
+    'REPLY_DOCDATA', 'REPLY_TERMDOESNTEXIST', 'REPLY_TERMEXISTS', 'REPLY_TERMFREQ',
+    'REPLY_VALUESTATS', 'REPLY_DOCLENGTH', 'REPLY_STATS', 'REPLY_TERMLIST', 'REPLY_POSITIONLIST',
+    'REPLY_POSTLISTHEADER', 'REPLY_POSTLIST', 'REPLY_VALUE', 'REPLY_ADDDOCUMENT', 'REPLY_RESULTS',
+    'REPLY_METADATA', 'REPLY_METADATAKEYLIST', 'REPLY_FREQS', 'REPLY_UNIQUETERMS', 'REPLY_WDFDOCMAX',
+    'REPLY_POSITIONLISTCOUNT', 'REPLY_REMOVESPELLING', 'REPLY_TERMLISTHEADER', 'REPLY_RECONSTRUCTTEXT',
+    'REPLY_SYNONYMTERMLIST', 'REPLY_SYNONYMKEYLIST',
+]
+_MSG_REMOTE = _load_remote_enum('message_type', 'MSG_') or _MSG_REMOTE_V47
+_REPLY_REMOTE = _load_remote_enum('reply_type', 'REPLY_') or _REPLY_REMOTE_V47
+
+
 @register('xapian')
 class XapianProxyServer(RawProxyServer):
     """
@@ -270,40 +319,7 @@ class XapianProxyServer(RawProxyServer):
     buffers = {}
 
     messages = {
-        'REMOTE': enum_dict(
-            'MSG_ALLTERMS',             # All Terms
-            'MSG_COLLFREQ',             # Get Collection Frequency
-            'MSG_DOCUMENT',             # Get Document
-            'MSG_TERMEXISTS',           # Term Exists?
-            'MSG_TERMFREQ',             # Get Term Frequency
-            'MSG_VALUESTATS',           # Get value statistics
-            'MSG_KEEPALIVE',            # Keep-alive
-            'MSG_DOCLENGTH',            # Get Doc Length
-            'MSG_QUERY',                # Run Query
-            'MSG_TERMLIST',             # Get TermList
-            'MSG_POSITIONLIST',         # Get PositionList
-            'MSG_POSTLIST',             # Get PostList
-            'MSG_REOPEN',               # Reopen
-            'MSG_UPDATE',               # Get Updated DocCount and AvLength
-            'MSG_ADDDOCUMENT',          # Add Document
-            'MSG_CANCEL',               # Cancel
-            'MSG_DELETEDOCUMENTTERM',   # Delete Document by term
-            'MSG_COMMIT',               # Commit
-            'MSG_REPLACEDOCUMENT',      # Replace Document
-            'MSG_REPLACEDOCUMENTTERM',  # Replace Document by term
-            'MSG_DELETEDOCUMENT',       # Delete Document
-            'MSG_WRITEACCESS',          # Upgrade to WritableDatabase
-            'MSG_GETMETADATA',          # Get metadata
-            'MSG_SETMETADATA',          # Set metadata
-            'MSG_ADDSPELLING',          # Add a spelling
-            'MSG_REMOVESPELLING',       # Remove a spelling
-            'MSG_GETMSET',              # Get MSet
-            'MSG_SHUTDOWN',             # Shutdown
-            'MSG_METADATAKEYLIST',      # Iterator for metadata keys
-            'MSG_FREQS',                # Get termfreq and collfreq
-            'MSG_UNIQUETERMS',          # Get number of unique terms in doc
-            'MSG_SELECT',               # Select current database
-        ),
+        'REMOTE': enum_dict(*_MSG_REMOTE),  # auto-loaded from remoteprotocol.h (v47)
         'REPL': enum_dict(
             'REPLY_END_OF_CHANGES',
             'REPLY_FAIL',
@@ -326,31 +342,7 @@ class XapianProxyServer(RawProxyServer):
     }
 
     replies = {
-        'REMOTE': enum_dict(
-            'REPLY_UPDATE',             # Updated database stats
-            'REPLY_EXCEPTION',          # Exception
-            'REPLY_DONE',               # Done sending list
-            'REPLY_ALLTERMS',           # All Terms
-            'REPLY_COLLFREQ',           # Get Collection Frequency
-            'REPLY_DOCDATA',            # Get Document
-            'REPLY_TERMDOESNTEXIST',    # Term Doesn't Exist
-            'REPLY_TERMEXISTS',         # Term Exists
-            'REPLY_TERMFREQ',           # Get Term Frequency
-            'REPLY_VALUESTATS',         # Value statistics
-            'REPLY_DOCLENGTH',          # Get Doc Length
-            'REPLY_STATS',              # Stats
-            'REPLY_TERMLIST',           # Get Termlist
-            'REPLY_POSITIONLIST',       # Get PositionList
-            'REPLY_POSTLISTSTART',      # Start of a postlist
-            'REPLY_POSTLISTITEM',       # Item in body of a postlist
-            'REPLY_VALUE',              # Document Value
-            'REPLY_ADDDOCUMENT',        # Add Document
-            'REPLY_RESULTS',            # Results (MSet)
-            'REPLY_METADATA',           # Metadata
-            'REPLY_METADATAKEYLIST',    # Iterator for metadata keys
-            'REPLY_FREQS',              # Get termfreq and collfreq
-            'REPLY_UNIQUETERMS',        # Get number of unique terms in doc
-        ),
+        'REMOTE': enum_dict(*_REPLY_REMOTE),  # auto-loaded from remoteprotocol.h (v47)
         'REPL': enum_dict(
             '_REPLY_END_OF_CHANGES',
             '_REPLY_FAIL',
