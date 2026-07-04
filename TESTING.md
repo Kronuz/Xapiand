@@ -214,6 +214,20 @@ harness/loadtest.py --target localhost:8880 --dataset docs/assets/accounts.ndjso
 (different substrate — read the caveats in `docs/_docs/benchmarks.md`). `perfdiff.py`
 diffs two `loadtest.py` result JSONs.
 
+**Cluster benchmark.** `cluster_bench.sh` runs the *same* load twice — once solo (no
+Remote protocol) and once on a 2-node cluster (index sharded across nodes, so every
+search runs the two-phase Remote match and every write replicates) — and prints both
+sets of numbers with the delta, making the cost of the distributed data plane explicit:
+
+```sh
+harness/cluster_bench.sh
+REPLICATE=20 CONCURRENCY=16 DURATION=5 TRIALS=2 harness/cluster_bench.sh
+```
+
+It needs a multicast-capable interface for discovery (like `cluster_check.sh`); if the
+cluster can't form it still reports the solo numbers. See `docs/_docs/benchmarks.md`
+for recorded solo-vs-cluster results.
+
 ---
 
 ## The unified runner

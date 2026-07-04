@@ -102,6 +102,45 @@ stemming and stopword handling actually fixed five assertions that fail on
 `origin/master` (default-operator matching, query-time stopword filtering, a
 complex-object info case, and a typed-content selector).
 
+## Cluster: with vs without the Remote protocol
+
+The numbers above are all single-node (`--solo`), where a search never leaves the
+process. A cluster is different: an index is sharded across nodes, so a search on
+the coordinator runs the two-phase Remote match against the other nodes' shards, and
+a write replicates. `harness/cluster_bench.sh` runs the *same* load
+(`accounts` x20k, concurrency 16) once solo and once on a 2-node localhost cluster,
+so the cost of the distributed data plane is explicit:
+
+| Metric | Solo (no Remote) | 2-node cluster | Δ |
+| --- | ---: | ---: | ---: |
+| Index throughput | ~11,400 docs/s | ~5,800 docs/s | **−49%** |
+| Query throughput | ~12,900 qps | ~215 qps | **−98%** |
+| Query p50 | 1.16 ms | 79 ms | ~68x |
+| Query p95 | 2.14 ms | 196 ms | ~91x |
+| Query p99 | 2.72 ms | 231 ms | ~85x |
+
+**Correctness is restored, performance is the next frontier.** After the v47 remote
+protocol + two-phase reconciliation, a cluster forms, replicates, and returns correct
+distributed results (`cluster_check.sh` is green). But the query path is currently
+**slow**: a single *uncontended* cross-node search is ~12 ms (vs ~1 ms solo), and
+under concurrency 16 the p50 degrades to ~79 ms, so it isn't just a fixed network hop,
+it also serializes under load. Three leads to chase, in order of suspicion:
+
+1. **The two-phase round-trip.** Every search is MSG_QUERY -> REPLY_STATS ->
+   MSG_GETMSET -> REPLY_RESULTS across the socket; the ~12 ms uncontended floor is
+   already high for localhost and points at per-request overhead (possibly a shard
+   reopen / reconnect in the checkout path, `shard.cc`'s `Xapian::Remote::open`).
+2. **A global lock on the prepared-match table.** `remote_protocol_views.cc` guards
+   its shared `pending_queries` map with one process-wide mutex, taken on *every*
+   MSG_QUERY and MSG_GETMSET, so concurrent cross-node searches contend on it.
+3. **The reactor offload hop**, which the solo bench already showed as a small tax,
+   compounds here because every remote DB operation crosses it.
+
+Index throughput halving is more expected (writes replicate and pay first-touch shard
+creation across nodes). These are measurements on a fresh cluster with default
+settings, no tuning; the point is to make the gap visible and give the optimization
+work a baseline, not to quote a production multiplier.
+
 ## Environment and caveats
 
 This is a smoke test, and the two engines were not on equal footing:
