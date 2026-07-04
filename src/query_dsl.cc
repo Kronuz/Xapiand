@@ -472,6 +472,15 @@ QueryDSL::get_value_query(std::string_view path, const MsgPack& obj, Xapian::Que
 		return get_accuracy_query(field_spc, data_field.second, obj, default_op, wqf, flags);
 	}
 
+	// An unresolved field type can never serialise as a regular term and always
+	// falls through to the global query below. Take that path directly instead of
+	// letting get_regular_query throw a SerialisationError just to catch it here:
+	// exception unwinding is very expensive and this is the query hot path for
+	// any missing or still-dynamic field.
+	if (field_spc.get_type() == FieldType::empty) {
+		return get_global_query(field_spc, obj, default_op, wqf, flags);
+	}
+
 	try {
 		return get_regular_query(field_spc, obj, default_op, wqf, flags);
 	} catch (const SerialisationError&) {

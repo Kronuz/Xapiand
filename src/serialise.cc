@@ -943,6 +943,33 @@ Serialise::guess_serialise(const class MsgPack& field_value)
 		case MsgPack::Type::STR: {
 			auto str_value = field_value.str_view();
 
+			// Fast path: the chain below guesses a value's type by trying each
+			// typed serialiser in turn, and every miss throws a C++ exception --
+			// on this platform the unwind (dyld unwind-section lookup + libunwind
+			// + personality) dominates the cost of guessing a plain value. A
+			// string with none of the characters that the UUID, datetime, time,
+			// timedelta, geospatial or number grammars require cannot be any of
+			// them, so it is text or keyword and we can skip the eight throwing
+			// trials. The guarded set covers digits plus '-' (uuid/date/number),
+			// '~' and '{' (encoded/braced uuid), ':' (urn:uuid / time) and '('
+			// (geospatial WKT).
+			if (!str_value.empty()) {
+				bool maybe_typed = false;
+				for (char c : str_value) {
+					if ((c >= '0' && c <= '9') || c == '-' || c == '~' ||
+						c == '{' || c == ':' || c == '(') {
+						maybe_typed = true;
+						break;
+					}
+				}
+				if (!maybe_typed) {
+					if (isText(str_value)) {
+						return std::make_pair(FieldType::text, std::string(str_value));
+					}
+					return std::make_pair(FieldType::keyword, std::string(str_value));
+				}
+			}
+
 			// Try like UUID
 			try {
 				return std::make_pair(FieldType::uuid, uuid(str_value));
