@@ -191,10 +191,23 @@ def main():
                 qs[k] = v
         query = []
         for k, v in qs.items():
-            query.append({
-                "key": k,
-                "value": v,
-            })
+            if v is None:
+                # A valueless flag (commit / volatile / echo): emit as a bare param.
+                query.append({
+                    "key": k,
+                    "value": None,
+                })
+            else:
+                # urlparse.parse_qs returns each value as a list; Postman expects a
+                # string per query entry, so emit one entry per value. (Previously the
+                # raw list was passed through, which newman serialised as a bare
+                # valueless param -- e.g. `sort=foo` became `?sort`, so every
+                # sort/params-bearing request was sent malformed and 400'd.)
+                for item in (v if isinstance(v, list) else [v]):
+                    query.append({
+                        "key": k,
+                        "value": item,
+                    })
         url = {
             "host": [
                 "{{domain}}"
