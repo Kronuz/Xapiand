@@ -39,6 +39,10 @@
 #include <unistd.h>                               // for unlink, STDERR_FILENO, chdir
 #include <vector>                                 // for vector
 
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>                          // for _NSGetExecutablePath
+#endif
+
 #ifdef HAVE_SYS_PRCTL_H
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>
@@ -908,6 +912,69 @@ cleanup_manager()
 }
 
 
+// Resolve the data directory (which holds stopwords/ and mime.types) relative to
+// the running executable, so an uninstalled build (e.g. build/bin/xapiand) finds
+// its data files instead of silently falling back to the compile-time install
+// prefix (XAPIAND_DATA_PATH) and no-op'ing stopword filtering and MIME detection.
+// An explicit XAPIAND_DATA_PATH in the environment always wins; if nothing is
+// found we leave it unset and the loaders keep their compiled-default behavior
+// (and warn), so this is strictly additive.
+static std::string get_executable_path(const char* argv0) {
+	char buffer[PATH_MAX + 1];
+#if defined(__APPLE__)
+	std::uint32_t size = sizeof(buffer);
+	if (_NSGetExecutablePath(buffer, &size) == 0) {
+		char resolved[PATH_MAX + 1];
+		if (realpath(buffer, resolved) != nullptr) {
+			return resolved;
+		}
+		return buffer;
+	}
+#elif defined(__linux__)
+	ssize_t len = ::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+	if (len > 0) {
+		buffer[len] = '\0';
+		return buffer;
+	}
+#endif
+	if (argv0 != nullptr && realpath(argv0, buffer) != nullptr) {
+		return buffer;
+	}
+	return argv0 != nullptr ? std::string(argv0) : std::string();
+}
+
+
+static void setup_data_path(const char* argv0) {
+	if (::getenv("XAPIAND_DATA_PATH") != nullptr) {
+		return;  // explicit override always wins
+	}
+	auto exe = get_executable_path(argv0);
+	auto slash = exe.find_last_of('/');
+	if (slash == std::string::npos) {
+		return;
+	}
+	auto exedir = exe.substr(0, slash);
+	// Candidate data roots relative to the executable, most-specific first:
+	//   <exedir>/../share/xapiand  -- installed layout (bin/ + share/ siblings)
+	//   <exedir>/../..             -- uninstalled build tree (build/bin -> repo root)
+	//   <exedir>/..                -- fallback
+	// A root is accepted when it carries one of the sentinel data files that
+	// getStopper()/load_mime_types() read.
+	for (const auto* sub : {"/../share/xapiand", "/../..", "/.."}) {
+		char resolved[PATH_MAX + 1];
+		if (realpath((exedir + sub).c_str(), resolved) == nullptr) {
+			continue;
+		}
+		std::string root(resolved);
+		if (::access((root + "/mime.types").c_str(), R_OK) == 0 ||
+			::access((root + "/stopwords").c_str(), R_OK) == 0) {
+			::setenv("XAPIAND_DATA_PATH", root.c_str(), 1);
+			return;
+		}
+	}
+}
+
+
 int main(int argc, char **argv) {
 
 	int exit_code = EX_OK;
@@ -925,6 +992,10 @@ int main(int argc, char **argv) {
 	try {
 
 		opts = parseOptions(argc, argv);
+
+		// Point XAPIAND_DATA_PATH at the executable's data dir before anything
+		// chdir's or lazily loads stopwords/mime.types (must run pre-detach).
+		setup_data_path(argv[0]);
 
 		if (opts.detach) {
 			detach();

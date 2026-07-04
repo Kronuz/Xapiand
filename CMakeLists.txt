@@ -1428,12 +1428,18 @@ target_link_libraries(${PROJECT_NAME}
 
 
 ########################################################################
-# Copy stopwords from source to build directory
+# Copy data files (stopwords, mime types) from source to build directory
+# so an uninstalled build (build/bin/xapiand) can resolve them relative to
+# the executable (see setup_data_path() in main.cc).
 ########################################################################
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
 	${CMAKE_SOURCE_DIR}/stopwords/ ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/stopwords)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+	${CMAKE_SOURCE_DIR}/mime.types ${CMAKE_INSTALL_DATAROOTDIR}/xapiand/mime.types)
 
 
 ########################################################################
