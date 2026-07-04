@@ -97,7 +97,19 @@ run_e2e() {
 		skip "e2e" "baseline report missing -- capture it per e2e_check.sh header; see TESTING.md"
 		return
 	fi
-	if "$HARNESS_DIR/e2e_check.sh"; then pass "e2e"; else fail "e2e"; fi
+	# Pass signal is ASSERTION parity vs the baseline (e2e_diff): no assertion
+	# regressed and no HTTP status changed.  Body-level identity (bodydiff, in
+	# e2e_check.sh) is deliberately NOT the bar here -- on a branch that changes
+	# behaviour on purpose (e.g. Xapian 2.0.0's stemming/stopword handling) bodies
+	# legitimately differ while assertions still pass.  Run e2e_check.sh directly for
+	# the stricter body diff when you want it.
+	local out="/tmp/xa_e2e_ours.json"
+	"$HARNESS_DIR/e2e_capture.sh" "$BIN" "$out" >/dev/null 2>&1
+	if python3 "$HARNESS_DIR/e2e_diff.py" "$out" "$HARNESS_DIR/results/e2e_base_7bd295b.json" 2>/dev/null | grep -q '^GREEN'; then
+		pass "e2e"
+	else
+		fail "e2e"
+	fi
 }
 
 run_cluster() {
