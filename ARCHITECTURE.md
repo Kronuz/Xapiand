@@ -5,33 +5,33 @@ self-contained enough to extract and reuse, and a catalog of the bugs and risks
 found while reading the source. Written from a close read of the code; every
 claim cites `file:line` so you can check it.
 
-> This document describes Xapiand's *own* code. The `src/` tree also vendors
-> several third-party libraries — see [Code map](#code-map) for the split.
+> This document describes Xapiand's *own* code. The `src/` tree still carries a
+> small vendored core, chiefly the Xapian fork and libyaml. Most former in-tree
+> libraries now arrive through CMake `FetchContent`. See [Code map](#code-map)
+> for the split.
 
 ---
 
 ## Code map
 
-Roughly 258,000 lines of C++ in `src/` are Xapiand's own (about 833 source and
-header files); another ~125,000 lines are bundled dependencies.
+The `src/` tree is much thinner than the pre-extraction snapshot. It now splits
+between Xapiand's application code, a customized Xapian fork, and a small YAML
+island. The old utility, wire-format, HTTP-parser, compression, and metrics
+bundles are pulled by CMake `FetchContent` instead of living under `src/`.
 
 **Bundled / vendored (don't look here for original work):**
 
 | Path | What it is |
 |---|---|
 | `src/xapian/` | A heavily customized fork of the Xapian search library (the matcher, the glass/honey backends, the weighting schemes). GPL. |
-| `src/msgpack/`, `src/msgpack/predef/` | msgpack-c. |
-| `src/rapidjson/` | RapidJSON. |
-| `src/fmt/` | the {fmt} formatting library. |
-| `src/tclap/` | command-line parsing. |
-| `src/yaml/`, `src/cppcodec/`, `src/chaiscript/` | YAML, base-N codecs, the ChaiScript engine. |
+| `src/yaml/` | libyaml plus Xapiand's YAML bridge. |
 
-> libev (`src/ev/`) and the `Kronuz/server` engine that once backed the network
-> services have been **removed**: the runtime now rides the standalone-Asio
-> [reactor](https://github.com/Kronuz/reactor) libraries (see
-> [Runtime architecture](#runtime-architecture)). LZ4 comes from `Kronuz/compressors`;
-> prometheus-cpp core comes from upstream FetchContent, with Xapiand's metric catalog
-> still in `src/metrics.*`.
+> The old in-tree copies of `src/cuuid/`, `src/msgpack*`, `src/xchange/`,
+> `src/prometheus/`, `src/ev/`, `src/lz4/`, `src/rapidjson/`, `src/cppcodec/`,
+> `src/tclap/`, `src/fmt/`, and `src/chaiscript/` are gone. `cuuid`, `msgpack`,
+> and the `Kronuz/*` utility stack come through FetchContent; prometheus-cpp core
+> comes from upstream v1.2.4, while Xapiand's metric catalog still lives in
+> `src/metrics.*`.
 
 **Xapiand's own subsystems:**
 
@@ -39,17 +39,18 @@ header files); another ~125,000 lines are bundled dependencies.
 |---|---|---|
 | Storage engine | `src/storage.h`, `src/database/` | Haystack-style append-only volumes, WAL, schema cache, sharding. |
 | Networking / reactor runtime | `src/server/`, `http_asio.h`, `src/manager.*` | Per-connection coroutines on shared-nothing `reactor::Reactor` pools; blocking work offloaded to bounded thread-pools. No libev. |
-| Clustering | `src/server/discovery.*`, `src/server/replication_protocol*`, `src/server/remote_protocol*`, `src/manager.*`, `src/node.*` | Raft control plane + asynchronous pull-based data replication. |
+| Clustering | `src/server/discovery.*`, `src/server/replication_protocol_service.*`, `src/server/replication_protocol_views.*`, `src/server/remote_protocol_service.h`, `src/server/remote_protocol_views.*`, `src/manager.*`, `src/node.*` | Raft control plane + asynchronous pull-based data replication. |
 | Search / query | `src/query_dsl.*`, `src/booleanParser/`, `src/aggregations/`, `src/multivalue/` | JSON/MsgPack DSL and a boolean string language, both compiling to Xapian queries; ES-style aggregations. |
 | Geospatial | `src/geospatial/` | Hierarchical Triangular Mesh: geometry → integer trixel ranges → numeric queries. |
-| Serialization | `src/serialise*.{cc,h}`, `src/sortable_serialise.*`, `src/cast.*`, `src/length.*`, `src/msgpack.h` | Order-preserving value encoding, varints, packed lists, a COW msgpack wrapper. |
-| Logging | `src/logger.*`, `src/log.h`, `src/ansi_color.hh`, `src/colors.h`, `src/traceback.*` | A custom async logger with lazy args, compile-time colors, timing, and exception backtraces. |
+| Serialization | `src/serialise*.{cc,h}`, `src/sortable_serialise.*`, `src/cast.*`, `src/length.*`, `Kronuz/msgpack` | Order-preserving value encoding, varints, packed lists, and the extracted COW `MsgPack` value layer. |
+| Logging | `src/log.h`, `src/logger_fwd.h`, `src/colors.h`, `Kronuz/logger`, `Kronuz/traceback` | A custom async logger with lazy args, compile-time colors, timing, and exception backtraces. |
 | Utility layer | top-level `src/*.hh` / `*.h` | Dozens of small, mostly self-contained headers (data structures, concurrency, metaprogramming, string tools). |
 
 Most of the utility layer has since been **spun out into standalone
-`Kronuz/*` repositories** — the [Dependencies](#dependencies) section lists all
-~57 of them — so the "extraction candidate" notes throughout this document have
-largely been acted on. The precedent this started from was
+`Kronuz/*` repositories**. The [Dependencies](#dependencies) section lists all
+59 of them, including the newly extracted `cuuid` and `msgpack` keystones, so the
+"extraction candidate" notes throughout this document have largely been acted
+on. The precedent this started from was
 [base-x](https://github.com/Kronuz/base-x) (`base_x.hh`),
 [uinteger_t](https://github.com/Kronuz/uinteger_t) (`uinteger_t.hh`), and
 [fantasyname](https://github.com/Kronuz/fantasyname) (`namegen.*`).
@@ -146,7 +147,7 @@ The rules that hold the topology together:
 
 ## Dependencies
 
-Xapiand is assembled from **~57 standalone `Kronuz/*` libraries** plus a handful of
+Xapiand is assembled from **59 standalone `Kronuz/*` libraries** plus a handful of
 third-party ones, wired in by CMake `FetchContent`. Most of what used to be in-tree
 `src/*.hh` utilities are now their own repositories (this is the decomposition the rest
 of this document's "extraction candidate" notes were pointing at). The layering (`→`
@@ -157,9 +158,12 @@ Xapiand  (the app)
 │
 ├── reactor       → asio*
 ├── cluster       → reactor
-├── http          → reactor · compressors · http-parser* · radix-router*
+├── http          → reactor · compressors · http-parser · radix-router
 ├── flume         → compressors
 ├── storage       → compressors · errno-names · strict-stox · stringified
+├── msgpack       → msgpack-c* (bundled inside Kronuz/msgpack)
+├── cuuid         → endian · char-classify
+├── prometheus-cpp* (core only; the app catalog stays in src/metrics.*)
 ├── io            → (no dependencies)
 ├── fs            → io · split · strings · stringified
 ├── system        → io · strings
@@ -173,39 +177,48 @@ Xapiand  (the app)
 ├── scheduler     → stash · threadpool
 └── traceback     → errno-names · nanosleep · strings · term-color
 
-  * third-party (everything else is Kronuz/*). The graph is a layered, acyclic
-    DAG — every edge points down a layer — and the leaf libraries (split,
-    stringified, char-classify, static-string, errno-names, nanosleep, stash,
-    threadpool, strict-stox) depend on nothing of their own.
+  * third-party (everything else in this graph is Kronuz/*). The graph is a
+    layered, acyclic DAG. Every edge points down a layer, and the leaf libraries
+    (split, stringified, char-classify, static-string, errno-names, nanosleep,
+    stash, threadpool, strict-stox) depend on nothing of their own.
 ```
 
 ### Full dependency list
 
-Every `Kronuz/*` dependency Xapiand pulls, grouped by role (all header-or-static,
-tracked at `main`):
+Every dependency CMake pulls, grouped by role. Most `Kronuz/*` repositories track
+`main`; a few older ones still track `master`, matching the CMake file.
 
-- **Asio runtime & network subsystems:** `reactor` (the shared-nothing Asio server
-  runtime), `cluster` (Bus gossip + Raft), `http` (the HTTP transport), `flume`
-  (framed, compressed file transfer), `io` (EINTR-safe POSIX I/O), `fs` (filesystem
-  helpers), `system` (resource introspection), `storage` (append-only blob store).
-- **Concurrency & scheduling:** `threadpool`, `scheduler`, `stash`, `queue`.
-- **Text, formatting & paths:** `strings`, `repr`, `escape`, `url-parser`,
-  `stringified`, `static-string`, `char-classify`, `term-color`, `fantasyname`.
-- **Logging & diagnostics:** `logger`, `traceback`, `errno-names`, `nanosleep`.
-- **Numerics, hashing & encoding:** `base-x`, `uinteger_t`, `endian`, `strict-stox`,
-  `hashes`, `md5`, `sha256`, `random`, `compressors` (LZ4 + Zstd), `allocators`.
-- **Data structures:** `lru-cache`, `bloom-filter`, `radix-router`, `perfect-hash`.
-- **Search & domain:** `boolean-parser`, `enum-reflection`, `soundex`,
-  `double-metaphone`, `string-similarity`, `htm`, `cartesian`, `datetime`, `times`,
-  `epoch`, `located-exception`, `math`, `utype`, `atomic-shared-ptr`, `lazy`,
-  `iterators`.
-- **Third-party:** `asio` (standalone), `lz4`, `zstd`, `rapidjson`, `cppcodec`,
-  `CLI11`, `sol2`/`lua`, `http-parser`.
+- **Runtime & network subsystems:** `reactor` (the shared-nothing Asio server
+  runtime), `cluster` (Bus gossip + Raft), `http` (the HTTP transport),
+  `http-parser` (the custom-verb parser), `radix-router` (route dispatch), `flume`
+  (framed, compressed file transfer), `io` (EINTR-safe POSIX I/O), `fs`
+  (filesystem helpers), `system` (resource introspection), `storage`
+  (append-only blob store).
+- **Serialization, identity & time:** `msgpack` (bundled msgpack-c v1.3.0 + the COW
+  `MsgPack` value + `xchange` adaptors + RFC-6902 patcher), `cuuid` (condensed
+  UUID value + binary wire codec), `datetime`, `times`, `epoch`, `endian`,
+  `base-x`, `uinteger_t`, `strict-stox`, `stringified`.
+- **Concurrency & scheduling:** `threadpool`, `scheduler`, `stash`, `queue`,
+  `atomic-shared-ptr`.
+- **Text, formatting & paths:** `strings`, `repr`, `escape`, `split`,
+  `url-parser`, `static-string`, `char-classify`, `term-color`, `fantasyname`.
+- **Logging & diagnostics:** `logger`, `traceback`, `errno-names`, `nanosleep`,
+  `located-exception`.
+- **Numerics, hashing & compression:** `hashes`, `md5`, `sha256`, `random`,
+  `compressors` (Deflate + LZ4 + Zstd), `allocators`, `math`.
+- **Data structures & small utilities:** `lru-cache`, `bloom-filter`,
+  `perfect-hash`, `utype`, `lazy`, `iterators`.
+- **Search, geography & language:** `boolean-parser`, `enum-reflection`, `soundex`,
+  `double-metaphone`, `string-similarity`, `htm`, `cartesian`.
+- **Third-party fetched or found outside `src/`:** `asio` (standalone), `lz4`,
+  `zstd`, `rapidjson`, `cppcodec`, `CLI11`, `sol2`/`lua`, and upstream
+  `prometheus-cpp` v1.2.4 core.
 
 Two guarantees make the graph maintainable: it is **acyclic and layered** (an arrow
 never points up a layer), and the leaf libraries are **dependency-free** (they build
-against nothing but the standard library). The libev vendored under `src/ev/` and the
-`Kronuz/server` engine that once sat under the network services are **both gone**.
+against nothing but the standard library). The libev vendored under `src/ev/`, the
+`Kronuz/server` engine, `src/cuuid/`, `src/msgpack*`, `src/xchange/`, and
+`src/prometheus/` are **gone**.
 
 ---
 
@@ -281,6 +294,17 @@ A safety touch that survived the migration: a service stopping shuts each tracke
 socket's fd (`shutdown()`), rather than racing a bare `close()`, so a coroutine blocked
 in a write returns instead of hanging on a fd another thread may reuse.
 
+The `src/server/` names now follow the same two-layer shape for every request-
+facing domain. `<domain>_service` is the enabling transport layer;
+`<domain>_views` is the handler layer. Remote uses `remote_protocol_service.h` +
+`remote_protocol_views.{cc,h}` (`RemoteProtocolViews`). Replication uses
+`replication_protocol_service.{cc,h}` + `replication_protocol_views.{cc,h}`
+(`ReplicationProtocolViews`). Search uses `search_service.{cc,h}`
+(`SearchService : http::HttpHandler`) + `search_views.{cc,h}` (the `Request`
+extension and the `*_view` handlers). `discovery.{cc,h}` stays standalone because
+it is the membership peer, not a request-view pair, and the old `mime_types.hh`
+name is gone in favor of `mime_types.h`.
+
 ### Clustering (`src/server/discovery.*`, `replication_protocol*`, `remote_protocol*`)
 
 This is the part the public description ("async replication") undersells. Two
@@ -355,7 +379,7 @@ OR-of-terms candidate filter precedes an exact range re-check ranked by angular
 distance. The serialized trixel ids are **big-endian on purpose** so their byte
 order matches their integer order.
 
-### Serialization (`src/sortable_serialise.*`, `src/serialise*.{cc,h}`, `src/msgpack.h`)
+### Serialization (`src/sortable_serialise.*`, `src/serialise*.{cc,h}`, `Kronuz/msgpack`)
 
 The linchpin is `sortable_serialise` (`sortable_serialise.cc:43`): it maps a
 `long double` to a byte string whose `memcmp` order matches numeric order, so
@@ -366,14 +390,21 @@ bytes while still reversing order — and the header comment documents the bit
 layout unusually completely. Length/varint encoding comes in two flavors
 (`length.*`), and `serialise_list.h` is a tidy CRTP design that stores a single
 element bare (no magic byte, no length prefix) for the overwhelmingly common
-cardinality-1 field. `msgpack.h` wraps the vendored msgpack with a
-copy-on-write body and a custom `UNDEFINED` ext type, unifying JSON, MsgPack, and
-internal objects behind one type.
+cardinality-1 field. The former in-tree MsgPack keystone now lives in
+[`Kronuz/msgpack`](https://github.com/Kronuz/msgpack): bundled msgpack-c v1.3.0,
+the copy-on-write `MsgPack` body, `xchange` adaptors, and the RFC-6902 patcher.
+Xapiand consumes the headers directly and compiles the library's
+`msgpack_patcher.cc` into the app with `MSGPACK_EXCEPTION_HEADER` pointing back at
+`src/exception.h`, so JSON, MsgPack, and internal objects still share one value
+type and one exception hierarchy.
 
-### Logging (`src/logger.*`, `src/ansi_color.hh`, `src/traceback.*`)
+### Logging (`Kronuz/logger`, `Kronuz/traceback`, `src/log.h`)
 
-A genuinely unusual logging system, and worth calling out because it's the kind
-of thing people rewrite badly. Highlights:
+The engine now comes from [`Kronuz/logger`](https://github.com/Kronuz/logger) and
+[`Kronuz/traceback`](https://github.com/Kronuz/traceback); Xapiand keeps
+`src/log.h`, `src/logger_fwd.h`, and `src/colors.h` as the compatibility surface.
+It is a genuinely unusual logging system, and worth calling out because it is the
+kind of thing people rewrite badly. Highlights:
 
 - **Hybrid async.** Error-level and any *delayed* messages go to a dedicated
   background thread via a timer-wheel scheduler; everything else renders on the
@@ -431,14 +462,15 @@ licensing notes**, see [EXTRACTION.md](EXTRACTION.md).
 | **Pretty backtraces** | `traceback.*` | Moderate | Med | Symbolized backtraces, cross-thread stack dump via signal, `__cxa_throw` capture. The allocator interposition makes the full thing invasive; the backtrace/symbolize core is liftable. |
 | **HTM geospatial** | `geospatial/`, `cartesian.*` | Moderate | High | Geometry → sortable integer ranges on a sphere, with full shape support. Cut `THROW`/`strings::format` and drop the ~940 lines of matplotlib debug writers (`htm.cc:838+`). Few OSS C++ HTM impls exist. |
 | **Haystack-style store** | `storage.h` (+ `compressor_lz4.*`) | Moderate | High | Single-file append-only blob store templated on format structs. Replace `opts.*` with constructor params and stub logging. |
-| **libev reactor framework** | `worker.*` | Moderate | High | shared_ptr lifetime tree + cross-loop async control + cooperative GC of finished workers. Depends only on libev + logging macros. |
+| **Retired libev reactor framework** | former `worker.*` / `Kronuz/server` | Retired | Low | The old Worker/BaseServer/TCP engine has been removed from Xapiand; current services ride `Kronuz/reactor` and keep protocol logic in the `*_views` layer. |
 | **Lock-free timer-wheel store** | `stash.h` | Easy | High | A novel CAS-based hierarchical slot store; near-zero deps once the trace macros are stubbed. The crown jewel of the scheduling stack. See [SCHEDULER.md](SCHEDULER.md). |
 | **Cancellable timer scheduler** | `scheduler.h` (+ `stash.h`) | Moderate | High | A 24-hour multi-resolution timer wheel + a thread that runs/dispatches due tasks; tasks are cancellable. Needs a thread/pool abstraction. See [SCHEDULER.md](SCHEDULER.md). |
 | **Per-key debouncer** | `debouncer.h` | Easy* | High | Throttle/debounce with a randomized force-window so a forever-touched key still fires. *Easy once the scheduler is extracted. See [SCHEDULER.md](SCHEDULER.md). |
 | **Thread pool** | `threadpool.hh`, `thread.hh` | Easy | Med | Blocking-queue pool + CRTP `Thread`. Drop the runtime-ignored `ThreadPolicyType`; depends on `blocking_concurrent_queue.h` + `likely.h`. |
 | **Lazy splitter** | `split.h` | Easy | High | One-pass `string_view` splitter, full-delimiter and find-first-of modes. |
 | **LZ4 streaming wrappers** | `compressor_lz4.*` | Easy | High | `LZ4BlockStreaming` + `compress_lz4`/`decompress_lz4`, ring-buffered file/data variants. (But: see the unused-digest bug.) |
-| **Condensed UUID** | `cuuid/` | Moderate | Med | UUID gen + a clever variable-length condenser for v1 time-UUIDs; coupled to `Node` for the node salt. |
+| **MsgPack keystone** | `Kronuz/msgpack` | Hard (done) | High | Former `src/msgpack*` + `src/xchange/`: bundled msgpack-c v1.3.0, the COW `MsgPack` value, `xchange` adaptors, and the RFC-6902 patcher. |
+| **Condensed UUID** | `Kronuz/cuuid` | Moderate (done) | Med | UUID gen + a variable-length condenser for v1 time-UUIDs. Xapiand compiles `uuid.cc` into the app with `CUUID_TRACE_HEADER`, `CUUID_EXCEPTION_HEADER`, and `CUUID_NODE_HEADER` seams back into the host. |
 | Misc | `bloom_filter.hh`, `lazy.hh`, `itertools.hh`, `reversed.hh`, `enum.h`, `endian.hh`, `datetime.*` | Easy | Med | Small, mostly standalone. `enum.h` is a reflective-enum generator capped at ~64 entries. |
 
 **The logging system as a whole** (the user's specific interest): the *engine*
@@ -496,11 +528,11 @@ included so each is checkable.
   (`remote_protocol_views.cc:1138`); replication is a debounced async pull
   (`discovery.cc:1159`). A primary crash before any replica pulls loses the
   write. Worth stating plainly in operational docs.
-- **Unbounded request intake = remote DoS.** No cap on HTTP `Content-Length`
-  before `reserve()` (`http_client.cc:1236`), on the pipelined request deque, or
-  on accumulated NDJSON/MSGPACK objects; the remote protocol has the same shape
-  via length-prefixed `unpack_string`. The write *output* path is bounded; the
-  read path is not.
+- **Request intake caps need a fresh audit after the HTTP swap.** The old
+  libev HTTP client (`http_client.cc`) is gone, so the previous `reserve()` finding
+  no longer points at live code. The remote protocol still reads length-prefixed
+  messages in `remote_protocol_service.h`; treat read-side limits as unproven until
+  the `Kronuz/http` path and remote framing are checked end-to-end.
 
 **Geospatial math:**
 
@@ -551,10 +583,6 @@ included so each is checkable.
 - **`ContentReader` swaps line/column on newline**: `currentColumn++;
   currentLine = 1;` (`ContentReader.cc:42`). Wrong positions in lexer error
   messages.
-- **`BaseClient` `total_clients` underflow force-exits the process.**
-  `~BaseClient` treats a 0 pre-value as inconsistency and calls
-  `sig_exit(-EX_SOFTWARE)` (`base_client.cc:122`); the asymmetric null-check vs
-  the constructor (`base_client.cc:103`) makes the counter driftable.
 - **`namegen` Random index can read out of bounds** at the top of its range
   (`namegen.cc:304`), depending on `random_real` inclusivity.
 
@@ -607,11 +635,11 @@ The tasteful bits, for anyone reading for pleasure:
   level so "all descendants" is one integer interval, turning spherical
   containment into a numeric range query (`htm.cc:679`), with big-endian
   serialization preserving the order on disk.
-- **Cross-loop control via `ev::async` baked into the Worker base**
-  (`worker.cc:82`) — any worker can be safely driven from any thread with no
-  extra locking, because the operation runs on the owning loop.
-- **The dup2 fd-stable close** (`tcp.cc:90`) — never hand a just-freed fd number
-  to a racing thread.
+- **The service/view split in `src/server/`:** transport coroutines live in
+  `*_service`, while the blocking protocol/search logic stays in `*_views`, so the
+  Asio migration did not smear socket mechanics into the handlers.
+- **Abortable socket shutdown on service stop:** tracked sockets are shut down,
+  not just closed, so a blocked write unwedges instead of racing fd reuse.
 - **Compile-time tri-escape colors** (`ansi_color.hh:116`) and per-level Unicode
   severity glyphs (`logger.cc:67`) — terminal-aware output with the cost paid
   once at startup.

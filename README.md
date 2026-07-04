@@ -28,11 +28,12 @@ The design goal throughout is to keep the moving pieces few and the defaults
 sane: one binary does something useful immediately, and still scales out across
 a cluster when you need it to.
 
-> **A note on scope.** This repository vendors several third-party libraries
-> under `src/` (the Xapian fork, msgpack, rapidjson, fmt, lz4, libev, tclap,
-> prometheus-cpp, yaml, cppcodec, ChaiScript). The interesting, original code is
-> everything else. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full map of
-> what is Xapiand's own and what is bundled.
+> **A note on scope.** This repository still vendors the customized Xapian fork
+> and libyaml bridge under `src/`. The old in-tree copies of cuuid, msgpack,
+> prometheus-cpp, libev, LZ4, RapidJSON, cppcodec, TCLAP, fmt, and ChaiScript are
+> gone; CMake now pulls the extracted `Kronuz/*` libraries and upstream
+> prometheus-cpp core with `FetchContent`. See [ARCHITECTURE.md](ARCHITECTURE.md)
+> for the full map.
 
 ## Documentation
 
@@ -78,18 +79,19 @@ Notable CMake options (all default on unless noted):
 
 Xapiand runs entirely on the standalone-Asio
 [reactor](https://github.com/Kronuz/reactor) runtime (there is no libev), and is
-assembled from **~57 standalone `Kronuz/*` libraries** plus a few third-party ones,
+assembled from **59 standalone `Kronuz/*` libraries** plus a few third-party ones,
 all wired in by CMake `FetchContent` at configure time. The runtime topology, the
 dependency layering diagram, and the **full dependency tree** live in
-[ARCHITECTURE.md](ARCHITECTURE.md) — see
+[ARCHITECTURE.md](ARCHITECTURE.md); see
 [Runtime architecture](ARCHITECTURE.md#runtime-architecture) and
 [Dependencies](ARCHITECTURE.md#dependencies).
 
 The load-bearing pieces: `reactor` (the Asio server runtime), `cluster` (Bus gossip +
 Raft), `http` (HTTP transport), `flume` (framed file transfer), `storage` (append-only
 blob store), `io` / `fs` / `system` (POSIX I/O, filesystem, resource introspection),
-plus a foundation of `strings` / `repr` / `logger` / `traceback` / `compressors` and
-the search-domain libraries.
+plus the extracted `cuuid` condensed-UUID value type, the `msgpack` keystone
+(msgpack-c + COW `MsgPack` + `xchange` + patcher), a foundation of `strings` /
+`repr` / `logger` / `traceback` / `compressors`, and the search-domain libraries.
 
 ## License
 
