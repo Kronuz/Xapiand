@@ -194,8 +194,9 @@ Matcher::Matcher(const Xapian::Database& db_,
 		 Xapian::Enquire::Internal::sort_setting sort_by,
 		 bool sort_val_reverse,
 		 double time_limit,
-		 const vector<opt_intrusive_ptr<Xapian::MatchSpy>>& matchspies)
-    : db(db_)
+		 const vector<opt_intrusive_ptr<Xapian::MatchSpy>>& matchspies,
+		 const std::string& query_id_)
+    : db(db_), query_id(query_id_)
 {
     // An empty query should get handled higher up.
     Assert(!query.empty());
@@ -222,7 +223,7 @@ Matcher::Matcher(const Xapian::Database& db_,
 		unimplemented("Xapian::MatchDecider not supported by the "
 			      "remote backend");
 	    }
-	    as_rem->set_query(query, query_length,
+	    as_rem->set_query(query_id, query, query_length,
 			      collapse_key, collapse_max,
 			      order, sort_key, sort_by, sort_val_reverse,
 			      time_limit,
@@ -335,6 +336,18 @@ Matcher::Matcher(const Xapian::Database& db_,
 	    submatch->prepare_match(stats);
 	});
 #endif
+}
+
+void
+Matcher::set_database(const Xapian::Database& db_)
+{
+    db = db_;
+    for (auto& o : locals) {
+	o->set_database(db_);
+    }
+    for (auto& o : remotes) {
+	o->set_database(db_);
+    }
 }
 
 Xapian::MSet
@@ -598,7 +611,7 @@ Matcher::get_mset(Xapian::doccount first,
     if (locals.empty() && remotes.size() == 1) {
 	// Short cut for a single remote database.
 	Assert(remotes[0]);
-	remotes[0]->start_match(first, maxitems, check_at_least, sorter,
+	remotes[0]->start_match(query_id, first, maxitems, check_at_least, sorter,
 				stats);
 	return remotes[0]->get_mset(matchspies);
     }
@@ -624,7 +637,7 @@ Matcher::get_mset(Xapian::doccount first,
 	    AssertRel(check_at_least, >=, first + maxitems);
 	    remote_maxitems = check_at_least;
 	}
-	submatch->start_match(0, remote_maxitems, check_at_least, sorter,
+	submatch->start_match(query_id, 0, remote_maxitems, check_at_least, sorter,
 			      stats);
     }
 #endif
@@ -852,4 +865,135 @@ Matcher::get_mset(Xapian::doccount first,
 #else
     return local_mset;
 #endif
+}
+
+Xapian::MSet
+Matcher::merge_mset(
+    const std::vector<Xapian::MSet>& vmsets,
+    Xapian::doccount first,
+    Xapian::doccount maxitems,
+    Xapian::doccount collapse_max,
+    int percent_threshold,
+    Xapian::Enquire::docid_order order,
+    Xapian::Enquire::Internal::sort_setting sort_by,
+    bool sort_val_reverse
+)
+{
+    Xapian::MSet merged_mset;
+
+    std::vector<std::pair<Xapian::MSet, Xapian::doccount>> msets;
+    for (auto& mset : vmsets) {
+	merged_mset.internal->merge_stats(mset.internal.get(), collapse_max != 0);
+	if (!mset.empty()) {
+	    msets.push_back({mset, 0});
+	}
+    }
+
+    if (msets.empty()) {
+	return merged_mset;
+    }
+
+    // Factor to multiply maximum weight seen by to get the minimum weight we
+    // need to consider.
+    double percent_threshold_factor = percent_threshold / 100.0;
+    // Corresponding correction to that in api/mset.cc to account for excess
+    // precision on x86.
+    percent_threshold_factor -= DBL_EPSILON;
+
+    if (merged_mset.internal->max_possible == 0.0) {
+	// All the weights are zero.
+	if (sort_by == REL) {
+	    // We're only sorting by DOCID.
+	    sort_by = DOCID;
+	} else if (sort_by == REL_VAL || sort_by == VAL_REL) {
+	    // Normalise REL_VAL and VAL_REL to VAL, to avoid needlessly
+	    // fetching and comparing weights.
+	    sort_by = VAL;
+	}
+	// All percentages will be 100% so turn off any percentage cut-off.
+	percent_threshold = 0;
+	percent_threshold_factor = 0.0;
+    }
+
+    bool sort_forward = (order != Xapian::Enquire::DESCENDING);
+    auto mcmp = get_msetcmp_function(sort_by, sort_forward, sort_val_reverse);
+    auto heap_cmp =
+	[&](const pair<Xapian::MSet, Xapian::doccount>& a,
+	    const pair<Xapian::MSet, Xapian::doccount>& b) {
+	    return mcmp(b.first.internal->items[b.second],
+			a.first.internal->items[a.second]);
+	};
+
+    Heap::make(msets.begin(), msets.end(), heap_cmp);
+
+    double min_weight = 0.0;
+    if (percent_threshold) {
+	min_weight = percent_threshold_factor * 100.0 /
+		     merged_mset.internal->percent_scale_factor;
+    }
+
+    CollapserLite collapser(collapse_max);
+    merged_mset.internal->first = first;
+    while (!msets.empty() && merged_mset.size() != maxitems) {
+	auto& front = msets.front();
+	auto& result = front.first.internal->items[front.second];
+	if (percent_threshold) {
+	    if (result.get_weight() < min_weight) {
+		break;
+	    }
+	}
+	if (!collapser || collapser.add(result.get_collapse_key())) {
+	    if (first) {
+		--first;
+	    } else {
+		merged_mset.internal->items.push_back(std::move(result));
+	    }
+	}
+	auto n = msets.front().second + 1;
+	if (n == msets.front().first.size()) {
+	    Heap::pop(msets.begin(), msets.end(), heap_cmp);
+	    msets.resize(msets.size() - 1);
+	} else {
+	    msets.front().second = n;
+	    Heap::replace(msets.begin(), msets.end(), heap_cmp);
+	}
+    }
+
+    if (collapser) {
+	collapser.finalise(merged_mset.internal->items, percent_threshold);
+
+	auto mseti = merged_mset.internal;
+	mseti->matches_lower_bound = collapser.get_matches_lower_bound();
+
+	double unique_rate = 1.0;
+
+	Xapian::doccount docs_considered = collapser.get_docs_considered();
+	Xapian::doccount dups_ignored = collapser.get_dups_ignored();
+	if (docs_considered > 0) {
+	    // Scale the estimate by the rate at which we've been finding
+	    // unique documents.
+	    double unique = double(docs_considered - dups_ignored);
+	    unique_rate = unique / double(docs_considered);
+	}
+
+	// We can safely reduce the upper bound by the number of duplicates
+	// we've ignored.
+	mseti->matches_upper_bound -= collapser.get_dups_ignored();
+
+	double estimate_scale = unique_rate;
+
+	if (estimate_scale != 1.0) {
+	    auto matches_estimated = mseti->matches_estimated;
+	    mseti->matches_estimated =
+		Xapian::doccount(matches_estimated * estimate_scale + 0.5);
+	}
+
+	// Clamp the estimate the range given by the bounds.
+	AssertRel(mseti->matches_lower_bound, <=, mseti->matches_upper_bound);
+	mseti->matches_estimated = std::clamp(mseti->matches_estimated,
+					     mseti->matches_lower_bound,
+					     mseti->matches_upper_bound);
+    }
+
+    return merged_mset;
 }

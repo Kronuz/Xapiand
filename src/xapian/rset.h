@@ -121,6 +121,12 @@ class XAPIAN_VISIBILITY_DEFAULT RSet {
 
     /// Return a string describing this object.
     std::string get_description() const;
+
+    /** Serialise this RSet for the remote protocol. */
+    std::string serialise() const;
+
+    /** Reconstruct an RSet from serialise(). */
+    static RSet unserialise(const std::string& s);
 };
 
 }

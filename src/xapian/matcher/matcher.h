@@ -48,6 +48,16 @@ class Matcher {
 
     Xapian::Database db;
 
+    /** Correlation id for the two-phase remote match (Xapiand distributed search).
+     *
+     *  Set in the constructor (prepare phase) and reused in get_mset() (finalise
+     *  phase).  It is sent to a remote server in MSG_QUERY and again in MSG_GETMSET
+     *  so the server -- whose reactor dispatches the two phases separately and so
+     *  can't hold the match on the stack like the stock in-process conversation --
+     *  can look the prepared match back up.  Empty for a purely local match.
+     */
+    std::string query_id;
+
     /** LocalSubMatch objects for local databases.
      *
      *  The entries are at the same index as the corresponding shard in the
@@ -152,7 +162,10 @@ class Matcher {
 	    Xapian::Enquire::Internal::sort_setting sort_by,
 	    bool sort_val_reverse,
 	    double time_limit,
-	    const std::vector<opt_ptr_spy>& matchspies);
+	    const std::vector<opt_ptr_spy>& matchspies,
+	    const std::string& query_id_ = std::string());
+
+    void set_database(const Xapian::Database& db_);
 
     /** Run the match and produce an MSet object.
      *
@@ -207,6 +220,24 @@ class Matcher {
 			  bool sort_val_reverse,
 			  double time_limit,
 			  const std::vector<opt_ptr_spy>& matchspies);
+
+    /** Merge already-computed per-shard MSets into one (coordinator side).
+     *
+     *  Xapiand's distributed matcher computes an MSet on each shard's node,
+     *  then hands them all here to be heap-merged into the final result.  This
+     *  is the same merge 2.0.0 does at the tail of get_mset(), exposed so it
+     *  can run separately from the per-shard matching.  It uses no per-Matcher
+     *  state, so it's static (2.0.0's Matcher has no bare constructor).
+     */
+    static Xapian::MSet merge_mset(
+	const std::vector<Xapian::MSet>& vmsets,
+	Xapian::doccount first,
+	Xapian::doccount maxitems,
+	Xapian::doccount collapse_max,
+	int percent_threshold,
+	Xapian::Enquire::docid_order order,
+	Xapian::Enquire::Internal::sort_setting sort_by,
+	bool sort_val_reverse);
 };
 
 #endif // XAPIAN_INCLUDED_MATCHER_H

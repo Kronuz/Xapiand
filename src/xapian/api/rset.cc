@@ -22,6 +22,7 @@
 
 #include "xapian/api/rsetinternal.h"
 #include "xapian/common/str.h"
+#include "xapian/net/serialise.h"
 
 #include <string>
 
@@ -90,6 +91,18 @@ RSet::get_description() const
 	desc.back() = ')';
     }
     return desc;
+}
+
+string
+RSet::serialise() const
+{
+    return serialise_rset(*this);
+}
+
+RSet
+RSet::unserialise(const string& s)
+{
+    return unserialise_rset(s);
 }
 
 }

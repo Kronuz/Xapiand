@@ -27,6 +27,7 @@
 #endif
 
 #include <string>
+#include <vector>
 
 #include "xapian/attributes.h"
 #include "xapian/eset.h"
@@ -357,6 +358,19 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
      */
     void set_time_limit(double time_limit);
 
+    void set_database(const Database& db_) const;
+
+    const MSet& prepare_mset(const std::string& query_id, const RSet *omrset,
+		      const MatchDecider *mdecider) const;
+
+    const MSet& get_prepared_mset() const;
+
+    void clear_prepared_mset() const;
+
+    void set_prepared_mset(const MSet& mset) const;
+
+    void add_prepared_mset(const MSet& mset) const;
+
     /** Run the query.
      *
      *  Run the query using the settings in this Enquire object and those
@@ -407,6 +421,17 @@ class XAPIAN_VISIBILITY_DEFAULT Enquire {
 		  const MatchDecider* mdecider = NULL) const {
 	return get_mset(first, maxitems, 0, rset, mdecider);
     }
+
+    /** Merge per-shard MSets into one (distributed coordinator side).
+     *
+     *  Xapiand computes an MSet on each shard's node, then hands the set here
+     *  to be heap-merged into the final result.  @a docs is the combined
+     *  document count across the shards.
+     */
+    MSet merge_mset(const std::vector<Xapian::MSet>& msets,
+		    doccount docs,
+		    doccount first,
+		    doccount maxitems) const;
 
     /** Iterate query terms matching a document.
      *

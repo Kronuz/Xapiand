@@ -196,6 +196,44 @@ Enquire::set_time_limit(double time_limit)
     internal->time_limit = time_limit;
 }
 
+void
+Enquire::set_database(const Database& db_) const
+{
+    internal->set_database(db_);
+}
+
+const MSet&
+Enquire::prepare_mset(const std::string& query_id, const RSet *rset,
+		      const MatchDecider *mdecider) const
+{
+    return internal->prepare_mset(query_id, rset, mdecider);
+}
+
+const MSet&
+Enquire::get_prepared_mset() const
+{
+
+    return internal->get_prepared_mset();
+}
+
+void
+Enquire::clear_prepared_mset() const
+{
+    internal->clear_prepared_mset();
+}
+
+void
+Enquire::set_prepared_mset(const MSet& mset) const
+{
+    internal->set_prepared_mset(mset);
+}
+
+void
+Enquire::add_prepared_mset(const MSet& mset) const
+{
+    internal->add_prepared_mset(mset);
+}
+
 MSet
 Enquire::get_mset(doccount first,
 		  doccount maxitems,
@@ -204,6 +242,15 @@ Enquire::get_mset(doccount first,
 		  const MatchDecider* mdecider) const
 {
     return internal->get_mset(first, maxitems, checkatleast, rset, mdecider);
+}
+
+MSet
+Enquire::merge_mset(const std::vector<Xapian::MSet>& msets,
+		    doccount docs,
+		    doccount first,
+		    doccount maxitems) const
+{
+    return internal->merge_mset(msets, docs, first, maxitems);
 }
 
 TermIterator
@@ -253,6 +300,102 @@ Enquire::get_description() const
 Enquire::Internal::Internal(const Database& db_)
     : db(db_) {}
 
+Enquire::Internal::~Internal() = default;
+
+void
+Enquire::Internal::set_database(const Database& db_) const
+{
+    db = db_;
+    if (match) {
+	match->set_database(db);
+    }
+}
+
+const MSet&
+Enquire::Internal::prepare_mset(const std::string& query_id, const RSet *rset,
+			      const MatchDecider *mdecider) const
+{
+    // query_id correlates the prepare (MSG_QUERY) and finalise (MSG_GETMSET)
+    // phases on a *remote* server, whose reactor dispatches the two separately and
+    // so can't hold the match on the stack like the stock in-process conversation.
+    // It's threaded into the Matcher below, which forwards it to the remote submatch
+    // (set_query on prepare, send_global_stats on finalise).  Empty for a purely
+    // local match, where it's simply unused.
+
+    if (percent_threshold && (sort_by == VAL || sort_by == VAL_REL)) {
+	throw Xapian::UnimplementedError("Use of a percentage cutoff while "
+					 "sorting primary by value isn't "
+					 "currently supported");
+    }
+    // Lazily initialise weight to its default if necessary.
+    if (!weight.get())
+	weight.reset(new BM25Weight);
+
+    // Lazily initialise query_length if it wasn't explicitly specified.
+    if (query_length == 0) {
+	query_length = query.get_length();
+    }
+
+    prepared_mset.reset(new Xapian::MSet());
+    prepared_mset->internal->set_stats(new Xapian::Weight::Internal());
+
+    // Phase 1: build the Matcher for this shard.  2.0.0's Matcher constructor
+    // accumulates this shard's local statistics into the stats object we hand
+    // it (via each submatch's prepare_match()).  We keep `match` alive so
+    // get_mset() can finalise with it once the global stats are merged in.
+    // The sorter is a get_mset() argument in 2.0.0, not a constructor one.
+    match.reset(new ::Matcher(db,
+			      query,
+			      query_length,
+			      rset,
+			      *prepared_mset->internal->get_stats(),
+			      *weight,
+			      (mdecider != NULL),
+			      collapse_key,
+			      collapse_max,
+			      percent_threshold,
+			      weight_threshold,
+			      order,
+			      sort_key,
+			      sort_by,
+			      sort_val_reverse,
+			      time_limit,
+			      matchspies,
+			      query_id));
+
+    return *prepared_mset;
+}
+
+const MSet&
+Enquire::Internal::get_prepared_mset() const
+{
+
+    return *prepared_mset;
+}
+
+void
+Enquire::Internal::clear_prepared_mset() const
+{
+    prepared_mset.reset();
+}
+
+void
+Enquire::Internal::set_prepared_mset(const MSet& mset) const
+{
+    clear_prepared_mset();
+    add_prepared_mset(mset);
+}
+
+void
+Enquire::Internal::add_prepared_mset(const MSet& mset) const
+{
+    if (!prepared_mset) {
+	prepared_mset.reset(new Xapian::MSet());
+	prepared_mset->internal->set_stats(new Xapian::Weight::Internal());
+    }
+    *prepared_mset->internal->get_stats() += *mset.internal->get_stats();
+}
+
 MSet
 Enquire::Internal::get_mset(doccount first,
 			    doccount maxitems,
@@ -290,42 +433,84 @@ Enquire::Internal::get_mset(doccount first,
 	checkatleast = max(checkatleast, first + maxitems);
     }
 
-    unique_ptr<Xapian::Weight::Internal> stats(new Xapian::Weight::Internal);
-    ::Matcher match(db,
-		    query,
-		    query_length,
-		    rset,
-		    *stats,
-		    *weight,
-		    (mdecider != NULL),
-		    collapse_key,
-		    collapse_max,
-		    percent_threshold,
-		    weight_threshold,
-		    order,
-		    sort_key,
-		    sort_by,
-		    sort_val_reverse,
-		    time_limit,
-		    matchspies);
+    // Phase 2: finalise.  If prepare_mset() wasn't called explicitly (the
+    // non-distributed path), prepare now so `match` and the stats exist.  The
+    // prepared_mset's stats are this shard's local stats after a bare prepare,
+    // or the merged global stats once the caller has combined the per-shard
+    // stats via add/set_prepared_mset() -- either way we finalise against them,
+    // reusing the Matcher built during prepare.  The sorter is passed here (a
+    // 2.0.0 get_mset argument, not a constructor one).
+    try {
+	if (!prepared_mset || !match) {
+	    prepare_mset("", rset, mdecider);
+	}
 
-    MSet mset = match.get_mset(first,
-			       maxitems,
-			       checkatleast,
-			       *stats,
-			       *weight,
-			       mdecider,
-			       sort_functor.get(),
-			       collapse_key,
-			       collapse_max,
-			       percent_threshold,
-			       weight_threshold,
-			       order,
-			       sort_key,
-			       sort_by,
-			       sort_val_reverse,
-			       time_limit,
-			       matchspies);
+	MSet mset = match->get_mset(first,
+				   maxitems,
+				   checkatleast,
+				   *prepared_mset->internal->get_stats(),
+				   *weight,
+				   mdecider,
+				   sort_functor.get(),
+				   collapse_key,
+				   collapse_max,
+				   percent_threshold,
+				   weight_threshold,
+				   order,
+				   sort_key,
+				   sort_by,
+				   sort_val_reverse,
+				   time_limit,
+				   matchspies);
+
+	if (first_orig != first) {
+	    mset.internal->set_first(first_orig);
+	}
+
+	mset.internal->set_enquire(this);
+
+	if (!mset.internal->get_stats()) {
+	    mset.internal->set_stats(prepared_mset->internal->release_stats());
+	}
+
+	prepared_mset.reset();
+	match.reset();
+
+	return mset;
+    } catch (...) {
+	prepared_mset.reset();
+	match.reset();
+	throw;
+    }
+}
+
+MSet
+Enquire::Internal::merge_mset(
+    const std::vector<Xapian::MSet>& msets,
+    Xapian::doccount docs,
+    Xapian::doccount first,
+    Xapian::doccount maxitems) const
+{
+    if (percent_threshold && (sort_by == VAL || sort_by == VAL_REL)) {
+	throw Xapian::UnimplementedError("Use of a percentage cutoff while "
+					 "sorting primary by value isn't "
+					 "currently supported");
+    }
+
+    Xapian::doccount first_orig = first;
+    first = min(first, docs);
+    maxitems = min(maxitems, docs - first);
+
+    // Matcher::merge_mset uses no per-Matcher state, so it's a static merge of
+    // the per-shard result MSets (and their stats).
+    MSet mset = ::Matcher::merge_mset(msets,
+				      first,
+				      maxitems,
+				      collapse_max,
+				      percent_threshold,
+				      order,
+				      sort_by,
+				      sort_val_reverse);
 
     if (first_orig != first) {
 	mset.internal->set_first(first_orig);
@@ -334,8 +519,21 @@ Enquire::Internal::get_mset(doccount first,
     mset.internal->set_enquire(this);
 
     if (!mset.internal->get_stats()) {
+	std::unique_ptr<Xapian::Weight::Internal> stats;
+	if (prepared_mset) {
+	    stats.reset(prepared_mset->internal->release_stats());
+	}
+	if (!stats) {
+	    stats.reset(new Xapian::Weight::Internal());
+	    for (auto& m : msets) {
+		if (m.internal->get_stats())
+		    *stats += *m.internal->get_stats();
+	    }
+	}
 	mset.internal->set_stats(stats.release());
     }
+
+    prepared_mset.reset();
 
     return mset;
 }

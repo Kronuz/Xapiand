@@ -265,6 +265,18 @@ MSet::diversify_(Xapian::doccount k,
 #endif
 
 void
+MSet::set_database(const Database& db) const
+{
+    // 2.0.0's Weight::Internal holds no database reference (its stats are
+    // eagerly computed), so unlike the old lazy model there's nothing to set
+    // on the stats here.  Releasing/setting the database on the owning Enquire
+    // is what lets Xapiand check a shard back into the pool between phases.
+    if (internal->enquire.get() != NULL) {
+	internal->enquire->set_database(db);
+    }
+}
+
+void
 MSet::sort_by_relevance()
 {
     std::sort(internal->items.begin(), internal->items.end(),
@@ -394,6 +406,32 @@ std::string
 MSet::get_description() const
 {
     return internal->get_description();
+}
+
+std::string
+MSet::serialise_stats() const
+{
+    return internal->serialise_stats();
+}
+
+std::string
+MSet::serialise() const
+{
+    return internal->serialise();
+}
+
+MSet
+MSet::unserialise_stats(const std::string& s)
+{
+    MSet mset;
+    mset.internal->unserialise_stats(s);
+    return mset;
+}
+
+void
+MSet::unshard_docids(Xapian::doccount shard, Xapian::doccount n_shards)
+{
+    internal->unshard_docids(shard, n_shards);
 }
 
 Document
@@ -547,7 +585,7 @@ MSet::Internal::serialise() const
     }
 
     if (stats)
-	result += serialise_stats(*stats);
+	result += ::serialise_stats(*stats);
 
     return result;
 }
@@ -590,8 +628,23 @@ MSet::Internal::unserialise(const char * p, const char * p_end)
 
     if (p != p_end) {
 	stats.reset(new Xapian::Weight::Internal());
-	unserialise_stats(p, p_end, *stats);
+	::unserialise_stats(p, p_end, *stats);
     }
+}
+
+string
+MSet::Internal::serialise_stats() const
+{
+    return stats ? ::serialise_stats(*stats) : string();
+}
+
+void
+MSet::Internal::unserialise_stats(const string& serialised)
+{
+    stats.reset(new Xapian::Weight::Internal());
+    const char* p = serialised.data();
+    const char* p_end = p + serialised.size();
+    ::unserialise_stats(p, p_end, *stats);
 }
 
 string

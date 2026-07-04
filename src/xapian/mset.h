@@ -40,6 +40,7 @@
 
 namespace Xapian {
 
+class Database;
 class MSetIterator;
 
 /// Class representing a list of search results.
@@ -109,6 +110,8 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 
     /// Destructor.
     ~MSet();
+
+    void set_database(const Database& db) const;
 
     /** Assigns new weights and updates MSet.
      *
@@ -483,6 +486,28 @@ class XAPIAN_VISIBILITY_DEFAULT MSet {
 
     /// Return a string describing this object.
     std::string get_description() const;
+
+    /** Serialise just the collection statistics of this MSet.
+     *
+     *  Used by Xapiand's distributed two-phase matcher: a shard sends its
+     *  prepared stats to the coordinator, which merges them and hands the
+     *  merged stats back to each shard for the final match.
+     */
+    std::string serialise_stats() const;
+
+    /** Reconstruct an MSet carrying only stats from serialise_stats(). */
+    static MSet unserialise_stats(const std::string& s);
+
+    /** Serialise this MSet (results + stats) for the remote protocol. */
+    std::string serialise() const;
+
+    /** Renumber this MSet's shard-local docids to global docids.
+     *
+     *  Xapiand matches each shard independently, so results come back with
+     *  docids local to their shard; this maps them back to the global docid
+     *  space (did-1)*n_shards + shard + 1 before merging.
+     */
+    void unshard_docids(Xapian::doccount shard, Xapian::doccount n_shards);
 
     /** @private @internal MSet is what the C++ STL calls a container.
      *

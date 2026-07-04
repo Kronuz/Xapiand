@@ -120,6 +120,9 @@ class MSet::Internal : public Xapian::Internal::intrusive_base {
 
     void set_stats(Xapian::Weight::Internal* stats_) { stats.reset(stats_); }
 
+    /// Hand off ownership of the stats (used by the two-phase get_mset()).
+    Xapian::Weight::Internal* release_stats() { return stats.release(); }
+
     double get_percent_scale_factor() const { return percent_scale_factor; }
 
     Xapian::Document get_document(Xapian::doccount index) const;
@@ -133,6 +136,12 @@ class MSet::Internal : public Xapian::Internal::intrusive_base {
     void unshard_docids(Xapian::doccount shard, Xapian::doccount n_shards);
 
     void merge_stats(const Internal* o, bool collapsing);
+
+    /// Serialise just the Weight::Internal stats (for the two-phase protocol).
+    std::string serialise_stats() const;
+
+    /// Replace the stats from a serialise_stats() string.
+    void unserialise_stats(const std::string& serialised);
 
     std::string snippet(std::string_view text,
 			size_t length,

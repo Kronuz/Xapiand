@@ -48,6 +48,10 @@ class RemoteSubMatch {
     RemoteSubMatch(const RemoteDatabase* db_, Xapian::doccount shard_)
 	: db(db_), shard(shard_) {}
 
+    void set_database(const Xapian::Database& db_) {
+		db = static_cast<const RemoteDatabase*>(db_.internal.get());
+    }
+
     int get_read_fd() const {
 	return db->get_read_fd();
     }
@@ -72,12 +76,13 @@ class RemoteSubMatch {
      *  @param sorter	      KeyMaker for sort keys (NULL for none).
      *  @param total_stats    The total statistics for the collection.
      */
-    void start_match(Xapian::doccount first,
+    void start_match(const std::string& query_id,
+		     Xapian::doccount first,
 		     Xapian::doccount maxitems,
 		     Xapian::doccount check_at_least,
 		     const Xapian::KeyMaker* sorter,
 		     const Xapian::Weight::Internal& total_stats) {
-	db->send_global_stats(first, maxitems, check_at_least, sorter,
+	db->send_global_stats(query_id, first, maxitems, check_at_least, sorter,
 			      total_stats);
     }
 

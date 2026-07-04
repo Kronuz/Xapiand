@@ -35,6 +35,9 @@
 #include <string>
 #include <vector>
 
+/// The matcher, in the global namespace (matcher/matcher.h).
+class Matcher;
+
 namespace Xapian {
 
 class ESet;
@@ -49,7 +52,7 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
     typedef enum { REL, VAL, VAL_REL, REL_VAL, DOCID } sort_setting;
 
   private:
-    Xapian::Database db;
+    mutable Xapian::Database db;
 
     Xapian::Query query;
 
@@ -83,15 +86,52 @@ class Enquire::Internal : public Xapian::Internal::intrusive_base {
 
     double expand_k = 1.0;
 
+    /** Two-phase distributed match state.
+     *
+     *  Xapiand drives distributed matching in two phases across shards that
+     *  may live on different nodes: prepare_mset() accumulates this shard's
+     *  local statistics into `prepared_mset` (an MSet carrying a
+     *  Weight::Internal); the caller merges the per-shard stats
+     *  (add_prepared_mset), then get_mset() finalises using the merged global
+     *  stats.  `match` is the reused 2.0.0 Matcher built during prepare.
+     */
+    mutable std::unique_ptr<Xapian::MSet> prepared_mset;
+    mutable std::unique_ptr<::Matcher> match;
+
   public:
     explicit
     Internal(const Database& db_);
+
+    /** Out-of-line destructor.
+     *
+     *  Declared here and defined in enquire.cc (which sees the full Matcher
+     *  definition) so `std::unique_ptr<::Matcher> match` can be destroyed even
+     *  in translation units that only forward-declare Matcher.
+     */
+    ~Internal();
+
+    void set_database(const Database& db_) const;
+
+    const MSet& prepare_mset(const std::string& query_id, const RSet *rset, const MatchDecider *mdecider) const;
+
+    const MSet& get_prepared_mset() const;
+
+    void clear_prepared_mset() const;
+
+    void set_prepared_mset(const MSet& mset) const;
+
+    void add_prepared_mset(const MSet& mset) const;
 
     MSet get_mset(doccount first,
 		  doccount maxitems,
 		  doccount checkatleast,
 		  const RSet* rset,
 		  const MatchDecider* mdecider) const;
+
+    MSet merge_mset(const std::vector<Xapian::MSet>& msets,
+		    doccount docs,
+		    doccount first,
+		    doccount maxitems) const;
 
     TermIterator get_matching_terms_begin(docid did) const;
 
