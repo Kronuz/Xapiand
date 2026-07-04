@@ -91,6 +91,10 @@ class RemoteDatabase : public Xapian::Database::Internal {
      */
     mutable bool pending_reply = false;
 
+    /// The revision of the remote database.
+    mutable Xapian::rev revision;
+
+
     /// The UUID of the remote database.
     mutable std::string uuid;
 
@@ -307,6 +311,8 @@ class RemoteDatabase : public Xapian::Database::Internal {
 					  const Xapian::Document & doc);
     Xapian::DocumentInfo replace_document(std::string_view unique_term,
 					  const Xapian::Document& document);
+
+    Xapian::rev get_revision() const;
 
     std::string get_uuid() const;
 

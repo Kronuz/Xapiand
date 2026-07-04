@@ -420,7 +420,8 @@ RemoteDatabase::update_stats(message_type msg_code, const string & body) const
 	!unpack_uint(&p, p_end, &doclen_lbound) ||
 	!unpack_uint(&p, p_end, &doclen_ubound) ||
 	!unpack_bool(&p, p_end, &has_positional_info) ||
-	!unpack_uint(&p, p_end, &total_length)) {
+	!unpack_uint(&p, p_end, &total_length) ||
+	!unpack_uint(&p, p_end, &revision)) {
 	throw Xapian::NetworkError("Bad stats update message received",
 				   link.get_context());
     }
@@ -934,6 +935,15 @@ RemoteDatabase::replace_document(std::string_view unique_term,
     }
     info.term = std::string(p, p_end);
     return info;
+}
+
+
+Xapian::rev
+RemoteDatabase::get_revision() const
+{
+    // Ensure that revision is up-to-date.
+    update_stats();
+    return revision;
 }
 
 string
