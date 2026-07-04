@@ -107,6 +107,12 @@ Database::size() const
     return internal->size();
 }
 
+unsigned
+Database::refs() const
+{
+    return internal->_refs;
+}
+
 void
 Database::add_database_(const Database& o, bool read_only)
 {
