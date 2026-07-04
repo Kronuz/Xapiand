@@ -19,8 +19,8 @@ substrate (see "Environment").
 
 Both engines indexed the bundled `accounts` dataset (1,000 records of nested
 account objects: name, age, gender, balance, nested `contact` address, a text
-`personality` field, a geo point) replicated to **15,000 documents**, then served
-a fixed mix of seven queries at **concurrency 16 for 8 seconds**.
+`personality` field, a geo point) replicated to **20,000 documents**, then served
+a fixed mix of seven queries at **concurrency 16 for 5 seconds, two trials**.
 
 The query mix is the same on both sides, translated to each engine's query
 language:
@@ -39,30 +39,39 @@ percentiles. Query numbers are from a warm run.
 
 ## Results
 
-| Metric | Xapiand | Elasticsearch 8.15.3 |
-| --- | ---: | ---: |
-| Index throughput | ~10,600 docs/s | ~12,500 docs/s |
-| On-disk size (15k docs) | **3.6 MB** | 13.1 MB |
-| Query throughput | **~9,800 qps** | ~6,960 qps |
-| Query latency p50 | **1.53 ms** | 2.19 ms |
-| Query latency p95 | **2.82 ms** | 3.45 ms |
-| Query latency p99 | **3.57 ms** | 4.47 ms |
+| Metric | Xapiand (this branch) | Xapiand (`origin/master`) | Elasticsearch 8.15.3 |
+| --- | ---: | ---: | ---: |
+| Index throughput | ~12,100 docs/s | ~10,200 docs/s | ~12,900 docs/s |
+| On-disk size (20k docs) | **3.47 MB** | 3.55 MB | 17.3 MB |
+| Query throughput | ~12,800 qps | ~13,000 qps | ~7,200 qps |
+| Query latency p50 | 1.17 ms | 1.16 ms | 1.94 ms |
+| Query latency p95 | 2.18 ms | 2.11 ms | 4.08 ms |
+| Query latency p99 | 2.75 ms | 2.65 ms | 5.83 ms |
 
-Three things stand out.
+The `origin/master` column is the upstream Xapiand exactly at `origin/master` with
+only the Apple-silicon build fix cherry-picked on top (commit `da3a9b97a`), so the
+two Xapiand columns isolate what the extraction/modernization work on this branch
+changed. Four things stand out.
 
-**On-disk footprint.** Xapiand's ~3.6x smaller index is the most defensible
-result here, because it does not depend on the runtime substrate (see below). It
-is the Zstandard-compressed storage doing its job on this fairly compressible,
-text-heavy data.
+**On-disk footprint.** Xapiand's ~5x smaller index is the most defensible result
+here, because it does not depend on the runtime substrate (see below). It is the
+Zstandard-compressed storage doing its job on this fairly compressible, text-heavy
+data. Both Xapiand builds are within ~2% of each other.
 
-**Query throughput and latency.** Xapiand serves more queries per second at a
-lower p50/p95/p99 on this workload. Some of that gap is real and some of it is the
-substrate: Elasticsearch is paying a virtualization and loopback-network tax that
-Xapiand is not (again, see Environment). Treat the query numbers as indicative of
-the shape, not as a precise multiplier.
+**Index throughput.** This branch bulk-loads ~19% faster than `origin/master`
+(~12,100 vs ~10,200 docs/s) and is now level with Elasticsearch. The write path
+genuinely improved with the modernization.
 
-**Index throughput.** Roughly a wash, with Elasticsearch a little ahead on this
-run. Both bulk-load 15k docs in a bit over a second.
+**Query throughput and latency.** The two Xapiand builds are within a few percent
+(`origin/master` a hair ahead at p50), and both serve ~1.8x the QPS of
+Elasticsearch at roughly half the p50/p95/p99. Some of the gap to ES is real and
+some is the substrate (ES pays a virtualization and loopback-network tax that
+Xapiand does not; see Environment). The small residual query gap to `origin/master`
+is per-request overhead from the reactor-based request path; profiling shows the
+query path itself is search/IO-bound, so it is CPU headroom rather than a wall.
+
+**Xapiand vs Elasticsearch.** On this workload Xapiand is dramatically more compact
+on disk and serves queries faster at lower latency; index throughput is a wash.
 
 ## Environment and caveats
 
@@ -73,7 +82,7 @@ This is a smoke test, and the two engines were not on equal footing:
   paid VM and virtual-network overhead that Xapiand did not. This flatters
   Xapiand on the latency and QPS numbers and is the single biggest reason not to
   read those as a controlled result. The on-disk size is unaffected by this.
-- **Small, single-node, single-shard.** 15,000 documents on one node with one
+- **Small, single-node, single-shard.** 20,000 documents on one node with one
   shard and no replicas. Nothing here says anything about multi-node scaling,
   large corpora, or sharded fan-out, where the trade-offs differ.
 - **Default configuration.** Stock settings on both sides. No JVM heap tuning
@@ -96,12 +105,22 @@ any multiplier should be quoted.
 Start a Xapiand node and run the driver:
 
 ```sh
-# Xapiand (native)
+# Xapiand (native) -- this branch, and origin/master + the arm64 build fix
 build/bin/xapiand --port 8880 --name benchnode --solo -D /tmp/xap_bench &
 python3 harness/loadtest.py \
     --target localhost:8880 --dataset docs/assets/accounts.ndjson \
-    --replicate 15 --concurrency 16 --duration 8 --trials 2 \
+    --replicate 20 --concurrency 16 --duration 5 --trials 2 \
     --datadir /tmp/xap_bench --out harness/results/xapiand_bench.json
+```
+
+For the `origin/master` column, build a second tree at `origin/master` with only
+the Apple-silicon build fix cherry-picked, and point the same driver at it:
+
+```sh
+git worktree add -b oldmaster-bench ../xapiand-oldmaster origin/master
+git -C ../xapiand-oldmaster cherry-pick da3a9b97a3bdb2a46eba011740698e5c8e4a7f8b
+cmake -S ../xapiand-oldmaster -B ../xapiand-oldmaster/build -DCMAKE_BUILD_TYPE=Release
+cmake --build ../xapiand-oldmaster/build --target xapiand -j4
 ```
 
 ```sh
