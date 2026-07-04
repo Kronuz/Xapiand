@@ -508,7 +508,7 @@ GenerateTerms::text(Xapian::Document& doc,
 	}
 #ifdef USE_ICU
 	if (cjk_words) {
-		flags |= Xapian::TermGenerator::FLAG_CJK_WORDS;
+		flags |= Xapian::TermGenerator::FLAG_WORD_BREAKS;
 	}
 #endif
 	term_generator.set_flags(flags);

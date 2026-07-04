@@ -83,7 +83,7 @@ inline std::string readable_query_parser_flags(int flags) {
 	if ((flags & Xapian::QueryParser::FLAG_AUTO_SYNONYMS) == Xapian::QueryParser::FLAG_AUTO_SYNONYMS) values.push_back("FLAG_AUTO_SYNONYMS");
 	if ((flags & Xapian::QueryParser::FLAG_AUTO_MULTIWORD_SYNONYMS) == Xapian::QueryParser::FLAG_AUTO_MULTIWORD_SYNONYMS) values.push_back("FLAG_AUTO_MULTIWORD_SYNONYMS");
 	if ((flags & Xapian::QueryParser::FLAG_CJK_NGRAM) == Xapian::QueryParser::FLAG_CJK_NGRAM) values.push_back("FLAG_CJK_NGRAM");
-	if ((flags & Xapian::QueryParser::FLAG_CJK_WORDS) == Xapian::QueryParser::FLAG_CJK_WORDS) values.push_back("FLAG_CJK_WORDS");
+	if ((flags & Xapian::QueryParser::FLAG_WORD_BREAKS) == Xapian::QueryParser::FLAG_WORD_BREAKS) values.push_back("FLAG_CJK_WORDS");
 	if ((flags & Xapian::QueryParser::FLAG_WILDCARD_MULTI) == Xapian::QueryParser::FLAG_WILDCARD_MULTI) values.push_back("FLAG_WILDCARD_MULTI");
 	if ((flags & Xapian::QueryParser::FLAG_WILDCARD_SINGLE) == Xapian::QueryParser::FLAG_WILDCARD_SINGLE) values.push_back("FLAG_WILDCARD_SINGLE");
 	if ((flags & Xapian::QueryParser::FLAG_FUZZY) == Xapian::QueryParser::FLAG_FUZZY) values.push_back("FLAG_FUZZY");
@@ -407,17 +407,20 @@ QueryDSL::process(Xapian::Query::op op, std::string_view path, const MsgPack& ob
 				THROW(QueryDslError, "Unexpected array");
 			}
 
-			auto processed = itertools::transform([&](const MsgPack& o){
-				return process(op, path, o, default_op, wqf, flags, is_leaf);
-			}, obj.begin(), obj.end());
+			// Xapian 2.0.0's Query(op, begin, end) constructor requires
+			// the iterators to expose std::iterator_traits (value_type,
+			// iterator_category), which our lazy itertools iterators
+			// don't.  Materialise into a vector<Query> first.
+			std::vector<Xapian::Query> processed;
+			for (auto it = obj.begin(); it != obj.end(); ++it) {
+				processed.push_back(process(op, path, *it, default_op, wqf, flags, is_leaf));
+			}
 
 			if (final_query.empty()) {
 				final_query = Xapian::Query(op, processed.begin(), processed.end());
 			} else {
-				auto chained = itertools::chain(
-					&final_query, &final_query + 1,
-					processed.begin(), processed.end());
-				final_query = Xapian::Query(op, chained.begin(), chained.end());
+				processed.insert(processed.begin(), final_query);
+				final_query = Xapian::Query(op, processed.begin(), processed.end());
 			}
 			break;
 		}
@@ -861,7 +864,7 @@ QueryDSL::get_term_query(const required_spc_t& field_spc, std::string_view seria
 			}
 #ifdef USE_ICU
 			if (field_spc.flags.cjk_words) {
-				flags |= Xapian::QueryParser::FLAG_CJK_WORDS;
+				flags |= Xapian::QueryParser::FLAG_WORD_BREAKS;
 			}
 #endif
 			flags |= Xapian::QueryParser::FLAG_PHRASE;

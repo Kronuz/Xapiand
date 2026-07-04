@@ -51,6 +51,7 @@
 #include "xapian/common/pack.h"               // for pack_* unpack_*
 #include "xapian/common/serialise-double.h"   // for unserialise_double
 #include "xapian/net/serialise-error.h"       // for serialise_error
+#include "xapian/api/termlist.h"              // for TermIterator::Internal::get_approx_size
 
 
 // #undef L_DEBUG
@@ -120,7 +121,7 @@ RemoteProtocolViews::RemoteProtocolViews(bool cluster_database_)
 	registry.register_posting_source(MultipleValueGE{});
 	registry.register_posting_source(MultipleValueLE{});
 	registry.register_match_spy(AggregationMatchSpy{});
-	registry.register_key_maker(Multi_MultiValueKeyMaker{});
+	registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
 
 	L_CONN("New Remote Protocol Client, {} client(s) of a total of {} connected.", manager ? manager->remote_clients.load() : 0, manager ? manager->total_clients.load() : 0);
 }
@@ -392,7 +393,7 @@ RemoteProtocolViews::msg_termlist(const std::string &message)
 		auto db = lk_shard->db();
 
 		Xapian::TermIterator t = db->termlist_begin(did);
-		Xapian::termcount num_terms = t.get_approx_size();
+		Xapian::termcount num_terms = t.internal->get_approx_size();
 
 		pack_uint(reply, db->get_doclength(did));
 		pack_uint_last(reply, num_terms);
@@ -867,7 +868,12 @@ RemoteProtocolViews::msg_query(const std::string &message_in)
 	}
 
 	////////////////////////////////////////////////////////////////////////////
-	auto prepared_mset = pending_query.enquire->prepare_mset(query_id, full_db_has_positions, &rset, nullptr);
+	// full_db_has_positions was removed from the matcher in Xapian 2.0.0;
+	// it's still carried on the wire for protocol compatibility but no
+	// longer influences prepare_mset().  TODO: drop from the wire once the
+	// sender is updated in lockstep.
+	(void)full_db_has_positions;
+	auto prepared_mset = pending_query.enquire->prepare_mset(query_id, &rset, nullptr);
 	// Clear internal database, as it's going to be checked in.
 	pending_query.enquire->set_database(Xapian::Database{});
 

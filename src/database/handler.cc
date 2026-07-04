@@ -1278,7 +1278,7 @@ DocMatcher::prepare_mset()
 					final_query = Xapian::Query(Xapian::Query::OP_OR, final_query, Xapian::Query(Xapian::Query::OP_ELITE_SET, eset.begin(), eset.end(), fuzzy->n_term));
 				}
 				enquire.set_query(final_query);
-				mset = enquire.prepare_mset(query_id, full_db_has_positions, nullptr, nullptr);
+				mset = enquire.prepare_mset(query_id, nullptr, nullptr);
 				revision = db->get_revision();
 				doccount += db->get_doccount();
 				enquire.set_database(Xapian::Database{});  // Make Enquire release the database
@@ -1475,7 +1475,7 @@ DatabaseHandler::get_mset(
 	registry.register_posting_source(MultipleValueGE{});
 	registry.register_posting_source(MultipleValueLE{});
 	registry.register_match_spy(AggregationMatchSpy{});
-	registry.register_key_maker(Multi_MultiValueKeyMaker{});
+	registry.register_key_maker((new Multi_MultiValueKeyMaker())->release());
 
 	auto manager = XapiandManager::manager();
 
