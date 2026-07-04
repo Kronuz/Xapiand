@@ -2792,6 +2792,15 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 							}
 						}
 					}
+					if (unprefixed_term_id.empty()) {
+						// The loop above is a shard-placement optimization; if no candidate
+						// landed on an active target shard (shards can be momentarily inactive
+						// while being created, a race that surfaced as an intermittent
+						// "Invalid UUID format: ''"), fall back to a valid generated UUID
+						// rather than leaving the id empty.
+						unprefixed_term_id = generator(opts.uuid_compact).serialise();
+						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
+					}
 					document_id = Unserialise::uuid(unprefixed_term_id, static_cast<UUIDRepr>(opts.uuid_repr));
 					break;
 				}
@@ -2850,6 +2859,14 @@ Schema::index(const MsgPack& object, MsgPack document_id, DatabaseHandler& db_ha
 								break;
 							}
 						}
+					}
+					if (unprefixed_term_id.empty()) {
+						// Same shard-placement fallback as the uuid branch: never leave the
+						// id empty when the loop cannot find a candidate on an active target
+						// shard (shards can be momentarily inactive while being created).
+						document_id = Base64::rfc4648url_unpadded().encode(generator(true).serialise());
+						unprefixed_term_id = Serialise::serialise(spc_id, document_id);
+						term_id = prefixed(unprefixed_term_id, spc_id.prefix(), spc_id.get_ctype());
 					}
 					break;
 				}
