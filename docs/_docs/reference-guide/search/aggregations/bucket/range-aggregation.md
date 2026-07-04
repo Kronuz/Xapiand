@@ -89,9 +89,9 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Response is aggregation", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.aggregations.balances_by_range["..2000.0"]["_doc_count"]).to.equal(384)
-  pm.expect(jsonData.aggregations.balances_by_range["2000.0..4000.0"]["_doc_count"]).to.equal(580)
-  pm.expect(jsonData.aggregations.balances_by_range["4000.0.."]["_doc_count"]).to.equal(36)
+  pm.expect(jsonData.aggregations.balances_by_range["..2000"]["_doc_count"]).to.equal(384)
+  pm.expect(jsonData.aggregations.balances_by_range["2000..4000"]["_doc_count"]).to.equal(580)
+  pm.expect(jsonData.aggregations.balances_by_range["4000.."]["_doc_count"]).to.equal(36)
 });
 ```
 {% endcomment %}
@@ -103,13 +103,13 @@ Response:
   "aggregations": {
     "_doc_count": 1000,
     "balances_by_range": {
-      "..2000.0": {
+      "..2000": {
         "_doc_count": 384
       },
-      "2000.0..4000.0": {
+      "2000..4000": {
         "_doc_count": 580
       },
-      "4000.0..": {
+      "4000..": {
         "_doc_count": 36
       }
     }

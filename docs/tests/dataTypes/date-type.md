@@ -138,7 +138,7 @@ pm.test("Response is success", function() {
 ```js
 pm.test("Value is valid", function() {
   var jsonData = pm.response.json();
-  pm.expect(jsonData.date).to.equal('2015-01-01T12:10:30');
+  pm.expect(jsonData.date).to.equal('2015-01-01T12:10:30Z');
 });
 ```
 {% endcomment %}
