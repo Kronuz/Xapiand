@@ -49,14 +49,18 @@ You can read more about explicit types [here](explicit-types).
 
 ## [Casting Types](casting-types)
 
-{: .note .construction }
-_This section is a **work in progress**..._
+Values can be explicitly converted from one compatible type to another during
+indexing, mirroring the casting available at search time.
+
+You can read more about casting types [here](casting-types).
 
 
 ## [Accuracy](accuracy)
 
-{: .note .construction }
-_This section is a **work in progress**..._
+Numeric, date and geospatial fields index extra coarse-grained terms so that
+ranges and range aggregations are fast. The granularities are configurable.
+
+You can read more about accuracy [here](accuracy).
 
 
 ## [Indexing Mode](indexing-mode)

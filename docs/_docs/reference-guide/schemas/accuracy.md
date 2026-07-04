@@ -2,7 +2,98 @@
 title: Accuracy
 ---
 
-{: .note .construction }
-_This section is a **work in progress**..._
+Numeric, date and geospatial fields index extra terms at coarser granularities,
+called _accuracies_. A range query can then match a handful of coarse "bucket"
+terms instead of scanning every distinct value, which makes ranges and range
+based aggregations much faster. The trade-off is a larger index: each accuracy
+level adds terms.
 
-<div style="min-height: 400px"></div>
+Accuracies are set per field with the `_accuracy` option. If it is omitted a
+sensible default is used, so you only need to tune it when you know your query
+patterns.
+
+## Numeric Accuracy
+
+For numeric fields, `_accuracy` is an array of step sizes. The field below
+buckets its values at multiples of 100, 1000 and 10000:
+
+{% capture req %}
+
+```json
+PUT /test_accuracy/
+
+{
+  "_schema": {
+    "balance": {
+      "_type": "float",
+      "_accuracy": [100, 1000, 10000]
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% capture req %}
+
+```json
+PUT /test_accuracy/1
+
+{
+  "balance": 1234.56
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+Ranges over the field use those buckets transparently, the results are exactly
+the same as without accuracies, only faster:
+
+{% capture req %}
+
+```json
+SEARCH /test_accuracy/
+
+{
+  "_query": {
+    "balance": {
+      "_in": {
+        "_range": { "_from": 1000, "_to": 2000 }
+      }
+    }
+  }
+}
+```
+{% endcapture %}
+{% include curl.html req=req %}
+
+{% comment %}
+
+```js
+pm.test("Response is success", function() {
+  pm.response.to.be.success;
+});
+```
+
+```js
+pm.test("Accuracy range query matches", function() {
+  var jsonData = pm.response.json();
+  pm.expect(jsonData.count).to.equal(1);
+});
+```
+{% endcomment %}
+
+When `_accuracy` is omitted, numeric fields default to
+`[100, 1000, 10000, 100000, 1000000, 100000000]`.
+
+## Date Accuracy
+
+For date fields, `_accuracy` is an array of named levels instead of step sizes:
+`"second"`, `"minute"`, `"hour"`, `"day"`, `"month"`, `"year"`, `"decade"`,
+`"century"` and `"millennium"`.
+
+See
+[Date Type]({{ '/docs/reference-guide/schemas/field-types/date-type' | relative_url }})
+and
+[Numeric Type]({{ '/docs/reference-guide/schemas/field-types/numeric-type' | relative_url }})
+for the per-type details.
